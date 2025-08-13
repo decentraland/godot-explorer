@@ -364,24 +364,54 @@ stretch = true
 hide_name = true
 can_move = false
 
-[node name="PanelContainer_Badges" type="PanelContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
-visible = false
+[node name="PanelContainer_GettingData" type="PanelContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
 
-[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_Badges"]
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_GettingData"]
 layout_mode = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 40
 
-[node name="VBoxContainer_Badges" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_Badges/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_GettingData/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_GettingData/MarginContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="TextureProgressBar_AvatarLoading" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_GettingData/MarginContainer/VBoxContainer/HBoxContainer2" instance=ExtResource("4_4hw2j")]
+layout_mode = 2
+
+[node name="VBoxContainer_Content" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
+[node name="PanelContainer_Badges" type="PanelContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
+
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxContainer_Badges" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -392,16 +422,16 @@ text = "Badges"
 label_settings = ExtResource("7_yx7pe")
 uppercase = true
 
-[node name="HBoxContainer_Badges" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
+[node name="HBoxContainer_Badges" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
 layout_mode = 2
 
-[node name="PanelContainer_About" type="PanelContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
+[node name="PanelContainer_About" type="PanelContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
 layout_mode = 2
 size_flags_vertical = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
 
-[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About"]
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About"]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/margin_left = 40
@@ -409,20 +439,20 @@ theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 40
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer"]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 40
 
-[node name="VBoxContainer_About" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_About" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
+[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 12
@@ -434,7 +464,7 @@ text = "About me"
 label_settings = ExtResource("7_yx7pe")
 uppercase = true
 
-[node name="Button_EditAbout" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
+[node name="Button_EditAbout" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
@@ -446,7 +476,7 @@ toggle_mode = true
 icon = ExtResource("3_gf7h4")
 icon_alignment = 1
 
-[node name="Label_InfoDescription" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="Label_InfoDescription" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -458,7 +488,7 @@ theme_override_font_sizes/font_size = 20
 text = "Use this space to describe yourself in a few words."
 label_settings = ExtResource("9_uj2xw")
 
-[node name="Label_NoIntro" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="Label_NoIntro" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -470,24 +500,24 @@ theme_override_font_sizes/font_size = 20
 text = "No intro."
 label_settings = ExtResource("7_yx7pe")
 
-[node name="HBoxContainer_About1" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="HBoxContainer_About1" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ProfileFieldText_AboutMe" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer_About1" instance=ExtResource("4_8pwo8")]
+[node name="ProfileFieldText_AboutMe" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer_About1" instance=ExtResource("4_8pwo8")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 title = "Intro"
 only_field = true
 
-[node name="HSeparator1" type="HSeparator" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="HSeparator1" type="HSeparator" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_uj2xw")
 
-[node name="Label_InfoDescription2" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="Label_InfoDescription2" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
@@ -501,7 +531,7 @@ text = "You can extend your profile information using this fields. Those which a
 label_settings = ExtResource("9_uj2xw")
 autowrap_mode = 2
 
-[node name="GridContainer_About" type="GridContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="GridContainer_About" type="GridContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -509,7 +539,7 @@ theme_override_constants/h_separation = 40
 theme_override_constants/v_separation = 20
 columns = 2
 
-[node name="ProfileFieldOption_Country" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+[node name="ProfileFieldOption_Country" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -517,7 +547,7 @@ size_flags_horizontal = 3
 title = "Country"
 icon = ExtResource("11_q5707")
 
-[node name="ProfileFieldOption_Language" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+[node name="ProfileFieldOption_Language" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -526,7 +556,7 @@ size_flags_vertical = 1
 title = "Language"
 icon = ExtResource("12_6ld5p")
 
-[node name="ProfileFieldOption_Pronouns" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+[node name="ProfileFieldOption_Pronouns" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -535,7 +565,7 @@ size_flags_vertical = 1
 title = "Pronouns"
 icon = ExtResource("13_wt1aa")
 
-[node name="ProfileFieldOption_Gender" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+[node name="ProfileFieldOption_Gender" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -544,7 +574,7 @@ size_flags_vertical = 1
 title = "Gender"
 icon = ExtResource("14_v4qqr")
 
-[node name="ProfileFieldOption_RelationshipStatus" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+[node name="ProfileFieldOption_RelationshipStatus" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -553,7 +583,7 @@ size_flags_vertical = 1
 title = "Relationship Status"
 icon = ExtResource("15_qnwic")
 
-[node name="ProfileFieldOption_SexualOrientation" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+[node name="ProfileFieldOption_SexualOrientation" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -562,7 +592,7 @@ size_flags_vertical = 1
 title = "Sexual Orientation"
 icon = ExtResource("16_d31ng")
 
-[node name="ProfileFieldOption_EmploymentStatus" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+[node name="ProfileFieldOption_EmploymentStatus" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -571,7 +601,7 @@ size_flags_vertical = 1
 title = "Employment Status"
 icon = ExtResource("17_g7mhu")
 
-[node name="ProfileFieldText_Profession" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
+[node name="ProfileFieldText_Profession" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -580,7 +610,7 @@ size_flags_vertical = 1
 title = "Profession"
 icon = ExtResource("18_uj2xw")
 
-[node name="ProfileFieldText_RealName" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
+[node name="ProfileFieldText_RealName" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -589,7 +619,7 @@ size_flags_vertical = 1
 title = "Real Name"
 icon = ExtResource("19_mpru1")
 
-[node name="ProfileFieldText_Hobbies" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
+[node name="ProfileFieldText_Hobbies" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
@@ -598,39 +628,39 @@ size_flags_vertical = 1
 title = "Hobbies"
 icon = ExtResource("20_m8kjd")
 
-[node name="VBoxContainer_AboutActions" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+[node name="VBoxContainer_AboutActions" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions"]
+[node name="HSeparator" type="HSeparator" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions"]
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions"]
 layout_mode = 2
 theme_override_constants/separation = 15
 alignment = 2
 
-[node name="Button_AboutCancel" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer"]
+[node name="Button_AboutCancel" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 theme_type_variation = &"DarkButton"
 text = "CANCEL"
 
-[node name="Button_AboutSave" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer"]
+[node name="Button_AboutSave" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 theme = ExtResource("22_mpru1")
 text = "SAVE"
 
-[node name="VBoxContainer_Links" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_Links" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer"]
+[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 12
@@ -642,7 +672,7 @@ text = "Links"
 label_settings = ExtResource("7_yx7pe")
 uppercase = true
 
-[node name="Button_EditLinks" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer"]
+[node name="Button_EditLinks" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
@@ -654,22 +684,22 @@ toggle_mode = true
 icon = ExtResource("3_gf7h4")
 icon_alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
 layout_mode = 2
 
-[node name="HFlowContainer_Links" type="HFlowContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
+[node name="HFlowContainer_Links" type="HFlowContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Button_AddLink" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer/HFlowContainer_Links"]
+[node name="Button_AddLink" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer/HFlowContainer_Links"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_vertical = 4
 text = "+ ADD"
 
-[node name="Label_NoLinks" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
+[node name="Label_NoLinks" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -680,7 +710,7 @@ theme_override_font_sizes/font_size = 20
 text = "No links."
 label_settings = ExtResource("7_yx7pe")
 
-[node name="Label_EditingLinks" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
+[node name="Label_EditingLinks" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
@@ -692,51 +722,51 @@ theme_override_font_sizes/font_size = 20
 text = "Add a maximum of 5 links to promote your personal website or social networks."
 autowrap_mode = 2
 
-[node name="VBoxContainer_LinksActions" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
+[node name="VBoxContainer_LinksActions" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions"]
+[node name="HSeparator" type="HSeparator" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions"]
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions"]
 layout_mode = 2
 theme_override_constants/separation = 15
 alignment = 2
 
-[node name="Button_LinksCancel" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer"]
+[node name="Button_LinksCancel" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 theme_type_variation = &"DarkButton"
 text = "CANCEL"
 
-[node name="Button_LinksSave" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer"]
+[node name="Button_LinksSave" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 theme = ExtResource("22_mpru1")
 text = "SAVE"
 
-[node name="PanelContainer_EquippedItems" type="PanelContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
+[node name="PanelContainer_EquippedItems" type="PanelContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
 
-[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems"]
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_EquippedItems"]
 layout_mode = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 40
 
-[node name="VBoxContainer_About" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer"]
+[node name="VBoxContainer_About" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_EquippedItems/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/HBoxContainer"]
+[node name="Label" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -747,7 +777,7 @@ text = "Equipped Items"
 label_settings = ExtResource("7_yx7pe")
 uppercase = true
 
-[node name="HFlowContainer_EquippedWearables" type="HFlowContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
+[node name="HFlowContainer_EquippedWearables" type="HFlowContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/h_separation = 15
@@ -779,12 +809,12 @@ layout_mode = 1
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/Button_CloseProfile" to="." method="_on_button_close_profile_pressed"]
 [connection signal="gui_input" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer2/Label_Address" to="." method="_on_label_address_gui_input"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer2/Button_CopyAddress" to="." method="_on_button_copy_address_pressed"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button_EditAbout" to="." method="_on_button_edit_about_pressed"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutCancel" to="." method="_on_button_about_cancel_pressed"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutSave" to="." method="_on_button_about_save_pressed"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer/Button_EditLinks" to="." method="_on_button_edit_links_pressed"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer/HFlowContainer_Links/Button_AddLink" to="." method="_on_button_add_link_pressed"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksCancel" to="." method="_on_button_links_cancel_pressed"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksSave" to="." method="_on_button_links_save_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button_EditAbout" to="." method="_on_button_edit_about_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutCancel" to="." method="_on_button_about_cancel_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutSave" to="." method="_on_button_about_save_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer/Button_EditLinks" to="." method="_on_button_edit_links_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer/HFlowContainer_Links/Button_AddLink" to="." method="_on_button_add_link_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksCancel" to="." method="_on_button_links_cancel_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksSave" to="." method="_on_button_links_save_pressed"]
 [connection signal="update_name_on_profile" from="ColorRect/ChangeNickPopup" to="." method="_on_change_nick_popup_update_name_on_profile"]
 [connection signal="add_link" from="ColorRect/ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]

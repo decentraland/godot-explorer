@@ -57,7 +57,7 @@ const NICK_MAX_LENGTH: int = 15
 
 var url_to_visit: String = ""
 var links = []
-var links_to_save = []
+var links_to_save: Array[Dictionary] = []
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
 var hasClaimedName: bool = false
@@ -75,6 +75,7 @@ var original_real_name: String = ""
 var original_hobbies: String = ""
 var original_about_me: String = ""
 var player_profile = Global.player_identity.get_profile_or_null()
+var _deploy_loading_id: int = -1
 
 func _ready() -> void:
 	url_popup.close()
@@ -83,6 +84,8 @@ func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_turn_about_editing(false)
 	_turn_links_editing(false)
+	# Refrescar perfil cuando Rust notifique cambios (deploy completado)
+	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	
 	button_edit_about.hide()
 	button_edit_links.hide()
@@ -246,7 +249,6 @@ func _update_elements_visibility() -> void:
 		button_edit_links.hide()
 		button_edit_nick.hide()
 		button_claim_name.hide()
-
 	if hasClaimedName:
 		texture_rect_claimed_checkmark.show()
 		label_tag.text = ""
@@ -259,6 +261,8 @@ func _update_elements_visibility() -> void:
 		
 		if isOwnPassport:
 			button_claim_name.show()
+	_turn_links_editing(false)
+	_turn_about_editing(false)
 
 
 func _on_color_rect_gui_input(event: InputEvent) -> void:
@@ -266,8 +270,12 @@ func _on_color_rect_gui_input(event: InputEvent) -> void:
 		if event.pressed:
 			close()
 
+@onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
+@onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 
 func _set_avatar_loading() -> int:
+	panel_container_getting_data.show()
+	v_box_container_content.hide()
 	button_edit_about.hide()
 	button_edit_links.hide()
 	avatar_preview_portrait.hide()
@@ -285,17 +293,18 @@ func _unset_avatar_loading(current: int):
 	avatar_loading_portrait.hide()
 	avatar_preview_portrait.show()
 	avatar_preview_landscape.show()
+	panel_container_getting_data.hide()
+	v_box_container_content.show()
 	_on_stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
 		avatar_preview_landscape.avatar.emote_controller.play_emote("wave")
 	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
 		avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
-		
-		
+	_update_elements_visibility()
+
+
 func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
-	
-	
 	if player_profile != null:
 		isOwnPassport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
 	else:
@@ -419,9 +428,12 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	
 	change_nick_popup.close()
 	_unset_avatar_loading(loading_id)
-	_turn_about_editing(false)
-	_turn_links_editing(false)
-	_update_elements_visibility()
+
+	if isOwnPassport:
+		var mutable := ProfileHelper.get_mutable_profile()
+		if mutable != null and profile.get_profile_version() < mutable.get_profile_version():
+			if _deploy_loading_id == -1:
+				_deploy_loading_id = _set_avatar_loading()
 
 
 func _on_emote_pressed(urn: String) -> void:
@@ -476,7 +488,6 @@ func _turn_links_editing(editing:bool) -> void:
 		if child.is_in_group("profile_link_buttons"):
 			child.emit_signal('change_editing', editing)
 	if editing:
-		links_to_save = player_profile.get_links()
 		_check_add_link_button_status()
 		label_editing_links.show()
 		v_box_container_links_actions.show()
@@ -597,20 +608,21 @@ func _on_label_address_gui_input(event: InputEvent) -> void:
 
 
 func _on_delete_link(title:String, url:String) -> void:
-	for i in range(links_to_save.size()):
-		var link = links_to_save[i]
-		if link.has("title") and link.has("url"):
-			if link.title == title and link.url == url:
-				links_to_save.remove_at(i)
-				print("LINKS TO SAVE AFTER DELETE", links_to_save)
-				return
+	call_deferred("_check_add_link_button_status")
 
 
 func _check_add_link_button_status() -> void:
-	if links_to_save.size() >= 5:
+	var links_quantity = 0
+	for child in h_flow_container_links.get_children():
+		if child.is_in_group("profile_link_buttons"):
+			if child.is_queued_for_deletion():
+				continue
+			links_quantity = links_quantity + 1 
+	if links_quantity >= 5:
 		button_add_link.hide()
 	else:
 		button_add_link.show()
+	print("Links totales a guardar: ", links_quantity)
 
 
 func _instantiate_link_button(title:String, url:String, editing:bool) -> void:
@@ -624,18 +636,37 @@ func _instantiate_link_button(title:String, url:String, editing:bool) -> void:
 
 
 func _on_profile_new_link_popup_add_link(title:String, url:String) -> void:
-	links_to_save.append({"title":title, "url":url})
 	_instantiate_link_button(title,url,true)
 	_reorder_add_link_button()
 	_check_add_link_button_status()
 
 
 func _on_button_links_save_pressed():
+	links_to_save.clear()
+	for child in h_flow_container_links.get_children():
+		if child.is_in_group("profile_link_buttons"):
+			links_to_save.append({"title": child.text, "url": child.url})
 	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	print("LINKS TO SAVE: ", links_to_save)
 	await ProfileHelper.save_profile(false)
 	player_profile = Global.player_identity.get_profile_or_null()
-	links = player_profile.get_links()
-	print("PROFILE LINKS: ",  links)
+	var updated_profile := ProfileHelper.get_mutable_profile()
+	if updated_profile != null:
+		links = updated_profile.get_links()
+	else:
+		links = player_profile.get_links()
 	_refresh_links()
 	_turn_links_editing(false)
+
+
+func _on_global_profile_changed(new_profile: DclUserProfile) -> void:
+	if new_profile == null:
+		return
+	var new_addr = new_profile.get_ethereum_address()
+	if new_addr != address:
+		return
+	player_profile = new_profile
+	links = new_profile.get_links()
+	_refresh_links()
+	if _deploy_loading_id != -1:
+		_unset_avatar_loading(_deploy_loading_id)
+		_deploy_loading_id = -1
