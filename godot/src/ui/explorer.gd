@@ -519,7 +519,6 @@ func _async_on_panel_chat_player_profile_clicked(avatar: DclAvatar):
 		printerr("Error getting player profile: ", result.get_error())
 		return
 
-	profile_panel.show()
 	if result != null:
 		profile_panel.async_show_profile(result)
 	release_mouse()
@@ -530,7 +529,6 @@ func _on_control_menu_open_profile() -> void:
 
 
 func _open_own_profile() -> void:
-	profile_panel.show()
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
 		profile_panel.async_show_profile(profile)

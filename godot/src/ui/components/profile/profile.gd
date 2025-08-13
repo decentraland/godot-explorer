@@ -328,6 +328,8 @@ func async_show_profile(profile: DclUserProfile) -> void:
 				_deploy_loading_id = _set_avatar_loading()
 				_deploy_timeout_timer.start()
 
+	show()
+
 
 func _on_emote_pressed(urn: String) -> void:
 	avatar_preview_landscape.reset_avatar_rotation()
@@ -343,6 +345,11 @@ func _on_emote_pressed(urn: String) -> void:
 func _on_stop_emote() -> void:
 	avatar_preview_landscape.avatar.emote_controller.stop_emote()
 	avatar_preview_portrait.avatar.emote_controller.stop_emote()
+
+
+func _on_reset_avatars_rotation() -> void:
+	avatar_preview_landscape.reset_avatar_rotation()
+	avatar_preview_portrait.reset_avatar_rotation()
 
 
 func _on_button_edit_about_pressed() -> void:
@@ -431,6 +438,8 @@ func _on_button_copy_address_pressed() -> void:
 
 func close() -> void:
 	hide()
+	_on_stop_emote()
+	_on_reset_avatars_rotation()
 	_turn_links_editing(false)
 	_turn_about_editing(false)
 
