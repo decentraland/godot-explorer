@@ -11,8 +11,6 @@ const NICK_MAX_LENGTH: int = 15
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var avatar_preview_portrait: AvatarPreview = %AvatarPreviewPortrait
 @onready var avatar_preview_landscape: AvatarPreview = %AvatarPreviewLandscape
-@onready var avatar_loading_landscape: TextureProgressBar = %TextureProgressBar_AvatarLoading
-@onready var avatar_loading_portrait: TextureProgressBar = $ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar/TextureProgressBar_AvatarLoading
 @onready var button_edit_about: Button = %Button_EditAbout
 @onready var button_edit_links: Button = %Button_EditLinks
 @onready var h_flow_container_equipped_wearables: HFlowContainer = %HFlowContainer_EquippedWearables
@@ -53,10 +51,11 @@ const NICK_MAX_LENGTH: int = 15
 @onready var url_popup: ColorRect = %UrlPopup
 @onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
 @onready var change_nick_popup: ColorRect = %ChangeNickPopup
-
+@onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
+@onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
+@onready var v_box_container_name_and_address: VBoxContainer = %VBoxContainer_NameAndAddress
 
 var url_to_visit: String = ""
-var links = []
 var links_to_save: Array[Dictionary] = []
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
@@ -78,32 +77,12 @@ var player_profile = Global.player_identity.get_profile_or_null()
 var _deploy_loading_id: int = -1
 
 func _ready() -> void:
-	url_popup.close()
-	change_nick_popup.close()
-	profile_new_link_popup.close()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_turn_about_editing(false)
-	_turn_links_editing(false)
-	# Refrescar perfil cuando Rust notifique cambios (deploy completado)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	
-	button_edit_about.hide()
-	button_edit_links.hide()
+	_update_elements_visibility()
+	_populate_about_fields()
 	
-	for country in ProfileConstants.COUNTRIES:
-		profile_field_option_country.add_option(country)
-	for language in ProfileConstants.LANGUAGES:
-		profile_field_option_language.add_option(language)
-	for pronoun in ProfileConstants.PRONOUNS:
-		profile_field_option_pronouns.add_option(pronoun)
-	for gender in ProfileConstants.GENDERS:
-		profile_field_option_gender.add_option(gender)
-	for relationship in ProfileConstants.RELATIONSHIP_STATUS:
-		profile_field_option_relationship_status.add_option(relationship)
-	for sexual_orientation in ProfileConstants.SEXUAL_ORIENTATIONS:
-		profile_field_option_sexual_orientation.add_option(sexual_orientation)
-	for employment_status in ProfileConstants.EMPLOYMENT_STATUS:
-		profile_field_option_employment_status.add_option(employment_status)
 
 
 func _find_option_index(value: String, options_array: Array) -> int:
@@ -230,6 +209,9 @@ func _save_profile_changes() -> void:
 
 
 func _update_elements_visibility() -> void:
+	url_popup.close()
+	change_nick_popup.close()
+	profile_new_link_popup.close()
 	if isOwnPassport:
 		button_add_friend.hide()
 		button_block_user.hide()
@@ -270,18 +252,15 @@ func _on_color_rect_gui_input(event: InputEvent) -> void:
 		if event.pressed:
 			close()
 
-@onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
-@onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 
 func _set_avatar_loading() -> int:
 	panel_container_getting_data.show()
+	v_box_container_name_and_address.hide()
 	v_box_container_content.hide()
 	button_edit_about.hide()
 	button_edit_links.hide()
 	avatar_preview_portrait.hide()
 	avatar_preview_landscape.hide()
-	avatar_loading_landscape.show()
-	avatar_loading_portrait.show()
 	avatar_loading_counter += 1
 	return avatar_loading_counter
 
@@ -289,11 +268,10 @@ func _set_avatar_loading() -> int:
 func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
-	avatar_loading_landscape.hide()
-	avatar_loading_portrait.hide()
 	avatar_preview_portrait.show()
 	avatar_preview_landscape.show()
 	panel_container_getting_data.hide()
+	v_box_container_name_and_address.show()
 	v_box_container_content.show()
 	_on_stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
@@ -310,123 +288,18 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	else:
 		isOwnPassport = false
 
-	hasClaimedName = profile.has_claimed_name()
-	
-	var name = profile.get_name()
-	label_nickname.text = name
-	
-	
-	address = profile.get_ethereum_address()
-	label_address.text = Global.shorten_address(address)
-	
 	var loading_id := _set_avatar_loading()
 	
-	var country = profile.get_country()
-	var country_index = _find_option_index(country, ProfileConstants.COUNTRIES)
-	profile_field_option_country.select_option(country_index)
-	
-	var language = profile.get_language()
-	var language_index = _find_option_index(language, ProfileConstants.LANGUAGES)
-	profile_field_option_language.select_option(language_index)
-	
-	var pronouns = profile.get_pronouns()
-	var pronouns_index = _find_option_index(pronouns, ProfileConstants.PRONOUNS)
-	profile_field_option_pronouns.select_option(pronouns_index)
-	
-	var gender = profile.get_gender()
-	var gender_index = _find_option_index(gender, ProfileConstants.GENDERS)
-	profile_field_option_gender.select_option(gender_index)
-	
-	var relationship_status = profile.get_relationship_status()
-	var relationship_index = _find_option_index(relationship_status, ProfileConstants.RELATIONSHIP_STATUS)
-	profile_field_option_relationship_status.select_option(relationship_index)
-	
-	var sexual_orientation = profile.get_sexual_orientation()
-	var sexual_orientation_index = _find_option_index(sexual_orientation, ProfileConstants.SEXUAL_ORIENTATIONS)
-	profile_field_option_sexual_orientation.select_option(sexual_orientation_index)
-	
-	var employment_status = profile.get_employment_status()
-	var employment_index = _find_option_index(employment_status, ProfileConstants.EMPLOYMENT_STATUS)
-	profile_field_option_employment_status.select_option(employment_index)
-	
-	var profession = profile.get_profession()
-	profile_field_text_profession.set_text(profession, true)
-	
-	var real_name = profile.get_real_name()
-	profile_field_text_real_name.set_text(real_name, true)
-	
-	var hobbies = profile.get_hobbies()
-	profile_field_text_hobbies.set_text(hobbies, true)
-	
-	var about_me = profile.get_description()
-	profile_field_text_about_me.set_text(about_me, true)
-	
-	links = profile.get_links()
+	_refresh_about()
 	_refresh_links()
-		
-	var equipped_button_group = ButtonGroup.new()
-	equipped_button_group.allow_unpress = true
+	_refresh_name_and_address()
+	_refresh_equipped_items()
 	
-	
-		
-	for child in h_flow_container_equipped_wearables.get_children():
-		child.queue_free()
-	
-	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(profile)
-	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(profile)
-	
-	var nickname_color = avatar_preview_landscape.avatar.get_nickname_color(profile.get_name())
-	label_nickname.add_theme_color_override("font_color", nickname_color)
-	
-	var profile_dictionary = profile.to_godot_dictionary()
-	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})
-	var wearables_urns = avatar_data.get("wearables", [])
-
-	if not wearables_urns.is_empty():
-		var equipped_wearables_promises = Global.content_provider.fetch_wearables(
-			wearables_urns, 
-			Global.realm.get_profile_content_url()
-		)
-		await PromiseUtils.async_all(equipped_wearables_promises)
-		
-		for wearable_urn in wearables_urns:
-			var wearable_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_urn)
-			if wearable_definition != null:
-				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
-				h_flow_container_equipped_wearables.add_child(wearable_item)
-				wearable_item.button_group = equipped_button_group
-				wearable_item.async_set_item(wearable_definition)
-			else:
-				printerr("Error getting wearable: ", wearable_urn)
-	else:
-		printerr("Error getting wearables")
-	
-	var emotes = avatar_data.get("emotes", [])
-
-	if not emotes.is_empty():
-		for emote in emotes:
-			var emote_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(emote.urn)
-			if emote_definition != null:
-				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
-				h_flow_container_equipped_wearables.add_child(emote_item)
-				emote_item.button_group = equipped_button_group
-				emote_item.async_set_item(emote_definition)
-				emote_item.set_as_emote(emote.urn)
-				emote_item.emote_pressed.connect(_on_emote_pressed)
-				emote_item.stop_emote.connect(_on_stop_emote)
-			else:
-				if Emotes.is_emote_default(emote.urn):
-					var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
-					h_flow_container_equipped_wearables.add_child(emote_item)
-					emote_item.button_group = equipped_button_group
-					emote_item.set_base_emote(emote.urn)
-					emote_item.emote_pressed.connect(_on_emote_pressed)
-					emote_item.stop_emote.connect(_on_stop_emote)
-
-	else:
-		printerr("Error getting emotes")
 	
 	change_nick_popup.close()
+	profile_new_link_popup.close()
+	url_popup.close()
+	
 	_unset_avatar_loading(loading_id)
 
 	if isOwnPassport:
@@ -494,13 +367,14 @@ func _turn_links_editing(editing:bool) -> void:
 		button_edit_links.hide()
 		label_no_links.hide()
 	else:
-		if links.size() == 0:
-			label_no_links.show()
-		else:
-			label_no_links.hide()
-		button_add_link.hide()
-		label_editing_links.hide()
-		v_box_container_links_actions.hide()
+		if current_profile != null:
+			if current_profile.get_links().size() == 0:
+				label_no_links.show()
+			else:
+				label_no_links.hide()
+			button_add_link.hide()
+			label_editing_links.hide()
+			v_box_container_links_actions.hide()
 		if isOwnPassport:
 			button_edit_links.show()
 	 
@@ -551,7 +425,7 @@ func _on_button_edit_nick_pressed() -> void:
 	change_nick_popup.open()
 
 
-func _refresh_links():
+func _refresh_links() -> void:
 	var children_to_remove = []
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
@@ -559,8 +433,121 @@ func _refresh_links():
 	for child in children_to_remove:
 		h_flow_container_links.remove_child(child)
 		child.queue_free()
-	for link in links:
+	for link in current_profile.get_links():
 		_instantiate_link_button(link.title, link.url, false)
+
+
+func _refresh_about() -> void:
+	var country = current_profile.get_country()
+	var country_index = _find_option_index(country, ProfileConstants.COUNTRIES)
+	profile_field_option_country.select_option(country_index)
+	
+	var language = current_profile.get_language()
+	var language_index = _find_option_index(language, ProfileConstants.LANGUAGES)
+	profile_field_option_language.select_option(language_index)
+	
+	var pronouns = current_profile.get_pronouns()
+	var pronouns_index = _find_option_index(pronouns, ProfileConstants.PRONOUNS)
+	profile_field_option_pronouns.select_option(pronouns_index)
+	
+	var gender = current_profile.get_gender()
+	var gender_index = _find_option_index(gender, ProfileConstants.GENDERS)
+	profile_field_option_gender.select_option(gender_index)
+	
+	var relationship_status = current_profile.get_relationship_status()
+	var relationship_index = _find_option_index(relationship_status, ProfileConstants.RELATIONSHIP_STATUS)
+	profile_field_option_relationship_status.select_option(relationship_index)
+	
+	var sexual_orientation = current_profile.get_sexual_orientation()
+	var sexual_orientation_index = _find_option_index(sexual_orientation, ProfileConstants.SEXUAL_ORIENTATIONS)
+	profile_field_option_sexual_orientation.select_option(sexual_orientation_index)
+	
+	var employment_status = current_profile.get_employment_status()
+	var employment_index = _find_option_index(employment_status, ProfileConstants.EMPLOYMENT_STATUS)
+	profile_field_option_employment_status.select_option(employment_index)
+	
+	var profession = current_profile.get_profession()
+	profile_field_text_profession.set_text(profession, true)
+	
+	var real_name = current_profile.get_real_name()
+	profile_field_text_real_name.set_text(real_name, true)
+	
+	var hobbies = current_profile.get_hobbies()
+	profile_field_text_hobbies.set_text(hobbies, true)
+	
+	var about_me = current_profile.get_description()
+	profile_field_text_about_me.set_text(about_me, true)
+
+
+func _refresh_name_and_address() -> void:
+	hasClaimedName = current_profile.has_claimed_name()
+	address = current_profile.get_ethereum_address()
+	label_address.text = Global.shorten_address(address)
+	
+	label_nickname.text = current_profile.get_name()
+	var nickname_color = avatar_preview_landscape.avatar.get_nickname_color(current_profile.get_name())
+	label_nickname.add_theme_color_override("font_color", nickname_color)
+
+
+func _refresh_equipped_items() -> void:
+	var equipped_button_group = ButtonGroup.new()
+	equipped_button_group.allow_unpress = true
+
+	for child in h_flow_container_equipped_wearables.get_children():
+		child.queue_free()
+	
+	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(current_profile)
+	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(current_profile)
+	
+	
+	
+	var profile_dictionary = current_profile.to_godot_dictionary()
+	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})
+	var wearables_urns = avatar_data.get("wearables", [])
+
+	if not wearables_urns.is_empty():
+		var equipped_wearables_promises = Global.content_provider.fetch_wearables(
+			wearables_urns, 
+			Global.realm.get_profile_content_url()
+		)
+		await PromiseUtils.async_all(equipped_wearables_promises)
+		
+		for wearable_urn in wearables_urns:
+			var wearable_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_urn)
+			if wearable_definition != null:
+				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
+				h_flow_container_equipped_wearables.add_child(wearable_item)
+				wearable_item.button_group = equipped_button_group
+				wearable_item.async_set_item(wearable_definition)
+			else:
+				printerr("Error getting wearable: ", wearable_urn)
+	else:
+		printerr("Error getting wearables")
+	
+	var emotes = avatar_data.get("emotes", [])
+
+	if not emotes.is_empty():
+		for emote in emotes:
+			var emote_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(emote.urn)
+			if emote_definition != null:
+				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
+				h_flow_container_equipped_wearables.add_child(emote_item)
+				emote_item.button_group = equipped_button_group
+				emote_item.async_set_item(emote_definition)
+				emote_item.set_as_emote(emote.urn)
+				emote_item.emote_pressed.connect(_on_emote_pressed)
+				emote_item.stop_emote.connect(_on_stop_emote)
+			else:
+				if Emotes.is_emote_default(emote.urn):
+					var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
+					h_flow_container_equipped_wearables.add_child(emote_item)
+					emote_item.button_group = equipped_button_group
+					emote_item.set_base_emote(emote.urn)
+					emote_item.emote_pressed.connect(_on_emote_pressed)
+					emote_item.stop_emote.connect(_on_stop_emote)
+
+	else:
+		printerr("Error getting emotes")
 
 
 func _on_button_add_link_pressed() -> void:
@@ -648,13 +635,6 @@ func _on_button_links_save_pressed():
 			links_to_save.append({"title": child.text, "url": child.url})
 	ProfileHelper.get_mutable_profile().set_links(links_to_save)
 	await ProfileHelper.save_profile(false)
-	player_profile = Global.player_identity.get_profile_or_null()
-	var updated_profile := ProfileHelper.get_mutable_profile()
-	if updated_profile != null:
-		links = updated_profile.get_links()
-	else:
-		links = player_profile.get_links()
-	_refresh_links()
 	_turn_links_editing(false)
 
 
@@ -664,9 +644,26 @@ func _on_global_profile_changed(new_profile: DclUserProfile) -> void:
 	var new_addr = new_profile.get_ethereum_address()
 	if new_addr != address:
 		return
-	player_profile = new_profile
-	links = new_profile.get_links()
+	current_profile = new_profile
 	_refresh_links()
+	_refresh_about()
+	_refresh_name_and_address()
 	if _deploy_loading_id != -1:
 		_unset_avatar_loading(_deploy_loading_id)
 		_deploy_loading_id = -1
+
+func _populate_about_fields() -> void:
+	for country in ProfileConstants.COUNTRIES:
+		profile_field_option_country.add_option(country)
+	for language in ProfileConstants.LANGUAGES:
+		profile_field_option_language.add_option(language)
+	for pronoun in ProfileConstants.PRONOUNS:
+		profile_field_option_pronouns.add_option(pronoun)
+	for gender in ProfileConstants.GENDERS:
+		profile_field_option_gender.add_option(gender)
+	for relationship in ProfileConstants.RELATIONSHIP_STATUS:
+		profile_field_option_relationship_status.add_option(relationship)
+	for sexual_orientation in ProfileConstants.SEXUAL_ORIENTATIONS:
+		profile_field_option_sexual_orientation.add_option(sexual_orientation)
+	for employment_status in ProfileConstants.EMPLOYMENT_STATUS:
+		profile_field_option_employment_status.add_option(employment_status)
