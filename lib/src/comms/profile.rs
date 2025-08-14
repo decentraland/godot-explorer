@@ -128,10 +128,6 @@ pub struct SerializedProfile {
     pub hobbies: Option<String>,
     pub birthdate: Option<i64>,
     pub links: Option<Vec<ProfileLink>>,
-
-
-
-
 }
 
 impl Default for AvatarWireFormat {

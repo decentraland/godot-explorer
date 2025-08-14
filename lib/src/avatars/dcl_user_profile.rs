@@ -4,7 +4,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::comms::profile::{UserProfile, ProfileLink};
+use crate::comms::profile::{ProfileLink, UserProfile};
 
 use super::avatar_type::DclAvatarWireFormat;
 
@@ -215,7 +215,13 @@ impl DclUserProfile {
 
     #[func]
     fn get_relationship_status(&self) -> GString {
-        GString::from(self.inner.content.relation_ship_status.as_deref().unwrap_or(""))
+        GString::from(
+            self.inner
+                .content
+                .relation_ship_status
+                .as_deref()
+                .unwrap_or(""),
+        )
     }
 
     #[func]
@@ -230,7 +236,13 @@ impl DclUserProfile {
 
     #[func]
     fn get_sexual_orientation(&self) -> GString {
-        GString::from(self.inner.content.sexual_orientation.as_deref().unwrap_or(""))
+        GString::from(
+            self.inner
+                .content
+                .sexual_orientation
+                .as_deref()
+                .unwrap_or(""),
+        )
     }
 
     #[func]
@@ -260,7 +272,13 @@ impl DclUserProfile {
 
     #[func]
     fn get_employment_status(&self) -> GString {
-        GString::from(self.inner.content.employment_status.as_deref().unwrap_or(""))
+        GString::from(
+            self.inner
+                .content
+                .employment_status
+                .as_deref()
+                .unwrap_or(""),
+        )
     }
 
     #[func]
@@ -345,7 +363,10 @@ impl DclUserProfile {
 
     #[func]
     fn set_interests(&mut self, interests_list: Array<GString>) {
-        let interests_vec: Vec<String> = interests_list.iter_shared().map(|s| s.to_string()).collect();
+        let interests_vec: Vec<String> = interests_list
+            .iter_shared()
+            .map(|s| s.to_string())
+            .collect();
         self.inner.content.interests = if interests_vec.is_empty() {
             None
         } else {
@@ -409,14 +430,15 @@ impl DclUserProfile {
 
     #[func]
     fn set_links(&mut self, links_array: Array<Dictionary>) {
-        let links_vec: Vec<ProfileLink> = links_array.iter_shared()
+        let links_vec: Vec<ProfileLink> = links_array
+            .iter_shared()
             .filter_map(|dict| {
                 let title = dict.get("title")?.to::<GString>().to_string();
                 let url = dict.get("url")?.to::<GString>().to_string();
                 Some(ProfileLink { title, url })
             })
             .collect();
-        
+
         self.inner.content.links = if links_vec.is_empty() {
             None
         } else {
