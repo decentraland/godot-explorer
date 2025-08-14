@@ -86,6 +86,7 @@ func on_chats_arrived(chats: Array):
 		elif message.begins_with(ACK):
 			pass  # TODO: Calculate ping
 		else:
+			Global.player_said.emit(address, message)
 			var text = "[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar_name, message]
 			add_chat_message(text)
 			UiSounds.play_sound("notification_chatmessage_public_appear")

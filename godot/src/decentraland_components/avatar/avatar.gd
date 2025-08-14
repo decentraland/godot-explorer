@@ -81,6 +81,13 @@ func _ready():
 
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
+	Global.player_said.connect(on_player_said)
+
+
+func on_player_said(address: String, message: String):
+	if avatar_id != address:
+		return
+	nickname_ui.async_show_message(message)
 
 
 func try_show():

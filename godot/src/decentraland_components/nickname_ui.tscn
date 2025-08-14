@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://d1i02k5nxmje6"]
+[gd_scene load_steps=6 format=3 uid="uid://d1i02k5nxmje6"]
 
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="1_8amxb"]
 [ext_resource type="Script" uid="uid://n63ru00fl7lr" path="res://src/decentraland_components/nickname_ui.gd" id="1_stx67"]
+[ext_resource type="PackedScene" uid="uid://bce2jth446t8i" path="res://src/decentraland_components/avatar/nickname_message_container.tscn" id="2_cu2t2"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="3_tj4hi"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wgo06"]
@@ -12,14 +13,14 @@ border_width_right = 15
 border_width_bottom = 15
 border_color = Color(0.226707, 0.226707, 0.226707, 1)
 border_blend = true
-corner_radius_top_left = 999
-corner_radius_top_right = 999
-corner_radius_bottom_right = 999
-corner_radius_bottom_left = 999
+corner_radius_top_left = 75
+corner_radius_top_right = 75
+corner_radius_bottom_right = 75
+corner_radius_bottom_left = 75
 
 [node name="NicknameUI" type="MarginContainer"]
-offset_right = 546.0
-offset_bottom = 159.0
+offset_right = 130.0
+offset_bottom = 70.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_constants/margin_left = 70
@@ -27,89 +28,78 @@ theme_override_constants/margin_top = 35
 theme_override_constants/margin_right = 60
 theme_override_constants/margin_bottom = 35
 script = ExtResource("1_stx67")
+message_container_scene = ExtResource("2_cu2t2")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = -60
-theme_override_constants/margin_top = -30
-theme_override_constants/margin_right = -50
-theme_override_constants/margin_bottom = -30
-
-[node name="Panel" type="Panel" parent="MarginContainer/MarginContainer"]
+[node name="Panel" type="Panel" parent="."]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_wgo06")
 
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 30
+
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
 
-[node name="Nickname" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="NicknameTag" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="MicEnabled" type="MarginContainer" parent="MarginContainer/VBoxContainer/Nickname"]
+[node name="MicEnabled" type="MarginContainer" parent="MarginContainer/VBoxContainer/NicknameTag"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/margin_right = 10
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/Nickname/MicEnabled"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/NicknameTag/MicEnabled"]
 layout_mode = 2
 texture = ExtResource("1_8amxb")
 stretch_mode = 4
 
-[node name="Nickname" type="Label" parent="MarginContainer/VBoxContainer/Nickname"]
+[node name="Nickname" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 70
 text = "nickname"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Nickname"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/NicknameTag"]
 layout_mode = 2
 
-[node name="Hash" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Nickname/HBoxContainer"]
+[node name="Hash" type="HBoxContainer" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HashTag" type="Label" parent="MarginContainer/VBoxContainer/Nickname/HBoxContainer/Hash"]
+[node name="HashTag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_font_sizes/font_size = 70
 text = "#"
 
-[node name="Tag" type="Label" parent="MarginContainer/VBoxContainer/Nickname/HBoxContainer/Hash"]
+[node name="Tag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_font_sizes/font_size = 70
 text = "xxxx"
 
-[node name="ClaimedCheckmark" type="MarginContainer" parent="MarginContainer/VBoxContainer/Nickname/HBoxContainer"]
+[node name="ClaimedCheckmark" type="MarginContainer" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 10
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/Nickname/HBoxContainer/ClaimedCheckmark"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/ClaimedCheckmark"]
 layout_mode = 2
 texture = ExtResource("3_tj4hi")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Message" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="MessageClip" type="Control" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
-
-[node name="RichTextLabel" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Message"]
-layout_mode = 2
-size_flags_horizontal = 3
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-visible_characters = 0
-visible_ratio = 0.0
