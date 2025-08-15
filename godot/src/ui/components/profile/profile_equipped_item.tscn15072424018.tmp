@@ -1,0 +1,80 @@
+[gd_scene load_steps=5 format=3 uid="uid://cc14rtphm0sjh"]
+
+[ext_resource type="Script" uid="uid://cha42k205r6lq" path="res://src/ui/components/profile/profile_equipped_item.gd" id="1_2saji"]
+[ext_resource type="PackedScene" uid="uid://drq5jh5xpenw1" path="res://src/ui/components/item_preview/item_preview.tscn" id="2_7lhdd"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lhdd"]
+bg_color = Color(0, 0, 0, 0.513726)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4co5n"]
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="ProfileEquippedItem" type="Panel"]
+custom_minimum_size = Vector2(150, 200)
+offset_right = 150.0
+offset_bottom = 215.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_7lhdd")
+script = ExtResource("1_2saji")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+offset_right = 150.0
+offset_bottom = 282.0
+
+[node name="ItemPreview" parent="VBoxContainer" instance=ExtResource("2_7lhdd")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+
+[node name="MarginContainer2" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_right = 5
+
+[node name="Label_Name" type="Label" parent="VBoxContainer/MarginContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Item name"
+
+[node name="MarginContainer3" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_right = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer3"]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="VBoxContainer/MarginContainer3/HBoxContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_4co5n")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer3/HBoxContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="Label_Rarity" type="Label" parent="VBoxContainer/MarginContainer3/HBoxContainer/Panel/MarginContainer"]
+layout_mode = 2
+text = "Rarity"
+
+[node name="Button" type="Button" parent="VBoxContainer/MarginContainer3/HBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+text = "BUY"

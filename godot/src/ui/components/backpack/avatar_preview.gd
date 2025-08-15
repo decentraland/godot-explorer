@@ -109,6 +109,10 @@ func _on_gui_input(event):
 			camera_3d.transform = changed_transform
 
 
+func reset_avatar_rotation() -> void:
+	avatar.rotation.y = 0.0
+
+
 func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) -> Image:
 	avatar.emote_controller.freeze_on_idle()
 	avatar.rotation.y = 0.0

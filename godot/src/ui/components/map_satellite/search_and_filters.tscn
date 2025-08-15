@@ -1,7 +1,7 @@
 [gd_scene load_steps=16 format=3 uid="uid://dytk736oxi1yj"]
 
 [ext_resource type="Script" uid="uid://b2recqti6a326" path="res://src/ui/components/map_satellite/search_and_filters.gd" id="1_2len1"]
-[ext_resource type="PackedScene" uid="uid://bhl7c24uruj0a" path="res://src/ui/components/utils/orientation_container.tscn" id="2_vpn0w"]
+[ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="2_q77y0"]
 [ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="3_xl8us"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="4_csu1b"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_518ky"]
@@ -64,9 +64,10 @@ mouse_filter = 2
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_bottom = 30
 
-[node name="OrientationContainer" parent="PlacesSearchbar" instance=ExtResource("2_vpn0w")]
+[node name="OrientationContainer" type="BoxContainer" parent="PlacesSearchbar"]
 layout_mode = 2
 theme_override_constants/separation = 15
+script = ExtResource("2_q77y0")
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="PlacesSearchbar/OrientationContainer"]
 layout_mode = 2
@@ -205,12 +206,12 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3
 
-[node name="Cards" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/CardsScroll" instance=ExtResource("2_vpn0w")]
+[node name="Cards" type="BoxContainer" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/CardsScroll"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-vertical = true
+script = ExtResource("2_q77y0")
 invert = true
 
 [node name="NoResults" type="VBoxContainer" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults"]

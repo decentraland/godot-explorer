@@ -148,7 +148,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("5_mb7k1")
 theme_override_font_sizes/font_size = 16
-text = "20"
+text = "0"
 
 [node name="Label" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
 layout_mode = 2

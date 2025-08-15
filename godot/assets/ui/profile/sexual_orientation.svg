@@ -1,0 +1,10 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M10.8656 6.66702C10.5052 6.66508 10.1485 6.74087 9.81914 6.88937C9.65835 6.96186 9.50587 7.05087 9.36398 7.15473C9.21521 7.26361 9.07807 7.38881 8.95518 7.52838C8.83229 7.38881 8.69515 7.26361 8.54638 7.15473C8.40449 7.05087 8.25201 6.96186 8.09122 6.88937C7.76186 6.74087 7.40515 6.66508 7.04472 6.66702C6.74011 6.6613 6.43742 6.71723 6.15436 6.83154C5.87129 6.94585 5.61353 7.11625 5.39613 7.33278C5.17873 7.54931 5.00605 7.80762 4.8882 8.09263C4.77034 8.37763 4.70966 8.68361 4.70972 8.99268C4.70972 10.8762 6.51486 12.3734 8.01262 13.6158C8.16331 13.7408 8.31089 13.8632 8.4532 13.9831C8.74235 14.2269 9.16905 14.228 9.45892 13.9852C9.58945 13.8758 9.72436 13.7643 9.86199 13.6505C11.3679 12.4055 13.2006 10.8903 13.2006 8.99268C13.2007 8.68361 13.14 8.37763 13.0222 8.09263C12.9043 7.80762 12.7316 7.54931 12.5142 7.33278C12.2968 7.11625 12.0391 6.94585 11.756 6.83154C11.4729 6.71723 11.1703 6.6613 10.8656 6.66702Z" stroke="white" stroke-opacity="0.7" stroke-width="1.66667"/>
+<path d="M13.9722 2.5H16.6388L12.9166 6.05552" stroke="white" stroke-opacity="0.7" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.97547 2.5H1.30882L5.03101 6.05552" stroke="white" stroke-opacity="0.7" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M16.6978 5.22193V2.5553" stroke="white" stroke-opacity="0.7" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.25 5.22193V2.5553" stroke="white" stroke-opacity="0.7" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.83325 16.4188H10.9999" stroke="white" stroke-opacity="0.7" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2.91663 5.93445L4.68439 4.16668" stroke="white" stroke-opacity="0.7" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="8.91659" y1="14.1667" x2="8.91658" y2="18.3334" stroke="white" stroke-opacity="0.7" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
