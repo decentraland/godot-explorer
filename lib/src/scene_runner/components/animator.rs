@@ -15,7 +15,7 @@ fn get_gltf_container(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<DclG
     godot_entity_node
         .base_3d
         .as_ref()?
-        .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"))
+        .try_get_node_as::<DclGltfContainer>(&NodePath::from("GltfContainer"))
 }
 
 pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -47,7 +47,7 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             };
 
             let value = entry.value.clone().unwrap_or_default();
-            apply_anims(gltf_container_node, &value);
+            apply_anims(&gltf_container_node, &value);
 
             if entry.value.is_none() {
                 scene.dup_animator.remove(entity);

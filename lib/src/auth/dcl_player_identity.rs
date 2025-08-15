@@ -60,13 +60,13 @@ impl INode for DclPlayerIdentity {
 #[godot_api]
 impl DclPlayerIdentity {
     #[signal]
-    fn logout(&self);
+    fn logout();
 
     #[signal]
-    fn wallet_connected(&self, address: GString, chain_id: u64, is_guest: bool);
+    fn wallet_connected(address: GString, chain_id: u64, is_guest: bool);
 
     #[signal]
-    fn profile_changed(&self, new_profile: Gd<DclUserProfile>);
+    fn profile_changed(new_profile: Gd<DclUserProfile>);
 
     #[func]
     fn try_set_remote_wallet(
@@ -89,7 +89,7 @@ impl DclPlayerIdentity {
                     ephemeral_auth_chain
                 );
                 self.base_mut().call_deferred(
-                    "_error_getting_wallet".into(),
+                    "_error_getting_wallet",
                     &["Error parsing ephemeral_auth_chain".to_variant()],
                 );
                 return false;
@@ -114,7 +114,7 @@ impl DclPlayerIdentity {
 
         let address = self.get_address();
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &[
                 "wallet_connected".to_variant(),
                 format!("{:#x}", address).to_variant(),
@@ -144,7 +144,7 @@ impl DclPlayerIdentity {
         let address = format!("{:#x}", self.get_address());
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &[
                 "wallet_connected".to_variant(),
                 address.to_variant(),
@@ -202,7 +202,7 @@ impl DclPlayerIdentity {
                             .expect("serialize ephemeral auth chain");
 
                     this.call_deferred(
-                        "try_set_remote_wallet".into(),
+                        "try_set_remote_wallet",
                         &[
                             format!("{:#x}", wallet.address()).to_variant(),
                             wallet.chain_id().to_variant(),
@@ -212,10 +212,7 @@ impl DclPlayerIdentity {
                 }
                 Err(err) => {
                     tracing::error!("error getting wallet {:?}", err);
-                    this.call_deferred(
-                        "_error_getting_wallet".into(),
-                        &["Unknown error".to_variant()],
-                    );
+                    this.call_deferred("_error_getting_wallet", &["Unknown error".to_variant()]);
                 }
             }
         });
@@ -318,7 +315,7 @@ impl DclPlayerIdentity {
         tracing::warn!("profile > set default profile",);
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &["profile_changed".to_variant(), profile.to_variant()],
         );
     }
@@ -333,7 +330,7 @@ impl DclPlayerIdentity {
         tracing::warn!("profile > set random profile",);
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &["profile_changed".to_variant(), profile.to_variant()],
         );
     }
@@ -344,7 +341,7 @@ impl DclPlayerIdentity {
         tracing::warn!("profile > set profile func",);
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &["profile_changed".to_variant(), profile.to_variant()],
         );
     }
@@ -490,7 +487,7 @@ impl DclPlayerIdentity {
                 tracing::warn!("profile > set profile from lambda",);
 
                 self.base_mut().call_deferred(
-                    "emit_signal".into(),
+                    "emit_signal",
                     &["profile_changed".to_variant(), new_profile.to_variant()],
                 );
                 true
@@ -534,7 +531,7 @@ impl DclPlayerIdentity {
         self.ephemeral_auth_chain = None;
         self.profile = None;
         self.base_mut()
-            .call_deferred("emit_signal".into(), &["logout".to_variant()]);
+            .call_deferred("emit_signal", &["logout".to_variant()]);
     }
 
     pub fn send_async(
