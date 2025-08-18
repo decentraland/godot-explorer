@@ -1,5 +1,6 @@
 extends DclGlobal
 
+signal player_said(address: String, message: String)
 signal on_menu_open
 signal on_menu_close
 signal loading_started
