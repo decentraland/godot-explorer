@@ -27,8 +27,8 @@ var pause_duration: float = 2
 
 
 func _ready():
-	# Conectar el evento de click del ProfilePicture
 	profile_picture.gui_input.connect(_on_profile_picture_gui_input)
+	add_to_group("blacklist_ui_sync")
 
 
 func _on_profile_picture_gui_input(event: InputEvent):
@@ -142,6 +142,7 @@ func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	else:
 		Global.social_blacklist.remove_muted(avatar.avatar_id)
 	_update_buttons()
+	_notify_other_components_of_change()
 
 
 func _update_buttons() -> void:
@@ -175,3 +176,14 @@ func _on_button_block_user_pressed() -> void:
 	else:
 		Global.social_blacklist.add_blocked(avatar.avatar_id)
 	_update_buttons()
+	_notify_other_components_of_change()
+
+
+func _notify_other_components_of_change() -> void:
+	if avatar != null:
+		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", avatar.avatar_id)
+
+
+func _sync_blacklist_ui(changed_avatar_id: String) -> void:
+	if avatar != null and avatar.avatar_id == changed_avatar_id:
+		call_deferred("_update_buttons")

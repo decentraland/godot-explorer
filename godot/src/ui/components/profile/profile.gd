@@ -3,6 +3,9 @@ extends Control
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
 const NICK_MAX_LENGTH: int = 15
+const MUTE = preload("res://assets/ui/audio_off.svg")
+const UNMUTE = preload("res://assets/ui/audio_on.svg")
+const BLOCK = preload("res://assets/ui/block.svg")
 
 var url_to_visit: String = ""
 var links_to_save: Array[Dictionary] = []
@@ -24,6 +27,8 @@ var original_about_me: String = ""
 var player_profile = Global.player_identity.get_profile_or_null()
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
+var is_blocked_user: bool = false
+var is_muted_user: bool = false
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
@@ -77,6 +82,7 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 @onready var v_box_container_name_and_address: VBoxContainer = %VBoxContainer_NameAndAddress
+@onready var button_mute_user: Button = %Button_MuteUser
 
 
 func _ready() -> void:
@@ -91,6 +97,7 @@ func _ready() -> void:
 
 	_populate_about_fields()
 	_update_elements_visibility()
+	add_to_group("blacklist_ui_sync")
 
 
 func _find_option_index(value: String, options_array: Array) -> int:
@@ -231,9 +238,8 @@ func _update_elements_visibility() -> void:
 	change_nick_popup.close()
 	profile_new_link_popup.close()
 	if is_own_passport:
-		#button_add_friend.hide()
 		button_block_user.hide()
-		#button_send_dm.hide()
+		button_mute_user.hide()
 		button_edit_about.show()
 		button_edit_links.show()
 		button_edit_nick.show()
@@ -243,9 +249,8 @@ func _update_elements_visibility() -> void:
 			else:
 				button_claim_name.show()
 	else:
-		#button_add_friend.show()
 		button_block_user.show()
-		#button_send_dm.show()
+		button_mute_user.show()
 		button_edit_about.hide()
 		button_edit_links.hide()
 		button_edit_nick.hide()
@@ -299,10 +304,14 @@ func _unset_avatar_loading(current: int):
 	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
 		avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
 	_update_elements_visibility()
+	_update_buttons()
 
 
 func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
+	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(current_profile)
+	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(current_profile)
+	
 	if player_profile != null:
 		is_own_passport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
 	else:
@@ -314,7 +323,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_refresh_links()
 	_refresh_name_and_address()
 	_async_refresh_equipped_items()
-
+	
 	change_nick_popup.close()
 	profile_new_link_popup.close()
 	url_popup.close()
@@ -532,8 +541,6 @@ func _async_refresh_equipped_items() -> void:
 	for child in h_flow_container_equipped_wearables.get_children():
 		child.queue_free()
 
-	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(current_profile)
-	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(current_profile)
 
 	var profile_dictionary = current_profile.to_godot_dictionary()
 	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})
@@ -726,3 +733,69 @@ func _async_on_deploy_timeout() -> void:
 	if _deploy_loading_id != -1:
 		_unset_avatar_loading(_deploy_loading_id)
 		_deploy_loading_id = -1
+
+
+func _on_button_mute_user_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Global.social_blacklist.add_muted(avatar_preview_landscape.avatar.avatar_id)
+	else:
+		Global.social_blacklist.remove_muted(avatar_preview_landscape.avatar.avatar_id)
+	_update_buttons()
+	# Notificar a otros componentes que hubo un cambio local
+	_notify_other_components_of_change()
+	
+func _check_block_and_mute_status() -> void:
+	var current_avatar = avatar_preview_landscape.avatar 
+	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
+
+	if is_blocked_user:
+		button_block_user.hide()
+		button_mute_user.hide()
+	elif is_muted_user:
+		button_block_user.show()
+		button_mute_user.button_pressed = true
+		
+		
+func _update_buttons() -> void:
+	if is_own_passport: return
+	var current_avatar = avatar_preview_landscape.avatar 
+	
+	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+	button_block_user.set_pressed_no_signal(is_blocked_user)
+	if is_blocked_user:
+		button_block_user.icon = null
+		button_block_user.text = "UNBLOCK"
+		button_mute_user.hide()
+	else:
+		button_block_user.icon = BLOCK
+		button_block_user.text = ""
+		button_mute_user.show()
+
+	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
+	button_mute_user.set_pressed_no_signal(is_muted_user)
+	if is_muted_user:
+		button_mute_user.icon = MUTE
+	else:
+		button_mute_user.icon = UNMUTE
+
+
+func _on_button_block_user_pressed() -> void:
+	var current_avatar = avatar_preview_landscape.avatar
+	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+	if is_blocked_user:
+		Global.social_blacklist.remove_blocked(current_avatar.avatar_id)
+	else:
+		Global.social_blacklist.add_blocked(current_avatar.avatar_id)
+	_update_buttons()
+	_notify_other_components_of_change()
+
+
+func _notify_other_components_of_change() -> void:
+	if avatar_preview_landscape.avatar != null:
+		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", avatar_preview_landscape.avatar.avatar_id)
+
+
+func _sync_blacklist_ui(changed_avatar_id: String) -> void:
+	if not is_own_passport and current_profile != null and avatar_preview_landscape.avatar != null and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id:
+		call_deferred("_update_buttons")
