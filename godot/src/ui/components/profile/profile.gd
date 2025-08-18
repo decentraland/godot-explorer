@@ -11,6 +11,8 @@ var url_to_visit: String = ""
 var links_to_save: Array[Dictionary] = []
 var avatar_loading_counter: int = 0
 var is_own_passport: bool = false
+var is_blocked_user: bool = false
+var is_muted_user: bool = false
 var current_profile: DclUserProfile = null
 var address: String = ""
 var original_country_index: int = 0
@@ -27,8 +29,6 @@ var original_about_me: String = ""
 var player_profile = Global.player_identity.get_profile_or_null()
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
-var is_blocked_user: bool = false
-var is_muted_user: bool = false
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
@@ -311,7 +311,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
 	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(current_profile)
 	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(current_profile)
-	
+
 	if player_profile != null:
 		is_own_passport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
 	else:
@@ -323,7 +323,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_refresh_links()
 	_refresh_name_and_address()
 	_async_refresh_equipped_items()
-	
+
 	change_nick_popup.close()
 	profile_new_link_popup.close()
 	url_popup.close()
@@ -541,7 +541,6 @@ func _async_refresh_equipped_items() -> void:
 	for child in h_flow_container_equipped_wearables.get_children():
 		child.queue_free()
 
-
 	var profile_dictionary = current_profile.to_godot_dictionary()
 	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})
 	var wearables_urns = avatar_data.get("wearables", [])
@@ -743,9 +742,10 @@ func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	_update_buttons()
 	# Notificar a otros componentes que hubo un cambio local
 	_notify_other_components_of_change()
-	
+
+
 func _check_block_and_mute_status() -> void:
-	var current_avatar = avatar_preview_landscape.avatar 
+	var current_avatar = avatar_preview_landscape.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
 
@@ -755,12 +755,13 @@ func _check_block_and_mute_status() -> void:
 	elif is_muted_user:
 		button_block_user.show()
 		button_mute_user.button_pressed = true
-		
-		
+
+
 func _update_buttons() -> void:
-	if is_own_passport: return
-	var current_avatar = avatar_preview_landscape.avatar 
-	
+	if is_own_passport:
+		return
+	var current_avatar = avatar_preview_landscape.avatar
+
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	button_block_user.set_pressed_no_signal(is_blocked_user)
 	if is_blocked_user:
@@ -793,9 +794,16 @@ func _on_button_block_user_pressed() -> void:
 
 func _notify_other_components_of_change() -> void:
 	if avatar_preview_landscape.avatar != null:
-		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", avatar_preview_landscape.avatar.avatar_id)
+		Global.get_tree().call_group(
+			"blacklist_ui_sync", "_sync_blacklist_ui", avatar_preview_landscape.avatar.avatar_id
+		)
 
 
 func _sync_blacklist_ui(changed_avatar_id: String) -> void:
-	if not is_own_passport and current_profile != null and avatar_preview_landscape.avatar != null and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id:
+	if (
+		not is_own_passport
+		and current_profile != null
+		and avatar_preview_landscape.avatar != null
+		and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id
+	):
 		call_deferred("_update_buttons")

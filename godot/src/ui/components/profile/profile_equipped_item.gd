@@ -23,8 +23,6 @@ func _ready():
 
 
 func async_set_item(item: DclItemEntityDefinition):
-	
-	
 	item_preview.async_set_item(item)
 	marquee_label_name.set_text(item.get_display_name())
 	var rarity = item.get_rarity()
@@ -36,7 +34,12 @@ func async_set_item(item: DclItemEntityDefinition):
 		if urn_parts.size() >= 2:
 			var contract_address = urn_parts[urn_parts.size() - 2]
 			var item_number = urn_parts[urn_parts.size() - 1]
-			marketplace_link = "https://decentraland.org/marketplace/contracts/" + contract_address + "/items/" + item_number
+			marketplace_link = (
+				"https://decentraland.org/marketplace/contracts/"
+				+ contract_address
+				+ "/items/"
+				+ item_number
+			)
 	else:
 		label_rarity.text = "BASE"
 		is_buyable = false
