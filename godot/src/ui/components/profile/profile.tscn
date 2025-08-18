@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=37 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="1_fgcha"]
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
@@ -18,7 +18,6 @@
 [ext_resource type="Texture2D" uid="uid://cl6wfontbtg2d" path="res://assets/ui/profile/country.svg" id="11_q5707"]
 [ext_resource type="Texture2D" uid="uid://bknni14p0d2of" path="res://assets/ui/profile/language.svg" id="12_6ld5p"]
 [ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="12_8iwyo"]
-[ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="12_odsw2"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_oyuqo"]
 [ext_resource type="Texture2D" uid="uid://chcxsgjdkd52u" path="res://assets/ui/chat_dm.svg" id="13_doqh1"]
 [ext_resource type="Texture2D" uid="uid://bjc0grtm3cyvg" path="res://assets/ui/profile/pronouns.svg" id="13_wt1aa"]
@@ -149,12 +148,12 @@ theme_override_constants/separation = -5
 [node name="HBoxContainer3" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress"]
 clip_contents = true
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
 [node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
 [node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer"]
 layout_mode = 2
@@ -225,8 +224,10 @@ theme_override_constants/icon_max_width = 12
 text = "CLAIM NAME"
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3"]
+custom_minimum_size = Vector2(84, 0)
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
+alignment = 2
 
 [node name="Button_AddFriend" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
 unique_name_in_owner = true
@@ -245,11 +246,14 @@ unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
+focus_mode = 0
 theme = ExtResource("22_mpru1")
 theme_type_variation = &"BlackButton"
-theme_override_constants/icon_max_width = 12
-icon = ExtResource("12_odsw2")
+theme_override_constants/icon_max_width = 21
+theme_override_font_sizes/font_size = 0
+text = "UNBLOCK"
 icon_alignment = 1
 
 [node name="Button_MuteUser" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
@@ -257,10 +261,12 @@ unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
+focus_mode = 0
 theme = ExtResource("22_mpru1")
 theme_type_variation = &"BlackButton"
-theme_override_constants/icon_max_width = 12
+theme_override_constants/icon_max_width = 21
 toggle_mode = true
 icon = ExtResource("12_8iwyo")
 icon_alignment = 1
@@ -284,6 +290,7 @@ modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 theme = ExtResource("22_mpru1")
 theme_type_variation = &"BlackButton"
 theme_override_constants/icon_max_width = 12

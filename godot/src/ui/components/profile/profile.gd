@@ -761,15 +761,15 @@ func _update_buttons() -> void:
 	if is_own_passport:
 		return
 	var current_avatar = avatar_preview_landscape.avatar
-
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-	button_block_user.set_pressed_no_signal(is_blocked_user)
 	if is_blocked_user:
 		button_block_user.icon = null
 		button_block_user.text = "UNBLOCK"
+		button_block_user.custom_minimum_size.x = 86
 		button_mute_user.hide()
 	else:
 		button_block_user.icon = BLOCK
+		button_block_user.custom_minimum_size.x = 38
 		button_block_user.text = ""
 		button_mute_user.show()
 
