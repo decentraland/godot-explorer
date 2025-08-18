@@ -113,14 +113,13 @@ text = "Rarity"
 horizontal_alignment = 1
 uppercase = true
 
-[node name="Button_Buy" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Button_View" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("5_ykumo")
-disabled = true
-text = "BUY"
+text = "VIEW"
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]
 [connection signal="gui_input" from="MarginContainer/PanelContainer" to="MarginContainer/PanelContainer" method="_on_gui_input"]
+[connection signal="pressed" from="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/Button_View" to="." method="_on_button_view_pressed"]

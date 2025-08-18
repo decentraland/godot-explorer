@@ -229,6 +229,7 @@ theme_override_constants/separation = 8
 
 [node name="Button_AddFriend" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
 unique_name_in_owner = true
+visible = false
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(15, 38)
 layout_mode = 2
@@ -253,6 +254,7 @@ icon_alignment = 1
 
 [node name="Button_SendDM" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
 unique_name_in_owner = true
+visible = false
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(38, 38)
 layout_mode = 2

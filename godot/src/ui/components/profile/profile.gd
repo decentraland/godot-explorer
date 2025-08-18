@@ -231,9 +231,9 @@ func _update_elements_visibility() -> void:
 	change_nick_popup.close()
 	profile_new_link_popup.close()
 	if is_own_passport:
-		button_add_friend.hide()
+		#button_add_friend.hide()
 		button_block_user.hide()
-		button_send_dm.hide()
+		#button_send_dm.hide()
 		button_edit_about.show()
 		button_edit_links.show()
 		button_edit_nick.show()
@@ -243,9 +243,9 @@ func _update_elements_visibility() -> void:
 			else:
 				button_claim_name.show()
 	else:
-		button_add_friend.show()
+		#button_add_friend.show()
 		button_block_user.show()
-		button_send_dm.show()
+		#button_send_dm.show()
 		button_edit_about.hide()
 		button_edit_links.hide()
 		button_edit_nick.hide()
