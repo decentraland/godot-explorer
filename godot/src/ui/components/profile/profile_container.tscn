@@ -1,0 +1,56 @@
+[gd_scene load_steps=6 format=3 uid="uid://bectasdgy1btu"]
+
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="1_6mjwx"]
+[ext_resource type="Script" uid="uid://c7b43qhrqpryi" path="res://src/ui/components/profile/profile_container.gd" id="1_d5ewq"]
+[ext_resource type="PackedScene" uid="uid://dcar8bc8rcscu" path="res://src/ui/components/profile/profile.tscn" id="2_d5ewq"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="4_7dm7t"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_4omb6"]
+
+[node name="ProfileContainer" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.784314)
+script = ExtResource("1_d5ewq")
+
+[node name="SafeMarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+script = ExtResource("1_6mjwx")
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="Profile" parent="SafeMarginContainer" instance=ExtResource("2_d5ewq")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="SafeMarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+
+[node name="Button_CloseProfile" type="Button" parent="SafeMarginContainer/MarginContainer2"]
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("4_7dm7t")
+theme_type_variation = &"BlackButton"
+theme_override_constants/icon_max_width = 12
+icon = ExtResource("5_4omb6")
+icon_alignment = 1
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="pressed" from="SafeMarginContainer/MarginContainer2/Button_CloseProfile" to="." method="_on_button_close_profile_pressed"]

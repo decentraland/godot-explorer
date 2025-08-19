@@ -272,12 +272,6 @@ func _update_elements_visibility() -> void:
 	_turn_about_editing(false)
 
 
-func _on_color_rect_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			close()
-
-
 func _set_avatar_loading() -> int:
 	panel_container_getting_data.show()
 	v_box_container_name_and_address.hide()
@@ -807,3 +801,9 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id
 	):
 		call_deferred("_update_buttons")
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			close()

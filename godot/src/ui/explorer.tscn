@@ -26,7 +26,7 @@
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
-[ext_resource type="PackedScene" uid="uid://dcar8bc8rcscu" path="res://src/ui/components/profile/profile.tscn" id="25_c5h7v"]
+[ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/components/profile/profile_container.tscn" id="25_c5h7v"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_cjop4"]
@@ -399,7 +399,7 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="Profile" parent="UI" instance=ExtResource("25_c5h7v")]
+[node name="ProfileContainer" parent="UI" instance=ExtResource("25_c5h7v")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -419,7 +419,7 @@ script = ExtResource("20_064cw")
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="open_profile" from="UI/SafeMarginContainer/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
-[connection signal="player_profile_clicked" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_player_profile_clicked"]
+[connection signal="player_profile_clicked" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_async_on_panel_chat_player_profile_clicked"]
 [connection signal="submit_message" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]

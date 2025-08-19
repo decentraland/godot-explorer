@@ -33,7 +33,7 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var control_minimap = %Control_Minimap
 @onready var mobile_ui = %MobileUI
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
-@onready var profile_panel: Control = %Profile
+@onready var profile_container: Control = %ProfileContainer
 
 @onready var loading_ui = %Loading
 
@@ -520,7 +520,7 @@ func _async_on_panel_chat_player_profile_clicked(avatar: DclAvatar):
 		return
 
 	if result != null:
-		profile_panel.async_show_profile(result)
+		profile_container.open(result)
 	release_mouse()
 
 
@@ -529,7 +529,5 @@ func _on_control_menu_open_profile() -> void:
 
 
 func _open_own_profile() -> void:
-	var profile := Global.player_identity.get_profile_or_null()
-	if profile != null:
-		profile_panel.async_show_profile(profile)
+	control_menu.show_own_profile()
 	release_mouse()

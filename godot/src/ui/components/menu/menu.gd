@@ -147,6 +147,10 @@ func show_settings():
 	_open()
 
 
+func show_own_profile():
+	select_node(control_profile_settings, false)
+	_open()
+
 func _open():
 	if not visible:
 		show()
@@ -194,7 +198,6 @@ func _on_button_backpack_pressed():
 
 func _on_menu_profile_button_open_menu_profile():
 	select_node(control_profile_settings)
-	open_profile.emit()
 
 
 func fade_in(node: Control):
