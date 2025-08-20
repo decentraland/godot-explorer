@@ -99,7 +99,8 @@ func _input(event):
 	if event.is_action_pressed("ia_pointer"):
 		# Only handle input if this avatar is currently selected
 		if Global.selected_avatar == self and avatar_id:
-			Global.open_profile.emit(self)
+			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				Global.open_profile.emit(self)
 
 
 func try_show():

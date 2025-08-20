@@ -1,6 +1,5 @@
 extends Control
 
-signal profile_picture_clicked(avatar: DclAvatar)
 
 const MUTE = preload("res://assets/ui/audio_off.svg")
 const UNMUTE = preload("res://assets/ui/audio_on.svg")
@@ -35,7 +34,7 @@ func _on_profile_picture_gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
 		if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			if avatar != null and is_instance_valid(avatar):
-				profile_picture_clicked.emit(avatar)
+				Global.open_profile.emit(avatar)
 
 
 func async_set_data(avatar_param = null):

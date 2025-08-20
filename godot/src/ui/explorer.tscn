@@ -419,7 +419,6 @@ script = ExtResource("20_064cw")
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="open_profile" from="UI/SafeMarginContainer/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
-[connection signal="player_profile_clicked" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_async_on_panel_chat_player_profile_clicked"]
 [connection signal="submit_message" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]

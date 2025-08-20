@@ -149,6 +149,10 @@ func show_settings():
 
 func show_own_profile():
 	select_node(control_profile_settings, false)
+	button_settings.set_pressed(false)
+	button_backpack.set_pressed(false)
+	button_map.set_pressed(false)
+	button_discover.set_pressed(false)
 	_open()
 
 func _open():
