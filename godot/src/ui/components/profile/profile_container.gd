@@ -9,7 +9,6 @@ func _on_gui_input(event: InputEvent) -> void:
 
 
 func close() -> void:
-	profile_panel.close()
 	hide()
 
 
@@ -18,5 +17,5 @@ func open(profile: DclUserProfile) -> void:
 	profile_panel.async_show_profile(profile)
 
 
-func _on_button_close_profile_pressed() -> void:
+func _on_profile_close_profile() -> void:
 	close()

@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=37 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
@@ -17,7 +17,9 @@
 [ext_resource type="Texture2D" uid="uid://cl6wfontbtg2d" path="res://assets/ui/profile/country.svg" id="11_q5707"]
 [ext_resource type="Texture2D" uid="uid://bknni14p0d2of" path="res://assets/ui/profile/language.svg" id="12_6ld5p"]
 [ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="12_8iwyo"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_oyuqo"]
 [ext_resource type="Texture2D" uid="uid://chcxsgjdkd52u" path="res://assets/ui/chat_dm.svg" id="13_doqh1"]
+[ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="13_ood4l"]
 [ext_resource type="Texture2D" uid="uid://bjc0grtm3cyvg" path="res://assets/ui/profile/pronouns.svg" id="13_wt1aa"]
 [ext_resource type="Texture2D" uid="uid://cre7w5guxn4ed" path="res://assets/ui/profile/gender.svg" id="14_v4qqr"]
 [ext_resource type="Texture2D" uid="uid://7gvql25g6krp" path="res://assets/ui/profile/relationship.svg" id="15_qnwic"]
@@ -40,8 +42,6 @@ shader_parameter/colors = PackedVector4Array(150, 20, 80, 0.005, 150, 200, 50, 0
 shader_parameter/time_scale = 1.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_usboe"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_usboe"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8pwo8"]
 bg_color = Color(0, 0, 0, 0.352941)
@@ -124,11 +124,14 @@ theme_override_constants/separation = 10
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="Label_Nickname" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("7_m8kjd")
@@ -138,6 +141,8 @@ text = "NickName"
 [node name="Label_Tag" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.625597, 0.625597, 0.625597, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
@@ -164,6 +169,9 @@ modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"FlatButton"
 theme_override_constants/icon_max_width = 15
 icon = ExtResource("9_oyuqo")
 flat = true
@@ -252,10 +260,17 @@ disabled = true
 icon = ExtResource("13_doqh1")
 icon_alignment = 1
 
-[node name="VSeparator" type="VSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3"]
+[node name="Button_CloseProfile" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
-theme_override_constants/separation = 36
-theme_override_styles/separator = SubResource("StyleBoxEmpty_usboe")
+focus_mode = 0
+theme = ExtResource("22_mpru1")
+theme_type_variation = &"BlackButton"
+theme_override_constants/icon_max_width = 12
+icon = ExtResource("12_oyuqo")
+icon_alignment = 1
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress"]
 layout_mode = 2
@@ -264,6 +279,8 @@ theme_override_constants/separation = 1
 [node name="Label_Address" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
@@ -277,6 +294,9 @@ modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"FlatButton"
 icon = ExtResource("9_oyuqo")
 flat = true
 
@@ -295,28 +315,31 @@ theme_override_constants/separation = 30
 [node name="Control_Avatar" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(150, 400)
+custom_minimum_size = Vector2(300, 500)
 layout_mode = 2
-size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
 script = ExtResource("3_oe5oo")
 
-[node name="AvatarPreviewPortrait" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar" instance=ExtResource("5_yx7pe")]
-unique_name_in_owner = true
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_right = 100
+
+[node name="AvatarPreviewPortrait" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar/MarginContainer" instance=ExtResource("5_yx7pe")]
+unique_name_in_owner = true
+layout_mode = 2
 size_flags_horizontal = 1
 mouse_filter = 0
+mouse_force_pass_scroll_events = false
 stretch = true
 hide_name = true
-can_move = false
+custom_environment = ExtResource("13_ood4l")
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -753,3 +776,23 @@ layout_mode = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+
+[connection signal="gui_input" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer/HBoxContainer/Label_Nickname" to="." method="_on_label_nickname_gui_input"]
+[connection signal="gui_input" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer/HBoxContainer/Label_Tag" to="." method="_on_label_tag_gui_input"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer/HBoxContainer/Button_CopyNick" to="." method="_on_button_copy_nick_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer/Button_EditNick" to="." method="_on_button_edit_nick_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer/Button_ClaimName" to="." method="_on_button_claim_name_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_BlockUser" to="." method="_on_button_block_user_pressed"]
+[connection signal="toggled" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_MuteUser" to="." method="_on_button_mute_user_toggled"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_CloseProfile" to="." method="_on_button_close_profile_pressed"]
+[connection signal="gui_input" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer2/Label_Address" to="." method="_on_label_address_gui_input"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer2/Button_CopyAddress" to="." method="_on_button_copy_address_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button_EditAbout" to="." method="_on_button_edit_about_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutCancel" to="." method="_on_button_about_cancel_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutSave" to="." method="_async_on_button_about_save_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer/Button_EditLinks" to="." method="_on_button_edit_links_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer/HFlowContainer_Links/Button_AddLink" to="." method="_on_button_add_link_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksCancel" to="." method="_on_button_links_cancel_pressed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksSave" to="." method="_async_on_button_links_save_pressed"]
+[connection signal="update_name_on_profile" from="ChangeNickPopup" to="." method="_on_change_nick_popup_update_name_on_profile"]
+[connection signal="add_link" from="ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]

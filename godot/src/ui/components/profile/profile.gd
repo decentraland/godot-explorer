@@ -1,11 +1,16 @@
 extends Control
 
+signal close_profile
+
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
 const NICK_MAX_LENGTH: int = 15
 const MUTE = preload("res://assets/ui/audio_off.svg")
 const UNMUTE = preload("res://assets/ui/audio_on.svg")
 const BLOCK = preload("res://assets/ui/block.svg")
+
+@export var rounded: bool = false
+@export var closable: bool = false
 
 var url_to_visit: String = ""
 var links_to_save: Array[Dictionary] = []
@@ -83,11 +88,29 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 @onready var v_box_container_name_and_address: VBoxContainer = %VBoxContainer_NameAndAddress
 @onready var button_mute_user: Button = %Button_MuteUser
+@onready var control_avatar: Control = %Control_Avatar
+@onready var button_close_profile: Button = %Button_CloseProfile
 
 
 func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
+	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
+	
+	if rounded:
+		var current_style = get_theme_stylebox("panel")
+		if current_style is StyleBoxFlat:
+			var style_box = current_style.duplicate()
+			style_box.corner_radius_top_left = 15
+			style_box.corner_radius_top_right = 15
+			style_box.corner_radius_bottom_right = 15
+			style_box.corner_radius_bottom_left = 15
+			add_theme_stylebox_override("panel", style_box)
+			
+	if closable:
+		button_close_profile.show()
+	else:
+		button_close_profile.hide()
 
 	_deploy_timeout_timer = Timer.new()
 	_deploy_timeout_timer.wait_time = 15.0
@@ -445,6 +468,8 @@ func close() -> void:
 	_on_reset_avatars_rotation()
 	_turn_links_editing(false)
 	_turn_about_editing(false)
+	if closable:
+		close_profile.emit()
 
 
 func _on_button_close_profile_pressed() -> void:
@@ -460,6 +485,7 @@ func _on_button_edit_nick_pressed() -> void:
 
 
 func _refresh_links() -> void:
+	if current_profile == null: return
 	var children_to_remove = []
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
@@ -472,6 +498,8 @@ func _refresh_links() -> void:
 
 
 func _refresh_about() -> void:
+	if current_profile == null: return
+	
 	var country = current_profile.get_country()
 	var country_index = _find_option_index(country, ProfileConstants.COUNTRIES)
 	profile_field_option_country.select_option(country_index)
@@ -654,7 +682,6 @@ func _check_add_link_button_status() -> void:
 		button_add_link.hide()
 	else:
 		button_add_link.show()
-	print("Links totales a guardar: ", links_quantity)
 
 
 func _instantiate_link_button(title: String, url: String, editing: bool) -> void:
@@ -734,7 +761,7 @@ func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	else:
 		Global.social_blacklist.remove_muted(avatar_preview_landscape.avatar.avatar_id)
 	_update_buttons()
-	# Notificar a otros componentes que hubo un cambio local
+
 	_notify_other_components_of_change()
 
 
@@ -801,9 +828,3 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id
 	):
 		call_deferred("_update_buttons")
-
-
-func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			close()

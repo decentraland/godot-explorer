@@ -188,7 +188,7 @@ func _ready():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	# Conectar la señal player_profile_clicked del chat
+
 	panel_chat.player_profile_clicked.connect(_async_on_panel_chat_player_profile_clicked)
 
 	# last
