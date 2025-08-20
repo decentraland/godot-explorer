@@ -93,7 +93,6 @@ func async_show_message(message: String):
 		message_clip.add_child(message_container)
 
 	var final_size = Vector2(width, message_container.size.y)
-	print(final_size)
 
 	message_tween = create_tween()
 	message_tween.tween_property(message_clip, "custom_minimum_size", final_size, TWEEN_DURATION)

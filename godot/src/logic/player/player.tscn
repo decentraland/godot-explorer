@@ -30,12 +30,18 @@ collision_layer = 2147483904
 collision_mask = 2147483904
 
 [node name="Mount" type="SpringArm3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, -0.21)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
 
 [node name="Camera3D" type="DclCamera3D" parent="Mount"]
 smoothing_speed = 2.0
 target_fov = 75.0
 far = 100.0
+
+[node name="AvatarRaycast" type="RayCast3D" parent="Mount/Camera3D"]
+target_position = Vector3(0, 0, -10)
+collision_mask = 536870912
+collide_with_areas = true
+collide_with_bodies = false
 
 [node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
 skip_process = true

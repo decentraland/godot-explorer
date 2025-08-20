@@ -16,6 +16,7 @@ var virtual_joystick_orig_position: Vector2i
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
+var _avatar_under_crosshair: Avatar = null
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -235,8 +236,19 @@ func _on_pointer_tooltip_changed():
 
 
 func change_tooltips():
-	if not Global.scene_runner.pointer_tooltips.is_empty():
-		control_pointer_tooltip.set_pointer_data(Global.scene_runner.pointer_tooltips)
+	var tooltip_data = Global.scene_runner.pointer_tooltips.duplicate()
+
+	# Check if there's an avatar behind the crosshair
+	_avatar_under_crosshair = player.get_avatar_under_crosshair()
+	Global.selected_avatar = _avatar_under_crosshair
+
+	if _avatar_under_crosshair:
+		# Add open profile tooltip
+		var profile_tooltip = {"text_pet_down": "Click to view profile", "action": "ia_pointer"}
+		tooltip_data.push_back(profile_tooltip)
+
+	if not tooltip_data.is_empty():
+		control_pointer_tooltip.set_pointer_data(tooltip_data)
 		control_pointer_tooltip.show()
 	else:
 		control_pointer_tooltip.hide()

@@ -50,6 +50,7 @@ var wearable_promises = null
 @onready var audio_player_emote = $AudioPlayer_Emote
 
 @onready var avatar_modifier_area_detector = $avatar_modifier_area_detector
+@onready var click_area = $ClickArea
 
 
 func _ready():
@@ -83,11 +84,22 @@ func _ready():
 	nickname_ui.mic_enabled = false
 	Global.player_said.connect(on_player_said)
 
+	# Setup metadata for raycast detection (same as DCL entities)
+	click_area.set_meta("is_avatar", true)
+	click_area.set_meta("avatar_id", avatar_id)
+
 
 func on_player_said(address: String, message: String):
 	if avatar_id != address:
 		return
 	nickname_ui.async_show_message(message)
+
+
+func _input(event):
+	if event.is_action_pressed("ia_pointer"):
+		# Only handle input if this avatar is currently selected
+		if Global.selected_avatar == self and avatar_id:
+			Global.open_profile.emit(self)
 
 
 func try_show():
@@ -130,6 +142,10 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	avatar_id = profile.get_ethereum_address()
+
+	# Update metadata with the new avatar_id
+	if click_area:
+		click_area.set_meta("avatar_id", avatar_id)
 
 	await async_update_avatar(avatar, new_avatar_name)
 

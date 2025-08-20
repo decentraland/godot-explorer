@@ -6,6 +6,7 @@ signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
+signal open_profile(avatar: DclAvatar)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -40,6 +41,7 @@ var webkit_android_plugin
 var webkit_ios_plugin
 
 var network_inspector_window: Window = null
+var selected_avatar: Avatar = null
 
 
 func is_xr() -> bool:

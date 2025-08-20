@@ -1,4 +1,4 @@
-[gd_scene load_steps=78 format=3 uid="uid://dvu5i0n51gph3"]
+[gd_scene load_steps=79 format=3 uid="uid://dvu5i0n51gph3"]
 
 [ext_resource type="Script" uid="uid://du2j4yjo5etlb" path="res://src/decentraland_components/avatar/avatar.gd" id="1_stmqn"]
 [ext_resource type="PackedScene" uid="uid://d1i02k5nxmje6" path="res://src/decentraland_components/nickname_ui.tscn" id="2_kjemr"]
@@ -357,6 +357,8 @@ albedo_color = Color(0.913725, 0.886275, 0.839216, 1)
 material = SubResource("StandardMaterial3D_6htl0")
 radius = 0.1
 height = 0.1
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mwwx3"]
 
 [node name="Avatar" type="DclAvatar"]
 script = ExtResource("1_stmqn")
@@ -896,5 +898,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
 bus = &"Scene"
 
 [node name="Avatar_SFXs" parent="." instance=ExtResource("7_xt6ge")]
+
+[node name="ClickArea" type="Area3D" parent="."]
+unique_name_in_owner = true
+collision_layer = 536870912
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ClickArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_mwwx3")
 
 [connection signal="timeout" from="Timer_HideMic" to="." method="_on_timer_hide_mic_timeout"]
