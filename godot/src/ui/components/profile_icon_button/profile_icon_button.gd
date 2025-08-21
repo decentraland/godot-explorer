@@ -7,6 +7,8 @@ signal open_profile
 
 func _ready():
 	gui_input.connect(self._on_gui_input)
+	var profile := Global.player_identity.get_profile_or_null()
+	_async_on_profile_changed(profile)
 	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 
 
