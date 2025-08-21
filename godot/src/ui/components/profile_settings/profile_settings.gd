@@ -21,7 +21,8 @@ func _ready():
 
 func _async_on_profile_changed(profile: DclUserProfile):
 	await passport.async_show_profile(profile)
-	
+
+
 func _on_button_logout_pressed():
 	Global.scene_runner.set_pause(true)
 	Global.comms.disconnect(true)

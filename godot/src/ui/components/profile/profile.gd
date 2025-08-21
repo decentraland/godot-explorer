@@ -96,7 +96,7 @@ func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
-	
+
 	if rounded:
 		var current_style = get_theme_stylebox("panel")
 		if current_style is StyleBoxFlat:
@@ -106,7 +106,7 @@ func _ready() -> void:
 			style_box.corner_radius_bottom_right = 15
 			style_box.corner_radius_bottom_left = 15
 			add_theme_stylebox_override("panel", style_box)
-			
+
 	if closable:
 		button_close_profile.show()
 	else:
@@ -485,7 +485,8 @@ func _on_button_edit_nick_pressed() -> void:
 
 
 func _refresh_links() -> void:
-	if current_profile == null: return
+	if current_profile == null:
+		return
 	var children_to_remove = []
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
@@ -498,8 +499,9 @@ func _refresh_links() -> void:
 
 
 func _refresh_about() -> void:
-	if current_profile == null: return
-	
+	if current_profile == null:
+		return
+
 	var country = current_profile.get_country()
 	var country_index = _find_option_index(country, ProfileConstants.COUNTRIES)
 	profile_field_option_country.select_option(country_index)

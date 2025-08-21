@@ -190,7 +190,7 @@ func _ready():
 	)
 
 	Global.open_profile.connect(_async_open_profile)
-	
+
 	# last
 	ui_root.grab_focus.call_deferred()
 

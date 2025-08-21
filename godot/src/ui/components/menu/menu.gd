@@ -155,6 +155,7 @@ func show_own_profile():
 	button_discover.set_pressed(false)
 	_open()
 
+
 func _open():
 	if not visible:
 		show()

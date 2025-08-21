@@ -62,6 +62,7 @@ anchor_bottom = 1.0
 offset_right = 179.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_force_pass_scroll_events = false
 theme_override_styles/panel = SubResource("StyleBoxFlat_usboe")
 script = ExtResource("1_y2op1")
 

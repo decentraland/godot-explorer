@@ -1,5 +1,6 @@
 class_name ProfileHelper
 
+
 static func get_mutable_profile() -> DclUserProfile:
 	var backpack = Global.get_backpack()
 	if backpack != null:

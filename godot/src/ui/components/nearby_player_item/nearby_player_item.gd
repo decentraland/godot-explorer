@@ -1,6 +1,5 @@
 extends Control
 
-
 const MUTE = preload("res://assets/ui/audio_off.svg")
 const UNMUTE = preload("res://assets/ui/audio_on.svg")
 const BLOCK = preload("res://assets/ui/block.svg")
