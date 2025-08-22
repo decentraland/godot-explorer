@@ -30,6 +30,8 @@ func _ready():
 	Global.avatars.avatar_scene_changed.connect(avatars_list.async_update_nearby_users)
 	avatars_list.size_changed.connect(self.update_nearby_quantity)
 
+	avatars_list.player_profile_clicked.connect(_on_player_profile_clicked)
+
 	add_chat_message(
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)
