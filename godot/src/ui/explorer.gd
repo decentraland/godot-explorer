@@ -190,9 +190,8 @@ func _ready():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	panel_chat.player_profile_clicked.connect(_async_on_panel_chat_player_profile_clicked)
+	Global.open_profile.connect(_async_open_profile)
 
-	# last
 	ui_root.grab_focus.call_deferred()
 
 	if OS.get_cmdline_args().has("--scene-renderer"):

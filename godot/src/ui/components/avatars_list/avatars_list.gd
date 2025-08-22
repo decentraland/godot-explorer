@@ -59,17 +59,12 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 					):
 						child.avatar.avatar_loaded.disconnect(child.async_set_data)
 
-					if child.profile_picture_clicked.is_connected(_on_player_profile_clicked):
-						child.profile_picture_clicked.disconnect(_on_player_profile_clicked)
-
 					child.queue_free()
 					break
 
 	for avatar in avatars_to_add:
 		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
 		v_box_container_nearby_players.add_child(avatar_item)
-
-		avatar_item.profile_picture_clicked.connect(_on_player_profile_clicked)
 
 		if avatar is Avatar:
 			if not avatar.avatar_loaded.is_connected(avatar_item.async_set_data):
