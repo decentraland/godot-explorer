@@ -13,6 +13,11 @@ var current_outlined_avatar: Node3D = null
 
 func setup(camera: Camera3D):
 	main_camera = camera
+	# Show the quads when running in game (they're hidden in editor by default)
+	if outline_quad:
+		outline_quad.visible = true
+	if sub_viewport and sub_viewport.has_node("DepthCamera/DepthQuad"):
+		sub_viewport.get_node("DepthCamera/DepthQuad").visible = true
 
 
 func _process(_delta):

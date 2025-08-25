@@ -3,7 +3,7 @@ extends CharacterBody3D
 
 const DEFAULT_CAMERA_FOV = 75.0
 const SPRINTING_CAMERA_FOV = 100.0
-const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
+const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
 
 var last_position: Vector3
 var actual_velocity_xz: float
@@ -55,10 +55,15 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 	if mode == Global.CameraMode.THIRD_PERSON:
 		var tween_out = create_tween()
+		tween_out.set_parallel(true)
 		(
 			tween_out
 			. tween_property(mount_camera, "spring_length", THIRD_PERSON_CAMERA.length(), 0.25)
 			. set_ease(Tween.EASE_IN_OUT)
+		)
+		# Apply X offset for over-shoulder view in third person
+		tween_out.tween_property(mount_camera, "position:x", THIRD_PERSON_CAMERA.x, 0.25).set_ease(
+			Tween.EASE_IN_OUT
 		)
 		avatar.set_hidden(false)
 		avatar.set_rotation(Vector3(0, 0, 0))
@@ -66,9 +71,12 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var tween_in = create_tween()
+		tween_in.set_parallel(true)
 		tween_in.tween_property(mount_camera, "spring_length", -.2, 0.25).set_ease(
 			Tween.EASE_IN_OUT
 		)
+		# Remove X offset for centered view in first person
+		tween_in.tween_property(mount_camera, "position:x", 0.0, 0.25).set_ease(Tween.EASE_IN_OUT)
 		avatar.set_hidden(true)
 		if play_sound:
 			UiSounds.play_sound("ui_fade_in")
@@ -112,7 +120,7 @@ func _ready():
 
 	camera.current = true
 
-	set_camera_mode(Global.CameraMode.THIRD_PERSON)
+	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.activate_attach_points()
 
 	floor_snap_length = 0.2

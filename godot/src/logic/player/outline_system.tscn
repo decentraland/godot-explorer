@@ -39,6 +39,7 @@ far = 100.0
 
 [node name="DepthQuad" type="MeshInstance3D" parent="SubViewport/DepthCamera"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.25)
+visible = false
 layers = 524288
 material_override = SubResource("ShaderMaterial_xigdd")
 cast_shadow = 0
@@ -47,6 +48,7 @@ skeleton = NodePath("")
 
 [node name="OutlineQuad" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.25)
+visible = false
 material_override = SubResource("ShaderMaterial_1")
 cast_shadow = 0
 mesh = SubResource("QuadMesh_1")
