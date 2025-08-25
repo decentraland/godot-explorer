@@ -9,8 +9,6 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
-const OUTLINE_LAYER = 20  # Layer 20 for outline system (bit 19)
-
 @export var skip_process: bool = false
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
@@ -439,19 +437,6 @@ func async_load_wearables():
 
 	emote_controller.clean_unused_emotes()
 	avatar_loaded.emit()
-
-
-func set_outline(show: bool):
-	# Set or remove the outline layer for all visible meshes
-	# Using layer 20 (bit 19) for outline-specific rendering
-	for child in body_shape_skeleton_3d.get_children():
-		if child.visible and child is MeshInstance3D:
-			if show:
-				# Add layer 20 for outline rendering while keeping original layers
-				child.layers |= (1 << (OUTLINE_LAYER - 1))
-			else:
-				# Remove layer 20
-				child.layers &= ~(1 << (OUTLINE_LAYER - 1))
 
 
 func apply_color_and_facial():

@@ -13,14 +13,17 @@ var current_outlined_avatar: Node3D = null
 
 func setup(camera: Camera3D):
 	main_camera = camera
-	# Match viewport size to window size
-	var window_size = get_viewport().get_visible_rect().size
-	sub_viewport.size = Vector2i(window_size)
 
 
 func _process(_delta):
 	if not main_camera:
 		return
+
+	# Match viewport size to window size
+	var window_size = get_viewport().get_visible_rect().size
+	if sub_viewport.size != Vector2i(window_size):
+		sub_viewport.size = Vector2i(window_size)
+
 	# Sync depth camera with main camera
 	depth_camera.fov = main_camera.fov
 	depth_camera.near = main_camera.near

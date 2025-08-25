@@ -11,7 +11,7 @@ uniform float value : hint_range(0.5, 1.0) = 1.0;
 
 void vertex() {
 	// Make this a fullscreen quad
-	POSITION = vec4(VERTEX.xy * 2.0, 0.0, 1.0);
+	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
 }
 
 float sobel_edge_detection(vec2 uv, mat4 inv_proj_mat) {

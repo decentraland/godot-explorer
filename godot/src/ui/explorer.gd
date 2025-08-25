@@ -241,6 +241,11 @@ func change_tooltips():
 	_avatar_under_crosshair = player.get_avatar_under_crosshair()
 	Global.selected_avatar = _avatar_under_crosshair
 
+	# Handle outline changes through the outline system
+	if _avatar_under_crosshair != _last_outlined_avatar:
+		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
+		_last_outlined_avatar = _avatar_under_crosshair
+
 	if _avatar_under_crosshair:
 		# Add open profile tooltip
 		var profile_tooltip = {"text_pet_down": "Click to view profile", "action": "ia_pointer"}
