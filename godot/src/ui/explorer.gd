@@ -473,7 +473,7 @@ func reset_cursor_position():
 	control_pointer_tooltip.set_global_cursor_position(center_position)
 
 
-func _on_ui_root_gui_input(event: InputEvent):
+func _on_ui_root_gui_input(_event: InputEvent):
 	pass
 	# Touch events no longer modify cursor position - raycast always uses screen center
 
