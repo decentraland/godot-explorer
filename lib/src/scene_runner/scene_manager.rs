@@ -1015,7 +1015,7 @@ impl INode for SceneManager {
             .connect("resized".into(), callable_on_ui_resize);
         self.base_ui.set_name("scenes_ui".into());
         self.ui_canvas_information = self.create_ui_canvas_information();
-        
+
         // Initialize cached viewport center
         let viewport = self.base().get_viewport();
         if let Some(viewport) = viewport {
