@@ -17,6 +17,7 @@ var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
+var _last_outlined_avatar: Avatar = null
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -239,6 +240,11 @@ func change_tooltips():
 	# Check if there's an avatar behind the crosshair
 	_avatar_under_crosshair = player.get_avatar_under_crosshair()
 	Global.selected_avatar = _avatar_under_crosshair
+
+	# Handle outline changes through the outline system
+	if _avatar_under_crosshair != _last_outlined_avatar:
+		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
+		_last_outlined_avatar = _avatar_under_crosshair
 
 	if _avatar_under_crosshair:
 		# Add open profile tooltip

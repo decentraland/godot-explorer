@@ -275,6 +275,9 @@ func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputS
 	var previous_camera = viewport.get_camera_3d()
 
 	var test_camera_3d = Camera3D.new()
+	# Exclude layer 20 (outline layer) from scene renderer tests
+	# Set cull_mask to show layers 1-19 only (0x7FFFF = 524287)
+	test_camera_3d.cull_mask = 524287
 	add_child(test_camera_3d)
 	test_camera_3d.make_current()
 
