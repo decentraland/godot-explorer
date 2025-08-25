@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://b4mbs03r7lad8"]
+[gd_scene load_steps=8 format=3 uid="uid://qyi7gcf7tphy"]
 
 [ext_resource type="Shader" uid="uid://c1amtn82m0opc" path="res://assets/shaders/avatar_outline_sobel.gdshader" id="1_outline"]
 [ext_resource type="Script" uid="uid://cypaj0ak7monu" path="res://src/logic/player/outline_system.gd" id="2_script"]
@@ -20,6 +20,7 @@ resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("1_outline")
 shader_parameter/extracted_texture = SubResource("ViewportTexture_layer20")
+shader_parameter/max_distance = 10.0
 shader_parameter/outline_thickness = 1.0
 shader_parameter/hue_rotation_speed = 1.0
 shader_parameter/saturation = 1.0
@@ -35,6 +36,7 @@ render_target_update_mode = 4
 
 [node name="DepthCamera" type="Camera3D" parent="SubViewport"]
 cull_mask = 524288
+current = true
 far = 100.0
 
 [node name="DepthQuad" type="MeshInstance3D" parent="SubViewport/DepthCamera"]

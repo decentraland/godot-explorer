@@ -355,6 +355,93 @@
                     }
                 }
             }
+        },
+        {
+            "entity": "outline_test_avatar",
+            "destPath": "output/avatar_no_outline.png",
+            "width": 256,
+            "height": 512,
+            "avatar": {
+                "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+                "snapshots": {
+                    "body": "test_body_snapshot",
+                    "face256": "test_face_snapshot"
+                },
+                "eyes": {
+                    "color": {
+                        "r": 0.3,
+                        "g": 0.8,
+                        "b": 0.5
+                    }
+                },
+                "hair": {
+                    "color": {
+                        "r": 0.596,
+                        "g": 0.373,
+                        "b": 0.216
+                    }
+                },
+                "skin": {
+                    "color": {
+                        "r": 0.490,
+                        "g": 0.365,
+                        "b": 0.278
+                    }
+                },
+                "wearables": [
+                    "urn:decentraland:off-chain:base-avatars:f_sweater",
+                    "urn:decentraland:off-chain:base-avatars:f_jeans",
+                    "urn:decentraland:off-chain:base-avatars:bun_shoes",
+                    "urn:decentraland:off-chain:base-avatars:standard_hair",
+                    "urn:decentraland:off-chain:base-avatars:f_eyes_01",
+                    "urn:decentraland:off-chain:base-avatars:f_eyebrows_00"
+                ]
+            },
+            "testOutline": true
+        },
+        {
+            "entity": "outline_test_avatar_with_outline",
+            "destPath": "output/avatar_with_outline.png",
+            "width": 256,
+            "height": 512,
+            "avatar": {
+                "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+                "snapshots": {
+                    "body": "test_body_snapshot",
+                    "face256": "test_face_snapshot"
+                },
+                "eyes": {
+                    "color": {
+                        "r": 0.3,
+                        "g": 0.8,
+                        "b": 0.5
+                    }
+                },
+                "hair": {
+                    "color": {
+                        "r": 0.596,
+                        "g": 0.373,
+                        "b": 0.216
+                    }
+                },
+                "skin": {
+                    "color": {
+                        "r": 0.490,
+                        "g": 0.365,
+                        "b": 0.278
+                    }
+                },
+                "wearables": [
+                    "urn:decentraland:off-chain:base-avatars:f_sweater",
+                    "urn:decentraland:off-chain:base-avatars:f_jeans",
+                    "urn:decentraland:off-chain:base-avatars:bun_shoes",
+                    "urn:decentraland:off-chain:base-avatars:standard_hair",
+                    "urn:decentraland:off-chain:base-avatars:f_eyes_01",
+                    "urn:decentraland:off-chain:base-avatars:f_eyebrows_00"
+                ]
+            },
+            "testOutline": true,
+            "enableOutline": true
         }
     ]
 }

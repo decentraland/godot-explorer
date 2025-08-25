@@ -30,6 +30,9 @@ custom_environment = ExtResource("3_2n2br")
 [node name="SubViewport" parent="SubViewportContainer" index="0"]
 transparent_bg = false
 
+[node name="OutlineSystem" parent="SubViewportContainer" index="1"]
+transform = Transform3D(-1, -5.16436e-08, 1.4189e-07, 0, 0.939693, 0.34202, -1.50996e-07, 0.34202, -0.939693, 0, 2.3, -3.5)
+
 [node name="TabContainer" type="TabContainer" parent="."]
 layout_mode = 0
 offset_left = 33.0
@@ -89,6 +92,15 @@ offset_top = 136.0
 offset_right = 583.0
 offset_bottom = 174.0
 text = "Render Avatar"
+
+[node name="OutlineCheckBox" type="CheckBox" parent="TabContainer/Avatars"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 185.0
+offset_right = 200.0
+offset_bottom = 225.0
+text = "Enable Outline"
 
 [node name="Emotes" type="Panel" parent="TabContainer"]
 visible = false
@@ -224,6 +236,7 @@ offset_bottom = 385.0
 [connection signal="pressed" from="TabContainer/Avatars/Button_CopyWearableData" to="." method="_on_button_copy_wearable_data_pressed"]
 [connection signal="pressed" from="TabContainer/Avatars/Button_Refresh" to="." method="_on_button_refresh_pressed"]
 [connection signal="pressed" from="TabContainer/Avatars/Button_Fetch" to="." method="_on_button_fetch_pressed"]
+[connection signal="toggled" from="TabContainer/Avatars/OutlineCheckBox" to="." method="_on_outline_toggled"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_OpenWheel" to="." method="_on_button_open_wheel_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_PlayCustom" to="." method="_on_button_play_custom_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_Clear" to="." method="_on_button_clear_pressed"]

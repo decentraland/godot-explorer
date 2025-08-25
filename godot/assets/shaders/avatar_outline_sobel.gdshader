@@ -1,9 +1,13 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, depth_test_disabled;
 
+#include "res://shaders/modules/rgb2hsv.gdshaderinc"
+#include "res://shaders/modules/hsv2rgb.gdshaderinc"
+
 uniform sampler2D depth_texture : hint_depth_texture, filter_linear_mipmap;
 uniform sampler2D extracted_texture : hint_default_white, filter_linear_mipmap;  // The viewport texture with avatars
 uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+uniform float max_distance : hint_range(0.0, 100.0) = 10.0;
 uniform float outline_thickness : hint_range(0.1, 5.0) = 1.0;
 uniform float hue_rotation_speed : hint_range(0.1, 5.0) = 1.0;
 uniform float saturation : hint_range(0.5, 1.0) = 1.0;
@@ -49,9 +53,9 @@ float sobel_edge_detection(vec2 uv, mat4 inv_proj_mat) {
       float sample_depth = mix(
         9999.9,
         linear_depth,
-        smoothstep(linear_depth, linear_depth + .1, real_linear_depth - .1)
+        smoothstep(linear_depth, linear_depth + .1*linear_depth, real_linear_depth - .1*real_linear_depth)
       );
-      float base_mask = smoothstep(11.0,10.0,linear_depth);
+      float base_mask = smoothstep(max_distance+1.0,max_distance,linear_depth);
       float mask = smoothstep(linear_depth-linear_depth*.2, linear_depth, real_linear_depth);
       mask = smoothstep(.0,.25,mask) * base_mask;
 
@@ -73,17 +77,23 @@ float sobel_edge_detection(vec2 uv, mat4 inv_proj_mat) {
 	return length(vec2(sobel_x, sobel_y));
 }
 
-vec3 hsv_to_rgb(vec3 hsv) {
-	vec3 rgb = clamp(abs(mod(hsv.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-	return hsv.z * mix(vec3(1.0), rgb, hsv.y);
-}
-
 void fragment() {
 	float edge = sobel_edge_detection(SCREEN_UV, INV_PROJECTION_MATRIX);
-	// Create a rotating hue based on time
-	float hue = mod(TIME * hue_rotation_speed * 0.1, 1.0);
-	vec3 hsv = vec3(hue, saturation, value);
-	vec3 vibrant_color = hsv_to_rgb(hsv);
-	ALBEDO = vibrant_color;
+
+	// Sample the screen color at this position
+	vec3 screen_color = texture(screen_texture, SCREEN_UV).rgb;
+
+	// Convert screen color to HSV
+	vec3 hsv = rgb2hsv(screen_color);
+
+	// Rotate hue by 180 degrees (0.5 in normalized space) and ensure high saturation/value
+	hsv.x = fract(hsv.x + 0.5);
+	hsv.y = max(hsv.y, saturation); // Ensure high saturation
+	hsv.z = max(hsv.z, value); // Ensure high value/brightness
+
+	// Convert back to RGB
+	vec3 outline_color = hsv2rgb(hsv);
+
+	ALBEDO = outline_color;
 	ALPHA = edge;
 }
