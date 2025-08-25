@@ -464,22 +464,18 @@ func _on_button_open_chat_pressed():
 	panel_chat.toggle_open_chat()
 
 
-func set_cursor_position(position: Vector2):
-	var crosshair_position = position - (label_crosshair.size / 2) - Vector2(0, 1)
-	label_crosshair.set_global_position(crosshair_position)
-	control_pointer_tooltip.set_global_cursor_position(position)
-	Global.scene_runner.set_cursor_position(position)
-
-
 func reset_cursor_position():
+	# Position crosshair at center of screen
 	var viewport_size = get_tree().root.get_viewport().get_visible_rect()
-	set_cursor_position(viewport_size.size * 0.5)
+	var center_position = viewport_size.size * 0.5
+	var crosshair_position = center_position - (label_crosshair.size / 2) - Vector2(0, 1)
+	label_crosshair.set_global_position(crosshair_position)
+	control_pointer_tooltip.set_global_cursor_position(center_position)
 
 
 func _on_ui_root_gui_input(event: InputEvent):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			set_cursor_position(event.position)
+	pass
+	# Touch events no longer modify cursor position - raycast always uses screen center
 
 
 func _on_panel_profile_open_profile():
