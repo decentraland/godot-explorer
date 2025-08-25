@@ -30,9 +30,6 @@ custom_environment = ExtResource("3_2n2br")
 [node name="SubViewport" parent="SubViewportContainer" index="0"]
 transparent_bg = false
 
-[node name="OutlineSystem" parent="SubViewportContainer" index="1"]
-transform = Transform3D(-1, -5.16436e-08, 1.4189e-07, 0, 0.939693, 0.34202, -1.50996e-07, 0.34202, -0.939693, 0, 2.3, -3.5)
-
 [node name="TabContainer" type="TabContainer" parent="."]
 layout_mode = 0
 offset_left = 33.0
