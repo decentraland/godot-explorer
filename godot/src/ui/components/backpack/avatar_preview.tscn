@@ -41,7 +41,6 @@ non_3d_audio = true
 [node name="Camera3D" type="Camera3D" parent="SubViewport"]
 unique_name_in_owner = true
 transform = Transform3D(-1, -5.16436e-08, 1.4189e-07, 0, 0.939693, 0.34202, -1.50996e-07, 0.34202, -0.939693, 0, 2.3, -3.5)
-cull_mask = 524287
 fov = 40.0
 size = 3.0
 

@@ -28,7 +28,6 @@ var current_profile_version: int = -1
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
 @onready var avatar_raycast: RayCast3D = $Mount/Camera3D/AvatarRaycast
-@onready var outline_system: OutlineSystem = $Mount/Camera3D/OutlineSystem
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 
@@ -113,10 +112,6 @@ func _ready():
 		add_child(PlayerMobileInput.new(self))
 	else:
 		add_child(PlayerDesktopInput.new(self))
-
-	# Setup the outline system with the main camera
-	if outline_system:
-		outline_system.setup(camera)
 
 	camera.current = true
 

@@ -1,9 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://blv7r5folt1d5"]
+[gd_scene load_steps=6 format=3 uid="uid://blv7r5folt1d5"]
 
 [ext_resource type="Script" uid="uid://bwfhs05dq8dhm" path="res://src/logic/player/player.gd" id="1_5bfm2"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
-[ext_resource type="PackedScene" uid="uid://b4mbs03r7lad8" path="res://src/logic/player/outline_system.tscn" id="3_sxiuh"]
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
@@ -36,7 +35,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
 [node name="Camera3D" type="DclCamera3D" parent="Mount"]
 smoothing_speed = 2.0
 target_fov = 75.0
-cull_mask = 524287
 far = 100.0
 
 [node name="AvatarRaycast" type="RayCast3D" parent="Mount/Camera3D"]
@@ -44,8 +42,6 @@ target_position = Vector3(0, 0, -10)
 collision_mask = 536870912
 collide_with_areas = true
 collide_with_bodies = false
-
-[node name="OutlineSystem" parent="Mount/Camera3D" instance=ExtResource("3_sxiuh")]
 
 [node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
 skip_process = true
