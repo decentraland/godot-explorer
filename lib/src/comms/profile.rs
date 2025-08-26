@@ -9,6 +9,12 @@ use crate::{
     http_request::request_response::{RequestResponse, ResponseEnum},
 };
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ProfileLink {
+    pub title: String,
+    pub url: String,
+}
+
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
 pub struct AvatarColor3 {
     pub r: f32,
@@ -106,6 +112,22 @@ pub struct SerializedProfile {
     #[serde(rename = "hasConnectedWeb3")]
     pub has_connected_web3: Option<bool>,
     pub avatar: AvatarWireFormat,
+    pub country: Option<String>,
+    pub gender: Option<String>,
+    pub pronouns: Option<String>,
+    #[serde(rename = "relationshipStatus")]
+    pub relation_ship_status: Option<String>,
+    #[serde(rename = "sexualOrientation")]
+    pub sexual_orientation: Option<String>,
+    pub language: Option<String>,
+    #[serde(rename = "employmentStatus")]
+    pub employment_status: Option<String>,
+    pub profession: Option<String>,
+    #[serde(rename = "realName")]
+    pub real_name: Option<String>,
+    pub hobbies: Option<String>,
+    pub birthdate: Option<i64>,
+    pub links: Option<Vec<ProfileLink>>,
 }
 
 impl Default for AvatarWireFormat {
@@ -170,6 +192,18 @@ impl Default for SerializedProfile {
             has_claimed_name: Some(false),
             has_connected_web3: Some(false),
             avatar: Default::default(),
+            country: Default::default(),
+            gender: Default::default(),
+            pronouns: Default::default(),
+            relation_ship_status: Default::default(),
+            sexual_orientation: Default::default(),
+            language: Default::default(),
+            employment_status: Default::default(),
+            profession: Default::default(),
+            real_name: Default::default(),
+            hobbies: Default::default(),
+            birthdate: Default::default(),
+            links: Default::default(),
         }
     }
 }

@@ -71,8 +71,8 @@ pub struct SceneManager {
     #[var]
     console: Callable,
 
-    #[var]
-    cursor_position: Vector2,
+    // Cached center position of viewport for raycasting
+    viewport_center: Vector2,
 
     player_position: Vector2i,
     current_parcel_scene_id: SceneId,
@@ -699,9 +699,10 @@ impl SceneManager {
 
         let camera_node = self.camera_node.clone().unwrap();
 
-        let raycast_from = camera_node.project_ray_origin(self.cursor_position);
+        // Use cached viewport center for raycasting
+        let raycast_from = camera_node.project_ray_origin(self.viewport_center);
         let raycast_to =
-            raycast_from + camera_node.project_ray_normal(self.cursor_position) * RAY_LENGTH;
+            raycast_from + camera_node.project_ray_normal(self.viewport_center) * RAY_LENGTH;
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
         let mut raycast_query = PhysicsRayQueryParameters3D::new_gd();
         raycast_query.set_from(raycast_from);
@@ -777,10 +778,11 @@ impl SceneManager {
     fn _on_ui_resize(&mut self) {
         self.ui_canvas_information = self.create_ui_canvas_information();
 
+        // Update cached viewport center when viewport resizes
         let viewport = self.base().get_viewport();
         if let Some(viewport) = viewport {
             let viewport_size = viewport.get_visible_rect();
-            self.cursor_position =
+            self.viewport_center =
                 Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
         }
     }
@@ -1002,7 +1004,7 @@ impl INode for SceneManager {
                 canvas_size.x as i32,
                 canvas_size.y as i32,
             ),
-            cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
+            viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
         }
     }
 
@@ -1013,10 +1015,12 @@ impl INode for SceneManager {
             .connect("resized".into(), callable_on_ui_resize);
         self.base_ui.set_name("scenes_ui".into());
         self.ui_canvas_information = self.create_ui_canvas_information();
+
+        // Initialize cached viewport center
         let viewport = self.base().get_viewport();
         if let Some(viewport) = viewport {
             let viewport_size = viewport.get_visible_rect();
-            self.cursor_position =
+            self.viewport_center =
                 Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
         }
     }

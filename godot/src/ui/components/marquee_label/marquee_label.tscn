@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://cqsb3na8hoq06"]
+
+[ext_resource type="Script" uid="uid://jpkenwyrcoox" path="res://src/ui/components/marquee_label/marquee_label.gd" id="1_fi0oc"]
+
+[node name="MarqueeLabel" type="ScrollContainer"]
+custom_minimum_size = Vector2(100, 20)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -620.0
+offset_bottom = -700.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+script = ExtResource("1_fi0oc")
+
+[node name="Label" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Marquee Label"

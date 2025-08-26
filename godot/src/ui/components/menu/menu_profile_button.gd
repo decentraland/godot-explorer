@@ -38,6 +38,7 @@ func _ready():
 
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
+	label_avatar_name.load_from_profile(new_profile)
 	var face256_hash = new_profile.get_avatar().get_snapshots_face_hash()
 	var face256_url = new_profile.get_avatar().get_snapshots_face_url()
 	var promise = Global.content_provider.fetch_texture_by_url(face256_hash, face256_url)
@@ -46,8 +47,6 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		printerr("menu_profile_button::_async_download_image promise error: ", result.get_error())
 		return
 	texture_rect_profile.texture = result.texture
-
-	label_avatar_name.load_from_profile(new_profile)
 
 
 func _on_profile_button_mouse_entered():

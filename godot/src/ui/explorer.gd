@@ -16,6 +16,7 @@ var virtual_joystick_orig_position: Vector2i
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
+var _avatar_under_crosshair: Avatar = null
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -33,6 +34,7 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var control_minimap = %Control_Minimap
 @onready var mobile_ui = %MobileUI
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
+@onready var profile_container: Control = %ProfileContainer
 
 @onready var loading_ui = %Loading
 
@@ -187,7 +189,8 @@ func _ready():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	# last
+	Global.open_profile.connect(_async_open_profile)
+
 	ui_root.grab_focus.call_deferred()
 
 	if OS.get_cmdline_args().has("--scene-renderer"):
@@ -231,8 +234,19 @@ func _on_pointer_tooltip_changed():
 
 
 func change_tooltips():
-	if not Global.scene_runner.pointer_tooltips.is_empty():
-		control_pointer_tooltip.set_pointer_data(Global.scene_runner.pointer_tooltips)
+	var tooltip_data = Global.scene_runner.pointer_tooltips.duplicate()
+
+	# Check if there's an avatar behind the crosshair
+	_avatar_under_crosshair = player.get_avatar_under_crosshair()
+	Global.selected_avatar = _avatar_under_crosshair
+
+	if _avatar_under_crosshair:
+		# Add open profile tooltip
+		var profile_tooltip = {"text_pet_down": "Click to view profile", "action": "ia_pointer"}
+		tooltip_data.push_back(profile_tooltip)
+
+	if not tooltip_data.is_empty():
+		control_pointer_tooltip.set_pointer_data(tooltip_data)
 		control_pointer_tooltip.show()
 	else:
 		control_pointer_tooltip.hide()
@@ -449,27 +463,22 @@ func _on_button_open_chat_pressed():
 	panel_chat.toggle_open_chat()
 
 
-func set_cursor_position(position: Vector2):
-	var crosshair_position = position - (label_crosshair.size / 2) - Vector2(0, 1)
-	label_crosshair.set_global_position(crosshair_position)
-	control_pointer_tooltip.set_global_cursor_position(position)
-	Global.scene_runner.set_cursor_position(position)
-
-
 func reset_cursor_position():
+	# Position crosshair at center of screen
 	var viewport_size = get_tree().root.get_viewport().get_visible_rect()
-	set_cursor_position(viewport_size.size * 0.5)
+	var center_position = viewport_size.size * 0.5
+	var crosshair_position = center_position - (label_crosshair.size / 2) - Vector2(0, 1)
+	label_crosshair.set_global_position(crosshair_position)
+	control_pointer_tooltip.set_global_cursor_position(center_position)
 
 
-func _on_ui_root_gui_input(event: InputEvent):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			set_cursor_position(event.position)
+func _on_ui_root_gui_input(_event: InputEvent):
+	pass
+	# Touch events no longer modify cursor position - raycast always uses screen center
 
 
 func _on_panel_profile_open_profile():
-	control_menu.show_backpack()
-	release_mouse()
+	_open_own_profile()
 
 
 func _on_adapter_changed(voice_chat_enabled, _adapter_str):
@@ -502,3 +511,29 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 			_first_time_refresh_warning = false
 	else:
 		button_load_scenes.hide()
+
+
+func _async_open_profile(avatar: DclAvatar):
+	if avatar == null or not is_instance_valid(avatar):
+		return
+
+	var user_address = avatar.avatar_id
+	var promise = Global.content_provider.fetch_profile(user_address)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("Error getting player profile: ", result.get_error())
+		return
+
+	if result != null:
+		profile_container.open(result)
+	release_mouse()
+
+
+func _on_control_menu_open_profile() -> void:
+	_open_own_profile()
+
+
+func _open_own_profile() -> void:
+	control_menu.show_own_profile()
+	release_mouse()

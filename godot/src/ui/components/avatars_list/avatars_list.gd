@@ -1,6 +1,7 @@
 extends Control
 
 signal size_changed
+
 const NEARBY_PLAYER_ITEM = preload(
 	"res://src/ui/components/nearby_player_item/nearby_player_item.tscn"
 )
@@ -57,6 +58,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 						and child.avatar.avatar_loaded.is_connected(child.async_set_data)
 					):
 						child.avatar.avatar_loaded.disconnect(child.async_set_data)
+
 					child.queue_free()
 					break
 

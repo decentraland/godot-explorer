@@ -1,5 +1,6 @@
 extends Control
 
+signal open_profile
 signal hide_menu
 signal jump_to(Vector2i)
 signal toggle_minimap
@@ -143,6 +144,15 @@ func show_backpack():
 func show_settings():
 	select_node(control_settings, false)
 	button_settings.set_pressed(true)
+	_open()
+
+
+func show_own_profile():
+	select_node(control_profile_settings, false)
+	button_settings.set_pressed(false)
+	button_backpack.set_pressed(false)
+	button_map.set_pressed(false)
+	button_discover.set_pressed(false)
 	_open()
 
 

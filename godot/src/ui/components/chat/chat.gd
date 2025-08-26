@@ -29,6 +29,7 @@ func _ready():
 	# Connect to avatar scene changed signal instead of using timer
 	Global.avatars.avatar_scene_changed.connect(avatars_list.async_update_nearby_users)
 	avatars_list.size_changed.connect(self.update_nearby_quantity)
+
 	add_chat_message(
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)

@@ -17,6 +17,6 @@ func _draw():
 func set_circle(pos: Vector2, new_radius: float, color: Color = circle_color):
 	radius = new_radius
 	circle_color = color
-	position = pos - Vector2(radius, radius)  # Centra el círculo
+	position = pos - Vector2(radius, radius)
 	set_size(Vector2(radius * 2, radius * 2))
 	queue_redraw()

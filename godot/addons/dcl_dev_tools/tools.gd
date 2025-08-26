@@ -8,22 +8,29 @@ var tools = [
 	preload("./dev_tools/resource_counter/tool.gd").new(self)
 ]
 
-var custom_menu: MenuButton
+var custom_menu_3d: MenuButton
+var custom_menu_2d: MenuButton
 var menu_name = "DCL Tools"
 
 
 func _enter_tree() -> void:
-	custom_menu = MenuButton.new()
-	custom_menu.name = "DCL_ToolsMenu"
-	custom_menu.text = menu_name
+	# Create menu for 3D editor
+	custom_menu_3d = MenuButton.new()
+	custom_menu_3d.name = "DCL_ToolsMenu3D"
+	custom_menu_3d.text = menu_name
+	initialize_items(custom_menu_3d)
+	add_control_to_container(EditorPlugin.CONTAINER_SPATIAL_EDITOR_MENU, custom_menu_3d)
 
-	initialize_items()
-	add_control_to_container(EditorPlugin.CONTAINER_TOOLBAR, custom_menu)
-	call_deferred("_position_menu")
+	# Create menu for 2D editor
+	custom_menu_2d = MenuButton.new()
+	custom_menu_2d.name = "DCL_ToolsMenu2D"
+	custom_menu_2d.text = menu_name
+	initialize_items(custom_menu_2d)
+	add_control_to_container(EditorPlugin.CONTAINER_CANVAS_EDITOR_MENU, custom_menu_2d)
 
 
-func initialize_items():
-	var popup = custom_menu.get_popup()
+func initialize_items(menu: MenuButton):
+	var popup = menu.get_popup()
 	for tool_id in tools.size():
 		tools[tool_id].populate_menu(popup, tool_id)
 	popup.id_pressed.connect(_on_menu_item_selected)
@@ -35,18 +42,15 @@ func _on_menu_item_selected(id: int) -> void:
 
 
 func _exit_tree() -> void:
-	if !custom_menu:
-		return
-	var container = custom_menu.get_parent().get_parent()
-	custom_menu.get_parent().remove_child(custom_menu)
-	container.add_child(custom_menu)
-	remove_control_from_container(EditorPlugin.CONTAINER_TOOLBAR, custom_menu)
-	custom_menu.queue_free()
+	# Clean up 3D editor menu
+	if custom_menu_3d and is_instance_valid(custom_menu_3d):
+		remove_control_from_container(EditorPlugin.CONTAINER_SPATIAL_EDITOR_MENU, custom_menu_3d)
+		custom_menu_3d.queue_free()
+
+	# Clean up 2D editor menu
+	if custom_menu_2d and is_instance_valid(custom_menu_2d):
+		remove_control_from_container(EditorPlugin.CONTAINER_CANVAS_EDITOR_MENU, custom_menu_2d)
+		custom_menu_2d.queue_free()
+
 	for tool in tools:
 		tool.cleanup()
-
-
-func _position_menu() -> void:
-	var menu_bar := custom_menu.get_parent()
-	menu_bar.remove_child(custom_menu)
-	menu_bar.get_child(1).add_child(custom_menu)

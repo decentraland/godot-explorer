@@ -3,7 +3,7 @@ extends CharacterBody3D
 
 const DEFAULT_CAMERA_FOV = 75.0
 const SPRINTING_CAMERA_FOV = 100.0
-const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
+const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
 
 var last_position: Vector3
 var actual_velocity_xz: float
@@ -27,6 +27,7 @@ var current_profile_version: int = -1
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
+@onready var avatar_raycast: RayCast3D = $Mount/Camera3D/AvatarRaycast
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 
@@ -53,10 +54,15 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 	if mode == Global.CameraMode.THIRD_PERSON:
 		var tween_out = create_tween()
+		tween_out.set_parallel(true)
 		(
 			tween_out
 			. tween_property(mount_camera, "spring_length", THIRD_PERSON_CAMERA.length(), 0.25)
 			. set_ease(Tween.EASE_IN_OUT)
+		)
+		# Apply X offset for over-shoulder view in third person
+		tween_out.tween_property(mount_camera, "position:x", THIRD_PERSON_CAMERA.x, 0.25).set_ease(
+			Tween.EASE_IN_OUT
 		)
 		avatar.set_hidden(false)
 		avatar.set_rotation(Vector3(0, 0, 0))
@@ -64,9 +70,12 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var tween_in = create_tween()
+		tween_in.set_parallel(true)
 		tween_in.tween_property(mount_camera, "spring_length", -.2, 0.25).set_ease(
 			Tween.EASE_IN_OUT
 		)
+		# Remove X offset for centered view in first person
+		tween_in.tween_property(mount_camera, "position:x", 0.0, 0.25).set_ease(Tween.EASE_IN_OUT)
 		avatar.set_hidden(true)
 		if play_sound:
 			UiSounds.play_sound("ui_fade_in")
@@ -106,12 +115,17 @@ func _ready():
 
 	camera.current = true
 
-	set_camera_mode(Global.CameraMode.THIRD_PERSON)
+	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.activate_attach_points()
 
 	floor_snap_length = 0.2
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
+
+	# Remove own avatar's click area as to avoid self-targeting
+	var own_click_area = avatar.get_node("%ClickArea")
+	if own_click_area:
+		own_click_area.queue_free()
 
 
 func _on_player_profile_changed(new_profile: DclUserProfile):
@@ -249,3 +263,27 @@ func get_broadcast_rotation_y() -> float:
 	const SNAP_STEP := 0.0174533  # PI / 180
 	rotation_y = snapped(rotation_y, SNAP_STEP)
 	return rotation_y
+
+
+func get_avatar_under_crosshair() -> Avatar:
+	if not avatar_raycast:
+		return null
+
+	# Check if raycast is colliding
+	if not avatar_raycast.is_colliding():
+		return null
+
+	var collider = avatar_raycast.get_collider()
+	if not collider:
+		return null
+
+	# Check if this is an avatar collision area
+	if collider.has_meta("is_avatar") and collider.get_meta("is_avatar"):
+		# Walk up the node tree to find the Avatar node
+		var node = collider
+		while node:
+			if node is Avatar:
+				return node
+			node = node.get_parent()
+
+	return null

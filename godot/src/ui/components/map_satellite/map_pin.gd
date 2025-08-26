@@ -80,9 +80,9 @@ func get_sibling_camera_zoom() -> Vector2:
 	var parent = get_parent()
 	if not parent:
 		return Vector2.ONE
-	for sibrling in parent.get_children():
-		if sibrling is Camera2D:
-			return sibrling.zoom
+	for sibling in parent.get_children():
+		if sibling is Camera2D:
+			return sibling.zoom
 	return Vector2.ONE
 
 
