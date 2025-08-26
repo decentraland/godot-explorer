@@ -47,7 +47,6 @@ collide_with_areas = true
 collide_with_bodies = false
 
 [node name="OutlineSystem" parent="Mount/Camera3D" instance=ExtResource("3_sxiuh")]
-
 [node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
 skip_process = true
 
