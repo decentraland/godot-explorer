@@ -1,0 +1,34 @@
+[gd_scene load_steps=3 format=3 uid="uid://crg0mweeyvwdh"]
+
+[ext_resource type="Script" uid="uid://b8h4r5n2kqx7c" path="res://src/ui/components/overlay_text_edit.gd" id="1_overlay"]
+[ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/dcl_text_edit.tscn" id="2_dcl_text_edit"]
+
+[node name="OverlayTextEdit" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+script = ExtResource("1_overlay")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="DclTextEdit" parent="MarginContainer/CenterContainer" instance=ExtResource("2_dcl_text_edit")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="dcl_text_edit_changed" from="MarginContainer/CenterContainer/DclTextEdit" to="." method="_on_dcl_text_edit_changed"]
