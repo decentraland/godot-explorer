@@ -69,3 +69,12 @@ func get_text_value() -> String:
 func set_text(new_text: String = "") -> void:
 	text_edit.text = new_text
 	_update_length()
+
+
+func _on_text_edit_focus_entered() -> void:
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		var visible := DisplayServer.virtual_keyboard_get_height() > 0
+		if visible:
+			print("Keyboard is open")
+		else:
+			print("Keyboard is closed")

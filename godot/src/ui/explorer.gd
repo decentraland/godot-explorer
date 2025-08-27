@@ -44,6 +44,7 @@ var _avatar_under_crosshair: Avatar = null
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
+@onready var mobile_input_manager: MobileInputManager = %MobileInputManager
 
 
 func _process(_dt):
@@ -192,6 +193,23 @@ func _ready():
 	Global.open_profile.connect(_async_open_profile)
 
 	ui_root.grab_focus.call_deferred()
+
+	# Configurar el mobile input manager para móvil
+	if Global.is_mobile() and mobile_input_manager:
+		# Hacer el manager accesible globalmente
+		Global.mobile_input_manager = mobile_input_manager
+		
+		# Conectar automáticamente todos los controles de texto de la UI
+		mobile_input_manager.auto_connect_scene_controls(ui_root)
+		
+		# Conectar señales para debugging
+		mobile_input_manager.overlay_opened.connect(_on_mobile_overlay_opened)
+		mobile_input_manager.overlay_closed.connect(_on_mobile_overlay_closed)
+		mobile_input_manager.text_confirmed.connect(_on_mobile_text_confirmed)
+		
+		print("📱 Mobile Input Manager configurado exitosamente")
+	else:
+		print("⚠️ Mobile Input Manager no disponible o no es móvil")
 
 	if OS.get_cmdline_args().has("--scene-renderer"):
 		prints("load scene_orchestor")
@@ -537,3 +555,13 @@ func _on_control_menu_open_profile() -> void:
 func _open_own_profile() -> void:
 	control_menu.show_own_profile()
 	release_mouse()
+
+# Callbacks del Mobile Input Manager
+func _on_mobile_overlay_opened(control: Control) -> void:
+	print("🚀 Mobile overlay abierto para: ", control.name)
+
+func _on_mobile_overlay_closed(control: Control) -> void:
+	print("❌ Mobile overlay cerrado para: ", control.name)
+
+func _on_mobile_text_confirmed(text: String, control: Control) -> void:
+	print("✅ Texto confirmado: '", text, "' para: ", control.name)

@@ -43,6 +43,9 @@ var webkit_ios_plugin
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
 
+# Mobile input manager for mobile text editing
+var mobile_input_manager = null
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr

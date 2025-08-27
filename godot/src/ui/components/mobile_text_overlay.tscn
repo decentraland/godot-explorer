@@ -1,0 +1,135 @@
+[gd_scene load_steps=4 format=3 uid="uid://b5m8k7n3jqp2w"]
+
+[ext_resource type="Script" path="res://src/ui/components/mobile_text_overlay.gd" id="1_mobile_overlay"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.2, 0.2, 0.2, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.4, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="MobileTextOverlay" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+script = ExtResource("1_mobile_overlay")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HeaderContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+text = "Editar Texto"
+vertical_alignment = 1
+
+[node name="CharCounter" type="Label" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HeaderContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme = ExtResource("2_theme")
+text = "0/100"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="InputContainer" type="Control" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+
+[node name="TextInput" type="TextEdit" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/InputContainer"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+placeholder_text = "Escribe aquí..."
+wrap_mode = 1
+caret_blink = true
+
+[node name="LineInput" type="LineEdit" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/InputContainer"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+placeholder_text = "Escribe aquí..."
+caret_blink = true
+
+[node name="ButtonContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/ButtonContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+text = "Cancelar"
+
+[node name="ConfirmButton" type="Button" parent="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/ButtonContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+text = "Confirmar"
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/InputContainer/TextInput" to="." method="_on_text_input_text_changed"]
+[connection signal="gui_input" from="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/InputContainer/TextInput" to="." method="_on_text_input_gui_input"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/InputContainer/LineInput" to="." method="_on_line_input_text_changed"]
+[connection signal="gui_input" from="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/InputContainer/LineInput" to="." method="_on_line_input_gui_input"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/ButtonContainer/CancelButton" to="." method="_on_cancel_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/ButtonContainer/ConfirmButton" to="." method="_on_confirm_pressed"]

@@ -54,4 +54,5 @@ layout_mode = 2
 text = "0/15"
 label_settings = ExtResource("2_755oe")
 
+[connection signal="focus_entered" from="PanelContainer/MarginContainer/TextEdit" to="." method="_on_text_edit_focus_entered"]
 [connection signal="text_changed" from="PanelContainer/MarginContainer/TextEdit" to="." method="_on_text_edit_text_changed"]
