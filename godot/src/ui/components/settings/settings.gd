@@ -490,3 +490,7 @@ func _on_button_general_pressed() -> void:
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
+
+
+func _on_check_box_compact_chat_toggled(toggled_on: bool) -> void:
+	Global.set_chat_compact(toggled_on)

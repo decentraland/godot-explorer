@@ -7,6 +7,7 @@ signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile(avatar: DclAvatar)
+signal chat_compact_changed(is_compact: bool)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -43,6 +44,27 @@ var webkit_ios_plugin
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
 
+var is_chat_compact: bool = false
+var url_popup_instance = null
+
+func set_chat_compact(is_compact: bool) -> void:
+	if is_chat_compact != is_compact:
+		is_chat_compact = is_compact
+		chat_compact_changed.emit(is_compact)
+
+
+func set_url_popup_instance(popup_instance) -> void:
+	url_popup_instance = popup_instance
+
+
+func show_url_popup(url: String) -> void:
+	if url_popup_instance != null:
+		url_popup_instance.open(url)
+
+
+func hide_url_popup() -> void:
+	if url_popup_instance != null:
+		url_popup_instance.close()
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr

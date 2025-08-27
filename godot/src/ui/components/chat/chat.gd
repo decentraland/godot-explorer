@@ -5,11 +5,11 @@ signal submit_message(message: String)
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
+const CHAT_MESSAGE = preload("res://src/ui/components/chat/chat_message.tscn")
 
 var hide_tween = null
 var nearby_avatars = null
 
-@onready var rich_text_label_chat = %RichTextLabel_Chat
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
 @onready var button_nearby_users: Button = %Button_NearbyUsers
@@ -20,6 +20,7 @@ var nearby_avatars = null
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
 @onready var timer_hide = %Timer_Hide
 @onready var avatars_list: Control = $VBoxContainer/AvatarsList
+@onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
 
 
 func _ready():
@@ -30,9 +31,9 @@ func _ready():
 	Global.avatars.avatar_scene_changed.connect(avatars_list.async_update_nearby_users)
 	avatars_list.size_changed.connect(self.update_nearby_quantity)
 
-	add_chat_message(
-		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
-	)
+	#add_chat_message(
+		#"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
+	#)
 
 	Global.comms.chat_message.connect(self.on_chats_arrived)
 
@@ -46,51 +47,24 @@ func _on_submit_message(_message: String):
 	_set_open_chat(false)
 
 
-func add_chat_message(bb_text: String) -> void:
-	rich_text_label_chat.append_text(bb_text)
-	rich_text_label_chat.newline()
-
-	if hide_tween != null:
-		hide_tween.stop()
-	modulate = Color.WHITE
-	timer_hide.start()
+#func add_chat_message(bb_text: String) -> void:
+	#rich_text_label_chat.append_text(bb_text)
+	#rich_text_label_chat.newline()
+#
+	#if hide_tween != null:
+		#hide_tween.stop()
+	#modulate = Color.WHITE
+	#timer_hide.start()
 
 
 func on_chats_arrived(chats: Array):
 	for chat in chats:
-		var address: String = chat[0]
-		# var _timestamp: float = chat[1]
-		var message: String = chat[2]
-
-		var avatar = Global.avatars.get_avatar_by_address(address)
-		if avatar == null:
-			if address == Global.player_identity.get_address_str():
-				avatar = Global.scene_runner.player_avatar_node
-
-		var avatar_name: String = ""
-		if avatar != null and is_instance_valid(avatar):
-			avatar_name = avatar.get_avatar_name()
-
-		if avatar_name.is_empty():
-			if address.length() > 32:
-				avatar_name = DclEther.shorten_eth_address(address)
-			else:
-				avatar_name = "Unknown"
-
-		if message.begins_with(EMOTE):
-			message = message.substr(1)  # Remove prefix
-			var expression_id = message.split(" ")[0]  # Get expression id ([1] is timestamp)
-			if avatar != null and is_instance_valid(avatar):
-				avatar.emote_controller.async_play_emote(expression_id)
-		elif message.begins_with(REQUEST_PING):
-			pass  # TODO: Send ACK
-		elif message.begins_with(ACK):
-			pass  # TODO: Calculate ping
-		else:
-			Global.player_said.emit(address, message)
-			var text = "[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar_name, message]
-			add_chat_message(text)
-			UiSounds.play_sound("notification_chatmessage_public_appear")
+		print(chat)
+		var new_chat = CHAT_MESSAGE.instantiate()
+		v_box_container_chat.add_child(new_chat)
+		new_chat.set_chat(chat)
+		new_chat.compact_view = Global.is_chat_compact
+		
 
 
 func _on_button_send_pressed():
