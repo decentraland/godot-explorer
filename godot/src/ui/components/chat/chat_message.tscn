@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://c8i3cvso5yx7n"]
+[gd_scene load_steps=6 format=3 uid="uid://c8i3cvso5yx7n"]
 
 [ext_resource type="Script" uid="uid://b0g05gunsfh4u" path="res://src/ui/components/chat/chat_message.gd" id="1_ppxi6"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="2_gw0bh"]
@@ -10,6 +10,9 @@ corner_radius_top_left = 15
 corner_radius_top_right = 15
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_ppxi6"]
+color = Color(0, 0, 0, 0)
 
 [node name="ChatMessage" type="VBoxContainer"]
 offset_right = 568.0
@@ -38,7 +41,7 @@ size_flags_vertical = 8
 
 [node name="PanelContainer" type="PanelContainer" parent="HBoxContainer_ExtendedChat"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_fq752")
 
@@ -115,3 +118,8 @@ theme_override_colors/font_color = Color(0.572988, 0.572988, 0.572988, 1)
 theme_override_font_sizes/font_size = 8
 text = "14:15"
 horizontal_alignment = 2
+
+[node name="VSeparator" type="VSeparator" parent="HBoxContainer_ExtendedChat"]
+layout_mode = 2
+theme_override_constants/separation = 45
+theme_override_styles/separator = SubResource("StyleBoxLine_ppxi6")

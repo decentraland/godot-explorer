@@ -249,6 +249,7 @@ theme_override_constants/margin_bottom = 15
 layout_mode = 2
 
 [node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeMarginContainer/InteractableHUD/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme = ExtResource("4_2vs87")
 theme_override_constants/separation = 10
@@ -438,6 +439,8 @@ script = ExtResource("20_064cw")
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer/VBoxContainer/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer/VBoxContainer/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer/VBoxContainer/HBoxContainer_TopLeftMenu/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
+[connection signal="hide_parcel_info" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer/VBoxContainer/Panel_Chat" to="." method="_on_panel_chat_hide_parcel_info"]
+[connection signal="show_parcel_info" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer/VBoxContainer/Panel_Chat" to="." method="_on_panel_chat_show_parcel_info"]
 [connection signal="submit_message" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer/VBoxContainer/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
 [connection signal="open_profile" from="UI/SafeMarginContainer/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]

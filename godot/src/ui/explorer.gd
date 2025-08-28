@@ -45,6 +45,7 @@ var _avatar_under_crosshair: Avatar = null
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
+@onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
 
 
 func _process(_dt):
@@ -466,7 +467,6 @@ func _on_button_jump_gui_input(event):
 func _on_button_open_chat_pressed():
 	panel_chat.toggle_open_chat()
 
-
 func reset_cursor_position():
 	# Position crosshair at center of screen
 	var viewport_size = get_tree().root.get_viewport().get_visible_rect()
@@ -541,3 +541,11 @@ func _on_control_menu_open_profile() -> void:
 func _open_own_profile() -> void:
 	control_menu.show_own_profile()
 	release_mouse()
+
+
+func _on_panel_chat_hide_parcel_info() -> void:
+	h_box_container_top_left_menu.hide()
+
+
+func _on_panel_chat_show_parcel_info() -> void:
+	h_box_container_top_left_menu.show()

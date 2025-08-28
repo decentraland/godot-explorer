@@ -20,6 +20,7 @@ const ACK: String = "␆"
 @onready var label_timestamp: Label = %Label_Timestamp
 @onready var claimed_checkmark: MarginContainer = %ClaimedCheckmark
 @onready var profile_picture: ProfilePicture = %ProfilePicture
+@onready var panel_container: PanelContainer = $HBoxContainer_ExtendedChat/PanelContainer
 
 var nickname: String = "Unknown"
 var tag: String = ""
@@ -56,6 +57,9 @@ func set_chat(chat) -> void:
 	var processed_message = make_urls_clickable(message)
 	rich_text_label_message.text = processed_message
 	label_timestamp.text = time_string
+	
+	# Ajustar tamaño del panel dinámicamente
+	adjust_panel_size.call_deferred()
 	var avatar = Global.avatars.get_avatar_by_address(address)
 	
 	if avatar == null:
@@ -124,6 +128,10 @@ func _on_chat_compact_changed(is_compact: bool) -> void:
 	compact_view = is_compact
 	h_box_container_extended_chat.visible = !is_compact
 	rich_text_label_compact_chat.visible = is_compact
+	
+	# Reajustar el tamaño si estamos en vista extendida
+	if not is_compact:
+		adjust_panel_size.call_deferred()
 
 
 func make_urls_clickable(text: String) -> String:
@@ -157,3 +165,38 @@ func _on_url_clicked(meta):
 	# Mostrar popup de confirmación para URL
 	print("URL clickeada: ", meta)
 	Global.show_url_popup(str(meta))
+
+
+func adjust_panel_size():
+	# Esperar un frame para que el contenido se renderice
+	await get_tree().process_frame
+	
+	# Obtener el ancho disponible del contenedor padre
+	var parent_width = get_parent().size.x if get_parent() else 400.0
+	
+	# Ancho máximo del panel (dejando espacio para el avatar y márgenes)
+	var max_panel_width = parent_width - 100.0  # 100px para avatar y espaciado
+	
+	## Obtener el tamaño del contenido del RichTextLabel
+	#var content_size = rich_text_label_message.get_content_height()
+	
+	# Calcular ancho necesario basado en el texto
+	var font = rich_text_label_message.get_theme_default_font()
+	var font_size = rich_text_label_message.get_theme_font_size("normal_font_size")
+	if font_size == -1:
+		font_size = 12  # tamaño por defecto
+	
+	var text_width = font.get_string_size(rich_text_label_message.get_parsed_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	
+	# Ancho mínimo y máximo
+	var min_width = 100.0
+	var desired_width = max(min_width, min(text_width + 40, max_panel_width))  # +40 para márgenes internos
+	
+	# Establecer el tamaño personalizado
+	panel_container.custom_minimum_size.x = desired_width
+	
+	# Si el texto es muy largo, permitir que el RichTextLabel haga wrap
+	if text_width > max_panel_width - 40:
+		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	else:
+		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_OFF
