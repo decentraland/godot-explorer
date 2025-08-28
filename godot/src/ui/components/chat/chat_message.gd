@@ -22,7 +22,7 @@ var nickname_color_hex: String = "#FFFFFF"
 @onready var label_timestamp: Label = %Label_Timestamp
 @onready var claimed_checkmark: MarginContainer = %ClaimedCheckmark
 @onready var profile_picture: ProfilePicture = %ProfilePicture
-@onready var panel_container: PanelContainer = $HBoxContainer_ExtendedChat/PanelContainer
+@onready var panel_container: PanelContainer = %PanelContainer
 
 
 func _ready() -> void:
@@ -137,16 +137,38 @@ func _on_chat_compact_changed(is_compact: bool) -> void:
 
 
 func make_urls_clickable(text: String) -> String:
-	# Regex to detect URLs (http/https/www)
+	var processed_text = text
+
+	# First, detect and process coordinates (#,# format)
+	var coord_regex = RegEx.new()
+	coord_regex.compile(r"(-?\d+,-?\d+)")
+
+	var coord_results = coord_regex.search_all(processed_text)
+	# Process coordinates from end to start to maintain correct positions
+	for i in range(coord_results.size() - 1, -1, -1):
+		var coord_match = coord_results[i]
+		var coord = coord_match.get_string()
+		var start_pos = coord_match.get_start()
+		var end_pos = coord_match.get_end()
+
+		# Validate coordinate range (-150 to 150 for both x and y)
+		if _is_valid_coordinate(coord):
+			# Replace with clickable BBCode format for coordinates
+			var clickable_coord = "[url=coord:%s]%s[/url]" % [coord, coord]
+			processed_text = (
+				processed_text.substr(0, start_pos)
+				+ clickable_coord
+				+ processed_text.substr(end_pos)
+			)
+
+	# Then, detect and process URLs (http/https/www)
 	var url_regex = RegEx.new()
 	url_regex.compile(r"(https?://[^\s]+|www\.[^\s]+)")
 
-	var result = url_regex.search_all(text)
-	var processed_text = text
-
-	# Process from end to start to maintain correct positions
-	for i in range(result.size() - 1, -1, -1):
-		var url_match = result[i]
+	var url_results = url_regex.search_all(processed_text)
+	# Process URLs from end to start to maintain correct positions
+	for i in range(url_results.size() - 1, -1, -1):
+		var url_match = url_results[i]
 		var url = url_match.get_string()
 		var start_pos = url_match.get_start()
 		var end_pos = url_match.get_end()
@@ -156,7 +178,7 @@ func make_urls_clickable(text: String) -> String:
 		if url.begins_with("www."):
 			full_url = "https://" + url
 
-		# Replace with clickable BBCode format
+		# Replace with clickable BBCode format for URLs
 		var clickable_url = "[url=%s]%s[/url]" % [full_url, url]
 		processed_text = (
 			processed_text.substr(0, start_pos) + clickable_url + processed_text.substr(end_pos)
@@ -165,10 +187,38 @@ func make_urls_clickable(text: String) -> String:
 	return processed_text
 
 
+func _is_valid_coordinate(coord_str: String) -> bool:
+	# Parse coordinates and validate range (-150 to 150)
+	var coords = coord_str.split(",")
+	if coords.size() != 2:
+		return false
+
+	var x = int(coords[0])
+	var y = int(coords[1])
+
+	# Check if both coordinates are within valid range
+	return x >= -150 and x <= 150 and y >= -150 and y <= 150
+
+
 func _on_url_clicked(meta):
-	# Show URL confirmation popup
-	print("URL clicked: ", meta)
-	Global.show_url_popup(str(meta))
+	var meta_str = str(meta)
+	if meta_str.begins_with("coord:"):
+		# Handle coordinate click
+		var coord_str = meta_str.substr(6)  # Remove "coord:" prefix
+		_handle_coordinate_click(coord_str)
+	else:
+		# Handle regular URL click
+		Global.show_url_popup(meta_str)
+
+
+func _handle_coordinate_click(coord_str: String):
+	# Parse coordinates from string like "52,-56"
+	var coords = coord_str.split(",")
+	if coords.size() == 2:
+		var x = int(coords[0])
+		var y = int(coords[1])
+		# Show jump in popup for coordinate confirmation
+		Global.show_jump_in_popup(Vector2i(x, y))
 
 
 func async_adjust_panel_size():

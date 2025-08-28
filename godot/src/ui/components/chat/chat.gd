@@ -62,7 +62,6 @@ func _on_submit_message(_message: String):
 
 func on_chats_arrived(chats: Array):
 	for chat in chats:
-		print(chat)
 		var new_chat = CHAT_MESSAGE.instantiate()
 		v_box_container_chat.add_child(new_chat)
 		new_chat.set_chat(chat)

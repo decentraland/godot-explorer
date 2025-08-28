@@ -17,7 +17,11 @@ offset_bottom = 63.0
 size_flags_horizontal = 3
 script = ExtResource("1_ppxi6")
 
-[node name="RichTextLabel_CompactChat" type="RichTextLabel" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_right = 5
+
+[node name="RichTextLabel_CompactChat" type="RichTextLabel" parent="MarginContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -25,49 +29,50 @@ bbcode_enabled = true
 fit_content = true
 scroll_active = false
 
-[node name="HBoxContainer_ExtendedChat" type="HBoxContainer" parent="."]
+[node name="HBoxContainer_ExtendedChat" type="HBoxContainer" parent="MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 alignment = 2
 
-[node name="ProfilePicture" parent="HBoxContainer_ExtendedChat" instance=ExtResource("2_gw0bh")]
+[node name="ProfilePicture" parent="MarginContainer/HBoxContainer_ExtendedChat" instance=ExtResource("2_gw0bh")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(45, 45)
 layout_mode = 2
 size_flags_horizontal = 1
 size_flags_vertical = 8
 
-[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer_ExtendedChat"]
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/HBoxContainer_ExtendedChat"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_fq752")
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer_ExtendedChat/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 15
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 15
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer"]
 layout_direction = 2
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer"]
 layout_direction = 2
 layout_mode = 2
 alignment = 1
 
-[node name="NicknameTag" type="HBoxContainer" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer"]
+[node name="NicknameTag" type="HBoxContainer" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/separation = 1
 
-[node name="Label_Nickname" type="Label" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag"]
+[node name="Label_Nickname" type="Label" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -75,15 +80,15 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
 text = "nickname"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag"]
 layout_mode = 2
 
-[node name="Hash" type="HBoxContainer" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer"]
+[node name="Hash" type="HBoxContainer" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Tag" type="Label" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash"]
+[node name="Label_Tag" type="Label" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -91,17 +96,17 @@ theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_font_sizes/font_size = 12
 text = "xxxx"
 
-[node name="ClaimedCheckmark" type="MarginContainer" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer"]
+[node name="ClaimedCheckmark" type="MarginContainer" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer/ClaimedCheckmark"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer/NicknameTag/HBoxContainer/ClaimedCheckmark"]
 layout_mode = 2
 texture = ExtResource("3_qhmmi")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="RichTextLabel_Message" type="RichTextLabel" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="RichTextLabel_Message" type="RichTextLabel" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
@@ -111,7 +116,7 @@ text = "message"
 fit_content = true
 scroll_active = false
 
-[node name="Label_Timestamp" type="Label" parent="HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="Label_Timestamp" type="Label" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.572988, 0.572988, 0.572988, 1)
@@ -119,7 +124,7 @@ theme_override_font_sizes/font_size = 8
 text = "14:15"
 horizontal_alignment = 2
 
-[node name="Control_Spacing" type="Control" parent="HBoxContainer_ExtendedChat"]
+[node name="Control_Spacing" type="Control" parent="MarginContainer/HBoxContainer_ExtendedChat"]
 custom_minimum_size = Vector2(45, 0)
 layout_mode = 2
 size_flags_horizontal = 3

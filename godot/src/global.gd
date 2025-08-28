@@ -46,6 +46,7 @@ var selected_avatar: Avatar = null
 
 var is_chat_compact: bool = false
 var url_popup_instance = null
+var jump_in_popup_instance = null
 
 
 func set_chat_compact(is_compact: bool) -> void:
@@ -66,6 +67,20 @@ func show_url_popup(url: String) -> void:
 func hide_url_popup() -> void:
 	if url_popup_instance != null:
 		url_popup_instance.close()
+
+
+func set_jump_in_popup_instance(popup_instance) -> void:
+	jump_in_popup_instance = popup_instance
+
+
+func show_jump_in_popup(coordinates: Vector2i) -> void:
+	if jump_in_popup_instance != null:
+		jump_in_popup_instance.open(coordinates)
+
+
+func hide_jump_in_popup() -> void:
+	if jump_in_popup_instance != null:
+		jump_in_popup_instance.close()
 
 
 func is_xr() -> bool:

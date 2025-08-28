@@ -28,6 +28,7 @@ var _avatar_under_crosshair: Avatar = null
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
 @onready var url_popup = %UrlPopup
+@onready var jump_in_popup = %JumpInPopup
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -90,8 +91,9 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 
-	# Registrar instancia del popup URL en Global
+	# Register popup instances in Global
 	Global.set_url_popup_instance(url_popup)
+	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	if Global.is_xr():
 		player = load("res://src/logic/player/xr_player.tscn").instantiate()
