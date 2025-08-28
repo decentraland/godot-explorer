@@ -47,6 +47,7 @@ var selected_avatar: Avatar = null
 var is_chat_compact: bool = false
 var url_popup_instance = null
 
+
 func set_chat_compact(is_compact: bool) -> void:
 	if is_chat_compact != is_compact:
 		is_chat_compact = is_compact
@@ -65,6 +66,7 @@ func show_url_popup(url: String) -> void:
 func hide_url_popup() -> void:
 	if url_popup_instance != null:
 		url_popup_instance.close()
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr

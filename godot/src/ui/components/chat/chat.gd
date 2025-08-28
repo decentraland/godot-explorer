@@ -1,8 +1,8 @@
 extends Panel
 
 signal submit_message(message: String)
-signal hide_parcel_info()
-signal show_parcel_info()
+signal hide_parcel_info
+signal show_parcel_info
 
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
@@ -25,6 +25,7 @@ var nearby_avatars = null
 @onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
 @onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
 
+
 func _ready():
 	_on_button_back_pressed()
 	avatars_list.async_update_nearby_users(Global.avatars.get_avatars())
@@ -34,7 +35,7 @@ func _ready():
 	avatars_list.size_changed.connect(self.update_nearby_quantity)
 
 	#add_chat_message(
-		#"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
+	#"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	#)
 
 	Global.comms.chat_message.connect(self.on_chats_arrived)
@@ -50,13 +51,13 @@ func _on_submit_message(_message: String):
 
 
 #func add_chat_message(bb_text: String) -> void:
-	#rich_text_label_chat.append_text(bb_text)
-	#rich_text_label_chat.newline()
+#rich_text_label_chat.append_text(bb_text)
+#rich_text_label_chat.newline()
 #
-	#if hide_tween != null:
-		#hide_tween.stop()
-	#modulate = Color.WHITE
-	#timer_hide.start()
+#if hide_tween != null:
+#hide_tween.stop()
+#modulate = Color.WHITE
+#timer_hide.start()
 
 
 func on_chats_arrived(chats: Array):
@@ -66,15 +67,17 @@ func on_chats_arrived(chats: Array):
 		v_box_container_chat.add_child(new_chat)
 		new_chat.set_chat(chat)
 		new_chat.compact_view = Global.is_chat_compact
-	
-	# Scroll hasta abajo después de que se procese el frame
-	scroll_to_bottom.call_deferred()
+
+	# Scroll to bottom after frame processing
+	async_scroll_to_bottom.call_deferred()
 
 
-func scroll_to_bottom() -> void:
-	# Asegurar que el scroll esté al máximo (abajo de todo)
+func async_scroll_to_bottom() -> void:
+	# Ensure scroll is at maximum (bottom)
 	await get_tree().process_frame
-	scroll_container_chats_list.scroll_vertical = scroll_container_chats_list.get_v_scroll_bar().max_value
+	scroll_container_chats_list.scroll_vertical = (
+		scroll_container_chats_list.get_v_scroll_bar().max_value
+	)
 
 
 func _on_button_send_pressed():
@@ -96,7 +99,6 @@ func finish():
 func _on_line_edit_command_focus_exited():
 	_set_open_chat(false)
 	emit_signal("show_parcel_info")
-	
 
 
 func toggle_open_chat():
@@ -131,7 +133,7 @@ func _on_timer_hide_timeout():
 	hide_tween = get_tree().create_tween()
 	modulate = Color.WHITE
 	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
-	
+
 
 func update_nearby_quantity() -> void:
 	button_nearby_users.text = str(avatars_list.list_size)

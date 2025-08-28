@@ -89,7 +89,7 @@ func _ready():
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
-	
+
 	# Registrar instancia del popup URL en Global
 	Global.set_url_popup_instance(url_popup)
 
@@ -466,6 +466,7 @@ func _on_button_jump_gui_input(event):
 
 func _on_button_open_chat_pressed():
 	panel_chat.toggle_open_chat()
+
 
 func reset_cursor_position():
 	# Position crosshair at center of screen
