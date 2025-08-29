@@ -36,6 +36,8 @@ func set_bg_color(color):
 
 
 func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
+	prints("action_to_trigger2", action)
+	print_stack()
 	text_down = text_pet_down if !text_pet_down.is_empty() else text_pet_up
 	text_up = text_pet_up if !text_pet_up.is_empty() else text_pet_down
 

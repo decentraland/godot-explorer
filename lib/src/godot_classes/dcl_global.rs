@@ -20,8 +20,9 @@ use crate::{
 };
 
 use super::{
-    dcl_config::DclConfig, dcl_realm::DclRealm, dcl_social_blacklist::DclSocialBlacklist,
-    dcl_tokio_rpc::DclTokioRpc, portables::DclPortableExperienceController,
+    dcl_avatar::DclAvatar, dcl_config::DclConfig, dcl_realm::DclRealm, 
+    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc, 
+    portables::DclPortableExperienceController,
 };
 
 #[cfg(target_os = "android")]
@@ -100,6 +101,8 @@ pub struct DclGlobal {
 
     #[var(get)]
     pub profile_service: Gd<ProfileService>,
+    
+    pub selected_avatar: Option<Gd<DclAvatar>>,
 }
 
 #[godot_api]
@@ -200,6 +203,7 @@ impl INode for DclGlobal {
             has_javascript_debugger: true,
             #[cfg(not(feature = "enable_inspector"))]
             has_javascript_debugger: false,
+            selected_avatar: None,
         }
     }
 }
@@ -225,6 +229,11 @@ impl DclGlobal {
     fn _set_is_mobile(&mut self, is_mobile: bool) {
         self.is_mobile = is_mobile;
         self.is_virtual_mobile = is_mobile;
+    }
+    
+    #[func]
+    fn get_selected_avatar(&self) -> Option<Gd<DclAvatar>> {
+        self.selected_avatar.clone()
     }
 
     pub fn has_singleton() -> bool {
