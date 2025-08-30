@@ -235,6 +235,29 @@ impl DclGlobal {
     fn get_selected_avatar(&self) -> Option<Gd<DclAvatar>> {
         self.selected_avatar.clone()
     }
+    
+    #[func]
+    pub fn ui_has_focus(&self) -> bool {
+        // Check if the explorer UI has focus by calling the GDScript function
+        let tree = Engine::singleton().get_main_loop();
+        if let Some(tree) = tree {
+            if let Ok(tree) = tree.try_cast::<SceneTree>() {
+                let root = tree.get_root();
+                if let Some(root) = root {
+                    // Try to find the explorer node
+                    let explorer = root.get_node_or_null(NodePath::from("explorer"));
+                    if let Some(mut explorer) = explorer {
+                        // Call ui_has_focus if it exists
+                        if explorer.has_method("ui_has_focus".into()) {
+                            return explorer.call("ui_has_focus".into(), &[]).to::<bool>();
+                        }
+                    }
+                }
+            }
+        }
+        // Default to true if we can't determine focus state
+        true
+    }
 
     pub fn has_singleton() -> bool {
         let Some(main_loop) = Engine::singleton().get_main_loop() else {

@@ -34,7 +34,7 @@ use godot::{
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use super::{
@@ -99,6 +99,9 @@ pub struct SceneManager {
     
     // Track avatar under crosshair
     last_avatar_under_crosshair: Option<Gd<DclAvatar>>,
+    
+    // Track when pointer was pressed on avatar for click-and-release mechanism
+    avatar_pointer_press_time: Option<Instant>,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -1061,6 +1064,7 @@ impl INode for SceneManager {
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
+            avatar_pointer_press_time: None,
         }
     }
 
@@ -1114,11 +1118,52 @@ impl INode for SceneManager {
                     self.base_mut()
                         .emit_signal("pointer_tooltip_changed".into(), &[]);
                 }
+                
+                // Handle pointer press/release on avatar for profile opening
+                // Check for pointer press (start timing)
+                if changed_inputs.contains(&(InputAction::IaPointer, true)) {
+                    // Record the time when pointer was pressed
+                    self.avatar_pointer_press_time = Some(Instant::now());
+                }
+                
+                // Check for pointer release (open profile if within time limit)
+                if changed_inputs.contains(&(InputAction::IaPointer, false)) {
+                    // Only open profile if:
+                    // 1. We have a recorded press time
+                    // 2. The release is within 1 second of the press
+                    // 3. UI has focus
+                    if let Some(press_time) = self.avatar_pointer_press_time {
+                        let press_duration = Instant::now().duration_since(press_time);
+                        
+                        // Check if release is within 1 second
+                        if press_duration < Duration::from_secs(1) {
+                            // Check if UI has focus using the Global singleton
+                            let ui_has_focus = if let Some(global) = DclGlobal::try_singleton() {
+                                global.bind().ui_has_focus()
+                            } else {
+                                true // Default to true if global not available
+                            };
+                            
+                            if ui_has_focus {
+                                // Emit open_profile signal on the Global singleton
+                                if let Some(mut global) = DclGlobal::try_singleton() {
+                                    global.emit_signal("open_profile".into(), &[avatar.to_variant()]);
+                                }
+                            }
+                        }
+                        
+                        // Clear the press time after handling release
+                        self.avatar_pointer_press_time = None;
+                    }
+                }
             }
             None | Some(RaycastResult::SceneEntity(_)) => {
                 // Clear avatar selection if we're not hovering over an avatar
                 if self.last_avatar_under_crosshair.is_some() {
                     self.last_avatar_under_crosshair = None;
+                    
+                    // Clear the press time since we're no longer hovering over an avatar
+                    self.avatar_pointer_press_time = None;
                     
                     // Clear Global.selected_avatar
                     if let Some(mut global) = DclGlobal::try_singleton() {
@@ -1203,7 +1248,7 @@ impl INode for SceneManager {
         // Add avatar profile tooltip if there's an avatar under crosshair
         if let Some(RaycastResult::Avatar(_)) = &current_raycast {
             let mut profile_dict = Dictionary::new();
-            profile_dict.set(StringName::from("text_pet_down"), GString::from("Click to view profile"));
+            profile_dict.set(StringName::from("text_pet_down"), GString::from("View profile"));
             profile_dict.set(StringName::from("action"), GString::from("ia_pointer"));
             tooltips.push(profile_dict.to_variant());
         }

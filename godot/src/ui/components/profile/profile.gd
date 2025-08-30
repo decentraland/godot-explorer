@@ -471,11 +471,6 @@ func close() -> void:
 	if closable:
 		close_profile.emit()
 
-
-func _on_button_close_profile_pressed() -> void:
-	close()
-
-
 func _on_button_claim_name_pressed() -> void:
 	Global.open_url("https://decentraland.org/marketplace/names/claim")
 
@@ -830,3 +825,12 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id
 	):
 		call_deferred("_update_buttons")
+
+
+func _on_button_close_profile_button_up() -> void:
+	close()
+
+
+func _on_visibility_changed() -> void:
+	if visible:
+		grab_focus()

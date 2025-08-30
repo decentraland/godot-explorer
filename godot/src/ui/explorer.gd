@@ -529,3 +529,7 @@ func _on_control_menu_open_profile() -> void:
 func _open_own_profile() -> void:
 	control_menu.show_own_profile()
 	release_mouse()
+
+
+func ui_has_focus() -> bool:
+	return ui_root.has_focus()
