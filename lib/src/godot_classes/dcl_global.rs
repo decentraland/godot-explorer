@@ -20,8 +20,8 @@ use crate::{
 };
 
 use super::{
-    dcl_avatar::DclAvatar, dcl_config::DclConfig, dcl_realm::DclRealm, 
-    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc, 
+    dcl_avatar::DclAvatar, dcl_config::DclConfig, dcl_realm::DclRealm,
+    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
     portables::DclPortableExperienceController,
 };
 
@@ -101,7 +101,7 @@ pub struct DclGlobal {
 
     #[var(get)]
     pub profile_service: Gd<ProfileService>,
-    
+
     pub selected_avatar: Option<Gd<DclAvatar>>,
 }
 
@@ -230,12 +230,12 @@ impl DclGlobal {
         self.is_mobile = is_mobile;
         self.is_virtual_mobile = is_mobile;
     }
-    
+
     #[func]
     fn get_selected_avatar(&self) -> Option<Gd<DclAvatar>> {
         self.selected_avatar.clone()
     }
-    
+
     #[func]
     pub fn ui_has_focus(&self) -> bool {
         // Check if the explorer UI has focus by calling the GDScript function

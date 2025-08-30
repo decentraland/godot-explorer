@@ -59,7 +59,6 @@ func _process(_dt):
 		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
 
 
-
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
 	var args := OS.get_cmdline_args()

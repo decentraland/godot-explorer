@@ -75,12 +75,7 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var button_send_dm: Button = %Button_SendDM
 @onready var label_no_intro: Label = %Label_NoIntro
-@onready var label_nick_length: Label = %Label_NickLength
-@onready var text_edit_new_nick: TextEdit = %TextEdit_NewNick
-@onready var button_nick_save: Button = %Button_NickSave
 @onready var button_claim_name: Button = %Button_ClaimName
-@onready var label_new_nick_tag: Label = %Label_NewNickTag
-@onready var button_claim_name_2: Button = %Button_ClaimName2
 @onready var url_popup: ColorRect = %UrlPopup
 @onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
 @onready var change_nick_popup: ColorRect = %ChangeNickPopup
@@ -470,6 +465,7 @@ func close() -> void:
 	_turn_about_editing(false)
 	if closable:
 		close_profile.emit()
+
 
 func _on_button_claim_name_pressed() -> void:
 	Global.open_url("https://decentraland.org/marketplace/names/claim")
