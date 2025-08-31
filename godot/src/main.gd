@@ -12,7 +12,7 @@ func start():
 		# Help text is already printed by the Rust side
 		get_tree().quit(0)
 		return
-	
+
 	if Global.cli.test_runner:
 		return
 
