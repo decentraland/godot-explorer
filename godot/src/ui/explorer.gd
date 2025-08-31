@@ -59,26 +59,13 @@ func _process(_dt):
 		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
 
 
-# TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
-	var args := OS.get_cmdline_args()
-	var realm_string = null
-	var location_vector = null
-	var realm_in_place := args.find("--realm")
-	var location_in_place := args.find("--location")
-	var preview_mode := args.has("--preview")
-	var spawn_avatars := args.has("--spawn-avatars")
-
-	if realm_in_place != -1 and args.size() > realm_in_place + 1:
-		realm_string = args[realm_in_place + 1]
-
-	if location_in_place != -1 and args.size() > location_in_place + 1:
-		location_vector = args[location_in_place + 1]
-		location_vector = location_vector.split(",")
-		if location_vector.size() == 2:
-			location_vector = Vector2i(int(location_vector[0]), int(location_vector[1]))
-		else:
-			location_vector = null
+	var realm_string = Global.cli.realm if not Global.cli.realm.is_empty() else null
+	var location_vector = Global.cli.get_location_vector()
+	if location_vector == Vector2i.ZERO:
+		location_vector = null
+	var preview_mode = Global.cli.preview_mode
+	var spawn_avatars = Global.cli.spawn_avatars
 	return [realm_string, location_vector, preview_mode, spawn_avatars]
 
 

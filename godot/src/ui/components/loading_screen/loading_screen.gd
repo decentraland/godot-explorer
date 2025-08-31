@@ -68,8 +68,7 @@ func async_hide_loading_screen_effect():
 	background.use_parent_material = false  # enable material
 	self.position.y = 0
 
-	var args := OS.get_cmdline_args()
-	if args.has("--measure-perf"):
+	if Global.cli.measure_perf:
 		var counter = (
 			load("res://addons/dcl_dev_tools/dev_tools/resource_counter/resource_counter.gd").new()
 		)

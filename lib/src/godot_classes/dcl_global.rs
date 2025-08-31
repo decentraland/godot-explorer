@@ -12,6 +12,7 @@ use crate::{
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
     dcl::common::set_scene_log_enabled,
+    godot_classes::dcl_avatar::DclAvatar,
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
     profile::profile_service::ProfileService,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
@@ -20,7 +21,7 @@ use crate::{
 };
 
 use super::{
-    dcl_avatar::DclAvatar, dcl_config::DclConfig, dcl_realm::DclRealm,
+    dcl_cli::DclCli, dcl_config::DclConfig, dcl_realm::DclRealm,
     dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
     portables::DclPortableExperienceController,
 };
@@ -102,6 +103,9 @@ pub struct DclGlobal {
     #[var(get)]
     pub profile_service: Gd<ProfileService>,
 
+    #[var(get)]
+    pub cli: Gd<DclCli>,
+
     pub selected_avatar: Option<Gd<DclAvatar>>,
 }
 
@@ -133,6 +137,7 @@ impl INode for DclGlobal {
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
         let mut metrics: Gd<Metrics> = Metrics::new_alloc();
+        let mut cli: Gd<DclCli> = DclCli::new_alloc();
 
         // For now, keep using base Rust classes - GDScript extensions will be created in global.gd
         let mut realm: Gd<DclRealm> = DclRealm::new_alloc();
@@ -156,19 +161,23 @@ impl INode for DclGlobal {
         network_inspector.set_name("network_inspector".into());
         social_blacklist.set_name("social_blacklist".into());
         metrics.set_name("metrics".into());
+        cli.set_name("cli".into());
 
-        let args = godot::engine::Os::singleton().get_cmdline_args();
-
-        let testing_scene_mode = args.find(&"--scene-test".into(), None).is_some();
-        let preview_mode = args.find(&"--preview".into(), None).is_some();
-        let developer_mode = args.find(&"--dev".into(), None).is_some();
-
-        let fixed_skybox_time =
-            testing_scene_mode || args.find(&"--scene-renderer".into(), None).is_some();
+        // Use CLI singleton for parsing
+        let (testing_scene_mode, preview_mode, developer_mode, fixed_skybox_time, force_mobile) = {
+            let cli_bind = cli.bind();
+            (
+                cli_bind.scene_test_mode,
+                cli_bind.preview_mode,
+                cli_bind.developer_mode,
+                cli_bind.fixed_skybox_time,
+                cli_bind.force_mobile,
+            )
+        };
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
-        let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into());
+        let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into()) || force_mobile;
 
         // For now, use base class - ConfigData will be created in global.gd
         let config = DclConfig::new_gd();
@@ -203,6 +212,7 @@ impl INode for DclGlobal {
             has_javascript_debugger: true,
             #[cfg(not(feature = "enable_inspector"))]
             has_javascript_debugger: false,
+            cli,
             selected_avatar: None,
         }
     }

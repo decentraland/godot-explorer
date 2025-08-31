@@ -99,13 +99,12 @@ func _ready():
 
 	Global.scene_runner.set_pause(true)
 
-	var args = OS.get_cmdline_args()
-	if args.has("--skip-lobby"):
+	if Global.cli.skip_lobby:
 		_skip_lobby = true
 
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if args.has("--guest-profile"):
+	if Global.cli.guest_profile:
 		session_account.clear()
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()

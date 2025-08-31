@@ -49,10 +49,8 @@ func is_xr() -> bool:
 
 
 func _ready():
-	var args := OS.get_cmdline_args()
-	# _set_is_mobile(true) # Test
-
-	if args.has("--force-mobile"):
+	# Use CLI singleton for command-line args
+	if cli.force_mobile:
 		_set_is_mobile(true)
 
 	# Setup
@@ -60,6 +58,7 @@ func _ready():
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
 
+	var args = cli.get_all_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
 		if args[0] != "res://src/main.tscn":
 			self.standalone = true
@@ -86,12 +85,12 @@ func _ready():
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
-	if args.has("--clear-cache-startup"):
+	if cli.clear_cache_startup:
 		prints("Clear cache startup!")
 		Global.content_provider.clear_cache_folder()
 
 	# #[itest] only needs a godot context, not the all explorer one
-	if args.has("--test-runner"):
+	if cli.test_runner:
 		print("Running godot-tests...")
 		var test_runner = load("res://src/test/test_runner.gd").new()
 		add_child(test_runner)
@@ -123,6 +122,7 @@ func _ready():
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
 
+	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
@@ -142,10 +142,10 @@ func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
-	if args.has("--raycast-debugger"):
+	if cli.raycast_debugger:
 		set_raycast_debugger_enable(true)
 
-	if args.has("--network-debugger"):
+	if cli.network_debugger:
 		self.network_inspector.set_is_active(true)
 		open_network_inspector_ui()
 	else:
