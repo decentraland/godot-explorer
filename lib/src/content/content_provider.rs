@@ -18,7 +18,7 @@ use tokio::sync::{RwLock, Semaphore};
 use crate::{
     auth::wallet::AsH160,
     avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
-    content::content_mapping::DclContentMappingAndUrl,
+    content::{content_mapping::DclContentMappingAndUrl, texture::load_image_texture},
     dcl::common::string::FindNthChar,
     godot_classes::{
         dcl_config::{DclConfig, TextureQuality},
@@ -712,8 +712,6 @@ impl ContentProvider {
         file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        godot_print!("fetch_texture_by_hash");
-
         let file_hash = file_hash_godot.to_string();
         if let Some(entry) = self.cached.get_mut(&file_hash) {
             entry.last_access = Instant::now();
@@ -741,7 +739,6 @@ impl ContentProvider {
         let ctx = self.get_context();
 
         if self.optimized_asset_exists(file_hash_godot.clone()) {
-            godot_print!("fetch_texture_by_hash optimized asset...");
             let hash_id = file_hash.clone();
             let optimized_data = self.optimized_data.clone();
 
@@ -780,22 +777,11 @@ impl ContentProvider {
                 then_promise(get_promise, Ok(Some(texture_entry.to_variant())));
             });
         } else {
-            // Construct the original content URL
-            let original_url = format!(
+            let url = format!(
                 "{}{}",
                 content_mapping.bind().get_base_url(),
                 file_hash.clone()
             );
-
-            // Use metamorph API service for conversion
-            // This service converts gif/webp to ogv and any image to ktx2 with astc
-            let metamorph_url = format!(
-                "{}{}",
-                METAMORPH_API_BASE_URL,
-                percent_encode(&original_url)
-            );
-
-            godot_print!("metamorph_url {metamorph_url}");
 
             let loading_resources = self.loading_resources.clone();
             let loaded_resources = self.loaded_resources.clone();
@@ -806,9 +792,7 @@ impl ContentProvider {
 
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
-                // Use unified media loader to handle both images and videos
-                // The metamorph service will return the converted media
-                let result = DclUnifiedMediaLoader::load_unified_media(metamorph_url, hash_id.clone(), ctx).await;
+                let result = load_image_texture(url, hash_id.clone(), ctx).await;
 
                 #[cfg(feature = "use_resource_tracking")]
                 if let Err(error) = &result {
