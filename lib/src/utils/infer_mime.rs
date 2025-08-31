@@ -98,12 +98,12 @@ pub fn is_ogv(buffer: &[u8]) -> bool {
     if buffer.len() < 35 {
         return false;
     }
-    
+
     // Check for OGG signature "OggS"
     if !(buffer[0] == 0x4F && buffer[1] == 0x67 && buffer[2] == 0x67 && buffer[3] == 0x53) {
         return false;
     }
-    
+
     // Check for theora header in the first packet
     // Theora header starts at byte 28 in the first OGG page with "theora"
     if buffer.len() > 35 {
@@ -115,6 +115,6 @@ pub fn is_ogv(buffer: &[u8]) -> bool {
             }
         }
     }
-    
+
     false
 }

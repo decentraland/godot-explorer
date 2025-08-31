@@ -826,7 +826,7 @@ impl ContentProvider {
             return entry.promise.clone();
         }
         let original_url = url.to_string();
-        
+
         // Use metamorph API service for conversion
         // This service converts gif/webp to ogv and any image to ktx2 with astc
         let metamorph_url = format!(
@@ -834,9 +834,9 @@ impl ContentProvider {
             METAMORPH_API_BASE_URL,
             percent_encode(&original_url)
         );
-        
+
         godot_print!("fetch_texture_by_url metamorph_url {metamorph_url}");
-        
+
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
         let sent_file_hash = file_hash.clone();
@@ -854,7 +854,12 @@ impl ContentProvider {
 
             // Use unified media loader to handle both images and videos
             // The metamorph service will return the converted media
-            let result = DclUnifiedMediaLoader::load_unified_media(metamorph_url, sent_file_hash, content_provider_context).await;
+            let result = DclUnifiedMediaLoader::load_unified_media(
+                metamorph_url,
+                sent_file_hash,
+                content_provider_context,
+            )
+            .await;
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
