@@ -20,8 +20,9 @@ use crate::{
 };
 
 use super::{
-    dcl_config::DclConfig, dcl_realm::DclRealm, dcl_social_blacklist::DclSocialBlacklist,
-    dcl_tokio_rpc::DclTokioRpc, portables::DclPortableExperienceController,
+    dcl_avatar::DclAvatar, dcl_config::DclConfig, dcl_realm::DclRealm,
+    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
+    portables::DclPortableExperienceController,
 };
 
 #[cfg(target_os = "android")]
@@ -100,6 +101,8 @@ pub struct DclGlobal {
 
     #[var(get)]
     pub profile_service: Gd<ProfileService>,
+
+    pub selected_avatar: Option<Gd<DclAvatar>>,
 }
 
 #[godot_api]
@@ -200,6 +203,7 @@ impl INode for DclGlobal {
             has_javascript_debugger: true,
             #[cfg(not(feature = "enable_inspector"))]
             has_javascript_debugger: false,
+            selected_avatar: None,
         }
     }
 }
@@ -225,6 +229,34 @@ impl DclGlobal {
     fn _set_is_mobile(&mut self, is_mobile: bool) {
         self.is_mobile = is_mobile;
         self.is_virtual_mobile = is_mobile;
+    }
+
+    #[func]
+    fn get_selected_avatar(&self) -> Option<Gd<DclAvatar>> {
+        self.selected_avatar.clone()
+    }
+
+    #[func]
+    pub fn ui_has_focus(&self) -> bool {
+        // Check if the explorer UI has focus by calling the GDScript function
+        let tree = Engine::singleton().get_main_loop();
+        if let Some(tree) = tree {
+            if let Ok(tree) = tree.try_cast::<SceneTree>() {
+                let root = tree.get_root();
+                if let Some(root) = root {
+                    // Try to find the explorer node
+                    let explorer = root.get_node_or_null(NodePath::from("explorer"));
+                    if let Some(mut explorer) = explorer {
+                        // Call ui_has_focus if it exists
+                        if explorer.has_method("ui_has_focus".into()) {
+                            return explorer.call("ui_has_focus".into(), &[]).to::<bool>();
+                        }
+                    }
+                }
+            }
+        }
+        // Default to true if we can't determine focus state
+        true
     }
 
     pub fn has_singleton() -> bool {
