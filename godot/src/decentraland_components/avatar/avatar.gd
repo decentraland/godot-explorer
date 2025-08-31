@@ -98,7 +98,8 @@ func on_player_said(address: String, message: String):
 func _input(event):
 	if event.is_action_pressed("ia_pointer"):
 		# Only handle input if this avatar is currently selected
-		if Global.selected_avatar == self and avatar_id:
+		var selected = Global.get_selected_avatar()
+		if selected and selected == self and avatar_id:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				Global.open_profile.emit(self)
 

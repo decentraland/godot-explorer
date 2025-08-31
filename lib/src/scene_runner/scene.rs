@@ -212,11 +212,17 @@ pub struct Scene {
     pub paused: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GodotDclRaycastResult {
     pub scene_id: SceneId,
     pub entity_id: SceneEntityId,
     pub hit: RaycastHit,
+}
+
+#[derive(Debug)]
+pub enum RaycastResult {
+    SceneEntity(GodotDclRaycastResult),
+    Avatar(godot::prelude::Gd<crate::godot_classes::dcl_avatar::DclAvatar>),
 }
 
 impl GodotDclRaycastResult {
