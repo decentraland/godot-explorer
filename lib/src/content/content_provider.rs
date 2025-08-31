@@ -45,11 +45,13 @@ use super::{
     },
     profile::{prepare_request_requirements, request_lambda_profile},
     resource_provider::ResourceProvider,
-    texture::{load_image_texture, TextureEntry},
+    texture::TextureEntry,
     thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
     video::download_video,
     wearable_entities::{request_wearables, WearableManyResolved},
 };
+
+use crate::godot_classes::dcl_unified_media_loader::DclUnifiedMediaLoader;
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
@@ -120,6 +122,7 @@ pub struct ContentProviderContext {
 unsafe impl Send for ContentProviderContext {}
 
 const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v1";
+const METAMORPH_API_BASE_URL: &str = "https://metamorph-api.decentraland.zone/convert?imageFormat=astc&videoFormat=ogv&wait=true&url=";
 
 #[godot_api]
 impl INode for ContentProvider {
@@ -709,6 +712,8 @@ impl ContentProvider {
         file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
+        godot_print!("fetch_texture_by_hash");
+
         let file_hash = file_hash_godot.to_string();
         if let Some(entry) = self.cached.get_mut(&file_hash) {
             entry.last_access = Instant::now();
@@ -736,6 +741,7 @@ impl ContentProvider {
         let ctx = self.get_context();
 
         if self.optimized_asset_exists(file_hash_godot.clone()) {
+            godot_print!("fetch_texture_by_hash optimized asset...");
             let hash_id = file_hash.clone();
             let optimized_data = self.optimized_data.clone();
 
@@ -774,11 +780,22 @@ impl ContentProvider {
                 then_promise(get_promise, Ok(Some(texture_entry.to_variant())));
             });
         } else {
-            let url = format!(
+            // Construct the original content URL
+            let original_url = format!(
                 "{}{}",
                 content_mapping.bind().get_base_url(),
                 file_hash.clone()
             );
+
+            // Use metamorph API service for conversion
+            // This service converts gif/webp to ogv and any image to ktx2 with astc
+            let metamorph_url = format!(
+                "{}{}",
+                METAMORPH_API_BASE_URL,
+                percent_encode(&original_url)
+            );
+
+            godot_print!("metamorph_url {metamorph_url}");
 
             let loading_resources = self.loading_resources.clone();
             let loaded_resources = self.loaded_resources.clone();
@@ -789,7 +806,9 @@ impl ContentProvider {
 
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
-                let result = load_image_texture(url, hash_id.clone(), ctx).await;
+                // Use unified media loader to handle both images and videos
+                // The metamorph service will return the converted media
+                let result = DclUnifiedMediaLoader::load_unified_media(metamorph_url, hash_id.clone(), ctx).await;
 
                 #[cfg(feature = "use_resource_tracking")]
                 if let Err(error) = &result {
@@ -822,7 +841,18 @@ impl ContentProvider {
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }
-        let url = url.to_string();
+        let original_url = url.to_string();
+        
+        // Use metamorph API service for conversion
+        // This service converts gif/webp to ogv and any image to ktx2 with astc
+        let metamorph_url = format!(
+            "{}{}",
+            METAMORPH_API_BASE_URL,
+            percent_encode(&original_url)
+        );
+        
+        godot_print!("fetch_texture_by_url metamorph_url {metamorph_url}");
+        
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
         let sent_file_hash = file_hash.clone();
@@ -838,7 +868,9 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
+            // Use unified media loader to handle both images and videos
+            // The metamorph service will return the converted media
+            let result = DclUnifiedMediaLoader::load_unified_media(metamorph_url, sent_file_hash, content_provider_context).await;
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
@@ -1162,6 +1194,11 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn get_metamorph_base_url(&self) -> GString {
+        METAMORPH_API_BASE_URL.to_godot()
+    }
+
+    #[func]
     pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
         let Some(user_id) = user_id.to_string().as_str().as_h160() else {
             return Promise::from_rejected("Invalid user id".to_string());
@@ -1208,6 +1245,20 @@ impl ContentProvider {
 
         promise
     }
+}
+
+// Helper function for percent encoding URLs
+fn percent_encode(s: &str) -> String {
+    s.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                vec![b]
+            }
+            _ => format!("%{:02X}", b).into_bytes(),
+        })
+        .flatten()
+        .map(|b| b as char)
+        .collect()
 }
 
 impl ContentProvider {

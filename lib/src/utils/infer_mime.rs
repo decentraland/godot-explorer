@@ -80,3 +80,41 @@ pub fn is_ktx(buffer: &[u8]) -> bool {
     // Check if the buffer starts with the KTX signature
     buffer.starts_with(&signature)
 }
+
+/// Returns whether a buffer is KTX2 texture data.
+pub fn is_ktx2(buffer: &[u8]) -> bool {
+    // KTX2 file signature
+    let signature: [u8; 12] = [
+        0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A,
+    ];
+
+    // Check if the buffer starts with the KTX2 signature
+    buffer.starts_with(&signature)
+}
+
+/// Returns whether a buffer is OGV (Ogg Theora video) data.
+pub fn is_ogv(buffer: &[u8]) -> bool {
+    // OGG container signature
+    if buffer.len() < 35 {
+        return false;
+    }
+    
+    // Check for OGG signature "OggS"
+    if !(buffer[0] == 0x4F && buffer[1] == 0x67 && buffer[2] == 0x67 && buffer[3] == 0x53) {
+        return false;
+    }
+    
+    // Check for theora header in the first packet
+    // Theora header starts at byte 28 in the first OGG page with "theora"
+    if buffer.len() > 35 {
+        // Look for "theora" string which indicates video codec
+        let theora_sig = b"theora";
+        for i in 28..buffer.len().min(100) {
+            if buffer[i..].starts_with(theora_sig) {
+                return true;
+            }
+        }
+    }
+    
+    false
+}
