@@ -36,4 +36,4 @@ func _init(_urn):
 
 
 func get_hash() -> String:
-	return contract_address + ":" + token_id
+	return contract_address + "_" + token_id

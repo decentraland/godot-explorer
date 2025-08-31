@@ -18,13 +18,6 @@ use crate::{
     utils::infer_mime,
 };
 
-
-#[derive(GodotClass)]
-#[class(init, base=RefCounted)]
-pub struct DclUnifiedMediaLoader {
-    base: Base<RefCounted>,
-}
-
 // Re-implement TextureEntry locally since it's in a private module
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
@@ -58,14 +51,20 @@ fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture
     resize_image(image, max_size);
     
     // Check if already compressed to avoid recompression
-    if !image.is_compressed() {
+    if image.is_compressed() {
+        godot_print!("  Image is already compressed, using as-is");
+        // Already compressed (e.g., ASTC from KTX2), create texture directly
+        let texture = ImageTexture::create_from_image(image.clone())
+            .expect("Failed to create texture from compressed image");
+        texture.upcast()
+    } else {
+        godot_print!("  Compressing image to ETC2");
+        // Not compressed, compress to ETC2 for iOS
         image.compress(CompressMode::ETC2);
+        let mut texture = PortableCompressedTexture2D::new_gd();
+        texture.create_from_image(image.clone(), CompressionMode::ETC2);
+        texture.upcast()
     }
-    
-    // Create texture from compressed image
-    let mut texture = PortableCompressedTexture2D::new_gd();
-    texture.create_from_image(image.clone(), CompressionMode::ETC2);
-    texture.upcast()
 }
 
 pub enum MediaType {
@@ -73,6 +72,9 @@ pub enum MediaType {
     Video,
     Unknown,
 }
+
+// Not a Godot class - just a module with functions
+pub struct DclUnifiedMediaLoader;
 
 impl DclUnifiedMediaLoader {
     
@@ -140,7 +142,6 @@ impl DclUnifiedMediaLoader {
         godot_print!("load_unified_media - URL: {}", url);
         godot_print!("load_unified_media - file_hash: {}", file_hash);
         
-        // First, detect what type of media we expect based on the URL
         // Detect expected file extension from metamorph URL parameters
         // This avoids duplicate files and ensures correct format for loaders
         let expected_extension = if url.contains(".gif") || url.contains("videoFormat=ogv") {
@@ -186,37 +187,21 @@ impl DclUnifiedMediaLoader {
             }
             MediaType::Video => {
                 godot_print!("Loading as VIDEO...");
-                // For videos, create a loader instance and schedule main thread execution
-                let loader = Gd::from_init_fn(|base| DclUnifiedMediaLoader { base });
                 
-                // Store the video file path as metadata
-                loader.clone().bind_mut().base_mut().set_meta(
-                    StringName::from("video_path"),
-                    absolute_file_path.to_variant()
-                );
-                
-                // Call the video loading function on the main thread
-                loader.clone().call_deferred(
-                    StringName::from("create_video_texture"),
-                    &[absolute_file_path.to_variant()]
-                );
-                
-                // Return a placeholder that will be replaced by the main thread function
-                // For now, return a placeholder texture entry
-                let placeholder_texture = ImageTexture::new_gd();
-                let texture_entry = Gd::from_init_fn(|_base| UnifiedTextureEntry {
-                    image: Image::new_gd(),
-                    texture: placeholder_texture.upcast(),
-                    original_size: Vector2i::new(1024, 1024),
-                });
-                
-                // Store the loader reference so it can update this entry
-                texture_entry.clone().bind_mut().texture.set_meta(
-                    StringName::from("_pending_video_loader"),
-                    loader.to_variant()
-                );
-                
-                Ok(Some(texture_entry.to_variant()))
+                // We already have the semaphore, so we can create the video texture directly
+                // without needing to defer to the main thread
+                if let Some(texture) = Self::create_video_texture_internal(absolute_file_path.clone()) {
+                    godot_print!("  Video texture created successfully");
+                    let texture_entry = Gd::from_init_fn(|_base| UnifiedTextureEntry {
+                        image: Image::new_gd(),
+                        texture,
+                        original_size: Vector2i::new(1024, 1024),
+                    });
+                    Ok(Some(texture_entry.to_variant()))
+                } else {
+                    godot_print!("  Failed to create video texture");
+                    Self::load_fallback_texture()
+                }
             }
             MediaType::Unknown => {
                 godot_print!("Unknown type, trying as IMAGE first...");
@@ -275,19 +260,29 @@ impl DclUnifiedMediaLoader {
         }
         
         godot_print!("  Image loaded successfully!");
-
         let original_size = image.get_size();
         let max_size = ctx.texture_quality.to_max_size();
         
-        // For iOS, create compressed texture; otherwise resize and create texture
-        let texture: Gd<Texture2D> = if std::env::consts::OS == "ios" {
+        // Check if image is already compressed (e.g., ASTC from metamorph KTX2)
+        let is_compressed = image.is_compressed();
+        godot_print!("  Image compressed: {}", is_compressed);
+        
+        // Create texture based on compression status and platform
+        let texture: Gd<Texture2D> = if is_compressed {
+            // Already compressed (ASTC from metamorph), don't recompress
+            godot_print!("  Using existing compression (ASTC from metamorph)");
+            resize_image(&mut image, max_size);
+            let texture = ImageTexture::create_from_image(image.clone())
+                .ok_or(anyhow::Error::msg(format!("Error creating texture from compressed image {}", absolute_file_path)))?;
+            texture.upcast()
+        } else if std::env::consts::OS == "ios" {
+            // Only compress for iOS if not already compressed
+            godot_print!("  Compressing for iOS (ETC2)");
             create_compressed_texture(&mut image, max_size)
         } else {
-            // Resize image if needed
+            // Regular uncompressed texture for other platforms
+            godot_print!("  Creating uncompressed texture");
             resize_image(&mut image, max_size);
-            
-            // OPTIMIZATION: Pass image directly without clone
-            // The texture takes ownership of the image data
             let texture = ImageTexture::create_from_image(image.clone())
                 .ok_or(anyhow::Error::msg(format!("Error creating texture from image {}", absolute_file_path)))?;
             texture.upcast()
@@ -357,17 +352,21 @@ impl DclUnifiedMediaLoader {
         viewport.add_child(video_player.clone().upcast());
         container.add_child(viewport.clone().upcast());
         
-        // Add to scene tree (we're on main thread now)
+        // Add to scene tree using deferred calls to avoid threading issues
         if let Some(main_loop) = Engine::singleton().get_main_loop() {
             if let Ok(scene_tree) = main_loop.try_cast::<SceneTree>() {
                 if let Some(mut root) = scene_tree.get_root() {
-                    // Add container directly - we're on main thread
-                    root.add_child(container.clone().upcast());
+                    // Use call_deferred for thread safety
+                    root.call_deferred(
+                        StringName::from("add_child"),
+                        &[container.to_variant()]
+                    );
                     
-                    // Start playback
-                    video_player.play();
+                    // Schedule playback
+                    video_player.call_deferred(StringName::from("play"), &[]);
                     
-                    // Get viewport texture - now available since we're in the tree
+                    // Get viewport texture - this should work even if not in tree yet
+                    // The texture will update once the viewport starts rendering
                     if let Some(viewport_texture) = viewport.get_texture() {
                         godot_print!("  Got viewport texture (zero-copy GPU reference)");
                         
@@ -384,6 +383,9 @@ impl DclUnifiedMediaLoader {
                         );
                         
                         return Some(texture.upcast());
+                    } else {
+                        godot_print!("  WARNING: Could not get viewport texture immediately");
+                        // Return None, will need to handle fallback
                     }
                 }
             }
@@ -415,53 +417,5 @@ impl DclUnifiedMediaLoader {
         }
         
         Err(anyhow::Error::msg("Failed to load fallback texture"))
-    }
-}
-
-#[godot_api]
-impl DclUnifiedMediaLoader {
-    #[func]
-    fn detect_media_type_from_bytes(bytes: PackedByteArray, file_path: GString) -> GString {
-        let media_type = Self::detect_media_type(&bytes.to_vec(), &file_path.to_string());
-        match media_type {
-            MediaType::Image => GString::from("image"),
-            MediaType::Video => GString::from("video"),
-            MediaType::Unknown => GString::from("unknown"),
-        }
-    }
-    
-    #[func]
-    fn create_video_texture(&self, file_path: GString) -> Variant {
-        // This function is called on the main thread via call_deferred
-        godot_print!("[MAIN THREAD] create_video_texture called with path: {}", file_path);
-        
-        if let Some(texture) = Self::create_video_texture_internal(file_path.to_string()) {
-            // Create texture entry with the video texture
-            let texture_entry = Gd::from_init_fn(|_base| UnifiedTextureEntry {
-                image: Image::new_gd(),
-                texture,
-                original_size: Vector2i::new(1024, 1024),
-            });
-            texture_entry.to_variant()
-        } else {
-            // Return fallback texture
-            if let Ok(Some(fallback)) = Self::load_fallback_texture() {
-                fallback
-            } else {
-                Variant::nil()
-            }
-        }
-    }
-    
-    #[func]
-    fn finalize_video_texture(viewport: Gd<SubViewport>) -> Option<Gd<Texture2D>> {
-        // This is called on the main thread after the viewport is in the scene tree
-        if let Some(texture) = viewport.get_texture() {
-            godot_print!("  finalize_video_texture: Got viewport texture");
-            Some(texture.upcast())
-        } else {
-            godot_print!("  finalize_video_texture: Failed to get viewport texture");
-            None
-        }
     }
 }
