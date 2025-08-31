@@ -6,7 +6,18 @@ use godot::{
 };
 
 use crate::{
-    analytics::metrics::Metrics, auth::{dcl_player_identity::DclPlayerIdentity, ethereum_provider::EthereumProvider}, avatars::avatar_scene::AvatarScene, comms::communication_manager::CommunicationManager, content::content_provider::ContentProvider, dcl::common::set_scene_log_enabled, godot_classes::dcl_avatar::DclAvatar, http_request::rust_http_queue_requester::RustHttpQueueRequester, profile::profile_service::ProfileService, scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime}, test_runner::testing_tools::DclTestingTools, tools::network_inspector::{NetworkInspector, NetworkInspectorSender}
+    analytics::metrics::Metrics,
+    auth::{dcl_player_identity::DclPlayerIdentity, ethereum_provider::EthereumProvider},
+    avatars::avatar_scene::AvatarScene,
+    comms::communication_manager::CommunicationManager,
+    content::content_provider::ContentProvider,
+    dcl::common::set_scene_log_enabled,
+    godot_classes::dcl_avatar::DclAvatar,
+    http_request::rust_http_queue_requester::RustHttpQueueRequester,
+    profile::profile_service::ProfileService,
+    scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
+    test_runner::testing_tools::DclTestingTools,
+    tools::network_inspector::{NetworkInspector, NetworkInspectorSender},
 };
 
 use super::{
