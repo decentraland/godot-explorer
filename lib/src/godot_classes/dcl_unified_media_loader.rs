@@ -142,25 +142,10 @@ impl DclUnifiedMediaLoader {
         godot_print!("load_unified_media - URL: {}", url);
         godot_print!("load_unified_media - file_hash: {}", file_hash);
         
-        // Detect expected file extension from metamorph URL parameters
-        // This avoids duplicate files and ensures correct format for loaders
-        let expected_extension = if url.contains(".gif") || url.contains("videoFormat=ogv") {
-            ".ogv"  // Videos converted by metamorph
-        } else if url.contains("imageFormat=astc") || url.contains("imageFormat=ktx2") {
-            ".ktx2" // Compressed textures - most efficient format
-        } else {
-            ""      // No extension for regular content
-        };
-        
-        // Set the file path with the expected extension for metamorph content
-        let absolute_file_path = format!("{}{}{}", ctx.content_folder, file_hash, expected_extension);
-        
-        godot_print!("  Using file path with extension: {}", absolute_file_path);
-        
-        // Use resource_provider to fetch the resource with the correct path
+        // First, fetch the data to determine the actual content type
         let bytes_vec = ctx
             .resource_provider
-            .fetch_resource_with_data(&url, &file_hash, &absolute_file_path)
+            .fetch_resource_with_data(&url, &file_hash, &format!("{}{}", ctx.content_folder, file_hash))
             .await
             .map_err(anyhow::Error::msg)?;
 
@@ -170,8 +155,29 @@ impl DclUnifiedMediaLoader {
             return Err(anyhow::Error::msg("Empty media data"));
         }
 
-        // Detect media type from the content
+        // Detect media type from the actual content
         let media_type = Self::detect_media_type(&bytes_vec, &url);
+        
+        // Determine the correct file extension based on actual content
+        let expected_extension = match media_type {
+            MediaType::Video => ".ogv",   // Videos need .ogv extension
+            MediaType::Image => "",        // Images don't need extension, detected by content
+            MediaType::Unknown => "",      // No extension for unknown
+        };
+        
+        // Set the file path with the correct extension based on actual content
+        let absolute_file_path = format!("{}{}{}", ctx.content_folder, file_hash, expected_extension);
+        
+        godot_print!("  Using file path with extension: {}", absolute_file_path);
+        
+        // If the file needs a different extension, save it with the correct one
+        if !expected_extension.is_empty() {
+            // Store the file with the correct extension
+            ctx.resource_provider
+                .store_file(&format!("{}{}", file_hash, expected_extension), &bytes_vec)
+                .await
+                .map_err(anyhow::Error::msg)?;
+        }
         
         godot_print!("load_unified_media - File path: {}", absolute_file_path);
 
