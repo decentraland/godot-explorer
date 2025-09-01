@@ -99,3 +99,4 @@ jobs:
           path: |
             tests/snapshots/scenes/comparison/**/*
             tests/snapshots/avatar-image-generation/comparison/**/*
+            tests/snapshots/client/comparison/**/*

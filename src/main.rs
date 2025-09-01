@@ -544,13 +544,6 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     run::build(false, vec![], Some(build_envs.clone()), None)?;
     run::run(false, false, client_extra_args, false, true)?;
 
-    // Move client test snapshots to coverage artifacts
-    let client_comparison_folder = client_snapshot_folder.join("comparison");
-    if client_comparison_folder.exists() {
-        let coverage_client_dir = Path::new("./coverage/client_snapshots");
-        copy_files::move_dir_recursive(&client_comparison_folder, coverage_client_dir)?;
-    }
-
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
         .map(|entry| {
