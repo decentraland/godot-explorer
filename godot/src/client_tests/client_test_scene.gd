@@ -46,7 +46,12 @@ func async_start_tests():
 
 
 func _setup_snapshot_folders():
-	if OS.has_feature("editor"):
+	# Use CLI snapshot folder if provided, otherwise use defaults
+	if not Global.cli.snapshot_folder.is_empty():
+		snapshot_folder = Global.cli.snapshot_folder
+		if not snapshot_folder.ends_with("/"):
+			snapshot_folder += "/"
+	elif OS.has_feature("editor"):
 		snapshot_folder = ProjectSettings.globalize_path("res://../tests/snapshots/client/")
 	else:
 		snapshot_folder = OS.get_user_data_dir() + "/snapshots/client/"
