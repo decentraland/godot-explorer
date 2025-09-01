@@ -35,9 +35,14 @@ func _ready():
 	viewport.scaling_3d_scale = 2.0
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
 
+	# Start the async test process
+	async_start_tests.call_deferred()
+
+
+func async_start_tests():
 	# Wait a bit then load a test avatar
 	await get_tree().create_timer(1.0).timeout
-	_load_test_avatar()
+	async_load_test_avatar()
 
 
 func _setup_snapshot_folders():
@@ -61,7 +66,7 @@ func _setup_snapshot_folders():
 	prints('snapshot_comparison_folder="' + snapshot_comparison_folder + '"')
 
 
-func _load_test_avatar():
+func async_load_test_avatar():
 	print("Loading test avatar...")
 
 	# Create a test avatar using DclUserProfile for proper structure
@@ -101,7 +106,7 @@ func _load_test_avatar():
 	await get_tree().create_timer(2.0).timeout
 
 	# Test without outline
-	var result_no_outline = await _capture_and_compare_avatar("avatar_no_outline")
+	var result_no_outline = await async_capture_and_compare_avatar("avatar_no_outline")
 	test_results.push_back(result_no_outline)
 
 	# Enable outline and test again
@@ -109,7 +114,7 @@ func _load_test_avatar():
 	print("Outline enabled!")
 	await get_tree().create_timer(1.0).timeout
 
-	var result_with_outline = await _capture_and_compare_avatar("avatar_with_outline")
+	var result_with_outline = await async_capture_and_compare_avatar("avatar_with_outline")
 	test_results.push_back(result_with_outline)
 
 	# Report results
@@ -120,7 +125,7 @@ func _load_test_avatar():
 	get_tree().quit()
 
 
-func _capture_and_compare_avatar(test_name: String) -> Dictionary:
+func async_capture_and_compare_avatar(test_name: String) -> Dictionary:
 	print("Testing %s..." % test_name)
 
 	var viewport: Viewport = avatar_preview_instance.get_node("SubViewport")
