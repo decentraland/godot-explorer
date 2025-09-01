@@ -64,8 +64,8 @@ func on_chats_arrived(chats: Array):
 	for chat in chats:
 		var new_chat = CHAT_MESSAGE.instantiate()
 		v_box_container_chat.add_child(new_chat)
-		new_chat.set_chat(chat)
 		new_chat.compact_view = Global.is_chat_compact
+		new_chat.set_chat(chat)
 
 	# Scroll to bottom after frame processing
 	async_scroll_to_bottom.call_deferred()

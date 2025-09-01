@@ -1,10 +1,87 @@
+@tool
 class_name ProfilePicture
 
 extends Control
 
+enum Size { EXTRA_LARGE, LARGE, MEDIUM, SMALL }
+
+@export var picture_size: Size = Size.MEDIUM:
+	set(value):
+		picture_size = value
+		_update_size()
+		if Engine.is_editor_hint():
+			notify_property_list_changed()
+
+var border_width: int
+
 @onready var texture_rect_profile: TextureRect = %TextureRect_Profile
 @onready var panel_border: PanelContainer = %Panel_Border
-@onready var panel: PanelContainer = %Panel
+
+
+func _ready() -> void:
+	_update_size()
+	if panel_border:
+		_update_border_style()
+
+
+func _get_configuration_warnings():
+	# This forces the editor to refresh when properties change
+	return []
+
+
+func _update_size() -> void:
+	var size_px: int
+	var border_px: int
+
+	match picture_size:
+		Size.EXTRA_LARGE:
+			size_px = 60
+			border_px = 3
+		Size.LARGE:
+			size_px = 40
+			border_px = 2
+		Size.MEDIUM:
+			size_px = 32
+			border_px = 2
+		Size.SMALL:
+			size_px = 28
+			border_px = 2
+
+	# Update the border width property
+	border_width = border_px
+
+	# Set the custom minimum size
+	custom_minimum_size = Vector2(size_px, size_px)
+
+	# Force size update in editor and runtime
+	size = Vector2(size_px, size_px)
+
+	if Engine.is_editor_hint():
+		# Force immediate update in editor
+		queue_redraw()
+		# Notify editor of changes
+		set_notify_transform(true)
+
+	# Update border style if nodes are ready
+	if is_node_ready() and has_node("%Panel_Border"):
+		_update_border_style()
+
+
+func _update_border_style() -> void:
+	if not panel_border:
+		return
+
+	var stylebox_border_panel := panel_border.get_theme_stylebox("panel")
+	if not stylebox_border_panel:
+		return
+
+	stylebox_border_panel = stylebox_border_panel.duplicate()
+	if stylebox_border_panel is StyleBoxFlat:
+		stylebox_border_panel.border_width_bottom = border_width
+		stylebox_border_panel.border_width_left = border_width
+		stylebox_border_panel.border_width_top = border_width
+		stylebox_border_panel.border_width_right = border_width
+	panel_border.add_theme_stylebox_override("panel", stylebox_border_panel)
 
 
 func async_update_profile_picture(avatar: DclAvatar):
@@ -13,12 +90,14 @@ func async_update_profile_picture(avatar: DclAvatar):
 
 	var background_color = nickname_color
 
-	var stylebox_background := panel.get_theme_stylebox("panel")
+	# Apply background color to the main panel container
+	var stylebox_background := get_theme_stylebox("panel")
 	stylebox_background = stylebox_background.duplicate()
 	if stylebox_background is StyleBoxFlat:
 		stylebox_background.bg_color = background_color
-	panel.add_theme_stylebox_override("panel", stylebox_background)
+	add_theme_stylebox_override("panel", stylebox_background)
 
+	# Apply border color to the border panel
 	var white = Color.WHITE
 	var factor = 0.3
 	var border_color = background_color.lerp(white, factor)
@@ -27,7 +106,16 @@ func async_update_profile_picture(avatar: DclAvatar):
 	stylebox_border = stylebox_border.duplicate()
 	if stylebox_border is StyleBoxFlat:
 		stylebox_border.border_color = border_color
+		# Ensure border width is correctly applied
+		stylebox_border.border_width_bottom = border_width
+		stylebox_border.border_width_left = border_width
+		stylebox_border.border_width_top = border_width
+		stylebox_border.border_width_right = border_width
 	panel_border.add_theme_stylebox_override("panel", stylebox_border)
+
+	# Skip image loading in editor mode
+	if Engine.is_editor_hint():
+		return
 
 	var avatar_data = avatar.get_avatar_data()
 	if avatar_data == null:

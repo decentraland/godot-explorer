@@ -84,8 +84,11 @@ theme_override_constants/separation = 9
 
 [node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer" instance=ExtResource("1_40sym")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
-size_flags_horizontal = 1
+size_flags_horizontal = 4
+size_flags_vertical = 4
+picture_size = 1
 
 [node name="Nickname" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(118, 0)

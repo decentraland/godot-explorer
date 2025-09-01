@@ -1,33 +1,27 @@
-[gd_scene load_steps=5 format=3 uid="uid://c8i3cvso5yx7n"]
+[gd_scene load_steps=7 format=3 uid="uid://c8i3cvso5yx7n"]
 
 [ext_resource type="Script" uid="uid://b0g05gunsfh4u" path="res://src/ui/components/chat/chat_message.gd" id="1_ppxi6"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="2_gw0bh"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_gw0bh"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="3_qhmmi"]
+[ext_resource type="FontFile" uid="uid://dpxpwjk8ilqos" path="res://assets/themes/fonts/lato_family/Lato-Regular.ttf" id="5_qhmmi"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fq752"]
-bg_color = Color(0, 0, 0, 0.623529)
-corner_radius_top_left = 15
-corner_radius_top_right = 15
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+bg_color = Color(0, 0, 0, 0.784314)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="ChatMessage" type="VBoxContainer"]
-offset_right = 553.0
-offset_bottom = 63.0
+offset_right = 237.0
+offset_bottom = 25.0
 size_flags_horizontal = 3
 script = ExtResource("1_ppxi6")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
 theme_override_constants/margin_right = 5
-
-[node name="RichTextLabel_CompactChat" type="RichTextLabel" parent="MarginContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
 
 [node name="HBoxContainer_ExtendedChat" type="HBoxContainer" parent="MarginContainer"]
 unique_name_in_owner = true
@@ -38,10 +32,10 @@ alignment = 2
 
 [node name="ProfilePicture" parent="MarginContainer/HBoxContainer_ExtendedChat" instance=ExtResource("2_gw0bh")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(45, 45)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
-size_flags_horizontal = 1
 size_flags_vertical = 8
+picture_size = 3
 
 [node name="PanelContainer" type="PanelContainer" parent="MarginContainer/HBoxContainer_ExtendedChat"]
 unique_name_in_owner = true
@@ -77,6 +71,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_gw0bh")
 theme_override_font_sizes/font_size = 12
 text = "nickname"
 
@@ -93,6 +88,8 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
 theme_override_font_sizes/font_size = 12
 text = "xxxx"
 
@@ -119,12 +116,57 @@ scroll_active = false
 [node name="Label_Timestamp" type="Label" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.572988, 0.572988, 0.572988, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_qhmmi")
 theme_override_font_sizes/font_size = 8
 text = "14:15"
 horizontal_alignment = 2
 
 [node name="Control_Spacing" type="Control" parent="MarginContainer/HBoxContainer_ExtendedChat"]
-custom_minimum_size = Vector2(45, 0)
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxContainer_CompactChat" type="HBoxContainer" parent="MarginContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+alignment = 2
+
+[node name="ProfilePicture_Compact" parent="MarginContainer/HBoxContainer_CompactChat" instance=ExtResource("2_gw0bh")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 8
+picture_size = 3
+
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/HBoxContainer_CompactChat"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_fq752")
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer_CompactChat/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 3
+
+[node name="RichTextLabel_CompactChat" type="RichTextLabel" parent="MarginContainer/HBoxContainer_CompactChat/PanelContainer/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = "message"
+fit_content = true
+scroll_active = false
+
+[node name="Control_Spacing" type="Control" parent="MarginContainer/HBoxContainer_CompactChat"]
+custom_minimum_size = Vector2(30, 0)
 layout_mode = 2
 size_flags_horizontal = 3

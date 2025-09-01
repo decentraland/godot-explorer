@@ -9,13 +9,16 @@ const ACK: String = "␆"
 	set(value):
 		compact_view = value
 		h_box_container_extended_chat.visible = !value
+		h_box_container_compact_chat.visible = value
 		rich_text_label_compact_chat.visible = value
 var nickname: String = "Unknown"
 var tag: String = ""
 var nickname_color_hex: String = "#FFFFFF"
+var is_own_message: bool = false
 
 @onready var rich_text_label_compact_chat: RichTextLabel = %RichTextLabel_CompactChat
 @onready var h_box_container_extended_chat: HBoxContainer = %HBoxContainer_ExtendedChat
+@onready var h_box_container_compact_chat: HBoxContainer = %HBoxContainer_CompactChat
 @onready var label_nickname: Label = %Label_Nickname
 @onready var label_tag: Label = %Label_Tag
 @onready var rich_text_label_message: RichTextLabel = %RichTextLabel_Message
@@ -23,6 +26,10 @@ var nickname_color_hex: String = "#FFFFFF"
 @onready var claimed_checkmark: MarginContainer = %ClaimedCheckmark
 @onready var profile_picture: ProfilePicture = %ProfilePicture
 @onready var panel_container: PanelContainer = %PanelContainer
+@onready var profile_picture_compact: ProfilePicture = %ProfilePicture_Compact
+@onready var panel_container_compact: PanelContainer = h_box_container_compact_chat.get_node(
+	"PanelContainer"
+)
 
 
 func _ready() -> void:
@@ -35,30 +42,42 @@ func _ready() -> void:
 
 
 func set_chat(chat) -> void:
+	var new_text: String
 	var own_address: String = Global.player_identity.get_address_str()
 	var address: String = chat[0]
+	is_own_message = own_address == address
 
-	if own_address == address:
-		# Own messages: avatar on the right, content aligned to the right
+	if is_own_message:
 		h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
-		#h_box_container_extended_chat.set_end()
+		h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
+		h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_END
 	else:
-		# Other messages: avatar on the left, content aligned to the left
 		h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
-		#h_box_container_extended_chat.alignment = 0  # ALIGNMENT_BEGIN
+		h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
+		h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 	var timestamp: float = chat[1]
 	var message: String = chat[2]
 
-	var datetime = Time.get_datetime_dict_from_unix_time(int(timestamp))
+	var datetime
+	if is_own_message:
+		# For own messages, use current system time
+		datetime = Time.get_time_dict_from_system()
+	else:
+		# For other messages, convert UTC timestamp to local device time
+		# The bias is in minutes and represents offset from UTC (negative for ahead of UTC)
+		var timezone_info = Time.get_time_zone_from_system()
+		var local_unix_time = int(timestamp) + (timezone_info.bias * 60)
+		datetime = Time.get_datetime_dict_from_unix_time(local_unix_time)
 	var time_string = "%02d:%02d" % [datetime.hour, datetime.minute]
 
 	# Process message to make URLs clickable
 	var processed_message = make_urls_clickable(message)
-	rich_text_label_message.text = processed_message
+	new_text = ("[b][color=#fff]%s[/color]" % [processed_message])
+	rich_text_label_message.text = new_text
 	label_timestamp.text = time_string
 
-	# Adjust panel size dynamically
+	# Adjust panel size dynamically for both modes
 	async_adjust_panel_size.call_deferred()
 	var avatar = Global.avatars.get_avatar_by_address(address)
 
@@ -83,11 +102,17 @@ func set_chat(chat) -> void:
 	else:
 		Global.player_said.emit(address, message)
 		var processed_message_compact = make_urls_clickable(message)
-		var text = (
-			"[b][color=#%s]%s[/color][color=#a9a9a9]%s[/color] [color=#fff]%s[/color]"
-			% [nickname_color_hex, nickname, tag, processed_message_compact]
-		)
-		rich_text_label_compact_chat.append_text(text)
+
+		if is_own_message:
+			new_text = ("[b][color=#fff]%s[/color]" % [processed_message_compact])
+			#profile_picture_compact.hide()
+		else:
+			new_text = (
+				"[b][color=#%s]%s[/color][/b][color=#a9a9a9]%s[/color] [b][color=#fff]%s[/color]"
+				% [nickname_color_hex, nickname, tag, processed_message_compact]
+			)
+			profile_picture_compact.show()
+		rich_text_label_compact_chat.text = new_text
 
 
 func set_avatar(avatar: DclAvatar) -> void:
@@ -108,7 +133,9 @@ func set_avatar(avatar: DclAvatar) -> void:
 		label_tag.text = ""
 		claimed_checkmark.show()
 
+	# Update both profile pictures (extended and compact)
 	profile_picture.async_update_profile_picture(avatar)
+	profile_picture_compact.async_update_profile_picture(avatar)
 
 
 func set_default_avatar(address: String) -> void:
@@ -125,15 +152,54 @@ func set_default_avatar(address: String) -> void:
 	label_nickname.add_theme_color_override("font_color", Color.WHITE)
 	claimed_checkmark.hide()
 
+	# Set default styling for both profile pictures when no avatar is available
+	_set_default_profile_picture_style()
+
+
+func _set_default_profile_picture_style() -> void:
+	# Apply default white background to both profile pictures
+	var default_color = Color.WHITE
+
+	# Apply to extended profile picture
+	_apply_profile_picture_background(profile_picture, default_color)
+
+	# Apply to compact profile picture
+	_apply_profile_picture_background(profile_picture_compact, default_color)
+
+
+func _apply_profile_picture_background(profile_pic: ProfilePicture, bg_color: Color) -> void:
+	if not profile_pic:
+		return
+
+	# Apply background color to the main panel container
+	var stylebox_background := profile_pic.get_theme_stylebox("panel")
+	if not stylebox_background:
+		return
+
+	stylebox_background = stylebox_background.duplicate()
+	if stylebox_background is StyleBoxFlat:
+		stylebox_background.bg_color = bg_color
+	profile_pic.add_theme_stylebox_override("panel", stylebox_background)
+
+	# Apply border color (slightly darker than background)
+	var border_color = bg_color.darkened(0.2)
+	var panel_border = profile_pic.get_node_or_null("%Panel_Border")
+	if panel_border:
+		var stylebox_border: StyleBoxFlat = panel_border.get_theme_stylebox("panel")
+		if stylebox_border:
+			stylebox_border = stylebox_border.duplicate()
+			if stylebox_border is StyleBoxFlat:
+				stylebox_border.border_color = border_color
+			panel_border.add_theme_stylebox_override("panel", stylebox_border)
+
 
 func _on_chat_compact_changed(is_compact: bool) -> void:
 	compact_view = is_compact
 	h_box_container_extended_chat.visible = !is_compact
-	rich_text_label_compact_chat.visible = is_compact
+	h_box_container_compact_chat.visible = is_compact
 
-	# Readjust size if in extended view
-	if not is_compact:
-		async_adjust_panel_size.call_deferred()
+	# Readjust size for both modes
+	async_adjust_panel_size.call_deferred()
 
 
 func make_urls_clickable(text: String) -> String:
@@ -231,10 +297,16 @@ func async_adjust_panel_size():
 	# Maximum panel width (leaving space for avatar and margins)
 	var max_panel_width = parent_width - 100.0  # 100px for avatar and spacing
 
-	## Get RichTextLabel content size
-	#var content_size = rich_text_label_message.get_content_height()
+	if compact_view:
+		# Handle compact chat sizing
+		_adjust_compact_panel_size(max_panel_width)
+	else:
+		# Handle extended chat sizing
+		_adjust_extended_panel_size(max_panel_width)
 
-	# Calculate required width based on text
+
+func _adjust_extended_panel_size(max_panel_width: float):
+	# Calculate required width based on text for extended chat
 	var font = rich_text_label_message.get_theme_default_font()
 	var font_size = rich_text_label_message.get_theme_font_size("normal_font_size")
 	if font_size == -1:
@@ -260,3 +332,33 @@ func async_adjust_panel_size():
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_OFF
+
+
+func _adjust_compact_panel_size(max_panel_width: float):
+	# Calculate required width based on text for compact chat
+	var font = rich_text_label_compact_chat.get_theme_default_font()
+	var font_size = rich_text_label_compact_chat.get_theme_font_size("normal_font_size")
+	if font_size == -1:
+		font_size = 12  # default size
+
+	var text_width = (
+		font
+		. get_string_size(
+			rich_text_label_compact_chat.get_parsed_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
+		)
+		. x
+	)
+
+	# Minimum and maximum width for compact mode (smaller than extended)
+	var min_width = 1.0  # Smaller minimum for compact mode
+	var desired_width = max(min_width, min(text_width + 20, max_panel_width))  # +20 for smaller margins
+
+	# Set custom size for compact panel
+	if panel_container_compact:
+		panel_container_compact.custom_minimum_size.x = desired_width
+
+	# If text is too long, allow RichTextLabel to wrap
+	if text_width > max_panel_width - 20:
+		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	else:
+		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_OFF
