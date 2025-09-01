@@ -530,6 +530,10 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::run(false, false, extra_args, true, false)?;
 
+    ui::print_section("Running Client Tests");
+    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::run(false, false, vec![], false, true)?;
+
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
         .map(|entry| {
