@@ -233,11 +233,6 @@ func change_tooltips():
 		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
 		_last_outlined_avatar = _avatar_under_crosshair
 
-	if _avatar_under_crosshair:
-		# Add open profile tooltip
-		var profile_tooltip = {"text_pet_down": "Click to view profile", "action": "ia_pointer"}
-		tooltip_data.push_back(profile_tooltip)
-
 	# Tooltips now include avatar detection from scene_runner
 	if not tooltip_data.is_empty():
 		control_pointer_tooltip.set_pointer_data(tooltip_data)
