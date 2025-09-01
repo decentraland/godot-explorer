@@ -13,9 +13,6 @@ class AvatarRendererSpecs:
 	var face_height := 256
 	var face_zoom := 25.0
 
-	var test_outline := false
-	var enable_outline := false
-
 	var avatar: DclAvatarWireFormat
 
 	static func from_dictionary(value: Dictionary) -> AvatarRendererSpecs:
@@ -29,8 +26,6 @@ class AvatarRendererSpecs:
 		ret.face_width = value.get("faceWidth", 256)
 		ret.face_height = value.get("faceHeight", 256)
 		ret.face_zoom = value.get("faceZoom", 25)
-		ret.test_outline = value.get("testOutline", false)
-		ret.enable_outline = value.get("enableOutline", false)
 		ret.avatar = DclAvatarWireFormat.from_godot_dictionary(value.get("avatar", {}))
 
 		if ret.dest_path is String and ret.avatar != null:

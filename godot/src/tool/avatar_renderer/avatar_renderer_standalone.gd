@@ -107,13 +107,6 @@ func _async_on_avatar_avatar_loaded():
 
 	await get_tree().process_frame
 
-	# Handle outline test if specified
-	if profile.test_outline:
-		if profile.enable_outline:
-			avatar_preview.enable_outline()
-		else:
-			avatar_preview.disable_outline()
-
 	var dest_path := ensure_ends_with(profile.dest_path, ".png")
 	ensure_base_dir_exists(dest_path)
 

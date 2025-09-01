@@ -155,6 +155,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("ctest")
+                        .long("ctest")
+                        .help("run client tests")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("resource-tracking")
                         .short('x')
                         .help("enables resource tracking feature")
@@ -363,6 +369,7 @@ fn main() -> Result<(), anyhow::Error> {
                     .map(|v| v.map(|it| it.into()).collect())
                     .unwrap_or_default(),
                 sm.is_present("stest"),
+                sm.is_present("ctest"),
             )?;
             Ok(())
         }
@@ -484,7 +491,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::build(false, vec![], Some(build_envs.clone()), None)?;
 
-    run::run(false, true, vec![], false)?;
+    run::run(false, true, vec![], false, false)?;
 
     let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
     let scene_test_coords: Vec<[i32; 2]> = vec![
@@ -521,7 +528,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::build(false, vec![], Some(build_envs.clone()), None)?;
 
-    run::run(false, false, extra_args, true)?;
+    run::run(false, false, extra_args, true, false)?;
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
