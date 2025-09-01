@@ -4,10 +4,6 @@ extends Control
 # Depends on backpack for the mutable profile
 @export var backpack: Backpack = null
 
-@onready var line_edit_name: LineEdit = %LineEdit_Name
-@onready var text_edit_about: TextEdit = %TextEdit_About
-@onready var use_claimed_name: CheckButton = %CheckButton_UseClaimedName
-@onready var radio_claimed_names: RadioSelector = %RadioSelector_ClaimedNames
 @onready var passport: Control = $Profile
 
 

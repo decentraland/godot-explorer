@@ -16,7 +16,8 @@ use crate::{
         DclScene, DclSceneRealmData, RendererResponse, SceneId, SceneResponse, SpawnDclSceneData,
     },
     godot_classes::{
-        dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_ui_control::DclUiControl,
+        dcl_avatar::DclAvatar, dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal,
+        dcl_ui_control::DclUiControl,
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
         JsonGodotClass,
     },
@@ -33,14 +34,14 @@ use godot::{
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
     input::InputState,
     scene::{
-        Dirty, GlobalSceneType, GodotDclRaycastResult, Scene, SceneState, SceneType,
+        Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
         SceneUpdateState,
     },
     update_scene::_process_scene,
@@ -73,6 +74,8 @@ pub struct SceneManager {
 
     // Cached center position of viewport for raycasting
     viewport_center: Vector2,
+    // Cached raycast query for performance
+    cached_raycast_query: Gd<PhysicsRayQueryParameters3D>,
 
     player_position: Vector2i,
     current_parcel_scene_id: SceneId,
@@ -86,12 +89,19 @@ pub struct SceneManager {
     begin_time: Instant,
     sorted_scene_ids: Vec<SceneId>,
     dying_scene_ids: Vec<SceneId>,
+    global_scene_ids: Vec<SceneId>,
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
 
     #[export]
     pointer_tooltips: VariantArray,
+
+    // Track avatar under crosshair
+    last_avatar_under_crosshair: Option<Gd<DclAvatar>>,
+
+    // Track when pointer was pressed on avatar for click-and-release mechanism
+    avatar_pointer_press_time: Option<Instant>,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -210,6 +220,12 @@ impl SceneManager {
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);
+
+        // Update global scene cache
+        if let SceneType::Global(_) = scene_type {
+            self.global_scene_ids.push(new_scene_id);
+        }
+
         self.compute_scene_distance();
 
         self.base_mut().call_deferred(
@@ -546,6 +562,7 @@ impl SceneManager {
 
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
+            self.global_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
 
             if scene.dcl_scene.thread_join_handle.is_finished() {
@@ -692,8 +709,10 @@ impl SceneManager {
         self.pause
     }
 
-    fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
+    fn get_current_mouse_entity(&mut self) -> Option<RaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
+        const CL_POINTER: u32 = 1;
+        const CL_AVATAR: u32 = 536870912; // Layer 30 for avatars
 
         self.camera_node.as_ref()?;
 
@@ -704,14 +723,28 @@ impl SceneManager {
         let raycast_to =
             raycast_from + camera_node.project_ray_normal(self.viewport_center) * RAY_LENGTH;
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
-        let mut raycast_query = PhysicsRayQueryParameters3D::new_gd();
-        raycast_query.set_from(raycast_from);
-        raycast_query.set_to(raycast_to);
-        raycast_query.set_collision_mask(1); // CL_POINTER
 
-        let raycast_result = space.intersect_ray(raycast_query);
+        // Update the cached raycast query parameters
+        self.cached_raycast_query.set_from(raycast_from);
+        self.cached_raycast_query.set_to(raycast_to);
+        self.cached_raycast_query
+            .set_collision_mask(CL_POINTER | CL_AVATAR);
+        // Need to collide with areas for avatars (they use Area3D)
+        self.cached_raycast_query.set_collide_with_areas(true);
+
+        let raycast_result = space.intersect_ray(self.cached_raycast_query.clone());
+
+        // Check if we hit anything at all
+        if !raycast_result.contains_key("collider") {
+            return None;
+        }
+
         let collider = raycast_result.get("collider")?;
 
+        // The raycast returns the closest hit, so we just need to identify what type it is
+        // Priority is naturally handled by distance - closer objects are returned first
+
+        // First check if this is a DCL entity (scene object)
         let has_dcl_entity_id = collider
             .call(
                 StringName::from("has_meta"),
@@ -719,37 +752,77 @@ impl SceneManager {
             )
             .booleanize();
 
-        if !has_dcl_entity_id {
-            return None;
+        if has_dcl_entity_id {
+            // It's a scene entity, return it
+            let dcl_entity_id = collider
+                .call(
+                    StringName::from("get_meta"),
+                    &[Variant::from("dcl_entity_id")],
+                )
+                .to::<i32>();
+            let dcl_scene_id = collider
+                .call(
+                    StringName::from("get_meta"),
+                    &[Variant::from("dcl_scene_id")],
+                )
+                .to::<i32>();
+
+            let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
+            let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
+            let raycast_data = RaycastHit::from_godot_raycast(
+                scene_position,
+                self.player_avatar_node.get_global_position(),
+                &raycast_result,
+                Some(dcl_entity_id as u32),
+            )?;
+
+            return Some(RaycastResult::SceneEntity(GodotDclRaycastResult {
+                scene_id: SceneId(dcl_scene_id),
+                entity_id: SceneEntityId::from_i32(dcl_entity_id),
+                hit: raycast_data,
+            }));
         }
 
-        let dcl_entity_id = collider
-            .call(
-                StringName::from("get_meta"),
-                &[Variant::from("dcl_entity_id")],
-            )
-            .to::<i32>();
-        let dcl_scene_id = collider
-            .call(
-                StringName::from("get_meta"),
-                &[Variant::from("dcl_scene_id")],
-            )
-            .to::<i32>();
+        // If not a scene entity, check if it's an avatar
+        let is_avatar = collider
+            .call(StringName::from("has_meta"), &[Variant::from("is_avatar")])
+            .booleanize()
+            && collider
+                .call(StringName::from("get_meta"), &[Variant::from("is_avatar")])
+                .booleanize();
 
-        let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
-        let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
-        let raycast_data = RaycastHit::from_godot_raycast(
-            scene_position,
-            self.player_avatar_node.get_global_position(),
-            &raycast_result,
-            Some(dcl_entity_id as u32),
-        )?;
+        if is_avatar {
+            // Check distance for avatar interactions (limit to 10 meters)
+            const MAX_AVATAR_INTERACTION_DISTANCE: f32 = 10.0;
 
-        Some(GodotDclRaycastResult {
-            scene_id: SceneId(dcl_scene_id),
-            entity_id: SceneEntityId::from_i32(dcl_entity_id),
-            hit: raycast_data,
-        })
+            // Get hit position from raycast result
+            if let Some(position_variant) = raycast_result.get("position") {
+                let hit_position = position_variant.to::<Vector3>();
+                let distance = raycast_from.distance_to(hit_position);
+
+                // Only allow avatar interaction within the distance limit
+                if distance <= MAX_AVATAR_INTERACTION_DISTANCE {
+                    // Walk up the node tree to find the DclAvatar node
+                    let mut node = collider;
+                    loop {
+                        // Try to cast to DclAvatar
+                        if let Ok(avatar) = node.try_to::<Gd<DclAvatar>>() {
+                            return Some(RaycastResult::Avatar(avatar));
+                        }
+
+                        // Try to get parent
+                        let parent_result = node.call(StringName::from("get_parent"), &[]);
+                        if parent_result.is_nil() {
+                            break;
+                        }
+                        node = parent_result;
+                    }
+                }
+            }
+        }
+
+        // Nothing found
+        None
     }
 
     #[signal]
@@ -869,18 +942,8 @@ impl SceneManager {
         self.scenes.get(scene_id)
     }
 
-    // this could be cached
-    pub fn get_global_scene_ids(&self) -> Vec<SceneId> {
-        self.scenes
-            .iter()
-            .filter(|(_scene_id, scene)| {
-                if let SceneType::Global(_) = scene.scene_type {
-                    return true;
-                }
-                false
-            })
-            .map(|(scene_id, _)| *scene_id)
-            .collect::<Vec<SceneId>>()
+    pub fn get_global_scene_ids(&self) -> &Vec<SceneId> {
+        &self.global_scene_ids
     }
 
     #[func]
@@ -980,6 +1043,7 @@ impl INode for SceneManager {
             pause: false,
             sorted_scene_ids: vec![],
             dying_scene_ids: vec![],
+            global_scene_ids: vec![],
             current_parcel_scene_id: SceneId(0),
             last_current_parcel_scene_id: SceneId::INVALID,
 
@@ -1005,6 +1069,9 @@ impl INode for SceneManager {
                 canvas_size.y as i32,
             ),
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
+            cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
+            last_avatar_under_crosshair: None,
+            avatar_pointer_press_time: None,
         }
     }
 
@@ -1025,11 +1092,98 @@ impl INode for SceneManager {
         }
     }
 
-    fn process(&mut self, delta: f64) {
+    fn physics_process(&mut self, delta: f64) {
         self.scene_runner_update(delta);
 
         let changed_inputs = self.input_state.get_new_inputs();
-        let current_pointer_raycast_result = self.get_current_mouse_entity();
+        let current_raycast = self.get_current_mouse_entity();
+
+        // Extract scene entity result for pointer events system
+        let current_pointer_raycast_result = match &current_raycast {
+            Some(RaycastResult::SceneEntity(entity)) => Some(entity.clone()),
+            _ => None,
+        };
+
+        // Handle avatar detection
+        match &current_raycast {
+            Some(RaycastResult::Avatar(avatar)) => {
+                // Update selected avatar if changed
+                let avatar_changed = match &self.last_avatar_under_crosshair {
+                    None => true,
+                    Some(last) => last.instance_id() != avatar.instance_id(),
+                };
+
+                if avatar_changed {
+                    self.last_avatar_under_crosshair = Some(avatar.clone());
+
+                    // Update Global.selected_avatar directly
+                    if let Some(mut global) = DclGlobal::try_singleton() {
+                        global.bind_mut().selected_avatar = Some(avatar.clone());
+                    }
+
+                    // Emit signal for tooltip change
+                    self.base_mut()
+                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                }
+
+                // Handle pointer press/release on avatar for profile opening
+                // Check for pointer press (start timing)
+                if changed_inputs.contains(&(InputAction::IaPointer, true)) {
+                    // Record the time when pointer was pressed
+                    self.avatar_pointer_press_time = Some(Instant::now());
+                }
+
+                // Check for pointer release (open profile if within time limit)
+                if changed_inputs.contains(&(InputAction::IaPointer, false)) {
+                    // Only open profile if:
+                    // 1. We have a recorded press time
+                    // 2. The release is within 1 second of the press
+                    // 3. UI has focus
+                    if let Some(press_time) = self.avatar_pointer_press_time {
+                        let press_duration = Instant::now().duration_since(press_time);
+
+                        // Check if release is within 1 second
+                        if press_duration < Duration::from_secs(1) {
+                            // Check if UI has focus using the Global singleton
+                            let ui_has_focus = if let Some(global) = DclGlobal::try_singleton() {
+                                global.bind().ui_has_focus()
+                            } else {
+                                true // Default to true if global not available
+                            };
+
+                            if ui_has_focus {
+                                // Emit open_profile signal on the Global singleton
+                                if let Some(mut global) = DclGlobal::try_singleton() {
+                                    global
+                                        .emit_signal("open_profile".into(), &[avatar.to_variant()]);
+                                }
+                            }
+                        }
+
+                        // Clear the press time after handling release
+                        self.avatar_pointer_press_time = None;
+                    }
+                }
+            }
+            None | Some(RaycastResult::SceneEntity(_)) => {
+                // Clear avatar selection if we're not hovering over an avatar
+                if self.last_avatar_under_crosshair.is_some() {
+                    self.last_avatar_under_crosshair = None;
+
+                    // Clear the press time since we're no longer hovering over an avatar
+                    self.avatar_pointer_press_time = None;
+
+                    // Clear Global.selected_avatar
+                    if let Some(mut global) = DclGlobal::try_singleton() {
+                        global.bind_mut().selected_avatar = None;
+                    }
+
+                    // Emit signal for tooltip change
+                    self.base_mut()
+                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                }
+            }
+        }
 
         pointer_events_system(
             &mut self.scenes,
@@ -1098,31 +1252,65 @@ impl INode for SceneManager {
             }
         }
 
-        self.set_pointer_tooltips(tooltips);
-        self.base_mut()
-            .emit_signal("pointer_tooltip_changed".into(), &[]);
+        // Add avatar profile tooltip if there's an avatar under crosshair
+        if let Some(RaycastResult::Avatar(_)) = &current_raycast {
+            let mut profile_dict = Dictionary::new();
+            profile_dict.set(
+                StringName::from("text_pet_down"),
+                GString::from("View profile"),
+            );
+            profile_dict.set(StringName::from("action"), GString::from("ia_pointer"));
+            tooltips.push(profile_dict.to_variant());
+        }
+
+        if self.pointer_tooltips != tooltips {
+            self.set_pointer_tooltips(tooltips);
+            self.base_mut()
+                .emit_signal("pointer_tooltip_changed".into(), &[]);
+        }
 
         if self.camera_node.is_none() {
             return;
         }
         let player_camera_node = self.camera_node.clone().unwrap();
 
-        // This update the mirror node that copies every frame the global transform of the player/camera
-        //  every entity attached to the player/camera is really attached to these mirror nodes
-        // TODO: should only update the current scnes + globals?
-        for (_, scene) in self.scenes.iter_mut() {
+        // Only update player/camera transforms for current scene and global scenes
+        let player_transform = self.player_avatar_node.get_global_transform();
+        let camera_transform = player_camera_node.get_global_transform();
+
+        // Update current parcel scene
+        if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
             if let Some(player_node) = scene
                 .godot_dcl_scene
                 .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
             {
-                player_node.set_global_transform(self.player_avatar_node.get_global_transform());
+                player_node.set_global_transform(player_transform);
             }
 
             if let Some(camera_node) = scene
                 .godot_dcl_scene
                 .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
             {
-                camera_node.set_global_transform(player_camera_node.get_global_transform());
+                camera_node.set_global_transform(camera_transform);
+            }
+        }
+
+        // Update global scenes
+        for scene_id in self.get_global_scene_ids().clone() {
+            if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                if let Some(player_node) = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
+                {
+                    player_node.set_global_transform(player_transform);
+                }
+
+                if let Some(camera_node) = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
+                {
+                    camera_node.set_global_transform(camera_transform);
+                }
             }
         }
 

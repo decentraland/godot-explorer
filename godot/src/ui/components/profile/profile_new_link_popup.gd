@@ -5,7 +5,6 @@ signal add_link(title: String, url: String)
 var title: String
 var url: String
 
-@onready var label_url: Label = %Label_Url
 @onready var dcl_text_edit_link_url: VBoxContainer = %DclTextEdit_LinkUrl
 @onready var dcl_text_edit_link_title: VBoxContainer = %DclTextEdit_LinkTitle
 @onready var button_new_link_save: Button = %Button_NewLinkSave

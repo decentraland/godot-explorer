@@ -75,12 +75,7 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var button_send_dm: Button = %Button_SendDM
 @onready var label_no_intro: Label = %Label_NoIntro
-@onready var label_nick_length: Label = %Label_NickLength
-@onready var text_edit_new_nick: TextEdit = %TextEdit_NewNick
-@onready var button_nick_save: Button = %Button_NickSave
 @onready var button_claim_name: Button = %Button_ClaimName
-@onready var label_new_nick_tag: Label = %Label_NewNickTag
-@onready var button_claim_name_2: Button = %Button_ClaimName2
 @onready var url_popup: ColorRect = %UrlPopup
 @onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
 @onready var change_nick_popup: ColorRect = %ChangeNickPopup
@@ -472,10 +467,6 @@ func close() -> void:
 		close_profile.emit()
 
 
-func _on_button_close_profile_pressed() -> void:
-	close()
-
-
 func _on_button_claim_name_pressed() -> void:
 	Global.open_url("https://decentraland.org/marketplace/names/claim")
 
@@ -830,3 +821,12 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id
 	):
 		call_deferred("_update_buttons")
+
+
+func _on_button_close_profile_button_up() -> void:
+	close()
+
+
+func _on_visibility_changed() -> void:
+	if visible:
+		grab_focus()

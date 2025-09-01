@@ -11,21 +11,16 @@ var current_avatar: DclAvatarWireFormat
 @onready var avatar_preview = %AvatarPreview
 
 
-# TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
-	var args := OS.get_cmdline_args()
-
 	# Only use from the editor
-	if USE_TEST_INPUT or args.has("--use-test-input"):
+	if USE_TEST_INPUT or Global.cli.use_test_input:
 		return [
 			AvatarRendererHelper.AvatarFile.from_file_path("res://../tests/avatars-test-input.json")
 		]
 
 	var avatar_data = null
-	var avatar_in_place := args.find("--avatars")
-
-	if avatar_in_place != -1 and args.size() > avatar_in_place + 1:
-		var file_path: String = args[avatar_in_place + 1]
+	var file_path: String = Global.cli.avatars_file
+	if not file_path.is_empty():
 		avatar_data = AvatarRendererHelper.AvatarFile.from_file_path(file_path)
 
 	return [avatar_data]

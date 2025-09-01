@@ -20,8 +20,7 @@ var places = {
 func populate_menu(menu: PopupMenu, id: int):
 	menu.add_item("Run Benchmark", id)
 
-	var args := OS.get_cmdline_args()
-	if args.has("--dcl-benchmark"):
+	if Global.cli.dcl_benchmark:
 		print("Running Benchmark...")
 		await execute()
 		plugin.get_editor_interface().get_editor_main_screen().get_tree().quit()
