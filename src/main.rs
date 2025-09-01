@@ -468,6 +468,8 @@ fn main() -> Result<(), anyhow::Error> {
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     let scene_snapshot_folder = Path::new("./tests/snapshots/scenes");
     let scene_snapshot_folder = scene_snapshot_folder.canonicalize()?;
+    let client_snapshot_folder = Path::new("./tests/snapshots/client");
+    let client_snapshot_folder = client_snapshot_folder.canonicalize()?;
 
     remove_dir("./coverage")?;
     create_dir_all("./coverage")?;
@@ -531,8 +533,23 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     run::run(false, false, extra_args, true, false)?;
 
     ui::print_section("Running Client Tests");
+    let client_extra_args = [
+        "--snapshot-folder",
+        client_snapshot_folder.to_str().unwrap(),
+    ]
+    .iter()
+    .map(|it| it.to_string())
+    .collect();
+
     run::build(false, vec![], Some(build_envs.clone()), None)?;
-    run::run(false, false, vec![], false, true)?;
+    run::run(false, false, client_extra_args, false, true)?;
+
+    // Copy client test snapshots to coverage artifacts
+    if client_snapshot_folder.exists() {
+        let coverage_client_dir = Path::new("./coverage/client_snapshots");
+        create_dir_all(coverage_client_dir)?;
+        copy_files::copy_dir_recursive(&client_snapshot_folder, coverage_client_dir)?;
+    }
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
