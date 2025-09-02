@@ -46,41 +46,32 @@ func _ready():
 
 	Global.comms.chat_message.connect(self.on_chats_arrived)
 	submit_message.connect(self._on_submit_message)
-	
+
 	show_notification()
-	
-	# Configurar la instancia de notificación existente en la escena
+
 	initialize_notification_instance()
-	
-	# Esperar a que el chat esté completamente inicializado antes de crear mensajes
-	await_chat_ready.call_deferred()
+	_async_chat_ready.call_deferred()
 
 
-func await_chat_ready():
-	# Esperar múltiples frames para asegurar que el layout esté completamente listo
+func _async_chat_ready():
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
-	
-	# Verificar que todos los componentes necesarios estén listos
+
 	if not v_box_container_chat or not scroll_container_chats_list:
 		return
-	
-	# Forzar actualización del layout del contenedor
+
 	v_box_container_chat.queue_redraw()
 	scroll_container_chats_list.queue_redraw()
 	await get_tree().process_frame
-	
-	# Crear el mensaje del sistema sin afectar el estado de notificación
+
 	var system_message = ["system", Time.get_unix_time_from_system(), "Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby."]
-	
-	# Crear solo el mensaje en el chat, sin notificación y sin cambiar la vista
+
 	var new_chat = CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
 	new_chat.compact_view = Global.is_chat_compact
 	new_chat.set_chat(system_message)
-	
-	# Ajustar el tamaño del mensaje del sistema
+
 	await get_tree().process_frame
 	await get_tree().process_frame
 	if new_chat.is_inside_tree() and new_chat.get_parent():
@@ -93,22 +84,23 @@ func _on_submit_message(_message: String):
 
 func on_chats_arrived(chats: Array):
 	var should_show_notification = not v_box_container_content.visible
-	
+
 	for i in range(chats.size()):
 		var chat = chats[i]
 		var is_last_message = (i == chats.size() - 1)
-		create_chat(chat, should_show_notification and is_last_message)
+		async_create_chat(chat, should_show_notification and is_last_message)
 
-	# Scroll to bottom after frame processing
-	async_scroll_to_bottom.call_deferred()
+	_async_scroll_to_bottom.call_deferred()
 
 
-func async_scroll_to_bottom() -> void:
-	# Ensure scroll is at maximum (bottom)
+func _async_scroll_to_bottom() -> void:
 	await get_tree().process_frame
-	scroll_container_chats_list.scroll_vertical = (
-		scroll_container_chats_list.get_v_scroll_bar().max_value
-	)
+	await get_tree().process_frame
+
+	if scroll_container_chats_list and is_instance_valid(scroll_container_chats_list):
+		var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
+		if scrollbar and is_instance_valid(scrollbar):
+			scroll_container_chats_list.scroll_vertical = scrollbar.max_value
 
 
 func _on_button_send_pressed():
@@ -205,22 +197,20 @@ func show_chat() -> void:
 	texture_rect_logo.show()
 	button_nearby_users.show()
 	timer_hide.start()
-	
-	# Ajustar el tamaño de todos los mensajes existentes cuando se muestra el chat por primera vez
-	adjust_existing_messages.call_deferred()
+
+	_async_adjust_existing_messages.call_deferred()
+	_async_scroll_to_bottom.call_deferred()
 
 
-func adjust_existing_messages() -> void:
-	# Esperar a que el layout se actualice
+func _async_adjust_existing_messages() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-	
-	# Ajustar el tamaño de todos los mensajes de chat existentes
+
 	for child in v_box_container_chat.get_children():
 		if child.has_method("async_adjust_panel_size"):
 			child.async_adjust_panel_size.call_deferred()
-	
-	
+
+
 func show_nearby_players() -> void:
 	v_box_container_content.show()
 	panel_container_notification.hide()
@@ -235,104 +225,74 @@ func show_nearby_players() -> void:
 
 
 func show_notification() -> void:
-	# Detener cualquier timer activo
 	timer_hide.stop()
-	
-	# Asegurar que el panel de notificaciones esté completamente visible
 	panel_container_notification.modulate = Color.WHITE
 	panel_container_notification.show()
-	
-	# Ocultar el contenido del chat
 	v_box_container_content.hide()
-	
 	self_modulate = "#00000000"
-	
-func create_chat(chat, should_create_notification = false) -> void:
-	# Verificar que el contenedor esté listo
+
+
+func async_create_chat(chat, should_create_notification = false) -> void:
 	if not v_box_container_chat or not is_inside_tree():
-		print("Warning: Chat container not ready, deferring message creation")
-		create_chat.call_deferred(chat, should_create_notification)
+		async_create_chat.call_deferred(chat, should_create_notification)
 		return
-	
-	# No verificar el tamaño del contenedor si está oculto - simplemente crear el mensaje
-	# El ajuste de tamaño se hará cuando sea necesario
-	
-	# Crear el mensaje principal en el chat
+
 	var new_chat = CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
 	new_chat.compact_view = Global.is_chat_compact
 	new_chat.set_chat(chat)
-	
-	# Crear notificación si es necesario
+
 	if should_create_notification:
-		create_notification(chat)
-	
-	# Esperar a que el mensaje esté completamente agregado al árbol
+		async_create_notification(chat)
+
 	await get_tree().process_frame
 	await get_tree().process_frame
-	
-	# Solo ajustar el panel si el contenido del chat es visible
-	# Si está oculto, el ajuste se hará cuando se muestre
+
 	if new_chat.is_inside_tree() and v_box_container_content.visible:
 		new_chat.async_adjust_panel_size.call_deferred()
 
+	# Always scroll to bottom when a new message is added
+	_async_scroll_to_bottom.call_deferred()
+
 
 func initialize_notification_instance() -> void:
-	# Configurar la instancia de notificación existente en la escena
 	if chat_message_notification and is_instance_valid(chat_message_notification):
 		chat_message_notification.compact_view = true
-		chat_message_notification.hide()  # Iniciar oculta
-
-
-func create_notification(chat) -> void:
-	# Detener timer anterior si está corriendo
-	timer_delete_notifications.stop()
-	
-	# Mostrar la vista de notificaciones ANTES de actualizar el contenido
-	show_notification()
-	
-	# Esperar un frame para que el layout se estabilice
-	await get_tree().process_frame
-	
-	# Actualizar el contenido de la notificación existente en la escena
-	if chat_message_notification and is_instance_valid(chat_message_notification):
-		# Ocultar temporalmente para evitar parpadeos durante el ajuste
 		chat_message_notification.hide()
-		
-		# Actualizar el contenido
+
+
+func async_create_notification(chat) -> void:
+	timer_delete_notifications.stop()
+	show_notification()
+	await get_tree().process_frame
+
+	if chat_message_notification and is_instance_valid(chat_message_notification):
+		chat_message_notification.hide()
 		chat_message_notification.set_chat(chat)
-		
-		# Esperar a que el contenido se actualice
+
 		await get_tree().process_frame
 		await get_tree().process_frame
-		
-		# Ajustar el tamaño con el nuevo contenido
+
 		if chat_message_notification.is_inside_tree():
 			chat_message_notification.async_adjust_panel_size.call_deferred()
-			
-			# Mostrar la notificación después del ajuste
 			await get_tree().process_frame
 			chat_message_notification.show()
-	
-	# Iniciar timer para ocultar la notificación
+			UiSounds.play_sound("widget_chat_message_private_send")
+
 	timer_delete_notifications.start()
 
 
 func clear_notifications() -> void:
-	# Solo ocultar la notificación, no eliminarla
 	if chat_message_notification and is_instance_valid(chat_message_notification):
 		chat_message_notification.hide()
 
 
 func _on_timer_delete_notifications_timeout() -> void:
-	# Animar fade out de la notificación
 	var hide_notification_tween = get_tree().create_tween()
 	hide_notification_tween.tween_property(panel_container_notification, "modulate", Color.TRANSPARENT, 0.5)
-	
-	# Después del fade out, ocultar la notificación y el panel
+
 	hide_notification_tween.tween_callback(func():
-		clear_notifications()  # Oculta la instancia reutilizable
-		panel_container_notification.modulate = Color.WHITE  # Restaurar opacidad
-		panel_container_notification.hide()  # Ocultar panel de notificaciones
+		clear_notifications()
+		panel_container_notification.modulate = Color.WHITE
+		panel_container_notification.hide()
 	)
-		

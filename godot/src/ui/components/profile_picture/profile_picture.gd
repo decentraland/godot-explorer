@@ -2,9 +2,9 @@
 class_name ProfilePicture
 extends Control
 
+enum Size { EXTRA_LARGE, LARGE, MEDIUM, SMALL }
 const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 
-enum Size { EXTRA_LARGE, LARGE, MEDIUM, SMALL }
 @export var picture_size: Size = Size.MEDIUM:
 	set(value):
 		picture_size = value
@@ -90,7 +90,6 @@ func async_update_profile_picture(avatar: DclAvatar):
 
 	var background_color = nickname_color
 	apply_style(background_color)
-	
 
 	# Skip image loading in editor mode
 	if Engine.is_editor_hint():

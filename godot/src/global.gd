@@ -383,6 +383,13 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 	if is_instance_valid(explorer):
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
+		explorer.panel_chat.async_create_chat(
+			[
+				"system",
+				Time.get_unix_time_from_system(),
+				"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]"
+			]
+		)
 	else:
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position

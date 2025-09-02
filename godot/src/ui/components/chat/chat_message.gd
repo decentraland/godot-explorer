@@ -38,49 +38,36 @@ func _ready() -> void:
 	# Connect signals for clickable URLs
 	rich_text_label_message.meta_clicked.connect(_on_url_clicked)
 	rich_text_label_compact_chat.meta_clicked.connect(_on_url_clicked)
-	
-	# Configurar estilos de links (sin subrayado)
+
 	configure_link_styles()
-	
-	# Aplicar el estado de compact_view ahora que los nodos están listos
 	_update_compact_view()
 
 
 func configure_link_styles() -> void:
-	# En Godot 4, necesitamos usar un enfoque diferente para los estilos de links
-	# Vamos a crear un tema personalizado para desactivar el subrayado
-	
-	# Para RichTextLabel_Message (vista extendida)
 	if rich_text_label_message:
 		_configure_richtext_theme(rich_text_label_message)
-	
-	# Para RichTextLabel_CompactChat (vista compacta)
+
 	if rich_text_label_compact_chat:
 		_configure_richtext_theme(rich_text_label_compact_chat)
 
 
 func _configure_richtext_theme(richtext_label: RichTextLabel) -> void:
-	# Crear un tema personalizado para desactivar el subrayado de links
 	var custom_theme = Theme.new()
-	
-	# Configurar el estilo de link sin subrayado
 	var link_style = StyleBoxFlat.new()
 	link_style.bg_color = Color.TRANSPARENT
 	link_style.border_width_left = 0
 	link_style.border_width_right = 0
 	link_style.border_width_top = 0
 	link_style.border_width_bottom = 0
-	
-	# Aplicar el tema personalizado
+
 	custom_theme.set_stylebox("normal", "LinkButton", link_style)
 	richtext_label.theme = custom_theme
 
 
 func _update_compact_view() -> void:
-	# Solo actualizar si los nodos están listos
 	if not h_box_container_extended_chat or not h_box_container_compact_chat or not rich_text_label_compact_chat:
 		return
-		
+
 	h_box_container_extended_chat.visible = !compact_view
 	h_box_container_compact_chat.visible = compact_view
 	rich_text_label_compact_chat.visible = compact_view
@@ -116,13 +103,11 @@ func set_chat(chat) -> void:
 		datetime = Time.get_datetime_dict_from_unix_time(local_unix_time)
 	var time_string = "%02d:%02d" % [datetime.hour, datetime.minute]
 
-	# Process message to make URLs clickable
 	var processed_message = make_urls_clickable(message)
 	new_text = ("[b][color=#fff]%s[/color]" % [processed_message])
 	rich_text_label_message.text = new_text
 	label_timestamp.text = time_string
 
-	
 	var avatar
 	if address != "system":
 		avatar = Global.avatars.get_avatar_by_address(address)
@@ -159,7 +144,7 @@ func set_chat(chat) -> void:
 			)
 			profile_picture_compact.show()
 		rich_text_label_compact_chat.text = new_text
-		
+
 	async_adjust_panel_size.call_deferred()
 
 func set_avatar(avatar: DclAvatar) -> void:
@@ -204,7 +189,6 @@ func _on_chat_compact_changed(is_compact: bool) -> void:
 	compact_view = is_compact
 	_update_compact_view()
 
-	# Readjust size for both modes
 	async_adjust_panel_size.call_deferred()
 
 
@@ -225,7 +209,6 @@ func make_urls_clickable(text: String) -> String:
 
 		# Validate coordinate range (-150 to 150 for both x and y)
 		if _is_valid_coordinate(coord):
-					# Replace with clickable BBCode format for coordinates (azul sin subrayado)
 			var clickable_coord = "[url=coord:%s][color=#66B3FF]%s[/color][/url]" % [coord, coord]
 			processed_text = (
 				processed_text.substr(0, start_pos)
@@ -250,7 +233,6 @@ func make_urls_clickable(text: String) -> String:
 		if url.begins_with("www."):
 			full_url = "https://" + url
 
-		# Replace with clickable BBCode format for URLs (azul sin subrayado)
 		var clickable_url = "[url=%s][color=#66B3FF]%s[/color][/url]" % [full_url, url]
 		processed_text = (
 			processed_text.substr(0, start_pos) + clickable_url + processed_text.substr(end_pos)
@@ -275,21 +257,17 @@ func _is_valid_coordinate(coord_str: String) -> bool:
 func _on_url_clicked(meta):
 	var meta_str = str(meta)
 	if meta_str.begins_with("coord:"):
-		# Handle coordinate click
-		var coord_str = meta_str.substr(6)  # Remove "coord:" prefix
+		var coord_str = meta_str.substr(6)
 		_handle_coordinate_click(coord_str)
 	else:
-		# Handle regular URL click
 		Global.show_url_popup(meta_str)
 
 
 func _handle_coordinate_click(coord_str: String):
-	# Parse coordinates from string like "52,-56"
 	var coords = coord_str.split(",")
 	if coords.size() == 2:
 		var x = int(coords[0])
 		var y = int(coords[1])
-		# Show jump in popup for coordinate confirmation
 		Global.show_jump_in_popup(Vector2i(x, y))
 
 
@@ -297,11 +275,11 @@ func async_adjust_panel_size():
 	# Wait multiple frames for content to render and layout to be ready
 	await get_tree().process_frame
 	await get_tree().process_frame
-	
+
 	# Ensure parent is valid and has proper size
 	if not get_parent():
 		return
-		
+
 	# Force layout update
 	get_parent().queue_redraw()
 	await get_tree().process_frame

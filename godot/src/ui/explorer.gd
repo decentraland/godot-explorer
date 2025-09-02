@@ -350,14 +350,22 @@ func _on_panel_chat_submit_message(message: String):
 			elif params.size() > 2:
 				dest_vector = Vector2i(int(params[1]), int(params[2]))
 
-			panel_chat.create_chat(["system", Time.get_unix_time_from_system(),
-				"[color=#ccc]Teleport to " + str(dest_vector) + "[/color]"
-			])
+			panel_chat.create_chat(
+				[
+					"system",
+					Time.get_unix_time_from_system(),
+					"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]"
+				]
+			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			panel_chat.create_chat(["system", Time.get_unix_time_from_system(),
-				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]"
-			])
+			panel_chat.create_chat(
+				[
+					"system",
+					Time.get_unix_time_from_system(),
+					"[color=#ccc]Trying to change to realm " + params[1] + "[/color]"
+				]
+			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
 		elif command_str == "/clear":
@@ -366,8 +374,13 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
 			loading_ui.enable_loading_screen()
 		else:
-			pass
-			# TODO: unknown command
+			panel_chat.create_chat(
+				[
+					"system",
+					Time.get_unix_time_from_system(),
+					"[color=#ccc]🔴 Unknown command[/color]"
+				]
+			)
 	else:
 		Global.comms.send_chat(message)
 		panel_chat.on_chats_arrived([[Global.player_identity.get_address_str(), 0, message]])
