@@ -77,9 +77,10 @@ func set_chat(chat) -> void:
 	rich_text_label_message.text = new_text
 	label_timestamp.text = time_string
 
-	# Adjust panel size dynamically for both modes
-	async_adjust_panel_size.call_deferred()
-	var avatar = Global.avatars.get_avatar_by_address(address)
+	
+	var avatar
+	if address != "system":
+		avatar = Global.avatars.get_avatar_by_address(address)
 
 	if avatar == null:
 		if address == Global.player_identity.get_address_str():
@@ -88,7 +89,7 @@ func set_chat(chat) -> void:
 	if avatar != null and is_instance_valid(avatar):
 		set_avatar(avatar)
 	else:
-		set_default_avatar(address)
+		set_system_avatar()
 
 	if message.begins_with(EMOTE):
 		message = message.substr(1)  # Remove prefix
@@ -113,7 +114,8 @@ func set_chat(chat) -> void:
 			)
 			profile_picture_compact.show()
 		rich_text_label_compact_chat.text = new_text
-
+		
+	async_adjust_panel_size.call_deferred()
 
 func set_avatar(avatar: DclAvatar) -> void:
 	nickname = avatar.get_avatar_name()
@@ -138,59 +140,19 @@ func set_avatar(avatar: DclAvatar) -> void:
 	profile_picture_compact.async_update_profile_picture(avatar)
 
 
-func set_default_avatar(address: String) -> void:
-	if address.length() > 32:
-		nickname = DclEther.shorten_eth_address(address)
-	else:
-		nickname = "Unknown"
+func set_system_avatar() -> void:
+	nickname = "System"
 
 	tag = ""
-	nickname_color_hex = "ffffff"
+	nickname_color_hex = "00ff00"
 
 	label_nickname.text = nickname
 	label_tag.text = ""
-	label_nickname.add_theme_color_override("font_color", Color.WHITE)
+	label_nickname.add_theme_color_override("font_color", Color.GREEN)
 	claimed_checkmark.hide()
 
-	# Set default styling for both profile pictures when no avatar is available
-	_set_default_profile_picture_style()
-
-
-func _set_default_profile_picture_style() -> void:
-	# Apply default white background to both profile pictures
-	var default_color = Color.WHITE
-
-	# Apply to extended profile picture
-	_apply_profile_picture_background(profile_picture, default_color)
-
-	# Apply to compact profile picture
-	_apply_profile_picture_background(profile_picture_compact, default_color)
-
-
-func _apply_profile_picture_background(profile_pic: ProfilePicture, bg_color: Color) -> void:
-	if not profile_pic:
-		return
-
-	# Apply background color to the main panel container
-	var stylebox_background := profile_pic.get_theme_stylebox("panel")
-	if not stylebox_background:
-		return
-
-	stylebox_background = stylebox_background.duplicate()
-	if stylebox_background is StyleBoxFlat:
-		stylebox_background.bg_color = bg_color
-	profile_pic.add_theme_stylebox_override("panel", stylebox_background)
-
-	# Apply border color (slightly darker than background)
-	var border_color = bg_color.darkened(0.2)
-	var panel_border = profile_pic.get_node_or_null("%Panel_Border")
-	if panel_border:
-		var stylebox_border: StyleBoxFlat = panel_border.get_theme_stylebox("panel")
-		if stylebox_border:
-			stylebox_border = stylebox_border.duplicate()
-			if stylebox_border is StyleBoxFlat:
-				stylebox_border.border_color = border_color
-			panel_border.add_theme_stylebox_override("panel", stylebox_border)
+	profile_picture.set_dcl_logo()
+	profile_picture_compact.set_dcl_logo()
 
 
 func _on_chat_compact_changed(is_compact: bool) -> void:
@@ -288,14 +250,49 @@ func _handle_coordinate_click(coord_str: String):
 
 
 func async_adjust_panel_size():
-	# Wait one frame for content to render
+	# Wait multiple frames for content to render and layout to be ready
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	
+	# Ensure we're in the tree and parent is valid
+	if not is_inside_tree() or not get_parent():
+		print("Warning: Message not in tree or no parent, skipping size adjustment")
+		return
+	
+	# Buscar el contenedor de chat más arriba en la jerarquía para obtener el ancho real
+	var chat_container = get_parent()
+	var attempts = 0
+	while chat_container and attempts < 10:
+		if chat_container.size.x > 100:  # Encontramos un contenedor con tamaño válido
+			break
+		chat_container = chat_container.get_parent()
+		attempts += 1
+		
+	if not chat_container or chat_container.size.x <= 100:
+		print("Warning: No valid chat container found, using default width")
+		chat_container = null
+		
+	# Force layout update
+	if chat_container:
+		chat_container.queue_redraw()
 	await get_tree().process_frame
 
 	# Get available width from parent container
-	var parent_width = get_parent().size.x if get_parent() else 400.0
+	var parent_width = chat_container.size.x if chat_container else 350.0
 
-	# Maximum panel width (leaving space for avatar and margins)
-	var max_panel_width = parent_width - 100.0  # 100px for avatar and spacing
+	# Calcular espacio ocupado por otros elementos:
+	# - Avatar: 28px
+	# - Separation del HBoxContainer: 5px  
+	# - MarginContainer derecho del mensaje: 5px
+	# - Márgenes internos del panel: ~30px
+	# - Espacio adicional de seguridad: 20px
+	var occupied_space = 28 + 5 + 5 + 30 + 20  # Total: 88px
+	var max_panel_width = parent_width - occupied_space
+
+	# Asegurar un ancho mínimo y máximo razonable
+	max_panel_width = max(max_panel_width, 150.0)
+	max_panel_width = min(max_panel_width, 300.0)  # Límite máximo para evitar desbordamientos
 
 	if compact_view:
 		# Handle compact chat sizing
@@ -320,15 +317,19 @@ func _adjust_extended_panel_size(max_panel_width: float):
 		. x
 	)
 
-	# Minimum and maximum width
+	# Minimum and maximum width - ser más conservador
 	var min_width = 100.0
-	var desired_width = max(min_width, min(text_width + 40, max_panel_width))  # +40 for internal margins
+	var internal_margins = 30.0  # Márgenes internos del panel
+	var desired_width = max(min_width, min(text_width + internal_margins, max_panel_width))
+
+	# Asegurar que no exceda el máximo disponible
+	desired_width = min(desired_width, max_panel_width)
 
 	# Set custom size
 	panel_container.custom_minimum_size.x = desired_width
 
 	# If text is too long, allow RichTextLabel to wrap
-	if text_width > max_panel_width - 40:
+	if text_width > max_panel_width - internal_margins:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -349,16 +350,20 @@ func _adjust_compact_panel_size(max_panel_width: float):
 		. x
 	)
 
-	# Minimum and maximum width for compact mode (smaller than extended)
-	var min_width = 1.0  # Smaller minimum for compact mode
-	var desired_width = max(min_width, min(text_width + 20, max_panel_width))  # +20 for smaller margins
+	# Minimum and maximum width for compact mode - ser más conservador
+	var min_width = 50.0  # Mínimo más razonable
+	var internal_margins = 15.0  # Márgenes internos más pequeños para compact
+	var desired_width = max(min_width, min(text_width + internal_margins, max_panel_width))
+
+	# Asegurar que no exceda el máximo disponible
+	desired_width = min(desired_width, max_panel_width)
 
 	# Set custom size for compact panel
 	if panel_container_compact:
 		panel_container_compact.custom_minimum_size.x = desired_width
 
 	# If text is too long, allow RichTextLabel to wrap
-	if text_width > max_panel_width - 20:
+	if text_width > max_panel_width - internal_margins:
 		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
 		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_OFF

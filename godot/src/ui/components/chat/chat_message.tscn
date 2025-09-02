@@ -28,6 +28,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 5
 alignment = 2
 
 [node name="ProfilePicture" parent="MarginContainer/HBoxContainer_ExtendedChat" instance=ExtResource("2_gw0bh")]
@@ -123,16 +124,16 @@ text = "14:15"
 horizontal_alignment = 2
 
 [node name="Control_Spacing" type="Control" parent="MarginContainer/HBoxContainer_ExtendedChat"]
-custom_minimum_size = Vector2(30, 0)
+custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="HBoxContainer_CompactChat" type="HBoxContainer" parent="MarginContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 5
 alignment = 2
 
 [node name="ProfilePicture_Compact" parent="MarginContainer/HBoxContainer_CompactChat" instance=ExtResource("2_gw0bh")]

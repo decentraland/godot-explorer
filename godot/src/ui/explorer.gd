@@ -287,7 +287,8 @@ func _unhandled_input(event):
 					release_mouse()
 
 			if event.pressed and event.keycode == KEY_ENTER:
-				panel_chat.toggle_open_chat()
+				panel_chat.toggle_chat_visibility(true)
+				panel_chat.line_edit_command.grab_focus.call_deferred()
 
 
 func _on_control_minimap_request_open_map():
@@ -349,14 +350,14 @@ func _on_panel_chat_submit_message(message: String):
 			elif params.size() > 2:
 				dest_vector = Vector2i(int(params[1]), int(params[2]))
 
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Teleport to " + str(dest_vector) + "[/color]"
-			)
+			panel_chat.create_chat(["system", Time.get_unix_time_from_system(),
+				"[color=#ccc]Teleport to " + str(dest_vector) + "[/color]"
+			])
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
-			)
+			panel_chat.create_chat(["system", Time.get_unix_time_from_system(),
+				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]"
+			])
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
 		elif command_str == "/clear":
@@ -466,10 +467,6 @@ func _on_button_jump_gui_input(event):
 			Input.action_release("ia_jump")
 
 
-func _on_button_open_chat_pressed():
-	panel_chat.toggle_open_chat()
-
-
 func reset_cursor_position():
 	# Position crosshair at center of screen
 	var viewport_size = get_tree().root.get_viewport().get_visible_rect()
@@ -552,3 +549,11 @@ func _on_panel_chat_hide_parcel_info() -> void:
 
 func _on_panel_chat_show_parcel_info() -> void:
 	h_box_container_top_left_menu.show()
+
+
+func _on_button_open_chat_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		panel_chat.show_chat()
+		release_mouse()
+	else:
+		panel_chat.show_notification()
