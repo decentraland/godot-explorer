@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=16 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_mb7k1"]
 [ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="8_lt7hs"]
+[ext_resource type="PackedScene" uid="uid://c8i3cvso5yx7n" path="res://src/ui/components/chat/chat_message.tscn" id="9_euk1h"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
 bg_color = Color(1, 1, 1, 1)
@@ -185,6 +186,7 @@ icon = ExtResource("3_bhyuy")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
@@ -229,18 +231,28 @@ expand_icon = true
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 
 [node name="PanelContainer_Notification" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_lt7hs")
 
-[node name="VBoxContainerNotifications" type="VBoxContainer" parent="PanelContainer_Notification"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Notification"]
+layout_mode = 2
+theme_override_constants/margin_top = 5
+
+[node name="VBoxContainerNotifications" type="VBoxContainer" parent="PanelContainer_Notification/MarginContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+
+[node name="ChatMessage_Notification" parent="PanelContainer_Notification/MarginContainer/VBoxContainerNotifications" instance=ExtResource("9_euk1h")]
+unique_name_in_owner = true
+layout_mode = 2
+compact_view = true
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="timeout" from="Timer_Hide" to="." method="_on_timer_hide_timeout"]

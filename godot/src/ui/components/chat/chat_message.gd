@@ -8,9 +8,7 @@ const ACK: String = "␆"
 @export var compact_view := false:
 	set(value):
 		compact_view = value
-		h_box_container_extended_chat.visible = !value
-		h_box_container_compact_chat.visible = value
-		rich_text_label_compact_chat.visible = value
+		_update_compact_view()
 var nickname: String = "Unknown"
 var tag: String = ""
 var nickname_color_hex: String = "#FFFFFF"
@@ -30,6 +28,7 @@ var is_own_message: bool = false
 @onready var panel_container_compact: PanelContainer = h_box_container_compact_chat.get_node(
 	"PanelContainer"
 )
+@onready var chat_message_notification: VBoxContainer = %ChatMessage_Notification
 
 
 func _ready() -> void:
@@ -39,6 +38,52 @@ func _ready() -> void:
 	# Connect signals for clickable URLs
 	rich_text_label_message.meta_clicked.connect(_on_url_clicked)
 	rich_text_label_compact_chat.meta_clicked.connect(_on_url_clicked)
+	
+	# Configurar estilos de links (sin subrayado)
+	configure_link_styles()
+	
+	# Aplicar el estado de compact_view ahora que los nodos están listos
+	_update_compact_view()
+
+
+func configure_link_styles() -> void:
+	# En Godot 4, necesitamos usar un enfoque diferente para los estilos de links
+	# Vamos a crear un tema personalizado para desactivar el subrayado
+	
+	# Para RichTextLabel_Message (vista extendida)
+	if rich_text_label_message:
+		_configure_richtext_theme(rich_text_label_message)
+	
+	# Para RichTextLabel_CompactChat (vista compacta)
+	if rich_text_label_compact_chat:
+		_configure_richtext_theme(rich_text_label_compact_chat)
+
+
+func _configure_richtext_theme(richtext_label: RichTextLabel) -> void:
+	# Crear un tema personalizado para desactivar el subrayado de links
+	var custom_theme = Theme.new()
+	
+	# Configurar el estilo de link sin subrayado
+	var link_style = StyleBoxFlat.new()
+	link_style.bg_color = Color.TRANSPARENT
+	link_style.border_width_left = 0
+	link_style.border_width_right = 0
+	link_style.border_width_top = 0
+	link_style.border_width_bottom = 0
+	
+	# Aplicar el tema personalizado
+	custom_theme.set_stylebox("normal", "LinkButton", link_style)
+	richtext_label.theme = custom_theme
+
+
+func _update_compact_view() -> void:
+	# Solo actualizar si los nodos están listos
+	if not h_box_container_extended_chat or not h_box_container_compact_chat or not rich_text_label_compact_chat:
+		return
+		
+	h_box_container_extended_chat.visible = !compact_view
+	h_box_container_compact_chat.visible = compact_view
+	rich_text_label_compact_chat.visible = compact_view
 
 
 func set_chat(chat) -> void:
@@ -157,8 +202,7 @@ func set_system_avatar() -> void:
 
 func _on_chat_compact_changed(is_compact: bool) -> void:
 	compact_view = is_compact
-	h_box_container_extended_chat.visible = !is_compact
-	h_box_container_compact_chat.visible = is_compact
+	_update_compact_view()
 
 	# Readjust size for both modes
 	async_adjust_panel_size.call_deferred()
@@ -181,8 +225,8 @@ func make_urls_clickable(text: String) -> String:
 
 		# Validate coordinate range (-150 to 150 for both x and y)
 		if _is_valid_coordinate(coord):
-			# Replace with clickable BBCode format for coordinates
-			var clickable_coord = "[url=coord:%s]%s[/url]" % [coord, coord]
+					# Replace with clickable BBCode format for coordinates (azul sin subrayado)
+			var clickable_coord = "[url=coord:%s][color=#66B3FF]%s[/color][/url]" % [coord, coord]
 			processed_text = (
 				processed_text.substr(0, start_pos)
 				+ clickable_coord
@@ -206,8 +250,8 @@ func make_urls_clickable(text: String) -> String:
 		if url.begins_with("www."):
 			full_url = "https://" + url
 
-		# Replace with clickable BBCode format for URLs
-		var clickable_url = "[url=%s]%s[/url]" % [full_url, url]
+		# Replace with clickable BBCode format for URLs (azul sin subrayado)
+		var clickable_url = "[url=%s][color=#66B3FF]%s[/color][/url]" % [full_url, url]
 		processed_text = (
 			processed_text.substr(0, start_pos) + clickable_url + processed_text.substr(end_pos)
 		)
@@ -253,46 +297,20 @@ func async_adjust_panel_size():
 	# Wait multiple frames for content to render and layout to be ready
 	await get_tree().process_frame
 	await get_tree().process_frame
-	await get_tree().process_frame
 	
-	# Ensure we're in the tree and parent is valid
-	if not is_inside_tree() or not get_parent():
-		print("Warning: Message not in tree or no parent, skipping size adjustment")
+	# Ensure parent is valid and has proper size
+	if not get_parent():
 		return
-	
-	# Buscar el contenedor de chat más arriba en la jerarquía para obtener el ancho real
-	var chat_container = get_parent()
-	var attempts = 0
-	while chat_container and attempts < 10:
-		if chat_container.size.x > 100:  # Encontramos un contenedor con tamaño válido
-			break
-		chat_container = chat_container.get_parent()
-		attempts += 1
-		
-	if not chat_container or chat_container.size.x <= 100:
-		print("Warning: No valid chat container found, using default width")
-		chat_container = null
 		
 	# Force layout update
-	if chat_container:
-		chat_container.queue_redraw()
+	get_parent().queue_redraw()
 	await get_tree().process_frame
 
 	# Get available width from parent container
-	var parent_width = chat_container.size.x if chat_container else 350.0
+	var parent_width = get_parent().size.x if get_parent().size.x > 0 else 400.0
 
-	# Calcular espacio ocupado por otros elementos:
-	# - Avatar: 28px
-	# - Separation del HBoxContainer: 5px  
-	# - MarginContainer derecho del mensaje: 5px
-	# - Márgenes internos del panel: ~30px
-	# - Espacio adicional de seguridad: 20px
-	var occupied_space = 28 + 5 + 5 + 30 + 20  # Total: 88px
-	var max_panel_width = parent_width - occupied_space
-
-	# Asegurar un ancho mínimo y máximo razonable
-	max_panel_width = max(max_panel_width, 150.0)
-	max_panel_width = min(max_panel_width, 300.0)  # Límite máximo para evitar desbordamientos
+	# Maximum panel width (leaving space for avatar and margins)
+	var max_panel_width = parent_width - 100 # Avatar + margins
 
 	if compact_view:
 		# Handle compact chat sizing
@@ -317,19 +335,15 @@ func _adjust_extended_panel_size(max_panel_width: float):
 		. x
 	)
 
-	# Minimum and maximum width - ser más conservador
+	# Minimum and maximum width
 	var min_width = 100.0
-	var internal_margins = 30.0  # Márgenes internos del panel
-	var desired_width = max(min_width, min(text_width + internal_margins, max_panel_width))
-
-	# Asegurar que no exceda el máximo disponible
-	desired_width = min(desired_width, max_panel_width)
+	var desired_width = max(min_width, min(text_width + 40, max_panel_width))  # +40 for internal margins
 
 	# Set custom size
 	panel_container.custom_minimum_size.x = desired_width
 
 	# If text is too long, allow RichTextLabel to wrap
-	if text_width > max_panel_width - internal_margins:
+	if text_width > max_panel_width - 40:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -350,20 +364,16 @@ func _adjust_compact_panel_size(max_panel_width: float):
 		. x
 	)
 
-	# Minimum and maximum width for compact mode - ser más conservador
-	var min_width = 50.0  # Mínimo más razonable
-	var internal_margins = 15.0  # Márgenes internos más pequeños para compact
-	var desired_width = max(min_width, min(text_width + internal_margins, max_panel_width))
-
-	# Asegurar que no exceda el máximo disponible
-	desired_width = min(desired_width, max_panel_width)
+	# Minimum and maximum width for compact mode (smaller than extended)
+	var min_width = 1.0  # Smaller minimum for compact mode
+	var desired_width = max(min_width, min(text_width + 20, max_panel_width))  # +20 for smaller margins
 
 	# Set custom size for compact panel
 	if panel_container_compact:
 		panel_container_compact.custom_minimum_size.x = desired_width
 
 	# If text is too long, allow RichTextLabel to wrap
-	if text_width > max_panel_width - internal_margins:
+	if text_width > max_panel_width - 20:
 		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
 		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_OFF
