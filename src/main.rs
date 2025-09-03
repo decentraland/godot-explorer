@@ -155,6 +155,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("ctest")
+                        .long("ctest")
+                        .help("run client tests")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("resource-tracking")
                         .short('x')
                         .help("enables resource tracking feature")
@@ -363,6 +369,7 @@ fn main() -> Result<(), anyhow::Error> {
                     .map(|v| v.map(|it| it.into()).collect())
                     .unwrap_or_default(),
                 sm.is_present("stest"),
+                sm.is_present("ctest"),
             )?;
             Ok(())
         }
@@ -461,6 +468,8 @@ fn main() -> Result<(), anyhow::Error> {
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     let scene_snapshot_folder = Path::new("./tests/snapshots/scenes");
     let scene_snapshot_folder = scene_snapshot_folder.canonicalize()?;
+    let client_snapshot_folder = Path::new("./tests/snapshots/client");
+    let client_snapshot_folder = client_snapshot_folder.canonicalize()?;
 
     remove_dir("./coverage")?;
     create_dir_all("./coverage")?;
@@ -484,7 +493,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::build(false, vec![], Some(build_envs.clone()), None)?;
 
-    run::run(false, true, vec![], false)?;
+    run::run(false, true, vec![], false, false)?;
 
     let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
     let scene_test_coords: Vec<[i32; 2]> = vec![
@@ -521,7 +530,19 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::build(false, vec![], Some(build_envs.clone()), None)?;
 
-    run::run(false, false, extra_args, true)?;
+    run::run(false, false, extra_args, true, false)?;
+
+    ui::print_section("Running Client Tests");
+    let client_extra_args = [
+        "--snapshot-folder",
+        client_snapshot_folder.to_str().unwrap(),
+    ]
+    .iter()
+    .map(|it| it.to_string())
+    .collect();
+
+    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::run(false, false, client_extra_args, false, true)?;
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())

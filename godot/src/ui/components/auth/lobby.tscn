@@ -567,7 +567,6 @@ size_flags_horizontal = 1
 size_flags_vertical = 3
 stretch = true
 hide_name = true
-show_platform = true
 can_move = false
 
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]

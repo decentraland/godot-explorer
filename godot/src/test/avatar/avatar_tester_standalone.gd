@@ -13,6 +13,7 @@ var avatar_list: Array = []
 
 @onready var spinner = $Spinner
 @onready var line_edit_profile_entity = $TabContainer/Avatars/LineEdit_ProfileEntity
+@onready var outline_checkbox = %OutlineCheckBox
 
 
 func _ready():
@@ -22,13 +23,14 @@ func _ready():
 	option_button_avatar_list.selected = -1
 	option_button_avatar_list.text = "Select an avatar"
 
+	# Connect outline checkbox
+	if outline_checkbox:
+		outline_checkbox.toggled.connect(_on_outline_toggled)
+
 	# Visual enhance
 	var viewport: Viewport = sub_viewport_container.subviewport.get_viewport()
 	viewport.use_debanding = true
 	viewport.scaling_3d_scale = 2.0
-	RenderingServer.viewport_set_msaa_3d(
-		viewport.get_viewport_rid(), RenderingServer.VIEWPORT_MSAA_8X
-	)
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
 
 
@@ -200,3 +202,11 @@ func _on_button_fetch_pressed():
 
 	spinner.hide()
 	_async_render_avatar(avatars_fetched[0].get("avatar", {}))
+
+
+func _on_outline_toggled(button_pressed: bool):
+	if sub_viewport_container:
+		if button_pressed:
+			sub_viewport_container.enable_outline()
+		else:
+			sub_viewport_container.disable_outline()

@@ -28,6 +28,7 @@ var dirty_is_dragging
 @onready var subviewport: SubViewport = %SubViewport
 @onready var world_environment = $SubViewport/WorldEnvironment
 @onready var directional_light_3d = $SubViewport/DirectionalLight3D
+@onready var outline_system = %OutlineSystem
 
 
 func _ready():
@@ -41,6 +42,9 @@ func _ready():
 
 	camera_3d.set_position(BODY_CAMERA_POSITION)
 	camera_3d.set_rotation_degrees(DEFAULT_ROTATION)
+
+	if outline_system:
+		outline_system.setup(camera_3d)
 
 	if can_move:
 		gui_input.connect(self._on_gui_input)
@@ -111,6 +115,16 @@ func _on_gui_input(event):
 
 func reset_avatar_rotation() -> void:
 	avatar.rotation.y = 0.0
+
+
+func enable_outline():
+	if outline_system and avatar:
+		outline_system.set_outlined_avatar(avatar)
+
+
+func disable_outline():
+	if outline_system:
+		outline_system.set_outlined_avatar(null)
 
 
 func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) -> Image:

@@ -7,8 +7,13 @@ func _ready():
 
 
 func start():
-	var args = OS.get_cmdline_args()
-	if args.has("--test-runner"):
+	# Check if help was requested
+	if Global.cli.is_help_requested():
+		# Help text is already printed by the Rust side
+		get_tree().quit(0)
+		return
+
+	if Global.cli.test_runner:
 		return
 
 	if not OS.has_feature("Server"):
@@ -36,18 +41,19 @@ func start():
 
 
 func _start():
-	var args = OS.get_cmdline_args()
-
 	if Global.is_xr():
 		print("Running in XR mode")
 		Global.set_orientation_landscape()
 		get_tree().change_scene_to_file("res://src/vr/vr_lobby.tscn")
-	elif args.has("--avatar-renderer"):
+	elif Global.cli.avatar_renderer_mode:
 		print("Running in Avatar-Renderer mode")
 		get_tree().change_scene_to_file(
 			"res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn"
 		)
-	elif args.has("--scene-test") or args.has("--scene-renderer"):
+	elif Global.cli.client_test_mode:
+		print("Running in Client Test mode")
+		get_tree().change_scene_to_file("res://src/client_tests/client_test_scene.tscn")
+	elif Global.cli.scene_test_mode or Global.cli.scene_renderer_mode:
 		print("Running in Scene Test mode")
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()

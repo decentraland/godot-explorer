@@ -31,9 +31,9 @@ func _ready():
 
 func _on_profile_picture_gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
-		if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			if avatar != null and is_instance_valid(avatar):
-				Global.open_profile.emit(avatar)
+		#if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if avatar != null and is_instance_valid(avatar):
+			Global.open_profile.emit(avatar)
 
 
 func async_set_data(avatar_param = null):

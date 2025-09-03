@@ -247,7 +247,7 @@ impl AvatarScene {
 
         let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
         let avatar_active_scene_ids = {
-            let mut scene_ids = scene_runner.get_global_scene_ids();
+            let mut scene_ids = scene_runner.get_global_scene_ids().clone();
             if avatar_current_parcel_scene_id != SceneId::INVALID.0 {
                 scene_ids.push(SceneId(avatar_current_parcel_scene_id));
             }
@@ -404,7 +404,7 @@ impl AvatarScene {
 
         let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
         let avatar_active_scene_ids = {
-            let mut scene_ids = scene_runner.get_global_scene_ids();
+            let mut scene_ids = scene_runner.get_global_scene_ids().clone();
             if avatar_current_parcel_scene_id != SceneId::INVALID.0 {
                 scene_ids.push(SceneId(avatar_current_parcel_scene_id));
             }
