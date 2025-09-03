@@ -50,6 +50,9 @@ func _start():
 		get_tree().change_scene_to_file(
 			"res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn"
 		)
+	elif Global.cli.client_test_mode:
+		print("Running in Client Test mode")
+		get_tree().change_scene_to_file("res://src/client_tests/client_test_scene.tscn")
 	elif Global.cli.scene_test_mode or Global.cli.scene_renderer_mode:
 		print("Running in Scene Test mode")
 		Global.get_config().guest_profile = {}

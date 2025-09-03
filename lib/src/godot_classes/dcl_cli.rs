@@ -44,6 +44,8 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_renderer_mode: bool,
     #[var(get)]
+    pub client_test_mode: bool,
+    #[var(get)]
     pub test_runner: bool,
     #[var(get)]
     pub clear_cache_startup: bool,
@@ -147,6 +149,12 @@ impl DclCli {
                 name: "--scene-test".to_string(),
                 description: "Run in scene test mode with specified scenes".to_string(),
                 arg_type: ArgType::Value("[[x,y],...]".to_string()),
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--client-test".to_string(),
+                description: "Run client visual tests (avatar outline tests)".to_string(),
+                arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
             ArgDefinition {
@@ -327,6 +335,7 @@ impl INode for DclCli {
         let scene_test_mode = args_map.contains_key("--scene-test");
         let scene_renderer_mode = args_map.contains_key("--scene-renderer");
         let avatar_renderer_mode = args_map.contains_key("--avatar-renderer");
+        let client_test_mode = args_map.contains_key("--client-test");
         let test_runner = args_map.contains_key("--test-runner");
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
         let raycast_debugger = args_map.contains_key("--raycast-debugger");
@@ -378,6 +387,7 @@ impl INode for DclCli {
             scene_test_mode,
             scene_renderer_mode,
             avatar_renderer_mode,
+            client_test_mode,
             test_runner,
             clear_cache_startup,
             raycast_debugger,

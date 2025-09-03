@@ -30,7 +30,7 @@ fn test_avatar_generation(
 
     run::build(false, vec![], with_build_envs, None)?;
 
-    run::run(false, false, extra_args, false)?;
+    run::run(false, false, extra_args, false, false)?;
 
     // Move files
     move_dir_recursive(&avatar_output.canonicalize()?, &comparison_folder)?;
@@ -62,7 +62,7 @@ fn test_scene_generation(
 
     run::build(false, vec![], with_build_envs, None)?;
 
-    run::run(false, false, extra_args, false)?;
+    run::run(false, false, extra_args, false, false)?;
 
     let scene_renderer_snapshot_folder =
         Path::new("./tests/snapshots/scene-image-generation").canonicalize()?;

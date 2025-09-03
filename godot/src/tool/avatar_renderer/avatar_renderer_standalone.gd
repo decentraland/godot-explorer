@@ -28,6 +28,7 @@ func get_params_from_cmd():
 
 func _ready():
 	print("spawning avatar renderer scene")
+
 	var from_params = get_params_from_cmd()
 	if from_params[0] == null:
 		printerr("param is missing or wrong, try with --avatars [file]")
@@ -55,9 +56,6 @@ func start():
 	var viewport: Viewport = avatar_preview.subviewport.get_viewport()
 	viewport.use_debanding = true
 	viewport.scaling_3d_scale = 2.0
-	RenderingServer.viewport_set_msaa_3d(
-		viewport.get_viewport_rid(), RenderingServer.VIEWPORT_MSAA_8X
-	)
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
 
 
@@ -72,8 +70,6 @@ func async_update_avatar(index: int):
 
 	current_avatar = profile.avatar
 	current_profile_index = index
-
-	flush_logs()
 
 	if not profile.entity.is_empty():
 		prints("processing payload entity", profile.entity)
@@ -124,6 +120,9 @@ func _async_on_avatar_avatar_loaded():
 		)
 		face_image.save_png(face_dest_path)
 		logs.push_back("🟢 " + face_dest_path)
+
+	flush_logs()
+	await get_tree().process_frame
 
 	if current_profile_index >= profiles_to_process.profiles.size() - 1:
 		Global.testing_tools.exit_gracefully(0)
