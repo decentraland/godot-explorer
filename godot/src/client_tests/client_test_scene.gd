@@ -6,6 +6,7 @@ var avatar_preview_instance: Control
 var snapshot_folder: String = ""
 var snapshot_comparison_folder: String = ""
 var test_results: Array = []
+var logs: Array[String] = []
 
 
 func _ready():
@@ -122,12 +123,12 @@ func async_load_test_avatar():
 	var result_with_outline = await async_capture_and_compare_avatar("avatar_with_outline")
 	test_results.push_back(result_with_outline)
 
-	# Report results
-	_report_results()
-
-	# Exit after tests
-	print("\nTest complete. Exiting...")
-	get_tree().quit()
+	# Report results and exit gracefully like scene tests
+	flush_logs()
+	if dump_test_result_and_get_ok():
+		Global.testing_tools.exit_gracefully(0)
+	else:
+		Global.testing_tools.exit_gracefully(1)
 
 
 func async_capture_and_compare_avatar(test_name: String) -> Dictionary:
@@ -167,13 +168,15 @@ func async_capture_and_compare_avatar(test_name: String) -> Dictionary:
 		result.passed = similarity > 0.99  # 99% similarity threshold
 
 		if result.passed:
-			print("✅ %s: PASSED (similarity: %.2f%%)" % [test_name, similarity * 100])
+			logs.push_back("🟢 %s: PASSED (similarity: %.2f%%)" % [test_name, similarity * 100])
 		else:
-			print("❌ %s: FAILED (similarity: %.2f%%)" % [test_name, similarity * 100])
-			print("   Diff saved to: ", diff_path)
+			logs.push_back("🔴 %s: FAILED (similarity: %.2f%%)" % [test_name, similarity * 100])
+			logs.push_back("   Diff saved to: %s" % diff_path)
 	else:
-		print("⚠️ %s: No reference snapshot found at %s" % [test_name, existing_snapshot_path])
-		print("   Creating initial snapshot...")
+		logs.push_back(
+			"⚠️ %s: No reference snapshot found at %s" % [test_name, existing_snapshot_path]
+		)
+		logs.push_back("   Creating initial snapshot...")
 		# Save as the reference snapshot for future runs
 		captured_image.save_png(existing_snapshot_path)
 
@@ -218,31 +221,50 @@ func _compute_image_similarity(image_a: Image, image_b: Image, diff_path: String
 	return float(matching_pixels) / float(total_pixels)
 
 
-func _report_results():
-	var separator = "=================================================="
-	print("\n" + separator)
-	print("CLIENT TEST RESULTS")
-	print(separator)
+func flush_logs():
+	for log_item in logs:
+		print(log_item)
+	logs.clear()
 
-	var all_passed = true
+
+func dump_test_result_and_get_ok() -> bool:
+	var ok: bool = true
+	var fail: int = 0
+	var total: int = test_results.size()
+	var passed: int = 0
+	var skipped: int = 0
+
 	for result in test_results:
 		if result.stored_snapshot_found:
 			if result.passed:
-				print("✅ %s: PASSED" % result.test_name)
+				passed += 1
 			else:
-				print(
-					(
-						"❌ %s: FAILED (similarity: %.2f%%)"
-						% [result.test_name, result.similarity * 100]
-					)
-				)
-				all_passed = false
+				fail += 1
 		else:
-			print("⚠️ %s: SKIPPED (no reference snapshot)" % result.test_name)
+			skipped += 1
 
-	print(separator)
-	if all_passed:
-		print("All client tests passed!")
-	else:
-		print("Some client tests failed!")
-	print(separator)
+	var text = (
+		"🔧 Client Tests: %d total, %d passed, %d failed, %d skipped"
+		% [total, passed, fail, skipped]
+	)
+	var text_detail_failed = ""
+
+	if fail > 0:
+		ok = false
+		text_detail_failed = "❌ Client test failures:\n"
+		for result in test_results:
+			if result.stored_snapshot_found and not result.passed:
+				text_detail_failed += (
+					"  - %s: %.2f%% similarity\n" % [result.test_name, result.similarity * 100]
+				)
+
+	prints(text)
+	if not text_detail_failed.is_empty():
+		prints(text_detail_failed)
+
+	if fail > 0 or not ok:
+		prints("Some client tests failed")
+		return false
+
+	prints("All client tests passed!")
+	return true

@@ -220,8 +220,6 @@ func fix_material(mat: BaseMaterial3D):
 	if mat.metallic_texture:
 		mat.metallic *= .5
 
-	mat.albedo_texture_force_srgb = true
-
 	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
 
