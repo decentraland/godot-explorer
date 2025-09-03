@@ -65,7 +65,11 @@ func _async_chat_ready():
 	scroll_container_chats_list.queue_redraw()
 	await get_tree().process_frame
 
-	var system_message = ["system", Time.get_unix_time_from_system(), "Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby."]
+	var system_message = [
+		"system",
+		Time.get_unix_time_from_system(),
+		"Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby."
+	]
 
 	var new_chat = CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
@@ -87,7 +91,7 @@ func on_chats_arrived(chats: Array):
 
 	for i in range(chats.size()):
 		var chat = chats[i]
-		var is_last_message = (i == chats.size() - 1)
+		var is_last_message = i == chats.size() - 1
 		async_create_chat(chat, should_show_notification and is_last_message)
 
 	_async_scroll_to_bottom.call_deferred()
@@ -119,7 +123,7 @@ func finish():
 		line_edit_command.text = ""
 
 
-func toggle_chat_visibility(visibility:bool):
+func toggle_chat_visibility(visibility: bool):
 	_on_button_back_pressed()
 	if visibility:
 		UiSounds.play_sound("widget_chat_open")
@@ -289,10 +293,16 @@ func clear_notifications() -> void:
 
 func _on_timer_delete_notifications_timeout() -> void:
 	var hide_notification_tween = get_tree().create_tween()
-	hide_notification_tween.tween_property(panel_container_notification, "modulate", Color.TRANSPARENT, 0.5)
+	hide_notification_tween.tween_property(
+		panel_container_notification, "modulate", Color.TRANSPARENT, 0.5
+	)
 
-	hide_notification_tween.tween_callback(func():
-		clear_notifications()
-		panel_container_notification.modulate = Color.WHITE
-		panel_container_notification.hide()
+	(
+		hide_notification_tween
+		. tween_callback(
+			func():
+				clear_notifications()
+				panel_container_notification.modulate = Color.WHITE
+				panel_container_notification.hide()
+		)
 	)

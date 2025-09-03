@@ -65,7 +65,11 @@ func _configure_richtext_theme(richtext_label: RichTextLabel) -> void:
 
 
 func _update_compact_view() -> void:
-	if not h_box_container_extended_chat or not h_box_container_compact_chat or not rich_text_label_compact_chat:
+	if (
+		not h_box_container_extended_chat
+		or not h_box_container_compact_chat
+		or not rich_text_label_compact_chat
+	):
 		return
 
 	h_box_container_extended_chat.visible = !compact_view
@@ -146,6 +150,7 @@ func set_chat(chat) -> void:
 		rich_text_label_compact_chat.text = new_text
 
 	async_adjust_panel_size.call_deferred()
+
 
 func set_avatar(avatar: DclAvatar) -> void:
 	nickname = avatar.get_avatar_name()
@@ -288,7 +293,7 @@ func async_adjust_panel_size():
 	var parent_width = get_parent().size.x if get_parent().size.x > 0 else 400.0
 
 	# Maximum panel width (leaving space for avatar and margins)
-	var max_panel_width = parent_width - 100 # Avatar + margins
+	var max_panel_width = parent_width - 100  # Avatar + margins
 
 	if compact_view:
 		# Handle compact chat sizing

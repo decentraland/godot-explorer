@@ -339,16 +339,16 @@ func _on_panel_chat_submit_message(message: String):
 			elif params.size() > 2:
 				dest_vector = Vector2i(int(params[1]), int(params[2]))
 
-			panel_chat.create_chat(
+			panel_chat.async_create_chat(
 				[
 					"system",
 					Time.get_unix_time_from_system(),
-					"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]"
+					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]"
 				]
 			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			panel_chat.create_chat(
+			panel_chat.async_create_chat(
 				[
 					"system",
 					Time.get_unix_time_from_system(),
@@ -363,7 +363,7 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
 			loading_ui.enable_loading_screen()
 		else:
-			panel_chat.create_chat(
+			panel_chat.async_create_chat(
 				[
 					"system",
 					Time.get_unix_time_from_system(),
