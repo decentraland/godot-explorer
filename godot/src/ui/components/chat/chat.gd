@@ -115,6 +115,8 @@ func _on_button_send_pressed():
 func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
+	line_edit_command.emit_signal("focus_exited")
+	grab_focus.call_deferred()
 
 
 func finish():
@@ -166,7 +168,7 @@ func _on_button_back_pressed() -> void:
 
 
 func _on_line_edit_command_focus_entered() -> void:
-	panel_container_navbar.show()
+	panel_container_navbar.hide()
 	emit_signal("hide_parcel_info")
 	timer_hide.stop()
 
@@ -186,7 +188,16 @@ func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch or event is InputEventMouseButton:
 		if margin_container_chat.visible:
 			show_chat()
-
+	if event is InputEventKey:
+			if event.pressed and event.keycode == KEY_ESCAPE:
+				show_notification()
+				print("ESC from chat")
+					
+			if event.pressed and event.keycode == KEY_ENTER:
+				print("ENTER")
+				toggle_chat_visibility(true)
+				show_chat()
+				line_edit_command.grab_focus.call_deferred()
 
 func show_chat() -> void:
 	v_box_container_content.show()
@@ -204,6 +215,8 @@ func show_chat() -> void:
 
 	_async_adjust_existing_messages.call_deferred()
 	_async_scroll_to_bottom.call_deferred()
+	grab_focus()
+	Global.get_explorer().release_mouse()
 
 
 func _async_adjust_existing_messages() -> void:
@@ -229,6 +242,9 @@ func show_nearby_players() -> void:
 
 
 func show_notification() -> void:
+	release_focus.call_deferred()
+	var explorer = Global.get_explorer()
+	explorer.capture_mouse()
 	timer_hide.stop()
 	panel_container_notification.modulate = Color.WHITE
 	panel_container_notification.show()
@@ -303,3 +319,13 @@ func _on_timer_delete_notifications_timeout() -> void:
 			panel_container_notification.modulate = Color.WHITE
 			panel_container_notification.hide()
 	)
+
+
+		
+
+
+func _on_line_edit_command_gui_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+			if event.pressed and event.keycode == KEY_ESCAPE:
+				show_notification()
+				print("ESC from lineedit")
