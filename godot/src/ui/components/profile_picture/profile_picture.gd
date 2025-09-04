@@ -122,12 +122,13 @@ func async_update_profile_picture(avatar: DclAvatar):
 		return
 	texture_rect_profile.texture = result.texture
 
+
 func set_dcl_logo() -> void:
 	texture_rect_profile.texture = DECENTRALAND_LOGO
 	apply_style(Color.GREEN)
 
 
-func apply_style(color:Color) -> void:
+func apply_style(color: Color) -> void:
 	# Apply background color to the main panel container
 	var stylebox_background := get_theme_stylebox("panel")
 	stylebox_background = stylebox_background.duplicate()

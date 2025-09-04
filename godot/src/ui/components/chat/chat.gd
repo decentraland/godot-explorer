@@ -297,12 +297,9 @@ func _on_timer_delete_notifications_timeout() -> void:
 		panel_container_notification, "modulate", Color.TRANSPARENT, 0.5
 	)
 
-	(
-		hide_notification_tween
-		. tween_callback(
-			func():
-				clear_notifications()
-				panel_container_notification.modulate = Color.WHITE
-				panel_container_notification.hide()
-		)
+	hide_notification_tween.tween_callback(
+		func():
+			clear_notifications()
+			panel_container_notification.modulate = Color.WHITE
+			panel_container_notification.hide()
 	)
