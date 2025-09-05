@@ -15,6 +15,8 @@ var open_tween = null
 var close_tween = null
 var nearby_avatars = null
 var is_open: bool = false
+var scrolled: bool = false
+var new_messages_count: int = 0
 
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
@@ -34,6 +36,10 @@ var is_open: bool = false
 @onready var v_box_container_notifications: VBoxContainer = %VBoxContainerNotifications
 @onready var timer_delete_notifications: Timer = %Timer_DeleteNotifications
 @onready var chat_message_notification: Control = %ChatMessage_Notification
+@onready var margin_container_go_to_new_messages: MarginContainer = %MarginContainer_GoToNewMessages
+@onready var button_go_to_last: Button = %Button_GoToLast
+@onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
+@onready var label_new_messages: Label = %Label_NewMessages
 
 
 func _ready():
@@ -51,6 +57,7 @@ func _ready():
 
 	initialize_notification_instance()
 	_async_chat_ready.call_deferred()
+	button_go_to_last.hide()
 
 
 func _async_chat_ready():
@@ -94,17 +101,16 @@ func on_chats_arrived(chats: Array):
 		var is_last_message = i == chats.size() - 1
 		async_create_chat(chat, should_show_notification and is_last_message)
 
-	_async_scroll_to_bottom.call_deferred()
-
 
 func _async_scroll_to_bottom() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-
 	if scroll_container_chats_list and is_instance_valid(scroll_container_chats_list):
 		var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
 		if scrollbar and is_instance_valid(scrollbar):
 			scroll_container_chats_list.scroll_vertical = scrollbar.max_value
+			new_messages_count = 0
+	_check_scroll_status()
 
 
 func _on_button_send_pressed():
@@ -189,15 +195,15 @@ func _on_gui_input(event: InputEvent) -> void:
 		if margin_container_chat.visible:
 			show_chat()
 	if event is InputEventKey:
-			if event.pressed and event.keycode == KEY_ESCAPE:
-				show_notification()
-				print("ESC from chat")
-					
-			if event.pressed and event.keycode == KEY_ENTER:
-				print("ENTER")
-				toggle_chat_visibility(true)
-				show_chat()
-				line_edit_command.grab_focus.call_deferred()
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			show_notification()
+			print("ESC from chat")
+		if event.pressed and event.keycode == KEY_ENTER:
+			print("ENTER")
+			toggle_chat_visibility(true)
+			show_chat()
+			line_edit_command.grab_focus.call_deferred()
+
 
 func show_chat() -> void:
 	v_box_container_content.show()
@@ -214,7 +220,6 @@ func show_chat() -> void:
 	timer_hide.start()
 
 	_async_adjust_existing_messages.call_deferred()
-	_async_scroll_to_bottom.call_deferred()
 	grab_focus()
 	Global.get_explorer().release_mouse()
 
@@ -253,6 +258,7 @@ func show_notification() -> void:
 
 
 func async_create_chat(chat, should_create_notification = false) -> void:
+	scrolled = _check_scroll_status()
 	if not v_box_container_chat or not is_inside_tree():
 		async_create_chat.call_deferred(chat, should_create_notification)
 		return
@@ -271,8 +277,15 @@ func async_create_chat(chat, should_create_notification = false) -> void:
 	if new_chat.is_inside_tree() and v_box_container_content.visible:
 		new_chat.async_adjust_panel_size.call_deferred()
 
-	# Always scroll to bottom when a new message is added
-	_async_scroll_to_bottom.call_deferred()
+	if !scrolled:
+		_async_scroll_to_bottom.call_deferred()
+	else:
+		new_messages_count = new_messages_count + 1
+		if new_messages_count == 0:
+			panel_container_new_messages.hide()
+		else:
+			panel_container_new_messages.show()
+			label_new_messages.text = str(new_messages_count)
 
 
 func initialize_notification_instance() -> void:
@@ -321,11 +334,26 @@ func _on_timer_delete_notifications_timeout() -> void:
 	)
 
 
-		
-
-
 func _on_line_edit_command_gui_input(event: InputEvent) -> void:
 	if event is InputEventKey:
-			if event.pressed and event.keycode == KEY_ESCAPE:
-				show_notification()
-				print("ESC from lineedit")
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			show_notification()
+			print("ESC from lineedit")
+
+
+func _check_scroll_status() -> bool:
+	if scroll_container_chats_list and is_instance_valid(scroll_container_chats_list):
+		var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
+		if scrollbar and is_instance_valid(scrollbar):
+			if (
+				scroll_container_chats_list.scroll_vertical + scroll_container_chats_list.size.y
+				< scrollbar.max_value
+			):
+				button_go_to_last.show()
+				return true
+	button_go_to_last.hide()
+	return false
+
+
+func _on_button_pressed() -> void:
+	_async_scroll_to_bottom()

@@ -409,7 +409,7 @@ func player_look_at(look_at_position: Vector3):
 
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	if label_crosshair and ui_root: 
+	if label_crosshair and ui_root:
 		label_crosshair.show()
 		ui_root.grab_focus.call_deferred()
 

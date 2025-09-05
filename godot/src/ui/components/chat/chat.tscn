@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=20 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -7,7 +7,9 @@
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_mb7k1"]
+[ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
 [ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="8_lt7hs"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
 [ext_resource type="PackedScene" uid="uid://c8i3cvso5yx7n" path="res://src/ui/components/chat/chat_message.tscn" id="9_euk1h"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
@@ -57,6 +59,20 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5a8fu"]
+bg_color = Color(0.276861, 0.698933, 0.396718, 1)
+corner_radius_top_left = 50
+corner_radius_top_right = 50
+corner_radius_bottom_right = 50
+corner_radius_bottom_left = 50
+
+[sub_resource type="LabelSettings" id="LabelSettings_askrr"]
+line_spacing = 0.0
+font = ExtResource("9_5a8fu")
+font_size = 10
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lt7hs"]
 
 [node name="Panel_Chat" type="PanelContainer"]
@@ -90,6 +106,7 @@ theme_override_constants/separation = 0
 
 [node name="PanelContainer_Navbar" type="PanelContainer" parent="VBoxContainer_Content"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_8g52q")
@@ -228,14 +245,67 @@ icon = ExtResource("3_umu3q")
 icon_alignment = 1
 expand_icon = true
 
+[node name="MarginContainer_GoToNewMessages" type="MarginContainer" parent="VBoxContainer_Content/MarginContainer_Chat"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 60
+
+[node name="Button_GoToLast" type="Button" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+focus_mode = 0
+icon = ExtResource("8_0pohw")
+icon_alignment = 1
+expand_icon = true
+
+[node name="PanelContainer_NewMessages" type="PanelContainer" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 3.0
+offset_top = -22.0
+offset_right = 23.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_5a8fu")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages"]
+layout_mode = 2
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
+
+[node name="Label_NewMessages" type="Label" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+text = "1"
+label_settings = SubResource("LabelSettings_askrr")
+horizontal_alignment = 1
+vertical_alignment = 2
+
 [node name="AvatarsList" parent="VBoxContainer_Content" instance=ExtResource("8_lt7hs")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
 [node name="PanelContainer_Notification" type="PanelContainer" parent="."]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_lt7hs")
 
@@ -260,8 +330,10 @@ compact_view = true
 [connection signal="timeout" from="Timer_DeleteNotifications" to="." method="_on_timer_delete_notifications_timeout"]
 [connection signal="pressed" from="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
 [connection signal="pressed" from="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_NearbyUsers" to="." method="_on_button_nearby_users_pressed"]
+[connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
 [connection signal="focus_entered" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_entered"]
 [connection signal="focus_exited" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
 [connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_gui_input"]
 [connection signal="text_submitted" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
 [connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]
+[connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_pressed"]
