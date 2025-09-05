@@ -1,0 +1,305 @@
+[gd_scene load_steps=16 format=3 uid="uid://bl6h58asl377"]
+
+[ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
+[ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="3_bhyuy"]
+[ext_resource type="Texture2D" uid="uid://bwhq0um6jgi1n" path="res://assets/ui/loading/LeftArrow.svg" id="3_lt7hs"]
+[ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
+[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_mb7k1"]
+[ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="8_lt7hs"]
+[ext_resource type="PackedScene" uid="uid://c8i3cvso5yx7n" path="res://src/ui/components/chat/chat_message.tscn" id="9_euk1h"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8g52q"]
+bg_color = Color(0, 0, 0, 0.7)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_euk1h"]
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 10.0
+content_margin_bottom = 0.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mb7k1"]
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 10.0
+content_margin_bottom = 0.0
+bg_color = Color(0.168627, 0.160784, 0.188235, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lt7hs"]
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 10.0
+content_margin_bottom = 0.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lt7hs"]
+
+[node name="Panel_Chat" type="PanelContainer"]
+self_modulate = Color(0, 0, 0, 0.4)
+custom_minimum_size = Vector2(370, 0)
+offset_right = 370.0
+offset_bottom = 70.0
+size_flags_horizontal = 3
+size_flags_vertical = 0
+focus_mode = 2
+mouse_filter = 1
+theme = ExtResource("1_ytipc")
+theme_override_styles/panel = SubResource("StyleBoxFlat_xauh3")
+script = ExtResource("1_llfi5")
+
+[node name="Timer_Hide" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 3.0
+one_shot = true
+
+[node name="Timer_DeleteNotifications" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 3.0
+one_shot = true
+
+[node name="VBoxContainer_Content" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 370)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PanelContainer_Navbar" type="PanelContainer" parent="VBoxContainer_Content"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8g52q")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer_Content/PanelContainer_Navbar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 11
+
+[node name="Button_Back" type="Button" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = ExtResource("1_ytipc")
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_styles/hover = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
+icon = ExtResource("3_lt7hs")
+icon_alignment = 1
+
+[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_euk1h")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_mb7k1")
+theme_override_font_sizes/font_size = 16
+text = "Nearby"
+
+[node name="HBoxContainer_NearbyUsers" type="HBoxContainer" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
+custom_minimum_size = Vector2(15, 15)
+layout_mode = 2
+texture = ExtResource("3_bhyuy")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_MembersQuantity" type="Label" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_mb7k1")
+theme_override_font_sizes/font_size = 16
+text = "0"
+
+[node name="Label" type="Label" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_mb7k1")
+theme_override_font_sizes/font_size = 16
+text = "Members"
+
+[node name="Button_NearbyUsers" type="Button" parent="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+theme = ExtResource("1_ytipc")
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_constants/icon_max_width = 15
+theme_override_fonts/font = ExtResource("5_mb7k1")
+theme_override_styles/hover = SubResource("StyleBoxFlat_lt7hs")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
+text = "0"
+icon = ExtResource("3_bhyuy")
+
+[node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer_Content/MarginContainer_Chat"]
+layout_mode = 2
+
+[node name="ScrollContainer_ChatsList" type="ScrollContainer" parent="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="HBoxContainer_LineEdit" type="HBoxContainer" parent="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LineEdit_Command" type="LineEdit" parent="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 0
+placeholder_text = "Write your message here..."
+
+[node name="Button_Send" type="Button" parent="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 16
+icon = ExtResource("3_umu3q")
+icon_alignment = 1
+expand_icon = true
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer_Content/MarginContainer_Chat"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 45
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+mouse_filter = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer/PanelContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
+
+[node name="MarginContainer" type="HBoxContainer" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer/PanelContainer/MarginContainer2"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer/PanelContainer/MarginContainer2/MarginContainer"]
+visible = false
+layout_mode = 2
+text = "showing old messages"
+
+[node name="Button" type="Button" parent="VBoxContainer_Content/MarginContainer_Chat/MarginContainer/PanelContainer/MarginContainer2/MarginContainer"]
+layout_mode = 2
+text = "GO TO LAST"
+
+[node name="AvatarsList" parent="VBoxContainer_Content" instance=ExtResource("8_lt7hs")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="PanelContainer_Notification" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_lt7hs")
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Notification"]
+layout_mode = 2
+theme_override_constants/margin_top = 5
+
+[node name="VBoxContainerNotifications" type="VBoxContainer" parent="PanelContainer_Notification/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ChatMessage_Notification" parent="PanelContainer_Notification/MarginContainer/VBoxContainerNotifications" instance=ExtResource("9_euk1h")]
+unique_name_in_owner = true
+layout_mode = 2
+compact_view = true
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="timeout" from="Timer_Hide" to="." method="_on_timer_hide_timeout"]
+[connection signal="timeout" from="Timer_DeleteNotifications" to="." method="_on_timer_delete_notifications_timeout"]
+[connection signal="pressed" from="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
+[connection signal="pressed" from="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_NearbyUsers" to="." method="_on_button_nearby_users_pressed"]
+[connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
+[connection signal="scroll_ended" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_scroll_ended"]
+[connection signal="focus_entered" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_entered"]
+[connection signal="focus_exited" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
+[connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_gui_input"]
+[connection signal="text_submitted" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
+[connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]
+[connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/MarginContainer/PanelContainer/MarginContainer2/MarginContainer/Button" to="." method="_on_button_pressed"]
