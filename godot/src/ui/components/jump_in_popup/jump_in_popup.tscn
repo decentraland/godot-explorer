@@ -1,0 +1,102 @@
+[gd_scene load_steps=7 format=3 uid="uid://ks0sxu8dsf66"]
+
+[ext_resource type="Script" uid="uid://lvl1rom2ixgt" path="res://src/ui/components/jump_in_popup/jump_in_popup.gd" id="1_kciwf"]
+[ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="2_81dhg"]
+[ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="2_uyx8q"]
+[ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="3_uyx8q"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="4_m7opt"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qbeay"]
+bg_color = Color(0.298039, 0.0784314, 0.486275, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[node name="JumpInPopup" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.784314)
+script = ExtResource("1_kciwf")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+clip_children = 2
+custom_minimum_size = Vector2(450, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -225.0
+offset_top = -242.0
+offset_right = 225.0
+offset_bottom = 242.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_qbeay")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="PanelContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+texture = ExtResource("2_uyx8q")
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 40
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2"]
+layout_mode = 2
+
+[node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Scene Title"
+label_settings = ExtResource("2_81dhg")
+
+[node name="Label_Creator" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "creator"
+label_settings = ExtResource("3_uyx8q")
+autowrap_mode = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 2
+
+[node name="Button_JumpInCancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2"]
+custom_minimum_size = Vector2(150, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"DarkButton"
+text = "CANCEL"
+
+[node name="Button_JumpIn" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2"]
+custom_minimum_size = Vector2(150, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("4_m7opt")
+text = "JUMP IN"
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2/Button_JumpInCancel" to="." method="_on_button_jump_in_cancel_pressed"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]

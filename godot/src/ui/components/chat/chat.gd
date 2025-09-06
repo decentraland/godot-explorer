@@ -1,15 +1,23 @@
-extends Panel
+extends PanelContainer
 
 signal submit_message(message: String)
+signal hide_parcel_info
+signal show_parcel_info
+signal release_mouse
 
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
+const CHAT_MESSAGE = preload("res://src/ui/components/chat/chat_message.tscn")
 
 var hide_tween = null
+var open_tween = null
+var close_tween = null
 var nearby_avatars = null
+var is_open: bool = false
+var scrolled: bool = false
+var new_messages_count: int = 0
 
-@onready var rich_text_label_chat = %RichTextLabel_Chat
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
 @onready var button_nearby_users: Button = %Button_NearbyUsers
@@ -19,7 +27,19 @@ var nearby_avatars = null
 @onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
 @onready var timer_hide = %Timer_Hide
-@onready var avatars_list: Control = $VBoxContainer/AvatarsList
+@onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
+@onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
+@onready var avatars_list: Control = %AvatarsList
+@onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
+@onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
+@onready var panel_container_notification: PanelContainer = %PanelContainer_Notification
+@onready var v_box_container_notifications: VBoxContainer = %VBoxContainerNotifications
+@onready var timer_delete_notifications: Timer = %Timer_DeleteNotifications
+@onready var chat_message_notification: Control = %ChatMessage_Notification
+@onready var margin_container_go_to_new_messages: MarginContainer = %MarginContainer_GoToNewMessages
+@onready var button_go_to_last: Button = %Button_GoToLast
+@onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
+@onready var label_new_messages: Label = %Label_NewMessages
 
 
 func _ready():
@@ -30,67 +50,67 @@ func _ready():
 	Global.avatars.avatar_scene_changed.connect(avatars_list.async_update_nearby_users)
 	avatars_list.size_changed.connect(self.update_nearby_quantity)
 
-	add_chat_message(
-		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
-	)
-
 	Global.comms.chat_message.connect(self.on_chats_arrived)
-
 	submit_message.connect(self._on_submit_message)
 
-	h_box_container_line_edit.hide()
+	show_notification()
+
+	initialize_notification_instance()
+	_async_chat_ready.call_deferred()
+	button_go_to_last.hide()
+
+
+func _async_chat_ready():
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	if not v_box_container_chat or not scroll_container_chats_list:
+		return
+
+	v_box_container_chat.queue_redraw()
+	scroll_container_chats_list.queue_redraw()
+	await get_tree().process_frame
+
+	var system_message = [
+		"system",
+		Time.get_unix_time_from_system(),
+		"Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby."
+	]
+
+	var new_chat = CHAT_MESSAGE.instantiate()
+	v_box_container_chat.add_child(new_chat)
+	new_chat.compact_view = Global.is_chat_compact
+	new_chat.set_chat(system_message)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if new_chat.is_inside_tree() and new_chat.get_parent():
+		new_chat.async_adjust_panel_size.call_deferred()
 
 
 func _on_submit_message(_message: String):
 	UiSounds.play_sound("widget_chat_message_private_send")
-	_set_open_chat(false)
-
-
-func add_chat_message(bb_text: String) -> void:
-	rich_text_label_chat.append_text(bb_text)
-	rich_text_label_chat.newline()
-
-	if hide_tween != null:
-		hide_tween.stop()
-	modulate = Color.WHITE
-	timer_hide.start()
 
 
 func on_chats_arrived(chats: Array):
-	for chat in chats:
-		var address: String = chat[0]
-		# var _timestamp: float = chat[1]
-		var message: String = chat[2]
+	var should_show_notification = not v_box_container_content.visible
 
-		var avatar = Global.avatars.get_avatar_by_address(address)
-		if avatar == null:
-			if address == Global.player_identity.get_address_str():
-				avatar = Global.scene_runner.player_avatar_node
+	for i in range(chats.size()):
+		var chat = chats[i]
+		var is_last_message = i == chats.size() - 1
+		async_create_chat(chat, should_show_notification and is_last_message)
 
-		var avatar_name: String = ""
-		if avatar != null and is_instance_valid(avatar):
-			avatar_name = avatar.get_avatar_name()
 
-		if avatar_name.is_empty():
-			if address.length() > 32:
-				avatar_name = DclEther.shorten_eth_address(address)
-			else:
-				avatar_name = "Unknown"
-
-		if message.begins_with(EMOTE):
-			message = message.substr(1)  # Remove prefix
-			var expression_id = message.split(" ")[0]  # Get expression id ([1] is timestamp)
-			if avatar != null and is_instance_valid(avatar):
-				avatar.emote_controller.async_play_emote(expression_id)
-		elif message.begins_with(REQUEST_PING):
-			pass  # TODO: Send ACK
-		elif message.begins_with(ACK):
-			pass  # TODO: Calculate ping
-		else:
-			Global.player_said.emit(address, message)
-			var text = "[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar_name, message]
-			add_chat_message(text)
-			UiSounds.play_sound("notification_chatmessage_public_appear")
+func _async_scroll_to_bottom() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if scroll_container_chats_list and is_instance_valid(scroll_container_chats_list):
+		var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
+		if scrollbar and is_instance_valid(scrollbar):
+			scroll_container_chats_list.scroll_vertical = scrollbar.max_value
+			new_messages_count = 0
+	_check_scroll_status()
 
 
 func _on_button_send_pressed():
@@ -101,6 +121,8 @@ func _on_button_send_pressed():
 func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
+	line_edit_command.emit_signal("focus_exited")
+	grab_focus.call_deferred()
 
 
 func finish():
@@ -109,42 +131,33 @@ func finish():
 		line_edit_command.text = ""
 
 
-func _on_line_edit_command_focus_exited():
-	_set_open_chat(false)
-
-
-func toggle_open_chat():
+func toggle_chat_visibility(visibility: bool):
 	_on_button_back_pressed()
-	_set_open_chat(not h_box_container_line_edit.visible)
-
-
-func _set_open_chat(value: bool):
-	h_box_container_line_edit.visible = value
-
-	if hide_tween != null:
-		hide_tween.stop()
-
-	if value:
-		line_edit_command.grab_focus()
+	if visibility:
 		UiSounds.play_sound("widget_chat_open")
-		timer_hide.stop()
-		modulate = Color.WHITE
+		_tween_open()
 	else:
 		Global.explorer_grab_focus()
 		UiSounds.play_sound("widget_chat_close")
-		timer_hide.start()
-		modulate = Color.WHITE
+		_tween_close()
 
 
-func _on_timer_hide_timeout():
-	if avatars_list.visible:
-		return
-	if hide_tween != null:
-		hide_tween.stop()
+func _tween_open() -> void:
+	if open_tween != null:
+		open_tween.stop()
+	open_tween = get_tree().create_tween()
+	v_box_container_content.show()
+	open_tween.tween_property(self, "modulate", Color.WHITE, 0.5)
+	is_open = true
 
-	hide_tween = get_tree().create_tween()
-	modulate = Color.WHITE
-	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
+
+func _tween_close() -> void:
+	if close_tween != null:
+		close_tween.stop()
+	close_tween = get_tree().create_tween()
+	close_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
+	v_box_container_content.hide()
+	is_open = false
 
 
 func update_nearby_quantity() -> void:
@@ -153,6 +166,76 @@ func update_nearby_quantity() -> void:
 
 
 func _on_button_nearby_users_pressed() -> void:
+	show_nearby_players()
+
+
+func _on_button_back_pressed() -> void:
+	show_chat()
+
+
+func _on_line_edit_command_focus_entered() -> void:
+	panel_container_navbar.hide()
+	emit_signal("hide_parcel_info")
+	timer_hide.stop()
+
+
+func _on_line_edit_command_focus_exited():
+	emit_signal("show_parcel_info")
+	timer_hide.start()
+
+
+func _on_timer_hide_timeout() -> void:
+	panel_container_navbar.hide()
+	h_box_container_line_edit.hide()
+	self_modulate = "#00000000"
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch or event is InputEventMouseButton:
+		if margin_container_chat.visible:
+			show_chat()
+	if event is InputEventKey:
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			show_notification()
+			print("ESC from chat")
+		if event.pressed and event.keycode == KEY_ENTER:
+			print("ENTER")
+			toggle_chat_visibility(true)
+			show_chat()
+			line_edit_command.grab_focus.call_deferred()
+
+
+func show_chat() -> void:
+	v_box_container_content.show()
+	panel_container_notification.hide()
+	self_modulate = "#00000040"
+	avatars_list.hide()
+	button_back.hide()
+	h_box_container_line_edit.show()
+	h_box_container_nearby_users.hide()
+	margin_container_chat.show()
+	panel_container_navbar.show()
+	texture_rect_logo.show()
+	button_nearby_users.show()
+	timer_hide.start()
+
+	_async_adjust_existing_messages.call_deferred()
+	grab_focus()
+	Global.get_explorer().release_mouse()
+
+
+func _async_adjust_existing_messages() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	for child in v_box_container_chat.get_children():
+		if child.has_method("async_adjust_panel_size"):
+			child.async_adjust_panel_size.call_deferred()
+
+
+func show_nearby_players() -> void:
+	v_box_container_content.show()
+	panel_container_notification.hide()
 	self_modulate = "#00000080"
 	avatars_list.show()
 	button_back.show()
@@ -163,12 +246,114 @@ func _on_button_nearby_users_pressed() -> void:
 	timer_hide.stop()
 
 
-func _on_button_back_pressed() -> void:
-	self_modulate = "#00000040"
-	avatars_list.hide()
-	button_back.hide()
-	h_box_container_nearby_users.hide()
-	margin_container_chat.show()
-	texture_rect_logo.show()
-	button_nearby_users.show()
-	timer_hide.start()
+func show_notification() -> void:
+	release_focus.call_deferred()
+	var explorer = Global.get_explorer()
+	explorer.capture_mouse()
+	timer_hide.stop()
+	panel_container_notification.modulate = Color.WHITE
+	panel_container_notification.show()
+	v_box_container_content.hide()
+	self_modulate = "#00000000"
+
+
+func async_create_chat(chat, should_create_notification = false) -> void:
+	scrolled = _check_scroll_status()
+	if not v_box_container_chat or not is_inside_tree():
+		async_create_chat.call_deferred(chat, should_create_notification)
+		return
+
+	var new_chat = CHAT_MESSAGE.instantiate()
+	v_box_container_chat.add_child(new_chat)
+	new_chat.compact_view = Global.is_chat_compact
+	new_chat.set_chat(chat)
+
+	if should_create_notification:
+		async_create_notification(chat)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	if new_chat.is_inside_tree() and v_box_container_content.visible:
+		new_chat.async_adjust_panel_size.call_deferred()
+
+	if !scrolled:
+		_async_scroll_to_bottom.call_deferred()
+	else:
+		new_messages_count = new_messages_count + 1
+		if new_messages_count == 0:
+			panel_container_new_messages.hide()
+		else:
+			panel_container_new_messages.show()
+			label_new_messages.text = str(new_messages_count)
+
+
+func initialize_notification_instance() -> void:
+	if chat_message_notification and is_instance_valid(chat_message_notification):
+		chat_message_notification.compact_view = true
+		chat_message_notification.hide()
+
+
+func async_create_notification(chat) -> void:
+	timer_delete_notifications.stop()
+	show_notification()
+	await get_tree().process_frame
+
+	if chat_message_notification and is_instance_valid(chat_message_notification):
+		chat_message_notification.hide()
+		chat_message_notification.set_chat(chat)
+
+		await get_tree().process_frame
+		await get_tree().process_frame
+
+		if chat_message_notification.is_inside_tree():
+			chat_message_notification.async_adjust_panel_size.call_deferred()
+			await get_tree().process_frame
+			chat_message_notification.show()
+			UiSounds.play_sound("widget_chat_message_private_send")
+
+	timer_delete_notifications.start()
+
+
+func clear_notifications() -> void:
+	if chat_message_notification and is_instance_valid(chat_message_notification):
+		chat_message_notification.hide()
+
+
+func _on_timer_delete_notifications_timeout() -> void:
+	var hide_notification_tween = get_tree().create_tween()
+	hide_notification_tween.tween_property(
+		panel_container_notification, "modulate", Color.TRANSPARENT, 0.5
+	)
+
+	hide_notification_tween.tween_callback(
+		func():
+			clear_notifications()
+			panel_container_notification.modulate = Color.WHITE
+			panel_container_notification.hide()
+	)
+
+
+func _on_line_edit_command_gui_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			show_notification()
+			print("ESC from lineedit")
+
+
+func _check_scroll_status() -> bool:
+	if scroll_container_chats_list and is_instance_valid(scroll_container_chats_list):
+		var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
+		if scrollbar and is_instance_valid(scrollbar):
+			if (
+				scroll_container_chats_list.scroll_vertical + scroll_container_chats_list.size.y
+				< scrollbar.max_value
+			):
+				button_go_to_last.show()
+				return true
+	button_go_to_last.hide()
+	return false
+
+
+func _on_button_pressed() -> void:
+	_async_scroll_to_bottom()

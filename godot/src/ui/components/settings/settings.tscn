@@ -172,7 +172,6 @@ size_flags_horizontal = 3
 
 [node name="Container_General" type="MarginContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
@@ -322,13 +321,18 @@ stretch = true
 handle_input_locally = false
 size = Vector2i(500, 150)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
 [node name="PreviewCamera3D" type="Camera3D" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
 
+[node name="CheckBox_CompactChat" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+layout_mode = 2
+text = "Compact chat"
+
 [node name="VBoxContainer_Graphics" type="BoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
@@ -891,6 +895,7 @@ focus_mode = 1
 [connection signal="drag_ended" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_ended"]
 [connection signal="drag_started" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_started"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_value_changed"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_CompactChat" to="." method="_on_check_box_compact_chat_toggled"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/GraphicProfile/RadioSelector_GraphicProfile" to="." method="_on_radio_selector_graphic_profile_select_item"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed/RadioSelector_Windowed" to="." method="_on_radio_selector_windowed_select_item"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/UiZoom/RadioSelector_UiZoom" to="." method="_on_radio_selector_ui_zoom_select_item"]
