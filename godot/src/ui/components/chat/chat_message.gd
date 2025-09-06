@@ -4,6 +4,9 @@ extends Control
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
+const MY_MENTION_COLOR = "#FC03EC"
+const URL_COLOR = "#66B3FF"
+const MENTION_COLOR = "#FFD700"
 
 @export var compact_view := false:
 	set(value):
@@ -23,12 +26,10 @@ var is_own_message: bool = false
 @onready var label_timestamp: Label = %Label_Timestamp
 @onready var claimed_checkmark: MarginContainer = %ClaimedCheckmark
 @onready var profile_picture: ProfilePicture = %ProfilePicture
-@onready var panel_container: PanelContainer = %PanelContainer
 @onready var profile_picture_compact: ProfilePicture = %ProfilePicture_Compact
-@onready var panel_container_compact: PanelContainer = h_box_container_compact_chat.get_node(
-	"PanelContainer"
-)
 @onready var chat_message_notification: VBoxContainer = %ChatMessage_Notification
+@onready var panel_container_extended: PanelContainer = %PanelContainer_Extended
+@onready var panel_container_compact: PanelContainer = %PanelContainer_Compact
 
 
 func _ready() -> void:
@@ -111,6 +112,7 @@ func set_chat(chat) -> void:
 	new_text = ("[b][color=#fff]%s[/color]" % [processed_message])
 	rich_text_label_message.text = new_text
 	label_timestamp.text = time_string
+	
 
 	var avatar
 	if address != "system":
@@ -200,7 +202,39 @@ func _on_chat_compact_changed(is_compact: bool) -> void:
 func make_urls_clickable(text: String) -> String:
 	var processed_text = text
 
-	# First, detect and process coordinates (#,# format)
+	# First, detect and process mentions (@Nick#TAG format)
+	var mention_regex = RegEx.new()
+	mention_regex.compile(r"@([^#\s]+)#([^\s]+)")
+
+	var mention_results = mention_regex.search_all(processed_text)
+	# Process mentions from end to start to maintain correct positions
+	for i in range(mention_results.size() - 1, -1, -1):
+		var mention_match = mention_results[i]
+		print(mention_match)
+		var full_mention = mention_match.get_string()
+		var start_pos = mention_match.get_start()
+		var end_pos = mention_match.get_end()
+
+		# Check if this mention matches an existing avatar
+		if _is_valid_mention(full_mention):
+			var clickable_mention = "[url=mention:%s][color=%s]%s[/color][/url]" % [full_mention, MENTION_COLOR, full_mention]
+			processed_text = (
+				processed_text.substr(0, start_pos)
+				+ clickable_mention
+				+ processed_text.substr(end_pos)
+			)
+			
+		if _is_mentioning_me(full_mention):
+			var clickable_mention = "[color=%s]%s[/color]" % [MY_MENTION_COLOR, full_mention]
+			processed_text = (
+				processed_text.substr(0, start_pos)
+				+ clickable_mention
+				+ processed_text.substr(end_pos)
+			)
+			_apply_mention_style()
+			
+
+	# Then, detect and process coordinates (#,# format)
 	var coord_regex = RegEx.new()
 	coord_regex.compile(r"(-?\d+,-?\d+)")
 
@@ -221,7 +255,7 @@ func make_urls_clickable(text: String) -> String:
 				+ processed_text.substr(end_pos)
 			)
 
-	# Then, detect and process URLs (http/https/www)
+	# Finally, detect and process URLs (http/https/www)
 	var url_regex = RegEx.new()
 	url_regex.compile(r"(https?://[^\s]+|www\.[^\s]+)")
 
@@ -238,12 +272,70 @@ func make_urls_clickable(text: String) -> String:
 		if url.begins_with("www."):
 			full_url = "https://" + url
 
-		var clickable_url = "[url=%s][color=#66B3FF]%s[/color][/url]" % [full_url, url]
+		var clickable_url = "[url=%s][color=#66B3FF]%s[/color][/url]" % [URL_COLOR, full_url, url]
 		processed_text = (
 			processed_text.substr(0, start_pos) + clickable_url + processed_text.substr(end_pos)
 		)
 
 	return processed_text
+
+
+func _is_valid_mention(mention: String) -> bool:
+	# Check if this mention matches an existing avatar
+	if not Global.avatars:
+		return false
+	
+	# Remove @ from mention
+	if not mention.begins_with("@"):
+		return false
+	
+	var mention_without_at = mention.substr(1)  # Remove @
+	
+	var avatars = Global.avatars.get_avatars()
+	for avatar in avatars:
+		if avatar and avatar.has_method("get_avatar_name"):
+			var avatar_name = avatar.get_avatar_name()
+			if avatar_name == mention_without_at:
+				return true
+	return false
+
+
+func _is_mentioning_me(mention: String) -> bool:
+	if not mention.begins_with("@"):
+		return false
+	
+	var mention_without_at = mention.substr(1)  # Remove @
+	
+	var me = Global.player_identity.get_profile_or_null()
+	if not me:
+		return false
+		
+	var my_name = me.get_name() + "#" + me.get_user_id().right(4)
+	
+	if my_name == mention_without_at:
+		return true
+	return false
+
+
+func _apply_mention_style():
+	var stylebox_compact = panel_container_compact.get_theme_stylebox("panel").duplicate()
+	stylebox_compact.border_width_left = 2
+	stylebox_compact.border_width_right = 2
+	stylebox_compact.border_width_top = 2
+	stylebox_compact.border_width_bottom = 2
+	stylebox_compact.border_color = MY_MENTION_COLOR
+	if panel_container_compact:
+		panel_container_compact.add_theme_stylebox_override("panel", stylebox_compact)
+	
+	var stylebox_extended = panel_container_extended.get_theme_stylebox("panel").duplicate()
+	stylebox_extended.border_width_left = 2
+	stylebox_extended.border_width_right = 2
+	stylebox_extended.border_width_top = 2
+	stylebox_extended.border_width_bottom = 2
+	stylebox_extended.border_color = MY_MENTION_COLOR
+	if panel_container_extended:
+		panel_container_extended.add_theme_stylebox_override("panel", stylebox_extended)
+
 
 
 func _is_valid_coordinate(coord_str: String) -> bool:
@@ -264,6 +356,9 @@ func _on_url_clicked(meta):
 	if meta_str.begins_with("coord:"):
 		var coord_str = meta_str.substr(6)
 		_handle_coordinate_click(coord_str)
+	elif meta_str.begins_with("mention:"):
+		var mention_str = meta_str.substr(8)  # Remove "mention:" prefix
+		_handle_mention_click(mention_str)
 	else:
 		Global.show_url_popup(meta_str)
 
@@ -274,6 +369,25 @@ func _handle_coordinate_click(coord_str: String):
 		var x = int(coords[0])
 		var y = int(coords[1])
 		Global.show_jump_in_popup(Vector2i(x, y))
+
+
+func _handle_mention_click(mention_str: String):
+	# Handle mention click (format: "@Nick#TAG")
+	if not mention_str.begins_with("@"):
+		return
+	
+	var mention_without_at = mention_str.substr(1)  # Remove @
+	
+	# Find the avatar that matches this mention
+	if Global.avatars:
+		var avatars = Global.avatars.get_avatars()
+		for avatar in avatars:
+			if avatar and avatar.has_method("get_avatar_name"):
+				var avatar_name = avatar.get_avatar_name()
+				if avatar_name == mention_without_at:
+					# Show some kind of user profile or interaction
+					Global.get_explorer()._async_open_profile(avatar)
+					break
 
 
 func async_adjust_panel_size():
@@ -323,7 +437,8 @@ func _adjust_extended_panel_size(max_panel_width: float):
 	var desired_width = max(min_width, min(text_width + 40, max_panel_width))  # +40 for internal margins
 
 	# Set custom size
-	panel_container.custom_minimum_size.x = desired_width
+	panel_container_compact.custom_minimum_size.x = desired_width
+	panel_container_extended.custom_minimum_size.x = desired_width
 
 	# If text is too long, allow RichTextLabel to wrap
 	if text_width > max_panel_width - 40:
