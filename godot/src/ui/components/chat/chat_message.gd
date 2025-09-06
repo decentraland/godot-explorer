@@ -112,7 +112,6 @@ func set_chat(chat) -> void:
 	new_text = ("[b][color=#fff]%s[/color]" % [processed_message])
 	rich_text_label_message.text = new_text
 	label_timestamp.text = time_string
-	
 
 	var avatar
 	if address != "system":
@@ -217,13 +216,16 @@ func make_urls_clickable(text: String) -> String:
 
 		# Check if this mention matches an existing avatar
 		if _is_valid_mention(full_mention):
-			var clickable_mention = "[url=mention:%s][color=%s]%s[/color][/url]" % [full_mention, MENTION_COLOR, full_mention]
+			var clickable_mention = (
+				"[url=mention:%s][color=%s]%s[/color][/url]"
+				% [full_mention, MENTION_COLOR, full_mention]
+			)
 			processed_text = (
 				processed_text.substr(0, start_pos)
 				+ clickable_mention
 				+ processed_text.substr(end_pos)
 			)
-			
+
 		if _is_mentioning_me(full_mention):
 			var clickable_mention = "[color=%s]%s[/color]" % [MY_MENTION_COLOR, full_mention]
 			processed_text = (
@@ -232,7 +234,6 @@ func make_urls_clickable(text: String) -> String:
 				+ processed_text.substr(end_pos)
 			)
 			_apply_mention_style()
-			
 
 	# Then, detect and process coordinates (#,# format)
 	var coord_regex = RegEx.new()
@@ -284,13 +285,13 @@ func _is_valid_mention(mention: String) -> bool:
 	# Check if this mention matches an existing avatar
 	if not Global.avatars:
 		return false
-	
+
 	# Remove @ from mention
 	if not mention.begins_with("@"):
 		return false
-	
+
 	var mention_without_at = mention.substr(1)  # Remove @
-	
+
 	var avatars = Global.avatars.get_avatars()
 	for avatar in avatars:
 		if avatar and avatar.has_method("get_avatar_name"):
@@ -303,15 +304,15 @@ func _is_valid_mention(mention: String) -> bool:
 func _is_mentioning_me(mention: String) -> bool:
 	if not mention.begins_with("@"):
 		return false
-	
+
 	var mention_without_at = mention.substr(1)  # Remove @
-	
+
 	var me = Global.player_identity.get_profile_or_null()
 	if not me:
 		return false
-		
+
 	var my_name = me.get_name() + "#" + me.get_user_id().right(4)
-	
+
 	if my_name == mention_without_at:
 		return true
 	return false
@@ -326,7 +327,7 @@ func _apply_mention_style():
 	stylebox_compact.border_color = MY_MENTION_COLOR
 	if panel_container_compact:
 		panel_container_compact.add_theme_stylebox_override("panel", stylebox_compact)
-	
+
 	var stylebox_extended = panel_container_extended.get_theme_stylebox("panel").duplicate()
 	stylebox_extended.border_width_left = 2
 	stylebox_extended.border_width_right = 2
@@ -335,7 +336,6 @@ func _apply_mention_style():
 	stylebox_extended.border_color = MY_MENTION_COLOR
 	if panel_container_extended:
 		panel_container_extended.add_theme_stylebox_override("panel", stylebox_extended)
-
 
 
 func _is_valid_coordinate(coord_str: String) -> bool:
@@ -375,9 +375,9 @@ func _handle_mention_click(mention_str: String):
 	# Handle mention click (format: "@Nick#TAG")
 	if not mention_str.begins_with("@"):
 		return
-	
+
 	var mention_without_at = mention_str.substr(1)  # Remove @
-	
+
 	# Find the avatar that matches this mention
 	if Global.avatars:
 		var avatars = Global.avatars.get_avatars()
