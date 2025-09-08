@@ -13,6 +13,7 @@ const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 			notify_property_list_changed()
 
 var border_width: int
+var avatar: DclAvatar
 
 @onready var texture_rect_profile: TextureRect = %TextureRect_Profile
 @onready var panel_border: PanelContainer = %Panel_Border
@@ -84,9 +85,10 @@ func _update_border_style() -> void:
 	panel_border.add_theme_stylebox_override("panel", stylebox_border_panel)
 
 
-func async_update_profile_picture(avatar: DclAvatar):
-	var avatar_name = avatar.get_avatar_name()
-	var nickname_color = avatar.get_nickname_color(avatar_name)
+func async_update_profile_picture(avatar_ifo: DclAvatar):
+	avatar = avatar_ifo
+	var avatar_name = avatar_ifo.get_avatar_name()
+	var nickname_color = avatar_ifo.get_nickname_color(avatar_name)
 
 	var background_color = nickname_color
 	apply_style(background_color)
@@ -95,7 +97,7 @@ func async_update_profile_picture(avatar: DclAvatar):
 	if Engine.is_editor_hint():
 		return
 
-	var avatar_data = avatar.get_avatar_data()
+	var avatar_data = avatar_ifo.get_avatar_data()
 	if avatar_data == null:
 		printerr("Profile picture: avatar_data is null")
 		return
@@ -150,3 +152,14 @@ func apply_style(color: Color) -> void:
 		stylebox_border.border_width_top = border_width
 		stylebox_border.border_width_right = border_width
 	panel_border.add_theme_stylebox_override("panel", stylebox_border)
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if avatar != null and is_instance_valid(avatar):
+				var explorer = Global.get_explorer()
+				if avatar.avatar_id == Global.player_identity.get_address_str():
+					explorer.control_menu.show_own_profile()
+				else:
+					explorer._async_open_profile(avatar)

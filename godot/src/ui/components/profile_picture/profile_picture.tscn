@@ -32,7 +32,7 @@ clip_children = 2
 custom_minimum_size = Vector2(32, 32)
 offset_right = 32.0
 offset_bottom = 32.0
-mouse_filter = 2
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_h41qx")
 script = ExtResource("1_xkyte")
 
@@ -50,3 +50,5 @@ clip_children = 2
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_xkyte")
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
