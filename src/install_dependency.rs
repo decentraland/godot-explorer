@@ -691,7 +691,7 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
     match env::consts::OS {
         "linux" => {
             // Use BtbN's shared library builds for FFmpeg 6.1
-            let url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz";
+            let url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-08-29-13-31/ffmpeg-n6.1.3-linux64-lgpl-shared-6.1.tar.xz";
             let temp_extract_path = BinPaths::temp_dir("ffmpeg_temp");
 
             // Clean up any existing temp directory first
@@ -702,13 +702,13 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
             download_and_extract_tar_xz(
                 url,
                 temp_extract_path.to_str().unwrap(),
-                Some("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz".to_string()),
+                Some("ffmpeg-n6.1.3-linux64-lgpl-shared-6.1.tar.xz".to_string()),
             )?;
 
             // The archive extracts to a folder like ffmpeg
             // We need to move its contents to our ffmpeg folder
             let extracted_folder =
-                temp_extract_path.join("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1");
+                temp_extract_path.join("ffmpeg-n6.1.3-linux64-lgpl-shared-6.1");
 
             // Create the final ffmpeg folder
             fs::create_dir_all(&ffmpeg_folder)?;
@@ -764,14 +764,14 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
             }
 
             download_and_extract_zip(
-                "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-win64-lgpl-shared-6.1.zip",
+                "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-08-29-13-31/ffmpeg-n6.1.3-win64-lgpl-shared-6.1.zip",
                 temp_extract_path.to_str().unwrap(),
-                Some("ffmpeg-n6.1-latest-win64-lgpl-shared-6.1.zip".to_string()),
+                Some("ffmpeg-n6.1-win64.zip".to_string()),
             )?;
 
             // The archive extracts to a folder like ffmpeg-n6.1-latest-win64-lgpl-shared-6.1
             let extracted_folder =
-                temp_extract_path.join("ffmpeg-n6.1-latest-win64-lgpl-shared-6.1");
+                temp_extract_path.join("ffmpeg-n6.1-win64");
 
             // Create the final ffmpeg folder
             fs::create_dir_all(&ffmpeg_folder)?;
