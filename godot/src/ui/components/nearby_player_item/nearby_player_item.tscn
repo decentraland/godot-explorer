@@ -45,6 +45,7 @@ anchors_preset = 0
 offset_right = 242.0
 offset_bottom = 53.0
 size_flags_horizontal = 3
+mouse_filter = 2
 script = ExtResource("1_77ytx")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -55,6 +56,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 theme_override_constants/margin_right = 15
 
 [node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer"]
@@ -62,6 +64,7 @@ unique_name_in_owner = true
 self_modulate = Color(1, 1, 1, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 1
 theme = ExtResource("1_gljko")
 theme_override_styles/panel = SubResource("StyleBoxFlat_66h5u")
 
@@ -72,6 +75,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
@@ -95,11 +99,13 @@ custom_minimum_size = Vector2(118, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+mouse_filter = 2
 
 [node name="MicEnabled" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_right = 10
 
 [node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/MicEnabled"]
@@ -107,6 +113,7 @@ custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+mouse_filter = 2
 texture = ExtResource("4_io7c4")
 expand_mode = 3
 stretch_mode = 4
@@ -116,22 +123,26 @@ unique_name_in_owner = true
 clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 theme_override_constants/separation = -1
 alignment = 1
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="ScrollContainer_Nickname" type="ScrollContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(118, 0)
 layout_mode = 2
+mouse_filter = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 
 [node name="Nick" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/ScrollContainer_Nickname"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/ScrollContainer_Nickname/Nick"]
@@ -150,6 +161,7 @@ text = "X"
 [node name="Hash" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="HashTag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
@@ -171,6 +183,7 @@ text = "X"
 
 [node name="VSeparator" type="VSeparator" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_io7c4")
 
 [node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
@@ -178,6 +191,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 texture = ExtResource("6_io7c4")
 expand_mode = 2
 stretch_mode = 4

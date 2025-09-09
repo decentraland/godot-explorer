@@ -29,6 +29,7 @@ theme_override_constants/margin_bottom = 8
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer_Nearby"]
 layout_mode = 2
+focus_mode = 2
 vertical_scroll_mode = 2
 
 [node name="VBoxContainer_NearbyPlayers" type="VBoxContainer" parent="MarginContainer_Nearby/ScrollContainer"]
