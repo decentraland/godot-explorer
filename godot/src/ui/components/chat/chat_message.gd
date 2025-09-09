@@ -33,7 +33,7 @@ var is_own_message: bool = false
 
 
 func _ready() -> void:
-	#
+	##
 	Global.chat_compact_changed.connect(_on_chat_compact_changed)
 	compact_view = Global.is_chat_compact
 
