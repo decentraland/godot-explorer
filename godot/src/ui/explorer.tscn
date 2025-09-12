@@ -1,4 +1,4 @@
-[gd_scene load_steps=33 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=29 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -8,17 +8,13 @@
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
-[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="7_1fkrq"]
-[ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="7_oofwd"]
-[ext_resource type="Texture2D" uid="uid://v1avum5r3l4s" path="res://assets/themes/dark_dcl_theme/icons/JumpButton.svg" id="8_ttlm2"]
+[ext_resource type="PackedScene" uid="uid://h103fpdwykme" path="res://src/ui/components/mobile_ui/mobile_ui.tscn" id="7_01glt"]
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_hj43f"]
-[ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
 [ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_gwcjv"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="13_tdhdx"]
-[ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
 [ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="14_xlu8p"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
@@ -97,141 +93,9 @@ script = ExtResource("5_c8ksg")
 layout_mode = 2
 mouse_filter = 2
 
-[node name="MobileUI" type="Control" parent="UI/SafeMarginContainer/InteractableHUD"]
+[node name="MobileUI" parent="UI/SafeMarginContainer/InteractableHUD" instance=ExtResource("7_01glt")]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Button_PrimaryAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -216.0
-offset_top = -277.0
-offset_right = -136.0
-offset_bottom = -197.0
-grow_horizontal = 0
-grow_vertical = 0
-
-[node name="Button_Mic" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -129.0
-offset_top = -325.0
-offset_right = -49.0
-offset_bottom = -245.0
-grow_horizontal = 0
-grow_vertical = 0
-text_letter = "T"
-icon = ExtResource("7_1fkrq")
-trigger_action = "ia_record_mic"
-
-[node name="Button_SecondaryAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -274.0
-offset_top = -201.0
-offset_right = -194.0
-offset_bottom = -121.0
-grow_horizontal = 0
-grow_vertical = 0
-text_letter = "F"
-trigger_action = "ia_secondary"
-
-[node name="Button_EmoteAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -307.0
-offset_top = -111.0
-offset_right = -227.0
-offset_bottom = -31.0
-grow_horizontal = 0
-grow_vertical = 0
-text_letter = "F"
-icon = ExtResource("14_jag8f")
-trigger_action = "ia_open_emote_wheel"
-
-[node name="Button_Jump" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI"]
-modulate = Color(1, 1, 1, 0.501961)
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -164.0
-offset_top = -174.0
-offset_right = -44.0
-offset_bottom = -54.0
-grow_horizontal = 0
-grow_vertical = 0
-focus_mode = 0
-theme = ExtResource("4_2vs87")
-texture_normal = ExtResource("8_ttlm2")
-ignore_texture_size = true
-stretch_mode = 4
-
-[node name="ShadowOutter" type="TextureRect" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
-modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -2.0
-offset_top = -2.0
-offset_right = 2.0
-offset_bottom = 2.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("8_ttlm2")
-expand_mode = 2
-
-[node name="ShadowInner" type="TextureRect" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
-modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = -2.0
-offset_bottom = -2.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("8_ttlm2")
-expand_mode = 2
-
-[node name="VirtualJoystick_Left" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("9_lxw33")]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = -1
-anchor_right = 0.352
-offset_top = -327.0
-offset_right = -0.560028
-deadzone_size = 0.0
 
 [node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeMarginContainer/InteractableHUD"]
 layout_mode = 0
@@ -414,7 +278,6 @@ script = ExtResource("20_064cw")
 
 [node name="SceneMusicChanger" parent="." instance=ExtResource("26_5hhk2")]
 
-[connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]

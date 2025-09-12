@@ -34,12 +34,10 @@ var _last_outlined_avatar: Avatar = null
 @onready var control_menu = %Control_Menu
 @onready var control_minimap = %Control_Minimap
 @onready var mobile_ui = %MobileUI
-@onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
 @onready var loading_ui = %Loading
 
-@onready var button_mic = %Button_Mic
 @onready var emote_wheel = %EmoteWheel
 
 @onready var world: Node3D = %world
@@ -105,8 +103,8 @@ func _ready():
 	if cmd_preview_mode:
 		_on_control_menu_request_debug_panel(true)
 
-	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	virtual_joystick_orig_position = virtual_joystick.get_position()
+	mobile_ui.virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	virtual_joystick_orig_position = mobile_ui.virtual_joystick.get_position()
 
 	if Global.is_xr():
 		mobile_ui.hide()
@@ -471,7 +469,7 @@ func _on_panel_profile_open_profile():
 
 
 func _on_adapter_changed(voice_chat_enabled, _adapter_str):
-	button_mic.visible = voice_chat_enabled
+	mobile_ui.button_mic.visible = voice_chat_enabled
 
 
 func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
