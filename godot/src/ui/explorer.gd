@@ -28,6 +28,8 @@ var _last_outlined_avatar: Avatar = null
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
+@onready var url_popup = %UrlPopup
+@onready var jump_in_popup = %JumpInPopup
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -45,6 +47,7 @@ var _last_outlined_avatar: Avatar = null
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
+@onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
 
 
 func _process(_dt):
@@ -75,6 +78,10 @@ func _ready():
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
+
+	# Register popup instances in Global
+	Global.set_url_popup_instance(url_popup)
+	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	if Global.is_xr():
 		player = load("res://src/logic/player/xr_player.tscn").instantiate()
@@ -269,7 +276,8 @@ func _unhandled_input(event):
 					release_mouse()
 
 			if event.pressed and event.keycode == KEY_ENTER:
-				panel_chat.toggle_open_chat()
+				panel_chat.toggle_chat_visibility(true)
+				panel_chat.line_edit_command.grab_focus.call_deferred()
 
 
 func _on_control_minimap_request_open_map():
@@ -331,13 +339,21 @@ func _on_panel_chat_submit_message(message: String):
 			elif params.size() > 2:
 				dest_vector = Vector2i(int(params[1]), int(params[2]))
 
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Teleport to " + str(dest_vector) + "[/color]"
+			panel_chat.async_create_chat(
+				[
+					"system",
+					Time.get_unix_time_from_system(),
+					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]"
+				]
 			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
+			panel_chat.async_create_chat(
+				[
+					"system",
+					Time.get_unix_time_from_system(),
+					"[color=#ccc]Trying to change to realm " + params[1] + "[/color]"
+				]
 			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
@@ -347,8 +363,13 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
 			loading_ui.enable_loading_screen()
 		else:
-			pass
-			# TODO: unknown command
+			panel_chat.async_create_chat(
+				[
+					"system",
+					Time.get_unix_time_from_system(),
+					"[color=#ccc]🔴 Unknown command[/color]"
+				]
+			)
 	else:
 		Global.comms.send_chat(message)
 		panel_chat.on_chats_arrived([[Global.player_identity.get_address_str(), 0, message]])
@@ -388,14 +409,16 @@ func player_look_at(look_at_position: Vector3):
 
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	label_crosshair.show()
-	ui_root.grab_focus.call_deferred()
+	if label_crosshair and ui_root:
+		label_crosshair.show()
+		ui_root.grab_focus.call_deferred()
 
 
 func release_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	if not Global.is_mobile():
-		label_crosshair.hide()
+		if label_crosshair:
+			label_crosshair.hide()
 
 
 func set_visible_ui(value: bool):
@@ -528,5 +551,17 @@ func _open_own_profile() -> void:
 	release_mouse()
 
 
-func ui_has_focus() -> bool:
-	return ui_root.has_focus()
+func _on_panel_chat_hide_parcel_info() -> void:
+	h_box_container_top_left_menu.hide()
+
+
+func _on_panel_chat_show_parcel_info() -> void:
+	h_box_container_top_left_menu.show()
+
+
+func _on_button_open_chat_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		panel_chat.show_chat()
+		release_mouse()
+	else:
+		panel_chat.show_notification()
