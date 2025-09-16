@@ -1,9 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://cdswseeu07kuo"]
+[gd_scene load_steps=4 format=3 uid="uid://cdswseeu07kuo"]
 
 [ext_resource type="ArrayMesh" uid="uid://jluf76ektf3g" path="res://assets/empty-scenes/EP_8_Visual.res" id="1_3fd5p"]
 [ext_resource type="Shape3D" uid="uid://l0t8etl87eha" path="res://assets/empty-scenes/EP_8_col.res" id="2_ycqvd"]
+[ext_resource type="Script" path="res://src/ui/components/empty_parcel.gd" id="3_empty_parcel"]
 
 [node name="EP_8" type="Node3D"]
+script = ExtResource("3_empty_parcel")
 
 [node name="EP_8_Visual" type="MeshInstance3D" parent="."]
 mesh = ExtResource("1_3fd5p")

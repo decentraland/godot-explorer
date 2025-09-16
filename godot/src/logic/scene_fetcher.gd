@@ -41,6 +41,8 @@ var current_scene_entity_id: String = ""
 
 var loaded_empty_scenes: Dictionary = {}
 var loaded_scenes: Dictionary = {}
+var current_edge_parcels: Array[Vector2i] = []
+var wall_manager: FloatingIslandWalls = null
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
 var last_version_checked: int = -1
@@ -60,6 +62,10 @@ var _bypass_loading_check: bool = false
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
+
+	# Initialize wall manager
+	wall_manager = FloatingIslandWalls.new()
+	add_child(wall_manager)
 
 	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 	Global.get_config().param_changed.connect(self._on_config_changed)
@@ -216,31 +222,187 @@ func _async_on_desired_scene_changed():
 	if counter_this_call != _scene_changed_counter:
 		return
 
+	# Clean up old scenes that are no longer needed
+	var scenes_to_remove = []
 	for scene_id in loaded_scenes.keys():
-		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
+		var should_keep = loadable_scenes.has(scene_id) or keep_alive_scenes.has(scene_id)
+
+		if not should_keep:
 			var scene: SceneItem = loaded_scenes[scene_id]
-			if scene.scene_number_id != -1:
+			# Don't kill global scenes
+			if not scene.is_global and scene.scene_number_id != -1:
+				print("Unloading scene: %s (was at parcels: %s)" % [scene.id, scene.parcels])
 				Global.scene_runner.kill_scene(scene.scene_number_id)
+				scenes_to_remove.append(scene_id)
+			elif scene.is_global:
+				print("Keeping global scene: %s" % scene.id)
+
+	# Remove killed scenes from loaded_scenes dictionary
+	for scene_id in scenes_to_remove:
+		loaded_scenes.erase(scene_id)
+
+	# Calculate bounds of all loaded scenes and create 2-parcel padding
+	var all_scene_parcels = []
+	for scene: SceneItem in loaded_scenes.values():
+		if not scene.is_global:  # Only consider local scenes for bounds
+			all_scene_parcels.append_array(scene.parcels)
+
+	# Filter out distant parcels to prevent huge padding areas
+	# This happens when there's a scene at (0,0) mixed with scenes far away
+	if all_scene_parcels.size() > 1:
+		all_scene_parcels = _filter_clustered_parcels(all_scene_parcels)
+
+	# Only recreate floating island if scene parcels have changed
+	var current_scene_hash = str(all_scene_parcels.hash())
+	if (
+		not all_scene_parcels.is_empty()
+		and (not has_meta("last_scene_hash") or get_meta("last_scene_hash") != current_scene_hash)
+	):
+		print("Scene layout changed, recreating floating island...")
+		print("Cleaning up %d old empty parcels" % loaded_empty_scenes.size())
+		for parcel in loaded_empty_scenes:
+			var empty_scene = loaded_empty_scenes[parcel]
+			remove_child(empty_scene)
+			empty_scene.queue_free()
+		loaded_empty_scenes.clear()
+		current_edge_parcels.clear()
+		wall_manager.clear_walls()
+
+		# Store the hash to avoid recreating unnecessarily
+		set_meta("last_scene_hash", current_scene_hash)
+
+		# Create floating island with empty parcels
+		var empty_parcels_coords = []
+		# Calculate bounding box of all loaded scene parcels
+		var min_x = all_scene_parcels[0].x
+		var max_x = all_scene_parcels[0].x
+		var min_z = all_scene_parcels[0].y
+		var max_z = all_scene_parcels[0].y
+
+		for parcel in all_scene_parcels:
+			min_x = min(min_x, parcel.x)
+			max_x = max(max_x, parcel.x)
+			min_z = min(min_z, parcel.y)
+			max_z = max(max_z, parcel.y)
+
+		# Create a set of scene parcels for quick lookup
+		var scene_parcel_set = {}
+		for parcel in all_scene_parcels:
+			scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
+
+		# Create 2-parcel padding around the bounds
+		var padding = 2
+		for x in range(min_x - padding, max_x + padding + 1):
+			for z in range(min_z - padding, max_z + padding + 1):
+				var coord = Vector2i(x, z)
+				# Only add empty parcels if they're not occupied by actual scenes
+				if not scene_parcel_set.has(coord):
+					empty_parcels_coords.push_back(coord)
+					var parcel_string = "%d,%d" % [x, z]
+
+					if not loaded_empty_scenes.has(parcel_string):
+						var index = randi_range(0, EMPTY_SCENES.size() - 1)
+						var scene: Node3D = EMPTY_SCENES[index].instantiate()
+						var temp := (
+							"EP_%s_%s_%s"
+							% [index, str(x).replace("-", "m"), str(z).replace("-", "m")]
+						)
+						scene.name = temp
+						add_child(scene)
+						scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+
+						# Set cliff direction based on position relative to scene bounds
+						var cliff_direction = _calculate_cliff_direction(
+							x, z, min_x, max_x, min_z, max_z, padding
+						)
+						if scene.has_method("set_cliff_direction"):
+							scene.set_cliff_direction(cliff_direction)
+
+						loaded_empty_scenes[parcel_string] = scene
+
+		# Calculate edge parcels (outermost perimeter)
+		var edge_parcels: Array[Vector2i] = []
+		var padding_bounds_min_x = min_x - padding
+		var padding_bounds_max_x = max_x + padding
+		var padding_bounds_min_z = min_z - padding
+		var padding_bounds_max_z = max_z + padding
+
+		for coord in empty_parcels_coords:
+			var x = coord.x
+			var z = coord.y
+			# A parcel is on the edge if it's on the boundary of the padded area
+			if (
+				x == padding_bounds_min_x
+				or x == padding_bounds_max_x
+				or z == padding_bounds_min_z
+				or z == padding_bounds_max_z
+			):
+				edge_parcels.append(coord)
+
+		# Store edge parcels for external access and add edge indicators
+		current_edge_parcels = edge_parcels
+
+		# Add white cube indicators to edge parcels
+		for edge_coord in edge_parcels:
+			var parcel_string = "%d,%d" % [edge_coord.x, edge_coord.y]
+			if loaded_empty_scenes.has(parcel_string):
+				var empty_scene = loaded_empty_scenes[parcel_string]
+				if empty_scene.has_method("add_edge_indicator"):
+					empty_scene.add_edge_indicator()
+
+		print(
+			(
+				"Created floating island: bounds (%d,%d) to (%d,%d) with %d empty padding parcels, %d edge parcels"
+				% [min_x, min_z, max_x, max_z, empty_parcels_coords.size(), edge_parcels.size()]
+			)
+		)
+		print("Edge parcels: %s" % edge_parcels)
+
+		# Create invisible walls around the floating island
+		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
 
 	var empty_parcels_coords = []
-	for parcel in empty_parcels:
-		var coord = parcel.split(",")
-		var x = int(coord[0])
-		var z = int(coord[1])
-		empty_parcels_coords.push_back(Vector2i(x, z))
+	if has_meta("last_scene_hash"):
+		# Use existing empty parcels for coordinate processing
+		for parcel_string in loaded_empty_scenes.keys():
+			var coord = parcel_string.split(",")
+			var x = int(coord[0])
+			var z = int(coord[1])
+			empty_parcels_coords.push_back(Vector2i(x, z))
 
-		if not loaded_empty_scenes.has(parcel):
-			var index = randi_range(0, EMPTY_SCENES.size() - 1)
-			var scene: Node3D = EMPTY_SCENES[index].instantiate()
-			var temp := "EP_%s_%s_%s" % [index, str(x).replace("-", "m"), str(-z).replace("-", "m")]
-			scene.name = temp
-			add_child(scene)
-			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
-			loaded_empty_scenes[parcel] = scene
+	# Process original empty parcels from coordinator (if any) - but only if we didn't just create floating island
+	if not has_meta("last_scene_hash") or get_meta("last_scene_hash") == "":
+		for parcel in empty_parcels:
+			var coord = parcel.split(",")
+			var x = int(coord[0])
+			var z = int(coord[1])
+			if not empty_parcels_coords.has(Vector2i(x, z)):  # Avoid duplicates
+				empty_parcels_coords.push_back(Vector2i(x, z))
 
 	var parcel_filled = []
 	for scene: SceneItem in loaded_scenes.values():
 		parcel_filled.append_array(scene.parcels)
+
+		# Calculate and print grid size for each loaded scene
+		var grid_size = _calculate_scene_grid_size(scene.parcels)
+		var scene_type = "GLOBAL" if scene.is_global else "LOCAL"
+		var current_pos = Global.scene_fetcher.current_position
+		var contains_current = scene.parcels.has(current_pos)
+		print(
+			(
+				"Scene '%s' (%s) loaded with grid size: %dx%d (total parcels: %d) - Contains current pos (%d,%d): %s"
+				% [
+					scene.id,
+					scene_type,
+					grid_size.x,
+					grid_size.y,
+					scene.parcels.size(),
+					current_pos.x,
+					current_pos.y,
+					contains_current
+				]
+			)
+		)
 
 	report_scene_load.emit(true, new_loading, loadable_scenes.size())
 
@@ -253,6 +415,9 @@ func _on_realm_changed():
 
 	Global.get_config().last_realm_joined = Global.realm.realm_url
 	Global.get_config().save_to_settings_file()
+
+	# Force floating island recreation on realm change
+	set_meta("last_scene_hash", "")
 
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url
@@ -282,6 +447,7 @@ func _on_realm_changed():
 		empty_parcel.queue_free()
 
 	loaded_empty_scenes.clear()
+	wall_manager.clear_walls()
 
 	loaded_scenes = {}
 
@@ -473,3 +639,123 @@ func reload_scene(scene_id: String) -> void:
 
 func set_debugging_js_scene_id(id: String) -> void:
 	_debugging_js_scene_id = id
+
+
+func get_edge_parcels() -> Array[Vector2i]:
+	return current_edge_parcels
+
+
+func _filter_clustered_parcels(parcels: Array) -> Array:
+	# Find the largest cluster of parcels to avoid huge padding from distant outliers
+	if parcels.size() <= 2:
+		return parcels
+
+	# Calculate center point based on current player position
+	var player_pos = current_position
+	var filtered_parcels = []
+	var max_distance_from_player = 10  # Only include parcels within 10 units of player
+
+	for parcel in parcels:
+		var distance = abs(parcel.x - player_pos.x) + abs(parcel.y - player_pos.y)
+		if distance <= max_distance_from_player:
+			filtered_parcels.append(parcel)
+
+	# If filtering removed too many parcels, fall back to original
+	if filtered_parcels.size() == 0:
+		print("Warning: Filtering removed all parcels, using original set")
+		return parcels
+
+	print(
+		(
+			"Filtered parcels from %d to %d (removed distant outliers)"
+			% [parcels.size(), filtered_parcels.size()]
+		)
+	)
+	return filtered_parcels
+
+
+func _calculate_cliff_direction(
+	x: int,
+	z: int,
+	scene_min_x: int,
+	scene_max_x: int,
+	scene_min_z: int,
+	scene_max_z: int,
+	padding: int
+):
+	# Load the EmptyParcel class to access the enum
+	var empty_parcel_script = preload("res://src/ui/components/empty_parcel.gd")
+	var CliffDirection = empty_parcel_script.CliffDirection
+
+	var padding_bounds_min_x = scene_min_x - padding
+	var padding_bounds_max_x = scene_max_x + padding
+	var padding_bounds_min_z = scene_min_z - padding
+	var padding_bounds_max_z = scene_max_z + padding
+
+	# Check if this parcel is on the edge boundary
+	var is_on_west_edge = x == padding_bounds_min_x
+	var is_on_east_edge = x == padding_bounds_max_x
+	var is_on_north_edge = z == padding_bounds_min_z
+	var is_on_south_edge = z == padding_bounds_max_z
+
+	# Check for corner positions first (corners take priority over straight edges)
+	if is_on_north_edge and is_on_west_edge:
+		return CliffDirection.NORTHWEST
+	elif is_on_north_edge and is_on_east_edge:
+		return CliffDirection.NORTHEAST
+	elif is_on_south_edge and is_on_west_edge:
+		return CliffDirection.SOUTHWEST
+	elif is_on_south_edge and is_on_east_edge:
+		return CliffDirection.SOUTHEAST
+	# Then check for straight edges
+	elif is_on_west_edge:
+		return CliffDirection.WEST
+	elif is_on_east_edge:
+		return CliffDirection.EAST
+	elif is_on_north_edge:
+		return CliffDirection.NORTH
+	elif is_on_south_edge:
+		return CliffDirection.SOUTH
+	else:
+		return CliffDirection.NONE
+
+
+func _calculate_scene_grid_size(parcels: Array[Vector2i]) -> Vector2i:
+	if parcels.is_empty():
+		return Vector2i.ZERO
+
+	if parcels.size() == 1:
+		return Vector2i.ONE
+
+	# For scenes with non-adjacent parcels, we can't represent as a simple grid
+	# Instead, let's find the tightest grid that would contain all parcels
+	var min_x = parcels[0].x
+	var max_x = parcels[0].x
+	var min_y = parcels[0].y
+	var max_y = parcels[0].y
+
+	for parcel in parcels:
+		min_x = min(min_x, parcel.x)
+		max_x = max(max_x, parcel.x)
+		min_y = min(min_y, parcel.y)
+		max_y = max(max_y, parcel.y)
+
+	# If parcels are spread far apart, this indicates scattered parcels
+	var width = max_x - min_x + 1
+	var height = max_y - min_y + 1
+
+	# Check if parcels form a contiguous block or are scattered
+	var expected_parcels = width * height
+	if parcels.size() == expected_parcels:
+		# Contiguous block
+		return Vector2i(width, height)
+	else:
+		# Scattered parcels - return the number of parcels as "1x{count}" or "{count}x1"
+		if parcels.size() <= 10:
+			return Vector2i(parcels.size(), 1)  # Display as 1x{count} for small scattered scenes
+		else:
+			return Vector2i(
+				int(sqrt(parcels.size())), int(ceil(float(parcels.size()) / sqrt(parcels.size())))
+			)
+
+	return Vector2i(width, height)

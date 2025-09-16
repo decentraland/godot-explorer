@@ -1,9 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://bxdkqpickpurc"]
+[gd_scene load_steps=4 format=3 uid="uid://bxdkqpickpurc"]
 
 [ext_resource type="ArrayMesh" uid="uid://b4gm3wmtq644p" path="res://assets/empty-scenes/EP_5_Visual.res" id="1_brg8g"]
 [ext_resource type="Shape3D" uid="uid://c8cbv6abhg6u2" path="res://assets/empty-scenes/EP_5_col.res" id="2_44l03"]
+[ext_resource type="Script" path="res://src/ui/components/empty_parcel.gd" id="3_empty_parcel"]
 
 [node name="EP_5" type="Node3D"]
+script = ExtResource("3_empty_parcel")
 
 [node name="EP_5_Visual" type="MeshInstance3D" parent="."]
 mesh = ExtResource("1_brg8g")
