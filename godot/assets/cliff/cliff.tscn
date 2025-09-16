@@ -1,9 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cu8rf0fyr5vfs"]
 
-[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
-size = Vector2(16, 10)
-center_offset = Vector3(0, -5, 0)
-orientation = 2
+[ext_resource type="ArrayMesh" uid="uid://c6wbf2aj44l03" path="res://assets/empty-scenes/cliff.obj" id="1_cliff"]
 
 [node name="root" type="MeshInstance3D"]
-mesh = SubResource("PlaneMesh_1")
+mesh = ExtResource("1_cliff")

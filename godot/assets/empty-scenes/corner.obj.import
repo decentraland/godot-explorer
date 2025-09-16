@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://covrvxboho1il"
+path="res://.godot/imported/corner.obj-77e7713adb7d9dc2319981b5475f7fea.mesh"
+
+[deps]
+
+files=["res://.godot/imported/corner.obj-77e7713adb7d9dc2319981b5475f7fea.mesh"]
+
+source_file="res://assets/empty-scenes/corner.obj"
+dest_files=["res://.godot/imported/corner.obj-77e7713adb7d9dc2319981b5475f7fea.mesh", "res://.godot/imported/corner.obj-77e7713adb7d9dc2319981b5475f7fea.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

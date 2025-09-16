@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://bcdxv1hq2lqvp"]
+
+[ext_resource type="ArrayMesh" uid="uid://1rnd5cxx7eus" path="res://assets/empty-scenes/floor.obj" id="1_floor"]
+[ext_resource type="ArrayMesh" uid="uid://covrvxboho1il" path="res://assets/empty-scenes/corner.obj" id="2_corner"]
+[ext_resource type="Script" uid="uid://dicbb32acuomj" path="res://src/ui/components/empty_parcel.gd" id="4_empty_parcel"]
+
+[node name="EmptyParcel" type="Node3D"]
+script = ExtResource("4_empty_parcel")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_floor")
+skeleton = NodePath("")
+
+[node name="FloorStaticBody" type="StaticBody3D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="FloorCollisionShape" type="CollisionShape3D" parent="FloorStaticBody"]
+
+[node name="Corner" type="MeshInstance3D" parent="."]
+mesh = ExtResource("2_corner")
+skeleton = NodePath("")
+
+[node name="CornerStaticBody" type="StaticBody3D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CornerCollisionShape" type="CollisionShape3D" parent="CornerStaticBody"]

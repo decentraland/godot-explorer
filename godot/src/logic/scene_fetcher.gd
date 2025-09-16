@@ -5,20 +5,7 @@ signal parcels_processed(parcel_filled, empty)
 signal report_scene_load(done: bool, is_new_loading: bool, pending: int)
 signal notify_pending_loading_scenes(is_pending: bool)
 
-const EMPTY_SCENES = [
-	preload("res://assets/empty-scenes/EP_0.tscn"),
-	#preload("res://assets/empty-scenes/EP_1.tscn"), # it looks dark
-	preload("res://assets/empty-scenes/EP_2.tscn"),
-	preload("res://assets/empty-scenes/EP_3.tscn"),
-	preload("res://assets/empty-scenes/EP_4.tscn"),
-	preload("res://assets/empty-scenes/EP_5.tscn"),
-	preload("res://assets/empty-scenes/EP_6.tscn"),
-	preload("res://assets/empty-scenes/EP_7.tscn"),
-	preload("res://assets/empty-scenes/EP_8.tscn"),
-	preload("res://assets/empty-scenes/EP_9.tscn"),
-	preload("res://assets/empty-scenes/EP_10.tscn"),
-	preload("res://assets/empty-scenes/EP_11.tscn")
-]
+const EMPTY_SCENES = [preload("res://assets/empty-scenes/EmptyScene.tscn")]
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
