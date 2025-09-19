@@ -25,15 +25,7 @@ var pause_duration: float = 2
 
 
 func _ready():
-	profile_picture.gui_input.connect(_on_profile_picture_gui_input)
 	add_to_group("blacklist_ui_sync")
-
-
-func _on_profile_picture_gui_input(event: InputEvent):
-	if event is InputEventMouseButton:
-		#if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if avatar != null and is_instance_valid(avatar):
-			Global.open_profile.emit(avatar)
 
 
 func async_set_data(avatar_param = null):
