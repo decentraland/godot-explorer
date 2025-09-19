@@ -189,7 +189,7 @@ func async_load_category(category: int) -> Array:
 	var url: String
 	if category_string == "all":
 		url = "https://places.decentraland.org/api/places?offset=0&limit=50&order_by=most_active&order=desc&with_realms_detail=true"
-	if category_string == "favorites":
+	elif category_string == "favorites":
 		url = "https://places.decentraland.org/api/places?offset=0&limit=500&order_by=most_active&order=desc&with_realms_detail=true&only_favorites=true"
 	elif category_string == "live":
 		url = "https://events.decentraland.org/api/events/?list=live"
