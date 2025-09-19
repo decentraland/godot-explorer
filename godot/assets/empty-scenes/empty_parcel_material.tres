@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://b8xv4j8g2m1kq"]
+
+[ext_resource type="Shader" uid="uid://b5oywax5er7sb" path="res://assets/shaders/empty_parcel.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="2_texture"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/texture_albedo = ExtResource("2_texture")
+shader_parameter/texture_scale = 0.1
+shader_parameter/distortion = Vector3(0, 0, 0)
+shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
+shader_parameter/debug_parcel_types = false

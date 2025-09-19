@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bcdxv1hq2lqvp"]
+
+[ext_resource type="Script" uid="uid://dicbb32acuomj" path="res://src/ui/components/empty_parcel.gd" id="4_empty_parcel"]
+
+[node name="EmptyParcel" type="Node3D"]
+script = ExtResource("4_empty_parcel")

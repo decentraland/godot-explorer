@@ -5,7 +5,7 @@ signal parcels_processed(parcel_filled, empty)
 signal report_scene_load(done: bool, is_new_loading: bool, pending: int)
 signal notify_pending_loading_scenes(is_pending: bool)
 
-const EMPTY_SCENES = [preload("res://assets/empty-scenes/EmptyScene.tscn")]
+const EMPTY_SCENES = [preload("res://assets/empty-scenes/empty_parcel.tscn")]
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
@@ -34,6 +34,8 @@ var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.ne
 var last_version_updated: int = -1
 var last_version_checked: int = -1
 
+var parcel_data_texture_generator: ParcelDataTextureGenerator
+
 var desired_portable_experiences_urns: Array[String] = []
 
 # Special-case: one-shot to skip loading screen
@@ -53,6 +55,15 @@ func _ready():
 	# Initialize wall manager
 	wall_manager = FloatingIslandWalls.new()
 	add_child(wall_manager)
+
+	# Initialize parcel data texture generator
+	parcel_data_texture_generator = ParcelDataTextureGenerator.new()
+	add_child(parcel_data_texture_generator)
+
+	# Parcel data texture will be generated after parcels are loaded
+
+	# Initialize global uniforms
+	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
 
 	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 	Global.get_config().param_changed.connect(self._on_config_changed)
@@ -302,8 +313,8 @@ func _async_on_desired_scene_changed():
 						var cliff_direction = _calculate_cliff_direction(
 							x, z, min_x, max_x, min_z, max_z, padding
 						)
-						if scene.has_method("set_cliff_direction"):
-							scene.set_cliff_direction(cliff_direction)
+						if scene.has_method("set_parcel_type"):
+							scene.set_parcel_type(cliff_direction)
 
 						loaded_empty_scenes[parcel_string] = scene
 
@@ -344,6 +355,10 @@ func _async_on_desired_scene_changed():
 			)
 		)
 		print("Edge parcels: %s" % edge_parcels)
+
+		# Generate parcel data texture now that empty scenes are loaded
+		if parcel_data_texture_generator:
+			parcel_data_texture_generator.generate_parcel_data_texture_for_parcel(current_position)
 
 		# Create invisible walls around the floating island
 		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
@@ -463,6 +478,17 @@ func update_position(new_position: Vector2i) -> void:
 
 	current_position = new_position
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
+
+	# Regenerate parcel data texture for new position
+	if parcel_data_texture_generator:
+		parcel_data_texture_generator.generate_parcel_data_texture_for_parcel(current_position)
+
+	# Update current parcel origin global uniform - pass actual world position
+	var world_origin = Vector3(current_position.x * 16.0, 0.0, current_position.y * 16.0)
+	print("SceneFetcher: Setting current_parcel_origin to world pos: ", world_origin)
+	RenderingServer.global_shader_parameter_set(
+		"current_parcel_origin", Vector2(world_origin.x, world_origin.z)
+	)
 
 
 func async_load_scene(
@@ -672,39 +698,94 @@ func _calculate_cliff_direction(
 ):
 	# Load the EmptyParcel class to access the enum
 	var empty_parcel_script = preload("res://src/ui/components/empty_parcel.gd")
-	var CliffDirection = empty_parcel_script.CliffDirection
+	var EmptyParcelType = empty_parcel_script.EmptyParcelType
 
 	var padding_bounds_min_x = scene_min_x - padding
 	var padding_bounds_max_x = scene_max_x + padding
 	var padding_bounds_min_z = scene_min_z - padding
 	var padding_bounds_max_z = scene_max_z + padding
 
-	# Check if this parcel is on the edge boundary
+	# Check if this parcel is on the outer edge boundary (cliff edge)
+	# Note: In Godot/DCL, negative z is north, positive z is south
 	var is_on_west_edge = x == padding_bounds_min_x
 	var is_on_east_edge = x == padding_bounds_max_x
-	var is_on_north_edge = z == padding_bounds_min_z
-	var is_on_south_edge = z == padding_bounds_max_z
+	var is_on_south_edge = z == padding_bounds_min_z  # Min z = south (visually)
+	var is_on_north_edge = z == padding_bounds_max_z  # Max z = north (visually)
 
-	# Check for corner positions first (corners take priority over straight edges)
+	# Check if this parcel is on the inner boundary (adjacent to loaded scenes)
+	var is_on_inner_west = x == scene_min_x - 1
+	var is_on_inner_east = x == scene_max_x + 1
+	var is_on_inner_south = z == scene_min_z - 1  # Min z - 1 = south inner edge
+	var is_on_inner_north = z == scene_max_z + 1  # Max z + 1 = north inner edge
+
+	# Check for outer cliff corners first (corners take priority over straight edges)
 	if is_on_north_edge and is_on_west_edge:
-		return CliffDirection.NORTHWEST
+		return EmptyParcelType.NORTHWEST
 	elif is_on_north_edge and is_on_east_edge:
-		return CliffDirection.NORTHEAST
+		return EmptyParcelType.NORTHEAST
 	elif is_on_south_edge and is_on_west_edge:
-		return CliffDirection.SOUTHWEST
+		return EmptyParcelType.SOUTHWEST
 	elif is_on_south_edge and is_on_east_edge:
-		return CliffDirection.SOUTHEAST
-	# Then check for straight edges
+		return EmptyParcelType.SOUTHEAST
+	# Then check for outer cliff straight edges
 	elif is_on_west_edge:
-		return CliffDirection.WEST
+		return EmptyParcelType.WEST
 	elif is_on_east_edge:
-		return CliffDirection.EAST
+		return EmptyParcelType.EAST
 	elif is_on_north_edge:
-		return CliffDirection.NORTH
+		return EmptyParcelType.NORTH
 	elif is_on_south_edge:
-		return CliffDirection.SOUTH
+		return EmptyParcelType.SOUTH
+	# Check for inner corners (adjacent to loaded scenes)
+	elif is_on_inner_north and is_on_inner_west:
+		return EmptyParcelType.INNER_NORTHWEST
+	elif is_on_inner_north and is_on_inner_east:
+		return EmptyParcelType.INNER_NORTHEAST
+	elif is_on_inner_south and is_on_inner_west:
+		return EmptyParcelType.INNER_SOUTHWEST
+	elif is_on_inner_south and is_on_inner_east:
+		return EmptyParcelType.INNER_SOUTHEAST
+	# Then check for inner straight edges
+	elif is_on_inner_west:
+		return EmptyParcelType.INNER_WEST
+	elif is_on_inner_east:
+		return EmptyParcelType.INNER_EAST
+	elif is_on_inner_north:
+		return EmptyParcelType.INNER_NORTH
+	elif is_on_inner_south:
+		return EmptyParcelType.INNER_SOUTH
 	else:
-		return CliffDirection.NONE
+		return EmptyParcelType.NONE
+
+
+func _create_test_parcel_data_texture():
+	# Create a simple test 64x64 texture with clearer pattern
+	var image = Image.create(64, 64, false, Image.FORMAT_RGB8)
+
+	for y in range(64):
+		for x in range(64):
+			var color = Color.BLACK
+
+			# Create larger blocks for easier visibility
+			if x >= 28 and x <= 35 and y >= 28 and y <= 35:
+				color = Color.RED  # Center 8x8 block red
+			elif x < 32 and y < 32:
+				color = Color.WHITE  # Top-left quadrant white
+			elif x >= 32 and y < 32:
+				color = Color.GREEN  # Top-right quadrant green
+			elif x < 32 and y >= 32:
+				color = Color.BLUE  # Bottom-left quadrant blue
+			else:
+				color = Color.YELLOW  # Bottom-right quadrant yellow
+
+			image.set_pixel(x, y, color)
+
+	var texture = ImageTexture.new()
+	texture.set_image(image)
+
+	# Set as global uniform
+	RenderingServer.global_shader_parameter_set("parcel_data_texture", texture)
+	print("SceneFetcher: Created test parcel data texture with quadrant pattern")
 
 
 func _calculate_scene_grid_size(parcels: Array[Vector2i]) -> Vector2i:

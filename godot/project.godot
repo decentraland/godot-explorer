@@ -218,6 +218,14 @@ day_night_cycle={
 "type": "float",
 "value": 1.265
 }
+parcel_data_texture={
+"type": "sampler2D",
+"value": ""
+}
+current_parcel_origin={
+"type": "vec2",
+"value": Vector2(0, 0)
+}
 
 [xr]
 

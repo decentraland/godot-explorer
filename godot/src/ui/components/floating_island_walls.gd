@@ -23,43 +23,60 @@ func create_walls_for_bounds(
 	var island_max_z = scene_max_z + padding
 
 	# Calculate island dimensions in world units (each parcel is 16x16 meters)
-	var island_width = (island_max_x - island_min_x + 1) * 16
-	var island_height = (island_max_z - island_min_z + 1) * 16
+	# Add 16 units (8 on each side) for cliff padding
+	var cliff_padding_total = 16.0
+	var island_width = (island_max_x - island_min_x + 1) * 16 + cliff_padding_total
+	var island_height = (island_max_z - island_min_z + 1) * 16 + cliff_padding_total
 
 	# Calculate wall positions at the exact edges of the island
 	# Parcels go from (coord * 16) to (coord * 16 + 16), so edges are at coord * 16 and (coord + 1) * 16
 	var island_center_x = (island_min_x + island_max_x + 1) * 8.0
 	var island_center_z = -(island_min_z + island_max_z + 1) * 8.0  # Z is flipped in Godot
 
-	# Create 4 walls: North, South, East, West - positioned at parcel boundaries displaced by half thickness
+	# Create 4 walls: North, South, East, West - positioned at parcel boundaries displaced by half thickness + cliff padding
+	var cliff_padding = 8.0  # Half parcel padding for cliffs
 	var wall_configs = [
-		# North wall - displaced outward (north) by half thickness
-		{
-			"position":
-			Vector3(island_center_x, wall_height / 2, -(island_min_z * 16) + wall_thickness / 2),
-			"size": Vector3(island_width, wall_height, wall_thickness),
-			"name": "NorthWall"
-		},
-		# South wall - displaced outward (south) by half thickness
+		# North wall - displaced outward (north) by half thickness + cliff padding
 		{
 			"position":
 			Vector3(
-				island_center_x, wall_height / 2, -((island_max_z + 1) * 16) - wall_thickness / 2
+				island_center_x,
+				wall_height / 2,
+				-(island_min_z * 16) + wall_thickness / 2 + cliff_padding
+			),
+			"size": Vector3(island_width, wall_height, wall_thickness),
+			"name": "NorthWall"
+		},
+		# South wall - displaced outward (south) by half thickness + cliff padding
+		{
+			"position":
+			Vector3(
+				island_center_x,
+				wall_height / 2,
+				-((island_max_z + 1) * 16) - wall_thickness / 2 - cliff_padding
 			),
 			"size": Vector3(island_width, wall_height, wall_thickness),
 			"name": "SouthWall"
 		},
-		# West wall - displaced outward (west) by half thickness
+		# West wall - displaced outward (west) by half thickness + cliff padding
 		{
 			"position":
-			Vector3(island_min_x * 16 - wall_thickness / 2, wall_height / 2, island_center_z),
+			Vector3(
+				island_min_x * 16 - wall_thickness / 2 - cliff_padding,
+				wall_height / 2,
+				island_center_z
+			),
 			"size": Vector3(wall_thickness, wall_height, island_height),
 			"name": "WestWall"
 		},
-		# East wall - displaced outward (east) by half thickness
+		# East wall - displaced outward (east) by half thickness + cliff padding
 		{
 			"position":
-			Vector3((island_max_x + 1) * 16 + wall_thickness / 2, wall_height / 2, island_center_z),
+			Vector3(
+				(island_max_x + 1) * 16 + wall_thickness / 2 + cliff_padding,
+				wall_height / 2,
+				island_center_z
+			),
 			"size": Vector3(wall_thickness, wall_height, island_height),
 			"name": "EastWall"
 		}

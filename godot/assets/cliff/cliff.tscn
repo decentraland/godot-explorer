@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://cu8rf0fyr5vfs"]
+[gd_scene load_steps=3 format=3 uid="uid://cu8rf0fyr5vfs"]
 
-[ext_resource type="ArrayMesh" uid="uid://c6wbf2aj44l03" path="res://assets/empty-scenes/cliff.obj" id="1_cliff"]
+[ext_resource type="ArrayMesh" uid="uid://beg76xee0fvna" path="res://assets/empty-scenes/cliff.obj" id="1_cliff"]
+[ext_resource type="Material" uid="uid://b8xv4j8g2m1kq" path="res://assets/empty-scenes/empty_parcel_material.tres" id="2_material"]
 
 [node name="root" type="MeshInstance3D"]
 mesh = ExtResource("1_cliff")
+material_override = ExtResource("2_material")
