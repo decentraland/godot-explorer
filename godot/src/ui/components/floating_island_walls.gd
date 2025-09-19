@@ -2,7 +2,7 @@ class_name FloatingIslandWalls
 extends Node3D
 
 # Wall configuration
-@export var wall_height: float = 20.0
+@export var wall_height: float = 120.0  # Increased to accommodate 100m cliffs
 @export var wall_thickness: float = 2.0
 @export var debug_mode: bool = false
 
@@ -41,7 +41,7 @@ func create_walls_for_bounds(
 			"position":
 			Vector3(
 				island_center_x,
-				wall_height / 2,
+				-wall_height / 2 + 10,  # Start 10m above ground, go down
 				-(island_min_z * 16) + wall_thickness / 2 + cliff_padding
 			),
 			"size": Vector3(island_width, wall_height, wall_thickness),
@@ -52,7 +52,7 @@ func create_walls_for_bounds(
 			"position":
 			Vector3(
 				island_center_x,
-				wall_height / 2,
+				-wall_height / 2 + 10,  # Start 10m above ground, go down
 				-((island_max_z + 1) * 16) - wall_thickness / 2 - cliff_padding
 			),
 			"size": Vector3(island_width, wall_height, wall_thickness),
@@ -63,7 +63,7 @@ func create_walls_for_bounds(
 			"position":
 			Vector3(
 				island_min_x * 16 - wall_thickness / 2 - cliff_padding,
-				wall_height / 2,
+				-wall_height / 2 + 10,  # Start 10m above ground, go down
 				island_center_z
 			),
 			"size": Vector3(wall_thickness, wall_height, island_height),
@@ -74,7 +74,7 @@ func create_walls_for_bounds(
 			"position":
 			Vector3(
 				(island_max_x + 1) * 16 + wall_thickness / 2 + cliff_padding,
-				wall_height / 2,
+				-wall_height / 2 + 10,  # Start 10m above ground, go down
 				island_center_z
 			),
 			"size": Vector3(wall_thickness, wall_height, island_height),

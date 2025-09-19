@@ -10,4 +10,6 @@ shader_parameter/texture_albedo = ExtResource("2_texture")
 shader_parameter/texture_scale = 0.1
 shader_parameter/distortion = Vector3(0, 0, 0)
 shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
-shader_parameter/debug_parcel_types = false
+shader_parameter/rock_rect = Vector4(0.51, 0.51, 0.48, 0.48)
+shader_parameter/slope_threshold = 0.7
+shader_parameter/slope_blend = 0.15

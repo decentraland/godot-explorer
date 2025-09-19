@@ -136,9 +136,9 @@ func _generate_cliff_mesh(
 	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	# Generate the cliff face
-	var cliff_height = 10.0  # Height of the cliff
+	var cliff_height = 100.0  # Height of the cliff (100 meters)
 	var cliff_segments = 32  # Match floor grid vertex count (32 cells = 33 vertices)
-	var vertical_segments = 8  # Number of vertical segments
+	var vertical_segments = 20  # Number of vertical segments (increased for taller cliff)
 
 	# Noise for displacement
 	var noise = FastNoiseLite.new()
