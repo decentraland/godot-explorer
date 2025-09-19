@@ -354,7 +354,6 @@ func _async_on_desired_scene_changed():
 				% [min_x, min_z, max_x, max_z, empty_parcels_coords.size(), edge_parcels.size()]
 			)
 		)
-		print("Edge parcels: %s" % edge_parcels)
 
 		# Generate parcel data texture now that empty scenes are loaded
 		if parcel_data_texture_generator:
@@ -485,7 +484,6 @@ func update_position(new_position: Vector2i) -> void:
 
 	# Update current parcel origin global uniform - pass actual world position
 	var world_origin = Vector3(current_position.x * 16.0, 0.0, current_position.y * 16.0)
-	print("SceneFetcher: Setting current_parcel_origin to world pos: ", world_origin)
 	RenderingServer.global_shader_parameter_set(
 		"current_parcel_origin", Vector2(world_origin.x, world_origin.z)
 	)
@@ -756,36 +754,6 @@ func _calculate_cliff_direction(
 		return EmptyParcelType.INNER_SOUTH
 	else:
 		return EmptyParcelType.NONE
-
-
-func _create_test_parcel_data_texture():
-	# Create a simple test 64x64 texture with clearer pattern
-	var image = Image.create(64, 64, false, Image.FORMAT_RGB8)
-
-	for y in range(64):
-		for x in range(64):
-			var color = Color.BLACK
-
-			# Create larger blocks for easier visibility
-			if x >= 28 and x <= 35 and y >= 28 and y <= 35:
-				color = Color.RED  # Center 8x8 block red
-			elif x < 32 and y < 32:
-				color = Color.WHITE  # Top-left quadrant white
-			elif x >= 32 and y < 32:
-				color = Color.GREEN  # Top-right quadrant green
-			elif x < 32 and y >= 32:
-				color = Color.BLUE  # Bottom-left quadrant blue
-			else:
-				color = Color.YELLOW  # Bottom-right quadrant yellow
-
-			image.set_pixel(x, y, color)
-
-	var texture = ImageTexture.new()
-	texture.set_image(image)
-
-	# Set as global uniform
-	RenderingServer.global_shader_parameter_set("parcel_data_texture", texture)
-	print("SceneFetcher: Created test parcel data texture with quadrant pattern")
 
 
 func _calculate_scene_grid_size(parcels: Array[Vector2i]) -> Vector2i:

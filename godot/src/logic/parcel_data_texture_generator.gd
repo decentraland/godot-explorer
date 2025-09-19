@@ -38,19 +38,8 @@ func generate_parcel_data_texture_for_parcel(center_parcel: Vector2i):
 	# Get parcel data from SceneFetcher
 	var scene_fetcher = Global.scene_fetcher
 	if not scene_fetcher:
-		print("ParcelDataTextureGenerator: No scene fetcher available")
 		return
 
-	print("ParcelDataTextureGenerator: Center parcel: ", center_parcel)
-	print(
-		"ParcelDataTextureGenerator: Available loaded_scenes: ", scene_fetcher.loaded_scenes.keys()
-	)
-	print(
-		"ParcelDataTextureGenerator: Available loaded_empty_scenes: ",
-		scene_fetcher.loaded_empty_scenes.keys()
-	)
-
-	var debug_found_parcels = 0
 
 	# Fill the texture based on SceneFetcher parcel data
 	for y in range(TEXTURE_SIZE):
@@ -61,21 +50,7 @@ func generate_parcel_data_texture_for_parcel(center_parcel: Vector2i):
 			var world_parcel = center_parcel + Vector2i(offset_x, offset_y)
 
 			var pixel_color = _get_parcel_color_from_scene_fetcher(world_parcel, scene_fetcher)
-			if pixel_color != Color.BLACK:
-				debug_found_parcels += 1
-				if debug_found_parcels <= 5:  # Only print first 5 found parcels
-					print(
-						(
-							"ParcelDataTextureGenerator: Texture pixel (%d,%d) -> parcel %s -> color %s"
-							% [x, y, world_parcel, pixel_color]
-						)
-					)
-
 			image.set_pixel(x, y, pixel_color)
-
-	print(
-		"ParcelDataTextureGenerator: Found ", debug_found_parcels, " non-black parcels in texture"
-	)
 
 	# Update texture
 	parcel_data_texture.set_image(image)
@@ -84,9 +59,6 @@ func generate_parcel_data_texture_for_parcel(center_parcel: Vector2i):
 	RenderingServer.global_shader_parameter_set("parcel_data_texture", parcel_data_texture)
 
 	parcel_data_texture_updated.emit(parcel_data_texture)
-
-	print("ParcelDataTextureGenerator: Generated parcel data texture for parcel ", center_parcel)
-
 
 func _get_parcel_color_from_map_pixel(pixel: Color) -> Color:
 	# Extract flags from pixel (matching the map shader logic)

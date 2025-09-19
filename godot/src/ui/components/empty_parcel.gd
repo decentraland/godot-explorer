@@ -21,10 +21,10 @@ enum EmptyParcelType {
 	INNER_SOUTHWEST
 }
 
-@export var parcel_type: EmptyParcelType = EmptyParcelType.NONE
+# Material resource loaded once at the top level
+const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_material.tres")
 
-# Cliff meshes are now dynamically generated
-# const CliffScene = preload("res://assets/cliff/cliff.tscn")
+@export var parcel_type: EmptyParcelType = EmptyParcelType.NONE
 
 
 func _ready():
@@ -34,12 +34,6 @@ func _ready():
 
 func set_parcel_type(type: EmptyParcelType) -> void:
 	parcel_type = type
-	print(
-		(
-			"Empty parcel at %s set parcel type: %s"
-			% [global_position, EmptyParcelType.keys()[parcel_type]]
-		)
-	)
 	# Regenerate mesh with the new parcel type
 	_create_grid_mesh()
 	# Generate cliff meshes based on parcel type
@@ -239,14 +233,10 @@ func _generate_cliff_mesh(
 	var cliff_mesh = surface_tool.commit()
 	cliff_mesh_instance.mesh = cliff_mesh
 
-	# Apply a material (reuse the empty parcel material for now)
-	var material = preload("res://assets/empty-scenes/empty_parcel_material.tres")
-	if material:
-		cliff_mesh_instance.material_override = material
+	# Apply the empty parcel material
+	cliff_mesh_instance.material_override = EMPTY_PARCEL_MATERIAL
 
 
-# Old cliff spawning functions have been removed
-# Dynamic cliff mesh generation is now used instead (see _create_cliff_meshes)
 
 
 func _create_grid_mesh():
@@ -255,9 +245,8 @@ func _create_grid_mesh():
 	mesh_instance.name = "GridFloor"
 	add_child(mesh_instance)
 
-	# Load the material
-	var material = load("res://assets/empty-scenes/empty_parcel_material.tres")
-	mesh_instance.material_override = material
+	# Apply the material
+	mesh_instance.material_override = EMPTY_PARCEL_MATERIAL
 
 	_generate_mesh(mesh_instance)
 
@@ -286,18 +275,7 @@ func _generate_mesh(mesh_instance: MeshInstance3D):
 	mesh_instance.mesh = generated_mesh
 	mesh_instance.visible = true  # Show mesh
 
-	# Apply the empty parcel material with shader
-	var material = preload("res://assets/empty-scenes/empty_parcel_material.tres")
-	if material:
-		mesh_instance.material_override = material
-		print(
-			"Applied material to parcel at ",
-			global_position,
-			" - parcel type: ",
-			EmptyParcelType.keys()[parcel_type]
-		)
-	else:
-		print("ERROR: Could not load empty_parcel_material.tres")
+	# Material is already applied in _create_grid_mesh
 
 	# Generate collision for the floor only (no parcel_type collision)
 	_generate_floor_collision()
@@ -365,8 +343,6 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 				noise_strength
 			)
 
-			# Get debug color for this parcel type
-			var debug_color = _get_parcel_type_debug_color()
 
 			# UV coordinates for this cell
 			var u1 = float(x) / float(grid_size)
@@ -385,33 +361,27 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 			# First triangle (v1, v2, v3)
 			surface_tool.set_normal(normal)
 			surface_tool.set_uv(uv1)
-			surface_tool.set_color(debug_color)
 			surface_tool.add_vertex(v1)
 
 			surface_tool.set_normal(normal)
 			surface_tool.set_uv(uv2)
-			surface_tool.set_color(debug_color)
 			surface_tool.add_vertex(v2)
 
 			surface_tool.set_normal(normal)
 			surface_tool.set_uv(uv3)
-			surface_tool.set_color(debug_color)
 			surface_tool.add_vertex(v3)
 
 			# Second triangle (v1, v3, v4)
 			surface_tool.set_normal(normal)
 			surface_tool.set_uv(uv1)
-			surface_tool.set_color(debug_color)
 			surface_tool.add_vertex(v1)
 
 			surface_tool.set_normal(normal)
 			surface_tool.set_uv(uv3)
-			surface_tool.set_color(debug_color)
 			surface_tool.add_vertex(v3)
 
 			surface_tool.set_normal(normal)
 			surface_tool.set_uv(uv4)
-			surface_tool.set_color(debug_color)
 			surface_tool.add_vertex(v4)
 
 
@@ -472,17 +442,17 @@ func _create_displaced_vertex(
 		# Apply displacement in the negative cliff normal direction
 		var displaced_pos = Vector3(local_x, 0, local_z) - cliff_normal * cliff_displacement
 		return displaced_pos
-	else:
-		# Regular floor displacement
-		var noise_value = noise.get_noise_2d(world_x, world_z)
-		# Convert noise from [-1, 1] to [0, 1] for positive-only displacement
-		var base_displacement = (noise_value + 1.0) * 0.5 * noise_strength
 
-		# Calculate falloff based on parcel type and position within grid
-		var falloff_multiplier = _calculate_displacement_falloff(grid_x, grid_z, grid_size)
-		var displacement = base_displacement * falloff_multiplier
+	# Regular floor displacement
+	var noise_value = noise.get_noise_2d(world_x, world_z)
+	# Convert noise from [-1, 1] to [0, 1] for positive-only displacement
+	var base_displacement = (noise_value + 1.0) * 0.5 * noise_strength
 
-		return Vector3(local_x, displacement, local_z)
+	# Calculate falloff based on parcel type and position within grid
+	var falloff_multiplier = _calculate_displacement_falloff(grid_x, grid_z, grid_size)
+	var displacement = base_displacement * falloff_multiplier
+
+	return Vector3(local_x, displacement, local_z)
 
 
 func _calculate_displacement_falloff(grid_x: int, grid_z: int, grid_size: int) -> float:
@@ -553,97 +523,6 @@ func _calculate_displacement_falloff(grid_x: int, grid_z: int, grid_size: int) -
 			falloff = 1.0
 
 	return falloff
-
-
-func _get_parcel_type_debug_color() -> Color:
-	# Systematic color mapping:
-	# Red = North (0.0 = South, 1.0 = North)
-	# Green = East (0.0 = West, 1.0 = East)
-	# Blue = Inner vs Outer (0.0 = Outer/Cliff, 1.0 = Inner)
-
-	var red = 0.0  # North component
-	var green = 0.0  # East component
-	var blue = 0.0  # Inner component
-
-	match parcel_type:
-		# Outer cliff types (blue = 0.0)
-		EmptyParcelType.SOUTH:
-			red = 0.0
-			green = 0.5
-			blue = 0.0  # Black with slight green
-		EmptyParcelType.SOUTHWEST:
-			red = 0.0
-			green = 0.0
-			blue = 0.0  # Pure black (south + west)
-		EmptyParcelType.WEST:
-			red = 0.5
-			green = 0.0
-			blue = 0.0  # Dark red
-		EmptyParcelType.NORTHWEST:
-			red = 1.0
-			green = 0.0
-			blue = 0.0  # Pure red (north + west)
-		EmptyParcelType.NORTH:
-			red = 1.0
-			green = 0.5
-			blue = 0.0  # Red with green
-		EmptyParcelType.NORTHEAST:
-			red = 1.0
-			green = 1.0
-			blue = 0.0  # Yellow (north + east)
-		EmptyParcelType.EAST:
-			red = 0.5
-			green = 1.0
-			blue = 0.0  # Green with red
-		EmptyParcelType.SOUTHEAST:
-			red = 0.0
-			green = 1.0
-			blue = 0.0  # Pure green (south + east)
-
-		# Inner types (blue = 1.0)
-		EmptyParcelType.INNER_SOUTH:
-			red = 0.0
-			green = 0.5
-			blue = 1.0  # Blue with slight green
-		EmptyParcelType.INNER_SOUTHWEST:
-			red = 0.0
-			green = 0.0
-			blue = 1.0  # Pure blue (south + west)
-		EmptyParcelType.INNER_WEST:
-			red = 0.5
-			green = 0.0
-			blue = 1.0  # Magenta
-		EmptyParcelType.INNER_NORTHWEST:
-			red = 1.0
-			green = 0.0
-			blue = 1.0  # Pure magenta (north + west)
-		EmptyParcelType.INNER_NORTH:
-			red = 1.0
-			green = 0.5
-			blue = 1.0  # Magenta with green
-		EmptyParcelType.INNER_NORTHEAST:
-			red = 1.0
-			green = 1.0
-			blue = 1.0  # White (north + east + inner)
-		EmptyParcelType.INNER_EAST:
-			red = 0.5
-			green = 1.0
-			blue = 1.0  # Cyan with red
-		EmptyParcelType.INNER_SOUTHEAST:
-			red = 0.0
-			green = 1.0
-			blue = 1.0  # Pure cyan (south + east + inner)
-
-		# Default/NONE - Gray (middle values)
-		EmptyParcelType.NONE:
-			red = 0.5
-			green = 0.5
-			blue = 0.5  # Gray
-
-		_:
-			return Color.MAGENTA  # Fallback/error color
-
-	return Color(red, green, blue, 1.0)
 
 
 func _generate_floor_collision():
