@@ -409,15 +409,14 @@ func async_adjust_panel_size():
 	# Maximum panel width (leaving space for avatar and margins)
 	var max_panel_width = parent_width - 100  # Avatar + margins
 
+	_adjust_panel_size(max_panel_width)
+
+
+
+func _adjust_panel_size(max_panel_width: float):
+	var margin = 40
 	if compact_view:
-		# Handle compact chat sizing
-		_adjust_compact_panel_size(max_panel_width)
-	else:
-		# Handle extended chat sizing
-		_adjust_extended_panel_size(max_panel_width)
-
-
-func _adjust_extended_panel_size(max_panel_width: float):
+		margin = 20
 	# Calculate required width based on text for extended chat
 	var font = rich_text_label_message.get_theme_default_font()
 	var font_size = rich_text_label_message.get_theme_font_size("normal_font_size")
@@ -434,44 +433,14 @@ func _adjust_extended_panel_size(max_panel_width: float):
 
 	# Minimum and maximum width
 	var min_width = 100.0
-	var desired_width = max(min_width, min(text_width + 40, max_panel_width))  # +40 for internal margins
+	var desired_width = max(min_width, min(text_width + margin, max_panel_width))  # +40 for internal margins
 
 	# Set custom size
 	panel_container_compact.custom_minimum_size.x = desired_width
 	panel_container_extended.custom_minimum_size.x = desired_width
 
 	# If text is too long, allow RichTextLabel to wrap
-	if text_width > max_panel_width - 40:
+	if text_width > max_panel_width - margin:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_OFF
-
-
-func _adjust_compact_panel_size(max_panel_width: float):
-	# Calculate required width based on text for compact chat
-	var font = rich_text_label_compact_chat.get_theme_default_font()
-	var font_size = rich_text_label_compact_chat.get_theme_font_size("normal_font_size")
-	if font_size == -1:
-		font_size = 12  # default size
-
-	var text_width = (
-		font
-		. get_string_size(
-			rich_text_label_compact_chat.get_parsed_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
-		)
-		. x
-	)
-
-	# Minimum and maximum width for compact mode (smaller than extended)
-	var min_width = 1.0  # Smaller minimum for compact mode
-	var desired_width = max(min_width, min(text_width + 20, max_panel_width))  # +20 for smaller margins
-
-	# Set custom size for compact panel
-	if panel_container_compact:
-		panel_container_compact.custom_minimum_size.x = desired_width
-
-	# If text is too long, allow RichTextLabel to wrap
-	if text_width > max_panel_width - 20:
-		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	else:
-		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_OFF
