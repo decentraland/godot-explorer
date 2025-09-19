@@ -237,8 +237,6 @@ func _generate_cliff_mesh(
 	cliff_mesh_instance.material_override = EMPTY_PARCEL_MATERIAL
 
 
-
-
 func _create_grid_mesh():
 	# Create a MeshInstance3D node for the grid
 	var mesh_instance = MeshInstance3D.new()
@@ -342,7 +340,6 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 				noise,
 				noise_strength
 			)
-
 
 			# UV coordinates for this cell
 			var u1 = float(x) / float(grid_size)

@@ -40,7 +40,6 @@ func generate_parcel_data_texture_for_parcel(center_parcel: Vector2i):
 	if not scene_fetcher:
 		return
 
-
 	# Fill the texture based on SceneFetcher parcel data
 	for y in range(TEXTURE_SIZE):
 		for x in range(TEXTURE_SIZE):
@@ -59,6 +58,7 @@ func generate_parcel_data_texture_for_parcel(center_parcel: Vector2i):
 	RenderingServer.global_shader_parameter_set("parcel_data_texture", parcel_data_texture)
 
 	parcel_data_texture_updated.emit(parcel_data_texture)
+
 
 func _get_parcel_color_from_map_pixel(pixel: Color) -> Color:
 	# Extract flags from pixel (matching the map shader logic)
