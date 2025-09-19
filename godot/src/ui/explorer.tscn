@@ -288,7 +288,7 @@ size_flags_vertical = 3
 
 [node name="Control_SafeBottomArea" type="PanelContainer" parent="UI/SafeMarginContainer/InteractableHUD/MarginContainer_ChatPanel/VBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 320)
+custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_u4dfr")
 

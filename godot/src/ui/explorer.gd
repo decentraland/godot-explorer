@@ -2,7 +2,7 @@ class_name Explorer
 extends Node
 
 var player: Node3D = null
-
+var bottom_area_height: int
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -122,12 +122,15 @@ func _ready():
 		label_crosshair.hide()
 	elif Global.is_mobile():
 		mobile_ui.show()
+		bottom_area_height = 320
 		label_crosshair.show()
 		reset_cursor_position()
 		ui_root.gui_input.connect(self._on_ui_root_gui_input)
 	else:
+		bottom_area_height = 200
 		mobile_ui.hide()
 
+	control_safe_bottom_area.custom_minimum_size.y = bottom_area_height
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -572,13 +575,15 @@ func _open_own_profile() -> void:
 
 
 func _on_panel_chat_hide_parcel_info() -> void:
-	h_box_container_top_left_menu.hide()
-	_async_hide_parcel_info()
+	if Global.is_mobile():
+		h_box_container_top_left_menu.hide()
+		_async_hide_parcel_info()
 
 
 func _on_panel_chat_show_parcel_info() -> void:
-	h_box_container_top_left_menu.show()
-	_async_show_parcel_info()
+	if Global.is_mobile():
+		h_box_container_top_left_menu.show()
+		_async_show_parcel_info()
 
 
 # Función auxiliar para obtener los factores de escala del viewport
@@ -639,7 +644,7 @@ func _async_hide_parcel_info() -> void:
 
 func _async_show_parcel_info() -> void:
 	# Ajustar la altura del área segura inferior
-	control_safe_bottom_area.custom_minimum_size.y = 320
+	control_safe_bottom_area.custom_minimum_size.y = bottom_area_height
 
 	# Calcular el ancho escalado para el chat panel
 	var scale_factors = _get_viewport_scale_factors()
