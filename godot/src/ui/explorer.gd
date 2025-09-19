@@ -48,6 +48,8 @@ var _last_outlined_avatar: Avatar = null
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
 @onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
+@onready var control_safe_bottom_area: Control = %Control_SafeBottomArea
+@onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
 
 
 func _process(_dt):
@@ -551,12 +553,112 @@ func _open_own_profile() -> void:
 	release_mouse()
 
 
+#func _get_virtual_keyboard_height() -> int:
+## Obtener el área segura de la pantalla para estimar la altura del teclado virtual
+#var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+#var window_size: Vector2i = DisplayServer.window_get_size()
+#var viewport_size = get_viewport().get_visible_rect().size
+#
+## Calcular la altura del teclado virtual basándose en la diferencia entre
+## el tamaño de la ventana y el área segura en la parte inferior
+#var y_factor: float = viewport_size.y / window_size.y
+#var keyboard_height = int(abs(safe_area.end.y - window_size.y) * y_factor)
+#
+## Si no hay teclado virtual visible, usar una altura mínima
+#if keyboard_height <= 0:
+#keyboard_height = 200  # Altura por defecto cuando no hay teclado virtual
+#
+#return keyboard_height
+
+
 func _on_panel_chat_hide_parcel_info() -> void:
 	h_box_container_top_left_menu.hide()
+	_async_hide_parcel_info()
 
 
 func _on_panel_chat_show_parcel_info() -> void:
 	h_box_container_top_left_menu.show()
+	_async_show_parcel_info()
+
+
+# Función auxiliar para obtener los factores de escala del viewport
+func _get_viewport_scale_factors() -> Vector2:
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var viewport_size = get_viewport().get_visible_rect().size
+	var x_factor: float = viewport_size.x / window_size.x
+	var y_factor: float = viewport_size.y / window_size.y
+	return Vector2(x_factor, y_factor)
+
+
+func _async_hide_parcel_info() -> void:
+	# Esperar hasta que el teclado virtual tenga una altura mayor a 0 y se estabilice
+	var keyboard_height = 0
+	var previous_height = -1
+	var stable_count = 0
+	var max_attempts = 50
+
+	var attempts = 0
+	while attempts < max_attempts:
+		keyboard_height = DisplayServer.virtual_keyboard_get_height()
+		print("Keyboard height (hide) attempt ", attempts + 1, ": ", keyboard_height)
+
+		# Si la altura es mayor a 0 y se mantiene estable por 3 intentos, salir
+		if keyboard_height > 0 and keyboard_height == previous_height:
+			stable_count += 1
+			if stable_count >= 3:
+				print("Keyboard height stabilized at: ", keyboard_height)
+				break
+		else:
+			stable_count = 0
+
+		previous_height = keyboard_height
+		await get_tree().process_frame
+		attempts += 1
+
+	# Aplicar factor de escala para convertir de píxeles físicos a píxeles de viewport
+	var scale_factors = _get_viewport_scale_factors()
+	var scaled_keyboard_height = int(keyboard_height * scale_factors.y)
+
+	print("Raw keyboard height: ", keyboard_height)
+	print("Y factor: ", scale_factors.y)
+	print("Scaled keyboard height: ", scaled_keyboard_height)
+
+	# Ajustar la altura del área segura inferior según el teclado virtual escalado
+	control_safe_bottom_area.custom_minimum_size.y = scaled_keyboard_height
+
+	# Hacer que el margin_container_chat_panel ocupe toda la pantalla
+	margin_container_chat_panel.anchor_left = 0.0
+	margin_container_chat_panel.anchor_right = 1.0
+	margin_container_chat_panel.anchor_top = 0.0
+	margin_container_chat_panel.anchor_bottom = 1.0
+	margin_container_chat_panel.offset_left = 0
+	margin_container_chat_panel.offset_right = 0
+	margin_container_chat_panel.offset_top = 0
+	margin_container_chat_panel.offset_bottom = 0
+
+
+func _async_show_parcel_info() -> void:
+	# Ajustar la altura del área segura inferior
+	control_safe_bottom_area.custom_minimum_size.y = 320
+
+	# Calcular el ancho escalado para el chat panel
+	var scale_factors = _get_viewport_scale_factors()
+	var base_chat_width = 482  # Ancho base en píxeles
+	var scaled_chat_width = int(base_chat_width * scale_factors.x)
+
+	print("Base chat width: ", base_chat_width)
+	print("X factor: ", scale_factors.x)
+	print("Scaled chat width: ", scaled_chat_width)
+
+	# Hacer que el margin_container_chat_panel ocupe left_wide con ancho escalado
+	margin_container_chat_panel.anchor_left = 0.0
+	margin_container_chat_panel.anchor_right = 0.0  # No usar anchor_right para controlar el ancho
+	margin_container_chat_panel.anchor_top = 0.0
+	margin_container_chat_panel.anchor_bottom = 1.0
+	margin_container_chat_panel.offset_left = 0
+	margin_container_chat_panel.offset_right = scaled_chat_width  # Ancho escalado
+	margin_container_chat_panel.offset_top = 0
+	margin_container_chat_panel.offset_bottom = 0
 
 
 func _on_button_open_chat_toggled(toggled_on: bool) -> void:
