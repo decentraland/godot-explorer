@@ -3,6 +3,9 @@ use std::{collections::HashMap, sync::Arc};
 use ethers_core::types::H160;
 use futures_util::StreamExt;
 use http::Uri;
+use livekit::{DataPacket, RoomOptions};
+
+#[cfg(feature = "use_voice_chat")]
 use livekit::{
     options::TrackPublishOptions,
     track::{LocalAudioTrack, LocalTrack, TrackSource},
@@ -10,7 +13,6 @@ use livekit::{
         audio_source::native::NativeAudioSource,
         prelude::{AudioSourceOptions, RtcAudioSource},
     },
-    DataPacket, RoomOptions,
 };
 use prost::Message;
 
@@ -233,29 +235,44 @@ fn spawn_livekit_task(
     let task = rt.spawn(async move {
         tracing::info!("🔌 Connecting to LiveKit room '{}' with auto_subscribe={}", room_id, auto_subscribe);
         let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
-        let native_source = NativeAudioSource::new(AudioSourceOptions{
-            echo_cancellation: true,
-            noise_suppression: true,
-            auto_gain_control: true,
-        }, 48000, 1, None);
-        let mic_track = LocalTrack::Audio(LocalAudioTrack::create_audio_track("mic", RtcAudioSource::Native(native_source.clone())));
-        room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await.unwrap();
+        
+        // Only initialize microphone if voice chat feature is enabled
+        #[cfg(feature = "use_voice_chat")]
+        {
+            let native_source = NativeAudioSource::new(AudioSourceOptions{
+                echo_cancellation: true,
+                noise_suppression: true,
+                auto_gain_control: true,
+            }, 48000, 1, None);
+            let mic_track = LocalTrack::Audio(LocalAudioTrack::create_audio_track("mic", RtcAudioSource::Native(native_source.clone())));
+            room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await.unwrap();
 
-        rt2.spawn(async move {
-            while let Some(data) = mic_receiver.recv().await {
-                let samples_per_channel = data.len() as u32;
-                let res = native_source.capture_frame(&livekit::webrtc::prelude::AudioFrame {
-                    data: data.into(),
-                    sample_rate: 48000,
-                    num_channels: 1,
-                    samples_per_channel
-                }).await;
+            rt2.spawn(async move {
+                while let Some(data) = mic_receiver.recv().await {
+                    let samples_per_channel = data.len() as u32;
+                    let res = native_source.capture_frame(&livekit::webrtc::prelude::AudioFrame {
+                        data: data.into(),
+                        sample_rate: 48000,
+                        num_channels: 1,
+                        samples_per_channel
+                    }).await;
 
-                if res.is_err() {
-                    break;
+                    if res.is_err() {
+                        break;
+                    }
                 }
-            }
-        });
+            });
+        }
+        
+        // Drain mic_receiver if voice chat is disabled to prevent blocking
+        #[cfg(not(feature = "use_voice_chat"))]
+        {
+            rt2.spawn(async move {
+                while mic_receiver.recv().await.is_some() {
+                    // Just drain the channel
+                }
+            });
+        }
 
         'stream: loop {
             tokio::select!(
