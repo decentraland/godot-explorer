@@ -235,7 +235,7 @@ fn spawn_livekit_task(
     let task = rt.spawn(async move {
         tracing::info!("🔌 Connecting to LiveKit room '{}' with auto_subscribe={}", room_id, auto_subscribe);
         let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
-        
+
         // Only initialize microphone if voice chat feature is enabled
         #[cfg(feature = "use_voice_chat")]
         {
@@ -263,7 +263,7 @@ fn spawn_livekit_task(
                 }
             });
         }
-        
+
         // Drain mic_receiver if voice chat is disabled to prevent blocking
         #[cfg(not(feature = "use_voice_chat"))]
         {
