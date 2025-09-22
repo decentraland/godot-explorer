@@ -16,6 +16,8 @@ var virtual_joystick_orig_position: Vector2i
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
+var _avatar_under_crosshair: Avatar = null
+var _last_outlined_avatar: Avatar = null
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -59,26 +61,13 @@ func _process(_dt):
 		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
 
 
-# TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
-	var args := OS.get_cmdline_args()
-	var realm_string = null
-	var location_vector = null
-	var realm_in_place := args.find("--realm")
-	var location_in_place := args.find("--location")
-	var preview_mode := args.has("--preview")
-	var spawn_avatars := args.has("--spawn-avatars")
-
-	if realm_in_place != -1 and args.size() > realm_in_place + 1:
-		realm_string = args[realm_in_place + 1]
-
-	if location_in_place != -1 and args.size() > location_in_place + 1:
-		location_vector = args[location_in_place + 1]
-		location_vector = location_vector.split(",")
-		if location_vector.size() == 2:
-			location_vector = Vector2i(int(location_vector[0]), int(location_vector[1]))
-		else:
-			location_vector = null
+	var realm_string = Global.cli.realm if not Global.cli.realm.is_empty() else null
+	var location_vector = Global.cli.get_location_vector()
+	if location_vector == Vector2i.ZERO:
+		location_vector = null
+	var preview_mode = Global.cli.preview_mode
+	var spawn_avatars = Global.cli.spawn_avatars
 	return [realm_string, location_vector, preview_mode, spawn_avatars]
 
 
@@ -234,6 +223,15 @@ func _on_pointer_tooltip_changed():
 
 func change_tooltips():
 	var tooltip_data = Global.scene_runner.pointer_tooltips.duplicate()
+
+	# Check if there's an avatar behind the crosshair
+	_avatar_under_crosshair = player.get_avatar_under_crosshair()
+	Global.selected_avatar = _avatar_under_crosshair
+
+	# Handle outline changes through the outline system
+	if _avatar_under_crosshair != _last_outlined_avatar:
+		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
+		_last_outlined_avatar = _avatar_under_crosshair
 
 	# Tooltips now include avatar detection from scene_runner
 	if not tooltip_data.is_empty():

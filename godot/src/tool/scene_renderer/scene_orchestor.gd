@@ -25,23 +25,19 @@ var test_camera_tune_base_position: Vector3
 var are_all_scene_loaded: bool = false
 
 
-# TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
-	var args := OS.get_cmdline_args()
 	var scene_data = null
-	var camera_tune := args.find("--test-camera-tune") != -1
+	var camera_tune := Global.cli.test_camera_tune
 
 	# Only use from the editor
-	if USE_TEST_INPUT or args.has("--use-test-input"):
+	if USE_TEST_INPUT or Global.cli.use_test_input:
 		print("scene-renderer: using test input")
 		scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(
 			"res://../tests/scene-renderer-test-input.json"
 		)
 	else:
-		var scene_in_place := args.find("--scene-input-file")
-
-		if scene_in_place != -1 and args.size() > scene_in_place + 1 and scene_data == null:
-			var file_path: String = args[scene_in_place + 1]
+		var file_path: String = Global.cli.scene_input_file
+		if not file_path.is_empty() and scene_data == null:
 			prints("scene-renderer: using input file from command line", file_path)
 			scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(file_path)
 
@@ -275,6 +271,9 @@ func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputS
 	var previous_camera = viewport.get_camera_3d()
 
 	var test_camera_3d = Camera3D.new()
+	# Exclude layer 20 (outline layer) from scene renderer tests
+	# Set cull_mask to show layers 1-19 only (0x7FFFF = 524287)
+	test_camera_3d.cull_mask = 524287
 	add_child(test_camera_3d)
 	test_camera_3d.make_current()
 

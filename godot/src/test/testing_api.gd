@@ -51,8 +51,9 @@ func _ready():
 
 
 func start():
-	var args := OS.get_cmdline_args()
-	var scene_test_index := args.find("--scene-test")
+	var scene_test_index := -1
+	if Global.cli.scene_test_mode:
+		scene_test_index = 0
 
 	if Global.FORCE_TEST:
 		scene_test_index = 0
@@ -62,9 +63,8 @@ func start():
 		self.process_mode = PROCESS_MODE_DISABLED
 		return
 
-	var snapshot_folder_index := args.find("--snapshot-folder")
-	if snapshot_folder_index != -1:
-		snapshot_folder = args[snapshot_folder_index + 1]
+	if not Global.cli.snapshot_folder.is_empty():
+		snapshot_folder = Global.cli.snapshot_folder
 	else:
 		if OS.has_feature("editor"):
 			snapshot_folder = ProjectSettings.globalize_path("res://../tests/snapshots")
@@ -87,7 +87,16 @@ func start():
 
 	var parcels_str: String = Global.FORCE_TEST_ARG
 	if not Global.FORCE_TEST:
-		parcels_str = args[scene_test_index + 1].replace("'", '"')
+		# Get the scene test argument value
+		var scene_test_arg = Global.cli.get_arg("--scene-test")
+		if not scene_test_arg.is_empty():
+			parcels_str = scene_test_arg.replace("'", '"')
+		else:
+			# Fallback to getting from args array for backward compatibility
+			var args := OS.get_cmdline_args()
+			var idx := args.find("--scene-test")
+			if idx != -1 and args.size() > idx + 1:
+				parcels_str = args[idx + 1].replace("'", '"')
 
 	prints("parcels_str=" + str(parcels_str))
 
@@ -180,6 +189,9 @@ func async_take_and_compare_snapshot(
 	var previous_camera = viewport.get_camera_3d()
 
 	var test_camera_3d = Camera3D.new()
+	# Exclude layer 20 (outline layer) from visual tests
+	# Set cull_mask to show layers 1-19 only (0x7FFFF = 524287)
+	test_camera_3d.cull_mask = 524287
 	add_child(test_camera_3d)
 	test_camera_3d.make_current()
 

@@ -1,0 +1,60 @@
+[gd_scene load_steps=8 format=3 uid="uid://qyi7gcf7tphy"]
+
+[ext_resource type="Shader" uid="uid://c1amtn82m0opc" path="res://assets/shaders/avatar_outline_sobel.gdshader" id="1_outline"]
+[ext_resource type="Script" uid="uid://cypaj0ak7monu" path="res://src/logic/player/outline_system.gd" id="2_script"]
+[ext_resource type="Shader" uid="uid://dtv68tkplbgac" path="res://assets/shaders/depth_extraction.gdshader" id="3_depth"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_xigdd"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("3_depth")
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_layer20"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("1_outline")
+shader_parameter/extracted_texture = SubResource("ViewportTexture_layer20")
+shader_parameter/max_distance = 10.0
+shader_parameter/outline_thickness = 1.0
+shader_parameter/hue_rotation_speed = 1.0
+shader_parameter/saturation = 1.0
+shader_parameter/value = 1.0
+
+[node name="OutlineSystem" type="Node3D"]
+script = ExtResource("2_script")
+
+[node name="SubViewport" type="SubViewport" parent="."]
+use_hdr_2d = true
+size = Vector2i(1920, 1080)
+render_target_update_mode = 4
+
+[node name="DepthCamera" type="Camera3D" parent="SubViewport"]
+cull_mask = 524288
+current = true
+far = 100.0
+
+[node name="DepthQuad" type="MeshInstance3D" parent="SubViewport/DepthCamera"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.25)
+visible = false
+layers = 524288
+material_override = SubResource("ShaderMaterial_xigdd")
+cast_shadow = 0
+mesh = SubResource("QuadMesh_1")
+skeleton = NodePath("")
+
+[node name="OutlineQuad" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.25)
+visible = false
+material_override = SubResource("ShaderMaterial_1")
+cast_shadow = 0
+mesh = SubResource("QuadMesh_1")
+skeleton = NodePath("")
+
+[node name="RemoteTransform3D" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("../SubViewport/DepthCamera")

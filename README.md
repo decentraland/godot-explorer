@@ -206,10 +206,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 
 ## 📚 Documentation
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Build System](src/README.md)
-- [Mobile Builds](lib/builds.md)
-- [Android Build Details](lib/ANDROID_BUILD.md)
+- [Project Overview by Claude](https://github.com/decentraland/godot-explorer/blob/main/CLAUDE.md)
 
 ## 🔗 Links
 

@@ -17,6 +17,7 @@ pub fn run(
     itest: bool,
     extras: Vec<String>,
     scene_tests: bool,
+    client_tests: bool,
 ) -> anyhow::Result<()> {
     let program = get_godot_path();
     println!("extras: {:?}", extras);
@@ -40,8 +41,8 @@ pub fn run(
         args.push(extra);
     }
 
-    if itest || scene_tests {
-        run_tests(&program, &args, scene_tests)
+    if itest || scene_tests || client_tests {
+        run_tests(&program, &args, scene_tests, client_tests)
     } else {
         run_godot(&program, &args)
     }
@@ -540,9 +541,22 @@ fn run_godot(program: &str, args: &[&str]) -> anyhow::Result<()> {
 }
 
 /// Runs tests using Godot and checks the output to determine pass/fail.
-fn run_tests(program: &str, args: &[&str], scene_tests: bool) -> anyhow::Result<()> {
+fn run_tests(
+    program: &str,
+    args: &[&str],
+    scene_tests: bool,
+    client_tests: bool,
+) -> anyhow::Result<()> {
+    // Prepare arguments for client tests
+    let mut final_args = args.to_vec();
+
+    if client_tests {
+        final_args.push("--client-test");
+        final_args.push("avatar_outline"); // Run avatar outline tests by default
+    }
+
     let child = std::process::Command::new(program)
-        .args(args)
+        .args(&final_args)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("Failed to run Godot");
@@ -560,6 +574,12 @@ fn run_tests(program: &str, args: &[&str], scene_tests: bool) -> anyhow::Result<
             if line.contains("All test of all scene passed") {
                 test_ok = (true, true, line);
             } else if line.contains("Some tests fail or some scenes couldn't be tested") {
+                test_ok = (true, false, line);
+            }
+        } else if client_tests {
+            if line.contains("All client tests passed!") {
+                test_ok = (true, true, line);
+            } else if line.contains("Visual tests failed!") {
                 test_ok = (true, false, line);
             }
         } else if line.contains("test-exiting with code ") {

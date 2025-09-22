@@ -7,6 +7,7 @@ pub mod dcl_avatar;
 pub mod dcl_avatar_modifier_area_3d;
 pub mod dcl_camera_3d;
 pub mod dcl_camera_mode_area_3d;
+pub mod dcl_cli;
 pub mod dcl_config;
 pub mod dcl_confirm_dialog;
 pub mod dcl_ether;
