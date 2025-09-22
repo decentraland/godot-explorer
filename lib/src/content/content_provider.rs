@@ -1126,6 +1126,58 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn clear_content(&mut self) {
+        // Clear in-memory cache and properly free resources
+        for (_hash_id, entry) in self.cached.drain() {
+            if entry.promise.bind().is_resolved() {
+                let data = entry.promise.bind().get_data();
+                // Free Node3D resources (GLTFs)
+                if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_deleted(&_hash_id);
+                    node_3d.queue_free();
+                }
+            }
+        }
+        
+        // Clear the file cache on disk and stop pending downloads
+        let resource_provider = self.resource_provider.clone();
+        let optimized_data = self.optimized_data.clone();
+        
+        TokioRuntime::spawn(async move {
+            // Clear pending downloads first to stop any waiting operations
+            resource_provider.clear_pending_downloads().await;
+            
+            // Clear the file cache
+            resource_provider.clear().await;
+            
+            // Clear optimized data
+            optimized_data.assets.write().await.clear();
+            optimized_data.dependencies.write().await.clear();
+            optimized_data.loaded_assets.write().await.clear();
+        });
+        
+        // Reset counters
+        self.loading_resources.store(0, Ordering::Relaxed);
+        self.loaded_resources.store(0, Ordering::Relaxed);
+        
+        // Clear optimized assets metadata
+        self.optimized_assets.clear();
+        self.optimized_original_size.clear();
+        
+        // Reset speed tracking
+        self.download_speed_mbs = 0.0;
+        self.every_second_tick = 0.0;
+        
+        #[cfg(feature = "use_resource_tracking")]
+        {
+            self.tracking_tick = 0.0;
+        }
+        
+        tracing::info!("ContentProvider: All cache and requests cleared");
+    }
+
+    #[func]
     pub fn set_cache_folder_max_size(&mut self, size: i64) {
         self.resource_provider.set_max_cache_size(size)
     }

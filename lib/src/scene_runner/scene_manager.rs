@@ -528,7 +528,9 @@ impl SceneManager {
                         let elapsed_from_kill_us = current_time_us - kill_time_us;
                         if elapsed_from_kill_us > 10 * 1e6 as i64 {
                             // 10 seconds from the kill signal
-                            tracing::error!("timeout killing scene");
+                            tracing::error!("timeout killing scene - forcing scene removal");
+                            // Force the scene to be marked as Dead to prevent infinite loop
+                            scene.state = SceneState::Dead;
                         }
                     }
                 }
@@ -576,6 +578,10 @@ impl SceneManager {
                     };
                     tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
                 }
+            } else {
+                // Thread is still running but we're forcing removal (timeout case)
+                // The thread will continue running but will be detached
+                tracing::warn!("scene {} thread still running, detaching thread", scene_id.0);
             }
 
             self.base_mut().emit_signal(

@@ -201,14 +201,24 @@ fn spawn_livekit_task(
 
     let task = rt.spawn(async move {
         tracing::info!("🔌 Connecting to LiveKit room '{}' with auto_subscribe={}", room_id, auto_subscribe);
-        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
+        let (room, mut network_rx) = match livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await {
+            Ok(result) => result,
+            Err(e) => {
+                tracing::error!("Failed to connect to LiveKit room: {:?}", e);
+                // Just log the error and exit the task - no need to send a message
+                return;
+            }
+        };
         let native_source = NativeAudioSource::new(AudioSourceOptions{
             echo_cancellation: true,
             noise_suppression: true,
             auto_gain_control: true,
         }, 48000, 1, None);
         let mic_track = LocalTrack::Audio(LocalAudioTrack::create_audio_track("mic", RtcAudioSource::Native(native_source.clone())));
-        room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await.unwrap();
+        if let Err(e) = room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await {
+            tracing::error!("Failed to publish microphone track: {:?}", e);
+            // Continue without microphone publishing rather than panic
+        }
 
         rt2.spawn(async move {
             while let Some(data) = mic_receiver.recv().await {

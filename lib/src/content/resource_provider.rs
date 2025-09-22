@@ -492,6 +492,18 @@ impl ResourceProvider {
         }
     }
 
+    // Method to clear all pending downloads and notify waiting tasks
+    pub async fn clear_pending_downloads(&self) {
+        let mut pending_downloads = self.pending_downloads.write().await;
+        
+        // Notify all waiting tasks that downloads are cancelled
+        for (_, notify) in pending_downloads.drain() {
+            notify.notify_waiters();
+        }
+        
+        tracing::info!("ResourceProvider: Cleared all pending downloads");
+    }
+
     pub fn consume_download_size(&self) -> u64 {
         self.downloaded_size.swap(0, Ordering::AcqRel)
     }

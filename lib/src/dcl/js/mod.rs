@@ -303,6 +303,7 @@ pub(crate) fn scene_thread(
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
+    let mut receiver_failure_count = 0;
 
     loop {
         state
@@ -358,6 +359,7 @@ pub(crate) fn scene_thread(
                 .try_take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
 
             if let Some(mut receiver) = receiver {
+                receiver_failure_count = 0; // Reset counter on success
                 let response = receiver.blocking_recv();
                 if let Some(RendererResponse::Kill) = response {
                     tracing::info!("scene_id {:?} doesn't process the main thread messages, killing scene from scene thread", scene_id);
@@ -366,10 +368,21 @@ pub(crate) fn scene_thread(
                     state.borrow_mut().put(receiver); // put it again...
                 }
             } else {
+                receiver_failure_count += 1;
                 tracing::error!(
-                    "Failed to take receiver for scene_id {:?}, sleeping for 1000ms",
-                    scene_id
+                    "Failed to take receiver for scene_id {:?}, attempt {}, sleeping for 1000ms",
+                    scene_id, receiver_failure_count
                 );
+                
+                // If we fail too many times, assume the scene is broken and exit
+                if receiver_failure_count > 10 {
+                    tracing::error!(
+                        "Scene {:?} failed to get receiver {} times, assuming scene is broken and exiting",
+                        scene_id, receiver_failure_count
+                    );
+                    break;
+                }
+                
                 std::thread::sleep(Duration::from_millis(1000));
             }
         }

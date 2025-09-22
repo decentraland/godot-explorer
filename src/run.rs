@@ -505,10 +505,18 @@ fn run_cargo_build(
         cwd.clone()
     };
 
-    let build_status = std::process::Command::new("cargo")
-        .current_dir(&working_dir)
-        .args(build_args)
-        .envs(envs)
+    let mut command = std::process::Command::new("cargo");
+    command.current_dir(&working_dir);
+    command.args(build_args);
+    command.envs(envs);
+    
+    // On macOS, set MACOSX_DEPLOYMENT_TARGET to avoid SDK version issues
+    #[cfg(target_os = "macos")]
+    {
+        command.env("MACOSX_DEPLOYMENT_TARGET", "14.0");
+    }
+
+    let build_status = command
         .status()
         .expect("Failed to run cargo build");
 
