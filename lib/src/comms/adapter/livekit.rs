@@ -49,7 +49,16 @@ impl LivekitRoom {
         Self::new_with_options(remote_address, room_id, true)
     }
 
-    pub fn new_with_options(remote_address: String, room_id: String, auto_subscribe: bool) -> Self {
+    pub fn new_with_options(
+        remote_address: String,
+        room_id: String,
+        auto_subscribe: bool,
+    ) -> Self {
+        // Disable auto_subscribe if voice chat is disabled
+        #[cfg(not(feature = "use_voice_chat"))]
+        let auto_subscribe = false;
+        #[cfg(feature = "use_voice_chat")]
+        let auto_subscribe = auto_subscribe;
         let room_type = if auto_subscribe {
             "Archipelago/Main"
         } else {
@@ -126,7 +135,15 @@ impl LivekitRoom {
     }
 
     fn _broadcast_voice(&mut self, frame: Vec<i16>) {
-        let _ = self.mic_sender_to_thread.blocking_send(frame);
+        #[cfg(feature = "use_voice_chat")]
+        {
+            let _ = self.mic_sender_to_thread.blocking_send(frame);
+        }
+        #[cfg(not(feature = "use_voice_chat"))]
+        {
+            // Voice chat disabled - drop the frame
+            let _ = frame;
+        }
     }
 }
 
@@ -158,7 +175,14 @@ impl Adapter for LivekitRoom {
     }
 
     fn support_voice_chat(&self) -> bool {
-        true
+        #[cfg(feature = "use_voice_chat")]
+        {
+            true
+        }
+        #[cfg(not(feature = "use_voice_chat"))]
+        {
+            false
+        }
     }
 
     fn consume_scene_messages(&mut self, _scene_id: &str) -> Vec<(H160, Vec<u8>)> {
