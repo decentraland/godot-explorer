@@ -74,7 +74,7 @@ impl LivekitRoom {
         );
         let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
-        
+
         #[cfg(feature = "use_voice_chat")]
         let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         #[cfg(not(feature = "use_voice_chat"))]
