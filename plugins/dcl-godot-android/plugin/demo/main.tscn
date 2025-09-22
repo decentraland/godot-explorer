@@ -1,0 +1,50 @@
+[gd_scene load_steps=2 format=3 uid="uid://cg3hylang5fxn"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_j0gfq"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_j0gfq")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 60
+alignment = 1
+
+[node name="ButtonCustomTab" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 48
+text = "Open
+Custom Tab"
+
+[node name="ButtonWebView" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 48
+text = "Open
+WebView"
+
+[node name="ButtonWebViewAndDestroy" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 48
+text = "Open WebView and
+5 secs destroy"
+
+[connection signal="pressed" from="VBoxContainer/ButtonCustomTab" to="." method="_on_button_custom_tab_pressed"]
+[connection signal="pressed" from="VBoxContainer/ButtonWebView" to="." method="_on_button_web_kit_pressed"]
+[connection signal="pressed" from="VBoxContainer/ButtonWebViewAndDestroy" to="." method="_on_button_web_kit_and_destroy_pressed"]
