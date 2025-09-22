@@ -34,6 +34,7 @@ pub struct NetworkMessage {
 
 pub struct LivekitRoom {
     sender_to_thread: tokio::sync::mpsc::Sender<NetworkMessage>,
+    #[cfg(feature = "use_voice_chat")]
     mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
     receiver_from_thread:
         tokio::sync::mpsc::Receiver<crate::comms::adapter::message_processor::IncomingMessage>,
@@ -52,7 +53,8 @@ impl LivekitRoom {
     pub fn new_with_options(
         remote_address: String,
         room_id: String,
-        auto_subscribe: bool,
+        #[cfg(feature = "use_voice_chat")] auto_subscribe: bool,
+        #[cfg(not(feature = "use_voice_chat"))] _auto_subscribe: bool,
     ) -> Self {
         // Disable auto_subscribe if voice chat is disabled
         #[cfg(not(feature = "use_voice_chat"))]
@@ -72,7 +74,11 @@ impl LivekitRoom {
         );
         let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        
+        #[cfg(feature = "use_voice_chat")]
         let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        #[cfg(not(feature = "use_voice_chat"))]
+        let (_, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
 
         let room_id_clone = room_id.clone();
         let _ = std::thread::Builder::new()
@@ -91,6 +97,7 @@ impl LivekitRoom {
 
         Self {
             sender_to_thread,
+            #[cfg(feature = "use_voice_chat")]
             mic_sender_to_thread,
             receiver_from_thread,
             room_id,
