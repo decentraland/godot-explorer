@@ -344,8 +344,10 @@ func _on_panel_chat_submit_message(message: String):
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
+			Global.scene_runner.kill_all_scenes()
+			Global.content_provider.clear_content()
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
-			loading_ui.enable_loading_screen()
+			#loading_ui.enable_loading_screen()
 		else:
 			pass
 			# TODO: unknown command

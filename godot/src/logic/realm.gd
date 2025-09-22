@@ -127,6 +127,7 @@ func async_clear_realm():
 	network_id = 0
 	content_base_url = ""
 	Global.scene_runner.kill_all_scenes()
+	Global.content_provider.clear_content()
 
 
 func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> void:
