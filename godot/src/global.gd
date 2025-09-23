@@ -7,6 +7,7 @@ signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile(avatar: DclAvatar)
+signal chat_compact_changed(is_compact: bool)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -42,6 +43,44 @@ var dcl_godot_ios_plugin
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
+
+var is_chat_compact: bool = false
+var url_popup_instance = null
+var jump_in_popup_instance = null
+
+
+func set_chat_compact(is_compact: bool) -> void:
+	if is_chat_compact != is_compact:
+		is_chat_compact = is_compact
+		chat_compact_changed.emit(is_compact)
+
+
+func set_url_popup_instance(popup_instance) -> void:
+	url_popup_instance = popup_instance
+
+
+func show_url_popup(url: String) -> void:
+	if url_popup_instance != null:
+		url_popup_instance.open(url)
+
+
+func hide_url_popup() -> void:
+	if url_popup_instance != null:
+		url_popup_instance.close()
+
+
+func set_jump_in_popup_instance(popup_instance) -> void:
+	jump_in_popup_instance = popup_instance
+
+
+func show_jump_in_popup(coordinates: Vector2i) -> void:
+	if jump_in_popup_instance != null:
+		jump_in_popup_instance.open(coordinates)
+
+
+func hide_jump_in_popup() -> void:
+	if jump_in_popup_instance != null:
+		jump_in_popup_instance.close()
 
 
 func is_xr() -> bool:
@@ -344,6 +383,13 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 	if is_instance_valid(explorer):
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
+		explorer.panel_chat.async_create_chat(
+			[
+				"system",
+				Time.get_unix_time_from_system(),
+				"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]"
+			]
+		)
 	else:
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position

@@ -349,6 +349,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 				_deploy_loading_id = _set_avatar_loading()
 				_deploy_timeout_timer.start()
 
+	UiSounds.play_sound("mainmenu_widget_open")
 	show()
 
 
