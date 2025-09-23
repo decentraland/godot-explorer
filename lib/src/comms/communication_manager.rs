@@ -1140,7 +1140,15 @@ impl CommunicationManager {
                     if let Some(adapter) = archipelago.adapter() {
                         adapter.support_voice_chat()
                     } else {
-                        true // Archipelago inherently supports voice when LiveKit is available
+                        // Only support voice if the feature is enabled
+                        #[cfg(feature = "use_voice_chat")]
+                        {
+                            true
+                        }
+                        #[cfg(not(feature = "use_voice_chat"))]
+                        {
+                            false
+                        }
                     }
                 }
                 _ => false,
