@@ -1,0 +1,9 @@
+# Normalize EOL for all files that Git considers text files.
+* text=auto eol=lf
+
+# Ignore all files
+/**        export-ignore
+
+# Only include the gdscript-async-utils addons folder when downloading from the Asset Library.
+/addons    !export-ignore
+/addons/** !export-ignore

@@ -1,10 +1,4 @@
-[gd_resource type="AudioBusLayout" load_steps=3 format=3 uid="uid://ctjmxlxnfk873"]
-
-[sub_resource type="AudioEffectAmplify" id="AudioEffectAmplify_jf6pc"]
-resource_name = "Amplify"
-
-[sub_resource type="AudioEffectCapture" id="AudioEffectCapture_umb32"]
-resource_name = "Capture"
+[gd_resource type="AudioBusLayout" format=3 uid="uid://ctjmxlxnfk873"]
 
 [resource]
 bus/1/name = &"Scene"
@@ -31,13 +25,3 @@ bus/4/mute = false
 bus/4/bypass_fx = false
 bus/4/volume_db = 0.0
 bus/4/send = &"Master"
-bus/5/name = &"Capture"
-bus/5/solo = false
-bus/5/mute = true
-bus/5/bypass_fx = false
-bus/5/volume_db = 0.0
-bus/5/send = &"Master"
-bus/5/effect/0/effect = SubResource("AudioEffectAmplify_jf6pc")
-bus/5/effect/0/enabled = true
-bus/5/effect/1/effect = SubResource("AudioEffectCapture_umb32")
-bus/5/effect/1/enabled = true
