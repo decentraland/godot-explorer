@@ -27,7 +27,6 @@ var is_own_message: bool = false
 @onready var claimed_checkmark: MarginContainer = %ClaimedCheckmark
 @onready var profile_picture: ProfilePicture = %ProfilePicture
 @onready var profile_picture_compact: ProfilePicture = %ProfilePicture_Compact
-@onready var chat_message_notification: VBoxContainer = %ChatMessage_Notification
 @onready var panel_container_extended: PanelContainer = %PanelContainer_Extended
 @onready var panel_container_compact: PanelContainer = %PanelContainer_Compact
 
@@ -209,7 +208,6 @@ func make_urls_clickable(text: String) -> String:
 	# Process mentions from end to start to maintain correct positions
 	for i in range(mention_results.size() - 1, -1, -1):
 		var mention_match = mention_results[i]
-		print(mention_match)
 		var full_mention = mention_match.get_string()
 		var start_pos = mention_match.get_start()
 		var end_pos = mention_match.get_end()
@@ -412,7 +410,6 @@ func async_adjust_panel_size():
 	_adjust_panel_size(max_panel_width)
 
 
-
 func _adjust_panel_size(max_panel_width: float):
 	var margin = 40
 	if compact_view:
@@ -432,15 +429,15 @@ func _adjust_panel_size(max_panel_width: float):
 	)
 
 	# Minimum and maximum width
-	var min_width = 100.0
-	var desired_width = max(min_width, min(text_width + margin, max_panel_width))  # +40 for internal margins
+	var min_width = 25
+	var desired_width = max(min_width, min(text_width + margin, max_panel_width))
 
 	# Set custom size
 	panel_container_compact.custom_minimum_size.x = desired_width
 	panel_container_extended.custom_minimum_size.x = desired_width
 
 	# If text is too long, allow RichTextLabel to wrap
-	if text_width > max_panel_width - margin:
+	if text_width > desired_width:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:

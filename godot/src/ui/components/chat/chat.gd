@@ -368,8 +368,8 @@ func redraw_messages() -> void:
 	for chat in chats_to_redraw:
 		async_create_chat(chat)
 	_async_scroll_to_bottom()
-	
-		
+
+
 func erase_messages() -> void:
 	for child in v_box_container_chat.get_children():
 		child.queue_free()
