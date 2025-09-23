@@ -17,6 +17,8 @@ var nearby_avatars = null
 var is_open: bool = false
 var scrolled: bool = false
 var new_messages_count: int = 0
+var displayed_chats = []
+var chats_to_redraw = []
 
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
@@ -174,14 +176,14 @@ func _on_button_back_pressed() -> void:
 
 
 func _on_line_edit_command_focus_entered() -> void:
+	timer_hide.stop()
 	panel_container_navbar.hide()
 	emit_signal("hide_parcel_info")
-	timer_hide.stop()
 
 
 func _on_line_edit_command_focus_exited():
-	emit_signal("show_parcel_info")
 	timer_hide.start()
+	emit_signal("show_parcel_info")
 
 
 func _on_timer_hide_timeout() -> void:
@@ -259,6 +261,7 @@ func show_notification() -> void:
 
 func async_create_chat(chat, should_create_notification = false) -> void:
 	scrolled = _check_scroll_status()
+	displayed_chats.append(chat)
 	if not v_box_container_chat or not is_inside_tree():
 		async_create_chat.call_deferred(chat, should_create_notification)
 		return
@@ -357,3 +360,16 @@ func _check_scroll_status() -> bool:
 
 func _on_button_pressed() -> void:
 	_async_scroll_to_bottom()
+
+
+func redraw_messages() -> void:
+	chats_to_redraw = displayed_chats
+	displayed_chats = []
+	for chat in chats_to_redraw:
+		async_create_chat(chat)
+	_async_scroll_to_bottom()
+	
+		
+func erase_messages() -> void:
+	for child in v_box_container_chat.get_children():
+		child.queue_free()

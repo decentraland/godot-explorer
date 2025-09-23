@@ -442,5 +442,7 @@ func _adjust_panel_size(max_panel_width: float):
 	# If text is too long, allow RichTextLabel to wrap
 	if text_width > max_panel_width - margin:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
 		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_OFF
+		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_OFF

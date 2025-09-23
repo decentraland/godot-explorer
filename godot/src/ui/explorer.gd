@@ -594,7 +594,7 @@ func _get_viewport_scale_factors() -> Vector2:
 	var y_factor: float = viewport_size.y / window_size.y
 	return Vector2(x_factor, y_factor)
 
-
+@onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
 func _async_hide_parcel_info() -> void:
 	# Esperar hasta que el teclado virtual tenga una altura mayor a 0 y se estabilice
 	var keyboard_height = 0
@@ -630,40 +630,16 @@ func _async_hide_parcel_info() -> void:
 
 	# Ajustar la altura del área segura inferior según el teclado virtual escalado
 	control_safe_bottom_area.custom_minimum_size.y = scaled_keyboard_height
-
-	# Hacer que el margin_container_chat_panel ocupe toda la pantalla
-	margin_container_chat_panel.anchor_left = 0.0
-	margin_container_chat_panel.anchor_right = 1.0
-	margin_container_chat_panel.anchor_top = 0.0
-	margin_container_chat_panel.anchor_bottom = 1.0
-	margin_container_chat_panel.offset_left = 0
-	margin_container_chat_panel.offset_right = 0
-	margin_container_chat_panel.offset_top = 0
-	margin_container_chat_panel.offset_bottom = 0
+	panel_chat.erase_messages()
+	v_box_container_left_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel_chat.redraw_messages()
 
 
 func _async_show_parcel_info() -> void:
-	# Ajustar la altura del área segura inferior
 	control_safe_bottom_area.custom_minimum_size.y = bottom_area_height
-
-	# Calcular el ancho escalado para el chat panel
-	var scale_factors = _get_viewport_scale_factors()
-	var base_chat_width = 482  # Ancho base en píxeles
-	var scaled_chat_width = int(base_chat_width * scale_factors.x)
-
-	print("Base chat width: ", base_chat_width)
-	print("X factor: ", scale_factors.x)
-	print("Scaled chat width: ", scaled_chat_width)
-
-	# Hacer que el margin_container_chat_panel ocupe left_wide con ancho escalado
-	margin_container_chat_panel.anchor_left = 0.0
-	margin_container_chat_panel.anchor_right = 0.0  # No usar anchor_right para controlar el ancho
-	margin_container_chat_panel.anchor_top = 0.0
-	margin_container_chat_panel.anchor_bottom = 1.0
-	margin_container_chat_panel.offset_left = 0
-	margin_container_chat_panel.offset_right = scaled_chat_width  # Ancho escalado
-	margin_container_chat_panel.offset_top = 0
-	margin_container_chat_panel.offset_bottom = 0
+	panel_chat.erase_messages()
+	v_box_container_left_side.size_flags_horizontal = Control.SIZE_FILL
+	panel_chat.redraw_messages()
 
 
 func _on_button_open_chat_toggled(toggled_on: bool) -> void:
