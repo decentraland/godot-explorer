@@ -5,26 +5,26 @@
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_r6r1x"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_x1g4l"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_kt8ab"]
-[ext_resource type="Theme" uid="uid://deex2so5rq5q5" path="res://assets/themes/dcl_theme.tres" id="6_vm4ah"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_vm4ah"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="7_4l5lg"]
 
-[sub_resource type="Gradient" id="Gradient_kt8ab"]
+[sub_resource type="Gradient" id="Gradient_vm4ah"]
 offsets = PackedFloat32Array(0.00296736, 1)
 colors = PackedColorArray(0.776471, 0.25098, 0.803922, 1, 0.411765, 0.121569, 0.662745, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_r6r1x"]
-gradient = SubResource("Gradient_kt8ab")
+gradient = SubResource("Gradient_vm4ah")
 fill_to = Vector2(0, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_o0won"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_r6r1x"]
 font = ExtResource("2_x1g4l")
-font_size = 95
+font_size = 42
 
 [sub_resource type="LabelSettings" id="LabelSettings_vm4ah"]
 font = ExtResource("4_kt8ab")
-font_size = 50
+font_size = 32
 
 [node name="TermsAndConditions" type="Control"]
 layout_mode = 3
@@ -47,37 +47,39 @@ grow_vertical = 2
 texture = SubResource("GradientTexture2D_r6r1x")
 expand_mode = 3
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="TextureRect"]
+[node name="CenterContainer" type="CenterContainer" parent="TextureRect"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("2_r6r1x")
-metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="VBoxContainer_Terms" type="VBoxContainer" parent="TextureRect/SafeMarginContainer"]
+[node name="Main" type="MarginContainer" parent="TextureRect/CenterContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(675, 0)
 layout_mode = 2
-size_flags_horizontal = 4
+script = ExtResource("2_r6r1x")
+
+[node name="VBoxContainer_Terms" type="VBoxContainer" parent="TextureRect/CenterContainer/Main"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(425, 450)
+layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 texture = ExtResource("1_yiehh")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="Label_Title" type="Label" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
+[node name="Label_Title" type="Label" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("2_x1g4l")
@@ -85,76 +87,63 @@ theme_override_font_sizes/font_size = 36
 text = "Welcome!"
 label_settings = SubResource("LabelSettings_r6r1x")
 
-[node name="Label_Title2" type="Label" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
+[node name="Label_Title2" type="Label" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("2_x1g4l")
-theme_override_font_sizes/font_size = 36
 text = "Before playing, you have to agree to our terms"
 label_settings = SubResource("LabelSettings_vm4ah")
 autowrap_mode = 2
 
-[node name="RichTextLabel" type="RichTextLabel" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
+[node name="HSeparator2" type="HSeparator" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+layout_mode = 2
+theme_override_constants/separation = 50
+theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
+
+[node name="Control" type="Control" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 7
+
+[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("6_vm4ah")
+theme_override_constants/icon_max_width = 40
+autowrap_mode = 2
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="RichTextLabel2" type="RichTextLabel" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer"]
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/line_separation = 10
+theme_override_fonts/normal_font = ExtResource("7_4l5lg")
 theme_override_font_sizes/bold_italics_font_size = 22
 theme_override_font_sizes/italics_font_size = 22
 theme_override_font_sizes/mono_font_size = 22
 theme_override_font_sizes/normal_font_size = 22
 theme_override_font_sizes/bold_font_size = 22
 bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="HSeparator2" type="HSeparator" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
-layout_mode = 2
-theme_override_constants/separation = 103
-theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
-
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Control" type="Control" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer"]
-custom_minimum_size = Vector2(80, 0)
-layout_mode = 2
-
-[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer/Control"]
-unique_name_in_owner = true
-layout_mode = 0
-offset_right = 38.0
-offset_bottom = 38.0
-theme = ExtResource("6_vm4ah")
-autowrap_mode = 2
-
-[node name="RichTextLabel2" type="RichTextLabel" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer"]
-clip_contents = false
-custom_minimum_size = Vector2(700, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_fonts/normal_font = ExtResource("7_4l5lg")
-theme_override_font_sizes/bold_italics_font_size = 42
-theme_override_font_sizes/italics_font_size = 42
-theme_override_font_sizes/mono_font_size = 42
-theme_override_font_sizes/normal_font_size = 42
-theme_override_font_sizes/bold_font_size = 42
-bbcode_enabled = true
 text = "I have read and accept Decentraland's [color=#FF2D55][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#FF2D55][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#FF2D55][url=\"https://decentraland.org/content/\"]Cookie Policy[/url][/color]"
 fit_content = true
 scroll_active = false
 
-[node name="HSeparator4" type="HSeparator" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
+[node name="Control2" type="Control" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 layout_mode = 2
-theme_override_constants/separation = 103
-theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
+size_flags_vertical = 3
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms"]
-layout_mode = 2
-
-[node name="Button_Accept" type="Button" parent="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer2"]
+[node name="Button_Accept" type="Button" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -164,8 +153,7 @@ disabled = true
 text = "ACCEPT"
 icon_alignment = 2
 
-[connection signal="meta_clicked" from="TextureRect/SafeMarginContainer/VBoxContainer_Terms/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="gui_input" from="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer/Control" to="." method="_on_control_gui_input"]
-[connection signal="toggled" from="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer/Control/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
-[connection signal="meta_clicked" from="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer/RichTextLabel2" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="pressed" from="TextureRect/SafeMarginContainer/VBoxContainer_Terms/HBoxContainer2/Button_Accept" to="." method="_on_button_accept_pressed"]
+[connection signal="gui_input" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control" to="." method="_on_control_gui_input"]
+[connection signal="toggled" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
+[connection signal="meta_clicked" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer/RichTextLabel2" to="." method="_on_rich_text_label_meta_clicked"]
+[connection signal="pressed" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Button_Accept" to="." method="_on_button_accept_pressed"]

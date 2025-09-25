@@ -49,12 +49,6 @@ func show_panel(child_node: Control, subpanel: Control = null):
 
 	child_node.show()
 
-	match child_node:
-		control_loading, control_backpack:
-			_show_background1()
-		control_start:
-			_show_background2()
-
 	if _last_panel != null:
 		_last_panel.hide()
 		_last_panel = null
@@ -297,13 +291,3 @@ func _check_button_finish():
 	if button_next.disabled != disabled:
 		avatar_preview.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
 	button_next.disabled = disabled
-
-
-func _show_background1():
-	background_1.show()
-	background_2.hide()
-
-
-func _show_background2():
-	background_1.hide()
-	background_2.show()

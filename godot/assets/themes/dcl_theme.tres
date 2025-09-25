@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=72 format=3 uid="uid://deex2so5rq5q5"]
+[gd_resource type="Theme" load_steps=72 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -20,20 +20,20 @@
 [ext_resource type="StyleBox" uid="uid://nw2w7vul1wnx" path="res://assets/themes/option_button_disabled.tres" id="19_njqlq"]
 [ext_resource type="StyleBox" uid="uid://g3qbyl5ohgr" path="res://assets/themes/option_button_normal.tres" id="20_xeyyo"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="25_1x5yb"]
-[ext_resource type="StyleBox" uid="uid://kkluqoot4wt5" path="res://assets/themes/primary_disabled.tres" id="26_1ib1f"]
+[ext_resource type="StyleBox" uid="uid://bwtnv6ee45sva" path="res://assets/themes/primary_disabled.tres" id="26_1ib1f"]
 [ext_resource type="Texture2D" uid="uid://d1ly37tghjvec" path="res://assets/themes/icons/dcl_checkbox_s.png" id="26_kypl7"]
 [ext_resource type="Texture2D" uid="uid://bbldjv3u5vh3" path="res://assets/themes/icons/dcl_radiobutton_checked.png" id="27_gw08q"]
-[ext_resource type="StyleBox" uid="uid://phggl3khh3pg" path="res://assets/themes/primary.tres" id="28_fqvpv"]
+[ext_resource type="StyleBox" uid="uid://dy12hpu2ygekh" path="res://assets/themes/primary.tres" id="28_fqvpv"]
 [ext_resource type="Texture2D" uid="uid://b4qyvbfm1jjig" path="res://assets/themes/icons/dcl_radiobutton_unchecked.png" id="28_ume8b"]
 [ext_resource type="Texture2D" uid="uid://b3h17d3b6j4ka" path="res://assets/themes/icons/dcl_collapsed_arrow.png" id="29_13bqh"]
-[ext_resource type="StyleBox" uid="uid://cbqndqhqpxw5b" path="res://assets/themes/primary_pressed_hover.tres" id="29_lmy7p"]
+[ext_resource type="StyleBox" uid="uid://cc8ohwj28642h" path="res://assets/themes/primary_pressed_hover.tres" id="29_lmy7p"]
 [ext_resource type="Texture2D" uid="uid://cb0lipd2f3quo" path="res://assets/themes/icons/dcl_collapsed_arrow_mirrored.png" id="30_s5chg"]
 [ext_resource type="Texture2D" uid="uid://um0t477e350q" path="res://assets/themes/icons/dcl_checkbox_unpressed_s.png" id="31_p3sh4"]
 [ext_resource type="StyleBox" uid="uid://47qduga5lyw6" path="res://assets/themes/box_flat_color/fake_white.tres" id="32_b70k2"]
-[ext_resource type="StyleBox" uid="uid://wsoo3k4g6h5f" path="res://assets/themes/secondary_disabled.tres" id="32_kiur2"]
-[ext_resource type="StyleBox" uid="uid://hl2n0ytf8egq" path="res://assets/themes/seconday_pressed_hover.tres" id="33_nnut5"]
+[ext_resource type="StyleBox" uid="uid://4thf2ewgh2eu" path="res://assets/themes/secondary_disabled.tres" id="32_kiur2"]
+[ext_resource type="StyleBox" uid="uid://dseamfrohw1kp" path="res://assets/themes/seconday_pressed_hover.tres" id="33_nnut5"]
 [ext_resource type="StyleBox" uid="uid://3ky70hn3g5de" path="res://assets/themes/box_flat_color/dcl_pink.tres" id="33_x5msw"]
-[ext_resource type="StyleBox" uid="uid://dlrdohgcalgxo" path="res://assets/themes/secondary.tres" id="34_kyfa3"]
+[ext_resource type="StyleBox" uid="uid://c7yyq5lfqino0" path="res://assets/themes/secondary.tres" id="34_kyfa3"]
 [ext_resource type="StyleBox" uid="uid://smxgemhwjkrd" path="res://assets/themes/tabs/tab_disabled.tres" id="38_rijel"]
 [ext_resource type="StyleBox" uid="uid://7trdin4r32ka" path="res://assets/themes/tabs/tab_selected.tres" id="39_g67sn"]
 [ext_resource type="StyleBox" uid="uid://bje68jsif1cd6" path="res://assets/themes/tabs/tab_unselected.tres" id="40_n8xxy"]
@@ -266,7 +266,7 @@ Button/constants/align_to_largest_stylebox = 0
 Button/constants/h_separation = 4
 Button/constants/icon_max_width = 0
 Button/constants/outline_size = 0
-Button/font_sizes/font_size = 32
+Button/font_sizes/font_size = 22
 Button/fonts/font = ExtResource("2_lbfoi")
 Button/styles/disabled = ExtResource("26_1ib1f")
 Button/styles/disabled_mirrored = ExtResource("26_1ib1f")
@@ -284,6 +284,7 @@ CheckBox/colors/font_hover_color = Color(0.4, 0.388235, 0.419608, 1)
 CheckBox/colors/font_hover_pressed_color = Color(0.188235, 0.184314, 0.203922, 1)
 CheckBox/colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 CheckBox/constants/h_separation = 10
+CheckBox/constants/icon_max_width = 25
 CheckBox/font_sizes/font_size = 16
 CheckBox/icons/checked = ExtResource("6_kiur2")
 CheckBox/icons/radio_checked = ExtResource("7_nnut5")
