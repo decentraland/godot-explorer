@@ -195,7 +195,10 @@ func _on_avatar_preview_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if not avatar_preview.avatar.emote_controller.is_playing():
-				avatar_preview.avatar.emote_controller.play_emote("wave")
+				if lineedit_choose_name.text.contains("dancer"):
+					avatar_preview.avatar.emote_controller.play_emote("dance")
+				else:
+					avatar_preview.avatar.emote_controller.play_emote("wave")
 
 
 func _on_button_start_pressed():
