@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=75 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=82 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -41,6 +41,13 @@
 [ext_resource type="StyleBox" uid="uid://7trdin4r32ka" path="res://assets/themes/tabs/tab_selected.tres" id="39_g67sn"]
 [ext_resource type="StyleBox" uid="uid://bje68jsif1cd6" path="res://assets/themes/tabs/tab_unselected.tres" id="40_n8xxy"]
 [ext_resource type="Texture2D" uid="uid://b4h5kvblb5s3a" path="res://assets/themes/icons/dcl_arrow.png" id="41_beqrj"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="42_qnq51"]
+[ext_resource type="StyleBox" uid="uid://bknvp87n5bpcq" path="res://assets/themes/wearable_disabled.tres" id="42_t5yfb"]
+[ext_resource type="StyleBox" uid="uid://d0clnpkagvv6p" path="res://assets/themes/wearable_normal.tres" id="43_xl2gf"]
+[ext_resource type="StyleBox" uid="uid://u0fvwsl85ccd" path="res://assets/themes/wearable_pressed.tres" id="44_xl2gf"]
+[ext_resource type="StyleBox" uid="uid://dos4er8sw2ap6" path="res://assets/themes/wearable_secondary_disabled.tres" id="46_jqsp7"]
+[ext_resource type="StyleBox" uid="uid://djspketxj6yml" path="res://assets/themes/wearable_secondary.tres" id="47_ls4j2"]
+[ext_resource type="StyleBox" uid="uid://bjtof22i81o4x" path="res://assets/themes/wearable_secondary_press_hover.tres" id="48_ec0gy"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1t6yp"]
 
@@ -498,3 +505,38 @@ VScrollBar/styles/scroll_focus = null
 VSlider/styles/grabber_area = SubResource("StyleBoxFlat_ha6x8")
 VSlider/styles/grabber_area_highlight = SubResource("StyleBoxFlat_txu25")
 VSlider/styles/slider = SubResource("StyleBoxFlat_cipmx")
+WearableButton/base_type = &"Button"
+WearableButton/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+WearableButton/colors/font_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
+WearableButton/colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+WearableButton/colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+WearableButton/colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+WearableButton/colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+WearableButton/colors/icon_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
+WearableButton/colors/icon_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+WearableButton/colors/icon_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+WearableButton/colors/icon_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+WearableButton/colors/icon_normal_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+WearableButton/colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+WearableButton/fonts/font = ExtResource("42_qnq51")
+WearableButton/styles/disabled = ExtResource("42_t5yfb")
+WearableButton/styles/disabled_mirrored = ExtResource("42_t5yfb")
+WearableButton/styles/focus = ExtResource("43_xl2gf")
+WearableButton/styles/hover = ExtResource("43_xl2gf")
+WearableButton/styles/hover_mirrored = ExtResource("43_xl2gf")
+WearableButton/styles/hover_pressed = ExtResource("44_xl2gf")
+WearableButton/styles/hover_pressed_mirrored = ExtResource("43_xl2gf")
+WearableButton/styles/normal = ExtResource("43_xl2gf")
+WearableButton/styles/normal_mirrored = ExtResource("43_xl2gf")
+WearableButton/styles/pressed = ExtResource("44_xl2gf")
+WearableSecondaryButton/base_type = &"Button"
+WearableSecondaryButton/styles/disabled = ExtResource("46_jqsp7")
+WearableSecondaryButton/styles/disabled_mirrored = ExtResource("46_jqsp7")
+WearableSecondaryButton/styles/focus = ExtResource("47_ls4j2")
+WearableSecondaryButton/styles/hover = ExtResource("47_ls4j2")
+WearableSecondaryButton/styles/hover_mirrored = ExtResource("47_ls4j2")
+WearableSecondaryButton/styles/hover_pressed = ExtResource("48_ec0gy")
+WearableSecondaryButton/styles/hover_pressed_mirrored = ExtResource("48_ec0gy")
+WearableSecondaryButton/styles/normal = ExtResource("47_ls4j2")
+WearableSecondaryButton/styles/normal_mirrored = ExtResource("47_ls4j2")
+WearableSecondaryButton/styles/pressed = ExtResource("48_ec0gy")

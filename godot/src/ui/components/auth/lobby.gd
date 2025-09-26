@@ -26,7 +26,8 @@ var _last_panel: Control = null
 
 @onready var label_avatar_name = %Label_Name
 
-@onready var avatar_preview = %AvatarPreview
+@onready var avatar_preview_landscape = %AvatarPreview_Landscape
+@onready var avatar_preview_portrait = %AvatarPreview_Portrait
 
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
@@ -35,9 +36,6 @@ var _last_panel: Control = null
 @onready var backpack = %Backpack
 
 @onready var button_open_browser = %Button_OpenBrowser
-
-@onready var background_1: Control = %Background1
-@onready var background_2: Control = %Background2
 
 @onready var v_box_container_cn_first: VBoxContainer = %VboxContainer_CNFirst
 @onready var v_box_container_rp_first: VBoxContainer = %VBoxContainer_RPFirst
@@ -126,7 +124,8 @@ func go_to_explorer():
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
-	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(new_profile)
+	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(new_profile)
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -191,22 +190,13 @@ func _on_button_different_account_pressed():
 
 	Global.get_config().save_to_settings_file()
 	show_connect()
-	avatar_preview.hide()
+	avatar_preview_portrait.hide()
+	avatar_preview_landscape.hide()
 
 
 func _on_button_continue_pressed():
 	_async_on_profile_changed(backpack.mutable_profile)
 	show_connect()
-
-
-func _on_avatar_preview_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			if not avatar_preview.avatar.emote_controller.is_playing():
-				if lineedit_choose_name.text.contains("dancer"):
-					avatar_preview.avatar.emote_controller.play_emote("dance")
-				else:
-					avatar_preview.avatar.emote_controller.play_emote("wave")
 
 
 func _on_button_start_pressed():
@@ -220,7 +210,8 @@ func _on_button_next_pressed():
 	if lineedit_choose_name.text.is_empty():
 		return
 
-	avatar_preview.hide()
+	avatar_preview_landscape.hide()
+	avatar_preview_portrait.hide()
 	show_panel(control_loading)
 	current_profile.set_name(lineedit_choose_name.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
@@ -283,8 +274,10 @@ func _on_button_enter_as_guest_pressed():
 
 
 func _show_avatar_preview():
-	avatar_preview.show()
-	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
+	avatar_preview_landscape.show()
+	avatar_preview_landscape.avatar.emote_controller.play_emote("raiseHand")
+	avatar_preview_portrait.show()
+	avatar_preview_portrait.avatar.emote_controller.play_emote("raiseHand")
 
 
 # gdlint:ignore = async-function-name
@@ -303,5 +296,26 @@ func _on_line_edit_choose_name_text_changed(_new_text):
 func _check_button_finish():
 	var disabled = lineedit_choose_name.text.is_empty()
 	if button_next.disabled != disabled:
-		avatar_preview.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
+		avatar_preview_landscape.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
+		avatar_preview_portrait.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
 	button_next.disabled = disabled
+
+
+func _on_avatar_preview_landscape_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if not avatar_preview_landscape.avatar.emote_controller.is_playing():
+				if lineedit_choose_name.text.contains("dancer"):
+					avatar_preview_landscape.avatar.emote_controller.play_emote("dance")
+				else:
+					avatar_preview_landscape.avatar.emote_controller.play_emote("wave")
+
+
+func _on_avatar_preview_portrait_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if not avatar_preview_portrait.avatar.emote_controller.is_playing():
+				if lineedit_choose_name.text.contains("dancer"):
+					avatar_preview_portrait.avatar.emote_controller.play_emote("dance")
+				else:
+					avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
