@@ -7,11 +7,13 @@ const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_ma
 var base_floor_multimesh: MultiMeshInstance3D = null
 var loaded_parcels_floors: Dictionary = {}
 
+
 func _ready():
 	_initialize_base_floor_multimesh()
 
 	if Global.scene_fetcher != null:
 		Global.scene_fetcher.player_parcel_changed.connect(_on_player_parcel_changed)
+
 
 func _initialize_base_floor_multimesh():
 	base_floor_multimesh = MultiMeshInstance3D.new()
@@ -24,26 +26,18 @@ func _initialize_base_floor_multimesh():
 	var array_mesh = ArrayMesh.new()
 	var arrays = []
 	arrays.resize(Mesh.ARRAY_MAX)
-	var vertices = PackedVector3Array([
-		Vector3(-FLOOR_SIZE/2, 0, -FLOOR_SIZE/2),
-		Vector3(FLOOR_SIZE/2, 0, -FLOOR_SIZE/2),
-		Vector3(FLOOR_SIZE/2, 0, FLOOR_SIZE/2),
-		Vector3(-FLOOR_SIZE/2, 0, FLOOR_SIZE/2)
-	])
+	var vertices = PackedVector3Array(
+		[
+			Vector3(-FLOOR_SIZE / 2, 0, -FLOOR_SIZE / 2),
+			Vector3(FLOOR_SIZE / 2, 0, -FLOOR_SIZE / 2),
+			Vector3(FLOOR_SIZE / 2, 0, FLOOR_SIZE / 2),
+			Vector3(-FLOOR_SIZE / 2, 0, FLOOR_SIZE / 2)
+		]
+	)
 
-	var uvs = PackedVector2Array([
-		Vector2(0, 0),
-		Vector2(1, 0),
-		Vector2(1, 1),
-		Vector2(0, 1)
-	])
+	var uvs = PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)])
 
-	var normals = PackedVector3Array([
-		Vector3.UP,
-		Vector3.UP,
-		Vector3.UP,
-		Vector3.UP
-	])
+	var normals = PackedVector3Array([Vector3.UP, Vector3.UP, Vector3.UP, Vector3.UP])
 
 	var indices = PackedInt32Array([0, 1, 2, 0, 2, 3])
 
@@ -59,6 +53,7 @@ func _initialize_base_floor_multimesh():
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.instance_count = 0
 	base_floor_multimesh.multimesh = multimesh
+
 
 func add_scene_floors(scene_id: String, parcels: Array):
 	if not base_floor_multimesh or not base_floor_multimesh.multimesh:
@@ -86,6 +81,7 @@ func add_scene_floors(scene_id: String, parcels: Array):
 
 	loaded_parcels_floors[scene_id] = new_floors
 	_update_base_floor_visibility()
+
 
 func remove_scene_floors(scene_id: String):
 	if not base_floor_multimesh or not base_floor_multimesh.multimesh:
@@ -117,12 +113,15 @@ func remove_scene_floors(scene_id: String):
 	loaded_parcels_floors = remaining_scene_ids
 	_update_base_floor_visibility()
 
+
 func _update_base_floor_visibility():
 	if base_floor_multimesh:
 		base_floor_multimesh.visible = base_floor_multimesh.multimesh.instance_count > 0
 
+
 func _on_player_parcel_changed(_new_parcel: Vector2i):
 	pass
+
 
 func clear_all_floors():
 	if base_floor_multimesh and base_floor_multimesh.multimesh:

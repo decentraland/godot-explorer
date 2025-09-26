@@ -1,7 +1,10 @@
 class_name ParcelUtils
 extends RefCounted
 
-static func create_aligned_transform(position: Vector3, normal: Vector3, random_rotation: bool = true, scale: float = 1.0) -> Transform3D:
+
+static func create_aligned_transform(
+	position: Vector3, normal: Vector3, random_rotation: bool = true, scale: float = 1.0
+) -> Transform3D:
 	var transform = Transform3D()
 
 	if normal != Vector3.UP:
@@ -20,7 +23,10 @@ static func create_aligned_transform(position: Vector3, normal: Vector3, random_
 	transform.origin = position
 	return transform
 
-static func get_random_indices(array_size: int, count: int, condition_func: Callable = Callable()) -> Array[int]:
+
+static func get_random_indices(
+	array_size: int, count: int, condition_func: Callable = Callable()
+) -> Array[int]:
 	var available_indices = []
 
 	for i in range(array_size):

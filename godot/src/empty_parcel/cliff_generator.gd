@@ -5,8 +5,10 @@ const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_ma
 
 var parent_parcel: EmptyParcel
 
+
 func _ready():
 	parent_parcel = get_parent()
+
 
 func generate_cliffs():
 	for child in get_children():
@@ -18,30 +20,55 @@ func generate_cliffs():
 
 	match parent_parcel.parcel_type:
 		EmptyParcel.EmptyParcelType.NORTH:
-			_generate_cliff_mesh("North", Vector3(0, 0, -8), Vector3(0, 0, -1), Vector3.ZERO, Vector3.ZERO)
+			_generate_cliff_mesh(
+				"North", Vector3(0, 0, -8), Vector3(0, 0, -1), Vector3.ZERO, Vector3.ZERO
+			)
 		EmptyParcel.EmptyParcelType.SOUTH:
-			_generate_cliff_mesh("South", Vector3(0, 0, 8), Vector3(0, 0, 1), Vector3.ZERO, Vector3.ZERO)
+			_generate_cliff_mesh(
+				"South", Vector3(0, 0, 8), Vector3(0, 0, 1), Vector3.ZERO, Vector3.ZERO
+			)
 		EmptyParcel.EmptyParcelType.EAST:
-			_generate_cliff_mesh("East", Vector3(8, 0, 0), Vector3(1, 0, 0), Vector3.ZERO, Vector3.ZERO)
+			_generate_cliff_mesh(
+				"East", Vector3(8, 0, 0), Vector3(1, 0, 0), Vector3.ZERO, Vector3.ZERO
+			)
 		EmptyParcel.EmptyParcelType.WEST:
-			_generate_cliff_mesh("West", Vector3(-8, 0, 0), Vector3(-1, 0, 0), Vector3.ZERO, Vector3.ZERO)
+			_generate_cliff_mesh(
+				"West", Vector3(-8, 0, 0), Vector3(-1, 0, 0), Vector3.ZERO, Vector3.ZERO
+			)
 
 		EmptyParcel.EmptyParcelType.NORTHEAST:
 			var ne_corner_normal = Vector3(1, 0, -1).normalized()
-			_generate_cliff_mesh("North", Vector3(0, 0, -8), Vector3(0, 0, -1), Vector3.ZERO, ne_corner_normal)
-			_generate_cliff_mesh("East", Vector3(8, 0, 0), Vector3(1, 0, 0), ne_corner_normal, Vector3.ZERO)
+			_generate_cliff_mesh(
+				"North", Vector3(0, 0, -8), Vector3(0, 0, -1), Vector3.ZERO, ne_corner_normal
+			)
+			_generate_cliff_mesh(
+				"East", Vector3(8, 0, 0), Vector3(1, 0, 0), ne_corner_normal, Vector3.ZERO
+			)
 		EmptyParcel.EmptyParcelType.NORTHWEST:
 			var nw_corner_normal = Vector3(-1, 0, -1).normalized()
-			_generate_cliff_mesh("North", Vector3(0, 0, -8), Vector3(0, 0, -1), nw_corner_normal, Vector3.ZERO)
-			_generate_cliff_mesh("West", Vector3(-8, 0, 0), Vector3(-1, 0, 0), nw_corner_normal, Vector3.ZERO)
+			_generate_cliff_mesh(
+				"North", Vector3(0, 0, -8), Vector3(0, 0, -1), nw_corner_normal, Vector3.ZERO
+			)
+			_generate_cliff_mesh(
+				"West", Vector3(-8, 0, 0), Vector3(-1, 0, 0), nw_corner_normal, Vector3.ZERO
+			)
 		EmptyParcel.EmptyParcelType.SOUTHEAST:
 			var se_corner_normal = Vector3(1, 0, 1).normalized()
-			_generate_cliff_mesh("South", Vector3(0, 0, 8), Vector3(0, 0, 1), Vector3.ZERO, se_corner_normal)
-			_generate_cliff_mesh("East", Vector3(8, 0, 0), Vector3(1, 0, 0), Vector3.ZERO, se_corner_normal)
+			_generate_cliff_mesh(
+				"South", Vector3(0, 0, 8), Vector3(0, 0, 1), Vector3.ZERO, se_corner_normal
+			)
+			_generate_cliff_mesh(
+				"East", Vector3(8, 0, 0), Vector3(1, 0, 0), Vector3.ZERO, se_corner_normal
+			)
 		EmptyParcel.EmptyParcelType.SOUTHWEST:
 			var sw_corner_normal = Vector3(-1, 0, 1).normalized()
-			_generate_cliff_mesh("South", Vector3(0, 0, 8), Vector3(0, 0, 1), sw_corner_normal, Vector3.ZERO)
-			_generate_cliff_mesh("West", Vector3(-8, 0, 0), Vector3(-1, 0, 0), Vector3.ZERO, sw_corner_normal)
+			_generate_cliff_mesh(
+				"South", Vector3(0, 0, 8), Vector3(0, 0, 1), sw_corner_normal, Vector3.ZERO
+			)
+			_generate_cliff_mesh(
+				"West", Vector3(-8, 0, 0), Vector3(-1, 0, 0), Vector3.ZERO, sw_corner_normal
+			)
+
 
 func _generate_cliff_mesh(
 	cliff_name: String,

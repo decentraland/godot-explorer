@@ -4,8 +4,9 @@ extends Node
 signal parcels_processed(parcel_filled, empty)
 signal report_scene_load(done: bool, is_new_loading: bool, pending: int)
 signal notify_pending_loading_scenes(is_pending: bool)
+signal player_parcel_changed(new_position: Vector2i)
 
-const EMPTY_SCENES = [preload("res://assets/empty-scenes/empty_parcel.tscn")]
+const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
@@ -34,6 +35,8 @@ var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.ne
 var last_version_updated: int = -1
 var last_version_checked: int = -1
 
+var base_floor_manager: BaseFloorManager = null
+
 var parcel_data_texture_generator: ParcelDataTextureGenerator
 
 var desired_portable_experiences_urns: Array[String] = []
@@ -59,6 +62,11 @@ func _ready():
 	# Initialize parcel data texture generator
 	parcel_data_texture_generator = ParcelDataTextureGenerator.new()
 	add_child(parcel_data_texture_generator)
+
+	# Create base floor manager
+	base_floor_manager = BaseFloorManager.new()
+	base_floor_manager.name = "BaseFloorManager"
+	add_child(base_floor_manager)
 
 	# Parcel data texture will be generated after parcels are loaded
 
@@ -231,6 +239,8 @@ func _async_on_desired_scene_changed():
 			if not scene.is_global and scene.scene_number_id != -1:
 				print("Unloading scene: %s (was at parcels: %s)" % [scene.id, scene.parcels])
 				Global.scene_runner.kill_scene(scene.scene_number_id)
+				if base_floor_manager:
+					base_floor_manager.remove_scene_floors(scene.id)
 				scenes_to_remove.append(scene_id)
 			elif scene.is_global:
 				print("Keeping global scene: %s" % scene.id)
@@ -299,11 +309,9 @@ func _async_on_desired_scene_changed():
 					var parcel_string = "%d,%d" % [x, z]
 
 					if not loaded_empty_scenes.has(parcel_string):
-						var index = randi_range(0, EMPTY_SCENES.size() - 1)
-						var scene: Node3D = EMPTY_SCENES[index].instantiate()
+						var scene: Node3D = EMPTY_SCENE.instantiate()
 						var temp := (
-							"EP_%s_%s_%s"
-							% [index, str(x).replace("-", "m"), str(z).replace("-", "m")]
+							"EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
 						)
 						scene.name = temp
 						add_child(scene)
@@ -477,6 +485,7 @@ func update_position(new_position: Vector2i) -> void:
 
 	current_position = new_position
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
+	player_parcel_changed.emit(new_position)
 
 	# Regenerate parcel data texture for new position
 	if parcel_data_texture_generator:
@@ -619,6 +628,10 @@ func _on_try_spawn_scene(
 	)
 	scene_item.scene_number_id = scene_number_id
 
+	# Add base floors for this scene's parcels
+	if base_floor_manager:
+		base_floor_manager.add_scene_floors(scene_item.id, scene_item.parcels)
+
 	return true
 
 
@@ -628,6 +641,8 @@ func reload_scene(scene_id: String) -> void:
 		var scene_number_id: int = scene.scene_number_id
 		if scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)
+			if base_floor_manager:
+				base_floor_manager.remove_scene_floors(scene_id)
 
 		var scene_entity_definition: DclSceneEntityDefinition = scene.scene_entity_definition
 		var local_main_js_path: String = (
@@ -694,10 +709,6 @@ func _calculate_cliff_direction(
 	scene_max_z: int,
 	padding: int
 ):
-	# Load the EmptyParcel class to access the enum
-	var empty_parcel_script = preload("res://src/ui/components/empty_parcel.gd")
-	var EmptyParcelType = empty_parcel_script.EmptyParcelType
-
 	var padding_bounds_min_x = scene_min_x - padding
 	var padding_bounds_max_x = scene_max_x + padding
 	var padding_bounds_min_z = scene_min_z - padding
@@ -718,42 +729,42 @@ func _calculate_cliff_direction(
 
 	# Check for outer cliff corners first (corners take priority over straight edges)
 	if is_on_north_edge and is_on_west_edge:
-		return EmptyParcelType.NORTHWEST
+		return EmptyParcel.EmptyParcelType.NORTHWEST
 	elif is_on_north_edge and is_on_east_edge:
-		return EmptyParcelType.NORTHEAST
+		return EmptyParcel.EmptyParcelType.NORTHEAST
 	elif is_on_south_edge and is_on_west_edge:
-		return EmptyParcelType.SOUTHWEST
+		return EmptyParcel.EmptyParcelType.SOUTHWEST
 	elif is_on_south_edge and is_on_east_edge:
-		return EmptyParcelType.SOUTHEAST
+		return EmptyParcel.EmptyParcelType.SOUTHEAST
 	# Then check for outer cliff straight edges
 	elif is_on_west_edge:
-		return EmptyParcelType.WEST
+		return EmptyParcel.EmptyParcelType.WEST
 	elif is_on_east_edge:
-		return EmptyParcelType.EAST
+		return EmptyParcel.EmptyParcelType.EAST
 	elif is_on_north_edge:
-		return EmptyParcelType.NORTH
+		return EmptyParcel.EmptyParcelType.NORTH
 	elif is_on_south_edge:
-		return EmptyParcelType.SOUTH
+		return EmptyParcel.EmptyParcelType.SOUTH
 	# Check for inner corners (adjacent to loaded scenes)
 	elif is_on_inner_north and is_on_inner_west:
-		return EmptyParcelType.INNER_NORTHWEST
+		return EmptyParcel.EmptyParcelType.INNER_NORTHWEST
 	elif is_on_inner_north and is_on_inner_east:
-		return EmptyParcelType.INNER_NORTHEAST
+		return EmptyParcel.EmptyParcelType.INNER_NORTHEAST
 	elif is_on_inner_south and is_on_inner_west:
-		return EmptyParcelType.INNER_SOUTHWEST
+		return EmptyParcel.EmptyParcelType.INNER_SOUTHWEST
 	elif is_on_inner_south and is_on_inner_east:
-		return EmptyParcelType.INNER_SOUTHEAST
+		return EmptyParcel.EmptyParcelType.INNER_SOUTHEAST
 	# Then check for inner straight edges
 	elif is_on_inner_west:
-		return EmptyParcelType.INNER_WEST
+		return EmptyParcel.EmptyParcelType.INNER_WEST
 	elif is_on_inner_east:
-		return EmptyParcelType.INNER_EAST
+		return EmptyParcel.EmptyParcelType.INNER_EAST
 	elif is_on_inner_north:
-		return EmptyParcelType.INNER_NORTH
+		return EmptyParcel.EmptyParcelType.INNER_NORTH
 	elif is_on_inner_south:
-		return EmptyParcelType.INNER_SOUTH
+		return EmptyParcel.EmptyParcelType.INNER_SOUTH
 	else:
-		return EmptyParcelType.NONE
+		return EmptyParcel.EmptyParcelType.NONE
 
 
 func _calculate_scene_grid_size(parcels: Array[Vector2i]) -> Vector2i:
@@ -795,3 +806,5 @@ func _calculate_scene_grid_size(parcels: Array[Vector2i]) -> Vector2i:
 			)
 
 	return Vector2i(width, height)
+
+# Base floor functions removed - now handled by BaseFloorManager

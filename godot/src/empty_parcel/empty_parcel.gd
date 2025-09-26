@@ -1,7 +1,9 @@
 class_name EmptyParcel
 extends Node3D
 
-class SpawnLocation extends RefCounted:
+
+class SpawnLocation:
+	extends RefCounted
 	var position: Vector3
 	var normal: Vector3
 	var falloff: float
@@ -10,6 +12,7 @@ class SpawnLocation extends RefCounted:
 		position = pos
 		normal = norm
 		falloff = fall
+
 
 enum EmptyParcelType {
 	NONE,
@@ -42,22 +45,27 @@ var spawn_locations: Array[SpawnLocation] = []
 @onready var props_spawner: PropsSpawner = $PropsSpawner
 @onready var tree_spawner: TreeSpawner = $TreeSpawner
 
+
 func _ready():
 	if terrain_generator:
 		terrain_generator.terrain_generated.connect(_on_terrain_generated)
+
 
 func set_parcel_type(type: EmptyParcelType) -> void:
 	parcel_type = type
 	regenerate()
 
+
 func get_parcel_type() -> EmptyParcelType:
 	return parcel_type
+
 
 func regenerate():
 	if terrain_generator:
 		terrain_generator.generate_terrain()
 	if cliff_generator:
 		cliff_generator.generate_cliffs()
+
 
 func _on_terrain_generated():
 	if grass_spawner:
@@ -72,6 +80,7 @@ func _on_terrain_generated():
 		tree_spawner.populate_trees()
 
 	spawn_locations.clear()
+
 
 func calculate_displacement_falloff(grid_x: int, grid_z: int, grid_size: int) -> float:
 	var norm_x = float(grid_x) / float(grid_size - 1)

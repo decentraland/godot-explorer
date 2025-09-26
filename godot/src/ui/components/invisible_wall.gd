@@ -49,13 +49,6 @@ func update_wall_configuration():
 	if collision_shape:
 		collision_shape.position = Vector3.ZERO  # Shape is centered on the StaticBody3D
 
-	print(
-		(
-			"InvisibleWall '%s' configured: pos=%s, size=%s, collision_layer=%d"
-			% [name, global_position, wall_size, collision_layer]
-		)
-	)
-
 
 func _add_debug_visualization():
 	# Remove existing debug mesh if any

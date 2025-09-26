@@ -1,7 +1,7 @@
 class_name TerrainGenerator
 extends Node3D
 
-signal terrain_generated()
+signal terrain_generated
 
 const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_material.tres")
 
@@ -9,13 +9,16 @@ const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_ma
 
 var parent_parcel: EmptyParcel
 
+
 func _ready():
 	parent_parcel = get_parent()
+
 
 func generate_terrain():
 	_create_grid_mesh()
 	_generate_floor_collision()
 	terrain_generated.emit()
+
 
 func _create_grid_mesh():
 	var existing_mesh = get_node_or_null("GridFloor")
@@ -29,6 +32,7 @@ func _create_grid_mesh():
 
 	_generate_mesh(mesh_instance)
 
+
 func _generate_mesh(mesh_instance: MeshInstance3D):
 	var surface_tool = SurfaceTool.new()
 	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -37,6 +41,7 @@ func _generate_mesh(mesh_instance: MeshInstance3D):
 	var generated_mesh = surface_tool.commit()
 	mesh_instance.mesh = generated_mesh
 	mesh_instance.visible = true
+
 
 func _generate_floor_grid(surface_tool: SurfaceTool):
 	var grid_size = 32
@@ -64,13 +69,37 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 				x_pos, z_pos, world_v1.x, world_v1.z, x, z, grid_size, noise, noise_strength
 			)
 			var v2 = _create_displaced_vertex(
-				x_pos + cell_size, z_pos, world_v2.x, world_v2.z, x + 1, z, grid_size, noise, noise_strength
+				x_pos + cell_size,
+				z_pos,
+				world_v2.x,
+				world_v2.z,
+				x + 1,
+				z,
+				grid_size,
+				noise,
+				noise_strength
 			)
 			var v3 = _create_displaced_vertex(
-				x_pos + cell_size, z_pos + cell_size, world_v3.x, world_v3.z, x + 1, z + 1, grid_size, noise, noise_strength
+				x_pos + cell_size,
+				z_pos + cell_size,
+				world_v3.x,
+				world_v3.z,
+				x + 1,
+				z + 1,
+				grid_size,
+				noise,
+				noise_strength
 			)
 			var v4 = _create_displaced_vertex(
-				x_pos, z_pos + cell_size, world_v4.x, world_v4.z, x, z + 1, grid_size, noise, noise_strength
+				x_pos,
+				z_pos + cell_size,
+				world_v4.x,
+				world_v4.z,
+				x,
+				z + 1,
+				grid_size,
+				noise,
+				noise_strength
 			)
 
 			var u1 = float(x) / float(grid_size)
@@ -131,6 +160,7 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 			var spawn_loc2 = EmptyParcel.SpawnLocation.new(point2, normal2, falloff2)
 			parent_parcel.spawn_locations.append(spawn_loc2)
 
+
 func _get_random_point_in_triangle(v1: Vector3, v2: Vector3, v3: Vector3) -> Vector3:
 	var r1 = randf()
 	var r2 = randf()
@@ -138,6 +168,7 @@ func _get_random_point_in_triangle(v1: Vector3, v2: Vector3, v3: Vector3) -> Vec
 		r1 = 1.0 - r1
 		r2 = 1.0 - r2
 	return v1 + r1 * (v2 - v1) + r2 * (v3 - v1)
+
 
 func _create_displaced_vertex(
 	local_x: float,
@@ -154,19 +185,47 @@ func _create_displaced_vertex(
 	var cliff_normal = Vector3.ZERO
 	var parcel_type = parent_parcel.parcel_type
 
-	if parcel_type in [EmptyParcel.EmptyParcelType.NORTH, EmptyParcel.EmptyParcelType.NORTHEAST, EmptyParcel.EmptyParcelType.NORTHWEST]:
+	if (
+		parcel_type
+		in [
+			EmptyParcel.EmptyParcelType.NORTH,
+			EmptyParcel.EmptyParcelType.NORTHEAST,
+			EmptyParcel.EmptyParcelType.NORTHWEST
+		]
+	):
 		if grid_z == 0:
 			is_edge_vertex = true
 			cliff_normal = Vector3(0, 0, -1)
-	if parcel_type in [EmptyParcel.EmptyParcelType.SOUTH, EmptyParcel.EmptyParcelType.SOUTHEAST, EmptyParcel.EmptyParcelType.SOUTHWEST]:
+	if (
+		parcel_type
+		in [
+			EmptyParcel.EmptyParcelType.SOUTH,
+			EmptyParcel.EmptyParcelType.SOUTHEAST,
+			EmptyParcel.EmptyParcelType.SOUTHWEST
+		]
+	):
 		if grid_z == grid_size:
 			is_edge_vertex = true
 			cliff_normal = Vector3(0, 0, 1)
-	if parcel_type in [EmptyParcel.EmptyParcelType.EAST, EmptyParcel.EmptyParcelType.NORTHEAST, EmptyParcel.EmptyParcelType.SOUTHEAST]:
+	if (
+		parcel_type
+		in [
+			EmptyParcel.EmptyParcelType.EAST,
+			EmptyParcel.EmptyParcelType.NORTHEAST,
+			EmptyParcel.EmptyParcelType.SOUTHEAST
+		]
+	):
 		if grid_x == grid_size:
 			is_edge_vertex = true
 			cliff_normal = Vector3(1, 0, 0)
-	if parcel_type in [EmptyParcel.EmptyParcelType.WEST, EmptyParcel.EmptyParcelType.NORTHWEST, EmptyParcel.EmptyParcelType.SOUTHWEST]:
+	if (
+		parcel_type
+		in [
+			EmptyParcel.EmptyParcelType.WEST,
+			EmptyParcel.EmptyParcelType.NORTHWEST,
+			EmptyParcel.EmptyParcelType.SOUTHWEST
+		]
+	):
 		if grid_x == 0:
 			is_edge_vertex = true
 			cliff_normal = Vector3(-1, 0, 0)
@@ -175,9 +234,15 @@ func _create_displaced_vertex(
 		cliff_normal = Vector3(1, 0, -1).normalized()
 	elif parcel_type == EmptyParcel.EmptyParcelType.NORTHWEST and grid_x == 0 and grid_z == 0:
 		cliff_normal = Vector3(-1, 0, -1).normalized()
-	elif parcel_type == EmptyParcel.EmptyParcelType.SOUTHEAST and grid_x == grid_size and grid_z == grid_size:
+	elif (
+		parcel_type == EmptyParcel.EmptyParcelType.SOUTHEAST
+		and grid_x == grid_size
+		and grid_z == grid_size
+	):
 		cliff_normal = Vector3(1, 0, 1).normalized()
-	elif parcel_type == EmptyParcel.EmptyParcelType.SOUTHWEST and grid_x == 0 and grid_z == grid_size:
+	elif (
+		parcel_type == EmptyParcel.EmptyParcelType.SOUTHWEST and grid_x == 0 and grid_z == grid_size
+	):
 		cliff_normal = Vector3(-1, 0, 1).normalized()
 
 	if is_edge_vertex and cliff_normal != Vector3.ZERO:
@@ -197,6 +262,7 @@ func _create_displaced_vertex(
 	var displacement = base_displacement * falloff_multiplier
 
 	return Vector3(local_x, displacement, local_z)
+
 
 func _generate_floor_collision():
 	var existing_body = get_node_or_null("CollisionBody")

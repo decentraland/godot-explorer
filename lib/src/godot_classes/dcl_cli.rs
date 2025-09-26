@@ -56,6 +56,8 @@ pub struct DclCli {
     #[var(get)]
     pub spawn_avatars: bool,
     #[var(get)]
+    pub debug_minimap: bool,
+    #[var(get)]
     pub use_test_input: bool,
     #[var(get)]
     pub test_camera_tune: bool,
@@ -218,6 +220,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
+            ArgDefinition {
+                name: "--debug-minimap".to_string(),
+                description: "Enable debug minimap overlay".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
             // Performance
             ArgDefinition {
                 name: "--measure-perf".to_string(),
@@ -341,6 +349,7 @@ impl INode for DclCli {
         let raycast_debugger = args_map.contains_key("--raycast-debugger");
         let network_debugger = args_map.contains_key("--network-debugger");
         let spawn_avatars = args_map.contains_key("--spawn-avatars");
+        let debug_minimap = args_map.contains_key("--debug-minimap");
         let use_test_input = args_map.contains_key("--use-test-input");
         let test_camera_tune = args_map.contains_key("--test-camera-tune");
         let measure_perf = args_map.contains_key("--measure-perf");
@@ -393,6 +402,7 @@ impl INode for DclCli {
             raycast_debugger,
             network_debugger,
             spawn_avatars,
+            debug_minimap,
             use_test_input,
             test_camera_tune,
             measure_perf,

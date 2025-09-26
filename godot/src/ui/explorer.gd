@@ -58,6 +58,8 @@ func _process(_dt):
 		# Dynamic loading disabled - scenes won't auto-load when moving between parcels
 		# Global.scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
+		# Just emit the signal for things like grass culling
+		Global.scene_fetcher.player_parcel_changed.emit(parcel_position)
 		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
 		Global.change_parcel.emit(parcel_position)
@@ -93,10 +95,11 @@ func _ready():
 
 	emote_wheel.avatar_node = player.avatar
 
-	# Add debug map container
-	debug_map_container = preload("res://src/ui/components/debug_map/debug_map_container.gd").new()
-	ui_root.add_child(debug_map_container)
-	debug_map_container.set_enabled(true)  # Enable by default for debugging
+	# Add debug map container only if --debug-minimap flag is present
+	if Global.cli.debug_minimap:
+		debug_map_container = load("res://src/ui/components/debug_map/debug_map_container.gd").new()
+		ui_root.add_child(debug_map_container)
+		debug_map_container.set_enabled(true)
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
@@ -305,6 +308,11 @@ func _on_control_menu_toggle_fps(visibility):
 
 func _on_control_menu_toggle_minimap(visibility):
 	control_minimap.visible = visibility
+
+
+func toggle_debug_minimap(enabled: bool):
+	if debug_map_container:
+		debug_map_container.set_enabled(enabled)
 
 
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
