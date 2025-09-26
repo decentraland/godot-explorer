@@ -368,6 +368,9 @@ class Categories:
 	const FACIAL: String = "facial"
 	const HANDS: String = "hands"
 	const HANDS_WEAR: String = "hands_wear"
+	const LEGS: String = "legs"
+	const BODY: String = "body"
+	const TORSO: String = "torso"
 
 	# Missing: HEAD, FACIAL, HANDS
 	const HIDING_PRIORITY = [
@@ -409,14 +412,24 @@ class Categories:
 	const REQUIRED_CATEGORIES: PackedStringArray = [EYES, MOUTH, EYEBROWS]
 
 	const MAIN_CATEGORIES: Dictionary = {
-		BODY_SHAPE: [BODY_SHAPE],
-		HAIR: [EYES, EYEBROWS, MOUTH, FACIAL_HAIR, HAIR],
-		UPPER_BODY: [UPPER_BODY],
-		HANDS_WEAR: [HANDS_WEAR],
-		LOWER_BODY: [LOWER_BODY],
-		FEET: [FEET],
-		HAT: [EARRING, EYEWEAR, HAT, HELMET, MASK, TIARA, TOP_HEAD],  # accesories...
-		SKIN: [SKIN],
+		BODY: [BODY_SHAPE, SKIN],
+		HEAD:
+		[
+			EYES,
+			EYEBROWS,
+			MOUTH,
+			FACIAL_HAIR,
+			HAIR,
+			EARRING,
+			EYEWEAR,
+			HAT,
+			HELMET,
+			MASK,
+			TIARA,
+			TOP_HEAD
+		],
+		TORSO: [UPPER_BODY, HANDS_WEAR],
+		LEGS: [LOWER_BODY, FEET],
 		ALL: [ALL],
 	}
 
