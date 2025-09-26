@@ -1,0 +1,83 @@
+shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx;
+
+uniform sampler2D depth_texture : hint_depth_texture, filter_linear_mipmap;
+
+#include "res://shaders/modules/world_aligned.gdshaderinc"
+
+varying vec3 world_position;
+
+uniform sampler2D texture_albedo : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform float alpha_threshold : hint_range(0.0, 1.0) = 0.3;
+uniform float alpha_softness : hint_range(0.0, 0.5) = 0.1;
+uniform sampler2D grass_atlas_texture : source_color;
+uniform float texture_scale : hint_range(0.1, 10.0) = 1.0;
+uniform vec3 distortion = vec3(0.0);
+uniform vec4 grass_rect = vec4(0.01, 0.51, 0.48, 0.48);
+uniform float gradient_power : hint_range(0.1, 4.0) = 1.5;
+uniform float gradient_strength : hint_range(0.0, 1.0) = 0.4;
+uniform float proximity_fade_distance : hint_range(0.0, 1.0) = 0.1;
+uniform float proximity_fade_softness : hint_range(0.01, 1.0) = 0.05;
+uniform float wind_strength : hint_range(0.0, 2.0) = 0.3;
+uniform float wind_speed : hint_range(0.0, 10.0) = 2.0;
+uniform vec2 wind_direction = vec2(1.0, 0.5);
+uniform float wind_scale : hint_range(0.1, 10.0) = 2.0;
+uniform float wind_turbulence : hint_range(0.0, 1.0) = 0.5;
+float simple_noise(vec2 p) {
+	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+float smooth_noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+
+	float a = simple_noise(i);
+	float b = simple_noise(i + vec2(1.0, 0.0));
+	float c = simple_noise(i + vec2(0.0, 1.0));
+	float d = simple_noise(i + vec2(1.0, 1.0));
+
+	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+void vertex() {
+	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+
+	if (VERTEX.y > 0.0) {
+		vec2 wind_dir = normalize(wind_direction);
+		vec2 wind_coords = world_position.xz * wind_scale + wind_dir * TIME * wind_speed;
+		float main_wind = smooth_noise(wind_coords) * 2.0 - 1.0;
+
+		vec2 turb_coords = world_position.xz * wind_scale * 2.3 + wind_dir.yx * TIME * wind_speed * 1.5;
+		float turbulence = (smooth_noise(turb_coords) * 2.0 - 1.0) * wind_turbulence;
+
+		float wind_offset = (main_wind + turbulence) * wind_strength;
+		float height_factor = VERTEX.y;
+		VERTEX.x += wind_dir.x * wind_offset * height_factor;
+		VERTEX.z += wind_dir.y * wind_offset * height_factor;
+		VERTEX.y += abs(wind_offset) * 0.1 * height_factor;
+	}
+
+	NORMAL = vec3(0.0, 1.0, 0.0);
+}
+
+void fragment() {
+	float alpha_mask = texture(texture_albedo, UV).r;
+	float alpha_cutout = smoothstep(alpha_threshold - alpha_softness, alpha_threshold + alpha_softness, alpha_mask);
+
+	vec3 world_normal = vec3(0.0, 1.0, 0.0);
+	vec2 aligned_uv = fract(world_aligned_uv(world_normal, world_position * texture_scale, distortion));
+	vec2 grass_uv = grass_rect.xy + aligned_uv * grass_rect.zw;
+	vec4 grass_color = textureLod(grass_atlas_texture, grass_uv, 1.0);
+
+	float gradient = pow(UV.y, gradient_power);
+	vec3 darkened_color = grass_color.rgb * mix(1.0 - gradient_strength, 1.0, gradient);
+
+	float depth_tex = textureLod(depth_texture, SCREEN_UV, 0.0).r;
+	vec4 world = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth_tex, 1.0);
+	world.xyz /= world.w;
+	float depth_blend = smoothstep(world.z + proximity_fade_distance, world.z + proximity_fade_distance + proximity_fade_softness, VERTEX.z);
+
+	ALPHA = alpha_cutout * depth_blend;
+	ALBEDO = darkened_color;
+	NORMAL = (VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
+}
