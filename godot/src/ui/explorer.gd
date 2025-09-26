@@ -2,7 +2,6 @@ class_name Explorer
 extends Node
 
 var player: Node3D = null
-var bottom_area_height: int
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -123,15 +122,12 @@ func _ready():
 		label_crosshair.hide()
 	elif Global.is_mobile():
 		mobile_ui.show()
-		bottom_area_height = 320
 		label_crosshair.show()
 		reset_cursor_position()
 		ui_root.gui_input.connect(self._on_ui_root_gui_input)
 	else:
-		bottom_area_height = 200
 		mobile_ui.hide()
 
-	control_safe_bottom_area.custom_minimum_size.y = bottom_area_height
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -281,9 +277,9 @@ func _unhandled_input(event):
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
 
-			if event.pressed and event.keycode == KEY_ENTER:
-				panel_chat.toggle_chat_visibility(true)
-				panel_chat.line_edit_command.grab_focus.call_deferred()
+			#if event.pressed and event.keycode == KEY_ENTER:
+			#	panel_chat.toggle_chat_visibility(true)
+			#	panel_chat.line_edit_command.grab_focus.call_deferred()
 
 
 func _on_control_minimap_request_open_map():
@@ -478,7 +474,8 @@ func _on_button_jump_gui_input(event):
 
 
 func _on_button_open_chat_pressed():
-	panel_chat.toggle_open_chat()
+	panel_chat.start_chat()
+	release_mouse()
 
 
 func reset_cursor_position():
@@ -557,16 +554,8 @@ func _open_own_profile() -> void:
 	release_mouse()
 
 
-func _on_panel_chat_hide_parcel_info() -> void:
-	if Global.is_mobile():
-		h_box_container_top_left_menu.hide()
-		_async_hide_parcel_info()
-
-
 func _on_panel_chat_show_parcel_info() -> void:
-	if Global.is_mobile():
-		h_box_container_top_left_menu.show()
-		_async_show_parcel_info()
+	_async_show_parcel_info()
 
 
 func _get_viewport_scale_factors() -> Vector2:
@@ -578,44 +567,25 @@ func _get_viewport_scale_factors() -> Vector2:
 
 
 func _async_hide_parcel_info() -> void:
-	var keyboard_height = 0
-	var previous_height = -1
-	var stable_count = 0
-	var max_attempts = 50
-
-	var attempts = 0
-	while attempts < max_attempts:
-		keyboard_height = DisplayServer.virtual_keyboard_get_height()
-		if keyboard_height > 0 and keyboard_height == previous_height:
-			stable_count += 1
-			if stable_count >= 3:
-				break
-		else:
-			stable_count = 0
-
-		previous_height = keyboard_height
-		await get_tree().process_frame
-		attempts += 1
-
-	var scale_factors = _get_viewport_scale_factors()
-	var scaled_keyboard_height = int(keyboard_height * scale_factors.y)
-
-	control_safe_bottom_area.custom_minimum_size.y = scaled_keyboard_height
+	h_box_container_top_left_menu.hide()
+	mobile_ui.hide()
+	control_safe_bottom_area.hide()
 	panel_chat.erase_messages()
 	v_box_container_left_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel_chat.redraw_messages()
+	prints("Hide!")
 
 
 func _async_show_parcel_info() -> void:
-	control_safe_bottom_area.custom_minimum_size.y = bottom_area_height
+	control_safe_bottom_area.show()
+	h_box_container_top_left_menu.show()
 	panel_chat.erase_messages()
 	v_box_container_left_side.size_flags_horizontal = Control.SIZE_FILL
 	panel_chat.redraw_messages()
+	
+	if Global.is_mobile():
+		mobile_ui.show()
 
 
-func _on_button_open_chat_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		panel_chat.show_chat()
-		release_mouse()
-	else:
-		panel_chat.show_notification()
+func _on_panel_chat_hide_parcel_info() -> void:
+	_async_hide_parcel_info()

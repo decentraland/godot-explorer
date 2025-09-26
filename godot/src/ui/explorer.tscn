@@ -96,6 +96,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
+use_virtual_keyboard_height = true
 
 [node name="InteractableHUD" type="Control" parent="UI/SafeMarginContainer"]
 layout_mode = 2
@@ -274,7 +275,6 @@ custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/icon_max_width = 48
-toggle_mode = true
 icon = ExtResource("9_hj43f")
 icon_alignment = 1
 expand_icon = true
@@ -457,7 +457,7 @@ script = ExtResource("20_064cw")
 
 [connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
-[connection signal="toggled" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_toggled"]
+[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="hide_parcel_info" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer/VBoxContainer_LeftSide/Panel_Chat" to="." method="_on_panel_chat_hide_parcel_info"]
 [connection signal="show_parcel_info" from="UI/SafeMarginContainer/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer/VBoxContainer_LeftSide/Panel_Chat" to="." method="_on_panel_chat_show_parcel_info"]

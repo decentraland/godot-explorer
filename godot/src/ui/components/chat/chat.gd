@@ -45,7 +45,7 @@ var chats_to_redraw = []
 
 
 func _ready():
-	_on_button_back_pressed()
+	#_on_button_back_pressed()
 	avatars_list.async_update_nearby_users(Global.avatars.get_avatars())
 
 	# Connect to avatar scene changed signal instead of using timer
@@ -118,6 +118,8 @@ func _async_scroll_to_bottom() -> void:
 func _on_button_send_pressed():
 	submit_message.emit(line_edit_command.text)
 	line_edit_command.text = ""
+	exit_chat()
+	DisplayServer.virtual_keyboard_hide()
 
 
 func _on_line_edit_command_text_submitted(new_text):
@@ -125,6 +127,7 @@ func _on_line_edit_command_text_submitted(new_text):
 	line_edit_command.text = ""
 	line_edit_command.emit_signal("focus_exited")
 	grab_focus.call_deferred()
+	exit_chat()
 
 
 func finish():
@@ -174,24 +177,6 @@ func _on_button_nearby_users_pressed() -> void:
 func _on_button_back_pressed() -> void:
 	show_chat()
 
-
-func _on_line_edit_command_focus_entered() -> void:
-	timer_hide.stop()
-	panel_container_navbar.hide()
-	emit_signal("hide_parcel_info")
-
-
-func _on_line_edit_command_focus_exited():
-	timer_hide.start()
-	emit_signal("show_parcel_info")
-
-
-func _on_timer_hide_timeout() -> void:
-	panel_container_navbar.hide()
-	h_box_container_line_edit.hide()
-	self_modulate = "#00000000"
-
-
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch or event is InputEventMouseButton:
 		if margin_container_chat.visible:
@@ -203,9 +188,16 @@ func _on_gui_input(event: InputEvent) -> void:
 		if event.pressed and event.keycode == KEY_ENTER:
 			print("ENTER")
 			toggle_chat_visibility(true)
-			show_chat()
+			start_chat()
 			line_edit_command.grab_focus.call_deferred()
 
+func exit_chat() -> void:
+	timer_hide.start()
+	show_parcel_info.emit()
+	panel_container_navbar.hide()
+	h_box_container_line_edit.hide()
+	self_modulate = "#00000000"
+	DisplayServer.virtual_keyboard_hide()
 
 func show_chat() -> void:
 	v_box_container_content.show()
@@ -220,10 +212,18 @@ func show_chat() -> void:
 	texture_rect_logo.show()
 	button_nearby_users.show()
 	timer_hide.start()
+	h_box_container_line_edit.hide()
 
+func start_chat():
+	show_chat()
 	_async_adjust_existing_messages.call_deferred()
-	grab_focus()
 	Global.get_explorer().release_mouse()
+	DisplayServer.virtual_keyboard_show("")
+	h_box_container_line_edit.show()
+	line_edit_command.grab_focus()
+	panel_container_navbar.hide()
+	hide_parcel_info.emit()
+	timer_hide.stop()
 
 
 func _async_adjust_existing_messages() -> void:
@@ -277,7 +277,7 @@ func async_create_chat(chat, should_create_notification = false) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	if new_chat.is_inside_tree() and v_box_container_content.visible:
+	if is_instance_valid(new_chat) and new_chat.is_inside_tree() and v_box_container_content.visible:
 		new_chat.async_adjust_panel_size.call_deferred()
 
 	if !scrolled:
@@ -373,3 +373,7 @@ func redraw_messages() -> void:
 func erase_messages() -> void:
 	for child in v_box_container_chat.get_children():
 		child.queue_free()
+
+
+func _on_timer_hide_timeout() -> void:
+	show_notification()

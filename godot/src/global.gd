@@ -48,6 +48,7 @@ var is_chat_compact: bool = false
 var url_popup_instance = null
 var jump_in_popup_instance = null
 
+var last_keyboard_height: int = 0
 
 func set_chat_compact(is_compact: bool) -> void:
 	if is_chat_compact != is_compact:
