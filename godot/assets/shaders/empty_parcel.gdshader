@@ -9,43 +9,72 @@ uniform sampler2D texture_albedo : source_color;
 uniform float texture_scale : hint_range(0.1, 10.0) = 1.0;
 uniform vec3 distortion = vec3(0.0);
 uniform vec4 grass_rect = vec4(0.01, 0.51, 0.48, 0.48);
-uniform vec4 rock_rect = vec4(0.51, 0.51, 0.48, 0.48);  // Rock texture in the same atlas
-uniform float slope_threshold : hint_range(0.0, 1.0) = 0.7;  // Threshold for grass/rock blend
-uniform float slope_blend : hint_range(0.0, 0.5) = 0.15;  // Blend range for smooth transition
+uniform vec4 rock_rect = vec4(0.51, 0.51, 0.48, 0.48);
+uniform float slope_threshold : hint_range(0.0, 1.0) = 0.7;
+uniform float slope_blend : hint_range(0.0, 0.5) = 0.15;
+
+uniform sampler2D grass_heightmap : hint_default_black, filter_linear_mipmap, repeat_enable;
+uniform float heightmap_scale : hint_range(-16.0, 16.0, 0.001) = -1.0;
+uniform int heightmap_min_layers : hint_range(1, 64) = 3;
+uniform int heightmap_max_layers : hint_range(1, 64) = 5;
+uniform vec2 heightmap_flip = vec2(1.0, 1.0);
+uniform float height_darkening : hint_range(0.0, 1.0, 0.01) = 0.1;
+uniform float heightmap_texture_scale : hint_range(0.1, 10.0) = 1.0;
 
 global uniform sampler2D parcel_data_texture;
 global uniform vec2 current_parcel_origin;
 
 void vertex() {
-	// Calculate world position in vertex shader
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-
-	// Calculate world normal in vertex shader
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 
 }
 
 void fragment() {
-	// Calculate world-aligned UV coordinates using interpolated world position and normal
 	vec2 aligned_uv = fract(world_aligned_uv(world_normal, world_position * texture_scale, distortion));
-
-	// Calculate slope factor (dot product of normal with up vector)
 	float slope = dot(normalize(world_normal), vec3(0.0, 1.0, 0.0));
-
-	// Calculate blend factor with smooth transition
-	// When slope is close to 1 (flat), use grass. When slope is low (steep), use rock
 	float blend_factor = smoothstep(slope_threshold - slope_blend, slope_threshold + slope_blend, slope);
 
-	// Sample both textures
 	vec2 grass_uv = grass_rect.xy + aligned_uv * grass_rect.zw;
 	vec2 rock_uv = rock_rect.xy + aligned_uv * rock_rect.zw;
+	float final_height = 0.0;
+
+	if (blend_factor > 0.01) {
+		vec3 view_dir = normalize(normalize(-VERTEX + EYE_OFFSET) * mat3(TANGENT * heightmap_flip.x, -BINORMAL * heightmap_flip.y, NORMAL));
+		float num_layers = mix(float(heightmap_max_layers), float(heightmap_min_layers), abs(dot(vec3(0.0, 0.0, 1.0), view_dir)));
+		float layer_depth = 1.0 / num_layers;
+		float current_layer_depth = 0.0;
+		vec2 p = view_dir.xy * heightmap_scale * 0.01;
+		vec2 delta = p / num_layers;
+		vec2 ofs = grass_uv;
+		vec2 heightmap_uv = aligned_uv * heightmap_texture_scale;
+		float depth = texture(grass_heightmap, heightmap_uv).r;
+
+		float current_depth = 0.0;
+		while (current_depth < depth) {
+			ofs -= delta;
+			heightmap_uv = (ofs - grass_rect.xy) / grass_rect.zw * heightmap_texture_scale;
+			depth = texture(grass_heightmap, heightmap_uv).r;
+			current_depth += layer_depth;
+		}
+
+		vec2 prev_ofs = ofs + delta;
+		vec2 prev_heightmap_uv = (prev_ofs - grass_rect.xy) / grass_rect.zw * heightmap_texture_scale;
+		float after_depth = depth - current_depth;
+		float before_depth = texture(grass_heightmap, prev_heightmap_uv).r - current_depth + layer_depth;
+
+		float weight = after_depth / (after_depth - before_depth);
+		grass_uv = mix(ofs, prev_ofs, weight);
+
+		vec2 final_heightmap_uv = (grass_uv - grass_rect.xy) / grass_rect.zw * heightmap_texture_scale;
+		final_height = texture(grass_heightmap, final_heightmap_uv).r;
+	}
 
 	vec4 grass_color = textureLod(texture_albedo, grass_uv, 1.0);
 	vec4 rock_color = textureLod(texture_albedo, rock_uv, 1.0);
 
-	// Blend between grass and rock based on slope
+	grass_color.rgb *= 1.0 - ((1.0 - final_height) * height_darkening * blend_factor);
 	vec3 final_color = mix(rock_color.rgb, grass_color.rgb, blend_factor);
 
 	ALBEDO = final_color;
-	ALPHA = 1.0;
 }

@@ -1,6 +1,95 @@
-[gd_scene load_steps=2 format=3 uid="uid://bcdxv1hq2lqvp"]
+[gd_scene load_steps=16 format=3 uid="uid://bcdxv1hq2lqvp"]
 
-[ext_resource type="Script" uid="uid://dicbb32acuomj" path="res://src/ui/components/empty_parcel.gd" id="4_empty_parcel"]
+[ext_resource type="Material" uid="uid://b8xv4j8g2m1kq" path="res://assets/empty-scenes/empty_parcel_material.tres" id="2_hs528"]
+[ext_resource type="Shader" uid="uid://cm0fkgbtmi0l4" path="res://assets/shaders/grass_blades.gdshader" id="2_it4im"]
+[ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="3_17dba"]
+[ext_resource type="Texture2D" uid="uid://dbdybsgq4vixe" path="res://assets/empty-scenes/Grass.png" id="4_5wob7"]
+[ext_resource type="Script" uid="uid://dv6lq5j827ocd" path="res://src/empty_parcel/empty_parcel.gd" id="4_empty_parcel"]
+[ext_resource type="Script" uid="uid://c7fe7gy8rbkm7" path="res://src/empty_parcel/terrain_generator.gd" id="5_terrain_gen"]
+[ext_resource type="Script" uid="uid://x2kq5v5y46hc" path="res://src/empty_parcel/cliff_generator.gd" id="6_cliff_gen"]
+[ext_resource type="Script" uid="uid://b18ebyi37rq0f" path="res://src/empty_parcel/grass_spawner.gd" id="7_grass_spawn"]
+[ext_resource type="Script" uid="uid://tytfrtpw53pq" path="res://src/empty_parcel/rock_spawner.gd" id="8_rock_spawn"]
+[ext_resource type="Script" uid="uid://b42u7bhw4pjxd" path="res://src/empty_parcel/props_spawner.gd" id="9_props_spawn"]
+[ext_resource type="Script" uid="uid://mmwi17kak5h2" path="res://src/empty_parcel/tree_spawner.gd" id="10_tree_spawn"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yf50e"]
+render_priority = 0
+shader = ExtResource("2_it4im")
+shader_parameter/texture_albedo = ExtResource("4_5wob7")
+shader_parameter/alpha_threshold = 0.1
+shader_parameter/alpha_softness = 0.01
+shader_parameter/grass_atlas_texture = ExtResource("3_17dba")
+shader_parameter/texture_scale = 1.0
+shader_parameter/distortion = Vector3(0, 0, 0)
+shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
+shader_parameter/gradient_power = 4.0
+shader_parameter/gradient_strength = 0.4
+shader_parameter/proximity_fade_distance = 0.0
+shader_parameter/proximity_fade_softness = 0.1
+shader_parameter/wind_strength = 0.3
+shader_parameter/wind_speed = 2.0
+shader_parameter/wind_direction = Vector2(1, 0.5)
+shader_parameter/wind_scale = 2.0
+shader_parameter/wind_turbulence = 0.5
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_fwft2"]
+resource_name = "grass_Plane_001"
+_surfaces = [{
+"aabb": AABB(-7.10543e-15, -0.108318, -0.776013, 1e-05, 0.619652, 1.55203),
+"attribute_data": PackedByteArray(255, 255, 255, 255, 255, 127, 255, 255, 255, 127, 255, 127),
+"format": 34896613399,
+"index_count": 3,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0),
+"material": SubResource("ShaderMaterial_yf50e"),
+"name": "Grass",
+"primitive": 3,
+"uv_scale": Vector4(2, 2, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(238, 1, 0, 0, 255, 255, 197, 236, 0, 0, 255, 255, 255, 127, 197, 236, 238, 1, 0, 0, 0, 0, 197, 236, 117, 182, 236, 108, 117, 182, 236, 108, 117, 182, 236, 108)
+}]
+blend_shape_mode = 0
+
+[sub_resource type="MultiMesh" id="MultiMesh_1"]
+resource_local_to_scene = true
+transform_format = 1
+mesh = SubResource("ArrayMesh_fwft2")
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_fwft2"]
+material = ExtResource("2_hs528")
+top_radius = 10.0
+bottom_radius = 9.0
+height = 10.0
 
 [node name="EmptyParcel" type="Node3D"]
 script = ExtResource("4_empty_parcel")
+
+[node name="Grass" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("MultiMesh_1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("CylinderMesh_fwft2")
+
+[node name="TerrainGenerator" type="Node3D" parent="."]
+script = ExtResource("5_terrain_gen")
+terrain_height = 5.0
+
+[node name="CliffGenerator" type="Node3D" parent="."]
+script = ExtResource("6_cliff_gen")
+
+[node name="GrassSpawner" type="Node3D" parent="."]
+script = ExtResource("7_grass_spawn")
+
+[node name="RockSpawner" type="Node3D" parent="."]
+script = ExtResource("8_rock_spawn")
+min_falloff_for_spawning = 0.5
+
+[node name="PropsSpawner" type="Node3D" parent="."]
+script = ExtResource("9_props_spawn")
+min_props = 2
+max_props = 3
+
+[node name="TreeSpawner" type="Node3D" parent="."]
+script = ExtResource("10_tree_spawn")
+max_trees = 3
+min_falloff_for_spawning = 0.5

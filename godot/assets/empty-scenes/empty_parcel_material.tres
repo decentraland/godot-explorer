@@ -1,5 +1,6 @@
-[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://b8xv4j8g2m1kq"]
+[gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://b8xv4j8g2m1kq"]
 
+[ext_resource type="Texture2D" uid="uid://ywncewk8tpsj" path="res://assets/empty-scenes/Grass005_1K-JPG_Displacement.jpg" id="1_rd7x0"]
 [ext_resource type="Shader" uid="uid://b5oywax5er7sb" path="res://assets/shaders/empty_parcel.gdshader" id="1_shader"]
 [ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="2_texture"]
 
@@ -10,6 +11,13 @@ shader_parameter/texture_albedo = ExtResource("2_texture")
 shader_parameter/texture_scale = 0.1
 shader_parameter/distortion = Vector3(0, 0, 0)
 shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
-shader_parameter/rock_rect = Vector4(0.51, 0.51, 0.48, 0.48)
+shader_parameter/rock_rect = Vector4(0.699, 0.505, 0.01, 0.01)
 shader_parameter/slope_threshold = 0.7
 shader_parameter/slope_blend = 0.15
+shader_parameter/grass_heightmap = ExtResource("1_rd7x0")
+shader_parameter/heightmap_scale = 0.250001
+shader_parameter/heightmap_min_layers = 3
+shader_parameter/heightmap_max_layers = 5
+shader_parameter/heightmap_flip = Vector2(1, 1)
+shader_parameter/height_darkening = 0.5
+shader_parameter/heightmap_texture_scale = 1.5
