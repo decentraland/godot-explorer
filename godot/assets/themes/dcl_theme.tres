@@ -1,7 +1,8 @@
-[gd_resource type="Theme" load_steps=72 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=75 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
+[ext_resource type="StyleBox" uid="uid://b777qk4p13rau" path="res://assets/themes/white_button_disabled.tres" id="5_kiur2"]
 [ext_resource type="Texture2D" uid="uid://trdy0bhdjepr" path="res://assets/themes/icons/checkbox_on.svg" id="6_kiur2"]
 [ext_resource type="StyleBox" uid="uid://bagpmfxlu8c0l" path="res://assets/themes/style_box_empty.tres" id="7_ls4j2"]
 [ext_resource type="Texture2D" uid="uid://dqckja3hkxjsx" path="res://assets/themes/icons/radio_button_on.svg" id="7_nnut5"]
@@ -34,6 +35,8 @@
 [ext_resource type="StyleBox" uid="uid://dseamfrohw1kp" path="res://assets/themes/seconday_pressed_hover.tres" id="33_nnut5"]
 [ext_resource type="StyleBox" uid="uid://3ky70hn3g5de" path="res://assets/themes/box_flat_color/dcl_pink.tres" id="33_x5msw"]
 [ext_resource type="StyleBox" uid="uid://c7yyq5lfqino0" path="res://assets/themes/secondary.tres" id="34_kyfa3"]
+[ext_resource type="StyleBox" uid="uid://d0dvukscdvxh6" path="res://assets/themes/white_button.tres" id="35_kyfa3"]
+[ext_resource type="StyleBox" uid="uid://bavxw6nd1syyd" path="res://assets/themes/white_pressed_hover.tres" id="35_nnut5"]
 [ext_resource type="StyleBox" uid="uid://smxgemhwjkrd" path="res://assets/themes/tabs/tab_disabled.tres" id="38_rijel"]
 [ext_resource type="StyleBox" uid="uid://7trdin4r32ka" path="res://assets/themes/tabs/tab_selected.tres" id="39_g67sn"]
 [ext_resource type="StyleBox" uid="uid://bje68jsif1cd6" path="res://assets/themes/tabs/tab_unselected.tres" id="40_n8xxy"]
@@ -434,6 +437,24 @@ SecondaryButton/styles/normal = ExtResource("34_kyfa3")
 SecondaryButton/styles/normal_mirrored = ExtResource("34_kyfa3")
 SecondaryButton/styles/pressed = ExtResource("33_nnut5")
 SecondaryButton/styles/pressed_mirrored = ExtResource("33_nnut5")
+SnowButton/base_type = &"Button"
+SnowButton/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+SnowButton/colors/font_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
+SnowButton/colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+SnowButton/colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+SnowButton/colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+SnowButton/colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+SnowButton/colors/icon_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
+SnowButton/styles/disabled = ExtResource("5_kiur2")
+SnowButton/styles/disabled_mirrored = ExtResource("5_kiur2")
+SnowButton/styles/focus = ExtResource("35_kyfa3")
+SnowButton/styles/hover = ExtResource("35_nnut5")
+SnowButton/styles/hover_mirrored = ExtResource("35_nnut5")
+SnowButton/styles/hover_pressed = ExtResource("35_nnut5")
+SnowButton/styles/hover_pressed_mirrored = ExtResource("35_nnut5")
+SnowButton/styles/normal = ExtResource("35_kyfa3")
+SnowButton/styles/normal_mirrored = ExtResource("35_kyfa3")
+SnowButton/styles/pressed = ExtResource("35_nnut5")
 TabBar/styles/button_highlight = SubResource("StyleBoxFlat_mcvo5")
 TabBar/styles/button_pressed = SubResource("StyleBoxFlat_jxfws")
 TabBar/styles/tab_selected = SubResource("StyleBoxFlat_cdpqd")

@@ -30,9 +30,6 @@ var _last_panel: Control = null
 
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
-@onready var restore_panel: VBoxContainer = %VBoxContainer_RestorePanel
-@onready var choose_name: VBoxContainer = %VBoxContainer_ChooseName
-
 @onready var button_next = %Button_Next
 
 @onready var backpack = %Backpack
@@ -41,6 +38,11 @@ var _last_panel: Control = null
 
 @onready var background_1: Control = %Background1
 @onready var background_2: Control = %Background2
+
+@onready var v_box_container_cn_first: VBoxContainer = %VboxContainer_CNFirst
+@onready var v_box_container_rp_first: VBoxContainer = %VBoxContainer_RPFirst
+@onready var v_box_container_cn_second: VBoxContainer = %VBoxContainer_CNSecond
+@onready var v_box_container_rp_second: VBoxContainer = %VBoxContainer_RPSecond
 
 
 func show_panel(child_node: Control, subpanel: Control = null):
@@ -72,8 +74,7 @@ func async_close_sign_in(generate_snapshots: bool = true):
 # gdlint:ignore = async-function-name
 func _ready():
 	Global.music_player.play("music_builder")
-	restore_panel.hide()
-	choose_name.hide()
+	control_restore_and_choose_name.hide()
 
 	var android_login = %AndroidLogin
 	if is_instance_valid(android_login) and android_login.is_platform_supported():
@@ -134,10 +135,13 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
-			label_avatar_name.set_text("Welcome back " + new_profile.get_name())
+			label_avatar_name.set_text(new_profile.get_name())
 
-			restore_panel.show()
-			show_panel(control_restore_and_choose_name, restore_panel)
+			v_box_container_rp_first.show()
+			v_box_container_rp_second.show()
+			v_box_container_cn_first.hide()
+			v_box_container_cn_second.hide()
+			show_panel(control_restore_and_choose_name)
 			_show_avatar_preview()
 			if _skip_lobby:
 				go_to_explorer.call_deferred()
@@ -152,7 +156,11 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		if profile_has_name():
 			await async_close_sign_in()
 		else:
-			show_panel(control_restore_and_choose_name, choose_name)
+			v_box_container_rp_first.hide()
+			v_box_container_rp_second.hide()
+			v_box_container_cn_first.show()
+			v_box_container_cn_second.show()
+			show_panel(control_restore_and_choose_name)
 			_show_avatar_preview()
 
 
@@ -266,8 +274,11 @@ func profile_has_name():
 
 func _on_button_enter_as_guest_pressed():
 	create_guest_account_if_needed()
-
-	show_panel(control_restore_and_choose_name, choose_name)
+	v_box_container_rp_first.hide()
+	v_box_container_rp_second.hide()
+	v_box_container_cn_first.show()
+	v_box_container_cn_second.show()
+	show_panel(control_restore_and_choose_name)
 	_show_avatar_preview()
 
 

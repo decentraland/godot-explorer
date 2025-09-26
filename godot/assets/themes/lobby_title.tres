@@ -1,0 +1,7 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://ipxcah14n2ng"]
+
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_gegye"]
+
+[resource]
+font = ExtResource("1_gegye")
+font_size = 48

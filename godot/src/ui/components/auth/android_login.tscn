@@ -1,17 +1,23 @@
-[gd_scene load_steps=7 format=3 uid="uid://cf78je1y8dpu3"]
+[gd_scene load_steps=10 format=3 uid="uid://cf78je1y8dpu3"]
 
 [ext_resource type="Script" uid="uid://cpe0atflphcxw" path="res://src/ui/components/auth/android_login.gd" id="1_qmbqb"]
 [ext_resource type="Texture2D" uid="uid://ie2f054vn7kc" path="res://src/ui/components/auth/images/magic.svg" id="2_y8nwo"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_55bff"]
-[ext_resource type="Texture2D" uid="uid://bygd71illytq5" path="res://src/ui/components/auth/images/social-login.png" id="4_8ahke"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="3_kk1uc"]
 [ext_resource type="Texture2D" uid="uid://c8mj35upr63j4" path="res://src/ui/components/auth/images/wallet-connect.png" id="5_mqpw2"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_s14u7"]
+[ext_resource type="Texture2D" uid="uid://wywgcgt311ft" path="res://src/ui/components/auth/images/google.svg" id="5_ys0bb"]
+[ext_resource type="Texture2D" uid="uid://cbukvmu67blst" path="res://src/ui/components/auth/images/discord.svg" id="7_apdvw"]
+[ext_resource type="Texture2D" uid="uid://b1wknyg6nwrwo" path="res://src/ui/components/auth/images/x.svg" id="8_8hgbb"]
+[ext_resource type="Texture2D" uid="uid://kxlueau7wo2u" path="res://src/ui/components/auth/images/apple.svg" id="9_tuhne"]
 
 [node name="MagicLogin" type="VBoxContainer"]
+offset_right = 207.0
+offset_bottom = 116.0
+theme_override_constants/separation = 25
 script = ExtResource("1_qmbqb")
 
 [node name="HBoxContainerMagicInfo" type="HBoxContainer" parent="."]
+visible = false
 layout_mode = 2
 
 [node name="Label" type="Label" parent="HBoxContainerMagicInfo"]
@@ -24,38 +30,85 @@ layout_mode = 2
 texture = ExtResource("2_y8nwo")
 
 [node name="ButtonSocial" type="Button" parent="."]
-custom_minimum_size = Vector2(280, 0)
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 focus_mode = 0
-theme_type_variation = &"RedButton"
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_constants/icon_max_width = 96
 theme_override_fonts/font = ExtResource("3_55bff")
 theme_override_font_sizes/font_size = 16
-text = "  Sign in with Social"
-icon = ExtResource("4_8ahke")
-alignment = 0
-
-[node name="HSeparator2" type="HSeparator" parent="."]
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_s14u7")
+text = "GOOGLE"
+icon = ExtResource("5_ys0bb")
 
 [node name="ButtonWalletConnect" type="Button" parent="."]
-custom_minimum_size = Vector2(280, 0)
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 focus_mode = 0
-theme_type_variation = &"RedButton"
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("3_55bff")
 theme_override_font_sizes/font_size = 16
-text = "  Sign in with Wallet Connect"
+text = "WALLET CONNECT"
 icon = ExtResource("5_mqpw2")
-alignment = 0
 
-[node name="HSeparator3" type="HSeparator" parent="."]
+[node name="HBoxContainer_SocialButtons" type="HBoxContainer" parent="."]
 layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_s14u7")
+theme_override_constants/separation = 25
+
+[node name="Button_Discord" type="Button" parent="HBoxContainer_SocialButtons"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 96
+theme_override_fonts/font = ExtResource("3_55bff")
+theme_override_font_sizes/font_size = 16
+disabled = true
+icon = ExtResource("7_apdvw")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_X" type="Button" parent="HBoxContainer_SocialButtons"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 96
+theme_override_fonts/font = ExtResource("3_55bff")
+theme_override_font_sizes/font_size = 16
+disabled = true
+icon = ExtResource("8_8hgbb")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Apple" type="Button" parent="HBoxContainer_SocialButtons"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 96
+theme_override_fonts/font = ExtResource("3_55bff")
+theme_override_font_sizes/font_size = 16
+disabled = true
+icon = ExtResource("9_tuhne")
+icon_alignment = 1
+expand_icon = true
 
 [connection signal="pressed" from="ButtonSocial" to="." method="_on_button_social_pressed"]
 [connection signal="pressed" from="ButtonWalletConnect" to="." method="_on_button_wallet_connect_pressed"]
+[connection signal="pressed" from="HBoxContainer_SocialButtons/Button_Discord" to="." method="_on_button_social_pressed"]
+[connection signal="pressed" from="HBoxContainer_SocialButtons/Button_X" to="." method="_on_button_social_pressed"]
+[connection signal="pressed" from="HBoxContainer_SocialButtons/Button_Apple" to="." method="_on_button_social_pressed"]

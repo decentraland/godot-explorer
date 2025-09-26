@@ -1,10 +1,11 @@
-[gd_scene load_steps=13 format=3 uid="uid://3tdl1oo7a282"]
+[gd_scene load_steps=12 format=3 uid="uid://3tdl1oo7a282"]
 
 [ext_resource type="Script" uid="uid://3gpw3k7sbwla" path="res://src/ui/components/terms_and_conditions/terms_and_conditions.gd" id="1_v76mk"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="1_yiehh"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_r6r1x"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_x1g4l"]
-[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_kt8ab"]
+[ext_resource type="LabelSettings" uid="uid://ipxcah14n2ng" path="res://assets/themes/lobby_title.tres" id="5_ratj3"]
+[ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="6_ratj3"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_vm4ah"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="7_4l5lg"]
 
@@ -17,14 +18,6 @@ gradient = SubResource("Gradient_vm4ah")
 fill_to = Vector2(0, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_o0won"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_r6r1x"]
-font = ExtResource("2_x1g4l")
-font_size = 42
-
-[sub_resource type="LabelSettings" id="LabelSettings_vm4ah"]
-font = ExtResource("4_kt8ab")
-font_size = 32
 
 [node name="TermsAndConditions" type="Control"]
 layout_mode = 3
@@ -85,14 +78,14 @@ theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("2_x1g4l")
 theme_override_font_sizes/font_size = 36
 text = "Welcome!"
-label_settings = SubResource("LabelSettings_r6r1x")
+label_settings = ExtResource("5_ratj3")
 
 [node name="Label_Title2" type="Label" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 text = "Before playing, you have to agree to our terms"
-label_settings = SubResource("LabelSettings_vm4ah")
+label_settings = ExtResource("6_ratj3")
 autowrap_mode = 2
 
 [node name="HSeparator2" type="HSeparator" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
