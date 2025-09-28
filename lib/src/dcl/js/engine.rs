@@ -9,8 +9,7 @@ use tokio::sync::mpsc::Receiver;
 
 use crate::dcl::{
     common::{
-        SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
-        SceneProcessMainThreadMessages,
+        CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
     },
     crdt::{
         message::{
@@ -80,13 +79,11 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
 async fn op_crdt_recv_from_renderer(
     op_state: Rc<RefCell<OpState>>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    tracing::info!("engine start borrow renderer response");
     let receiver = op_state
         .borrow_mut()
         .borrow_mut::<Arc<tokio::sync::Mutex<Receiver<RendererResponse>>>>()
         .clone();
     let response = receiver.lock().await.recv().await;
-    tracing::info!("engine end borrow renderer response");
 
     let mut op_state = op_state.borrow_mut();
     op_state.put(receiver);
@@ -172,7 +169,7 @@ async fn op_crdt_recv_from_renderer(
         }
     };
 
-    op_state.put(SceneProcessMainThreadMessages(true));
+    op_state.put(CommunicatedWithRenderer);
 
     op_state.put(Vec::<LocalCall>::new());
     op_state.put(mutex_scene_crdt_state);

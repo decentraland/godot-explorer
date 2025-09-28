@@ -14,8 +14,8 @@ mod testing;
 mod websocket;
 
 use crate::dcl::common::{
-    is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneLogLevel, SceneLogMessage, SceneLogs,
-    SceneMainCrdtFileContent, SceneProcessMainThreadMessages, SceneStartTime,
+    is_scene_log_enabled, CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogLevel,
+    SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
@@ -308,10 +308,6 @@ pub(crate) fn scene_thread(
     let mut reported_error_filter = 0;
 
     loop {
-        state
-            .borrow_mut()
-            .put(SceneProcessMainThreadMessages(false));
-
         let dt = std::time::SystemTime::now()
             .duration_since(start_time)
             .unwrap_or(elapsed)
@@ -345,6 +341,20 @@ pub(crate) fn scene_thread(
                     err_str
                 );
             }
+            reported_error_filter += 1;
+
+            if reported_error_filter == 10
+                && state
+                    .borrow()
+                    .try_borrow::<CommunicatedWithRenderer>()
+                    .is_none()
+            {
+                tracing::error!(
+                    "[scene thread {scene_id:?}] too many errors without renderer interaction: shutting down"
+                );
+            }
+        } else if reported_error_filter > 0 {
+            reported_error_filter -= 1;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
@@ -352,6 +362,8 @@ pub(crate) fn scene_thread(
             tracing::info!("breaking from the thread {:?}", scene_id);
             break;
         }
+
+        state.borrow_mut().try_take::<CommunicatedWithRenderer>();
     }
 
     let mut op_state = state.borrow_mut();
