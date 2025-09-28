@@ -220,7 +220,9 @@ pub(crate) fn scene_thread(
     let state = runtime.op_state();
 
     state.borrow_mut().put(thread_sender_to_main);
-    state.borrow_mut().put(Arc::new(tokio::sync::Mutex::new(thread_receive_from_main)));
+    state
+        .borrow_mut()
+        .put(Arc::new(tokio::sync::Mutex::new(thread_receive_from_main)));
     state.borrow_mut().put(ethereum_provider);
 
     if let Some(network_inspector_sender) = maybe_network_inspector_sender {

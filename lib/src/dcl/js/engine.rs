@@ -5,7 +5,7 @@ use std::{
 };
 
 use deno_core::{op2, OpDecl, OpState};
-use tokio::sync::{mpsc::Receiver};
+use tokio::sync::mpsc::Receiver;
 
 use crate::dcl::{
     common::{
