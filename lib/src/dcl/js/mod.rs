@@ -37,6 +37,7 @@ use deno_core::{
 use deno_core::{JsRuntime, OpDecl, PollEventLoopOptions};
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use tokio::sync::mpsc::Receiver;
 use v8::IsolateHandle;
 
 #[cfg(feature = "enable_inspector")]
@@ -139,7 +140,7 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
 // main scene processing thread - constructs an isolate and runs the scene
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn scene_thread(
-    thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
+    thread_receive_from_main: Receiver<RendererResponse>,
     scene_crdt: Arc<Mutex<SceneCrdtState>>,
     spawn_dcl_scene_data: SpawnDclSceneData,
 ) {
@@ -219,7 +220,7 @@ pub(crate) fn scene_thread(
     let state = runtime.op_state();
 
     state.borrow_mut().put(thread_sender_to_main);
-    state.borrow_mut().put(thread_receive_from_main);
+    state.borrow_mut().put(Arc::new(tokio::sync::Mutex::new(thread_receive_from_main)));
     state.borrow_mut().put(ethereum_provider);
 
     if let Some(network_inspector_sender) = maybe_network_inspector_sender {
@@ -328,49 +329,19 @@ pub(crate) fn scene_thread(
         });
 
         if let Err(e) = result {
-            reported_error_filter += 1;
-
-            if reported_error_filter <= 10 {
-                let err_str = format!("{:?}", e);
-                if let Ok(err) = e.downcast::<JsError>() {
-                    tracing::error!(
-                        "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
-                        err_str,
-                        err.message,
-                        err
-                    );
-                } else {
-                    tracing::error!(
-                        "[scene thread {scene_id:?}] script error onUpdate: {}",
-                        err_str
-                    );
-                }
-            }
-        } else {
-            reported_error_filter -= 1;
-        }
-
-        // if the crdtSendToRenderer is not called, we didn't process the RendererResponse, so the SceneKill will be never be processed...
-        let main_thread_processed = state.borrow().borrow::<SceneProcessMainThreadMessages>().0;
-        if !main_thread_processed {
-            let receiver = state
-                .borrow_mut()
-                .try_take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
-
-            if let Some(mut receiver) = receiver {
-                let response = receiver.blocking_recv();
-                if let Some(RendererResponse::Kill) = response {
-                    tracing::info!("scene_id {:?} doesn't process the main thread messages, killing scene from scene thread", scene_id);
-                    break;
-                } else {
-                    state.borrow_mut().put(receiver); // put it again...
-                }
+            let err_str = format!("{:?}", e);
+            if let Ok(err) = e.downcast::<JsError>() {
+                tracing::error!(
+                    "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
+                    err_str,
+                    err.message,
+                    err
+                );
             } else {
                 tracing::error!(
-                    "Failed to take receiver for scene_id {:?}, sleeping for 1000ms",
-                    scene_id
+                    "[scene thread {scene_id:?}] script error onUpdate: {}",
+                    err_str
                 );
-                std::thread::sleep(Duration::from_millis(1000));
             }
         }
 
