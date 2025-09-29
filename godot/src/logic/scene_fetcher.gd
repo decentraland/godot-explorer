@@ -245,7 +245,6 @@ func _async_on_desired_scene_changed():
 			elif scene.is_global:
 				print("Keeping global scene: %s" % scene.id)
 
-	# Remove killed scenes from loaded_scenes dictionary
 	for scene_id in scenes_to_remove:
 		loaded_scenes.erase(scene_id)
 
@@ -255,12 +254,11 @@ func _async_on_desired_scene_changed():
 		if not scene.is_global:  # Only consider local scenes for bounds
 			all_scene_parcels.append_array(scene.parcels)
 
-	# Filter out distant parcels to prevent huge padding areas
+	# HACK: Filter out distant parcels to prevent huge padding areas
 	# This happens when there's a scene at (0,0) mixed with scenes far away
 	if all_scene_parcels.size() > 1:
 		all_scene_parcels = _filter_clustered_parcels(all_scene_parcels)
 
-	# Only recreate floating island if scene parcels have changed
 	var current_scene_hash = str(all_scene_parcels.hash())
 	if (
 		not all_scene_parcels.is_empty()
@@ -279,9 +277,8 @@ func _async_on_desired_scene_changed():
 		# Store the hash to avoid recreating unnecessarily
 		set_meta("last_scene_hash", current_scene_hash)
 
-		# Create floating island with empty parcels
 		var empty_parcels_coords = []
-		# Calculate bounding box of all loaded scene parcels
+
 		var min_x = all_scene_parcels[0].x
 		var max_x = all_scene_parcels[0].x
 		var min_z = all_scene_parcels[0].y
@@ -317,57 +314,15 @@ func _async_on_desired_scene_changed():
 						add_child(scene)
 						scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 
-						# Set cliff direction based on position relative to scene bounds
-						var cliff_direction = _calculate_cliff_direction(
-							x, z, min_x, max_x, min_z, max_z, padding
+						# Calculate adjacent parcel states for SDF-based falloff
+						var config = _calculate_parcel_adjacency(
+							x, z, min_x - padding, max_x + padding,
+							min_z - padding, max_z + padding, scene_parcel_set
 						)
-						if scene.has_method("set_parcel_type"):
-							scene.set_parcel_type(cliff_direction)
+						scene.set_corner_configuration(config)
 
 						loaded_empty_scenes[parcel_string] = scene
 
-		# Calculate edge parcels (outermost perimeter)
-		var edge_parcels: Array[Vector2i] = []
-		var padding_bounds_min_x = min_x - padding
-		var padding_bounds_max_x = max_x + padding
-		var padding_bounds_min_z = min_z - padding
-		var padding_bounds_max_z = max_z + padding
-
-		for coord in empty_parcels_coords:
-			var x = coord.x
-			var z = coord.y
-			# A parcel is on the edge if it's on the boundary of the padded area
-			if (
-				x == padding_bounds_min_x
-				or x == padding_bounds_max_x
-				or z == padding_bounds_min_z
-				or z == padding_bounds_max_z
-			):
-				edge_parcels.append(coord)
-
-		# Store edge parcels for external access and add edge indicators
-		current_edge_parcels = edge_parcels
-
-		# Add white cube indicators to edge parcels
-		for edge_coord in edge_parcels:
-			var parcel_string = "%d,%d" % [edge_coord.x, edge_coord.y]
-			if loaded_empty_scenes.has(parcel_string):
-				var empty_scene = loaded_empty_scenes[parcel_string]
-				if empty_scene.has_method("add_edge_indicator"):
-					empty_scene.add_edge_indicator()
-
-		print(
-			(
-				"Created floating island: bounds (%d,%d) to (%d,%d) with %d empty padding parcels, %d edge parcels"
-				% [min_x, min_z, max_x, max_z, empty_parcels_coords.size(), edge_parcels.size()]
-			)
-		)
-
-		# Generate parcel data texture now that empty scenes are loaded
-		if parcel_data_texture_generator:
-			parcel_data_texture_generator.generate_parcel_data_texture_for_parcel(current_position)
-
-		# Create invisible walls around the floating island
 		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
 
 	var empty_parcels_coords = []
@@ -392,31 +347,8 @@ func _async_on_desired_scene_changed():
 	for scene: SceneItem in loaded_scenes.values():
 		parcel_filled.append_array(scene.parcels)
 
-		# Calculate and print grid size for each loaded scene
-		var grid_size = _calculate_scene_grid_size(scene.parcels)
-		var scene_type = "GLOBAL" if scene.is_global else "LOCAL"
-		var current_pos = Global.scene_fetcher.current_position
-		var contains_current = scene.parcels.has(current_pos)
-		print(
-			(
-				"Scene '%s' (%s) loaded with grid size: %dx%d (total parcels: %d) - Contains current pos (%d,%d): %s"
-				% [
-					scene.id,
-					scene_type,
-					grid_size.x,
-					grid_size.y,
-					scene.parcels.size(),
-					current_pos.x,
-					current_pos.y,
-					contains_current
-				]
-			)
-		)
-
 	report_scene_load.emit(true, new_loading, loadable_scenes.size())
-
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
-
 
 func _on_realm_changed():
 	var should_load_city_pointers = true
@@ -700,111 +632,36 @@ func _filter_clustered_parcels(parcels: Array) -> Array:
 	return filtered_parcels
 
 
-func _calculate_cliff_direction(
+func _calculate_parcel_adjacency(
 	x: int,
 	z: int,
-	scene_min_x: int,
-	scene_max_x: int,
-	scene_min_z: int,
-	scene_max_z: int,
-	padding: int
-):
-	var padding_bounds_min_x = scene_min_x - padding
-	var padding_bounds_max_x = scene_max_x + padding
-	var padding_bounds_min_z = scene_min_z - padding
-	var padding_bounds_max_z = scene_max_z + padding
+	bounds_min_x: int,
+	bounds_max_x: int,
+	bounds_min_z: int,
+	bounds_max_z: int,
+	loaded_parcels: Dictionary
+) -> CornerConfiguration:
+	var config = CornerConfiguration.new()
 
-	# Check if this parcel is on the outer edge boundary (cliff edge)
-	# Note: In Godot/DCL, negative z is north, positive z is south
-	var is_on_west_edge = x == padding_bounds_min_x
-	var is_on_east_edge = x == padding_bounds_max_x
-	var is_on_south_edge = z == padding_bounds_min_z  # Min z = south (visually)
-	var is_on_north_edge = z == padding_bounds_max_z  # Max z = north (visually)
+	# Helper to determine the state of an adjacent parcel
+	var get_parcel_state = func(px: int, pz: int) -> CornerConfiguration.ParcelState:
+		# Out of bounds
+		if px < bounds_min_x or px > bounds_max_x or pz < bounds_min_z or pz > bounds_max_z:
+			return CornerConfiguration.ParcelState.NOTHING
+		# Loaded scene
+		if loaded_parcels.has(Vector2i(px, pz)):
+			return CornerConfiguration.ParcelState.LOADED
+		# Empty parcel
+		return CornerConfiguration.ParcelState.EMPTY
 
-	# Check if this parcel is on the inner boundary (adjacent to loaded scenes)
-	var is_on_inner_west = x == scene_min_x - 1
-	var is_on_inner_east = x == scene_max_x + 1
-	var is_on_inner_south = z == scene_min_z - 1  # Min z - 1 = south inner edge
-	var is_on_inner_north = z == scene_max_z + 1  # Max z + 1 = north inner edge
+	# Check all 8 adjacent positions
+	config.north = get_parcel_state.call(x, z + 1)
+	config.south = get_parcel_state.call(x, z - 1)
+	config.east = get_parcel_state.call(x + 1, z)
+	config.west = get_parcel_state.call(x - 1, z)
+	config.northwest = get_parcel_state.call(x - 1, z + 1)
+	config.northeast = get_parcel_state.call(x + 1, z + 1)
+	config.southwest = get_parcel_state.call(x - 1, z - 1)
+	config.southeast = get_parcel_state.call(x + 1, z - 1)
 
-	# Check for outer cliff corners first (corners take priority over straight edges)
-	if is_on_north_edge and is_on_west_edge:
-		return EmptyParcel.EmptyParcelType.NORTHWEST
-	elif is_on_north_edge and is_on_east_edge:
-		return EmptyParcel.EmptyParcelType.NORTHEAST
-	elif is_on_south_edge and is_on_west_edge:
-		return EmptyParcel.EmptyParcelType.SOUTHWEST
-	elif is_on_south_edge and is_on_east_edge:
-		return EmptyParcel.EmptyParcelType.SOUTHEAST
-	# Then check for outer cliff straight edges
-	elif is_on_west_edge:
-		return EmptyParcel.EmptyParcelType.WEST
-	elif is_on_east_edge:
-		return EmptyParcel.EmptyParcelType.EAST
-	elif is_on_north_edge:
-		return EmptyParcel.EmptyParcelType.NORTH
-	elif is_on_south_edge:
-		return EmptyParcel.EmptyParcelType.SOUTH
-	# Check for inner corners (adjacent to loaded scenes)
-	elif is_on_inner_north and is_on_inner_west:
-		return EmptyParcel.EmptyParcelType.INNER_NORTHWEST
-	elif is_on_inner_north and is_on_inner_east:
-		return EmptyParcel.EmptyParcelType.INNER_NORTHEAST
-	elif is_on_inner_south and is_on_inner_west:
-		return EmptyParcel.EmptyParcelType.INNER_SOUTHWEST
-	elif is_on_inner_south and is_on_inner_east:
-		return EmptyParcel.EmptyParcelType.INNER_SOUTHEAST
-	# Then check for inner straight edges
-	elif is_on_inner_west:
-		return EmptyParcel.EmptyParcelType.INNER_WEST
-	elif is_on_inner_east:
-		return EmptyParcel.EmptyParcelType.INNER_EAST
-	elif is_on_inner_north:
-		return EmptyParcel.EmptyParcelType.INNER_NORTH
-	elif is_on_inner_south:
-		return EmptyParcel.EmptyParcelType.INNER_SOUTH
-	else:
-		return EmptyParcel.EmptyParcelType.NONE
-
-
-func _calculate_scene_grid_size(parcels: Array[Vector2i]) -> Vector2i:
-	if parcels.is_empty():
-		return Vector2i.ZERO
-
-	if parcels.size() == 1:
-		return Vector2i.ONE
-
-	# For scenes with non-adjacent parcels, we can't represent as a simple grid
-	# Instead, let's find the tightest grid that would contain all parcels
-	var min_x = parcels[0].x
-	var max_x = parcels[0].x
-	var min_y = parcels[0].y
-	var max_y = parcels[0].y
-
-	for parcel in parcels:
-		min_x = min(min_x, parcel.x)
-		max_x = max(max_x, parcel.x)
-		min_y = min(min_y, parcel.y)
-		max_y = max(max_y, parcel.y)
-
-	# If parcels are spread far apart, this indicates scattered parcels
-	var width = max_x - min_x + 1
-	var height = max_y - min_y + 1
-
-	# Check if parcels form a contiguous block or are scattered
-	var expected_parcels = width * height
-	if parcels.size() == expected_parcels:
-		# Contiguous block
-		return Vector2i(width, height)
-	else:
-		# Scattered parcels - return the number of parcels as "1x{count}" or "{count}x1"
-		if parcels.size() <= 10:
-			return Vector2i(parcels.size(), 1)  # Display as 1x{count} for small scattered scenes
-		else:
-			return Vector2i(
-				int(sqrt(parcels.size())), int(ceil(float(parcels.size()) / sqrt(parcels.size())))
-			)
-
-	return Vector2i(width, height)
-
-# Base floor functions removed - now handled by BaseFloorManager
+	return config

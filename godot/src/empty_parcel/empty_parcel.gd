@@ -1,6 +1,11 @@
 class_name EmptyParcel
 extends Node3D
 
+const PARCEL_SIZE: float = 16.0
+const PARCEL_HALF_SIZE: float = 8.0
+const FALLOFF_DISTANCE: float = 8.0
+const GRID_SIZE: int = 32
+const CELL_SIZE: float = 0.5
 
 class SpawnLocation:
 	extends RefCounted
@@ -13,29 +18,7 @@ class SpawnLocation:
 		normal = norm
 		falloff = fall
 
-
-enum EmptyParcelType {
-	NONE,
-	NORTH,
-	EAST,
-	SOUTH,
-	WEST,
-	NORTHEAST,
-	NORTHWEST,
-	SOUTHEAST,
-	SOUTHWEST,
-	INNER_NORTH,
-	INNER_EAST,
-	INNER_SOUTH,
-	INNER_WEST,
-	INNER_NORTHEAST,
-	INNER_NORTHWEST,
-	INNER_SOUTHEAST,
-	INNER_SOUTHWEST
-}
-
-@export var parcel_type: EmptyParcelType = EmptyParcelType.NONE
-
+var corner_config: CornerConfiguration = CornerConfiguration.new()
 var spawn_locations: Array[SpawnLocation] = []
 
 @onready var terrain_generator: TerrainGenerator = $TerrainGenerator
@@ -45,95 +28,87 @@ var spawn_locations: Array[SpawnLocation] = []
 @onready var props_spawner: PropsSpawner = $PropsSpawner
 @onready var tree_spawner: TreeSpawner = $TreeSpawner
 
-
 func _ready():
-	if terrain_generator:
-		terrain_generator.terrain_generated.connect(_on_terrain_generated)
+	terrain_generator.terrain_generated.connect(_on_terrain_generated)
 
+func set_corner_configuration(config: CornerConfiguration) -> void:
+	corner_config = config
+	generate()
 
-func set_parcel_type(type: EmptyParcelType) -> void:
-	parcel_type = type
-	regenerate()
+func get_corner_configuration() -> CornerConfiguration:
+	return corner_config
 
-
-func get_parcel_type() -> EmptyParcelType:
-	return parcel_type
-
-
-func regenerate():
-	if terrain_generator:
-		terrain_generator.generate_terrain()
-	if cliff_generator:
-		cliff_generator.generate_cliffs()
-
+func generate():
+	terrain_generator.generate_terrain()
+	cliff_generator.generate_cliffs()
 
 func _on_terrain_generated():
-	if grass_spawner:
-		var grass_multimesh = get_node("Grass")
-		grass_spawner.set_grass_multimesh(grass_multimesh)
-		grass_spawner.populate_grass()
-	if rock_spawner:
-		rock_spawner.populate_rocks()
-	if props_spawner:
-		props_spawner.populate_props()
-	if tree_spawner:
-		tree_spawner.populate_trees()
-
+	_populate_spawners()
 	spawn_locations.clear()
 
+func _populate_spawners():
+	var grass_multimesh = get_node("Grass")
+	grass_spawner.set_grass_multimesh(grass_multimesh)
+	grass_spawner.populate_grass()
+
+	rock_spawner.populate_rocks()
+	props_spawner.populate_props()
+	tree_spawner.populate_trees()
 
 func calculate_displacement_falloff(grid_x: int, grid_z: int, grid_size: int) -> float:
-	var norm_x = float(grid_x) / float(grid_size - 1)
-	var norm_z = float(grid_z) / float(grid_size - 1)
+	var local_pos = _grid_to_local_position(grid_x, grid_z, grid_size)
+	var min_distance = _calculate_minimum_distance_to_neighbors(local_pos)
+	var falloff = clamp(min_distance / FALLOFF_DISTANCE, 0.0, 1.0)
+	return smoothstep(0.0, 1.0, falloff)
 
-	var falloff = 1.0
+func _grid_to_local_position(grid_x: int, grid_z: int, grid_size: int) -> Vector2:
+	var normalized_x = float(grid_x) / float(grid_size - 1) - 0.5
+	var normalized_z = float(grid_z) / float(grid_size - 1) - 0.5
+	return Vector2(normalized_x * PARCEL_SIZE, normalized_z * PARCEL_SIZE)
 
-	match parcel_type:
-		EmptyParcelType.NORTH:
-			falloff = clamp(norm_z * 2.0, 0.0, 1.0)
-		EmptyParcelType.SOUTH:
-			falloff = clamp((1.0 - norm_z) * 2.0, 0.0, 1.0)
-		EmptyParcelType.EAST:
-			falloff = clamp((1.0 - norm_x) * 2.0, 0.0, 1.0)
-		EmptyParcelType.WEST:
-			falloff = clamp(norm_x * 2.0, 0.0, 1.0)
+func _calculate_minimum_distance_to_neighbors(local_pos: Vector2) -> float:
+	var min_distance = PARCEL_SIZE
 
-		EmptyParcelType.NORTHEAST:
-			falloff = clamp(norm_z * 2.0, 0.0, 1.0) * clamp((1.0 - norm_x) * 2.0, 0.0, 1.0)
-		EmptyParcelType.NORTHWEST:
-			falloff = clamp(norm_z * 2.0, 0.0, 1.0) * clamp(norm_x * 2.0, 0.0, 1.0)
-		EmptyParcelType.SOUTHEAST:
-			falloff = clamp((1.0 - norm_z) * 2.0, 0.0, 1.0) * clamp((1.0 - norm_x) * 2.0, 0.0, 1.0)
-		EmptyParcelType.SOUTHWEST:
-			falloff = clamp((1.0 - norm_z) * 2.0, 0.0, 1.0) * clamp(norm_x * 2.0, 0.0, 1.0)
+	min_distance = _update_distance_for_corners(local_pos, min_distance)
+	min_distance = _update_distance_for_edges(local_pos, min_distance)
+	return min_distance
 
-		EmptyParcelType.INNER_NORTH:
-			falloff = clamp((1.0 - norm_z) * 2.0, 0.0, 1.0)
-		EmptyParcelType.INNER_SOUTH:
-			falloff = clamp(norm_z * 2.0, 0.0, 1.0)
-		EmptyParcelType.INNER_EAST:
-			falloff = clamp(norm_x * 2.0, 0.0, 1.0)
-		EmptyParcelType.INNER_WEST:
-			falloff = clamp((1.0 - norm_x) * 2.0, 0.0, 1.0)
+func _update_distance_for_corners(local_pos: Vector2, current_min: float) -> float:
+	var corners = [
+		{"config": corner_config.northwest, "pos": Vector2(-PARCEL_HALF_SIZE, -PARCEL_HALF_SIZE),
+			"adjacent_edges": [corner_config.north, corner_config.west]},
+		{"config": corner_config.northeast, "pos": Vector2(PARCEL_HALF_SIZE, -PARCEL_HALF_SIZE),
+			"adjacent_edges": [corner_config.north, corner_config.east]},
+		{"config": corner_config.southwest, "pos": Vector2(-PARCEL_HALF_SIZE, PARCEL_HALF_SIZE),
+			"adjacent_edges": [corner_config.south, corner_config.west]},
+		{"config": corner_config.southeast, "pos": Vector2(PARCEL_HALF_SIZE, PARCEL_HALF_SIZE),
+			"adjacent_edges": [corner_config.south, corner_config.east]}
+	]
 
-		EmptyParcelType.INNER_NORTHEAST:
-			var north_falloff = clamp((1.0 - norm_z) * 2.0, 0.0, 1.0)
-			var east_falloff = clamp(norm_x * 2.0, 0.0, 1.0)
-			falloff = max(north_falloff, east_falloff)
-		EmptyParcelType.INNER_NORTHWEST:
-			var north_falloff = clamp((1.0 - norm_z) * 2.0, 0.0, 1.0)
-			var west_falloff = clamp((1.0 - norm_x) * 2.0, 0.0, 1.0)
-			falloff = max(north_falloff, west_falloff)
-		EmptyParcelType.INNER_SOUTHEAST:
-			var south_falloff = clamp(norm_z * 2.0, 0.0, 1.0)
-			var east_falloff = clamp(norm_x * 2.0, 0.0, 1.0)
-			falloff = max(south_falloff, east_falloff)
-		EmptyParcelType.INNER_SOUTHWEST:
-			var south_falloff = clamp(norm_z * 2.0, 0.0, 1.0)
-			var west_falloff = clamp((1.0 - norm_x) * 2.0, 0.0, 1.0)
-			falloff = max(south_falloff, west_falloff)
+	var result_distance = current_min
+	for corner in corners:
+		if corner.config != CornerConfiguration.ParcelState.EMPTY:
+			var both_edges_empty = (
+				corner.adjacent_edges[0] == CornerConfiguration.ParcelState.EMPTY and
+				corner.adjacent_edges[1] == CornerConfiguration.ParcelState.EMPTY
+			)
+			if both_edges_empty:
+				var dist = (local_pos - corner.pos).length()
+				result_distance = min(result_distance, dist)
 
-		_:
-			falloff = 1.0
+	return result_distance
 
-	return falloff
+func _update_distance_for_edges(local_pos: Vector2, current_min: float) -> float:
+	var edges = [
+		{"config": corner_config.north, "distance": local_pos.y + PARCEL_HALF_SIZE},
+		{"config": corner_config.south, "distance": PARCEL_HALF_SIZE - local_pos.y},
+		{"config": corner_config.east, "distance": PARCEL_HALF_SIZE - local_pos.x},
+		{"config": corner_config.west, "distance": local_pos.x + PARCEL_HALF_SIZE}
+	]
+
+	var result_distance = current_min
+	for edge in edges:
+		if edge.config != CornerConfiguration.ParcelState.EMPTY:
+			result_distance = min(result_distance, edge.distance)
+
+	return result_distance

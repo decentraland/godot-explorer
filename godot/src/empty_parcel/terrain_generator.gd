@@ -183,67 +183,34 @@ func _create_displaced_vertex(
 ) -> Vector3:
 	var is_edge_vertex = false
 	var cliff_normal = Vector3.ZERO
-	var parcel_type = parent_parcel.parcel_type
+	var corner_config = parent_parcel.corner_config
 
-	if (
-		parcel_type
-		in [
-			EmptyParcel.EmptyParcelType.NORTH,
-			EmptyParcel.EmptyParcelType.NORTHEAST,
-			EmptyParcel.EmptyParcelType.NORTHWEST
-		]
-	):
-		if grid_z == 0:
-			is_edge_vertex = true
-			cliff_normal = Vector3(0, 0, -1)
-	if (
-		parcel_type
-		in [
-			EmptyParcel.EmptyParcelType.SOUTH,
-			EmptyParcel.EmptyParcelType.SOUTHEAST,
-			EmptyParcel.EmptyParcelType.SOUTHWEST
-		]
-	):
-		if grid_z == grid_size:
-			is_edge_vertex = true
-			cliff_normal = Vector3(0, 0, 1)
-	if (
-		parcel_type
-		in [
-			EmptyParcel.EmptyParcelType.EAST,
-			EmptyParcel.EmptyParcelType.NORTHEAST,
-			EmptyParcel.EmptyParcelType.SOUTHEAST
-		]
-	):
-		if grid_x == grid_size:
-			is_edge_vertex = true
-			cliff_normal = Vector3(1, 0, 0)
-	if (
-		parcel_type
-		in [
-			EmptyParcel.EmptyParcelType.WEST,
-			EmptyParcel.EmptyParcelType.NORTHWEST,
-			EmptyParcel.EmptyParcelType.SOUTHWEST
-		]
-	):
-		if grid_x == 0:
-			is_edge_vertex = true
-			cliff_normal = Vector3(-1, 0, 0)
+	# Check if this vertex is at an edge that borders out of bounds (NOTHING)
+	if grid_z == 0 and corner_config.north == CornerConfiguration.ParcelState.NOTHING:
+		is_edge_vertex = true
+		cliff_normal = Vector3(0, 0, -1)
 
-	if parcel_type == EmptyParcel.EmptyParcelType.NORTHEAST and grid_x == grid_size and grid_z == 0:
-		cliff_normal = Vector3(1, 0, -1).normalized()
-	elif parcel_type == EmptyParcel.EmptyParcelType.NORTHWEST and grid_x == 0 and grid_z == 0:
+	if grid_z == grid_size and corner_config.south == CornerConfiguration.ParcelState.NOTHING:
+		is_edge_vertex = true
+		cliff_normal = Vector3(0, 0, 1)
+
+	if grid_x == grid_size and corner_config.east == CornerConfiguration.ParcelState.NOTHING:
+		is_edge_vertex = true
+		cliff_normal = Vector3(1, 0, 0)
+
+	if grid_x == 0 and corner_config.west == CornerConfiguration.ParcelState.NOTHING:
+		is_edge_vertex = true
+		cliff_normal = Vector3(-1, 0, 0)
+
+	# Check corners for out of bounds
+	if grid_x == 0 and grid_z == 0 and corner_config.northwest == CornerConfiguration.ParcelState.NOTHING:
 		cliff_normal = Vector3(-1, 0, -1).normalized()
-	elif (
-		parcel_type == EmptyParcel.EmptyParcelType.SOUTHEAST
-		and grid_x == grid_size
-		and grid_z == grid_size
-	):
-		cliff_normal = Vector3(1, 0, 1).normalized()
-	elif (
-		parcel_type == EmptyParcel.EmptyParcelType.SOUTHWEST and grid_x == 0 and grid_z == grid_size
-	):
+	elif grid_x == grid_size and grid_z == 0 and corner_config.northeast == CornerConfiguration.ParcelState.NOTHING:
+		cliff_normal = Vector3(1, 0, -1).normalized()
+	elif grid_x == 0 and grid_z == grid_size and corner_config.southwest == CornerConfiguration.ParcelState.NOTHING:
 		cliff_normal = Vector3(-1, 0, 1).normalized()
+	elif grid_x == grid_size and grid_z == grid_size and corner_config.southeast == CornerConfiguration.ParcelState.NOTHING:
+		cliff_normal = Vector3(1, 0, 1).normalized()
 
 	if is_edge_vertex and cliff_normal != Vector3.ZERO:
 		var cliff_noise = FastNoiseLite.new()
