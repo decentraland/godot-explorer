@@ -12,9 +12,9 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_ypsmd"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="13_43yag"]
 [ext_resource type="PackedScene" uid="uid://cf78je1y8dpu3" path="res://src/ui/components/auth/android_login.tscn" id="14_a8lfo"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
+[ext_resource type="Texture2D" uid="uid://dpto8joivusog" path="res://assets/themes/dark_dcl_theme/icons/cancel-icon.svg" id="15_ypsmd"]
 [ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="17_ca7yb"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="18_2q7xc"]
 [ext_resource type="Texture2D" uid="uid://0562185xxlpt" path="res://assets/ui/sign-in/dice.svg" id="18_3tlbd"]
@@ -167,6 +167,7 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="Button_Start" type="Button" parent="Main/Start/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
@@ -181,6 +182,7 @@ theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_GoToSignIn" type="Button" parent="Main/Start/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
@@ -225,7 +227,7 @@ layout_mode = 2
 hide_navbar = true
 
 [node name="Button_Continue" type="Button" parent="Main/BackpackContainer/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(200, 60)
 layout_mode = 2
 size_flags_horizontal = 8
 focus_mode = 0
@@ -235,7 +237,6 @@ icon_alignment = 2
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn"]
@@ -267,10 +268,10 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="Label_Name" type="Label" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
+visible = false
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -282,12 +283,12 @@ autowrap_mode = 3
 
 [node name="AndroidLogin" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1" instance=ExtResource("14_a8lfo")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="Button_OpenBrowser" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(320, 56)
+visible = false
+custom_minimum_size = Vector2(320, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
@@ -303,16 +304,18 @@ theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_EnterAsGuest" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
-custom_minimum_size = Vector2(320, 46)
+custom_minimum_size = Vector2(320, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 18
 text = "QUICK DIVE AS A GUEST"
+expand_icon = true
 
 [node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -343,19 +346,21 @@ theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_Cancel" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2"]
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_type_variation = &"SecondaryButton"
-theme_override_constants/h_separation = 10
-theme_override_constants/icon_max_width = 13
+theme_override_constants/icon_max_width = 40
 theme_override_fonts/font = ExtResource("12_s6a2k")
 theme_override_font_sizes/font_size = 18
 text = "CANCEL"
-icon = ExtResource("13_43yag")
+icon = ExtResource("15_ypsmd")
+expand_icon = true
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -435,7 +440,7 @@ clear_button_enabled = true
 
 [node name="Button_RandomName" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/OrientationContainer/VBoxContainer/VboxContainer_CNFirst/HBoxContainer"]
 texture_filter = 4
-custom_minimum_size = Vector2(50, 50)
+custom_minimum_size = Vector2(50, 60)
 layout_mode = 2
 theme = ExtResource("9_ypsmd")
 theme_override_styles/focus = SubResource("StyleBoxFlat_rqbts")
@@ -543,7 +548,7 @@ theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_JumpIn" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/OrientationContainer/VBoxContainer/VBoxContainer_RPSecond"]
-custom_minimum_size = Vector2(425, 0)
+custom_minimum_size = Vector2(425, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
@@ -554,6 +559,7 @@ text = "LET'S GO"
 icon_alignment = 2
 
 [node name="Button_DifferentAccount" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/OrientationContainer/VBoxContainer/VBoxContainer_RPSecond"]
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")

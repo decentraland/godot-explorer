@@ -30,7 +30,7 @@ layout_mode = 2
 texture = ExtResource("2_y8nwo")
 
 [node name="ButtonSocial" type="Button" parent="."]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("3_kk1uc")
@@ -43,7 +43,7 @@ text = "GOOGLE"
 icon = ExtResource("5_ys0bb")
 
 [node name="ButtonWalletConnect" type="Button" parent="."]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("3_kk1uc")
@@ -60,7 +60,7 @@ layout_mode = 2
 theme_override_constants/separation = 25
 
 [node name="Button_Discord" type="Button" parent="HBoxContainer_SocialButtons"]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
@@ -76,7 +76,7 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="Button_X" type="Button" parent="HBoxContainer_SocialButtons"]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
@@ -92,7 +92,7 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="Button_Apple" type="Button" parent="HBoxContainer_SocialButtons"]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
