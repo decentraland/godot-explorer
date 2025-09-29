@@ -314,10 +314,14 @@ func _async_on_desired_scene_changed():
 						add_child(scene)
 						scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 
-						# Calculate adjacent parcel states for SDF-based falloff
 						var config = _calculate_parcel_adjacency(
-							x, z, min_x - padding, max_x + padding,
-							min_z - padding, max_z + padding, scene_parcel_set
+							x,
+							z,
+							min_x - padding,
+							max_x + padding,
+							min_z - padding,
+							max_z + padding,
+							scene_parcel_set
 						)
 						scene.set_corner_configuration(config)
 
@@ -349,6 +353,7 @@ func _async_on_desired_scene_changed():
 
 	report_scene_load.emit(true, new_loading, loadable_scenes.size())
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
+
 
 func _on_realm_changed():
 	var should_load_city_pointers = true

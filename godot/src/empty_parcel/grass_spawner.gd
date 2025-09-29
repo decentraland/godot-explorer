@@ -52,7 +52,8 @@ func populate_grass():
 		var falloff = spawn_location.falloff
 
 		var random_variation = 0.8 + randf() * 0.4
-		var final_scale = base_scale * falloff * random_variation
+		var grass_scale_falloff = pow(falloff, 0.3)
+		var final_scale = base_scale * grass_scale_falloff * random_variation
 		var transform = ParcelUtils.create_aligned_transform(
 			grass_pos, grass_normal, true, final_scale
 		)

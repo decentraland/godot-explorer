@@ -5,6 +5,7 @@
 [node name="EmptyParcelProps" instance=ExtResource("1_xirrl")]
 
 [node name="Scene Collection" parent="." index="0"]
+process_mode = 4
 visible = false
 
 [node name="Props" parent="Scene Collection" index="0"]

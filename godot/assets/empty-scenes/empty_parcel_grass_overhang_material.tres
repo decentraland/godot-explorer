@@ -1,0 +1,22 @@
+[gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://c2mfhwqv4mft4"]
+
+[ext_resource type="Shader" uid="uid://dktkqpppa32pc" path="res://assets/shaders/grass_overhang.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="2_texture"]
+[ext_resource type="Texture2D" uid="uid://ywncewk8tpsj" path="res://assets/empty-scenes/Grass005_1K-JPG_Displacement.jpg" id="3_heightmap"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/texture_albedo = ExtResource("2_texture")
+shader_parameter/texture_scale = 0.1
+shader_parameter/distortion = Vector3(0, 0, 0)
+shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
+shader_parameter/grass_heightmap = ExtResource("3_heightmap")
+shader_parameter/heightmap_scale = 0.250001
+shader_parameter/heightmap_min_layers = 3
+shader_parameter/heightmap_max_layers = 5
+shader_parameter/heightmap_flip = Vector2(1, 1)
+shader_parameter/height_darkening = 0.5
+shader_parameter/heightmap_texture_scale = 1.5
+shader_parameter/edge_fade_power = 2.0
+shader_parameter/alpha_scissor = 0.1

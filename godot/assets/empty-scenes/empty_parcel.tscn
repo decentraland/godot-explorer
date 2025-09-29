@@ -1,6 +1,5 @@
-[gd_scene load_steps=16 format=3 uid="uid://bcdxv1hq2lqvp"]
+[gd_scene load_steps=14 format=3 uid="uid://bcdxv1hq2lqvp"]
 
-[ext_resource type="Material" uid="uid://b8xv4j8g2m1kq" path="res://assets/empty-scenes/empty_parcel_material.tres" id="2_hs528"]
 [ext_resource type="Shader" uid="uid://cm0fkgbtmi0l4" path="res://assets/shaders/grass_blades.gdshader" id="2_it4im"]
 [ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="3_17dba"]
 [ext_resource type="Texture2D" uid="uid://dbdybsgq4vixe" path="res://assets/empty-scenes/Grass.png" id="4_5wob7"]
@@ -54,25 +53,14 @@ resource_local_to_scene = true
 transform_format = 1
 mesh = SubResource("ArrayMesh_fwft2")
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_fwft2"]
-material = ExtResource("2_hs528")
-top_radius = 10.0
-bottom_radius = 9.0
-height = 10.0
-
 [node name="EmptyParcel" type="Node3D"]
 script = ExtResource("4_empty_parcel")
 
 [node name="Grass" type="MultiMeshInstance3D" parent="."]
 multimesh = SubResource("MultiMesh_1")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-visible = false
-mesh = SubResource("CylinderMesh_fwft2")
-
 [node name="TerrainGenerator" type="Node3D" parent="."]
 script = ExtResource("5_terrain_gen")
-terrain_height = 5.0
 
 [node name="CliffGenerator" type="Node3D" parent="."]
 script = ExtResource("6_cliff_gen")
