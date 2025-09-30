@@ -15,7 +15,7 @@
 render_priority = 0
 shader = ExtResource("2_it4im")
 shader_parameter/texture_albedo = ExtResource("4_5wob7")
-shader_parameter/alpha_threshold = 0.1
+shader_parameter/alpha_threshold = 0.01
 shader_parameter/alpha_softness = 0.01
 shader_parameter/grass_atlas_texture = ExtResource("3_17dba")
 shader_parameter/texture_scale = 1.0

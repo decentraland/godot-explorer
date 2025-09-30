@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx;
+render_mode blend_mix, cull_disabled;
 
 uniform sampler2D depth_texture : hint_depth_texture, filter_linear_mipmap;
 
@@ -23,9 +23,11 @@ uniform float wind_speed : hint_range(0.0, 10.0) = 2.0;
 uniform vec2 wind_direction = vec2(1.0, 0.5);
 uniform float wind_scale : hint_range(0.1, 10.0) = 2.0;
 uniform float wind_turbulence : hint_range(0.0, 1.0) = 0.5;
+
 float simple_noise(vec2 p) {
 	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
+
 float smooth_noise(vec2 p) {
 	vec2 i = floor(p);
 	vec2 f = fract(p);
@@ -42,11 +44,9 @@ float smooth_noise(vec2 p) {
 void vertex() {
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 
-	// Calculate distance from camera to grass instance
 	vec3 camera_pos = INV_VIEW_MATRIX[3].xyz;
 	float distance_to_camera = length(world_position - camera_pos);
 
-	// Smoothly scale down grass from 16m to 24m distance
 	float fade_start = 16.0;
 	float fade_end = 24.0;
 	float distance_scale = 1.0 - smoothstep(fade_start, fade_end, distance_to_camera);
