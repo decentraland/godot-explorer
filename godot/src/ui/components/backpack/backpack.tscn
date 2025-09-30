@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=42 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -33,6 +33,7 @@
 [ext_resource type="Texture2D" uid="uid://bmoy7cmuucooq" path="res://assets/ui/wearable_categories/skin-icon.svg" id="25_cd16j"]
 [ext_resource type="Texture2D" uid="uid://10ljw6k05g33" path="res://assets/ui/backpack/no-items-in-category.svg" id="27_kffkw"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/emote_editor/emote_editor.tscn" id="30_vfwc7"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="33_18vfg"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_no6vh"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -623,35 +624,37 @@ theme_override_constants/h_separation = 4
 theme_override_constants/v_separation = 4
 columns = 4
 
-[node name="Control_NoItems" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer"]
-unique_name_in_owner = true
-visible = false
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 60
+theme_override_constants/margin_bottom = 60
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/Control_NoItems"]
-custom_minimum_size = Vector2(70, 70)
+[node name="Control_NoItems" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 50
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/MarginContainer/Control_NoItems"]
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
 texture = ExtResource("27_kffkw")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/Control_NoItems"]
+[node name="RichTextBox_OpenMarketplace" type="RichTextLabel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/MarginContainer/Control_NoItems"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_font_sizes/font_size = 16
-text = "There are no items in this category."
-horizontal_alignment = 1
-
-[node name="RichTextBox_OpenMarketplace" type="RichTextLabel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/Control_NoItems"]
-layout_mode = 2
-theme_override_font_sizes/normal_font_size = 16
+theme_override_fonts/normal_font = ExtResource("33_18vfg")
+theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "If you want you can find the ideal one for you in the [color=#FF2D55][url]Marketplace[/url][/color]."
+text = "There are no items in this category.
+If you want you can find the ideal one for you in the [color=#FF2D55][url]Marketplace[/url][/color]"
 fit_content = true
 scroll_active = false
-autowrap_mode = 0
+autowrap_mode = 2
+horizontal_alignment = 1
 
 [node name="EmoteEditor" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer" instance=ExtResource("30_vfwc7")]
 unique_name_in_owner = true
@@ -699,6 +702,6 @@ show_platform = true
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/CheckBox_OnlyCollectibles" to="." method="_on_check_box_only_collectibles_toggled"]
 [connection signal="toggle_color_panel" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer2/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]
-[connection signal="meta_clicked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/Control_NoItems/RichTextBox_OpenMarketplace" to="." method="_on_rich_text_box_open_marketplace_meta_clicked"]
+[connection signal="meta_clicked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/MarginContainer/Control_NoItems/RichTextBox_OpenMarketplace" to="." method="_on_rich_text_box_open_marketplace_meta_clicked"]
 [connection signal="hided" from="Color_Picker_Panel" to="." method="_on_color_picker_panel_hided"]
 [connection signal="pick_color" from="Color_Picker_Panel" to="." method="_on_color_picker_panel_pick_color"]
