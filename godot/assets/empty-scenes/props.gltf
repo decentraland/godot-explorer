@@ -214,7 +214,7 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"DefaultParcels_MAT",
+			"name":"EmptyParcels_MAT",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -731,8 +731,8 @@
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"DefaultParcels_MAT_albedo000",
-			"uri":"DefaultParcels_MAT_albedo000.png"
+			"name":"EmptyParcels-TX",
+			"uri":"EmptyParcels-TX.png"
 		},
 		{
 			"mimeType":"image/png",
