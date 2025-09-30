@@ -78,12 +78,15 @@ jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
 [features]
-# FFMPEG disabled until next iteration
-default = ["use_livekit", "use_deno", "enable_inspector"]
+default = ["use_livekit", "use_deno"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
+use_voice_chat = []
+
+# TODO: Fix enable_inspector failure when cross-compiling to Android from Windows.
+#       The FastWebSockets build incorrectly includes `unmask`.
 enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
