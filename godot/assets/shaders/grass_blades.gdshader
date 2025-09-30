@@ -1,7 +1,5 @@
 shader_type spatial;
-render_mode blend_mix, cull_disabled;
-
-uniform sampler2D depth_texture : hint_depth_texture, filter_linear_mipmap;
+render_mode depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx;
 
 #include "res://shaders/modules/world_aligned.gdshaderinc"
 
@@ -16,8 +14,6 @@ uniform vec3 distortion = vec3(0.0);
 uniform vec4 grass_rect = vec4(0.01, 0.51, 0.48, 0.48);
 uniform float gradient_power : hint_range(0.1, 4.0) = 1.5;
 uniform float gradient_strength : hint_range(0.0, 1.0) = 0.4;
-uniform float proximity_fade_distance : hint_range(0.0, 1.0) = 0.1;
-uniform float proximity_fade_softness : hint_range(0.01, 1.0) = 0.05;
 uniform float wind_strength : hint_range(0.0, 2.0) = 0.3;
 uniform float wind_speed : hint_range(0.0, 10.0) = 2.0;
 uniform vec2 wind_direction = vec2(1.0, 0.5);
@@ -84,12 +80,7 @@ void fragment() {
 	float gradient = pow(UV.y, gradient_power);
 	vec3 darkened_color = grass_color.rgb * mix(1.0 - gradient_strength, 1.0, gradient);
 
-	float depth_tex = textureLod(depth_texture, SCREEN_UV, 0.0).r;
-	vec4 world = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth_tex, 1.0);
-	world.xyz /= world.w;
-	float depth_blend = smoothstep(world.z + proximity_fade_distance, world.z + proximity_fade_distance + proximity_fade_softness, VERTEX.z);
-
-	ALPHA = alpha_cutout * depth_blend;
+	ALPHA = alpha_cutout;
 	ALBEDO = darkened_color;
 	NORMAL = (VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
 }
