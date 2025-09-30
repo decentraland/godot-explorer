@@ -42,6 +42,18 @@ float smooth_noise(vec2 p) {
 void vertex() {
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 
+	// Calculate distance from camera to grass instance
+	vec3 camera_pos = INV_VIEW_MATRIX[3].xyz;
+	float distance_to_camera = length(world_position - camera_pos);
+
+	// Smoothly scale down grass from 16m to 24m distance
+	float fade_start = 16.0;
+	float fade_end = 24.0;
+	float distance_scale = 1.0 - smoothstep(fade_start, fade_end, distance_to_camera);
+
+	// Apply distance-based scaling to vertex
+	VERTEX *= distance_scale;
+
 	if (VERTEX.y > 0.0) {
 		vec2 wind_dir = normalize(wind_direction);
 		vec2 wind_coords = world_position.xz * wind_scale + wind_dir * TIME * wind_speed;
