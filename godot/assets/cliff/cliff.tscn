@@ -1,8 +1,0 @@
-[gd_scene load_steps=3 format=3 uid="uid://cu8rf0fyr5vfs"]
-
-[ext_resource type="Material" uid="uid://di3pn11i2lssn" path="res://assets/empty-scenes/cliff_material.tres" id="1_2aorv"]
-[ext_resource type="ArrayMesh" uid="uid://beg76xee0fvna" path="res://assets/empty-scenes/cliff.obj" id="1_cliff"]
-
-[node name="root" type="MeshInstance3D"]
-material_override = ExtResource("1_2aorv")
-mesh = ExtResource("1_cliff")
