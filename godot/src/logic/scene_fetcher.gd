@@ -37,8 +37,6 @@ var last_version_checked: int = -1
 
 var base_floor_manager: BaseFloorManager = null
 
-var parcel_data_texture_generator: ParcelDataTextureGenerator
-
 var desired_portable_experiences_urns: Array[String] = []
 
 # Special-case: one-shot to skip loading screen
@@ -58,10 +56,6 @@ func _ready():
 	# Initialize wall manager
 	wall_manager = FloatingIslandWalls.new()
 	add_child(wall_manager)
-
-	# Initialize parcel data texture generator
-	parcel_data_texture_generator = ParcelDataTextureGenerator.new()
-	add_child(parcel_data_texture_generator)
 
 	# Create base floor manager
 	base_floor_manager = BaseFloorManager.new()
@@ -423,16 +417,6 @@ func update_position(new_position: Vector2i) -> void:
 	current_position = new_position
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 	player_parcel_changed.emit(new_position)
-
-	# Regenerate parcel data texture for new position
-	if parcel_data_texture_generator:
-		parcel_data_texture_generator.generate_parcel_data_texture_for_parcel(current_position)
-
-	# Update current parcel origin global uniform - pass actual world position
-	var world_origin = Vector3(current_position.x * 16.0, 0.0, current_position.y * 16.0)
-	RenderingServer.global_shader_parameter_set(
-		"current_parcel_origin", Vector2(world_origin.x, world_origin.z)
-	)
 
 
 func async_load_scene(

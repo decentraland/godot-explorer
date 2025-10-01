@@ -13,6 +13,8 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var debug_map_container: DebugMapContainer = null
+
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -45,8 +47,6 @@ var _last_outlined_avatar: Avatar = null
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
-
-var debug_map_container: DebugMapContainer = null
 
 
 func _process(_dt):

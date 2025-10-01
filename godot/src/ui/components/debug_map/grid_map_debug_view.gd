@@ -1,13 +1,8 @@
 class_name GridMapDebugView
 extends Control
 
-@export var view_radius: int = 15  # How many parcels to show in each direction
-@export var cell_size: float = 10.0  # Size of each cell in pixels
-@export var player_position: Vector2 = Vector2.ZERO  # Exact player position (not grid-snapped)
-@export var player_rotation: float = 0.0  # Player/camera rotation in radians
-@export var camera_center: Vector2 = Vector2.ZERO  # Center of the view
-@export var zoom_level: float = 1.0
-@export var follow_player: bool = true  # Whether camera follows player
+# Track parcel states
+enum ParcelType { NOT_LOADED, MAIN_SCENE, EMPTY_PARCEL, KEEP_ALIVE_SCENE }
 
 # Colors for different parcel states
 const COLOR_LOADED_SCENE = Color.WHITE
@@ -19,8 +14,14 @@ const COLOR_GRID = Color(0.3, 0.3, 0.3)
 const COLOR_BACKGROUND = Color(0.05, 0.05, 0.05)
 const COLOR_ORIGIN = Color(0.5, 0.5, 0.8, 0.5)  # Blue for (0,0)
 
-# Track parcel states
-enum ParcelType { NOT_LOADED, MAIN_SCENE, EMPTY_PARCEL, KEEP_ALIVE_SCENE }
+@export var view_radius: int = 15  # How many parcels to show in each direction
+@export var cell_size: float = 10.0  # Size of each cell in pixels
+@export var player_position: Vector2 = Vector2.ZERO  # Exact player position (not grid-snapped)
+@export var player_rotation: float = 0.0  # Player/camera rotation in radians
+@export var camera_center: Vector2 = Vector2.ZERO  # Center of the view
+@export var zoom_level: float = 1.0
+@export var follow_player: bool = true  # Whether camera follows player
+
 var loaded_parcels: Dictionary = {}  # Dict[Vector2i, ParcelType]
 var viewport_size: Vector2
 
@@ -230,7 +231,7 @@ func update_player_transform(pos: Vector2, rot: float):
 	queue_redraw()
 
 
-func _on_parcels_processed(parcel_filled: Array, empty_parcels: Array):
+func _on_parcels_processed(parcel_filled: Array, _empty_parcels: Array):
 	# Clear and update loaded parcels
 	loaded_parcels.clear()
 

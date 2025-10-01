@@ -20,9 +20,6 @@ uniform float darkening_texture_scale : hint_range(0.1, 10.0) = 2.0;
 uniform float shell_threshold : hint_range(0.0, 1.0, 0.01) = 0.0;
 uniform float shell_grow : hint_range(0.0, 0.5, 0.01) = 0.0;
 
-global uniform sampler2D parcel_data_texture;
-global uniform vec2 current_parcel_origin;
-
 void vertex() {
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
