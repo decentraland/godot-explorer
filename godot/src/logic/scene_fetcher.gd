@@ -271,8 +271,6 @@ func _async_on_desired_scene_changed():
 		# Store the hash to avoid recreating unnecessarily
 		set_meta("last_scene_hash", current_scene_hash)
 
-		var empty_parcels_coords = []
-
 		var min_x = all_scene_parcels[0].x
 		var max_x = all_scene_parcels[0].x
 		var min_z = all_scene_parcels[0].y
@@ -296,7 +294,6 @@ func _async_on_desired_scene_changed():
 				var coord = Vector2i(x, z)
 				# Only add empty parcels if they're not occupied by actual scenes
 				if not scene_parcel_set.has(coord):
-					empty_parcels_coords.push_back(coord)
 					var parcel_string = "%d,%d" % [x, z]
 
 					if not loaded_empty_scenes.has(parcel_string):
