@@ -1,10 +1,10 @@
-[gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://b8xv4j8g2m1kq"]
+[gd_resource type="ShaderMaterial" load_steps=6 format=3 uid="uid://b8xv4j8g2m1kq"]
 
 [ext_resource type="Texture2D" uid="uid://ywncewk8tpsj" path="res://assets/empty-scenes/Grass005_1K-JPG_Displacement.jpg" id="1_rd7x0"]
 [ext_resource type="Shader" uid="uid://b5oywax5er7sb" path="res://assets/shaders/empty_parcel.gdshader" id="1_shader"]
 [ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="2_texture"]
 
-[resource]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_47243"]
 render_priority = 0
 shader = ExtResource("1_shader")
 shader_parameter/texture_albedo = ExtResource("2_texture")
@@ -12,5 +12,35 @@ shader_parameter/texture_scale = 0.1
 shader_parameter/distortion = Vector3(0, 0, 0)
 shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
 shader_parameter/darkening_texture = ExtResource("1_rd7x0")
-shader_parameter/darkening_strength = 0.3
-shader_parameter/darkening_texture_scale = 1.0
+shader_parameter/darkening_strength = 1.0
+shader_parameter/darkening_texture_scale = 2.0
+shader_parameter/shell_threshold = 0.35
+shader_parameter/shell_grow = 0.04
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rd7x0"]
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_47243")
+shader = ExtResource("1_shader")
+shader_parameter/texture_albedo = ExtResource("2_texture")
+shader_parameter/texture_scale = 0.1
+shader_parameter/distortion = Vector3(0, 0, 0)
+shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
+shader_parameter/darkening_texture = ExtResource("1_rd7x0")
+shader_parameter/darkening_strength = 1.0
+shader_parameter/darkening_texture_scale = 2.0
+shader_parameter/shell_threshold = 0.25
+shader_parameter/shell_grow = 0.02
+
+[resource]
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_rd7x0")
+shader = ExtResource("1_shader")
+shader_parameter/texture_albedo = ExtResource("2_texture")
+shader_parameter/texture_scale = 0.1
+shader_parameter/distortion = Vector3(0, 0, 0)
+shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
+shader_parameter/darkening_texture = ExtResource("1_rd7x0")
+shader_parameter/darkening_strength = 1.0
+shader_parameter/darkening_texture_scale = 2.0
+shader_parameter/shell_threshold = 0.0
+shader_parameter/shell_grow = 0.0

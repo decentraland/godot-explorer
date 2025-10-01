@@ -15,21 +15,19 @@
 render_priority = 0
 shader = ExtResource("2_it4im")
 shader_parameter/texture_albedo = ExtResource("4_5wob7")
-shader_parameter/alpha_threshold = 0.01
-shader_parameter/alpha_softness = 0.01
+shader_parameter/alpha_scissor = 0.01
 shader_parameter/grass_atlas_texture = ExtResource("3_17dba")
 shader_parameter/texture_scale = 1.0
 shader_parameter/distortion = Vector3(0, 0, 0)
 shader_parameter/grass_rect = Vector4(0.01, 0.51, 0.48, 0.48)
 shader_parameter/gradient_power = 4.0
 shader_parameter/gradient_strength = 0.4
-shader_parameter/proximity_fade_distance = 0.0
-shader_parameter/proximity_fade_softness = 0.1
 shader_parameter/wind_strength = 0.3
 shader_parameter/wind_speed = 2.0
 shader_parameter/wind_direction = Vector2(1, 0.5)
 shader_parameter/wind_scale = 2.0
 shader_parameter/wind_turbulence = 0.5
+shader_parameter/billboard_mix = 0.5
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_fwft2"]
 resource_name = "grass_Plane_001"
