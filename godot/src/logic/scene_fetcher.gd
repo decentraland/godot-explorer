@@ -322,7 +322,9 @@ func _async_on_desired_scene_changed():
 
 			wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
 		else:
-			print("Warning: all_scene_parcels is empty after filtering, skipping floating island generation")
+			print(
+				"Warning: all_scene_parcels is empty after filtering, skipping floating island generation"
+			)
 
 	var empty_parcels_coords = []
 	if has_meta("last_scene_hash"):
