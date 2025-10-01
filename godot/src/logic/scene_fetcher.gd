@@ -53,19 +53,15 @@ var _bypass_loading_check: bool = false
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 
-	# Initialize wall manager
-	wall_manager = FloatingIslandWalls.new()
-	add_child(wall_manager)
+	if not Global.cli.test_runner:
+		wall_manager = FloatingIslandWalls.new()
+		add_child(wall_manager)
 
-	# Create base floor manager
-	base_floor_manager = BaseFloorManager.new()
-	base_floor_manager.name = "BaseFloorManager"
-	add_child(base_floor_manager)
+		base_floor_manager = BaseFloorManager.new()
+		base_floor_manager.name = "BaseFloorManager"
+		add_child(base_floor_manager)
 
-	# Parcel data texture will be generated after parcels are loaded
-
-	# Initialize global uniforms
-	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
+		RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
 
 	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 	Global.get_config().param_changed.connect(self._on_config_changed)
@@ -254,10 +250,13 @@ func _async_on_desired_scene_changed():
 		all_scene_parcels = _filter_clustered_parcels(all_scene_parcels)
 
 	var current_scene_hash = str(all_scene_parcels.hash())
-	if (
-		not all_scene_parcels.is_empty()
+	# Skip floating island generation during tests to avoid blocking test execution
+	var should_generate_islands = (
+		not Global.cli.test_runner
+		and not all_scene_parcels.is_empty()
 		and (not has_meta("last_scene_hash") or get_meta("last_scene_hash") != current_scene_hash)
-	):
+	)
+	if should_generate_islands:
 		print("Scene layout changed, recreating floating island...")
 		print("Cleaning up %d old empty parcels" % loaded_empty_scenes.size())
 		for parcel in loaded_empty_scenes:
@@ -390,7 +389,8 @@ func _on_realm_changed():
 		empty_parcel.queue_free()
 
 	loaded_empty_scenes.clear()
-	wall_manager.clear_walls()
+	if wall_manager:
+		wall_manager.clear_walls()
 
 	loaded_scenes = {}
 
