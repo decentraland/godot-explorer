@@ -577,7 +577,7 @@ impl SceneEntityCoordinator {
         let mut coord_to_clean = Vec::new();
         for (key, value) in self.cache_city_pointers.iter() {
             if value.eq(&scene_id) {
-                coord_to_clean.push(key.clone());
+                coord_to_clean.push(*key);
             }
         }
 
