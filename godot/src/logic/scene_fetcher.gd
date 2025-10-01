@@ -271,54 +271,58 @@ func _async_on_desired_scene_changed():
 		# Store the hash to avoid recreating unnecessarily
 		set_meta("last_scene_hash", current_scene_hash)
 
-		var min_x = all_scene_parcels[0].x
-		var max_x = all_scene_parcels[0].x
-		var min_z = all_scene_parcels[0].y
-		var max_z = all_scene_parcels[0].y
+		# Safety check: ensure array is not empty after all filtering
+		if not all_scene_parcels.is_empty():
+			var min_x = all_scene_parcels[0].x
+			var max_x = all_scene_parcels[0].x
+			var min_z = all_scene_parcels[0].y
+			var max_z = all_scene_parcels[0].y
 
-		for parcel in all_scene_parcels:
-			min_x = min(min_x, parcel.x)
-			max_x = max(max_x, parcel.x)
-			min_z = min(min_z, parcel.y)
-			max_z = max(max_z, parcel.y)
+			for parcel in all_scene_parcels:
+				min_x = min(min_x, parcel.x)
+				max_x = max(max_x, parcel.x)
+				min_z = min(min_z, parcel.y)
+				max_z = max(max_z, parcel.y)
 
-		# Create a set of scene parcels for quick lookup
-		var scene_parcel_set = {}
-		for parcel in all_scene_parcels:
-			scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
+			# Create a set of scene parcels for quick lookup
+			var scene_parcel_set = {}
+			for parcel in all_scene_parcels:
+				scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
 
-		# Create 2-parcel padding around the bounds
-		var padding = 2
-		for x in range(min_x - padding, max_x + padding + 1):
-			for z in range(min_z - padding, max_z + padding + 1):
-				var coord = Vector2i(x, z)
-				# Only add empty parcels if they're not occupied by actual scenes
-				if not scene_parcel_set.has(coord):
-					var parcel_string = "%d,%d" % [x, z]
+			# Create 2-parcel padding around the bounds
+			var padding = 2
+			for x in range(min_x - padding, max_x + padding + 1):
+				for z in range(min_z - padding, max_z + padding + 1):
+					var coord = Vector2i(x, z)
+					# Only add empty parcels if they're not occupied by actual scenes
+					if not scene_parcel_set.has(coord):
+						var parcel_string = "%d,%d" % [x, z]
 
-					if not loaded_empty_scenes.has(parcel_string):
-						var scene: Node3D = EMPTY_SCENE.instantiate()
-						var temp := (
-							"EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
-						)
-						scene.name = temp
-						add_child(scene)
-						scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+						if not loaded_empty_scenes.has(parcel_string):
+							var scene: Node3D = EMPTY_SCENE.instantiate()
+							var temp := (
+								"EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+							)
+							scene.name = temp
+							add_child(scene)
+							scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 
-						var config = _calculate_parcel_adjacency(
-							x,
-							z,
-							min_x - padding,
-							max_x + padding,
-							min_z - padding,
-							max_z + padding,
-							scene_parcel_set
-						)
-						scene.set_corner_configuration(config)
+							var config = _calculate_parcel_adjacency(
+								x,
+								z,
+								min_x - padding,
+								max_x + padding,
+								min_z - padding,
+								max_z + padding,
+								scene_parcel_set
+							)
+							scene.set_corner_configuration(config)
 
-						loaded_empty_scenes[parcel_string] = scene
+							loaded_empty_scenes[parcel_string] = scene
 
-		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
+			wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
+		else:
+			print("Warning: all_scene_parcels is empty after filtering, skipping floating island generation")
 
 	var empty_parcels_coords = []
 	if has_meta("last_scene_hash"):
