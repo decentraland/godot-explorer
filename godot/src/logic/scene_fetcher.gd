@@ -4,21 +4,9 @@ extends Node
 signal parcels_processed(parcel_filled, empty)
 signal report_scene_load(done: bool, is_new_loading: bool, pending: int)
 signal notify_pending_loading_scenes(is_pending: bool)
+signal player_parcel_changed(new_position: Vector2i)
 
-const EMPTY_SCENES = [
-	preload("res://assets/empty-scenes/EP_0.tscn"),
-	#preload("res://assets/empty-scenes/EP_1.tscn"), # it looks dark
-	preload("res://assets/empty-scenes/EP_2.tscn"),
-	preload("res://assets/empty-scenes/EP_3.tscn"),
-	preload("res://assets/empty-scenes/EP_4.tscn"),
-	preload("res://assets/empty-scenes/EP_5.tscn"),
-	preload("res://assets/empty-scenes/EP_6.tscn"),
-	preload("res://assets/empty-scenes/EP_7.tscn"),
-	preload("res://assets/empty-scenes/EP_8.tscn"),
-	preload("res://assets/empty-scenes/EP_9.tscn"),
-	preload("res://assets/empty-scenes/EP_10.tscn"),
-	preload("res://assets/empty-scenes/EP_11.tscn")
-]
+const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
@@ -41,9 +29,13 @@ var current_scene_entity_id: String = ""
 
 var loaded_empty_scenes: Dictionary = {}
 var loaded_scenes: Dictionary = {}
+var current_edge_parcels: Array[Vector2i] = []
+var wall_manager: FloatingIslandWalls = null
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
 var last_version_checked: int = -1
+
+var base_floor_manager: BaseFloorManager = null
 
 var desired_portable_experiences_urns: Array[String] = []
 
@@ -60,6 +52,20 @@ var _bypass_loading_check: bool = false
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
+
+	# Initialize wall manager
+	wall_manager = FloatingIslandWalls.new()
+	add_child(wall_manager)
+
+	# Create base floor manager
+	base_floor_manager = BaseFloorManager.new()
+	base_floor_manager.name = "BaseFloorManager"
+	add_child(base_floor_manager)
+
+	# Parcel data texture will be generated after parcels are loaded
+
+	# Initialize global uniforms
+	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
 
 	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 	Global.get_config().param_changed.connect(self._on_config_changed)
@@ -126,7 +132,12 @@ func _process(_dt):
 	var version := scene_entity_coordinator.get_version()
 
 	# When the loading-check is disable, early process this and return
-	if not Global.get_config().loading_scene_arround_only_when_you_pass:
+	# For dynamic loading (no floating islands), always use continuous loading
+	var use_continuous_loading = (
+		not Global.get_config().loading_scene_arround_only_when_you_pass
+		or not is_using_floating_islands()
+	)
+	if use_continuous_loading:
 		if version != last_version_updated:
 			last_version_updated = scene_entity_coordinator.get_version()
 			await _async_on_desired_scene_changed()
@@ -147,6 +158,10 @@ func _process(_dt):
 			last_version_updated = scene_entity_coordinator.get_version()
 			notify_pending_loading_scenes.emit(false)
 			await _async_on_desired_scene_changed()
+	elif version != last_version_updated:
+		# Version changed but we're in the same scene - still need to update for dynamic loading
+		last_version_updated = scene_entity_coordinator.get_version()
+		await _async_on_desired_scene_changed()
 	elif version != last_version_checked:
 		last_version_checked = version
 		if _is_there_any_new_scene_to_load():
@@ -183,29 +198,38 @@ func _is_there_any_new_scene_to_load() -> bool:
 func _async_on_desired_scene_changed():
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
-	var keep_alive_scenes = d.get("keep_alive_scenes", [])
 	var empty_parcels = d.get("empty_parcels", [])
 
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
 	# Report new load, when I dont have scenes loaded, and there are a lot of new scenes...
-	var new_loading = loaded_scenes.is_empty() and not loadable_scenes.is_empty()
+	# Never show loading screen for dynamic loading (seamless background loading)
+	var new_loading = (
+		loaded_scenes.is_empty() and not loadable_scenes.is_empty() and is_using_floating_islands()
+	)
 	if new_loading and _is_reloading:
 		_is_reloading = false
 		new_loading = false
 
 	var loading_promises: Array = []
 	for scene_id in loadable_scenes:
+		var should_load = false
 		if not loaded_scenes.has(scene_id):
+			should_load = true
+		else:
+			# Check if scene is actually loaded or still loading (scene_number_id == -1)
+			var scene: SceneItem = loaded_scenes[scene_id]
+			if scene.scene_number_id != -1:
+				# Scene is fully loaded
+				new_loading = false
+
+		if should_load:
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
 			if scene_definition != null:
 				loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
 			else:
-				printerr("shoud load scene_id ", scene_id, " but data is empty")
-		else:
-			# When we already have loaded the scene...
-			new_loading = false
+				printerr("should load scene_id ", scene_id, " but data is empty")
 
 	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
@@ -216,34 +240,120 @@ func _async_on_desired_scene_changed():
 	if counter_this_call != _scene_changed_counter:
 		return
 
+	# Get current loadable/keep_alive scenes (they may have changed while loading)
+	var current_desired = scene_entity_coordinator.get_desired_scenes()
+	var current_loadable = current_desired.get("loadable_scenes", [])
+	var current_keep_alive = current_desired.get("keep_alive_scenes", [])
+
+	# Clean up old scenes that are no longer needed
+	var scenes_to_remove = []
 	for scene_id in loaded_scenes.keys():
-		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
+		var should_keep = current_loadable.has(scene_id) or current_keep_alive.has(scene_id)
+
+		if not should_keep:
 			var scene: SceneItem = loaded_scenes[scene_id]
-			if scene.scene_number_id != -1:
+			# Don't kill or remove scenes that are still loading (scene_number_id == -1)
+			# Don't kill or remove global scenes
+			if not scene.is_global and scene.scene_number_id != -1:
 				Global.scene_runner.kill_scene(scene.scene_number_id)
+				if base_floor_manager:
+					base_floor_manager.remove_scene_floors(scene.id)
+				scenes_to_remove.append(scene_id)
+
+	for scene_id in scenes_to_remove:
+		loaded_scenes.erase(scene_id)
+
+	# Skip floating island generation in test/renderer modes
+	var use_floating_islands = is_using_floating_islands()
+
+	# Clear floating island state when switching to dynamic loading
+	if not use_floating_islands and has_meta("last_scene_hash"):
+		set_meta("last_scene_hash", "")
+		# Clean up any existing floating island empty parcels
+		for parcel in loaded_empty_scenes:
+			var empty_scene = loaded_empty_scenes[parcel]
+			remove_child(empty_scene)
+			empty_scene.queue_free()
+		loaded_empty_scenes.clear()
+
+	if use_floating_islands:
+		var all_scene_parcels = []
+		for scene: SceneItem in loaded_scenes.values():
+			if not scene.is_global:
+				all_scene_parcels.append_array(scene.parcels)
+
+		var current_scene_hash = str(all_scene_parcels.hash())
+		if (
+			not all_scene_parcels.is_empty()
+			and (
+				not has_meta("last_scene_hash") or get_meta("last_scene_hash") != current_scene_hash
+			)
+		):
+			for parcel in loaded_empty_scenes:
+				var empty_scene = loaded_empty_scenes[parcel]
+				remove_child(empty_scene)
+				empty_scene.queue_free()
+			loaded_empty_scenes.clear()
+			current_edge_parcels.clear()
+			wall_manager.clear_walls()
+
+			set_meta("last_scene_hash", current_scene_hash)
+
+			# Cluster parcels and find the one containing the player
+			var clusters = _cluster_parcels(all_scene_parcels)
+			var player_cluster = _find_cluster_containing_parcel(clusters, current_position)
+
+			if player_cluster != null:
+				_create_floating_island_for_cluster(player_cluster)
 
 	var empty_parcels_coords = []
-	for parcel in empty_parcels:
-		var coord = parcel.split(",")
-		var x = int(coord[0])
-		var z = int(coord[1])
-		empty_parcels_coords.push_back(Vector2i(x, z))
+	if use_floating_islands and has_meta("last_scene_hash"):
+		# Use floating island empty parcels
+		for parcel_string in loaded_empty_scenes.keys():
+			var coord = parcel_string.split(",")
+			var x = int(coord[0])
+			var z = int(coord[1])
+			empty_parcels_coords.push_back(Vector2i(x, z))
+	else:
+		# Use dynamic loading for empty parcels (test/renderer mode or no floating island)
+		# The coordinator provides all empty parcels in the radius
+		var current_empty_parcels_set = {}
+		for parcel in empty_parcels:
+			current_empty_parcels_set[parcel] = true
 
-		if not loaded_empty_scenes.has(parcel):
-			var index = randi_range(0, EMPTY_SCENES.size() - 1)
-			var scene: Node3D = EMPTY_SCENES[index].instantiate()
-			var temp := "EP_%s_%s_%s" % [index, str(x).replace("-", "m"), str(-z).replace("-", "m")]
-			scene.name = temp
-			add_child(scene)
-			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
-			loaded_empty_scenes[parcel] = scene
+		# Remove old empty parcels that are no longer in range
+		var parcels_to_remove = []
+		for parcel_string in loaded_empty_scenes.keys():
+			if not current_empty_parcels_set.has(parcel_string):
+				parcels_to_remove.append(parcel_string)
+
+		for parcel_string in parcels_to_remove:
+			var empty_scene = loaded_empty_scenes[parcel_string]
+			remove_child(empty_scene)
+			empty_scene.queue_free()
+			loaded_empty_scenes.erase(parcel_string)
+
+		# Load new empty parcels from coordinator
+		for parcel in empty_parcels:
+			var coord = parcel.split(",")
+			var x = int(coord[0])
+			var z = int(coord[1])
+			empty_parcels_coords.push_back(Vector2i(x, z))
+
+			# Instantiate empty parcel scene if not already loaded
+			if not loaded_empty_scenes.has(parcel):
+				var scene: Node3D = EMPTY_SCENE.instantiate()
+				var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+				scene.name = temp
+				add_child(scene)
+				scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+				loaded_empty_scenes[parcel] = scene
 
 	var parcel_filled = []
 	for scene: SceneItem in loaded_scenes.values():
 		parcel_filled.append_array(scene.parcels)
 
 	report_scene_load.emit(true, new_loading, loadable_scenes.size())
-
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
 
 
@@ -253,6 +363,9 @@ func _on_realm_changed():
 
 	Global.get_config().last_realm_joined = Global.realm.realm_url
 	Global.get_config().save_to_settings_file()
+
+	# Force floating island recreation on realm change
+	set_meta("last_scene_hash", "")
 
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url
@@ -282,6 +395,7 @@ func _on_realm_changed():
 		empty_parcel.queue_free()
 
 	loaded_empty_scenes.clear()
+	wall_manager.clear_walls()
 
 	loaded_scenes = {}
 
@@ -304,12 +418,17 @@ func get_scene_by_req_id(request_id: int):
 	return null
 
 
+func is_using_floating_islands() -> bool:
+	return not (Global.cli.scene_test_mode or Global.cli.scene_renderer_mode)
+
+
 func update_position(new_position: Vector2i) -> void:
 	if current_position == new_position:
 		return
 
 	current_position = new_position
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
+	player_parcel_changed.emit(new_position)
 
 
 func async_load_scene(
@@ -379,10 +498,16 @@ func async_load_scene(
 		"%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
 	)
 
-	var download_promise: Promise = Global.content_provider.fetch_file_by_url(
-		scene_hash_zip, asset_url
-	)
-	var download_res = await PromiseUtils.async_awaiter(download_promise)
+	# Check if optimized zip already exists to avoid re-download hang
+	var zip_file_path = "user://content/" + scene_hash_zip
+	var download_res = null
+	if FileAccess.file_exists(zip_file_path):
+		download_res = true  # Pretend success since file exists
+	else:
+		var download_promise: Promise = Global.content_provider.fetch_file_by_url(
+			scene_hash_zip, asset_url
+		)
+		download_res = await PromiseUtils.async_awaiter(download_promise)
 	if Global.is_xr() or Global.get_testing_scene_mode():
 		print("Scene optimization skipped")
 	elif download_res is PromiseError:
@@ -442,6 +567,10 @@ func _on_try_spawn_scene(
 	)
 	scene_item.scene_number_id = scene_number_id
 
+	# Add base floors for this scene's parcels
+	if base_floor_manager:
+		base_floor_manager.add_scene_floors(scene_item.id, scene_item.parcels)
+
 	return true
 
 
@@ -451,6 +580,8 @@ func reload_scene(scene_id: String) -> void:
 		var scene_number_id: int = scene.scene_number_id
 		if scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)
+			if base_floor_manager:
+				base_floor_manager.remove_scene_floors(scene_id)
 
 		var scene_entity_definition: DclSceneEntityDefinition = scene.scene_entity_definition
 		var local_main_js_path: String = (
@@ -473,3 +604,131 @@ func reload_scene(scene_id: String) -> void:
 
 func set_debugging_js_scene_id(id: String) -> void:
 	_debugging_js_scene_id = id
+
+
+func get_edge_parcels() -> Array[Vector2i]:
+	return current_edge_parcels
+
+
+func _find_cluster_containing_parcel(clusters: Array, parcel: Vector2i):
+	for cluster in clusters:
+		for cluster_parcel in cluster:
+			if cluster_parcel.x == parcel.x and cluster_parcel.y == parcel.y:
+				return cluster
+	return null
+
+
+func _cluster_parcels(parcels: Array) -> Array:
+	if parcels.is_empty():
+		return []
+
+	var clusters = []
+	var max_cluster_distance = 10  # Parcels within 10 units are considered part of the same island
+
+	for parcel in parcels:
+		var added_to_cluster = false
+
+		# Try to add to an existing cluster
+		for cluster in clusters:
+			# Check if this parcel is close to any parcel in the cluster
+			for cluster_parcel in cluster:
+				var distance = abs(parcel.x - cluster_parcel.x) + abs(parcel.y - cluster_parcel.y)
+				if distance <= max_cluster_distance:
+					cluster.append(parcel)
+					added_to_cluster = true
+					break
+			if added_to_cluster:
+				break
+
+		# If not added to any cluster, create a new one
+		if not added_to_cluster:
+			clusters.append([parcel])
+
+	return clusters
+
+
+func _create_floating_island_for_cluster(cluster: Array):
+	if cluster.is_empty():
+		return
+
+	var min_x = cluster[0].x
+	var max_x = cluster[0].x
+	var min_z = cluster[0].y
+	var max_z = cluster[0].y
+
+	for parcel in cluster:
+		min_x = min(min_x, parcel.x)
+		max_x = max(max_x, parcel.x)
+		min_z = min(min_z, parcel.y)
+		max_z = max(max_z, parcel.y)
+
+	# Create a set of scene parcels for quick lookup
+	var scene_parcel_set = {}
+	for parcel in cluster:
+		scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
+
+	# Create 2-parcel padding around the bounds
+	var padding = 2
+	for x in range(min_x - padding, max_x + padding + 1):
+		for z in range(min_z - padding, max_z + padding + 1):
+			var coord = Vector2i(x, z)
+			# Only add empty parcels if they're not occupied by actual scenes
+			if not scene_parcel_set.has(coord):
+				var parcel_string = "%d,%d" % [x, z]
+
+				if not loaded_empty_scenes.has(parcel_string):
+					var scene: Node3D = EMPTY_SCENE.instantiate()
+					var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+					scene.name = temp
+					add_child(scene)
+					scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+
+					var config = _calculate_parcel_adjacency(
+						x,
+						z,
+						min_x - padding,
+						max_x + padding,
+						min_z - padding,
+						max_z + padding,
+						scene_parcel_set
+					)
+					scene.set_corner_configuration(config)
+
+					loaded_empty_scenes[parcel_string] = scene
+
+	wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
+
+
+func _calculate_parcel_adjacency(
+	x: int,
+	z: int,
+	bounds_min_x: int,
+	bounds_max_x: int,
+	bounds_min_z: int,
+	bounds_max_z: int,
+	loaded_parcels: Dictionary
+) -> CornerConfiguration:
+	var config = CornerConfiguration.new()
+
+	# Helper to determine the state of an adjacent parcel
+	var get_parcel_state = func(px: int, pz: int) -> CornerConfiguration.ParcelState:
+		# Out of bounds
+		if px < bounds_min_x or px > bounds_max_x or pz < bounds_min_z or pz > bounds_max_z:
+			return CornerConfiguration.ParcelState.NOTHING
+		# Loaded scene
+		if loaded_parcels.has(Vector2i(px, pz)):
+			return CornerConfiguration.ParcelState.LOADED
+		# Empty parcel
+		return CornerConfiguration.ParcelState.EMPTY
+
+	# Check all 8 adjacent positions
+	config.north = get_parcel_state.call(x, z + 1)
+	config.south = get_parcel_state.call(x, z - 1)
+	config.east = get_parcel_state.call(x + 1, z)
+	config.west = get_parcel_state.call(x - 1, z)
+	config.northwest = get_parcel_state.call(x - 1, z + 1)
+	config.northeast = get_parcel_state.call(x + 1, z + 1)
+	config.southwest = get_parcel_state.call(x - 1, z - 1)
+	config.southeast = get_parcel_state.call(x + 1, z - 1)
+
+	return config

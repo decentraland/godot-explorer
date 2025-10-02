@@ -1,17 +1,18 @@
 extends "res://addons/dcl_dev_tools/dev_tools/dcl_dev_tool.gd"
 
 var places = {
-	"Genesis Plaza": Vector2i(0, 0),
-	"Soul Magic": Vector2i(96, -110),
-	"Tower of Hanoi": Vector2i(61, -22),
-	"Meta gamimall": Vector2i(1, 95),
-	"Wondermine": Vector2i(-29, 55),
-	"Exodus": Vector2i(125, 41),
-	"BitCinema": Vector2i(-109, -93),
-	"DAO HQ": Vector2i(65, 13),
-	"Casa Roustan": Vector2i(37, -114),
-	"Fashion Week Scene": Vector2i(142, -78),
-	"Game Night": Vector2i(1, 81)
+	"Genesis Plaza": {"coords": Vector2i(0, 0)},
+	"kuruk.dcl.eth": {"coords": Vector2i(0, 0), "realm": "kuruk.dcl.eth"},
+	"Soul Magic": {"coords": Vector2i(96, -110)},
+	"Tower of Hanoi": {"coords": Vector2i(61, -22)},
+	"Meta gamimall": {"coords": Vector2i(1, 95)},
+	"Wondermine": {"coords": Vector2i(-29, 55)},
+	"Exodus": {"coords": Vector2i(125, 41)},
+	"BitCinema": {"coords": Vector2i(-109, -93)},
+	"DAO HQ": {"coords": Vector2i(65, 13)},
+	"Casa Roustan": {"coords": Vector2i(37, -114)},
+	"Fashion Week Scene": {"coords": Vector2i(142, -78)},
+	"Game Night": {"coords": Vector2i(1, 81)}
 }
 
 var launch_dialog: AcceptDialog
@@ -101,17 +102,15 @@ func _launch_selected_place():
 	if selected_place_index < 0 or selected_place_index >= places.size():
 		return
 
-	var place = places.keys()[selected_place_index]
-	var coord = places[place]
+	var place_name = places.keys()[selected_place_index]
+	var place_data = places[place_name]
+	var coord = place_data["coords"]
+	var realm = place_data.get("realm", "https://realm-provider.decentraland.org/main")
 
 	var old_args = ProjectSettings.get("editor/run/main_run_args")
-	ProjectSettings.set(
-		"editor/run/main_run_args",
-		(
-			"--skip-lobby --realm https://realm-provider.decentraland.org/main --location %d,%d"
-			% [coord.x, coord.y]
-		)
-	)
+	var launch_args = "--skip-lobby --realm %s --location %d,%d" % [realm, coord.x, coord.y]
+	print("Launching with args: ", launch_args)
+	ProjectSettings.set("editor/run/main_run_args", launch_args)
 	plugin.get_editor_interface().play_main_scene()
 	ProjectSettings.set("editor/run/main_run_args", old_args)
 

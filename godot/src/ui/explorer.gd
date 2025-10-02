@@ -13,6 +13,8 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var debug_map_container: DebugMapContainer = null
+
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -53,8 +55,12 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		Global.scene_fetcher.update_position(parcel_position)
+		# Only use dynamic loading when floating islands are disabled (test/renderer mode)
+		if not Global.scene_fetcher.is_using_floating_islands():
+			Global.scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
+		# Just emit the signal for things like grass culling
+		Global.scene_fetcher.player_parcel_changed.emit(parcel_position)
 		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
 		Global.change_parcel.emit(parcel_position)
@@ -89,6 +95,12 @@ func _ready():
 		player.vr_screen.set_instantiate_scene(ui_root)
 
 	emote_wheel.avatar_node = player.avatar
+
+	# Add debug map container only if --debug-minimap flag is present
+	if Global.cli.debug_minimap:
+		debug_map_container = load("res://src/ui/components/debug_map/debug_map_container.gd").new()
+		ui_root.add_child(debug_map_container)
+		debug_map_container.set_enabled(true)
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
@@ -129,6 +141,9 @@ func _ready():
 		+ Vector3(8.0, 0.0, -8.0)
 	)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
+
+	# Load the initial parcel since dynamic loading is disabled
+	Global.scene_fetcher.update_position(start_parcel_position)
 
 	Global.scene_runner.camera_node = player.camera
 	Global.scene_runner.player_avatar_node = player.avatar
@@ -296,6 +311,11 @@ func _on_control_menu_toggle_minimap(visibility):
 	control_minimap.visible = visibility
 
 
+func toggle_debug_minimap(enabled: bool):
+	if debug_map_container:
+		debug_map_container.set_enabled(enabled)
+
+
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
 
@@ -376,6 +396,12 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	prints("Teleport to parcel: ", parcel, move_to_position)
 	move_to(move_to_position, false)
+
+	# Load scenes at the new position since dynamic loading is disabled
+	print("Loading scenes at teleport destination: ", parcel)
+	# Force recreation of floating island by clearing the hash
+	Global.scene_fetcher.set_meta("last_scene_hash", "")
+	Global.scene_fetcher.update_position(parcel)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true

@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" load_steps=5 format=3 uid="uid://di3pn11i2lssn"]
+
+[ext_resource type="Shader" uid="uid://c6dcw4v1iv4o5" path="res://assets/shaders/cliff.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="2_texture"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_mqm50"]
+noise_type = 2
+fractal_type = 2
+cellular_distance_function = 3
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_j8e8d"]
+width = 256
+height = 256
+seamless = true
+noise = SubResource("FastNoiseLite_mqm50")
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/texture_albedo = ExtResource("2_texture")
+shader_parameter/noise_texture = SubResource("NoiseTexture2D_j8e8d")
+shader_parameter/noise_scale = 0.01
+shader_parameter/distortion = Vector3(0, 0, 0)
+shader_parameter/texture_coord_1 = Vector2(0.56, 0.7)
+shader_parameter/texture_coord_2 = Vector2(0.62, 0.7)
