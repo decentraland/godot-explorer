@@ -10,6 +10,7 @@ const MENTION_COLOR = "#FFD700"
 	set(value):
 		compact_view = value
 		_update_compact_view()
+@export var reduce_text := false
 var nickname: String = "Unknown"
 var tag: String = ""
 var nickname_color_hex: String = "#FFFFFF"
@@ -93,16 +94,11 @@ func set_chat(address: String, message: String, timestamp: float) -> void:
 	h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_BEGIN
 
-	var datetime
-	if is_own_message:
-		# For own messages, use current system time
-		datetime = Time.get_time_dict_from_system()
-	else:
-		# For other messages, convert UTC timestamp to local device time
-		# The bias is in minutes and represents offset from UTC (negative for ahead of UTC)
-		var timezone_info = Time.get_time_zone_from_system()
-		var local_unix_time = int(timestamp) + (timezone_info.bias * 60)
-		datetime = Time.get_datetime_dict_from_unix_time(local_unix_time)
+	# For other messages, convert UTC timestamp to local device time
+	# The bias is in minutes and represents offset from UTC (negative for ahead of UTC)
+	var timezone_info = Time.get_time_zone_from_system()
+	var local_unix_time = int(timestamp) + (timezone_info.bias * 60)
+	var datetime = Time.get_datetime_dict_from_unix_time(local_unix_time)
 	var time_string = "%02d:%02d" % [datetime.hour, datetime.minute]
 
 	var processed_message = make_urls_clickable(message)
@@ -117,19 +113,11 @@ func set_chat(address: String, message: String, timestamp: float) -> void:
 	else:
 		set_system_avatar()
 
-	var processed_message_compact = make_urls_clickable(message)
-
-	if is_own_message:
-		new_text = ("[b][color=#fff]%s[/color]" % [processed_message_compact])
-		#profile_picture_compact.hide()
-	else:
-		new_text = (
-			"[b][color=#%s]%s[/color][/b][color=#a9a9a9]%s[/color] [b][color=#fff]%s[/color]"
-			% [nickname_color_hex, nickname, tag, processed_message_compact]
-		)
-		profile_picture_compact.show()
-	if compact_view and new_text.length() > MAX_CHARS_COMPACT_VIEW:
+	if reduce_text and new_text.length() > MAX_CHARS_COMPACT_VIEW:
 		new_text = new_text.substr(0, MAX_CHARS_COMPACT_VIEW) + "..."
+
+	var processed_message_compact = make_urls_clickable(message)
+	new_text = ("[b][color=#fff]%s[/color]" % [processed_message_compact])
 	rich_text_label_compact_chat.text = new_text
 
 	async_adjust_panel_size.call_deferred()

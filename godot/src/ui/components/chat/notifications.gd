@@ -19,6 +19,7 @@ func _async_on_chat_message_arrived(address: String, message: String, timestamp:
 	notifications.push_back(new_chat)
 	notifications_container.add_child(new_chat)
 	new_chat.compact_view = true
+	new_chat.reduce_text = true
 	new_chat.max_panel_width = notifications_container.size.x - 50
 	new_chat.set_chat(address, message, timestamp)
 

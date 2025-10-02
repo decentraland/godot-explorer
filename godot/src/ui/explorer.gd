@@ -351,21 +351,17 @@ func _on_panel_chat_submit_message(message: String):
 			elif params.size() > 2:
 				dest_vector = Vector2i(int(params[1]), int(params[2]))
 
-			panel_chat.async_create_chat(
-				[
-					"system",
-					Time.get_unix_time_from_system(),
-					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]"
-				]
+			Global.on_chat_message.emit(
+				"system",
+				Time.get_unix_time_from_system(),
+				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]"
 			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			panel_chat.async_create_chat(
-				[
-					"system",
-					Time.get_unix_time_from_system(),
-					"[color=#ccc]Trying to change to realm " + params[1] + "[/color]"
-				]
+			Global.on_chat_message.emit(
+				"system",
+				Time.get_unix_time_from_system(),
+				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]"
 			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
@@ -375,12 +371,8 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
 			loading_ui.enable_loading_screen()
 		else:
-			panel_chat.async_create_chat(
-				[
-					"system",
-					Time.get_unix_time_from_system(),
-					"[color=#ccc]🔴 Unknown command[/color]"
-				]
+			Global.on_chat_message.emit(
+				"system", Time.get_unix_time_from_system(), "[color=#ccc]🔴 Unknown command[/color]"
 			)
 	else:
 		Global.comms.send_chat(message)
@@ -541,6 +533,7 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 
 
 func _async_open_profile(avatar: DclAvatar):
+	panel_chat.exit_chat()
 	if avatar == null or not is_instance_valid(avatar):
 		return
 

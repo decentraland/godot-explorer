@@ -12,8 +12,9 @@ use crate::{
     comms::{
         consts::{
             DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS, MAX_CHAT_MESSAGES,
-            MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE, MESSAGE_CHANNEL_SIZE,
-            OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS, PROFILE_UPDATE_CHANNEL_SIZE,
+            MAX_CHAT_MESSAGE_SIZE, MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE,
+            MESSAGE_CHANNEL_SIZE, OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS,
+            PROFILE_UPDATE_CHANNEL_SIZE,
         },
         profile::{SerializedProfile, UserProfile},
     },
@@ -757,6 +758,14 @@ impl MessageProcessor {
                         tracing::warn!("Chat queue full, dropping oldest message from {:#x}", addr);
                     }
                 }
+                let chat = if chat.message.len() > MAX_CHAT_MESSAGE_SIZE {
+                    rfc4::Chat {
+                        message: format!("{}...", &chat.message[..MAX_CHAT_MESSAGE_SIZE]),
+                        timestamp: chat.timestamp,
+                    }
+                } else {
+                    chat
+                };
                 self.chats.push_back((address, chat));
             }
             rfc4::packet::Message::ProfileVersion(announce_profile_version) => {

@@ -25,7 +25,6 @@ var new_messages_count: int = 0
 @onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
 @onready var avatars_list: Control = %AvatarsList
 @onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
-@onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
 @onready var margin_container_go_to_new_messages: MarginContainer = %MarginContainer_GoToNewMessages
 @onready var button_go_to_last: Button = %Button_GoToLast
 @onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
@@ -43,19 +42,11 @@ func _ready():
 	submit_message.connect(self._on_submit_message)
 
 	exit_chat.call_deferred()
-	_async_chat_ready.call_deferred()
 	button_go_to_last.hide()
 
 	scroll_container_chats_list.get_v_scroll_bar().scrolling.connect(
 		self._on_chat_scrollbar_scrolling
 	)
-
-
-func _async_chat_ready():
-	if not v_box_container_chat or not scroll_container_chats_list:
-		return
-
-	v_box_container_chat.queue_redraw()
 
 
 func _on_submit_message(_message: String):
@@ -134,15 +125,12 @@ func _on_gui_input(event: InputEvent) -> void:
 
 func exit_chat() -> void:
 	hide()
-	self_modulate = "#00000000"
 	on_exit_chat.emit()
 	DisplayServer.virtual_keyboard_hide()
 
 
 func async_start_chat():
 	show()
-	self_modulate = "#00000040"
-	v_box_container_content.show()
 	panel_container_navbar.show()
 
 	Global.get_explorer().release_mouse()
@@ -156,8 +144,6 @@ func async_start_chat():
 
 
 func show_nearby_players() -> void:
-	v_box_container_content.show()
-	self_modulate = "#00000080"
 	avatars_list.show()
 	button_back.show()
 	h_box_container_nearby_users.show()
@@ -169,8 +155,9 @@ func show_nearby_players() -> void:
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
-	new_chat.compact_view = false
-	new_chat.max_panel_width = v_box_container_chat.size.x - 100
+	new_chat.compact_view = true
+	new_chat.reduce_text = false
+	new_chat.max_panel_width = v_box_container_chat.size.x - 300
 	new_chat.set_chat(address, message, timestamp)
 
 	if !scrolled:
