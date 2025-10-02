@@ -88,16 +88,14 @@ theme_override_constants/separation = 9
 
 [node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer" instance=ExtResource("1_40sym")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
+custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 picture_size = 1
 
 [node name="Nickname" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(118, 0)
 layout_mode = 2
-size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
 
@@ -120,7 +118,6 @@ stretch_mode = 4
 
 [node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
 unique_name_in_owner = true
-clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
@@ -131,23 +128,8 @@ alignment = 1
 layout_mode = 2
 mouse_filter = 2
 
-[node name="ScrollContainer_Nickname" type="ScrollContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer"]
+[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(118, 0)
-layout_mode = 2
-mouse_filter = 2
-horizontal_scroll_mode = 3
-vertical_scroll_mode = 0
-
-[node name="Nick" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/ScrollContainer_Nickname"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/ScrollContainer_Nickname/Nick"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(118, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -155,7 +137,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("5_cmtom")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 18
 text = "X"
 
 [node name="Hash" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
@@ -169,7 +151,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 14
 text = "#"
 
 [node name="Tag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
@@ -178,7 +160,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 14
 text = "X"
 
 [node name="VSeparator" type="VSeparator" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
@@ -205,18 +187,17 @@ alignment = 1
 
 [node name="Button_BlockUser" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(35, 35)
+custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
-mouse_filter = 1
 mouse_default_cursor_shape = 2
 theme = ExtResource("1_gljko")
 theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 20
-theme_override_font_sizes/font_size = 12
+theme_override_constants/icon_max_width = 50
+theme_override_font_sizes/font_size = 20
 theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
@@ -226,17 +207,16 @@ expand_icon = true
 
 [node name="Button_MuteUser" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(35, 35)
+custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
-mouse_filter = 1
 mouse_default_cursor_shape = 2
 theme = ExtResource("1_gljko")
 theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 20
+theme_override_constants/icon_max_width = 40
 theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
@@ -261,6 +241,7 @@ icon = ExtResource("5_n1xiu")
 icon_alignment = 1
 expand_icon = true
 
+[connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_panel_nearby_player_item_gui_input"]
 [connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_BlockUser" to="." method="_on_button_block_user_pressed"]

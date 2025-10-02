@@ -15,6 +15,7 @@ var nickname: String = "Unknown"
 var tag: String = ""
 var nickname_color_hex: String = "#FFFFFF"
 var is_own_message: bool = false
+var has_claimed_name: bool = false
 var max_panel_width: int = 370
 
 @onready var rich_text_label_compact_chat: RichTextLabel = %RichTextLabel_CompactChat
@@ -76,12 +77,9 @@ func _update_compact_view() -> void:
 	h_box_container_compact_chat.visible = compact_view
 	rich_text_label_compact_chat.visible = compact_view
 
-	nickname_tag.reparent(nickname_container_compact if compact_view else nickname_container)
-	nickname_tag.get_parent().move_child(nickname_tag, 0)
-
 
 func set_chat(address: String, message: String, timestamp: float) -> void:
-	var new_text: String
+	var new_text: String = message
 	var own_address: String = Global.player_identity.get_address_str()
 	is_own_message = own_address == address
 
@@ -101,9 +99,6 @@ func set_chat(address: String, message: String, timestamp: float) -> void:
 	var datetime = Time.get_datetime_dict_from_unix_time(local_unix_time)
 	var time_string = "%02d:%02d" % [datetime.hour, datetime.minute]
 
-	var processed_message = make_urls_clickable(message)
-	new_text = ("[b][color=#fff]%s[/color]" % [processed_message])
-	rich_text_label_message.text = new_text
 	label_timestamp.text = time_string
 
 	if address == Global.player_identity.get_address_str():
@@ -116,10 +111,21 @@ func set_chat(address: String, message: String, timestamp: float) -> void:
 	if reduce_text and new_text.length() > MAX_CHARS_COMPACT_VIEW:
 		new_text = new_text.substr(0, MAX_CHARS_COMPACT_VIEW) + "..."
 
-	var processed_message_compact = make_urls_clickable(message)
-	new_text = ("[b][color=#fff]%s[/color]" % [processed_message_compact])
-	rich_text_label_compact_chat.text = new_text
-
+	var processed_message_compact = make_urls_clickable(new_text)
+	if address != "system":
+		processed_message_compact = escape_bbcode(processed_message_compact)
+	if compact_view:
+		var check_mark_text = ""
+		if has_claimed_name:
+			check_mark_text = " [img=14]res://assets/check-mark.svg[/img]"
+		new_text = (
+			"[b][color=#%s]%s[/color][/b][color=#a9a9a9]%s[/color]%s: [b][color=#fff]%s[/color]"
+			% [nickname_color_hex, nickname, tag, check_mark_text, processed_message_compact]
+		)
+		rich_text_label_compact_chat.text = new_text
+	else:
+		new_text = ("[b][color=#fff]%s[/color]" % [processed_message_compact])
+		rich_text_label_message.text = new_text
 	async_adjust_panel_size.call_deferred()
 
 
@@ -138,10 +144,13 @@ func set_avatar(avatar: DclAvatar) -> void:
 		tag = "#" + splitted_nickname[1]
 		label_tag.text = tag
 		claimed_checkmark.hide()
+		has_claimed_name = false
 	else:
 		label_nickname.text = nickname
 		label_tag.text = ""
+		tag = ""
 		claimed_checkmark.show()
+		has_claimed_name = true
 
 	# Update both profile pictures (extended and compact)
 	profile_picture.async_update_profile_picture(avatar)
@@ -363,18 +372,16 @@ func _adjust_panel_size():
 	if compact_view:
 		margin = 20
 	# Calculate required width based on text for extended chat
-	var font = rich_text_label_message.get_theme_default_font()
-	var font_size = rich_text_label_message.get_theme_font_size("normal_font_size")
-	if font_size == -1:
-		font_size = 12  # default size
+	var rich_text_label = rich_text_label_message
+	if compact_view:
+		rich_text_label = rich_text_label_compact_chat
 
-	var text_width = (
-		font
-		. get_string_size(
-			rich_text_label_message.get_parsed_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
-		)
-		. x
-	)
+	var parsed_text = rich_text_label.get_parsed_text()
+	var font = rich_text_label.get_theme_default_font()
+	var font_size = rich_text_label.get_theme_font_size("normal_font_size")
+	if font_size == -1:
+		font_size = 16  # default size
+	var text_width = font.get_string_size(parsed_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 
 	# Minimum and maximum width
 	var min_width = 25
@@ -385,8 +392,12 @@ func _adjust_panel_size():
 
 	# If text is too long, allow RichTextLabel to wrap
 	if text_width > desired_width:
-		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rich_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	else:
-		rich_text_label_message.autowrap_mode = TextServer.AUTOWRAP_OFF
-		rich_text_label_compact_chat.autowrap_mode = TextServer.AUTOWRAP_OFF
+		rich_text_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+
+
+func escape_bbcode(text: String) -> String:
+	# Insert zero-width space after [ to break BBCode parsing
+	text = text.replace("[", "[\u200b")  # Zero-width space
+	return text

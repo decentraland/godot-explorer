@@ -60,7 +60,7 @@ picture_size = 3
 
 [node name="PanelContainer_Extended" type="PanelContainer" parent="MarginContainer/HBoxContainer_ExtendedChat"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(92, 0)
+custom_minimum_size = Vector2(117, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -141,7 +141,11 @@ unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_rb0rw")
 theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/normal_font_size = 12
+theme_override_font_sizes/bold_italics_font_size = 16
+theme_override_font_sizes/italics_font_size = 16
+theme_override_font_sizes/mono_font_size = 16
+theme_override_font_sizes/normal_font_size = 16
+theme_override_font_sizes/bold_font_size = 16
 bbcode_enabled = true
 text = "message"
 fit_content = true
@@ -182,7 +186,7 @@ picture_size = 3
 
 [node name="PanelContainer_Compact" type="PanelContainer" parent="MarginContainer/HBoxContainer_CompactChat"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(92, 0)
+custom_minimum_size = Vector2(117, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -205,7 +209,11 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme = SubResource("Theme_pb0jp")
 theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/normal_font_size = 12
+theme_override_font_sizes/bold_italics_font_size = 16
+theme_override_font_sizes/italics_font_size = 16
+theme_override_font_sizes/mono_font_size = 16
+theme_override_font_sizes/normal_font_size = 16
+theme_override_font_sizes/bold_font_size = 16
 bbcode_enabled = true
 fit_content = true
 scroll_active = false

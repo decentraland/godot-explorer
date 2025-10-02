@@ -353,15 +353,15 @@ func _on_panel_chat_submit_message(message: String):
 
 			Global.on_chat_message.emit(
 				"system",
-				Time.get_unix_time_from_system(),
-				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]"
+				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+				Time.get_unix_time_from_system()
 			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
 			Global.on_chat_message.emit(
 				"system",
-				Time.get_unix_time_from_system(),
-				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]"
+				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]",
+				Time.get_unix_time_from_system()
 			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
@@ -372,7 +372,7 @@ func _on_panel_chat_submit_message(message: String):
 			loading_ui.enable_loading_screen()
 		else:
 			Global.on_chat_message.emit(
-				"system", Time.get_unix_time_from_system(), "[color=#ccc]🔴 Unknown command[/color]"
+				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
 			)
 	else:
 		Global.comms.send_chat(message)
@@ -586,3 +586,5 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 
 		var y_factor: float = viewport_size.y / window_size.y
 		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
+	elif virtual_keyboard_height == 0:
+		panel_chat.exit_chat()

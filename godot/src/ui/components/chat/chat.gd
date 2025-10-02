@@ -13,6 +13,7 @@ var is_open: bool = false
 var scrolled: bool = false
 var new_messages_count: int = 0
 
+@onready var panel_line_edit: PanelContainer = %PanelLineEdit
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
 @onready var button_nearby_users: Button = %Button_NearbyUsers
@@ -48,6 +49,13 @@ func _ready():
 		self._on_chat_scrollbar_scrolling
 	)
 
+	await Global.loading_finished
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b]",
+		Time.get_unix_time_from_system()
+	)
+
 
 func _on_submit_message(_message: String):
 	UiSounds.play_sound("widget_chat_message_private_send")
@@ -57,6 +65,7 @@ func _scroll_to_bottom() -> void:
 	if not scroll_container_chats_list:
 		return
 
+	new_messages_count = 0
 	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
 	if scrollbar:
 		scroll_container_chats_list.set_v_scroll.call_deferred(scrollbar.max_value - scrollbar.page)
@@ -74,7 +83,7 @@ func _on_button_send_pressed():
 func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
-	line_edit_command.emit_signal("focus_exited")
+	line_edit_command.focus_exited.emit()
 	grab_focus.call_deferred()
 	exit_chat()
 
@@ -104,6 +113,7 @@ func _on_button_nearby_users_pressed() -> void:
 
 
 func _on_button_back_pressed() -> void:
+	panel_line_edit.show()
 	avatars_list.hide()
 	button_back.hide()
 	h_box_container_nearby_users.hide()
@@ -150,6 +160,7 @@ func show_nearby_players() -> void:
 	margin_container_chat.hide()
 	texture_rect_logo.hide()
 	button_nearby_users.hide()
+	panel_line_edit.hide()
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
@@ -157,7 +168,7 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 	v_box_container_chat.add_child(new_chat)
 	new_chat.compact_view = true
 	new_chat.reduce_text = false
-	new_chat.max_panel_width = v_box_container_chat.size.x - 300
+	new_chat.max_panel_width = 1000
 	new_chat.set_chat(address, message, timestamp)
 
 	if !scrolled:

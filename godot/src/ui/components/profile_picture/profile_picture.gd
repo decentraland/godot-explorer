@@ -155,11 +155,11 @@ func apply_style(color: Color) -> void:
 
 
 func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	if event is InputEventScreenTouch:
+		if event.pressed:
 			if avatar != null and is_instance_valid(avatar):
 				var explorer = Global.get_explorer()
 				if avatar.avatar_id == Global.player_identity.get_address_str():
 					explorer.control_menu.show_own_profile()
 				else:
-					Global.emit_signal("open_profile", avatar)
+					Global.open_profile.emit(avatar)

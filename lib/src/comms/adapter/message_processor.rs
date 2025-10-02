@@ -728,21 +728,20 @@ impl MessageProcessor {
                 // Check if user is muted for chat (using cached set for O(1) lookup)
                 // Note: cached_muted includes both muted AND blocked users
                 if self.cached_muted.contains(&address) {
+                    tracing::info!("Ignoring muted {:#x}", address);
                     return; // muted/blocked - ignore chat messages
                 }
 
                 // Check for duplicate messages based on timestamp
-                const TIMESTAMP_TOLERANCE: f64 = 0.001;
-
                 // Check if we've seen a recent message from this sender
                 if let Some(&last_timestamp) = self.last_chat_timestamps.get(&address) {
                     // If the new timestamp is older or within tolerance of the last one, it's a duplicate
-                    if chat.timestamp <= last_timestamp + TIMESTAMP_TOLERANCE {
-                        tracing::debug!(
+                    if chat.timestamp < last_timestamp {
+                        tracing::info!(
                             "Discarding duplicate chat from {:#x}: timestamp {} <= {} (last + tolerance)",
                             address,
                             chat.timestamp,
-                            last_timestamp + TIMESTAMP_TOLERANCE
+                            last_timestamp
                         );
                         return;
                     }

@@ -386,8 +386,8 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
 			"system",
-			Time.get_unix_time_from_system(),
-			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]"
+			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]",
+			Time.get_unix_time_from_system()
 		)
 	else:
 		Global.get_config().last_realm_joined = new_realm
