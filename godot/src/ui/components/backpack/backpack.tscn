@@ -615,7 +615,6 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-mouse_filter = 2
 
 [node name="GridContainer_WearablesList" type="GridContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer"]
 unique_name_in_owner = true
@@ -625,7 +624,9 @@ theme_override_constants/v_separation = 4
 columns = 4
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer"]
+visible = false
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 60
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 60
@@ -635,17 +636,20 @@ theme_override_constants/margin_bottom = 60
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 50
 
 [node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/MarginContainer/Control_NoItems"]
 custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
+mouse_filter = 2
 texture = ExtResource("27_kffkw")
 expand_mode = 3
 stretch_mode = 5
 
 [node name="RichTextBox_OpenMarketplace" type="RichTextLabel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/MarginContainer/Control_NoItems"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_fonts/normal_font = ExtResource("33_18vfg")
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true

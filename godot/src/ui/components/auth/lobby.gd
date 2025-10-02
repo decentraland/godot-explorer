@@ -3,6 +3,8 @@ extends Control
 
 signal change_scene(new_scene_path: String)
 
+var is_creating_account: bool = false
+
 var current_profile: DclUserProfile
 var guest_account_created: bool = false
 
@@ -26,8 +28,8 @@ var _last_panel: Control = null
 
 @onready var label_avatar_name = %Label_Name
 
-@onready var avatar_preview_landscape = %AvatarPreview_Landscape
-@onready var avatar_preview_portrait = %AvatarPreview_Portrait
+@onready var avatar_preview: AvatarPreview = %AvatarPreview
+
 
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
@@ -35,12 +37,13 @@ var _last_panel: Control = null
 
 @onready var backpack = %Backpack
 
-@onready var button_open_browser = %Button_OpenBrowser
+@onready var choose_name_head: VBoxContainer = %ChooseNameHead
+@onready var restore_name_head: VBoxContainer = %RestoreNameHead
+@onready var choose_name_footer: VBoxContainer = %ChooseNameFooter
+@onready var restore_name_footer: VBoxContainer = %RestoreNameFooter
 
-@onready var v_box_container_cn_first: VBoxContainer = %VboxContainer_CNFirst
-@onready var v_box_container_rp_first: VBoxContainer = %VBoxContainer_RPFirst
-@onready var v_box_container_cn_second: VBoxContainer = %VBoxContainer_CNSecond
-@onready var v_box_container_rp_second: VBoxContainer = %VBoxContainer_RPSecond
+@onready var button_enter_as_guest: Button = %Button_EnterAsGuest
+@onready var sign_in_title: Label = %SignInTitle
 
 
 func show_panel(child_node: Control, subpanel: Control = null):
@@ -74,14 +77,10 @@ func _ready():
 	Global.music_player.play("music_builder")
 	control_restore_and_choose_name.hide()
 
-	var android_login = %AndroidLogin
-	if is_instance_valid(android_login) and android_login.is_platform_supported():
-		android_login.set_lobby(self)
-		android_login.show()
-		button_open_browser.hide()
-	else:
-		button_open_browser.text = "OPEN BROWSER"
-		android_login.hide()
+	var login = %Login
+	
+	login.set_lobby(self)
+	login.show()
 
 	show_panel(control_loading)
 
@@ -124,22 +123,25 @@ func go_to_explorer():
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
-	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(new_profile)
-	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(new_profile)
+	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
 		Global.get_config().save_to_settings_file()
-
+		restore_name_head.hide()
+		restore_name_footer.hide()
+		choose_name_head.show()
+		choose_name_footer.show()
+		
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
 			label_avatar_name.set_text(new_profile.get_name())
 
-			v_box_container_rp_first.show()
-			v_box_container_rp_second.show()
-			v_box_container_cn_first.hide()
-			v_box_container_cn_second.hide()
+			restore_name_head.show()
+			restore_name_footer.show()
+			choose_name_head.hide()
+			choose_name_footer.hide()
 			show_panel(control_restore_and_choose_name)
 			_show_avatar_preview()
 			if _skip_lobby:
@@ -152,15 +154,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
-		if profile_has_name():
-			await async_close_sign_in()
-		else:
-			v_box_container_rp_first.hide()
-			v_box_container_rp_second.hide()
-			v_box_container_cn_first.show()
-			v_box_container_cn_second.show()
-			show_panel(control_restore_and_choose_name)
-			_show_avatar_preview()
+		await async_close_sign_in()
 
 
 func show_connect():
@@ -189,19 +183,21 @@ func _on_button_different_account_pressed():
 	Global.social_blacklist.clear_muted()
 
 	Global.get_config().save_to_settings_file()
-	show_connect()
-	avatar_preview_portrait.hide()
-	avatar_preview_landscape.hide()
+	show_panel(control_start)
+	#avatar_preview.hide()
 
 
 func _on_button_continue_pressed():
 	_async_on_profile_changed(backpack.mutable_profile)
-	show_connect()
+	show_panel(control_restore_and_choose_name)
+
 
 
 func _on_button_start_pressed():
+	button_enter_as_guest.show()
+	sign_in_title.text = "Create Your Account"
 	create_guest_account_if_needed()
-
+	is_creating_account = true
 	show_panel(control_backpack)
 
 
@@ -210,8 +206,7 @@ func _on_button_next_pressed():
 	if lineedit_choose_name.text.is_empty():
 		return
 
-	avatar_preview_landscape.hide()
-	avatar_preview_portrait.hide()
+	avatar_preview.hide()
 	show_panel(control_loading)
 	current_profile.set_name(lineedit_choose_name.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
@@ -223,23 +218,18 @@ func _on_button_next_pressed():
 
 	await ProfileService.async_deploy_profile(current_profile, true)
 
-	await async_close_sign_in(false)
-
+	#await async_close_sign_in(false)
+	show_panel(control_signin)
 
 func _on_button_random_name_pressed():
 	lineedit_choose_name.set_text(RandomGeneratorUtil.generate_unique_name())
 	_check_button_finish()
 
 
-func _on_button_open_browser_pressed():
-	Global.player_identity.try_connect_account("")
-	container_sign_in_step1.hide()
-	container_sign_in_step2.show()
-	waiting_for_new_wallet = true
-
-
 func _on_button_go_to_sign_in_pressed():
 	show_connect()
+	button_enter_as_guest.hide()
+	sign_in_title.text = "Sign In to Decentraland"
 
 
 func _on_button_cancel_pressed():
@@ -254,7 +244,10 @@ func create_guest_account_if_needed():
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()
-		Global.player_identity.set_default_profile()
+		if is_creating_account:
+			Global.player_identity.set_profile(current_profile)
+		else:
+			Global.player_identity.set_default_profile() 
 		guest_account_created = true
 
 
@@ -262,22 +255,16 @@ func profile_has_name():
 	var profile = Global.player_identity.get_profile_or_null()
 	return profile != null and not profile.get_name().is_empty()
 
-
+# gdlint:ignore = async-function-name
 func _on_button_enter_as_guest_pressed():
 	create_guest_account_if_needed()
-	v_box_container_rp_first.hide()
-	v_box_container_rp_second.hide()
-	v_box_container_cn_first.show()
-	v_box_container_cn_second.show()
-	show_panel(control_restore_and_choose_name)
-	_show_avatar_preview()
+	await async_close_sign_in()
 
 
 func _show_avatar_preview():
-	avatar_preview_landscape.show()
-	avatar_preview_landscape.avatar.emote_controller.play_emote("raiseHand")
-	avatar_preview_portrait.show()
-	avatar_preview_portrait.avatar.emote_controller.play_emote("raiseHand")
+	avatar_preview.show()
+	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
+	
 
 
 # gdlint:ignore = async-function-name
@@ -296,26 +283,15 @@ func _on_line_edit_choose_name_text_changed(_new_text):
 func _check_button_finish():
 	var disabled = lineedit_choose_name.text.is_empty()
 	if button_next.disabled != disabled:
-		avatar_preview_landscape.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
-		avatar_preview_portrait.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
+		avatar_preview.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
 	button_next.disabled = disabled
 
 
-func _on_avatar_preview_landscape_gui_input(event: InputEvent) -> void:
+func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if not avatar_preview_landscape.avatar.emote_controller.is_playing():
+			if not avatar_preview.avatar.emote_controller.is_playing():
 				if lineedit_choose_name.text.contains("dancer"):
-					avatar_preview_landscape.avatar.emote_controller.play_emote("dance")
+					avatar_preview.avatar.emote_controller.play_emote("dance")
 				else:
-					avatar_preview_landscape.avatar.emote_controller.play_emote("wave")
-
-
-func _on_avatar_preview_portrait_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			if not avatar_preview_portrait.avatar.emote_controller.is_playing():
-				if lineedit_choose_name.text.contains("dancer"):
-					avatar_preview_portrait.avatar.emote_controller.play_emote("dance")
-				else:
-					avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
+					avatar_preview.avatar.emote_controller.play_emote("wave")
