@@ -301,7 +301,7 @@ impl INode for DclCli {
         let mut args_map = HashMap::new();
 
         // Add default arguments
-        args_map.insert("--skip-lobby".to_string(), None);
+        //args_map.insert("--skip-lobby".to_string(), None); // debug
 
         // Parse command line arguments into a map
         let args_vec = args.to_vec();
