@@ -55,8 +55,9 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		# Dynamic loading disabled - scenes won't auto-load when moving between parcels
-		# Global.scene_fetcher.update_position(parcel_position)
+		# Only use dynamic loading when floating islands are disabled (test/renderer mode)
+		if not Global.scene_fetcher.is_using_floating_islands():
+			Global.scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
 		# Just emit the signal for things like grass culling
 		Global.scene_fetcher.player_parcel_changed.emit(parcel_position)

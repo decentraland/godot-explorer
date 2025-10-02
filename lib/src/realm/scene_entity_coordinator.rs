@@ -317,15 +317,33 @@ impl SceneEntityCoordinator {
             && self.requested_city_pointers.is_empty()
             && self.requested_entity.is_empty();
 
-        // Load only the scene at the current position (single scene mode)
-        if let Some(entity_id) = self.cache_city_pointers.get(&self.current_position) {
-            if entity_id.is_empty() {
-                self.empty_parcels.insert(self.current_position.to_string());
-            } else {
-                self.loadable_scenes.insert(entity_id.clone());
+        // Check what are the new scenes to load that are not in the cache
+        for coord in self.parcel_radius_calculator.get_inner_parcels() {
+            let coord = coord.plus(&self.current_position);
+
+            if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
+                if entity_id.is_empty() {
+                    self.empty_parcels.insert(coord.to_string());
+                } else {
+                    self.loadable_scenes.insert(entity_id.clone());
+                }
+            } else if unexisting_taken_as_empty {
+                self.empty_parcels.insert(coord.to_string());
             }
-        } else if unexisting_taken_as_empty {
-            self.empty_parcels.insert(self.current_position.to_string());
+        }
+
+        for coord in self.parcel_radius_calculator.get_outer_parcels() {
+            let coord = coord.plus(&self.current_position);
+
+            if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
+                if entity_id.is_empty() {
+                    continue;
+                }
+                if self.loadable_scenes.contains(entity_id) {
+                    continue;
+                }
+                self.keep_alive_scenes.insert(entity_id.clone());
+            }
         }
 
         for entity_base in self.global_desired_entities.iter() {
@@ -409,15 +427,22 @@ impl SceneEntityCoordinator {
         self.current_position = Coord(x, z);
 
         if self.should_load_city_scenes {
-            // Only request the scene at the current position (single scene mode)
-            if !self
-                .cache_city_pointers
-                .contains_key(&self.current_position)
-            {
-                let mut request_pointers = HashSet::new();
-                request_pointers.insert(self.current_position);
-                self.request_pointers(request_pointers);
+            let inner_parcels = self.parcel_radius_calculator.get_inner_parcels();
+            let mut request_pointers = HashSet::with_capacity(inner_parcels.capacity());
+            // Check what are the new scenes to load that are not in the cache
+            for coord in inner_parcels {
+                let coord = coord.plus(&self.current_position);
+
+                // If I already have the scene data, continue
+                if self.cache_city_pointers.contains_key(&coord) {
+                    continue;
+                }
+
+                request_pointers.insert(coord);
             }
+
+            // Request the new pointers
+            self.request_pointers(request_pointers);
         }
     }
 
