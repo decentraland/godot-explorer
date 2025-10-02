@@ -299,7 +299,7 @@ impl INode for DclCli {
     fn init(base: Base<Node>) -> Self {
         let args = Os::singleton().get_cmdline_args();
         let mut args_map = HashMap::new();
-        
+
         // Add default arguments
         args_map.insert("--skip-lobby".to_string(), None);
 
