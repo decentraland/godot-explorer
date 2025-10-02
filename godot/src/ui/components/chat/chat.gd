@@ -126,9 +126,7 @@ func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		if event.pressed and event.keycode == KEY_ESCAPE:
 			exit_chat()
-			print("ESC from chat")
 		if event.pressed and event.keycode == KEY_ENTER:
-			print("ENTER")
 			toggle_chat_visibility(true)
 			async_start_chat()
 			line_edit_command.grab_focus.call_deferred()
@@ -190,7 +188,6 @@ func _on_line_edit_command_gui_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		if event.pressed and event.keycode == KEY_ESCAPE:
 			exit_chat()
-			print("ESC from lineedit")
 
 
 func is_at_bottom() -> bool:

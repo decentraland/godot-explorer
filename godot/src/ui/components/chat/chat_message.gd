@@ -391,7 +391,6 @@ func _adjust_panel_size():
 	# Minimum and maximum width
 	var min_width = 25
 	var desired_width = max(min_width, min(text_width + margin, max_panel_width))
-	prints("max_panel_width", max_panel_width, desired_width, text_width)
 	# Set custom size
 	panel_container_compact.custom_minimum_size.x = desired_width
 	panel_container_extended.custom_minimum_size.x = desired_width
