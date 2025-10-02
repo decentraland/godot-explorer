@@ -462,18 +462,19 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
-	var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
+	if Global.is_mobile():
+		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
-	# Shift the values
-	previous_height_2 = previous_height
-	previous_height = current_height
-	current_height = virtual_keyboard_height
+		# Shift the values
+		previous_height_2 = previous_height
+		previous_height = current_height
+		current_height = virtual_keyboard_height
 
-	# Check if stable (same for 3 frames) and different from last emitted
-	if (
-		current_height == previous_height
-		and current_height == previous_height_2
-		and current_height != last_emitted_height
-	):
-		last_emitted_height = current_height
-		change_virtual_keyboard.emit(last_emitted_height)
+		# Check if stable (same for 3 frames) and different from last emitted
+		if (
+			current_height == previous_height
+			and current_height == previous_height_2
+			and current_height != last_emitted_height
+		):
+			last_emitted_height = current_height
+			change_virtual_keyboard.emit(last_emitted_height)

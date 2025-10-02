@@ -69,6 +69,8 @@ func _scroll_to_bottom() -> void:
 	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
 	if scrollbar:
 		scroll_container_chats_list.set_v_scroll.call_deferred(scrollbar.max_value - scrollbar.page)
+		scrolled = false
+		button_go_to_last.hide()
 
 
 func _on_button_send_pressed():
