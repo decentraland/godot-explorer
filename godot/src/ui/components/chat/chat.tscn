@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=18 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -10,7 +10,6 @@
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
 [ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="8_lt7hs"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
-[ext_resource type="PackedScene" uid="uid://c8i3cvso5yx7n" path="res://src/ui/components/chat/chat_message.tscn" id="9_euk1h"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
 bg_color = Color(1, 1, 1, 1)
@@ -73,31 +72,19 @@ font_size = 10
 outline_size = 2
 outline_color = Color(0, 0, 0, 1)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lt7hs"]
-
 [node name="Panel_Chat" type="PanelContainer"]
 self_modulate = Color(0, 0, 0, 0.4)
 custom_minimum_size = Vector2(370, 0)
-anchors_preset = 9
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 148.0
+grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
-mouse_filter = 1
 theme = ExtResource("1_ytipc")
 theme_override_styles/panel = SubResource("StyleBoxFlat_xauh3")
 script = ExtResource("1_llfi5")
-
-[node name="Timer_Hide" type="Timer" parent="."]
-unique_name_in_owner = true
-wait_time = 3.0
-one_shot = true
-
-[node name="Timer_DeleteNotifications" type="Timer" parent="."]
-unique_name_in_owner = true
-wait_time = 3.0
-one_shot = true
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
@@ -218,6 +205,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
 
 [node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList"]
 unique_name_in_owner = true
@@ -304,34 +292,12 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="PanelContainer_Notification" type="PanelContainer" parent="."]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxEmpty_lt7hs")
-
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Notification"]
-layout_mode = 2
-theme_override_constants/margin_top = 5
-
-[node name="VBoxContainerNotifications" type="VBoxContainer" parent="PanelContainer_Notification/MarginContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 70)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="ChatMessage_Notification" parent="PanelContainer_Notification/MarginContainer/VBoxContainerNotifications" instance=ExtResource("9_euk1h")]
-unique_name_in_owner = true
-layout_mode = 2
-compact_view = true
-
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
-[connection signal="timeout" from="Timer_Hide" to="." method="_on_timer_hide_timeout"]
-[connection signal="timeout" from="Timer_DeleteNotifications" to="." method="_on_timer_delete_notifications_timeout"]
 [connection signal="pressed" from="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
 [connection signal="pressed" from="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_NearbyUsers" to="." method="_on_button_nearby_users_pressed"]
 [connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
+[connection signal="scroll_ended" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_scroll_ended"]
 [connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_gui_input"]
 [connection signal="text_submitted" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
 [connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]
-[connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]

@@ -11,6 +11,13 @@ var list_size: int = 0
 @onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
 
 
+func _ready():
+	async_update_nearby_users(Global.avatars.get_avatars())
+
+	# Connect to avatar scene changed signal instead of using timer
+	Global.avatars.avatar_scene_changed.connect(self.async_update_nearby_users)
+
+
 func async_update_nearby_users(remote_avatars: Array) -> void:
 	list_size = remote_avatars.size()
 	size_changed.emit()

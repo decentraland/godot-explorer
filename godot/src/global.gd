@@ -1,13 +1,13 @@
 extends DclGlobal
 
-signal player_said(address: String, message: String)
 signal on_menu_open
 signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile(avatar: DclAvatar)
-signal chat_compact_changed(is_compact: bool)
+signal on_chat_message(address: String, message: String, timestamp: float)
+signal change_virtual_keyboard(height: int)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -36,6 +36,8 @@ var nft_frame_loader: NftFrameStyleLoader
 
 var music_player: MusicPlayer
 
+var preload_assets: PreloadAssets
+
 var standalone = false
 var dcl_android_plugin
 var dcl_godot_android_plugin
@@ -44,16 +46,13 @@ var dcl_godot_ios_plugin
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
 
-var is_chat_compact: bool = false
 var url_popup_instance = null
 var jump_in_popup_instance = null
 
-var last_keyboard_height: int = 0
-
-func set_chat_compact(is_compact: bool) -> void:
-	if is_chat_compact != is_compact:
-		is_chat_compact = is_compact
-		chat_compact_changed.emit(is_compact)
+var last_emitted_height: int = 0
+var current_height: int = -1
+var previous_height: int = -1
+var previous_height_2: int = -1
 
 
 func set_url_popup_instance(popup_instance) -> void:
@@ -97,6 +96,7 @@ func _ready():
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
+	preload_assets = PreloadAssets.new()
 
 	var args = cli.get_all_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
@@ -459,3 +459,21 @@ func get_backpack() -> Backpack:
 		return explorer.control_menu.control_backpack
 	var control_menu = get_node_or_null("/root/Menu")
 	return control_menu.control_backpack
+
+
+func _process(_delta: float) -> void:
+	var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
+
+	# Shift the values
+	previous_height_2 = previous_height
+	previous_height = current_height
+	current_height = virtual_keyboard_height
+
+	# Check if stable (same for 3 frames) and different from last emitted
+	if (
+		current_height == previous_height
+		and current_height == previous_height_2
+		and current_height != last_emitted_height
+	):
+		last_emitted_height = current_height
+		change_virtual_keyboard.emit(last_emitted_height)

@@ -1,9 +1,7 @@
 @tool
 extends Control
 
-const EMOTE: String = "␐"
-const REQUEST_PING: String = "␑"
-const ACK: String = "␆"
+const MAX_CHARS_COMPACT_VIEW: int = 80
 const MY_MENTION_COLOR = "#FC03EC"
 const URL_COLOR = "#66B3FF"
 const MENTION_COLOR = "#FFD700"
@@ -16,6 +14,7 @@ var nickname: String = "Unknown"
 var tag: String = ""
 var nickname_color_hex: String = "#FFFFFF"
 var is_own_message: bool = false
+var max_panel_width: int = 370
 
 @onready var rich_text_label_compact_chat: RichTextLabel = %RichTextLabel_CompactChat
 @onready var h_box_container_extended_chat: HBoxContainer = %HBoxContainer_ExtendedChat
@@ -29,18 +28,18 @@ var is_own_message: bool = false
 @onready var profile_picture_compact: ProfilePicture = %ProfilePicture_Compact
 @onready var panel_container_extended: PanelContainer = %PanelContainer_Extended
 @onready var panel_container_compact: PanelContainer = %PanelContainer_Compact
+@onready var nickname_container: VBoxContainer = %NicknameContainer
+@onready var nickname_container_compact: HBoxContainer = %NicknameContainerCompact
+@onready var nickname_tag: HBoxContainer = %NicknameTag
 
 
 func _ready() -> void:
-	Global.chat_compact_changed.connect(_on_chat_compact_changed)
-	compact_view = Global.is_chat_compact
-
 	# Connect signals for clickable URLs
 	rich_text_label_message.meta_clicked.connect(_on_url_clicked)
 	rich_text_label_compact_chat.meta_clicked.connect(_on_url_clicked)
 
 	configure_link_styles()
-	_update_compact_view()
+	async_adjust_panel_size()
 
 
 func configure_link_styles() -> void:
@@ -76,24 +75,23 @@ func _update_compact_view() -> void:
 	h_box_container_compact_chat.visible = compact_view
 	rich_text_label_compact_chat.visible = compact_view
 
+	nickname_tag.reparent(nickname_container_compact if compact_view else nickname_container)
+	nickname_tag.get_parent().move_child(nickname_tag, 0)
 
-func set_chat(chat) -> void:
+
+func set_chat(address: String, message: String, timestamp: float) -> void:
 	var new_text: String
 	var own_address: String = Global.player_identity.get_address_str()
-	var address: String = chat[0]
 	is_own_message = own_address == address
 
-	if is_own_message:
-		h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
-		h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
-		h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_END
-	else:
-		h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
-		h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
-		h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_BEGIN
-
-	var timestamp: float = chat[1]
-	var message: String = chat[2]
+	#if is_own_message:
+	#h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	#h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	#h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_END
+	#else:
+	h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 	var datetime
 	if is_own_message:
@@ -112,47 +110,34 @@ func set_chat(chat) -> void:
 	rich_text_label_message.text = new_text
 	label_timestamp.text = time_string
 
-	var avatar
-	if address != "system":
-		avatar = Global.avatars.get_avatar_by_address(address)
-
-	if avatar == null:
-		if address == Global.player_identity.get_address_str():
-			avatar = Global.scene_runner.player_avatar_node
-
-	if avatar != null and is_instance_valid(avatar):
-		set_avatar(avatar)
+	if address == Global.player_identity.get_address_str():
+		set_avatar(Global.scene_runner.player_avatar_node)
+	elif address != "system":
+		set_avatar(Global.avatars.get_avatar_by_address(address))
 	else:
 		set_system_avatar()
 
-	if message.begins_with(EMOTE):
-		message = message.substr(1)  # Remove prefix
-		var expression_id = message.split(" ")[0]  # Get expression id ([1] is timestamp)
-		if avatar != null and is_instance_valid(avatar):
-			avatar.emote_controller.async_play_emote(expression_id)
-	elif message.begins_with(REQUEST_PING):
-		pass  # TODO: Send ACK
-	elif message.begins_with(ACK):
-		pass  # TODO: Calculate ping
-	else:
-		Global.player_said.emit(address, message)
-		var processed_message_compact = make_urls_clickable(message)
+	var processed_message_compact = make_urls_clickable(message)
 
-		if is_own_message:
-			new_text = ("[b][color=#fff]%s[/color]" % [processed_message_compact])
-			#profile_picture_compact.hide()
-		else:
-			new_text = (
-				"[b][color=#%s]%s[/color][/b][color=#a9a9a9]%s[/color] [b][color=#fff]%s[/color]"
-				% [nickname_color_hex, nickname, tag, processed_message_compact]
-			)
-			profile_picture_compact.show()
-		rich_text_label_compact_chat.text = new_text
+	if is_own_message:
+		new_text = ("[b][color=#fff]%s[/color]" % [processed_message_compact])
+		#profile_picture_compact.hide()
+	else:
+		new_text = (
+			"[b][color=#%s]%s[/color][/b][color=#a9a9a9]%s[/color] [b][color=#fff]%s[/color]"
+			% [nickname_color_hex, nickname, tag, processed_message_compact]
+		)
+		profile_picture_compact.show()
+	if compact_view and new_text.length() > MAX_CHARS_COMPACT_VIEW:
+		new_text = new_text.substr(0, MAX_CHARS_COMPACT_VIEW) + "..."
+	rich_text_label_compact_chat.text = new_text
 
 	async_adjust_panel_size.call_deferred()
 
 
 func set_avatar(avatar: DclAvatar) -> void:
+	if avatar == null or !is_instance_valid(avatar):
+		return
 	nickname = avatar.get_avatar_name()
 	var color = avatar.get_nickname_color(nickname)
 	label_nickname.add_theme_color_override("font_color", color)
@@ -188,13 +173,6 @@ func set_system_avatar() -> void:
 
 	profile_picture.set_dcl_logo()
 	profile_picture_compact.set_dcl_logo()
-
-
-func _on_chat_compact_changed(is_compact: bool) -> void:
-	compact_view = is_compact
-	_update_compact_view()
-
-	async_adjust_panel_size.call_deferred()
 
 
 func make_urls_clickable(text: String) -> String:
@@ -389,28 +367,10 @@ func _handle_mention_click(mention_str: String):
 
 
 func async_adjust_panel_size():
-	# Wait multiple frames for content to render and layout to be ready
-	await get_tree().process_frame
-	await get_tree().process_frame
-
-	# Ensure parent is valid and has proper size
-	if not get_parent():
-		return
-
-	# Force layout update
-	get_parent().queue_redraw()
-	await get_tree().process_frame
-
-	# Get available width from parent container
-	var parent_width = get_parent().size.x if get_parent().size.x > 0 else 400.0
-
-	# Maximum panel width (leaving space for avatar and margins)
-	var max_panel_width = parent_width - 100  # Avatar + margins
-
-	_adjust_panel_size(max_panel_width)
+	_adjust_panel_size()
 
 
-func _adjust_panel_size(max_panel_width: float):
+func _adjust_panel_size():
 	var margin = 40
 	if compact_view:
 		margin = 20
@@ -431,7 +391,7 @@ func _adjust_panel_size(max_panel_width: float):
 	# Minimum and maximum width
 	var min_width = 25
 	var desired_width = max(min_width, min(text_width + margin, max_panel_width))
-
+	prints("max_panel_width", max_panel_width, desired_width, text_width)
 	# Set custom size
 	panel_container_compact.custom_minimum_size.x = desired_width
 	panel_container_extended.custom_minimum_size.x = desired_width

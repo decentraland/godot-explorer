@@ -30,6 +30,8 @@ var _last_outlined_avatar: Avatar = null
 @onready var url_popup = %UrlPopup
 @onready var jump_in_popup = %JumpInPopup
 
+@onready var panel_profile: Panel = %Panel_Profile
+
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
@@ -50,6 +52,7 @@ var _last_outlined_avatar: Avatar = null
 @onready var control_safe_bottom_area: Control = %Control_SafeBottomArea
 @onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
 @onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
+@onready var notifications: Control = %Notifications
 
 
 func _process(_dt):
@@ -128,6 +131,7 @@ func _ready():
 	else:
 		mobile_ui.hide()
 
+	panel_chat.hide()
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -374,7 +378,9 @@ func _on_panel_chat_submit_message(message: String):
 			)
 	else:
 		Global.comms.send_chat(message)
-		panel_chat.on_chats_arrived([[Global.player_identity.get_address_str(), 0, message]])
+		Global.on_chat_message.emit(
+			Global.player_identity.get_address_str(), message, Time.get_unix_time_from_system()
+		)
 
 
 func _on_control_menu_request_pause_scenes(enabled):
@@ -474,7 +480,7 @@ func _on_button_jump_gui_input(event):
 
 
 func _on_button_open_chat_pressed():
-	panel_chat.start_chat()
+	panel_chat.async_start_chat()
 	release_mouse()
 
 
@@ -554,10 +560,6 @@ func _open_own_profile() -> void:
 	release_mouse()
 
 
-func _on_panel_chat_show_parcel_info() -> void:
-	_async_show_parcel_info()
-
-
 func _get_viewport_scale_factors() -> Vector2:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var viewport_size = get_viewport().get_visible_rect().size
@@ -566,26 +568,18 @@ func _get_viewport_scale_factors() -> Vector2:
 	return Vector2(x_factor, y_factor)
 
 
-func _async_hide_parcel_info() -> void:
+func _on_panel_chat_on_open_chat() -> void:
+	notifications.hide()
 	h_box_container_top_left_menu.hide()
 	mobile_ui.hide()
 	control_safe_bottom_area.hide()
-	panel_chat.erase_messages()
-	v_box_container_left_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel_chat.redraw_messages()
-	prints("Hide!")
+	panel_profile.hide()
 
 
-func _async_show_parcel_info() -> void:
+func _on_panel_chat_on_exit_chat() -> void:
+	notifications.show()
 	control_safe_bottom_area.show()
 	h_box_container_top_left_menu.show()
-	panel_chat.erase_messages()
-	v_box_container_left_side.size_flags_horizontal = Control.SIZE_FILL
-	panel_chat.redraw_messages()
-	
+	panel_profile.show()
 	if Global.is_mobile():
 		mobile_ui.show()
-
-
-func _on_panel_chat_hide_parcel_info() -> void:
-	_async_hide_parcel_info()
