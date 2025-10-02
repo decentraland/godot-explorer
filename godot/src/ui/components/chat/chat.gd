@@ -69,7 +69,6 @@ func _scroll_to_bottom() -> void:
 	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
 	if scrollbar:
 		scroll_container_chats_list.set_v_scroll.call_deferred(scrollbar.max_value - scrollbar.page)
-		prints("Scrolled to bottom")
 
 
 func _on_button_send_pressed():
@@ -206,17 +205,8 @@ func is_at_bottom() -> bool:
 
 
 func _on_chat_scrollbar_scrolling() -> void:
-	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
 	scrolled = !is_at_bottom()
 	button_go_to_last.visible = scrolled
-	prints(
-		"Scroll...",
-		scrollbar.value,
-		scrollbar.min_value,
-		scrollbar.max_value,
-		scrollbar.page,
-		scrolled
-	)
 
 
 func _on_button_go_to_last_pressed() -> void:
@@ -226,3 +216,7 @@ func _on_button_go_to_last_pressed() -> void:
 func _async_on_change_virtual_keyboard(_new_safe_area) -> void:
 	await get_tree().process_frame
 	_scroll_to_bottom()
+
+
+func _on_line_edit_command_focus_exited() -> void:
+	line_edit_command.grab_focus()

@@ -6,33 +6,13 @@ extends MarginContainer
 @export var use_right: bool = true
 @export var use_top: bool = true
 @export var use_bottom: bool = true
-@export var use_virtual_keyboard_height = false
 
 var last_margin_bottom: int = 0
 
 
 func _ready() -> void:
 	get_window().size_changed.connect(self._on_size_changed)
-	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	_on_size_changed()
-
-
-func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
-	if use_virtual_keyboard_height:
-		if Global.is_mobile():
-			var window_size: Vector2i = DisplayServer.window_get_size()
-			var viewport_size = get_viewport().get_visible_rect().size
-
-			var bottom: int = default_margin
-			var y_factor: float = viewport_size.y / window_size.y
-			virtual_keyboard_height = virtual_keyboard_height * y_factor
-
-			if use_bottom:
-				bottom = max(max(bottom, virtual_keyboard_height), last_margin_bottom)
-			else:
-				bottom = max(virtual_keyboard_height, last_margin_bottom)
-
-			add_theme_constant_override("margin_bottom", bottom)
 
 
 func _on_size_changed():

@@ -297,6 +297,7 @@ mouse_filter = 2
 [connection signal="pressed" from="VBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_NearbyUsers" to="." method="_on_button_nearby_users_pressed"]
 [connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
 [connection signal="scroll_ended" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_scroll_ended"]
+[connection signal="focus_exited" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
 [connection signal="gui_input" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_gui_input"]
 [connection signal="text_submitted" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
 [connection signal="pressed" from="VBoxContainer_Content/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]

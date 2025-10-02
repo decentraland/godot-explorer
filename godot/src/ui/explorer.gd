@@ -54,6 +54,11 @@ var _last_outlined_avatar: Avatar = null
 @onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
 @onready var notifications: Control = %Notifications
 
+@onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
+
+@onready var chat_container: Control = %ChatContainer
+@onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
+
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
@@ -80,6 +85,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
@@ -131,7 +137,7 @@ func _ready():
 	else:
 		mobile_ui.hide()
 
-	panel_chat.hide()
+	chat_container.hide()
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -569,17 +575,21 @@ func _get_viewport_scale_factors() -> Vector2:
 
 
 func _on_panel_chat_on_open_chat() -> void:
-	notifications.hide()
-	h_box_container_top_left_menu.hide()
-	mobile_ui.hide()
-	control_safe_bottom_area.hide()
-	panel_profile.hide()
+	safe_margin_container_hud.hide()
+	chat_container.show()
 
 
 func _on_panel_chat_on_exit_chat() -> void:
-	notifications.show()
-	control_safe_bottom_area.show()
-	h_box_container_top_left_menu.show()
-	panel_profile.show()
+	safe_margin_container_hud.show()
+	chat_container.hide()
 	if Global.is_mobile():
 		mobile_ui.show()
+
+
+func _on_change_virtual_keyboard(virtual_keyboard_height: int):
+	if virtual_keyboard_height != 0:
+		var window_size: Vector2i = DisplayServer.window_get_size()
+		var viewport_size = get_viewport().get_visible_rect().size
+
+		var y_factor: float = viewport_size.y / window_size.y
+		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
