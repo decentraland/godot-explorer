@@ -60,7 +60,7 @@ picture_size = 3
 
 [node name="PanelContainer_Extended" type="PanelContainer" parent="MarginContainer/HBoxContainer_ExtendedChat"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(117, 0)
+custom_minimum_size = Vector2(109, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -186,7 +186,7 @@ picture_size = 3
 
 [node name="PanelContainer_Compact" type="PanelContainer" parent="MarginContainer/HBoxContainer_CompactChat"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(117, 0)
+custom_minimum_size = Vector2(109, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4

@@ -169,7 +169,7 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 	v_box_container_chat.add_child(new_chat)
 	new_chat.compact_view = true
 	new_chat.reduce_text = false
-	new_chat.max_panel_width = 1000
+	new_chat.max_panel_width = 450
 	new_chat.set_chat(address, message, timestamp)
 
 	if !scrolled:

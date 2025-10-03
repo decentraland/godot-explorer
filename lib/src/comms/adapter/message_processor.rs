@@ -6,6 +6,7 @@ use std::{
 use ethers_core::types::H160;
 use godot::prelude::{GString, Gd};
 use tokio::sync::mpsc;
+use std::cmp::Ordering;
 
 use crate::{
     avatars::avatar_scene::AvatarScene,
@@ -150,6 +151,18 @@ pub struct MessageProcessor {
     // Cached blocked/muted sets for performance (updated when social_blacklist changes)
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
+}
+
+fn compare_f64(a: &f64, b: &f64) -> Ordering {
+    match (a.is_nan(), b.is_nan()) {
+        (true, true) => Ordering::Equal,  // NaN == NaN for sorting purposes
+        (true, false) => Ordering::Greater, // NaN sorts last
+        (false, true) => Ordering::Less,
+        (false, false) => {
+            // Use total_cmp for consistent ordering (handles -0.0 vs 0.0)
+            a.total_cmp(b)
+        }
+    }
 }
 
 impl MessageProcessor {
@@ -736,7 +749,7 @@ impl MessageProcessor {
                 // Check if we've seen a recent message from this sender
                 if let Some(&last_timestamp) = self.last_chat_timestamps.get(&address) {
                     // If the new timestamp is older or within tolerance of the last one, it's a duplicate
-                    if chat.timestamp < last_timestamp {
+                    if compare_f64(&chat.timestamp, &last_timestamp) != Ordering::Greater {
                         tracing::info!(
                             "Discarding duplicate chat from {:#x}: timestamp {} <= {} (last + tolerance)",
                             address,
