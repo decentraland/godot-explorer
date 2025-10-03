@@ -2,7 +2,6 @@ class_name Explorer
 extends Node
 
 var player: Node3D = null
-
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -28,6 +27,10 @@ var _last_outlined_avatar: Avatar = null
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
+@onready var url_popup = %UrlPopup
+@onready var jump_in_popup = %JumpInPopup
+
+@onready var panel_profile: Panel = %Panel_Profile
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -45,6 +48,16 @@ var _last_outlined_avatar: Avatar = null
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
+@onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
+@onready var control_safe_bottom_area: Control = %Control_SafeBottomArea
+@onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
+@onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
+@onready var notifications: Control = %Notifications
+
+@onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
+
+@onready var chat_container: Control = %ChatContainer
+@onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
 
 func _process(_dt):
@@ -72,9 +85,14 @@ func get_params_from_cmd():
 
 
 func _ready():
+	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
+
+	# Register popup instances in Global
+	Global.set_url_popup_instance(url_popup)
+	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	if Global.is_xr():
 		player = load("res://src/logic/player/xr_player.tscn").instantiate()
@@ -119,6 +137,7 @@ func _ready():
 	else:
 		mobile_ui.hide()
 
+	chat_container.hide()
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -268,8 +287,9 @@ func _unhandled_input(event):
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
 
-			if event.pressed and event.keycode == KEY_ENTER:
-				panel_chat.toggle_open_chat()
+			#if event.pressed and event.keycode == KEY_ENTER:
+			#	panel_chat.toggle_chat_visibility(true)
+			#	panel_chat.line_edit_command.grab_focus.call_deferred()
 
 
 func _on_control_minimap_request_open_map():
@@ -331,13 +351,17 @@ func _on_panel_chat_submit_message(message: String):
 			elif params.size() > 2:
 				dest_vector = Vector2i(int(params[1]), int(params[2]))
 
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Teleport to " + str(dest_vector) + "[/color]"
+			Global.on_chat_message.emit(
+				"system",
+				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+				Time.get_unix_time_from_system()
 			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
+			Global.on_chat_message.emit(
+				"system",
+				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]",
+				Time.get_unix_time_from_system()
 			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
@@ -347,11 +371,14 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
 			loading_ui.enable_loading_screen()
 		else:
-			pass
-			# TODO: unknown command
+			Global.on_chat_message.emit(
+				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
+			)
 	else:
 		Global.comms.send_chat(message)
-		panel_chat.on_chats_arrived([[Global.player_identity.get_address_str(), 0, message]])
+		Global.on_chat_message.emit(
+			Global.player_identity.get_address_str(), message, Time.get_unix_time_from_system()
+		)
 
 
 func _on_control_menu_request_pause_scenes(enabled):
@@ -388,14 +415,16 @@ func player_look_at(look_at_position: Vector3):
 
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	label_crosshair.show()
-	ui_root.grab_focus.call_deferred()
+	if label_crosshair and ui_root:
+		label_crosshair.show()
+		ui_root.grab_focus.call_deferred()
 
 
 func release_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	if not Global.is_mobile():
-		label_crosshair.hide()
+		if label_crosshair:
+			label_crosshair.hide()
 
 
 func set_visible_ui(value: bool):
@@ -449,7 +478,8 @@ func _on_button_jump_gui_input(event):
 
 
 func _on_button_open_chat_pressed():
-	panel_chat.toggle_open_chat()
+	panel_chat.async_start_chat()
+	release_mouse()
 
 
 func reset_cursor_position():
@@ -503,6 +533,7 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 
 
 func _async_open_profile(avatar: DclAvatar):
+	panel_chat.exit_chat()
 	if avatar == null or not is_instance_valid(avatar):
 		return
 
@@ -528,5 +559,32 @@ func _open_own_profile() -> void:
 	release_mouse()
 
 
-func ui_has_focus() -> bool:
-	return ui_root.has_focus()
+func _get_viewport_scale_factors() -> Vector2:
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var viewport_size = get_viewport().get_visible_rect().size
+	var x_factor: float = viewport_size.x / window_size.x
+	var y_factor: float = viewport_size.y / window_size.y
+	return Vector2(x_factor, y_factor)
+
+
+func _on_panel_chat_on_open_chat() -> void:
+	safe_margin_container_hud.hide()
+	chat_container.show()
+
+
+func _on_panel_chat_on_exit_chat() -> void:
+	safe_margin_container_hud.show()
+	chat_container.hide()
+	if Global.is_mobile():
+		mobile_ui.show()
+
+
+func _on_change_virtual_keyboard(virtual_keyboard_height: int):
+	if virtual_keyboard_height != 0:
+		var window_size: Vector2i = DisplayServer.window_get_size()
+		var viewport_size = get_viewport().get_visible_rect().size
+
+		var y_factor: float = viewport_size.y / window_size.y
+		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
+	elif virtual_keyboard_height == 0:
+		panel_chat.exit_chat()

@@ -2,13 +2,16 @@ extends Control
 
 signal size_changed
 
-const NEARBY_PLAYER_ITEM = preload(
-	"res://src/ui/components/nearby_player_item/nearby_player_item.tscn"
-)
-
 var list_size: int = 0
 
 @onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
+
+
+func _ready():
+	async_update_nearby_users(Global.avatars.get_avatars())
+
+	# Connect to avatar scene changed signal instead of using timer
+	Global.avatars.avatar_scene_changed.connect(self.async_update_nearby_users)
 
 
 func async_update_nearby_users(remote_avatars: Array) -> void:
@@ -63,7 +66,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 					break
 
 	for avatar in avatars_to_add:
-		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
+		var avatar_item = Global.preload_assets.NEARBY_PLAYER_ITEM.instantiate()
 		v_box_container_nearby_players.add_child(avatar_item)
 
 		if avatar is Avatar:

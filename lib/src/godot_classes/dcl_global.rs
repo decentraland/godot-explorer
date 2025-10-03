@@ -89,6 +89,10 @@ pub struct DclGlobal {
 
     pub is_mobile: bool,
 
+    pub is_android: bool,
+
+    pub is_ios: bool,
+
     pub is_virtual_mobile: bool,
 
     #[var]
@@ -178,6 +182,8 @@ impl INode for DclGlobal {
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
         let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into()) || force_mobile;
+        let is_android = std::env::consts::OS == "android";
+        let is_ios = std::env::consts::OS == "ios";
 
         // For now, use base class - ConfigData will be created in global.gd
         let config = DclConfig::new_gd();
@@ -185,6 +191,8 @@ impl INode for DclGlobal {
         Self {
             _base: base,
             is_mobile,
+            is_android,
+            is_ios,
             is_virtual_mobile: false,
             scene_runner,
             comms,
@@ -228,6 +236,16 @@ impl DclGlobal {
     #[func]
     fn is_mobile(&self) -> bool {
         self.is_mobile
+    }
+
+    #[func]
+    fn is_android(&self) -> bool {
+        self.is_android
+    }
+
+    #[func]
+    fn is_ios(&self) -> bool {
+        self.is_ios
     }
 
     #[func]

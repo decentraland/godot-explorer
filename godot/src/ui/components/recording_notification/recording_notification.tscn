@@ -163,6 +163,6 @@ stretch_mode = 5
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
-"": SubResource("AnimationLibrary_r6m7u")
+&"": SubResource("AnimationLibrary_r6m7u")
 }
 autoplay = "default"
