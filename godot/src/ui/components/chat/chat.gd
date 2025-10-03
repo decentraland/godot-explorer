@@ -32,6 +32,7 @@ var new_messages_count: int = 0
 @onready var label_new_messages: Label = %Label_NewMessages
 
 
+# gdlint:ignore = async-function-name
 func _ready():
 	#_on_button_back_pressed()
 
