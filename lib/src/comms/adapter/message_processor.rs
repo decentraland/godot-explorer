@@ -5,8 +5,8 @@ use std::{
 
 use ethers_core::types::H160;
 use godot::prelude::{GString, Gd};
-use tokio::sync::mpsc;
 use std::cmp::Ordering;
+use tokio::sync::mpsc;
 
 use crate::{
     avatars::avatar_scene::AvatarScene,
@@ -155,7 +155,7 @@ pub struct MessageProcessor {
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
     match (a.is_nan(), b.is_nan()) {
-        (true, true) => Ordering::Equal,  // NaN == NaN for sorting purposes
+        (true, true) => Ordering::Equal, // NaN == NaN for sorting purposes
         (true, false) => Ordering::Greater, // NaN sorts last
         (false, true) => Ordering::Less,
         (false, false) => {
