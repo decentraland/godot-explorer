@@ -5,6 +5,7 @@ use std::{
 
 use ethers_core::types::H160;
 use godot::prelude::{GString, Gd};
+use std::cmp::Ordering;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -12,8 +13,9 @@ use crate::{
     comms::{
         consts::{
             DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS, MAX_CHAT_MESSAGES,
-            MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE, MESSAGE_CHANNEL_SIZE,
-            OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS, PROFILE_UPDATE_CHANNEL_SIZE,
+            MAX_CHAT_MESSAGE_SIZE, MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE,
+            MESSAGE_CHANNEL_SIZE, OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS,
+            PROFILE_UPDATE_CHANNEL_SIZE,
         },
         profile::{SerializedProfile, UserProfile},
     },
@@ -149,6 +151,18 @@ pub struct MessageProcessor {
     // Cached blocked/muted sets for performance (updated when social_blacklist changes)
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
+}
+
+fn compare_f64(a: &f64, b: &f64) -> Ordering {
+    match (a.is_nan(), b.is_nan()) {
+        (true, true) => Ordering::Equal, // NaN == NaN for sorting purposes
+        (true, false) => Ordering::Greater, // NaN sorts last
+        (false, true) => Ordering::Less,
+        (false, false) => {
+            // Use total_cmp for consistent ordering (handles -0.0 vs 0.0)
+            a.total_cmp(b)
+        }
+    }
 }
 
 impl MessageProcessor {
@@ -727,21 +741,20 @@ impl MessageProcessor {
                 // Check if user is muted for chat (using cached set for O(1) lookup)
                 // Note: cached_muted includes both muted AND blocked users
                 if self.cached_muted.contains(&address) {
+                    tracing::info!("Ignoring muted {:#x}", address);
                     return; // muted/blocked - ignore chat messages
                 }
 
                 // Check for duplicate messages based on timestamp
-                const TIMESTAMP_TOLERANCE: f64 = 0.001;
-
                 // Check if we've seen a recent message from this sender
                 if let Some(&last_timestamp) = self.last_chat_timestamps.get(&address) {
                     // If the new timestamp is older or within tolerance of the last one, it's a duplicate
-                    if chat.timestamp <= last_timestamp + TIMESTAMP_TOLERANCE {
-                        tracing::debug!(
+                    if compare_f64(&chat.timestamp, &last_timestamp) != Ordering::Greater {
+                        tracing::info!(
                             "Discarding duplicate chat from {:#x}: timestamp {} <= {} (last + tolerance)",
                             address,
                             chat.timestamp,
-                            last_timestamp + TIMESTAMP_TOLERANCE
+                            last_timestamp
                         );
                         return;
                     }
@@ -757,6 +770,14 @@ impl MessageProcessor {
                         tracing::warn!("Chat queue full, dropping oldest message from {:#x}", addr);
                     }
                 }
+                let chat = if chat.message.len() > MAX_CHAT_MESSAGE_SIZE {
+                    rfc4::Chat {
+                        message: format!("{}...", &chat.message[..MAX_CHAT_MESSAGE_SIZE]),
+                        timestamp: chat.timestamp,
+                    }
+                } else {
+                    chat
+                };
                 self.chats.push_back((address, chat));
             }
             rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
