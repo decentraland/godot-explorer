@@ -125,3 +125,7 @@ func _on_panel_nearby_player_item_gui_input(event: InputEvent) -> void:
 					explorer.control_menu.show_own_profile()
 				else:
 					Global.open_profile.emit(avatar)
+
+
+func _on_button_report_pressed() -> void:
+	pass  # Replace with function body.

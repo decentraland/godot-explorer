@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://d30nejywxmhpn"]
+[gd_scene load_steps=17 format=3 uid="uid://d30nejywxmhpn"]
 
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="1_40sym"]
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/nearby_player_item/nearby_player_item.gd" id="1_77ytx"]
@@ -18,6 +18,35 @@ corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_io7c4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4mds5"]
+content_margin_left = 10.0
+content_margin_right = 10.0
+bg_color = Color(0.878431, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p3duq"]
+content_margin_left = 10.0
+content_margin_right = 10.0
+bg_color = Color(0.878431, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n6ndn"]
+content_margin_left = 10.0
+content_margin_right = 10.0
+bg_color = Color(0.878431, 0, 0, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_io7c4"]
 content_margin_left = 10.0
@@ -148,7 +177,7 @@ theme_override_constants/separation = 0
 
 [node name="HashTag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 14
@@ -157,7 +186,7 @@ text = "#"
 [node name="Tag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 14
@@ -198,9 +227,9 @@ theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 50
 theme_override_font_sizes/font_size = 20
-theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_io7c4")
-theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
+theme_override_styles/hover = SubResource("StyleBoxFlat_4mds5")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_p3duq")
+theme_override_styles/normal = SubResource("StyleBoxFlat_n6ndn")
 icon = ExtResource("6_cmtom")
 icon_alignment = 1
 expand_icon = true
@@ -228,15 +257,19 @@ expand_icon = true
 [node name="Button_Report" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(25, 25)
+custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-tooltip_text = "Report"
-mouse_filter = 1
+focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_override_constants/icon_max_width = 25
-toggle_mode = true
+theme = ExtResource("1_gljko")
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_constants/icon_max_width = 40
+theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_io7c4")
+theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
 icon = ExtResource("5_n1xiu")
 icon_alignment = 1
 expand_icon = true

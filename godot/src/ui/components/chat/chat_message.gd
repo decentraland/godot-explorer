@@ -80,14 +80,11 @@ func _update_compact_view() -> void:
 
 func set_chat(address: String, message: String, timestamp: float) -> void:
 	var new_text: String = message
+	if address != "system":
+		new_text = escape_bbcode(new_text)
 	var own_address: String = Global.player_identity.get_address_str()
 	is_own_message = own_address == address
 
-	#if is_own_message:
-	#h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	#h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	#h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_END
-	#else:
 	h_box_container_extended_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	h_box_container_compact_chat.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	h_box_container_compact_chat.alignment = BoxContainer.ALIGNMENT_BEGIN
@@ -112,8 +109,7 @@ func set_chat(address: String, message: String, timestamp: float) -> void:
 		new_text = new_text.substr(0, MAX_CHARS_COMPACT_VIEW) + "..."
 
 	var processed_message_compact = make_urls_clickable(new_text)
-	if address != "system":
-		processed_message_compact = escape_bbcode(processed_message_compact)
+
 	if compact_view:
 		var check_mark_text = ""
 		if has_claimed_name:
@@ -175,9 +171,10 @@ func set_system_avatar() -> void:
 func make_urls_clickable(text: String) -> String:
 	var processed_text = text
 
-	# First, detect and process mentions (@Nick#TAG format)
+	# First, detect and process mentions (@Nick or @Nick#TAG format)
 	var mention_regex = RegEx.new()
-	mention_regex.compile(r"@([^#\s]+)#([^\s]+)")
+	# Updated regex: optional tag that must be exactly 4 hex characters if present
+	mention_regex.compile(r"@([^#\s]+)(?:#([0-9a-fA-F]{4}))?")
 
 	var mention_results = mention_regex.search_all(processed_text)
 	# Process mentions from end to start to maintain correct positions
@@ -187,11 +184,25 @@ func make_urls_clickable(text: String) -> String:
 		var start_pos = mention_match.get_start()
 		var end_pos = mention_match.get_end()
 
+		# Get the username (always present)
+		var username = mention_match.get_string(1)
+
+		# Get the tag if it exists (group 2)
+		var user_tag = ""
+		if mention_match.get_group_count() > 1:
+			var tag_match = mention_match.get_string(2)
+			if tag_match != null and tag_match != "":
+				user_tag = tag_match
+
+		# For functions that need the unique identifier
+		# If no tag, return @username (with @), otherwise return full mention
+		var unique_name = ("@" + username) if user_tag.is_empty() else full_mention
+
 		# Check if this mention matches an existing avatar
-		if _is_valid_mention(full_mention):
+		if _is_valid_mention(unique_name):
 			var clickable_mention = (
 				"[url=mention:%s][color=%s]%s[/color][/url]"
-				% [full_mention, MENTION_COLOR, full_mention]
+				% [unique_name, MENTION_COLOR, full_mention]
 			)
 			processed_text = (
 				processed_text.substr(0, start_pos)
@@ -199,7 +210,7 @@ func make_urls_clickable(text: String) -> String:
 				+ processed_text.substr(end_pos)
 			)
 
-		if _is_mentioning_me(full_mention):
+		if _is_mentioning_me(unique_name):
 			var clickable_mention = "[color=%s]%s[/color]" % [MY_MENTION_COLOR, full_mention]
 			processed_text = (
 				processed_text.substr(0, start_pos)
@@ -229,9 +240,10 @@ func make_urls_clickable(text: String) -> String:
 				+ processed_text.substr(end_pos)
 			)
 
-	# Finally, detect and process URLs (http/https/www)
+	# Finally, detect and process URLs (https only for security)
 	var url_regex = RegEx.new()
-	url_regex.compile(r"(https?://[^\s]+|www\.[^\s]+)")
+	# Only accept https:// URLs and www. (which will be converted to https)
+	url_regex.compile(r"(https://[^\s]+|www\.[^\s]+)")
 
 	var url_results = url_regex.search_all(processed_text)
 	# Process URLs from end to start to maintain correct positions
@@ -246,12 +258,89 @@ func make_urls_clickable(text: String) -> String:
 		if url.begins_with("www."):
 			full_url = "https://" + url
 
-		var clickable_url = "[url=%s][color=#66B3FF]%s[/color][/url]" % [URL_COLOR, full_url, url]
-		processed_text = (
-			processed_text.substr(0, start_pos) + clickable_url + processed_text.substr(end_pos)
-		)
+		# Security validation for the URL
+		if _is_safe_url(full_url):
+			# Sanitize the URL for display
+			var sanitized_url = _sanitize_url(full_url)
+			var display_url = _sanitize_for_display(url)
+
+			var clickable_url = (
+				"[url=%s][color=#66B3FF]%s[/color][/url]" % [sanitized_url, display_url]
+			)
+			processed_text = (
+				processed_text.substr(0, start_pos) + clickable_url + processed_text.substr(end_pos)
+			)
 
 	return processed_text
+
+
+# Security function to validate URLs
+func _is_safe_url(url: String) -> bool:
+	# Only allow HTTPS URLs
+	if not url.begins_with("https://"):
+		return false
+
+	# Check for common XSS patterns
+	var dangerous_patterns = [
+		"javascript:",
+		"data:",
+		"vbscript:",
+		"file:",
+		"about:",
+		"<script",
+		"onclick",
+		"onerror",
+		"onload",
+		"%3Cscript",  # URL encoded <script
+		"&#",  # HTML entity encoding
+	]
+
+	var lower_url = url.to_lower()
+	for pattern in dangerous_patterns:
+		if pattern in lower_url:
+			return false
+
+	# Check for suspicious characters that might indicate injection attempts
+	var suspicious_chars = ["<", ">", '"', "'", "`", "{", "}", "[", "]"]
+	for char in suspicious_chars:
+		if char in url:
+			return false
+
+	# Validate URL structure (basic check)
+	if url.length() > 2048:  # Reasonable max URL length
+		return false
+
+	# Check for double slashes after the protocol (except the initial https://)
+	var after_protocol = url.substr(8)  # Skip "https://"
+	if "//" in after_protocol:
+		return false
+
+	return true
+
+
+# Sanitize URL for use in href attribute
+func _sanitize_url(url: String) -> String:
+	# Remove any potential BBCode injections
+	var sanitized = url
+
+	# Remove BBCode tags if any slipped through
+	sanitized = sanitized.replace("[", "%5B")
+	sanitized = sanitized.replace("]", "%5D")
+
+	# Ensure URL hasn't been tampered with
+	if not sanitized.begins_with("https://"):
+		return ""
+
+	return sanitized
+
+
+# Sanitize text for display (the visible part of the link)
+func _sanitize_for_display(text: String) -> String:
+	# Escape BBCode characters to prevent injection in the display text
+	var sanitized = text
+	sanitized = sanitized.replace("[", "\\[")
+	sanitized = sanitized.replace("]", "\\]")
+	return sanitized
 
 
 func _is_valid_mention(mention: String) -> bool:
@@ -284,7 +373,9 @@ func _is_mentioning_me(mention: String) -> bool:
 	if not me:
 		return false
 
-	var my_name = me.get_name() + "#" + me.get_user_id().right(4)
+	var my_name = me.get_name()
+	if not me.has_claimed_name():
+		my_name = my_name + "#" + me.get_user_id().right(4)
 
 	if my_name == mention_without_at:
 		return true
