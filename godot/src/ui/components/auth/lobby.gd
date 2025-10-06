@@ -30,7 +30,6 @@ var _last_panel: Control = null
 
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 
-
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
 @onready var button_next = %Button_Next
@@ -78,7 +77,7 @@ func _ready():
 	control_restore_and_choose_name.hide()
 
 	var login = %Login
-	
+
 	login.set_lobby(self)
 	login.show()
 
@@ -132,7 +131,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		restore_name_footer.hide()
 		choose_name_head.show()
 		choose_name_footer.show()
-		
+
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
@@ -192,7 +191,6 @@ func _on_button_continue_pressed():
 	show_panel(control_restore_and_choose_name)
 
 
-
 func _on_button_start_pressed():
 	button_enter_as_guest.show()
 	sign_in_title.text = "Create Your Account"
@@ -221,6 +219,7 @@ func _on_button_next_pressed():
 	#await async_close_sign_in(false)
 	show_panel(control_signin)
 
+
 func _on_button_random_name_pressed():
 	lineedit_choose_name.set_text(RandomGeneratorUtil.generate_unique_name())
 	_check_button_finish()
@@ -247,13 +246,14 @@ func create_guest_account_if_needed():
 		if is_creating_account:
 			Global.player_identity.set_profile(current_profile)
 		else:
-			Global.player_identity.set_default_profile() 
+			Global.player_identity.set_default_profile()
 		guest_account_created = true
 
 
 func profile_has_name():
 	var profile = Global.player_identity.get_profile_or_null()
 	return profile != null and not profile.get_name().is_empty()
+
 
 # gdlint:ignore = async-function-name
 func _on_button_enter_as_guest_pressed():
@@ -264,7 +264,6 @@ func _on_button_enter_as_guest_pressed():
 func _show_avatar_preview():
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
-	
 
 
 # gdlint:ignore = async-function-name
