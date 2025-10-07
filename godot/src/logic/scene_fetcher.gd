@@ -53,16 +53,16 @@ var _bypass_loading_check: bool = false
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 
-	# Initialize wall manager
-	wall_manager = FloatingIslandWalls.new()
-	add_child(wall_manager)
+	# Initialize wall manager and base floor manager only for floating islands mode
+	if is_using_floating_islands():
+		wall_manager = FloatingIslandWalls.new()
+		add_child(wall_manager)
 
-	# Create base floor manager
-	base_floor_manager = BaseFloorManager.new()
-	base_floor_manager.name = "BaseFloorManager"
-	add_child(base_floor_manager)
+		base_floor_manager = BaseFloorManager.new()
+		base_floor_manager.name = "BaseFloorManager"
+		add_child(base_floor_manager)
 
-	# Parcel data texture will be generated after parcels are loaded
+		# Parcel data texture will be generated after parcels are loaded
 
 	# Initialize global uniforms
 	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
@@ -362,7 +362,8 @@ func _on_realm_changed():
 		empty_parcel.queue_free()
 
 	loaded_empty_scenes.clear()
-	wall_manager.clear_walls()
+	if wall_manager:
+		wall_manager.clear_walls()
 
 	loaded_scenes = {}
 
@@ -663,7 +664,8 @@ func _create_floating_island_for_cluster(cluster: Array):
 
 					loaded_empty_scenes[parcel_string] = scene
 
-	wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
+	if wall_manager:
+		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
 
 
 func _calculate_parcel_adjacency(
