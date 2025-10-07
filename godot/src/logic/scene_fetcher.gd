@@ -314,40 +314,8 @@ func _async_on_desired_scene_changed():
 			var x = int(coord[0])
 			var z = int(coord[1])
 			empty_parcels_coords.push_back(Vector2i(x, z))
-	else:
-		# Use dynamic loading for empty parcels (test/renderer mode or no floating island)
-		# The coordinator provides all empty parcels in the radius
-		var current_empty_parcels_set = {}
-		for parcel in empty_parcels:
-			current_empty_parcels_set[parcel] = true
-
-		# Remove old empty parcels that are no longer in range
-		var parcels_to_remove = []
-		for parcel_string in loaded_empty_scenes.keys():
-			if not current_empty_parcels_set.has(parcel_string):
-				parcels_to_remove.append(parcel_string)
-
-		for parcel_string in parcels_to_remove:
-			var empty_scene = loaded_empty_scenes[parcel_string]
-			remove_child(empty_scene)
-			empty_scene.queue_free()
-			loaded_empty_scenes.erase(parcel_string)
-
-		# Load new empty parcels from coordinator
-		for parcel in empty_parcels:
-			var coord = parcel.split(",")
-			var x = int(coord[0])
-			var z = int(coord[1])
-			empty_parcels_coords.push_back(Vector2i(x, z))
-
-			# Instantiate empty parcel scene if not already loaded
-			if not loaded_empty_scenes.has(parcel):
-				var scene: Node3D = EMPTY_SCENE.instantiate()
-				var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
-				scene.name = temp
-				add_child(scene)
-				scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
-				loaded_empty_scenes[parcel] = scene
+	# Note: In test/renderer mode (use_floating_islands = false), we don't render empty parcels at all
+	# This prevents grass/terrain from appearing in scene snapshots
 
 	var parcel_filled = []
 	for scene: SceneItem in loaded_scenes.values():
