@@ -2,7 +2,7 @@ class_name BaseFloorManager
 extends Node3D
 
 const FLOOR_SIZE = 16.0
-const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_material.tres")
+const BASE_FLOOR_MATERIAL = preload("res://assets/empty-scenes/base_floor_material.tres")
 
 var base_floor_multimesh: MultiMeshInstance3D = null
 var loaded_parcels_floors: Dictionary = {}
@@ -22,7 +22,7 @@ func _initialize_base_floor_multimesh():
 
 	var quad_mesh = QuadMesh.new()
 	quad_mesh.size = Vector2(FLOOR_SIZE, FLOOR_SIZE)
-	quad_mesh.material = EMPTY_PARCEL_MATERIAL
+	quad_mesh.material = BASE_FLOOR_MATERIAL
 	var array_mesh = ArrayMesh.new()
 	var arrays = []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -47,7 +47,7 @@ func _initialize_base_floor_multimesh():
 	arrays[Mesh.ARRAY_INDEX] = indices
 
 	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	array_mesh.surface_set_material(0, EMPTY_PARCEL_MATERIAL)
+	array_mesh.surface_set_material(0, BASE_FLOOR_MATERIAL)
 	var multimesh = MultiMesh.new()
 	multimesh.mesh = array_mesh
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
