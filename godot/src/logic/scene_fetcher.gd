@@ -278,7 +278,7 @@ func _async_on_desired_scene_changed():
 	if use_floating_islands:
 		var all_scene_parcels = []
 		for scene: SceneItem in loaded_scenes.values():
-			if not scene.is_global:
+			if not scene.is_global and scene.scene_number_id != -1:
 				all_scene_parcels.append_array(scene.parcels)
 
 		var current_scene_hash = str(all_scene_parcels.hash())
