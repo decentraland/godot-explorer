@@ -201,7 +201,6 @@ func _ready():
 	ui_root.grab_focus.call_deferred()
 
 	if OS.get_cmdline_args().has("--scene-renderer"):
-		prints("load scene_orchestor")
 		var scene_renderer_orchestor = (
 			load("res://src/tool/scene_renderer/scene_orchestor.tscn").instantiate()
 		)
@@ -385,12 +384,20 @@ func _on_control_menu_request_pause_scenes(enabled):
 	Global.scene_runner.set_pause(enabled)
 
 
+## Moves the player to a specific position
+##
+## @param position: The 3D position to move the player to
+## @param skip_loading: When true, skips showing the loading screen.
+##                      This is used when teleporting inside a scene to avoid
+##                      showing the loading UI for an already-loaded area.
 func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
-	player.set_position(position)
-	var cur_parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	prints("cur_parcel_position:", cur_parcel_position, position)
+
+	player.async_move_to(position)
+	var cur_parcel_position = Vector2i(
+		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
+	)
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 			loading_ui.enable_loading_screen()
@@ -401,7 +408,6 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 		Global.realm.async_set_realm(realm)
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
-	prints("Teleport to parcel: ", parcel, move_to_position)
 	move_to(move_to_position, false)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)

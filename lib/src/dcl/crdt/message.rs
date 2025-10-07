@@ -25,6 +25,7 @@ const CRDT_HEADER_SIZE: usize = 8;
 fn debug_check_component(component: SceneComponentId, entity: SceneEntityId, operation: &str) {
     // List of component IDs to debug with their names
     const DEBUG_COMPONENTS: &[(u32, &str)] = &[
+        (1078, "PBInputModifier"),
         (1079, "PBLightSource"),
         (1099, "PBGltfNodeModifiers"),
         // Add more components here as needed

@@ -23,5 +23,8 @@ target/
 coverage
 godoteditor/
 
+# Log files
+logs.log
+
 # Created from download_dependencies.py
 __pycache__
