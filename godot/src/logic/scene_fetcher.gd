@@ -198,7 +198,6 @@ func _is_there_any_new_scene_to_load() -> bool:
 func _async_on_desired_scene_changed():
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
-	var _empty_parcels = d.get("empty_parcels", [])
 
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
