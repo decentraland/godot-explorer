@@ -199,6 +199,24 @@ func _async_on_desired_scene_changed():
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 
+	# In floating islands mode, only load the scene at the player's current parcel
+	# But allow initial load when position hasn't been set yet or no scenes are loaded
+	if is_using_floating_islands() and not loaded_scenes.is_empty():
+		var player_scene_id = null
+		for scene_id in loadable_scenes:
+			var scene_def = scene_entity_coordinator.get_scene_definition(scene_id)
+			if scene_def != null and current_position in scene_def.get_parcels():
+				player_scene_id = scene_id
+				break
+
+		if player_scene_id != null:
+			loadable_scenes = [player_scene_id]
+		else:
+			# If no scene matches current position but we're in floating islands mode,
+			# don't clear loadable_scenes on initial load
+			if current_position != Vector2i(-1000, -1000):
+				loadable_scenes = []
+
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
@@ -276,34 +294,7 @@ func _async_on_desired_scene_changed():
 		loaded_empty_scenes.clear()
 
 	if use_floating_islands:
-		var all_scene_parcels = []
-		for scene: SceneItem in loaded_scenes.values():
-			if not scene.is_global and scene.scene_number_id != -1:
-				all_scene_parcels.append_array(scene.parcels)
-
-		var current_scene_hash = str(all_scene_parcels.hash())
-		if (
-			not all_scene_parcels.is_empty()
-			and (
-				not has_meta("last_scene_hash") or get_meta("last_scene_hash") != current_scene_hash
-			)
-		):
-			for parcel in loaded_empty_scenes:
-				var empty_scene = loaded_empty_scenes[parcel]
-				remove_child(empty_scene)
-				empty_scene.queue_free()
-			loaded_empty_scenes.clear()
-			current_edge_parcels.clear()
-			wall_manager.clear_walls()
-
-			set_meta("last_scene_hash", current_scene_hash)
-
-			# Cluster parcels and find the one containing the player
-			var clusters = _cluster_parcels(all_scene_parcels)
-			var player_cluster = _find_cluster_containing_parcel(clusters, current_position)
-
-			if player_cluster != null:
-				_create_floating_island_for_cluster(player_cluster)
+		_regenerate_floating_islands()
 
 	var empty_parcels_coords = []
 	if use_floating_islands and has_meta("last_scene_hash"):
@@ -390,13 +381,80 @@ func is_using_floating_islands() -> bool:
 	return not (Global.cli.scene_test_mode or Global.cli.scene_renderer_mode)
 
 
+func _unload_scenes_except_current(current_scene_id: int) -> void:
+	var scenes_to_remove = []
+
+	for scene_id in loaded_scenes:
+		var scene: SceneItem = loaded_scenes[scene_id]
+		if scene.scene_number_id != current_scene_id and scene.scene_number_id != -1:
+			# Kill the scene
+			Global.scene_runner.kill_scene(scene.scene_number_id)
+			# Remove base floors
+			if base_floor_manager:
+				base_floor_manager.remove_scene_floors(scene.id)
+			scenes_to_remove.append(scene_id)
+
+	# Remove from loaded_scenes
+	for scene_id in scenes_to_remove:
+		loaded_scenes.erase(scene_id)
+
+
+func _regenerate_floating_islands() -> void:
+	# Find the scene containing the player's current position
+	var player_scene_id = get_parcel_scene_id(current_position.x, current_position.y)
+	var player_scene: SceneItem = null
+
+	# Find the SceneItem by scene_number_id
+	for scene: SceneItem in loaded_scenes.values():
+		if scene.scene_number_id == player_scene_id:
+			player_scene = scene
+			break
+
+	var player_scene_parcels = []
+	if player_scene != null:
+		player_scene_parcels = player_scene.parcels
+
+	if player_scene_parcels.is_empty():
+		return
+
+	var current_scene_hash = str(player_scene_parcels.hash())
+
+	# Skip if same scene (hash check)
+	if has_meta("last_scene_hash") and get_meta("last_scene_hash") == current_scene_hash:
+		return
+
+	# Clear old empty parcels
+	for parcel in loaded_empty_scenes:
+		var empty_scene = loaded_empty_scenes[parcel]
+		remove_child(empty_scene)
+		empty_scene.queue_free()
+	loaded_empty_scenes.clear()
+	current_edge_parcels.clear()
+	if wall_manager:
+		wall_manager.clear_walls()
+
+	set_meta("last_scene_hash", current_scene_hash)
+
+	# Create floating island for the player's scene only
+	_create_floating_island_for_cluster(player_scene_parcels)
+
+
 func update_position(new_position: Vector2i) -> void:
 	if current_position == new_position:
 		return
 
+	var old_scene_id = get_parcel_scene_id(current_position.x, current_position.y)
 	current_position = new_position
+	var new_scene_id = get_parcel_scene_id(current_position.x, current_position.y)
+
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 	player_parcel_changed.emit(new_position)
+
+	# In floating islands mode, unload all scenes except the current one when changing scenes
+	# Only do this if we actually have a valid new scene to switch to
+	if is_using_floating_islands() and old_scene_id != new_scene_id and new_scene_id != -1:
+		_unload_scenes_except_current(new_scene_id)
+		_regenerate_floating_islands()
 
 
 func async_load_scene(

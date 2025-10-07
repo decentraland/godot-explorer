@@ -74,7 +74,7 @@ func add_scene_floors(scene_id: String, parcels: Array):
 		var parcel_z = -parcel.y * FLOOR_SIZE - FLOOR_SIZE / 2
 
 		var transform = Transform3D()
-		transform.origin = Vector3(parcel_x, -0.00001, parcel_z)
+		transform.origin = Vector3(parcel_x, -0.05, parcel_z)
 		multimesh.set_instance_transform(instance_idx, transform)
 
 		new_floors.append(instance_idx)
