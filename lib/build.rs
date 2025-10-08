@@ -374,8 +374,6 @@ fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
 }
 
 fn check_safe_repo() -> Result<(), String> {
-    // GITHUB_SHA
-
     // Get the current working directory and navigate up two levels
     let mut repo_path = env::current_dir().map_err(|e| e.to_string())?;
     repo_path.pop(); // Go up one level
@@ -425,33 +423,27 @@ fn check_safe_repo() -> Result<(), String> {
 }
 
 fn set_godot_explorer_version() {
-    // First, try to get hash from GITHUB_SHA environment variable
-    let commit_hash = if let Ok(hash) = env::var("GITHUB_SHA") {
-        eprintln!(
-            "Using commit hash: {} (from GITHUB_SHA env)",
-            hash.chars().take(7).collect::<String>()
-        );
-        Some(hash)
-    } else {
-        // Fall back to git command if GITHUB_SHA not available
-        match check_safe_repo() {
-            Ok(_) => {
-                if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
-                    let long_hash = String::from_utf8(output.stdout).unwrap().trim().to_string();
-                    eprintln!(
-                        "Using commit hash: {} (from git command)",
-                        long_hash.chars().take(7).collect::<String>()
-                    );
-                    Some(long_hash)
-                } else {
-                    eprintln!("After checking if the repo is safe, couldn't get the hash");
-                    None
-                }
-            }
-            Err(e) => {
-                eprintln!("Check if the repo is safe: {}", e);
+    // Always use git to get the actual checked-out commit (what GitHub checkout uses)
+    let commit_hash = match check_safe_repo() {
+        Ok(_) => {
+            if let Ok(output) = Command::new("git")
+                .args(["log", "-1", "--format=%H"])
+                .output()
+            {
+                let long_hash = String::from_utf8(output.stdout).unwrap().trim().to_string();
+                eprintln!(
+                    "Using commit hash: {} (from git log)",
+                    long_hash.chars().take(7).collect::<String>()
+                );
+                Some(long_hash)
+            } else {
+                eprintln!("After checking if the repo is safe, couldn't get the hash");
                 None
             }
+        }
+        Err(e) => {
+            eprintln!("Check if the repo is safe: {}", e);
+            None
         }
     };
 

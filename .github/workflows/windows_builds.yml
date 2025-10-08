@@ -14,8 +14,6 @@ jobs:
       matrix:
         os: [bigwin]
     runs-on: ${{ matrix.os }}
-    env:
-      GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
