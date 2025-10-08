@@ -419,15 +419,16 @@ func move_to(position: Vector3, skip_loading: bool):
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
-	if not realm.is_empty() && realm != Global.realm.get_realm_string():
-		Global.scene_fetcher.current_position = parcel
-		Global.realm.async_set_realm(realm)
-
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
 
 	Global.scene_fetcher.set_meta("last_scene_hash", "")
-	Global.scene_fetcher.update_position(parcel)
+
+	if not realm.is_empty() && realm != Global.realm.get_realm_string():
+		Global.scene_fetcher.current_position = parcel
+		Global.realm.async_set_realm(realm)
+	else:
+		Global.scene_fetcher.update_position(parcel)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
