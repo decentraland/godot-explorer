@@ -11,6 +11,11 @@ use crate::{
 };
 
 pub fn sync_realm_info(scene: &Scene, crdt_state: &mut SceneCrdtState) {
+    // Throttle: run on first frame (tick 0) and every 15 frames after that
+    if scene.tick_number != 0 && scene.tick_number % 15 != 0 {
+        return;
+    }
+
     let maybe_current_realm_info = SceneCrdtStateProtoComponents::get_realm_info(crdt_state)
         .get(&SceneEntityId::ROOT)
         .and_then(|realm_info_value| realm_info_value.value.clone());
