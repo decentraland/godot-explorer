@@ -34,9 +34,9 @@ pub fn sync_realm_info(scene: &Scene, crdt_state: &mut SceneCrdtState) {
         !scene_room_id.is_empty() && scene_room_id == current_scene_id;
 
     let is_connected_scene_room =
-        Some(is_scene_room_for_this_scene && comms.is_connected_to_scene_room());
+        is_scene_room_for_this_scene && comms.is_connected_to_scene_room();
 
-    let room = if is_connected_scene_room.unwrap_or(false) {
+    let room = if is_connected_scene_room {
         Some(scene_room_id)
     } else {
         None
@@ -49,7 +49,7 @@ pub fn sync_realm_info(scene: &Scene, crdt_state: &mut SceneCrdtState) {
         comms_adapter: comms_adapter.clone(),
         is_preview,
         room,
-        is_connected_scene_room,
+        is_connected_scene_room: Some(is_connected_scene_room),
     };
 
     let should_update = match maybe_current_realm_info {
@@ -60,7 +60,7 @@ pub fn sync_realm_info(scene: &Scene, crdt_state: &mut SceneCrdtState) {
                 || current.comms_adapter != comms_adapter
                 || current.is_preview != is_preview
                 || current.room != new_realm_info.room
-                || current.is_connected_scene_room != is_connected_scene_room
+                || current.is_connected_scene_room != Some(is_connected_scene_room)
         }
         None => true,
     };
