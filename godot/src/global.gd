@@ -460,7 +460,7 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
-	if Global.is_mobile():
+	if Global.is_mobile() and !Global.is_virtual_mobile():
 		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
 		# Shift the values

@@ -22,6 +22,7 @@ use super::{
         nft_shape::update_nft_shape,
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
+        realm_info::sync_realm_info,
         text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent,
         tween::update_tween,
@@ -143,6 +144,9 @@ pub fn _process_scene(
                             primary_player_inside,
                         );
                 }
+
+                // PbRealmInfo
+                sync_realm_info(scene, crdt_state);
 
                 false
             }
