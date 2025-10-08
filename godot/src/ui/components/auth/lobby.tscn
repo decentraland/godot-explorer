@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=26 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" uid="uid://do4lb6hapbydx" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
 [ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="17_ca7yb"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="18_10jcs"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="21_ypsmd"]
 
 [sub_resource type="Gradient" id="Gradient_rgwma"]
 offsets = PackedFloat32Array(0.373134, 1)
@@ -579,9 +580,12 @@ offset_top = -30.0
 offset_right = 200.0
 offset_bottom = -10.0
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 0.6)
-theme_override_fonts/font = ExtResource("10_wurju")
-theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("21_ypsmd")
+theme_override_font_sizes/font_size = 18
 text = "v0.0.0"
 
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
