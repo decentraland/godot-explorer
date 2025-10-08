@@ -14,6 +14,9 @@ jobs:
       matrix:
         os: [bigwin]
     runs-on: ${{ matrix.os }}
+    env:
+      # Override GITHUB_SHA to use the actual PR commit, not the merge commit
+      GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
