@@ -429,7 +429,7 @@ fn set_godot_explorer_version() {
         Ok(_) => {
             if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
                 let long_hash = String::from_utf8(output.stdout).unwrap();
-                Some(long_hash)
+                Some(long_hash.trim().to_string())
             } else {
                 eprintln!("After checking if the repo is safe, couldn't get the hash");
                 None
@@ -442,22 +442,168 @@ fn set_godot_explorer_version() {
     };
 
     let hash_from_env = env::var("GITHUB_SHA").ok();
-    let timestamp = Utc::now()
-        .to_rfc3339()
-        .replace(|c: char| !c.is_ascii_digit(), "");
+    let commit_hash = hash_from_command.or(hash_from_env);
 
-    let commit_hash = hash_from_command
-        .or(hash_from_env)
-        .map(|hash| format!("commit-{}", hash));
+    // Get short hash (first 7 characters)
+    let short_hash = commit_hash
+        .as_ref()
+        .map(|hash| hash.chars().take(7).collect::<String>());
 
-    let snapshot = commit_hash.unwrap_or(format!("timestamp-{}", timestamp));
-
-    // get the CARGO_PKG_VERSION env var
+    // Get the CARGO_PKG_VERSION env var
     let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());
-    let snapshot_version = format!("{}-{}", version, snapshot);
 
-    println!(
-        "cargo:rustc-env=GODOT_EXPLORER_VERSION={}",
-        snapshot_version
-    );
+    // Check if building in CI with GitHub Actions run number
+    let github_run_number = env::var("GITHUB_RUN_NUMBER").ok();
+
+    // Check if debug or release build
+    let profile = env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
+    let is_debug = profile == "debug";
+
+    let full_version = match (github_run_number, short_hash) {
+        // CI build: {version}-{run_number}-{short_hash}
+        (Some(run_number), Some(hash)) => format!("{}-{}-{}", version, run_number, hash),
+        // Local debug build: {version}-dev-{short_hash}
+        (None, Some(hash)) if is_debug => format!("{}-dev-{}", version, hash),
+        // Local release build: {version}-{short_hash}
+        (None, Some(hash)) => format!("{}-{}", version, hash),
+        // Fallback if no git hash available
+        _ => {
+            let timestamp = Utc::now()
+                .to_rfc3339()
+                .replace(|c: char| !c.is_ascii_digit(), "");
+            if is_debug {
+                format!("{}-dev-{}", version, timestamp)
+            } else {
+                format!("{}-{}", version, timestamp)
+            }
+        }
+    };
+
+    println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn version_check() {
+        // Parse Cargo.toml version
+        let cargo_toml_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        let cargo_toml_content = fs::read_to_string(&cargo_toml_path)
+            .expect("Failed to read Cargo.toml");
+
+        let cargo_version = cargo_toml_content
+            .lines()
+            .find(|line| line.starts_with("version = "))
+            .expect("Failed to find version in Cargo.toml")
+            .split('=')
+            .nth(1)
+            .expect("Failed to parse version")
+            .trim()
+            .trim_matches('"');
+
+        // Extract the minor version number (e.g., "0.32.0" -> 32)
+        let version_parts: Vec<&str> = cargo_version.split('.').collect();
+        let expected_version_code = version_parts
+            .get(1)
+            .expect("Version should have at least 2 parts")
+            .parse::<u32>()
+            .expect("Failed to parse version code");
+
+        // Parse export_presets.cfg
+        let export_presets_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("Failed to get parent directory")
+            .join("godot/export_presets.cfg");
+
+        let export_presets_content = fs::read_to_string(&export_presets_path)
+            .expect("Failed to read export_presets.cfg");
+
+        // Find all version/code entries (Android and Quest)
+        let mut android_version_code = None;
+        let mut quest_version_code = None;
+        let mut ios_version = None;
+
+        let mut in_android_preset = false;
+        let mut in_quest_preset = false;
+        let mut in_ios_preset = false;
+
+        for line in export_presets_content.lines() {
+            if line.contains("name=\"android\"") {
+                in_android_preset = true;
+                in_quest_preset = false;
+                in_ios_preset = false;
+            } else if line.contains("name=\"quest\"") {
+                in_quest_preset = true;
+                in_android_preset = false;
+                in_ios_preset = false;
+            } else if line.contains("name=\"ios\"") {
+                in_ios_preset = true;
+                in_android_preset = false;
+                in_quest_preset = false;
+            } else if line.starts_with("[preset.") {
+                // Reset flags on new preset
+                in_android_preset = false;
+                in_quest_preset = false;
+                in_ios_preset = false;
+            }
+
+            if in_android_preset && line.starts_with("version/code=") && android_version_code.is_none() {
+                android_version_code = Some(
+                    line.split('=')
+                        .nth(1)
+                        .expect("Failed to parse Android version/code")
+                        .trim()
+                        .parse::<u32>()
+                        .expect("Failed to parse Android version/code as u32"),
+                );
+            } else if in_quest_preset && line.starts_with("version/code=") && quest_version_code.is_none() {
+                quest_version_code = Some(
+                    line.split('=')
+                        .nth(1)
+                        .expect("Failed to parse Quest version/code")
+                        .trim()
+                        .parse::<u32>()
+                        .expect("Failed to parse Quest version/code as u32"),
+                );
+            } else if in_ios_preset && line.starts_with("application/version=") && ios_version.is_none() {
+                ios_version = Some(
+                    line.split('=')
+                        .nth(1)
+                        .expect("Failed to parse iOS application/version")
+                        .trim()
+                        .trim_matches('"')
+                        .parse::<u32>()
+                        .expect("Failed to parse iOS application/version as u32"),
+                );
+            }
+        }
+
+        let android_version_code = android_version_code.expect("Failed to find Android version/code");
+        let quest_version_code = quest_version_code.expect("Failed to find Quest version/code");
+        let ios_version = ios_version.expect("Failed to find iOS application/version");
+
+        // Compare versions
+        assert_eq!(
+            android_version_code, expected_version_code,
+            "Android version/code ({}) does not match Cargo.toml version code ({})",
+            android_version_code, expected_version_code
+        );
+
+        assert_eq!(
+            ios_version, expected_version_code,
+            "iOS application/version ({}) does not match Cargo.toml version code ({})",
+            ios_version, expected_version_code
+        );
+
+        assert_eq!(
+            quest_version_code, expected_version_code,
+            "Quest version/code ({}) does not match Cargo.toml version code ({})",
+            quest_version_code, expected_version_code
+        );
+
+        println!("✓ All versions match: Cargo.toml={}, Android={}, iOS={}, Quest={}",
+            expected_version_code, android_version_code, ios_version, quest_version_code);
+    }
 }

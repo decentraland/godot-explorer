@@ -568,6 +568,22 @@ stretch = true
 hide_name = true
 can_move = false
 
+[node name="Label_Version" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -30.0
+offset_right = 200.0
+offset_bottom = -10.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 0.6)
+theme_override_fonts/font = ExtResource("10_wurju")
+theme_override_font_sizes/font_size = 12
+text = "v0.0.0"
+
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
 [connection signal="pressed" from="Main/BackpackContainer/SafeMarginContainer/Backpack/Button_Continue" to="." method="_on_button_continue_pressed"]

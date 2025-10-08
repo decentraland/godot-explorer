@@ -53,3 +53,7 @@ jobs:
       - name: cargo clippy
         working-directory: lib
         run: cargo clippy -- -D warnings
+
+      - name: Version check
+        working-directory: lib
+        run: cargo test --lib version_check -- --nocapture
