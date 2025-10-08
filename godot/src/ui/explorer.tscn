@@ -352,20 +352,34 @@ theme_override_styles/panel = SubResource("StyleBoxEmpty_u4dfr")
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="Label_FPS" type="Label" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
-unique_name_in_owner = true
+[node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = -15.0
-offset_right = 153.0
+offset_left = 15.0
+offset_top = -30.0
+offset_right = 169.0
+offset_bottom = -15.0
 grow_vertical = 0
+
+[node name="Label_Version" type="Label" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_VersionFPS"]
+unique_name_in_owner = true
+layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
 theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
-text = "ALPHA - FPS"
+text = "v0.1.0-alpha-abcd1f"
+
+[node name="Label_FPS" type="Label" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_VersionFPS"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
+theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "FPS"
 
 [node name="Label_RAM" type="Label" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 unique_name_in_owner = true

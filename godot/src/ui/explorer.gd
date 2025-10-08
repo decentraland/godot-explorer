@@ -32,6 +32,7 @@ var _last_outlined_avatar: Avatar = null
 
 @onready var panel_profile: Panel = %Panel_Profile
 
+@onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
@@ -85,6 +86,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	label_version.set_text("v" + Global.get_version())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
@@ -459,7 +461,7 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
+	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.get_config().save_to_settings_file()

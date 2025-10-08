@@ -461,20 +461,20 @@ fn set_godot_explorer_version() {
 
     let full_version = match (github_run_number, short_hash) {
         // CI build: {version}-{run_number}-{short_hash}
-        (Some(run_number), Some(hash)) => format!("{}-{}-{}", version, run_number, hash),
+        (Some(run_number), Some(hash)) => format!("{}-{}-{}-alpha", version, run_number, hash),
         // Local debug build: {version}-dev-{short_hash}
-        (None, Some(hash)) if is_debug => format!("{}-dev-{}", version, hash),
+        (None, Some(hash)) if is_debug => format!("{}-{}-alpha-dev", version, hash),
         // Local release build: {version}-{short_hash}
-        (None, Some(hash)) => format!("{}-{}", version, hash),
+        (None, Some(hash)) => format!("{}-{}-alpha", version, hash),
         // Fallback if no git hash available
         _ => {
             let timestamp = Utc::now()
                 .to_rfc3339()
                 .replace(|c: char| !c.is_ascii_digit(), "");
             if is_debug {
-                format!("{}-dev-{}", version, timestamp)
+                format!("{}-t{}-alpha-dev", version, timestamp)
             } else {
-                format!("{}-{}", version, timestamp)
+                format!("{}-t{}-alpha", version, timestamp)
             }
         }
     };
