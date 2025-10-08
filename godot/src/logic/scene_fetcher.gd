@@ -49,6 +49,9 @@ var _debugging_js_scene_id: String = ""
 
 var _bypass_loading_check: bool = false
 
+# Track the target parcel during teleport to ensure correct spawn point
+var _teleport_target_parcel: Vector2i = Vector2i(-1000, -1000)
+
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
@@ -83,9 +86,16 @@ func get_current_spawn_point():
 
 
 func on_loading_finished():
-	var target_position = get_current_spawn_point()
-	if target_position != null:
-		Global.get_explorer().move_to(target_position, true)
+	var spawn_parcel = current_position
+	if is_using_floating_islands() and _teleport_target_parcel != Vector2i(-1000, -1000):
+		spawn_parcel = _teleport_target_parcel
+		_teleport_target_parcel = Vector2i(-1000, -1000)
+
+	var scene_data = get_scene_data(spawn_parcel)
+	if scene_data != null:
+		var target_position = scene_data.scene_entity_definition.get_global_spawn_position()
+		if target_position != null:
+			Global.get_explorer().move_to(target_position, true)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -199,24 +209,6 @@ func _async_on_desired_scene_changed():
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 
-	# In floating islands mode, only load the scene at the player's current parcel
-	# But allow initial load when position hasn't been set yet or no scenes are loaded
-	if is_using_floating_islands() and not loaded_scenes.is_empty():
-		var player_scene_id = null
-		for scene_id in loadable_scenes:
-			var scene_def = scene_entity_coordinator.get_scene_definition(scene_id)
-			if scene_def != null and current_position in scene_def.get_parcels():
-				player_scene_id = scene_id
-				break
-
-		if player_scene_id != null:
-			loadable_scenes = [player_scene_id]
-		else:
-			# If no scene matches current position but we're in floating islands mode,
-			# don't clear loadable_scenes on initial load
-			if current_position != Vector2i(-1000, -1000):
-				loadable_scenes = []
-
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
@@ -316,7 +308,6 @@ func _async_on_desired_scene_changed():
 
 
 func _on_realm_changed():
-	var should_load_city_pointers = true
 	var content_base_url = Global.realm.content_base_url
 
 	Global.get_config().last_realm_joined = Global.realm.realm_url
@@ -328,11 +319,9 @@ func _on_realm_changed():
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url
 
-	if (
-		Global.realm.realm_scene_urns.size() > 0
-		and Global.realm.realm_city_loader_content_base_url.is_empty()
-	):
-		should_load_city_pointers = false
+	# Use floating islands mode (single scene) by default
+	# Only use dynamic city mode (radius-based) in test/renderer modes
+	var should_load_city_pointers = not is_using_floating_islands()
 
 	scene_entity_coordinator.config(
 		content_base_url + "entities/active", content_base_url, should_load_city_pointers
@@ -400,26 +389,20 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 
 
 func _regenerate_floating_islands() -> void:
-	# Find the scene containing the player's current position
-	var player_scene_id = get_parcel_scene_id(current_position.x, current_position.y)
-	var player_scene: SceneItem = null
-
-	# Find the SceneItem by scene_number_id
+	# Collect parcels from ALL loaded scenes (not just player's current scene)
+	var all_scene_parcels = []
 	for scene: SceneItem in loaded_scenes.values():
-		if scene.scene_number_id == player_scene_id:
-			player_scene = scene
-			break
+		# Include parcels from all loaded non-global scenes
+		if not scene.is_global and scene.scene_number_id != -1:
+			for parcel in scene.parcels:
+				all_scene_parcels.append(parcel)
 
-	var player_scene_parcels = []
-	if player_scene != null:
-		player_scene_parcels = player_scene.parcels
-
-	if player_scene_parcels.is_empty():
+	if all_scene_parcels.is_empty():
 		return
 
-	var current_scene_hash = str(player_scene_parcels.hash())
+	var current_scene_hash = str(all_scene_parcels.hash())
 
-	# Skip if same scene (hash check)
+	# Skip if same scene configuration
 	if has_meta("last_scene_hash") and get_meta("last_scene_hash") == current_scene_hash:
 		return
 
@@ -435,26 +418,33 @@ func _regenerate_floating_islands() -> void:
 
 	set_meta("last_scene_hash", current_scene_hash)
 
-	# Create floating island for the player's scene only
-	_create_floating_island_for_cluster(player_scene_parcels)
+	# Create floating island platform considering all loaded scenes
+	_create_floating_island_for_cluster(all_scene_parcels)
 
 
 func update_position(new_position: Vector2i) -> void:
 	if current_position == new_position:
 		return
 
-	var old_scene_id = get_parcel_scene_id(current_position.x, current_position.y)
 	current_position = new_position
-	var new_scene_id = get_parcel_scene_id(current_position.x, current_position.y)
 
-	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
+	var is_teleport = is_using_floating_islands() and (not has_meta("last_scene_hash") or get_meta("last_scene_hash") == "")
+
+	if is_teleport:
+		_teleport_target_parcel = new_position
+
+		for scene_id in loaded_scenes.keys():
+			var scene: SceneItem = loaded_scenes[scene_id]
+			if not scene.is_global and scene.scene_number_id != -1:
+				Global.scene_runner.kill_scene(scene.scene_number_id)
+				if base_floor_manager:
+					base_floor_manager.remove_scene_floors(scene.id)
+		loaded_scenes.clear()
+
+	if not is_using_floating_islands() or is_teleport:
+		scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
+
 	player_parcel_changed.emit(new_position)
-
-	# In floating islands mode, unload all scenes except the current one when changing scenes
-	# Only do this if we actually have a valid new scene to switch to
-	if is_using_floating_islands() and old_scene_id != new_scene_id and new_scene_id != -1:
-		_unload_scenes_except_current(new_scene_id)
-		_regenerate_floating_islands()
 
 
 func async_load_scene(
@@ -718,7 +708,7 @@ func _create_floating_island_for_cluster(cluster: Array):
 						max_z + padding,
 						scene_parcel_set
 					)
-					scene.set_corner_configuration(config)
+					scene.set_corner_configuration.call_deferred(config)
 
 					loaded_empty_scenes[parcel_string] = scene
 

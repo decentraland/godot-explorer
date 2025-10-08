@@ -68,7 +68,6 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		# Always update position in scene fetcher for proper scene loading
 		Global.scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
 		Global.get_config().last_parcel_position = parcel_position
@@ -158,9 +157,6 @@ func _ready():
 	)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
-	# Load the initial parcel since dynamic loading is disabled
-	Global.scene_fetcher.update_position(start_parcel_position)
-
 	Global.scene_runner.camera_node = player.camera
 	Global.scene_runner.player_avatar_node = player.avatar
 	Global.scene_runner.player_body_node = player
@@ -186,6 +182,10 @@ func _ready():
 			)
 		else:
 			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
+
+	await Global.realm.realm_changed
+
+	Global.scene_fetcher.update_position(start_parcel_position)
 
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
@@ -416,14 +416,11 @@ func move_to(position: Vector3, skip_loading: bool):
 func teleport_to(parcel: Vector2i, realm: String = ""):
 	if not realm.is_empty() && realm != Global.realm.get_realm_string():
 		Global.realm.async_set_realm(realm)
+		await Global.realm.realm_changed
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
-	prints("Teleport to parcel: ", parcel, move_to_position)
 	move_to(move_to_position, false)
 
-	# Load scenes at the new position since dynamic loading is disabled
-	print("Loading scenes at teleport destination: ", parcel)
-	# Force recreation of floating island by clearing the hash
 	Global.scene_fetcher.set_meta("last_scene_hash", "")
 	Global.scene_fetcher.update_position(parcel)
 

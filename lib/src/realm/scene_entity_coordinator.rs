@@ -313,6 +313,25 @@ impl SceneEntityCoordinator {
         self.keep_alive_scenes.clear();
         self.empty_parcels.clear();
 
+        if !self.should_load_city_scenes {
+            let current_coord = self.current_position;
+
+            if let Some(entity_id) = self.cache_city_pointers.get(&current_coord) {
+                if !entity_id.is_empty() {
+                    self.loadable_scenes.insert(entity_id.clone());
+                }
+            }
+
+            // Load global scenes
+            for entity_base in self.global_desired_entities.iter() {
+                if self.cache_scene_data.contains_key(&entity_base.hash) {
+                    self.loadable_scenes.insert(entity_base.hash.clone());
+                }
+            }
+
+            return;
+        }
+
         let unexisting_taken_as_empty: bool = !self.should_load_city_scenes
             && self.requested_city_pointers.is_empty()
             && self.requested_entity.is_empty();
@@ -443,6 +462,15 @@ impl SceneEntityCoordinator {
 
             // Request the new pointers
             self.request_pointers(request_pointers);
+        } else {
+            if !self
+                .cache_city_pointers
+                .contains_key(&self.current_position)
+            {
+                let mut request_pointers = HashSet::with_capacity(1);
+                request_pointers.insert(self.current_position);
+                self.request_pointers(request_pointers);
+            }
         }
     }
 
