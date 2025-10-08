@@ -185,8 +185,10 @@ pub fn move_player_to(
     );
 
     // Calculate real target position
-    let position_target = Vector3::new(position_target[0], position_target[1], position_target[2]);
-    let position_target = position_target + scene_position;
+    let relative_position_target =
+        Vector3::new(position_target[0], position_target[1], position_target[2]);
+    let position_target = relative_position_target + scene_position;
+    tracing::debug!("move_player_to: relative_position_target={relative_position_target} + scene_position={scene_position} = position_target={position_target}");
 
     // Check if the target position is inside the scene that requested the move
     let target_parcel = Vector2i::new(
@@ -209,7 +211,7 @@ pub fn move_player_to(
     let position_target = Vector3::new(position_target.x, position_target.y, -position_target.z);
     explorer_node.call(
         "move_to".into(),
-        &[Variant::from(position_target), false.to_variant()],
+        &[Variant::from(position_target), true.to_variant()],
     );
 
     // Set camera to look at camera target position

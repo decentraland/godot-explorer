@@ -781,6 +781,7 @@ impl AvatarScene {
             }
         }
 
+        // Transforms
         let local_transform_component = self.crdt_state.get_transform();
         let local_player_identity_data =
             SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt_state);
