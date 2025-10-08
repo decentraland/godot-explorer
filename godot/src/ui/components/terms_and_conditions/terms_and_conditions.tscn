@@ -138,6 +138,7 @@ size_flags_vertical = 3
 
 [node name="Button_Accept" type="Button" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0

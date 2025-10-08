@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=29 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" uid="uid://do4lb6hapbydx" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -46,6 +46,8 @@ corner_radius_bottom_left = 12
 
 [sub_resource type="LabelSettings" id="LabelSettings_2q7xc"]
 font = ExtResource("19_ypsmd")
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vcjym"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_ypsmd"]
 font = ExtResource("18_2q7xc")
@@ -236,7 +238,6 @@ icon_alignment = 2
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -248,6 +249,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer"]
+custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 size_flags_vertical = 3
 alignment = 1
@@ -261,6 +263,7 @@ script = ExtResource("18_10jcs")
 [node name="ChooseNameHead" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 
@@ -292,7 +295,7 @@ clear_button_enabled = true
 
 [node name="Button_RandomName" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
 texture_filter = 4
-custom_minimum_size = Vector2(50, 60)
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme = ExtResource("9_ypsmd")
 theme_override_styles/focus = SubResource("StyleBoxFlat_rqbts")
@@ -317,6 +320,7 @@ label_settings = SubResource("LabelSettings_2q7xc")
 
 [node name="RestoreNameHead" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 alignment = 1
@@ -341,8 +345,14 @@ theme_override_fonts/font = ExtResource("5_g62s5")
 theme_override_font_sizes/font_size = 36
 text = "Welcome Back!"
 label_settings = ExtResource("18_ypsmd")
+horizontal_alignment = 1
 
-[node name="AvatarPreview" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer" instance=ExtResource("15_n5dun")]
+[node name="Control" type="PanelContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_vcjym")
+
+[node name="AvatarPreview" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/Control" instance=ExtResource("15_n5dun")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
@@ -352,10 +362,34 @@ stretch = true
 hide_name = true
 can_move = false
 
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/Control"]
+layout_mode = 2
+alignment = 2
+
+[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/Control/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(425, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("5_g62s5")
+theme_override_font_sizes/font_size = 36
+text = "Kuruk"
+label_settings = ExtResource("18_ypsmd")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator3" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/Control/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+size_flags_horizontal = 4
 
 [node name="Button_Next" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter"]
 unique_name_in_owner = true
@@ -373,23 +407,15 @@ icon_alignment = 2
 
 [node name="RestoreNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 25
 alignment = 1
 
-[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("5_g62s5")
-theme_override_font_sizes/font_size = 36
-text = "Kuruk"
-label_settings = ExtResource("18_ypsmd")
-horizontal_alignment = 1
-
 [node name="HSeparator3" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter"]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
@@ -543,7 +569,7 @@ expand_icon = true
 [connection signal="pressed" from="Main/BackpackContainer/MarginContainer/VBoxContainer/Button_Continue" to="." method="_on_button_continue_pressed"]
 [connection signal="text_changed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/LineEdit_ChooseName" to="." method="_on_line_edit_choose_name_text_changed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
-[connection signal="gui_input" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
+[connection signal="gui_input" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/Control/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/Button_Next" to="." method="_on_button_next_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]

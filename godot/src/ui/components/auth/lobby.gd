@@ -40,6 +40,7 @@ var _last_panel: Control = null
 @onready var restore_name_head: VBoxContainer = %RestoreNameHead
 @onready var choose_name_footer: VBoxContainer = %ChooseNameFooter
 @onready var restore_name_footer: VBoxContainer = %RestoreNameFooter
+@onready var label_name: Label = %Label_Name
 
 @onready var button_enter_as_guest: Button = %Button_EnterAsGuest
 @onready var sign_in_title: Label = %SignInTitle
@@ -129,6 +130,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		Global.get_config().save_to_settings_file()
 		restore_name_head.hide()
 		restore_name_footer.hide()
+		label_name.hide()
 		choose_name_head.show()
 		choose_name_footer.show()
 
@@ -139,6 +141,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 			restore_name_head.show()
 			restore_name_footer.show()
+			label_name.show()
 			choose_name_head.hide()
 			choose_name_footer.hide()
 			show_panel(control_restore_and_choose_name)
