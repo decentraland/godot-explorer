@@ -15,13 +15,12 @@ jobs:
       image: quay.io/decentraland/dcl-godot-android-builder:02ee2c576f49c1397710a6b90098549725bad4a5
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
+    env:
+      GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Set correct commit hash
-        run: echo "GITHUB_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1

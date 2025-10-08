@@ -13,13 +13,12 @@ jobs:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Set correct commit hash
-        run: echo "GITHUB_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
       - uses: actions-rs/toolchain@v1
         with:

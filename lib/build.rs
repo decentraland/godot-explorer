@@ -425,24 +425,39 @@ fn check_safe_repo() -> Result<(), String> {
 }
 
 fn set_godot_explorer_version() {
-    let hash_from_command = match check_safe_repo() {
-        Ok(_) => {
-            if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
-                let long_hash = String::from_utf8(output.stdout).unwrap();
-                Some(long_hash.trim().to_string())
-            } else {
-                eprintln!("After checking if the repo is safe, couldn't get the hash");
+    // First, try to get hash from GITHUB_SHA environment variable
+    let commit_hash = if let Ok(hash) = env::var("GITHUB_SHA") {
+        eprintln!(
+            "Using commit hash: {} (from GITHUB_SHA env)",
+            hash.chars().take(7).collect::<String>()
+        );
+        Some(hash)
+    } else {
+        // Fall back to git command if GITHUB_SHA not available
+        match check_safe_repo() {
+            Ok(_) => {
+                if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
+                    let long_hash = String::from_utf8(output.stdout).unwrap().trim().to_string();
+                    eprintln!(
+                        "Using commit hash: {} (from git command)",
+                        long_hash.chars().take(7).collect::<String>()
+                    );
+                    Some(long_hash)
+                } else {
+                    eprintln!("After checking if the repo is safe, couldn't get the hash");
+                    None
+                }
+            }
+            Err(e) => {
+                eprintln!("Check if the repo is safe: {}", e);
                 None
             }
         }
-        Err(e) => {
-            eprintln!("Check if the repo is safe: {}", e);
-            None
-        }
     };
 
-    let hash_from_env = env::var("GITHUB_SHA").ok();
-    let commit_hash = hash_from_command.or(hash_from_env);
+    if commit_hash.is_none() {
+        eprintln!("No commit hash available, using timestamp");
+    }
 
     // Get short hash (first 7 characters)
     let short_hash = commit_hash
