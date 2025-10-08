@@ -462,15 +462,13 @@ impl SceneEntityCoordinator {
 
             // Request the new pointers
             self.request_pointers(request_pointers);
-        } else {
-            if !self
-                .cache_city_pointers
-                .contains_key(&self.current_position)
-            {
-                let mut request_pointers = HashSet::with_capacity(1);
-                request_pointers.insert(self.current_position);
-                self.request_pointers(request_pointers);
-            }
+        } else if !self
+            .cache_city_pointers
+            .contains_key(&self.current_position)
+        {
+            let mut request_pointers = HashSet::with_capacity(1);
+            request_pointers.insert(self.current_position);
+            self.request_pointers(request_pointers);
         }
     }
 
