@@ -490,8 +490,8 @@ mod tests {
     fn version_check() {
         // Parse Cargo.toml version
         let cargo_toml_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
-        let cargo_toml_content = fs::read_to_string(&cargo_toml_path)
-            .expect("Failed to read Cargo.toml");
+        let cargo_toml_content =
+            fs::read_to_string(&cargo_toml_path).expect("Failed to read Cargo.toml");
 
         let cargo_version = cargo_toml_content
             .lines()
@@ -517,8 +517,8 @@ mod tests {
             .expect("Failed to get parent directory")
             .join("godot/export_presets.cfg");
 
-        let export_presets_content = fs::read_to_string(&export_presets_path)
-            .expect("Failed to read export_presets.cfg");
+        let export_presets_content =
+            fs::read_to_string(&export_presets_path).expect("Failed to read export_presets.cfg");
 
         // Find all version/code entries (Android and Quest)
         let mut android_version_code = None;
@@ -549,7 +549,10 @@ mod tests {
                 in_ios_preset = false;
             }
 
-            if in_android_preset && line.starts_with("version/code=") && android_version_code.is_none() {
+            if in_android_preset
+                && line.starts_with("version/code=")
+                && android_version_code.is_none()
+            {
                 android_version_code = Some(
                     line.split('=')
                         .nth(1)
@@ -558,7 +561,10 @@ mod tests {
                         .parse::<u32>()
                         .expect("Failed to parse Android version/code as u32"),
                 );
-            } else if in_quest_preset && line.starts_with("version/code=") && quest_version_code.is_none() {
+            } else if in_quest_preset
+                && line.starts_with("version/code=")
+                && quest_version_code.is_none()
+            {
                 quest_version_code = Some(
                     line.split('=')
                         .nth(1)
@@ -567,7 +573,10 @@ mod tests {
                         .parse::<u32>()
                         .expect("Failed to parse Quest version/code as u32"),
                 );
-            } else if in_ios_preset && line.starts_with("application/version=") && ios_version.is_none() {
+            } else if in_ios_preset
+                && line.starts_with("application/version=")
+                && ios_version.is_none()
+            {
                 ios_version = Some(
                     line.split('=')
                         .nth(1)
@@ -580,7 +589,8 @@ mod tests {
             }
         }
 
-        let android_version_code = android_version_code.expect("Failed to find Android version/code");
+        let android_version_code =
+            android_version_code.expect("Failed to find Android version/code");
         let quest_version_code = quest_version_code.expect("Failed to find Quest version/code");
         let ios_version = ios_version.expect("Failed to find iOS application/version");
 
@@ -603,7 +613,9 @@ mod tests {
             quest_version_code, expected_version_code
         );
 
-        println!("✓ All versions match: Cargo.toml={}, Android={}, iOS={}, Quest={}",
-            expected_version_code, android_version_code, ios_version, quest_version_code);
+        println!(
+            "✓ All versions match: Cargo.toml={}, Android={}, iOS={}, Quest={}",
+            expected_version_code, android_version_code, ios_version, quest_version_code
+        );
     }
 }
