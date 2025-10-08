@@ -428,7 +428,10 @@ func update_position(new_position: Vector2i) -> void:
 
 	current_position = new_position
 
-	var is_teleport = is_using_floating_islands() and (not has_meta("last_scene_hash") or get_meta("last_scene_hash") == "")
+	var is_teleport = (
+		is_using_floating_islands()
+		and (not has_meta("last_scene_hash") or get_meta("last_scene_hash") == "")
+	)
 
 	if is_teleport:
 		_teleport_target_parcel = new_position
