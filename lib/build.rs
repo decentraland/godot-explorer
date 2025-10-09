@@ -374,8 +374,6 @@ fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
 }
 
 fn check_safe_repo() -> Result<(), String> {
-    // GITHUB_SHA
-
     // Get the current working directory and navigate up two levels
     let mut repo_path = env::current_dir().map_err(|e| e.to_string())?;
     repo_path.pop(); // Go up one level
@@ -425,39 +423,68 @@ fn check_safe_repo() -> Result<(), String> {
 }
 
 fn set_godot_explorer_version() {
-    let hash_from_command = match check_safe_repo() {
+    // Always use git to get the actual checked-out commit (what GitHub checkout uses)
+    let commit_hash = match check_safe_repo() {
         Ok(_) => {
-            if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
-                let long_hash = String::from_utf8(output.stdout).unwrap();
+            if let Ok(output) = Command::new("git")
+                .args(["log", "-1", "--format=%H"])
+                .output()
+            {
+                let long_hash = String::from_utf8(output.stdout).unwrap().trim().to_string();
+                println!(
+                    "cargo:warning=Using commit hash: {} (from git log)",
+                    long_hash.chars().take(7).collect::<String>()
+                );
                 Some(long_hash)
             } else {
-                eprintln!("After checking if the repo is safe, couldn't get the hash");
+                println!("cargo:warning=After checking if the repo is safe, couldn't get the hash");
                 None
             }
         }
         Err(e) => {
-            eprintln!("Check if the repo is safe: {}", e);
+            println!("cargo:warning=Check if the repo is safe: {}", e);
             None
         }
     };
 
-    let hash_from_env = env::var("GITHUB_SHA").ok();
-    let timestamp = Utc::now()
-        .to_rfc3339()
-        .replace(|c: char| !c.is_ascii_digit(), "");
+    if commit_hash.is_none() {
+        println!("cargo:warning=No commit hash available, using timestamp");
+    }
 
-    let commit_hash = hash_from_command
-        .or(hash_from_env)
-        .map(|hash| format!("commit-{}", hash));
+    // Get short hash (first 7 characters)
+    let short_hash = commit_hash
+        .as_ref()
+        .map(|hash| hash.chars().take(7).collect::<String>());
 
-    let snapshot = commit_hash.unwrap_or(format!("timestamp-{}", timestamp));
-
-    // get the CARGO_PKG_VERSION env var
+    // Get the CARGO_PKG_VERSION env var
     let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());
-    let snapshot_version = format!("{}-{}", version, snapshot);
 
-    println!(
-        "cargo:rustc-env=GODOT_EXPLORER_VERSION={}",
-        snapshot_version
-    );
+    // Check if building in CI with GitHub Actions run number
+    let github_run_number = env::var("GITHUB_RUN_NUMBER").ok();
+
+    // Check if debug or release build
+    let profile = env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
+    let is_debug = profile == "debug";
+
+    let full_version = match (github_run_number, short_hash) {
+        // CI build: {version}-{run_number}-{short_hash}
+        (Some(run_number), Some(hash)) => format!("{}-{}-{}-alpha", version, run_number, hash),
+        // Local debug build: {version}-dev-{short_hash}
+        (None, Some(hash)) if is_debug => format!("{}-{}-alpha-dev", version, hash),
+        // Local release build: {version}-{short_hash}
+        (None, Some(hash)) => format!("{}-{}-alpha", version, hash),
+        // Fallback if no git hash available
+        _ => {
+            let timestamp = Utc::now()
+                .to_rfc3339()
+                .replace(|c: char| !c.is_ascii_digit(), "");
+            if is_debug {
+                format!("{}-t{}-alpha-dev", version, timestamp)
+            } else {
+                format!("{}-t{}-alpha", version, timestamp)
+            }
+        }
+    };
+
+    println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
 }

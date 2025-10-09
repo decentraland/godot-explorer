@@ -42,6 +42,8 @@ var _last_panel: Control = null
 @onready var background_1: Control = %Background1
 @onready var background_2: Control = %Background2
 
+@onready var label_version = %Label_Version
+
 
 func show_panel(child_node: Control, subpanel: Control = null):
 	for child in control_main.get_children():
@@ -80,6 +82,9 @@ func _ready():
 	Global.music_player.play("music_builder")
 	restore_panel.hide()
 	choose_name.hide()
+
+	# Set version label
+	label_version.set_text("v" + Global.get_version())
 
 	var android_login = %AndroidLogin
 	if is_instance_valid(android_login) and android_login.is_platform_supported():

@@ -287,6 +287,11 @@ impl DclGlobal {
         true
     }
 
+    #[func]
+    pub fn get_version(&self) -> GString {
+        env!("GODOT_EXPLORER_VERSION").into()
+    }
+
     pub fn has_singleton() -> bool {
         let Some(main_loop) = Engine::singleton().get_main_loop() else {
             return false;
