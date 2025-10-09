@@ -40,7 +40,8 @@ var base_floor_manager: BaseFloorManager = null
 
 var desired_portable_experiences_urns: Array[String] = []
 
-# Special-case: one-shot to skip loading screen
+# Flag to skip loading screen during reload operations (teleports, scene reloads, etc.)
+# This is a one-shot flag that gets reset after use
 var _is_reloading: bool = false
 
 # This counter is to control the async-flow
@@ -224,14 +225,19 @@ func _async_on_desired_scene_changed():
 	var counter_this_call := _scene_changed_counter
 	prints("[SCENE_FLOW]", "Scene change counter:", counter_this_call)  # TEMP
 
-	# Report new load, when I dont have scenes loaded, and there are a lot of new scenes...
-	# Never show loading screen for dynamic loading (seamless background loading)
+	# Determine if we should show a loading screen
+	# Show loading screen ONLY when:
+	# - We have no scenes loaded AND there are scenes to load (initial load)
+	# - We're in floating islands mode (not dynamic loading)
+	# - We're NOT reloading (teleport, reload_scene, etc.)
 	var new_loading = (
 		loaded_scenes.is_empty() and not loadable_scenes.is_empty() and is_using_floating_islands()
 	)
+
+	# Skip loading screen for any reload scenario (teleports, scene reloads, etc.)
 	if new_loading and _is_reloading:
-		prints("[SCENE_FLOW]", "Skipping loading screen (is_reloading)")  # TEMP
-		_is_reloading = false
+		prints("[SCENE_FLOW]", "Skipping loading screen - reload detected (_is_reloading=true)")  # TEMP
+		_is_reloading = false  # Reset the flag after use (one-shot)
 		new_loading = false
 
 	var loading_promises: Array = []
@@ -258,7 +264,7 @@ func _async_on_desired_scene_changed():
 			else:
 				printerr("[SCENE_FLOW] ERROR: should load scene_id ", scene_id, " but data is empty")  # TEMP
 
-	prints("[SCENE_FLOW]", "Emitting report_scene_load (before): new_loading:", new_loading, "count:", loadable_scenes.size())  # TEMP
+	prints("[SCENE_FLOW]", "Emitting report_scene_load (before): done=false, new_loading:", new_loading, "pending:", loadable_scenes.size())  # TEMP
 	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
 	prints("[SCENE_FLOW]", "Awaiting", loading_promises.size(), "scene loading promises...")  # TEMP
@@ -268,7 +274,9 @@ func _async_on_desired_scene_changed():
 	# If there is other calls processing the scene, early return
 	# 	the next block of code will be executed by the last request
 	if counter_this_call != _scene_changed_counter:
-		prints("[SCENE_FLOW]", "RACE CONDITION: Early return, counter", counter_this_call, "!=", _scene_changed_counter)  # TEMP
+		prints("[SCENE_FLOW]", "!!! RACE CONDITION: Early return WITHOUT emitting done signal !!!")  # TEMP
+		prints("[SCENE_FLOW]", "RACE CONDITION: counter_this_call:", counter_this_call, "current:", _scene_changed_counter)  # TEMP
+		prints("[SCENE_FLOW]", "WARNING: Loading screen will NOT be dismissed by this call!")  # TEMP
 		return
 
 	# Get current loadable/keep_alive scenes (they may have changed while loading)
@@ -337,11 +345,14 @@ func _async_on_desired_scene_changed():
 	for scene: SceneItem in loaded_scenes.values():
 		parcel_filled.append_array(scene.parcels)
 
-	prints("[SCENE_FLOW]", "Emitting report_scene_load (after): new_loading:", new_loading, "count:", loadable_scenes.size())  # TEMP
+	prints("[SCENE_FLOW]", "=== FINAL REPORT ===")  # TEMP
+	prints("[SCENE_FLOW]", "Emitting report_scene_load (after): done=true, new_loading=false (always false when done), pending:", loadable_scenes.size())  # TEMP
 	prints("[SCENE_FLOW]", "Emitting parcels_processed: filled:", parcel_filled.size(), "empty:", empty_parcels_coords.size())  # TEMP
-	report_scene_load.emit(true, new_loading, loadable_scenes.size())
+	prints("[SCENE_FLOW]", "Scene counter check: counter_this_call:", counter_this_call, "current:", _scene_changed_counter)  # TEMP
+	# Always emit new_loading=false when done=true to properly dismiss the loading screen  # TEMP
+	report_scene_load.emit(true, false, loadable_scenes.size())
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
-	prints("[SCENE_FLOW]", "<<< _async_on_desired_scene_changed() completed")  # TEMP
+	prints("[SCENE_FLOW]", "<<< _async_on_desired_scene_changed() completed - counter:", counter_this_call)  # TEMP
 
 
 func _on_realm_changed():
@@ -490,14 +501,31 @@ func _regenerate_floating_islands() -> void:
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
+	# Skip only if not teleporting and position hasn't changed
+	# Always process teleports, even to the same location (to force scene reload)
 	if current_position == new_position and !is_teleport:
 		return
+
 	prints("[SCENE_FLOW]", ">>> update_position() -", "old:", current_position, "new:", new_position, "is_teleport:", is_teleport)  # TEMP
+
+	# For teleports to the same position, we still want to reload the scene
+	var position_changed = current_position != new_position
 	current_position = new_position
 
 	if is_teleport:
 		prints("[SCENE_FLOW]", "TELEPORT: Setting target parcel and clearing all scenes, current loaded_scenes:", loaded_scenes.size())  # TEMP
 		_teleport_target_parcel = new_position
+
+		# Always skip loading screen for teleports (both same and different positions)
+		# Teleports are user-initiated and should feel seamless
+		prints("[SCENE_FLOW]", "TELEPORT: Setting _is_reloading=true to skip loading screen")  # TEMP
+		_is_reloading = true
+
+		# If teleporting to the same position, force scene processing even if we're in the same scene entity
+		if not position_changed:
+			prints("[SCENE_FLOW]", "TELEPORT: Same position - setting _bypass_loading_check to force reload")  # TEMP
+			if is_using_floating_islands():
+				_bypass_loading_check = true
 
 		var killed_count = 0
 		for scene_id in loaded_scenes.keys():
