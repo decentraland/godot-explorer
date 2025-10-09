@@ -24,6 +24,7 @@ mod platform;
 mod run;
 mod tests;
 mod ui;
+mod version_check;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -63,6 +64,7 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
+        .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("install")
                 .arg(
@@ -455,6 +457,7 @@ fn main() -> Result<(), anyhow::Error> {
                 .context("please provide a package with -p")?,
         ),
         ("doctor", _) => doctor::run_doctor(),
+        ("version-check", _) => version_check::run_version_check(),
         _ => unreachable!("unreachable branch"),
     };
 

@@ -431,24 +431,24 @@ fn set_godot_explorer_version() {
                 .output()
             {
                 let long_hash = String::from_utf8(output.stdout).unwrap().trim().to_string();
-                eprintln!(
-                    "Using commit hash: {} (from git log)",
+                println!(
+                    "cargo:warning=Using commit hash: {} (from git log)",
                     long_hash.chars().take(7).collect::<String>()
                 );
                 Some(long_hash)
             } else {
-                eprintln!("After checking if the repo is safe, couldn't get the hash");
+                println!("cargo:warning=After checking if the repo is safe, couldn't get the hash");
                 None
             }
         }
         Err(e) => {
-            eprintln!("Check if the repo is safe: {}", e);
+            println!("cargo:warning=Check if the repo is safe: {}", e);
             None
         }
     };
 
     if commit_hash.is_none() {
-        eprintln!("No commit hash available, using timestamp");
+        println!("cargo:warning=No commit hash available, using timestamp");
     }
 
     // Get short hash (first 7 characters)
@@ -487,142 +487,4 @@ fn set_godot_explorer_version() {
     };
 
     println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn version_check() {
-        // Parse Cargo.toml version
-        let cargo_toml_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
-        let cargo_toml_content =
-            fs::read_to_string(&cargo_toml_path).expect("Failed to read Cargo.toml");
-
-        let cargo_version = cargo_toml_content
-            .lines()
-            .find(|line| line.starts_with("version = "))
-            .expect("Failed to find version in Cargo.toml")
-            .split('=')
-            .nth(1)
-            .expect("Failed to parse version")
-            .trim()
-            .trim_matches('"');
-
-        // Extract the minor version number (e.g., "0.32.0" -> 32)
-        let version_parts: Vec<&str> = cargo_version.split('.').collect();
-        let expected_version_code = version_parts
-            .get(1)
-            .expect("Version should have at least 2 parts")
-            .parse::<u32>()
-            .expect("Failed to parse version code");
-
-        // Parse export_presets.cfg
-        let export_presets_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("Failed to get parent directory")
-            .join("godot/export_presets.cfg");
-
-        let export_presets_content =
-            fs::read_to_string(&export_presets_path).expect("Failed to read export_presets.cfg");
-
-        // Find all version/code entries (Android and Quest)
-        let mut android_version_code = None;
-        let mut quest_version_code = None;
-        let mut ios_version = None;
-
-        let mut in_android_preset = false;
-        let mut in_quest_preset = false;
-        let mut in_ios_preset = false;
-
-        for line in export_presets_content.lines() {
-            if line.contains("name=\"android\"") {
-                in_android_preset = true;
-                in_quest_preset = false;
-                in_ios_preset = false;
-            } else if line.contains("name=\"quest\"") {
-                in_quest_preset = true;
-                in_android_preset = false;
-                in_ios_preset = false;
-            } else if line.contains("name=\"ios\"") {
-                in_ios_preset = true;
-                in_android_preset = false;
-                in_quest_preset = false;
-            } else if line.starts_with("[preset.") {
-                // Reset flags on new preset
-                in_android_preset = false;
-                in_quest_preset = false;
-                in_ios_preset = false;
-            }
-
-            if in_android_preset
-                && line.starts_with("version/code=")
-                && android_version_code.is_none()
-            {
-                android_version_code = Some(
-                    line.split('=')
-                        .nth(1)
-                        .expect("Failed to parse Android version/code")
-                        .trim()
-                        .parse::<u32>()
-                        .expect("Failed to parse Android version/code as u32"),
-                );
-            } else if in_quest_preset
-                && line.starts_with("version/code=")
-                && quest_version_code.is_none()
-            {
-                quest_version_code = Some(
-                    line.split('=')
-                        .nth(1)
-                        .expect("Failed to parse Quest version/code")
-                        .trim()
-                        .parse::<u32>()
-                        .expect("Failed to parse Quest version/code as u32"),
-                );
-            } else if in_ios_preset
-                && line.starts_with("application/version=")
-                && ios_version.is_none()
-            {
-                ios_version = Some(
-                    line.split('=')
-                        .nth(1)
-                        .expect("Failed to parse iOS application/version")
-                        .trim()
-                        .trim_matches('"')
-                        .parse::<u32>()
-                        .expect("Failed to parse iOS application/version as u32"),
-                );
-            }
-        }
-
-        let android_version_code =
-            android_version_code.expect("Failed to find Android version/code");
-        let quest_version_code = quest_version_code.expect("Failed to find Quest version/code");
-        let ios_version = ios_version.expect("Failed to find iOS application/version");
-
-        // Compare versions
-        assert_eq!(
-            android_version_code, expected_version_code,
-            "Android version/code ({}) does not match Cargo.toml version code ({})",
-            android_version_code, expected_version_code
-        );
-
-        assert_eq!(
-            ios_version, expected_version_code,
-            "iOS application/version ({}) does not match Cargo.toml version code ({})",
-            ios_version, expected_version_code
-        );
-
-        assert_eq!(
-            quest_version_code, expected_version_code,
-            "Quest version/code ({}) does not match Cargo.toml version code ({})",
-            quest_version_code, expected_version_code
-        );
-
-        println!(
-            "✓ All versions match: Cargo.toml={}, Android={}, iOS={}, Quest={}",
-            expected_version_code, android_version_code, ios_version, quest_version_code
-        );
-    }
 }

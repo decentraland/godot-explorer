@@ -24,6 +24,7 @@ jobs:
           echo "The commit SHA is $GITHUB_SHA"
       - name: Print commit SHA
         run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
           echo "The commit SHA is $(git log -1 --format=%H)"
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
