@@ -34,6 +34,7 @@ var wall_manager: FloatingIslandWalls = null
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
 var last_version_checked: int = -1
+var last_scene_group_hash: String = ""
 
 var base_floor_manager: BaseFloorManager = null
 
@@ -206,8 +207,9 @@ func _is_there_any_new_scene_to_load() -> bool:
 
 
 func _async_on_desired_scene_changed():
-	var d = scene_entity_coordinator.get_desired_scenes()
-	var loadable_scenes = d.get("loadable_scenes", [])
+	var desired_scenes = scene_entity_coordinator.get_desired_scenes()
+	prints("get_desired_scenes", desired_scenes)
+	var loadable_scenes = desired_scenes.get("loadable_scenes", [])
 
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
@@ -235,6 +237,7 @@ func _async_on_desired_scene_changed():
 
 		if should_load:
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
+			prints("loading scene_id = ", scene_id, current_position, Global.realm.realm_url)
 			if scene_definition != null:
 				loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
 			else:
@@ -276,8 +279,8 @@ func _async_on_desired_scene_changed():
 	var use_floating_islands = is_using_floating_islands()
 
 	# Clear floating island state when switching to dynamic loading
-	if not use_floating_islands and has_meta("last_scene_hash"):
-		set_meta("last_scene_hash", "")
+	if not use_floating_islands and !last_scene_group_hash.is_empty():
+		last_scene_group_hash = ""
 		# Clean up any existing floating island empty parcels
 		for parcel in loaded_empty_scenes:
 			var empty_scene = loaded_empty_scenes[parcel]
@@ -289,7 +292,7 @@ func _async_on_desired_scene_changed():
 		_regenerate_floating_islands()
 
 	var empty_parcels_coords = []
-	if use_floating_islands and has_meta("last_scene_hash"):
+	if use_floating_islands and !last_scene_group_hash.is_empty():
 		# Use floating island empty parcels
 		for parcel_string in loaded_empty_scenes.keys():
 			var coord = parcel_string.split(",")
@@ -314,7 +317,7 @@ func _on_realm_changed():
 	Global.get_config().save_to_settings_file()
 
 	# Force floating island recreation on realm change
-	set_meta("last_scene_hash", "")
+	last_scene_group_hash = ""
 
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url
@@ -400,10 +403,10 @@ func _regenerate_floating_islands() -> void:
 	if all_scene_parcels.is_empty():
 		return
 
-	var current_scene_hash = str(all_scene_parcels.hash())
+	var current_scene_group_hash: String = str(all_scene_parcels.hash())
 
 	# Skip if same scene configuration
-	if has_meta("last_scene_hash") and get_meta("last_scene_hash") == current_scene_hash:
+	if !last_scene_group_hash.is_empty() and last_scene_group_hash == current_scene_group_hash:
 		return
 
 	# Clear old empty parcels
@@ -416,22 +419,17 @@ func _regenerate_floating_islands() -> void:
 	if wall_manager:
 		wall_manager.clear_walls()
 
-	set_meta("last_scene_hash", current_scene_hash)
+	last_scene_group_hash = current_scene_group_hash
 
 	# Create floating island platform considering all loaded scenes
 	_create_floating_island_for_cluster(all_scene_parcels)
 
 
-func update_position(new_position: Vector2i) -> void:
-	if current_position == new_position:
+func update_position(new_position: Vector2i, is_teleport: bool) -> void:
+	if current_position == new_position and !is_teleport:
 		return
-
+	prints("current_position", new_position)
 	current_position = new_position
-
-	var is_teleport = (
-		is_using_floating_islands()
-		and (not has_meta("last_scene_hash") or get_meta("last_scene_hash") == "")
-	)
 
 	if is_teleport:
 		_teleport_target_parcel = new_position

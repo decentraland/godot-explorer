@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=33 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
@@ -32,7 +32,6 @@
 [ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
 
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_u4dfr"]
 
 [node name="explorer" type="Node"]
@@ -40,7 +39,6 @@ script = ExtResource("1_5n8xk")
 
 [node name="world" type="Node3D" parent="."]
 unique_name_in_owner = true
-
 
 [node name="Timer_BroadcastPosition" parent="world" instance=ExtResource("4_2dkhu")]
 unique_name_in_owner = true

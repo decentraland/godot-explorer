@@ -130,6 +130,7 @@ func async_clear_realm():
 
 
 func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> void:
+	prints("async_set_realm", new_realm_string, search_new_pos)
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)

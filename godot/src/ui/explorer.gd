@@ -68,7 +68,7 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		Global.scene_fetcher.update_position(parcel_position)
+		Global.scene_fetcher.update_position(parcel_position, false)
 		_last_parcel_position = parcel_position
 		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
@@ -172,7 +172,8 @@ func _ready():
 
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
 
-	Global.scene_fetcher.current_position = start_parcel_position
+	#Global.scene_fetcher.current_position = start_parcel_position
+	Global.scene_fetcher.update_position(start_parcel_position, true)
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
@@ -422,13 +423,10 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
 
-	Global.scene_fetcher.set_meta("last_scene_hash", "")
-
 	if not realm.is_empty() && realm != Global.realm.get_realm_string():
-		Global.scene_fetcher.current_position = parcel
 		Global.realm.async_set_realm(realm)
-	else:
-		Global.scene_fetcher.update_position(parcel)
+
+	Global.scene_fetcher.update_position(parcel, true)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
