@@ -8,7 +8,7 @@ signal accepted
 @onready var timer: Timer = $Timer
 @onready var spinner: TextureProgressBar = %Spinner
 
-	
+
 func _on_check_box_terms_and_privacy_toggled(toggled_on: bool) -> void:
 	%Button_Accept.disabled = !toggled_on
 
@@ -22,8 +22,6 @@ func _on_button_accept_pressed() -> void:
 	control_separator.hide()
 	button_accept.hide()
 	timer.start()
-
-	
 
 
 func _on_button_reject_pressed() -> void:
