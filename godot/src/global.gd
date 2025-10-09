@@ -363,12 +363,7 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
-	# Mobile and is not virtual...
-	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
-	else:
-		get_window().size = Vector2i(1280, 720)
-		get_window().move_to_center()
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 
 
 func is_orientation_portrait():
@@ -377,20 +372,11 @@ func is_orientation_portrait():
 
 
 func set_orientation_portrait():
-	# Mobile and is not virtual...
-	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
-	else:
-		get_window().size = Vector2i(720, 1280)
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 
 
 func set_orientation_sensor():
-	# Mobile and is not virtual...
-	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
-	else:
-		get_window().size = Vector2i(1280, 720)
-		get_window().move_to_center()
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
@@ -474,7 +460,7 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
-	if Global.is_mobile():
+	if Global.is_mobile() and !Global.is_virtual_mobile():
 		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
 		# Shift the values

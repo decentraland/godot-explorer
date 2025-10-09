@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://3tdl1oo7a282"]
+[gd_scene load_steps=13 format=3 uid="uid://3tdl1oo7a282"]
 
 [ext_resource type="Script" uid="uid://3gpw3k7sbwla" path="res://src/ui/components/terms_and_conditions/terms_and_conditions.gd" id="1_v76mk"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="1_yiehh"]
@@ -8,6 +8,7 @@
 [ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="6_ratj3"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_vm4ah"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="7_4l5lg"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="9_w7xww"]
 
 [sub_resource type="Gradient" id="Gradient_vm4ah"]
 offsets = PackedFloat32Array(0.00296736, 1)
@@ -93,12 +94,13 @@ layout_mode = 2
 theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="Control" type="Control" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="Control_Separator" type="Control" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
 size_flags_vertical = 4
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -107,7 +109,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 7
 
-[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer"]
+[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -117,7 +119,7 @@ autowrap_mode = 2
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="RichTextLabel2" type="RichTextLabel" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer"]
+[node name="RichTextLabel2" type="RichTextLabel" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
@@ -147,7 +149,19 @@ disabled = true
 text = "ACCEPT"
 icon_alignment = 2
 
-[connection signal="gui_input" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control" to="." method="_on_control_gui_input"]
-[connection signal="toggled" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
-[connection signal="meta_clicked" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control/HBoxContainer/RichTextLabel2" to="." method="_on_rich_text_label_meta_clicked"]
+[node name="Spinner" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms" instance=ExtResource("9_w7xww")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+speed_scale = 2.0
+
+[node name="Timer" type="Timer" parent="."]
+one_shot = true
+
+[connection signal="gui_input" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator" to="." method="_on_control_gui_input"]
+[connection signal="toggled" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
+[connection signal="meta_clicked" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer/RichTextLabel2" to="." method="_on_rich_text_label_meta_clicked"]
 [connection signal="pressed" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Button_Accept" to="." method="_on_button_accept_pressed"]
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

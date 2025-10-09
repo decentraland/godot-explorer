@@ -1,6 +1,6 @@
-[gd_scene load_steps=10 format=3 uid="uid://cf78je1y8dpu3"]
+[gd_scene load_steps=10 format=3 uid="uid://bi3eesytuc1tr"]
 
-[ext_resource type="Script" uid="uid://cpe0atflphcxw" path="res://src/ui/components/auth/login.gd" id="1_qmbqb"]
+[ext_resource type="Script" path="res://src/ui/components/auth/login.gd" id="1_f6pdb"]
 [ext_resource type="Texture2D" uid="uid://ie2f054vn7kc" path="res://src/ui/components/auth/images/magic.svg" id="2_y8nwo"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_55bff"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="3_kk1uc"]
@@ -14,7 +14,7 @@
 offset_right = 207.0
 offset_bottom = 116.0
 theme_override_constants/separation = 25
-script = ExtResource("1_qmbqb")
+script = ExtResource("1_f6pdb")
 
 [node name="HBoxContainerMagicInfo" type="HBoxContainer" parent="."]
 visible = false
