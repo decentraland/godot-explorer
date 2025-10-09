@@ -32,6 +32,7 @@ var _last_outlined_avatar: Avatar = null
 
 @onready var panel_profile: Panel = %Panel_Profile
 
+@onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
@@ -85,6 +86,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	label_version.set_text("v" + Global.get_version())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
@@ -201,7 +203,6 @@ func _ready():
 	ui_root.grab_focus.call_deferred()
 
 	if OS.get_cmdline_args().has("--scene-renderer"):
-		prints("load scene_orchestor")
 		var scene_renderer_orchestor = (
 			load("res://src/tool/scene_renderer/scene_orchestor.tscn").instantiate()
 		)
@@ -385,12 +386,20 @@ func _on_control_menu_request_pause_scenes(enabled):
 	Global.scene_runner.set_pause(enabled)
 
 
+## Moves the player to a specific position
+##
+## @param position: The 3D position to move the player to
+## @param skip_loading: When true, skips showing the loading screen.
+##                      This is used when teleporting inside a scene to avoid
+##                      showing the loading UI for an already-loaded area.
 func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
-	player.set_position(position)
-	var cur_parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	prints("cur_parcel_position:", cur_parcel_position, position)
+
+	player.async_move_to(position)
+	var cur_parcel_position = Vector2i(
+		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
+	)
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 			loading_ui.enable_loading_screen()
@@ -401,7 +410,6 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 		Global.realm.async_set_realm(realm)
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
-	prints("Teleport to parcel: ", parcel, move_to_position)
 	move_to(move_to_position, false)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
@@ -453,7 +461,7 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
+	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.get_config().save_to_settings_file()

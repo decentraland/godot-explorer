@@ -18,7 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.ref || github.event.inputs.branch }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Add safe directory
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
