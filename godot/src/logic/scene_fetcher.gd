@@ -315,6 +315,10 @@ func _async_on_desired_scene_changed():
 		loaded_empty_scenes.clear()
 
 	if use_floating_islands:
+		prints("[SCENE_FLOW]", "About to trigger _regenerate_floating_islands() - loaded_scenes count:", loaded_scenes.size())  # TEMP
+		for scene_id in loaded_scenes.keys():
+			var scene: SceneItem = loaded_scenes[scene_id]
+			prints("[SCENE_FLOW]", "  Scene in dict:", scene_id, "scene_number_id:", scene.scene_number_id, "parcels:", scene.parcels.size())  # TEMP
 		prints("[SCENE_FLOW]", "Triggering _regenerate_floating_islands()")  # TEMP
 		_regenerate_floating_islands()
 
@@ -430,13 +434,28 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 
 func _regenerate_floating_islands() -> void:
 	prints("[SCENE_FLOW]", ">>> _regenerate_floating_islands() started")  # TEMP
+	prints("[SCENE_FLOW]", "Total loaded_scenes count:", loaded_scenes.size())  # TEMP
+
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
 	var all_scene_parcels = []
-	for scene: SceneItem in loaded_scenes.values():
+	var skipped_scenes_count = 0
+	for scene_id in loaded_scenes.keys():
+		var scene: SceneItem = loaded_scenes[scene_id]
+		prints("[SCENE_FLOW]", "Checking scene:", scene_id, "is_global:", scene.is_global, "scene_number_id:", scene.scene_number_id, "parcels:", scene.parcels.size())  # TEMP
+
 		# Include parcels from all loaded non-global scenes
 		if not scene.is_global and scene.scene_number_id != -1:
+			prints("[SCENE_FLOW]", "Including", scene.parcels.size(), "parcels from scene:", scene_id)  # TEMP
 			for parcel in scene.parcels:
 				all_scene_parcels.append(parcel)
+		else:
+			skipped_scenes_count += 1
+			if scene.is_global:
+				prints("[SCENE_FLOW]", "Skipping scene (is_global):", scene_id)  # TEMP
+			elif scene.scene_number_id == -1:
+				prints("[SCENE_FLOW]", "Skipping scene (still loading, scene_number_id=-1):", scene_id)  # TEMP
+
+	prints("[SCENE_FLOW]", "Total parcels collected:", all_scene_parcels.size(), "| Skipped scenes:", skipped_scenes_count)  # TEMP
 
 	if all_scene_parcels.is_empty():
 		prints("[SCENE_FLOW]", "No scene parcels to generate islands for, returning")  # TEMP
@@ -477,9 +496,10 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	current_position = new_position
 
 	if is_teleport:
-		prints("[SCENE_FLOW]", "TELEPORT: Setting target parcel and clearing all scenes")  # TEMP
+		prints("[SCENE_FLOW]", "TELEPORT: Setting target parcel and clearing all scenes, current loaded_scenes:", loaded_scenes.size())  # TEMP
 		_teleport_target_parcel = new_position
 
+		var killed_count = 0
 		for scene_id in loaded_scenes.keys():
 			var scene: SceneItem = loaded_scenes[scene_id]
 			if not scene.is_global and scene.scene_number_id != -1:
@@ -487,7 +507,20 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 				Global.scene_runner.kill_scene(scene.scene_number_id)
 				if base_floor_manager:
 					base_floor_manager.remove_scene_floors(scene.id)
+				killed_count += 1
+			else:
+				if scene.is_global:
+					prints("[SCENE_FLOW]", "TELEPORT: Keeping global scene:", scene.id)  # TEMP
+				elif scene.scene_number_id == -1:
+					prints("[SCENE_FLOW]", "TELEPORT: Scene still loading (number_id=-1):", scene.id)  # TEMP
+
+		prints("[SCENE_FLOW]", "TELEPORT: Killed", killed_count, "scenes, clearing loaded_scenes dict")  # TEMP
 		loaded_scenes.clear()
+		prints("[SCENE_FLOW]", "TELEPORT: loaded_scenes after clear:", loaded_scenes.size())  # TEMP
+
+		# Clear floating island hash to force regeneration on next load  # TEMP
+		prints("[SCENE_FLOW]", "TELEPORT: Clearing last_scene_group_hash to force island regeneration")  # TEMP
+		last_scene_group_hash = ""  # TEMP
 
 	if not is_using_floating_islands() or is_teleport:
 		prints("[SCENE_FLOW]", "Updating coordinator position to:", current_position)  # TEMP
@@ -501,6 +534,12 @@ func async_load_scene(
 	scene_entity_id: String, scene_entity_definition: DclSceneEntityDefinition
 ) -> Promise:
 	prints("[SCENE_FLOW]", ">>> async_load_scene() started for:", scene_entity_id)  # TEMP
+
+	# Check if scene is already in loaded_scenes
+	if loaded_scenes.has(scene_entity_id):
+		var existing_scene: SceneItem = loaded_scenes[scene_entity_id]
+		prints("[SCENE_FLOW]", "WARNING: Scene already in loaded_scenes! scene_number_id:", existing_scene.scene_number_id)  # TEMP
+
 	var parcels := scene_entity_definition.get_parcels()
 
 	var scene_item: SceneItem = SceneItem.new()
@@ -511,7 +550,7 @@ func async_load_scene(
 	scene_item.is_global = scene_entity_definition.is_global()
 
 	loaded_scenes[scene_entity_id] = scene_item
-	prints("[SCENE_FLOW]", "Scene item created with", parcels.size(), "parcels, is_global:", scene_item.is_global)  # TEMP
+	prints("[SCENE_FLOW]", "Scene item created with", parcels.size(), "parcels, is_global:", scene_item.is_global, "scene_number_id:", scene_item.scene_number_id)  # TEMP
 
 	var content_mapping := scene_entity_definition.get_content_mapping()
 
@@ -535,31 +574,35 @@ func async_load_scene(
 			local_main_js_path = "user://content/" + script_hash
 
 	if script_promise != null:
+		prints("[SCENE_FLOW]", "Awaiting script promise for:", scene_entity_id)  # TEMP
 		var script_res = await PromiseUtils.async_awaiter(script_promise)
 		if script_res is PromiseError:
 			printerr(
-				"Scene ",
+				"[SCENE_FLOW] ERROR: Scene ",
 				scene_entity_id,
 				" fail getting the script code content, error message: ",
 				script_res.get_error()
-			)
+			)  # TEMP
 			return PromiseUtils.resolved(false)
+		prints("[SCENE_FLOW]", "Script promise resolved successfully for:", scene_entity_id)  # TEMP
 
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
 	var local_main_crdt_path: String = String()
 	if not main_crdt_file_hash.is_empty():
+		prints("[SCENE_FLOW]", "Fetching main.crdt for:", scene_entity_id)  # TEMP
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
 		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
 
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
 			printerr(
-				"Scene ",
+				"[SCENE_FLOW] ERROR: Scene ",
 				scene_entity_id,
 				" fail getting the main crdt content, error message: ",
 				res.get_error()
-			)
+			)  # TEMP
 			return PromiseUtils.resolved(false)
+		prints("[SCENE_FLOW]", "main.crdt fetched successfully for:", scene_entity_id)  # TEMP
 
 	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
 	var asset_url: String = (
@@ -569,17 +612,28 @@ func async_load_scene(
 	# Check if optimized zip already exists to avoid re-download hang
 	var zip_file_path = "user://content/" + scene_hash_zip
 	var download_res = null
-	if FileAccess.file_exists(zip_file_path):
+	var file_exists = FileAccess.file_exists(zip_file_path)  # TEMP
+	prints("[SCENE_FLOW]", "Checking zip file existence:", zip_file_path, "exists:", file_exists)  # TEMP
+	if file_exists:
+		prints("[SCENE_FLOW]", "Optimized zip already exists for:", scene_entity_id)  # TEMP
 		download_res = true  # Pretend success since file exists
 	else:
+		prints("[SCENE_FLOW]", "Downloading optimized zip for:", scene_entity_id, "from:", asset_url)  # TEMP
 		var download_promise: Promise = Global.content_provider.fetch_file_by_url(
 			scene_hash_zip, asset_url
 		)
+		prints("[SCENE_FLOW]", "Created download promise, awaiting...")  # TEMP
 		download_res = await PromiseUtils.async_awaiter(download_promise)
+		prints("[SCENE_FLOW]", "Download promise resolved, type:", typeof(download_res))  # TEMP
+		if download_res is PromiseError:
+			prints("[SCENE_FLOW]", "Optimized zip download failed for:", scene_entity_id, "error:", download_res.get_error())  # TEMP
+		else:
+			prints("[SCENE_FLOW]", "Optimized zip downloaded for:", scene_entity_id)  # TEMP
+
 	if Global.is_xr() or Global.get_testing_scene_mode():
-		print("Scene optimization skipped")
+		prints("[SCENE_FLOW]", "Scene optimization skipped (XR/testing mode)")  # TEMP
 	elif download_res is PromiseError:
-		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
+		printerr("[SCENE_FLOW]", "Scene ", scene_entity_id, " is not optimized, failed to download zip.")  # TEMP
 	else:
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
 		if not ok:
@@ -600,12 +654,16 @@ func async_load_scene(
 				printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #2")
 
 	# the scene was removed while it was loading...
+	prints("[SCENE_FLOW]", "Checking if scene still in loaded_scenes:", scene_entity_id, "->", loaded_scenes.has(scene_entity_id))  # TEMP
 	if not loaded_scenes.has(scene_entity_id):
 		printerr("[SCENE_FLOW] ERROR: Scene was removed while loading:", scene_entity_id)  # TEMP
 		return PromiseUtils.resolved(false)
 
+	var scene_in_dict = loaded_scenes[scene_entity_id]
+	prints("[SCENE_FLOW]", "Scene found in loaded_scenes, current scene_number_id:", scene_in_dict.scene_number_id)  # TEMP
 	prints("[SCENE_FLOW]", "Calling _on_try_spawn_scene for:", scene_entity_id)  # TEMP
-	_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)
+	var spawn_result = _on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)
+	prints("[SCENE_FLOW]", "_on_try_spawn_scene returned:", spawn_result, "final scene_number_id:", scene_in_dict.scene_number_id)  # TEMP
 	prints("[SCENE_FLOW]", "<<< async_load_scene() completed for:", scene_entity_id)  # TEMP
 	return PromiseUtils.resolved(true)
 
@@ -613,7 +671,7 @@ func async_load_scene(
 func _on_try_spawn_scene(
 	scene_item: SceneItem, local_main_js_path: String, local_main_crdt_path: String
 ):
-	prints("[SCENE_FLOW]", ">>> _on_try_spawn_scene() for:", scene_item.id)  # TEMP
+	prints("[SCENE_FLOW]", ">>> _on_try_spawn_scene() for:", scene_item.id, "current scene_number_id:", scene_item.scene_number_id)  # TEMP
 	if not local_main_js_path.is_empty() and not FileAccess.file_exists(local_main_js_path):
 		printerr("[SCENE_FLOW] ERROR: Couldn't get main.js file:", local_main_js_path)  # TEMP
 		local_main_js_path = ""
@@ -630,19 +688,26 @@ func _on_try_spawn_scene(
 	if Global.has_javascript_debugger and _debugging_js_scene_id == scene_item.id:
 		enable_js_inspector = true
 
-	prints("[SCENE_FLOW]", "Starting scene runner for:", scene_item.id)  # TEMP
+	prints("[SCENE_FLOW]", "Starting scene runner for:", scene_item.id, "js:", !local_main_js_path.is_empty(), "crdt:", !local_main_crdt_path.is_empty())  # TEMP
 	var scene_number_id: int = Global.scene_runner.start_scene(
 		local_main_js_path,
 		local_main_crdt_path,
 		scene_item.scene_entity_definition,
 		enable_js_inspector
 	)
+	prints("[SCENE_FLOW]", "!!! scene_number_id changed from", scene_item.scene_number_id, "->", scene_number_id, "for scene:", scene_item.id)  # TEMP
 	scene_item.scene_number_id = scene_number_id
-	prints("[SCENE_FLOW]", "Scene spawned with scene_number_id:", scene_number_id)  # TEMP
+	prints("[SCENE_FLOW]", "Scene spawned successfully with scene_number_id:", scene_number_id, "for:", scene_item.id)  # TEMP
 
 	# Add base floors for this scene's parcels
 	if base_floor_manager:
+		prints("[SCENE_FLOW]", "Adding base floors for", scene_item.parcels.size(), "parcels")  # TEMP
 		base_floor_manager.add_scene_floors(scene_item.id, scene_item.parcels)
+
+	# Regenerate floating islands after scene spawns (deferred to ensure scene is fully initialized)  # TEMP
+	if is_using_floating_islands():  # TEMP
+		prints("[SCENE_FLOW]", "Scheduling deferred _regenerate_floating_islands() after spawn")  # TEMP
+		_regenerate_floating_islands.call_deferred()  # TEMP
 
 	prints("[SCENE_FLOW]", "<<< _on_try_spawn_scene() completed for:", scene_item.id)  # TEMP
 	return true
