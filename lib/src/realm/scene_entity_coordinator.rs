@@ -203,7 +203,10 @@ impl SceneEntityCoordinator {
     fn request_pointers(&mut self, set_request_pointers: HashSet<Coord>) {
         // Request the new pointers
         if !set_request_pointers.is_empty() {
-            tracing::debug!("Requesting {} pointers from entities/active", set_request_pointers.len());
+            tracing::debug!(
+                "Requesting {} pointers from entities/active",
+                set_request_pointers.len()
+            );
             let request_pointers_body = set_request_pointers
                 .iter()
                 .map(|coord| format!("\"{coord}\""))
@@ -294,7 +297,10 @@ impl SceneEntityCoordinator {
             if let Some(remaining_pointers) = self.requested_city_pointers.remove(&request_id) {
                 remaining_pointers
             } else {
-                tracing::warn!("Received entity pointers for unknown request_id: {}", request_id);
+                tracing::warn!(
+                    "Received entity pointers for unknown request_id: {}",
+                    request_id
+                );
                 return;
             };
 

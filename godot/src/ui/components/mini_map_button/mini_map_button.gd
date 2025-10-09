@@ -19,6 +19,7 @@ func _on_change_scene_id(scene_id: int):
 	texture_rect_sdk6.hide()
 	if scene_id == -1:
 		label_scene_title.text = ""
+		label_scene_title.hide()
 		return
 
 	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)

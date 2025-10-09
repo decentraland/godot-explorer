@@ -155,12 +155,12 @@ func _process(_dt):
 	var is_invalid_position = current_position == Vector2i(-1000, -1000)
 
 	# Check if there's an actual change (not just empty -> empty)
-	var has_actual_change = scene_entity_id != current_scene_entity_id and not (scene_entity_id.is_empty() and current_scene_entity_id.is_empty())
+	var has_actual_change = (
+		scene_entity_id != current_scene_entity_id
+		and not (scene_entity_id.is_empty() and current_scene_entity_id.is_empty())
+	)
 
-	if (
-		_bypass_loading_check
-		or (has_actual_change and not is_invalid_position)
-	):
+	if _bypass_loading_check or (has_actual_change and not is_invalid_position):
 		current_scene_entity_id = scene_entity_id
 		_bypass_loading_check = false
 
@@ -397,7 +397,6 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 func _regenerate_floating_islands() -> void:
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
 	var all_scene_parcels = []
-	var skipped_scenes_count = 0
 	for scene_id in loaded_scenes.keys():
 		var scene: SceneItem = loaded_scenes[scene_id]
 
@@ -405,8 +404,6 @@ func _regenerate_floating_islands() -> void:
 		if not scene.is_global and scene.scene_number_id != -1:
 			for parcel in scene.parcels:
 				all_scene_parcels.append(parcel)
-		else:
-			skipped_scenes_count += 1
 
 	if all_scene_parcels.is_empty():
 		return
@@ -455,14 +452,12 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 			if is_using_floating_islands():
 				_bypass_loading_check = true
 
-		var killed_count = 0
 		for scene_id in loaded_scenes.keys():
 			var scene: SceneItem = loaded_scenes[scene_id]
 			if not scene.is_global and scene.scene_number_id != -1:
 				Global.scene_runner.kill_scene(scene.scene_number_id)
 				if base_floor_manager:
 					base_floor_manager.remove_scene_floors(scene.id)
-				killed_count += 1
 
 		loaded_scenes.clear()
 
@@ -478,11 +473,13 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 func async_load_scene(
 	scene_entity_id: String, scene_entity_definition: DclSceneEntityDefinition
 ) -> Promise:
-
 	# Check if scene is already in loaded_scenes
 	if loaded_scenes.has(scene_entity_id):
 		var existing_scene: SceneItem = loaded_scenes[scene_entity_id]
-		printerr("WARNING: Scene already in loaded_scenes! scene_number_id:", existing_scene.scene_number_id)
+		printerr(
+			"WARNING: Scene already in loaded_scenes! scene_number_id:",
+			existing_scene.scene_number_id
+		)
 
 	var parcels := scene_entity_definition.get_parcels()
 
@@ -588,7 +585,7 @@ func async_load_scene(
 		return PromiseUtils.resolved(false)
 
 	var scene_in_dict = loaded_scenes[scene_entity_id]
-	var spawn_result = _on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)
+	_on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)
 	return PromiseUtils.resolved(true)
 
 
