@@ -378,6 +378,9 @@ fn main() -> Result<(), anyhow::Error> {
         ("build", sm) => {
             let target = sm.value_of("target");
 
+            // Run version check first
+            version_check::run_version_check()?;
+
             // Check dependencies first
             dependencies::check_command_dependencies("build", target)?;
 
