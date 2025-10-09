@@ -75,8 +75,8 @@ func _ready():
 	# Initialize global uniforms
 	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
 
-	# Hardcoded scene radius: 2 for normal mode, 1 for XR
-	var scene_radius = 1 if Global.is_xr() else 2
+	# Hardcoded scene radius 0
+	var scene_radius = 0
 	prints("[SCENE_FLOW]", "Setting scene radius:", scene_radius)  # TEMP
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
@@ -157,10 +157,15 @@ func _process(_dt):
 	# Once we're here, we need the logic of selected time to process the desired change
 	var scene_entity_id := scene_entity_coordinator.get_scene_entity_id(current_position)
 
+	# Skip processing when at invalid initial position to avoid spam
+	var is_invalid_position = current_position == Vector2i(-1000, -1000)
+
+	# Check if there's an actual change (not just empty -> empty)
+	var has_actual_change = scene_entity_id != current_scene_entity_id and not (scene_entity_id.is_empty() and current_scene_entity_id.is_empty())
+
 	if (
 		_bypass_loading_check
-		or scene_entity_id != current_scene_entity_id
-		or scene_entity_id.is_empty()
+		or (has_actual_change and not is_invalid_position)
 	):
 		prints("[SCENE_FLOW]", "FLOATING MODE: Scene entity changed at", current_position, ":", current_scene_entity_id, "->", scene_entity_id, "bypass:", _bypass_loading_check)  # TEMP
 		current_scene_entity_id = scene_entity_id

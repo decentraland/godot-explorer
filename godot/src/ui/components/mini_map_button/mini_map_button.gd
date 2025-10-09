@@ -28,3 +28,4 @@ func _on_change_scene_id(scene_id: int):
 		label_scene_title.show()
 	else:
 		label_scene_title.text = ""
+		label_scene_title.hide()
