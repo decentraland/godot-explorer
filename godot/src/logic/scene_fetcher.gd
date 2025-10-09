@@ -329,9 +329,9 @@ func _on_realm_changed():
 	scene_entity_coordinator.config(
 		content_base_url + "entities/active", content_base_url, should_load_city_pointers
 	)
-	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
+	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 	set_portable_experiences_urns(self.desired_portable_experiences_urns)
 

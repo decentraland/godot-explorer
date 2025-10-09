@@ -33,6 +33,7 @@ struct SceneEntityCoordinator {
     cache_city_pointers: HashMap<Coord, String>, // coord to entity_id
 
     global_desired_entities: Vec<EntityBase>,
+    fixed_desired_entities: HashSet<String>,
     requested_entity: HashMap<u32, EntityBase>,
     cache_scene_data: HashMap<String, Arc<SceneEntityDefinition>>, // entity_id to SceneData
 
@@ -73,6 +74,7 @@ impl SceneEntityCoordinator {
             cache_city_pointers: Default::default(),
 
             global_desired_entities: Default::default(),
+            fixed_desired_entities: Default::default(),
             requested_entity: Default::default(),
             cache_scene_data: Default::default(),
             entities_active_url: Default::default(),
@@ -106,6 +108,7 @@ impl SceneEntityCoordinator {
         self.current_position = Coord(-1000, -1000);
         self.should_load_city_scenes = should_load_city_scenes;
         self.global_desired_entities.clear();
+        self.fixed_desired_entities.clear();
         self.cache_city_pointers.clear();
         self.cache_scene_data.clear();
         self.requested_city_pointers.clear();
@@ -378,8 +381,10 @@ impl SceneEntityCoordinator {
         }
 
         self.dirty_loadable_scenes = true;
+        self.fixed_desired_entities.clear();
 
         for urn_str in entities.iter() {
+            self.fixed_desired_entities.insert(urn_str.clone());
             if self.cache_scene_data.contains_key(urn_str) {
                 continue;
             }
@@ -462,9 +467,10 @@ impl SceneEntityCoordinator {
 
             // Request the new pointers
             self.request_pointers(request_pointers);
-        } else if !self
-            .cache_city_pointers
-            .contains_key(&self.current_position)
+        } else if self.fixed_desired_entities.is_empty()
+            && !self
+                .cache_city_pointers
+                .contains_key(&self.current_position)
         {
             let mut request_pointers = HashSet::with_capacity(1);
             request_pointers.insert(self.current_position);
