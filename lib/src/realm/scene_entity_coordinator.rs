@@ -1,3 +1,30 @@
+//! Scene Entity Coordinator
+//!
+//! Manages scene discovery, fetching, and loading for Decentraland realms.
+//!
+//! # Loading Modes
+//!
+//! ## City Mode (`should_load_city_scenes = true`)
+//! - Used for Genesis City and large open worlds
+//! - Dynamically loads scenes in a radius around the player's position
+//! - Requests scene data by coordinate from the realm's entities/active endpoint
+//! - Manages inner parcels (loadable) and outer parcels (keep-alive) based on distance
+//!
+//! ## Floating Islands Mode (`should_load_city_scenes = false`)
+//! - Used for custom realms with specific scenes
+//! - Loads only explicitly configured scenes from realm's `scenesUrn` config
+//! - Scenes remain loaded regardless of player position
+//! - Falls back to coordinate-based loading only when no fixed scenes are configured
+//!
+//! # Data Flow
+//!
+//! 1. Configuration: `config()` sets up realm URLs and clears caches
+//! 2. Scene Registration: `set_fixed_desired_entities_urns()` registers scenes to load
+//! 3. Position Update: `update_position()` triggers scene requests based on mode
+//! 4. Async Responses: `_update()` processes HTTP responses and updates caches
+//! 5. Scene Resolution: `update_loadable_and_keep_alive_scenes()` determines which scenes should be loaded
+//! 6. Consumption: GDScript reads `get_desired_scenes()` and loads/unloads accordingly
+
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -27,25 +54,36 @@ use super::{
 struct SceneEntityCoordinator {
     parcel_radius_calculator: ParcelRadiusCalculator,
 
+    // Position tracking
     current_position: Coord,
+
+    // Mode configuration
     should_load_city_scenes: bool,
+
+    // City mode: coordinate-based scene loading
     requested_city_pointers: HashMap<u32, HashSet<Coord>>,
-    cache_city_pointers: HashMap<Coord, String>, // coord to entity_id
+    cache_city_pointers: HashMap<Coord, String>,
 
-    global_desired_entities: Vec<EntityBase>,
+    // Floating islands mode: fixed scene loading
     fixed_desired_entities: HashSet<String>,
-    requested_entity: HashMap<u32, EntityBase>,
-    cache_scene_data: HashMap<String, Arc<SceneEntityDefinition>>, // entity_id to SceneData
+    global_desired_entities: Vec<EntityBase>,
 
+    // Scene data storage (shared by both modes)
+    requested_entity: HashMap<u32, EntityBase>,
+    cache_scene_data: HashMap<String, Arc<SceneEntityDefinition>>,
+
+    // Realm endpoints
     entities_active_url: String,
     content_url: String,
 
+    // Output state
     version: u32,
     dirty_loadable_scenes: bool,
     loadable_scenes: HashSet<String>,
     keep_alive_scenes: HashSet<String>,
     empty_parcels: HashSet<String>,
 
+    // Async communication
     receiver: tokio::sync::mpsc::Receiver<Result<RequestResponse, RequestResponseError>>,
     sender: tokio::sync::mpsc::Sender<Result<RequestResponse, RequestResponseError>>,
 
@@ -97,12 +135,27 @@ impl SceneEntityCoordinator {
         _self
     }
 
+    /// Configures the coordinator for a new realm.
+    ///
+    /// Clears all caches and sets up endpoints. Called when switching realms.
+    ///
+    /// # Arguments
+    /// * `entities_active_url` - Endpoint for coordinate-based scene queries
+    /// * `content_url` - Base URL for scene content
+    /// * `should_load_city_scenes` - true for city mode, false for floating islands
     pub fn _config(
         &mut self,
         entities_active_url: String,
         content_url: String,
         should_load_city_scenes: bool,
     ) {
+        tracing::info!(
+            "Configuring realm: entities_url={} | content_url={} | city_mode={}",
+            entities_active_url,
+            content_url,
+            should_load_city_scenes
+        );
+
         self.entities_active_url = entities_active_url;
         self.content_url = content_url;
         self.current_position = Coord(-1000, -1000);
@@ -114,6 +167,8 @@ impl SceneEntityCoordinator {
         self.requested_city_pointers.clear();
         self.requested_entity.clear();
         self.dirty_loadable_scenes = true;
+
+        tracing::info!("Realm configuration complete, all caches cleared");
     }
 
     fn do_request(&mut self, request_option: RequestOption) {
@@ -174,12 +229,27 @@ impl SceneEntityCoordinator {
         }
     }
 
+    /// Processes scene entity data from fixed entity requests.
+    ///
+    /// Called when scene data arrives for entities requested via:
+    /// - `_set_fixed_desired_entities_urns()` (realm config scenes)
+    /// - `_set_fixed_desired_entities_global_urns()` (portable experiences)
+    ///
+    /// Stores the scene definition in cache_scene_data.
+    /// For non-global scenes, also populates cache_city_pointers with coordinate mappings.
     fn handle_scene_data(&mut self, id: u32, json: serde_json::Value) {
         let entity_base = if let Some(entity_base) = self.requested_entity.remove(&id) {
             entity_base
         } else {
+            tracing::warn!("Received scene data for unknown request id: {}", id);
             return;
         };
+
+        tracing::info!(
+            "Received scene data for hash: {} from base_url: {}",
+            entity_base.hash,
+            entity_base.base_url
+        );
 
         let is_global_scene = self
             .global_desired_entities
@@ -194,8 +264,8 @@ impl SceneEntityCoordinator {
         ) {
             Ok(entity_definition) => entity_definition,
             Err(err) => {
-                tracing::info!(
-                    "Error handling scene data from entity {:?}: {:?}",
+                tracing::warn!(
+                    "Error parsing scene data from entity {:?}: {:?}",
                     entity_base,
                     err
                 );
@@ -203,7 +273,6 @@ impl SceneEntityCoordinator {
             }
         };
 
-        // If it's a global scene, it doesn't add the pointers to the cache
         if !is_global_scene {
             let entity_id = entity_definition_json.id.as_str();
             for pointer in entity_definition_json.scene_meta_scene.scene.parcels.iter() {
@@ -213,12 +282,21 @@ impl SceneEntityCoordinator {
             }
         }
 
+        tracing::info!(
+            "Successfully cached scene data for: {} (is_global={})",
+            entity_base.hash,
+            is_global_scene
+        );
         self.cache_scene_data
             .insert(entity_base.hash, Arc::new(entity_definition_json));
     }
 
+    /// Processes scene entity data from coordinate-based requests (city mode).
+    ///
+    /// Called when the entities/active endpoint returns scene data for coordinate queries.
+    /// Maps coordinates to entity IDs and caches scene definitions.
+    /// Coordinates without scenes are marked with empty string in cache_city_pointers.
     fn handle_entity_pointers(&mut self, request_id: u32, mut json: serde_json::Value) {
-        // If the request was dismissed, early return (this typically happens when the realm is changed)
         let mut remaining_pointers =
             if let Some(remaining_pointers) = self.requested_city_pointers.remove(&request_id) {
                 remaining_pointers
@@ -309,29 +387,71 @@ impl SceneEntityCoordinator {
         self.requested_entity.remove(&request_id);
     }
 
-    /// Returns the scenes that are desired to be loaded
+    /// Determines which scenes should be loaded based on current mode and position.
+    ///
+    /// This is the core logic that decides what scenes to load. It's called whenever:
+    /// - HTTP responses complete and update caches
+    /// - Position changes
+    /// - Fixed entities are configured
+    ///
+    /// # Floating Islands Mode
+    /// Loads scenes that are explicitly configured or at current coordinate:
+    /// 1. Scene at current coordinate (if any)
+    /// 2. All fixed desired entities (from realm config)
+    /// 3. All global scenes (portable experiences)
+    ///
+    /// # City Mode
+    /// Loads scenes dynamically based on player position:
+    /// 1. Inner parcels: scenes within radius (loadable_scenes)
+    /// 2. Outer parcels: scenes in outer ring (keep_alive_scenes)
+    /// 3. Global scenes: always loaded
     fn update_loadable_and_keep_alive_scenes(&mut self) {
         self.version += 1;
         self.loadable_scenes.clear();
         self.keep_alive_scenes.clear();
         self.empty_parcels.clear();
 
+        tracing::info!(
+            "update_loadable_and_keep_alive_scenes: city_mode={} | fixed_count={} | global_count={} | cache_size={}",
+            self.should_load_city_scenes,
+            self.fixed_desired_entities.len(),
+            self.global_desired_entities.len(),
+            self.cache_scene_data.len()
+        );
+
         if !self.should_load_city_scenes {
             let current_coord = self.current_position;
 
             if let Some(entity_id) = self.cache_city_pointers.get(&current_coord) {
                 if !entity_id.is_empty() {
+                    tracing::info!("Adding scene at current coord: {}", entity_id);
                     self.loadable_scenes.insert(entity_id.clone());
                 }
             }
 
-            // Load global scenes
+            for entity_hash in self.fixed_desired_entities.iter() {
+                if self.cache_scene_data.contains_key(entity_hash) {
+                    tracing::info!("Adding fixed entity to loadable: {}", entity_hash);
+                    self.loadable_scenes.insert(entity_hash.clone());
+                } else {
+                    tracing::warn!(
+                        "Fixed entity {} not in cache yet (still loading?)",
+                        entity_hash
+                    );
+                }
+            }
+
             for entity_base in self.global_desired_entities.iter() {
                 if self.cache_scene_data.contains_key(&entity_base.hash) {
+                    tracing::info!("Adding global entity to loadable: {}", entity_base.hash);
                     self.loadable_scenes.insert(entity_base.hash.clone());
                 }
             }
 
+            tracing::info!(
+                "Floating islands mode: {} loadable scenes",
+                self.loadable_scenes.len()
+            );
             return;
         }
 
@@ -375,6 +495,19 @@ impl SceneEntityCoordinator {
         }
     }
 
+    /// Configures fixed scenes that should always be loaded (floating islands mode).
+    ///
+    /// Used for custom realms that specify specific scenes via `scenesUrn` configuration.
+    /// These scenes remain loaded regardless of player position.
+    ///
+    /// This method:
+    /// 1. Clears previous fixed entities
+    /// 2. Parses each URN to extract the entity hash
+    /// 3. Stores hashes in fixed_desired_entities for later loading
+    /// 4. Requests scene data from content server if not cached
+    ///
+    /// # Arguments
+    /// * `entities` - List of scene URNs (format: urn:decentraland:entity:{hash}?baseUrl=...)
     pub fn _set_fixed_desired_entities_urns(&mut self, entities: Vec<String>) {
         if self.content_url.is_empty() {
             return;
@@ -383,14 +516,30 @@ impl SceneEntityCoordinator {
         self.dirty_loadable_scenes = true;
         self.fixed_desired_entities.clear();
 
+        tracing::info!(
+            "Setting fixed desired entities URNs: {} entities",
+            entities.len()
+        );
+
         for urn_str in entities.iter() {
-            self.fixed_desired_entities.insert(urn_str.clone());
-            if self.cache_scene_data.contains_key(urn_str) {
-                continue;
-            }
             let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else {
+                tracing::warn!("Failed to parse URN: {}", urn_str);
                 continue;
             };
+
+            tracing::info!(
+                "Adding fixed entity hash: {} from URN: {}",
+                entity_base.hash,
+                urn_str
+            );
+            self.fixed_desired_entities.insert(entity_base.hash.clone());
+            if self.cache_scene_data.contains_key(&entity_base.hash) {
+                tracing::info!(
+                    "Scene {} already cached, skipping request",
+                    entity_base.hash
+                );
+                continue;
+            }
 
             let url = format!("{}{}", entity_base.base_url, entity_base.hash);
             let request = RequestOption::new(
@@ -442,10 +591,26 @@ impl SceneEntityCoordinator {
         }
     }
 
+    /// Updates the player's current position and requests scenes if needed.
+    ///
+    /// # City Mode
+    /// Requests scenes for all coordinates within the parcel radius that aren't cached.
+    ///
+    /// # Floating Islands Mode
+    /// - If fixed entities are configured: No coordinate requests (scenes already specified)
+    /// - If no fixed entities: Requests scene at current coordinate (fallback for genesis city teleports)
     pub fn update_position(&mut self, x: i16, z: i16) {
         if self.entities_active_url.is_empty() {
             return;
         }
+
+        tracing::info!(
+            "update_position: ({}, {}) | city_mode={} | fixed_entities={}",
+            x,
+            z,
+            self.should_load_city_scenes,
+            self.fixed_desired_entities.len()
+        );
 
         self.dirty_loadable_scenes = true;
         self.current_position = Coord(x, z);
