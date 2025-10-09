@@ -149,13 +149,12 @@ impl SceneEntityCoordinator {
         content_url: String,
         should_load_city_scenes: bool,
     ) {
-        tracing::info!("[SCENE_FLOW] >>> _config() started"); // TEMP
-        tracing::info!(
-            "[SCENE_FLOW] Configuring realm: entities_url={} | content_url={} | city_mode={}",
+        tracing::debug!(
+            "Configuring realm: entities_url={} | content_url={} | city_mode={}",
             entities_active_url,
             content_url,
             should_load_city_scenes
-        ); // TEMP
+        );
 
         self.entities_active_url = entities_active_url;
         self.content_url = content_url;
@@ -168,9 +167,6 @@ impl SceneEntityCoordinator {
         self.requested_city_pointers.clear();
         self.requested_entity.clear();
         self.dirty_loadable_scenes = true;
-
-        tracing::info!("[SCENE_FLOW] Realm configuration complete, all caches cleared"); // TEMP
-        tracing::info!("[SCENE_FLOW] <<< _config() completed"); // TEMP
     }
 
     fn do_request(&mut self, request_option: RequestOption) {
@@ -207,7 +203,7 @@ impl SceneEntityCoordinator {
     fn request_pointers(&mut self, set_request_pointers: HashSet<Coord>) {
         // Request the new pointers
         if !set_request_pointers.is_empty() {
-            tracing::info!("[SCENE_FLOW] >>> Requesting {} pointers from entities/active", set_request_pointers.len()); // TEMP
+            tracing::debug!("Requesting {} pointers from entities/active", set_request_pointers.len());
             let request_pointers_body = set_request_pointers
                 .iter()
                 .map(|coord| format!("\"{coord}\""))
@@ -226,7 +222,6 @@ impl SceneEntityCoordinator {
                 Some(headers),
                 None,
             );
-            tracing::info!("[SCENE_FLOW] Pointer request id: {}", request.id); // TEMP
             self.requested_city_pointers
                 .insert(request.id, set_request_pointers);
             self.do_request(request);
@@ -242,19 +237,12 @@ impl SceneEntityCoordinator {
     /// Stores the scene definition in cache_scene_data.
     /// For non-global scenes, also populates cache_city_pointers with coordinate mappings.
     fn handle_scene_data(&mut self, id: u32, json: serde_json::Value) {
-        tracing::info!("[SCENE_FLOW] >>> handle_scene_data() for request_id: {}", id); // TEMP
         let entity_base = if let Some(entity_base) = self.requested_entity.remove(&id) {
             entity_base
         } else {
-            tracing::warn!("[SCENE_FLOW] ERROR: Received scene data for unknown request id: {}", id); // TEMP
+            tracing::warn!("Received scene data for unknown request id: {}", id);
             return;
         };
-
-        tracing::info!(
-            "[SCENE_FLOW] Received scene data for hash: {} from base_url: {}",
-            entity_base.hash,
-            entity_base.base_url
-        ); // TEMP
 
         let is_global_scene = self
             .global_desired_entities
@@ -270,17 +258,16 @@ impl SceneEntityCoordinator {
             Ok(entity_definition) => entity_definition,
             Err(err) => {
                 tracing::warn!(
-                    "[SCENE_FLOW] ERROR: Error parsing scene data from entity {:?}: {:?}",
+                    "Error parsing scene data from entity {:?}: {:?}",
                     entity_base,
                     err
-                ); // TEMP
+                );
                 return;
             }
         };
 
         if !is_global_scene {
             let entity_id = entity_definition_json.id.as_str();
-            tracing::info!("[SCENE_FLOW] Caching {} parcels for entity_id: {}", entity_definition_json.scene_meta_scene.scene.parcels.len(), entity_id); // TEMP
             for pointer in entity_definition_json.scene_meta_scene.scene.parcels.iter() {
                 let coord = Coord::from(pointer);
                 self.cache_city_pointers
@@ -288,14 +275,13 @@ impl SceneEntityCoordinator {
             }
         }
 
-        tracing::info!(
-            "[SCENE_FLOW] Successfully cached scene data for: {} (is_global={})",
+        tracing::debug!(
+            "Cached scene data for: {} (is_global={})",
             entity_base.hash,
             is_global_scene
-        ); // TEMP
+        );
         self.cache_scene_data
             .insert(entity_base.hash, Arc::new(entity_definition_json));
-        tracing::info!("[SCENE_FLOW] <<< handle_scene_data() completed"); // TEMP
     }
 
     /// Processes scene entity data from coordinate-based requests (city mode).
@@ -304,21 +290,18 @@ impl SceneEntityCoordinator {
     /// Maps coordinates to entity IDs and caches scene definitions.
     /// Coordinates without scenes are marked with empty string in cache_city_pointers.
     fn handle_entity_pointers(&mut self, request_id: u32, mut json: serde_json::Value) {
-        tracing::info!("[SCENE_FLOW] >>> handle_entity_pointers() for request_id: {}", request_id); // TEMP
         let mut remaining_pointers =
             if let Some(remaining_pointers) = self.requested_city_pointers.remove(&request_id) {
                 remaining_pointers
             } else {
-                tracing::warn!("[SCENE_FLOW] ERROR: Received entity pointers for unknown request_id: {}", request_id); // TEMP
+                tracing::warn!("Received entity pointers for unknown request_id: {}", request_id);
                 return;
             };
 
         let Some(entity_pointers) = json.as_array_mut() else {
-            tracing::warn!("[SCENE_FLOW] ERROR: Entity pointers response is not an array"); // TEMP
+            tracing::warn!("Entity pointers response is not an array");
             return;
         };
-
-        tracing::info!("[SCENE_FLOW] Processing {} entity pointers", entity_pointers.len()); // TEMP
 
         // Add the scene data to the cache
         for entity_pointer in entity_pointers.iter_mut() {
@@ -332,12 +315,11 @@ impl SceneEntityCoordinator {
             ) {
                 Ok(entity_definition) => entity_definition,
                 Err(err) => {
-                    tracing::info!("[SCENE_FLOW] ERROR: Error handling pointer from entity {:?}", err); // TEMP
+                    tracing::debug!("Error handling pointer from entity {:?}", err);
                     continue;
                 }
             };
 
-            tracing::info!("[SCENE_FLOW] Caching entity: {} with {} pointers", entity_definition_json.id, entity_definition_json.entity_definition_json.pointers.len()); // TEMP
             for pointer in entity_definition_json
                 .entity_definition_json
                 .pointers
@@ -356,11 +338,9 @@ impl SceneEntityCoordinator {
             );
         }
 
-        tracing::info!("[SCENE_FLOW] Marking {} remaining pointers as empty", remaining_pointers.len()); // TEMP
         for pointer in remaining_pointers.into_iter() {
             self.cache_city_pointers.insert(pointer, "".to_string());
         }
-        tracing::info!("[SCENE_FLOW] <<< handle_entity_pointers() completed"); // TEMP
     }
 
     fn handle_response(&mut self, response: RequestResponse) {
@@ -369,7 +349,7 @@ impl SceneEntityCoordinator {
                 ResponseEnum::Json(json) => {
                     if json.is_err() {
                         self.cleanup_request_id(response.request_option.id);
-                        tracing::info!("Error parsing the JSON {json:?}");
+                        tracing::warn!("Error parsing the JSON {json:?}");
                         return;
                     }
 
@@ -381,18 +361,18 @@ impl SceneEntityCoordinator {
                             self.handle_entity_pointers(response.request_option.id, json.unwrap());
                         }
                         _ => {
-                            tracing::info!("Invalid type of request ID while handling a request");
+                            tracing::warn!("Invalid type of request ID while handling a request");
                         }
                     }
                 }
                 _ => {
                     self.cleanup_request_id(response.request_option.id);
-                    tracing::info!("Invalid type of request while handling a request");
+                    tracing::warn!("Invalid type of request while handling a request");
                 }
             },
             Err(err) => {
                 self.cleanup_request_id(response.request_option.id);
-                tracing::info!("Error while handling a request: {err:?}");
+                tracing::warn!("Error while handling a request: {err:?}");
             }
         }
     }
@@ -440,69 +420,42 @@ impl SceneEntityCoordinator {
     /// 2. Outer parcels: scenes in outer ring (keep_alive_scenes)
     /// 3. Global scenes: always loaded
     fn update_loadable_and_keep_alive_scenes(&mut self) {
-        tracing::info!("[SCENE_FLOW] >>> update_loadable_and_keep_alive_scenes() started"); // TEMP
         self.version += 1;
         self.loadable_scenes.clear();
         self.keep_alive_scenes.clear();
         self.empty_parcels.clear();
 
-        tracing::info!(
-            "[SCENE_FLOW] update_loadable_and_keep_alive_scenes: city_mode={} | fixed_count={} | global_count={} | cache_size={} | version={}",
-            self.should_load_city_scenes,
-            self.fixed_desired_entities.len(),
-            self.global_desired_entities.len(),
-            self.cache_scene_data.len(),
-            self.version
-        ); // TEMP
-
         if !self.should_load_city_scenes {
-            tracing::info!("[SCENE_FLOW] FLOATING ISLANDS MODE: Processing scenes"); // TEMP
             let current_coord = self.current_position;
 
             if let Some(entity_id) = self.cache_city_pointers.get(&current_coord) {
                 if !entity_id.is_empty() {
-                    tracing::info!("[SCENE_FLOW] Adding scene at current coord {:?}: {}", current_coord, entity_id); // TEMP
                     self.loadable_scenes.insert(entity_id.clone());
-                } else {
-                    tracing::info!("[SCENE_FLOW] Current coord {:?} has empty entity", current_coord); // TEMP
                 }
-            } else {
-                tracing::info!("[SCENE_FLOW] Current coord {:?} not in cache yet", current_coord); // TEMP
             }
 
             for entity_hash in self.fixed_desired_entities.iter() {
                 if let Some(scene_def) = self.cache_scene_data.get(entity_hash) {
                     // Check if scene is within range
                     if self.is_scene_in_range(scene_def) {
-                        tracing::info!("[SCENE_FLOW] Adding fixed entity to loadable (in range): {}", entity_hash); // TEMP
                         self.loadable_scenes.insert(entity_hash.clone());
-                    } else {
-                        tracing::info!("[SCENE_FLOW] Fixed entity out of range, skipping: {}", entity_hash); // TEMP
                     }
                 } else {
-                    tracing::warn!(
-                        "[SCENE_FLOW] Fixed entity {} not in cache yet (still loading?)",
+                    tracing::debug!(
+                        "Fixed entity {} not in cache yet (still loading?)",
                         entity_hash
-                    ); // TEMP
+                    );
                 }
             }
 
             for entity_base in self.global_desired_entities.iter() {
                 if self.cache_scene_data.contains_key(&entity_base.hash) {
-                    tracing::info!("[SCENE_FLOW] Adding global entity to loadable: {}", entity_base.hash); // TEMP
                     self.loadable_scenes.insert(entity_base.hash.clone());
                 }
             }
 
-            tracing::info!(
-                "[SCENE_FLOW] FLOATING ISLANDS MODE: {} loadable scenes",
-                self.loadable_scenes.len()
-            ); // TEMP
-            tracing::info!("[SCENE_FLOW] <<< update_loadable_and_keep_alive_scenes() completed (floating islands)"); // TEMP
             return;
         }
-
-        tracing::info!("[SCENE_FLOW] CITY MODE: Processing parcels around position {:?}", self.current_position); // TEMP
         let unexisting_taken_as_empty: bool = !self.should_load_city_scenes
             && self.requested_city_pointers.is_empty()
             && self.requested_entity.is_empty();
@@ -541,14 +494,6 @@ impl SceneEntityCoordinator {
                 self.loadable_scenes.insert(entity_base.hash.clone());
             }
         }
-
-        tracing::info!(
-            "[SCENE_FLOW] CITY MODE: {} loadable scenes, {} keep_alive scenes, {} empty parcels",
-            self.loadable_scenes.len(),
-            self.keep_alive_scenes.len(),
-            self.empty_parcels.len()
-        ); // TEMP
-        tracing::info!("[SCENE_FLOW] <<< update_loadable_and_keep_alive_scenes() completed (city mode)"); // TEMP
     }
 
     /// Configures fixed scenes that should always be loaded (floating islands mode).
@@ -565,37 +510,22 @@ impl SceneEntityCoordinator {
     /// # Arguments
     /// * `entities` - List of scene URNs (format: urn:decentraland:entity:{hash}?baseUrl=...)
     pub fn _set_fixed_desired_entities_urns(&mut self, entities: Vec<String>) {
-        tracing::info!("[SCENE_FLOW] >>> _set_fixed_desired_entities_urns() with {} entities", entities.len()); // TEMP
         if self.content_url.is_empty() {
-            tracing::warn!("[SCENE_FLOW] ERROR: content_url is empty, cannot set fixed entities"); // TEMP
+            tracing::warn!("content_url is empty, cannot set fixed entities");
             return;
         }
 
         self.dirty_loadable_scenes = true;
         self.fixed_desired_entities.clear();
 
-        tracing::info!(
-            "[SCENE_FLOW] Setting fixed desired entities URNs: {} entities",
-            entities.len()
-        ); // TEMP
-
         for urn_str in entities.iter() {
             let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else {
-                tracing::warn!("[SCENE_FLOW] ERROR: Failed to parse URN: {}", urn_str); // TEMP
+                tracing::warn!("Failed to parse URN: {}", urn_str);
                 continue;
             };
 
-            tracing::info!(
-                "[SCENE_FLOW] Adding fixed entity hash: {} from URN: {}",
-                entity_base.hash,
-                urn_str
-            ); // TEMP
             self.fixed_desired_entities.insert(entity_base.hash.clone());
             if self.cache_scene_data.contains_key(&entity_base.hash) {
-                tracing::info!(
-                    "[SCENE_FLOW] Scene {} already cached, skipping request",
-                    entity_base.hash
-                ); // TEMP
                 continue;
             }
 
@@ -610,11 +540,9 @@ impl SceneEntityCoordinator {
                 None,
             );
 
-            tracing::info!("[SCENE_FLOW] Requesting scene data for: {} (request_id: {})", entity_base.hash, request.id); // TEMP
             self.requested_entity.insert(request.id, entity_base);
             self.do_request(request);
         }
-        tracing::info!("[SCENE_FLOW] <<< _set_fixed_desired_entities_urns() completed"); // TEMP
     }
 
     pub fn _set_fixed_desired_entities_global_urns(&mut self, entities: Vec<String>) {
@@ -661,23 +589,14 @@ impl SceneEntityCoordinator {
     /// - If no fixed entities: Requests scene at current coordinate (fallback for genesis city teleports)
     pub fn update_position(&mut self, x: i16, z: i16) {
         if self.entities_active_url.is_empty() {
-            tracing::warn!("[SCENE_FLOW] ERROR: entities_active_url is empty, cannot update position"); // TEMP
+            tracing::warn!("entities_active_url is empty, cannot update position");
             return;
         }
-
-        tracing::info!(
-            "[SCENE_FLOW] >>> update_position: ({}, {}) | city_mode={} | fixed_entities={}",
-            x,
-            z,
-            self.should_load_city_scenes,
-            self.fixed_desired_entities.len()
-        ); // TEMP
 
         self.dirty_loadable_scenes = true;
         self.current_position = Coord(x, z);
 
         if self.should_load_city_scenes {
-            tracing::info!("[SCENE_FLOW] CITY MODE: Checking parcels around position"); // TEMP
             let inner_parcels = self.parcel_radius_calculator.get_inner_parcels();
             let mut request_pointers = HashSet::with_capacity(inner_parcels.capacity());
             // Check what are the new scenes to load that are not in the cache
@@ -693,56 +612,40 @@ impl SceneEntityCoordinator {
             }
 
             // Request the new pointers
-            if !request_pointers.is_empty() {
-                tracing::info!("[SCENE_FLOW] CITY MODE: Need to request {} new pointers", request_pointers.len()); // TEMP
-            }
             self.request_pointers(request_pointers);
         } else if self.fixed_desired_entities.is_empty()
             && !self
                 .cache_city_pointers
                 .contains_key(&self.current_position)
         {
-            tracing::info!("[SCENE_FLOW] FLOATING MODE: No fixed entities, requesting current position pointer"); // TEMP
             let mut request_pointers = HashSet::with_capacity(1);
             request_pointers.insert(self.current_position);
             self.request_pointers(request_pointers);
-        } else {
-            tracing::info!("[SCENE_FLOW] FLOATING MODE: Using fixed entities, no pointer request needed"); // TEMP
         }
-        tracing::info!("[SCENE_FLOW] <<< update_position() completed"); // TEMP
     }
 
     pub fn _update(&mut self) {
-        let mut received_responses = 0;
         while let Ok(response) = self.receiver.try_recv() {
-            received_responses += 1;
             match response {
                 Ok(response) => {
-                    tracing::info!("[SCENE_FLOW] Received response for request_id: {} | status: {} | type: {}", response.request_option.id, response.status_code, response.request_option.reference_id); // TEMP
                     if response.status_code.as_u16() >= 200 && response.status_code.as_u16() < 300 {
                         self.handle_response(response);
                         self.dirty_loadable_scenes = true;
                     } else {
                         self.cleanup_request_id(response.request_option.id);
-                        tracing::info!(
-                            "[SCENE_FLOW] ERROR: Bad status code while doing a request: {:?}",
+                        tracing::warn!(
+                            "Bad status code while doing a request: {:?}",
                             response.status_code
-                        ); // TEMP
-                        tracing::info!("[SCENE_FLOW] {response:?}"); // TEMP
+                        );
                     }
                 }
                 Err(err) => {
-                    tracing::info!("[SCENE_FLOW] ERROR: Error while doing a request: {err:?}"); // TEMP
+                    tracing::warn!("Error while doing a request: {err:?}");
                 }
             }
         }
 
-        if received_responses > 0 {
-            tracing::info!("[SCENE_FLOW] Processed {} responses this update", received_responses); // TEMP
-        }
-
         if self.dirty_loadable_scenes {
-            tracing::info!("[SCENE_FLOW] dirty_loadable_scenes=true, triggering update_loadable_and_keep_alive_scenes()"); // TEMP
             self.dirty_loadable_scenes = false;
             self.update_loadable_and_keep_alive_scenes();
         }
@@ -819,7 +722,6 @@ impl SceneEntityCoordinator {
 
     #[func]
     pub fn set_scene_radius(&mut self, new_value: i16) {
-        tracing::info!("[SCENE_FLOW] set_scene_radius = {new_value}"); // TEMP
         self.parcel_radius_calculator = ParcelRadiusCalculator::new(new_value);
 
         // This triggers the update of the loadable scenes
@@ -986,5 +888,5 @@ mod tests {
 
 #[itest]
 fn some() {
-    tracing::info!("this is a itest");
+    tracing::debug!("this is a itest");
 }

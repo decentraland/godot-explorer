@@ -56,12 +56,10 @@ var _teleport_target_parcel: Vector2i = Vector2i(-1000, -1000)
 
 
 func _ready():
-	prints("[SCENE_FLOW]", "SceneFetcher._ready() started")  # TEMP
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 
 	# Initialize wall manager and base floor manager only for floating islands mode
 	if is_using_floating_islands():
-		prints("[SCENE_FLOW]", "Using floating islands mode")  # TEMP
 		wall_manager = FloatingIslandWalls.new()
 		add_child(wall_manager)
 
@@ -70,20 +68,16 @@ func _ready():
 		add_child(base_floor_manager)
 
 		# Parcel data texture will be generated after parcels are loaded
-	else:
-		prints("[SCENE_FLOW]", "Using dynamic city mode")  # TEMP
 
 	# Initialize global uniforms
 	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
 
 	# Hardcoded scene radius 0
 	var scene_radius = 0
-	prints("[SCENE_FLOW]", "Setting scene radius:", scene_radius)  # TEMP
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
 	Global.loading_finished.connect(self.on_loading_finished)
-	prints("[SCENE_FLOW]", "SceneFetcher._ready() completed")  # TEMP
 
 
 func get_current_spawn_point():
@@ -150,7 +144,6 @@ func _process(_dt):
 	var use_continuous_loading = not is_using_floating_islands()
 	if use_continuous_loading:
 		if version != last_version_updated:
-			prints("[SCENE_FLOW]", "CONTINUOUS MODE: Version changed", last_version_updated, "->", version)  # TEMP
 			last_version_updated = scene_entity_coordinator.get_version()
 			await _async_on_desired_scene_changed()
 		return
@@ -168,24 +161,20 @@ func _process(_dt):
 		_bypass_loading_check
 		or (has_actual_change and not is_invalid_position)
 	):
-		prints("[SCENE_FLOW]", "FLOATING MODE: Scene entity changed at", current_position, ":", current_scene_entity_id, "->", scene_entity_id, "bypass:", _bypass_loading_check)  # TEMP
 		current_scene_entity_id = scene_entity_id
 		_bypass_loading_check = false
 
 		if version != last_version_updated:
-			prints("[SCENE_FLOW]", "FLOATING MODE: Triggering scene load, version:", version)  # TEMP
 			last_version_updated = scene_entity_coordinator.get_version()
 			notify_pending_loading_scenes.emit(false)
 			await _async_on_desired_scene_changed()
 	elif version != last_version_updated:
 		# Version changed but we're in the same scene - still need to update for dynamic loading
-		prints("[SCENE_FLOW]", "FLOATING MODE: Version changed in same scene", last_version_updated, "->", version)  # TEMP
 		last_version_updated = scene_entity_coordinator.get_version()
 		await _async_on_desired_scene_changed()
 	elif version != last_version_checked:
 		last_version_checked = version
 		if _is_there_any_new_scene_to_load():
-			prints("[SCENE_FLOW]", "FLOATING MODE: New scenes available to load")  # TEMP
 			notify_pending_loading_scenes.emit(true)
 
 
@@ -218,12 +207,10 @@ func _is_there_any_new_scene_to_load() -> bool:
 
 func _async_on_desired_scene_changed():
 	var desired_scenes = scene_entity_coordinator.get_desired_scenes()
-	prints("[SCENE_FLOW]", ">>> _async_on_desired_scene_changed() started", desired_scenes)  # TEMP
 	var loadable_scenes = desired_scenes.get("loadable_scenes", [])
 
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
-	prints("[SCENE_FLOW]", "Scene change counter:", counter_this_call)  # TEMP
 
 	# Determine if we should show a loading screen
 	# Show loading screen ONLY when:
@@ -236,7 +223,6 @@ func _async_on_desired_scene_changed():
 
 	# Skip loading screen for any reload scenario (teleports, scene reloads, etc.)
 	if new_loading and _is_reloading:
-		prints("[SCENE_FLOW]", "Skipping loading screen - reload detected (_is_reloading=true)")  # TEMP
 		_is_reloading = false  # Reset the flag after use (one-shot)
 		new_loading = false
 
@@ -245,45 +231,33 @@ func _async_on_desired_scene_changed():
 		var should_load = false
 		if not loaded_scenes.has(scene_id):
 			should_load = true
-			prints("[SCENE_FLOW]", "Scene not loaded yet:", scene_id)  # TEMP
 		else:
 			# Check if scene is actually loaded or still loading (scene_number_id == -1)
 			var scene: SceneItem = loaded_scenes[scene_id]
 			if scene.scene_number_id != -1:
 				# Scene is fully loaded
-				prints("[SCENE_FLOW]", "Scene already loaded:", scene_id, "number_id:", scene.scene_number_id)  # TEMP
 				new_loading = false
-			else:
-				prints("[SCENE_FLOW]", "Scene still loading:", scene_id)  # TEMP
 
 		if should_load:
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
-			prints("[SCENE_FLOW]", ">>> Queuing scene load:", scene_id, "at position:", current_position)  # TEMP
 			if scene_definition != null:
 				loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
 			else:
-				printerr("[SCENE_FLOW] ERROR: should load scene_id ", scene_id, " but data is empty")  # TEMP
+				printerr("should load scene_id ", scene_id, " but data is empty")
 
-	prints("[SCENE_FLOW]", "Emitting report_scene_load (before): done=false, new_loading:", new_loading, "pending:", loadable_scenes.size())  # TEMP
 	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
-	prints("[SCENE_FLOW]", "Awaiting", loading_promises.size(), "scene loading promises...")  # TEMP
 	await PromiseUtils.async_all(loading_promises)
-	prints("[SCENE_FLOW]", "All scene loading promises completed")  # TEMP
 
 	# If there is other calls processing the scene, early return
 	# 	the next block of code will be executed by the last request
 	if counter_this_call != _scene_changed_counter:
-		prints("[SCENE_FLOW]", "!!! RACE CONDITION: Early return WITHOUT emitting done signal !!!")  # TEMP
-		prints("[SCENE_FLOW]", "RACE CONDITION: counter_this_call:", counter_this_call, "current:", _scene_changed_counter)  # TEMP
-		prints("[SCENE_FLOW]", "WARNING: Loading screen will NOT be dismissed by this call!")  # TEMP
 		return
 
 	# Get current loadable/keep_alive scenes (they may have changed while loading)
 	var current_desired = scene_entity_coordinator.get_desired_scenes()
 	var current_loadable = current_desired.get("loadable_scenes", [])
 	var current_keep_alive = current_desired.get("keep_alive_scenes", [])
-	prints("[SCENE_FLOW]", "Current desired scenes - loadable:", current_loadable.size(), "keep_alive:", current_keep_alive.size())  # TEMP
 
 	# Clean up old scenes that are no longer needed
 	var scenes_to_remove = []
@@ -295,25 +269,19 @@ func _async_on_desired_scene_changed():
 			# Don't kill or remove scenes that are still loading (scene_number_id == -1)
 			# Don't kill or remove global scenes
 			if not scene.is_global and scene.scene_number_id != -1:
-				prints("[SCENE_FLOW]", ">>> Killing scene:", scene_id, "number_id:", scene.scene_number_id)  # TEMP
 				Global.scene_runner.kill_scene(scene.scene_number_id)
 				if base_floor_manager:
 					base_floor_manager.remove_scene_floors(scene.id)
 				scenes_to_remove.append(scene_id)
-			else:
-				prints("[SCENE_FLOW]", "Keeping scene (is_global or still loading):", scene_id, "is_global:", scene.is_global, "number_id:", scene.scene_number_id)  # TEMP
 
 	for scene_id in scenes_to_remove:
 		loaded_scenes.erase(scene_id)
-	if scenes_to_remove.size() > 0:
-		prints("[SCENE_FLOW]", "Removed", scenes_to_remove.size(), "scenes from loaded_scenes")  # TEMP
 
 	# Skip floating island generation in test/renderer modes
 	var use_floating_islands = is_using_floating_islands()
 
 	# Clear floating island state when switching to dynamic loading
 	if not use_floating_islands and !last_scene_group_hash.is_empty():
-		prints("[SCENE_FLOW]", "Clearing floating island state (switched to dynamic loading)")  # TEMP
 		last_scene_group_hash = ""
 		# Clean up any existing floating island empty parcels
 		for parcel in loaded_empty_scenes:
@@ -323,11 +291,6 @@ func _async_on_desired_scene_changed():
 		loaded_empty_scenes.clear()
 
 	if use_floating_islands:
-		prints("[SCENE_FLOW]", "About to trigger _regenerate_floating_islands() - loaded_scenes count:", loaded_scenes.size())  # TEMP
-		for scene_id in loaded_scenes.keys():
-			var scene: SceneItem = loaded_scenes[scene_id]
-			prints("[SCENE_FLOW]", "  Scene in dict:", scene_id, "scene_number_id:", scene.scene_number_id, "parcels:", scene.parcels.size())  # TEMP
-		prints("[SCENE_FLOW]", "Triggering _regenerate_floating_islands()")  # TEMP
 		_regenerate_floating_islands()
 
 	var empty_parcels_coords = []
@@ -345,18 +308,12 @@ func _async_on_desired_scene_changed():
 	for scene: SceneItem in loaded_scenes.values():
 		parcel_filled.append_array(scene.parcels)
 
-	prints("[SCENE_FLOW]", "=== FINAL REPORT ===")  # TEMP
-	prints("[SCENE_FLOW]", "Emitting report_scene_load (after): done=true, new_loading=false (always false when done), pending:", loadable_scenes.size())  # TEMP
-	prints("[SCENE_FLOW]", "Emitting parcels_processed: filled:", parcel_filled.size(), "empty:", empty_parcels_coords.size())  # TEMP
-	prints("[SCENE_FLOW]", "Scene counter check: counter_this_call:", counter_this_call, "current:", _scene_changed_counter)  # TEMP
-	# Always emit new_loading=false when done=true to properly dismiss the loading screen  # TEMP
+	# Always emit new_loading=false when done=true to properly dismiss the loading screen
 	report_scene_load.emit(true, false, loadable_scenes.size())
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
-	prints("[SCENE_FLOW]", "<<< _async_on_desired_scene_changed() completed - counter:", counter_this_call)  # TEMP
 
 
 func _on_realm_changed():
-	prints("[SCENE_FLOW]", ">>> _on_realm_changed() started, realm_url:", Global.realm.realm_url)  # TEMP
 	var content_base_url = Global.realm.content_base_url
 
 	Global.get_config().last_realm_joined = Global.realm.realm_url
@@ -364,7 +321,6 @@ func _on_realm_changed():
 
 	# Force floating island recreation on realm change
 	last_scene_group_hash = ""
-	prints("[SCENE_FLOW]", "Cleared last_scene_group_hash to force recreation")  # TEMP
 
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url
@@ -372,22 +328,18 @@ func _on_realm_changed():
 	# Use floating islands mode (single scene) by default
 	# Only use dynamic city mode (radius-based) in test/renderer modes
 	var should_load_city_pointers = not is_using_floating_islands()
-	prints("[SCENE_FLOW]", "Configuring coordinator - should_load_city_pointers:", should_load_city_pointers)  # TEMP
 
 	scene_entity_coordinator.config(
 		content_base_url + "entities/active", content_base_url, should_load_city_pointers
 	)
 	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
-	prints("[SCENE_FLOW]", "Setting fixed scenes URNs:", scenes_urns.size(), "scenes")  # TEMP
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 	set_portable_experiences_urns(self.desired_portable_experiences_urns)
 
-	prints("[SCENE_FLOW]", "Killing all loaded scenes:", loaded_scenes.size())  # TEMP
 	for scene: SceneItem in loaded_scenes.values():
 		if not scene.is_global and scene.scene_number_id != -1:
-			prints("[SCENE_FLOW]", "Killing scene on realm change:", scene.id, "number_id:", scene.scene_number_id)  # TEMP
 			Global.scene_runner.kill_scene(scene.scene_number_id)
 
 	for parcel in loaded_empty_scenes:
@@ -400,7 +352,6 @@ func _on_realm_changed():
 		wall_manager.clear_walls()
 
 	loaded_scenes = {}
-	prints("[SCENE_FLOW]", "<<< _on_realm_changed() completed")  # TEMP
 
 
 func set_portable_experiences_urns(urns: Array[String]) -> void:
@@ -444,43 +395,29 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 
 
 func _regenerate_floating_islands() -> void:
-	prints("[SCENE_FLOW]", ">>> _regenerate_floating_islands() started")  # TEMP
-	prints("[SCENE_FLOW]", "Total loaded_scenes count:", loaded_scenes.size())  # TEMP
-
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
 	var all_scene_parcels = []
 	var skipped_scenes_count = 0
 	for scene_id in loaded_scenes.keys():
 		var scene: SceneItem = loaded_scenes[scene_id]
-		prints("[SCENE_FLOW]", "Checking scene:", scene_id, "is_global:", scene.is_global, "scene_number_id:", scene.scene_number_id, "parcels:", scene.parcels.size())  # TEMP
 
 		# Include parcels from all loaded non-global scenes
 		if not scene.is_global and scene.scene_number_id != -1:
-			prints("[SCENE_FLOW]", "Including", scene.parcels.size(), "parcels from scene:", scene_id)  # TEMP
 			for parcel in scene.parcels:
 				all_scene_parcels.append(parcel)
 		else:
 			skipped_scenes_count += 1
-			if scene.is_global:
-				prints("[SCENE_FLOW]", "Skipping scene (is_global):", scene_id)  # TEMP
-			elif scene.scene_number_id == -1:
-				prints("[SCENE_FLOW]", "Skipping scene (still loading, scene_number_id=-1):", scene_id)  # TEMP
-
-	prints("[SCENE_FLOW]", "Total parcels collected:", all_scene_parcels.size(), "| Skipped scenes:", skipped_scenes_count)  # TEMP
 
 	if all_scene_parcels.is_empty():
-		prints("[SCENE_FLOW]", "No scene parcels to generate islands for, returning")  # TEMP
 		return
 
 	var current_scene_group_hash: String = str(all_scene_parcels.hash())
 
 	# Skip if same scene configuration
 	if !last_scene_group_hash.is_empty() and last_scene_group_hash == current_scene_group_hash:
-		prints("[SCENE_FLOW]", "Same scene group hash, skipping regeneration:", current_scene_group_hash)  # TEMP
 		return
 
-	prints("[SCENE_FLOW]", "Scene group hash changed:", last_scene_group_hash, "->", current_scene_group_hash)  # TEMP
-	prints("[SCENE_FLOW]", "Total parcels to generate island for:", all_scene_parcels.size())  # TEMP
+	last_scene_group_hash = current_scene_group_hash
 
 	# Clear old empty parcels
 	for parcel in loaded_empty_scenes:
@@ -492,12 +429,8 @@ func _regenerate_floating_islands() -> void:
 	if wall_manager:
 		wall_manager.clear_walls()
 
-	last_scene_group_hash = current_scene_group_hash
-
 	# Create floating island platform considering all loaded scenes
-	prints("[SCENE_FLOW]", "Creating floating island cluster")  # TEMP
 	_create_floating_island_for_cluster(all_scene_parcels)
-	prints("[SCENE_FLOW]", "<<< _regenerate_floating_islands() completed")  # TEMP
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
@@ -506,24 +439,19 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	if current_position == new_position and !is_teleport:
 		return
 
-	prints("[SCENE_FLOW]", ">>> update_position() -", "old:", current_position, "new:", new_position, "is_teleport:", is_teleport)  # TEMP
-
 	# For teleports to the same position, we still want to reload the scene
 	var position_changed = current_position != new_position
 	current_position = new_position
 
 	if is_teleport:
-		prints("[SCENE_FLOW]", "TELEPORT: Setting target parcel and clearing all scenes, current loaded_scenes:", loaded_scenes.size())  # TEMP
 		_teleport_target_parcel = new_position
 
 		# Always skip loading screen for teleports (both same and different positions)
 		# Teleports are user-initiated and should feel seamless
-		prints("[SCENE_FLOW]", "TELEPORT: Setting _is_reloading=true to skip loading screen")  # TEMP
 		_is_reloading = true
 
 		# If teleporting to the same position, force scene processing even if we're in the same scene entity
 		if not position_changed:
-			prints("[SCENE_FLOW]", "TELEPORT: Same position - setting _bypass_loading_check to force reload")  # TEMP
 			if is_using_floating_islands():
 				_bypass_loading_check = true
 
@@ -531,42 +459,30 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 		for scene_id in loaded_scenes.keys():
 			var scene: SceneItem = loaded_scenes[scene_id]
 			if not scene.is_global and scene.scene_number_id != -1:
-				prints("[SCENE_FLOW]", "TELEPORT: Killing scene:", scene.id, "number_id:", scene.scene_number_id)  # TEMP
 				Global.scene_runner.kill_scene(scene.scene_number_id)
 				if base_floor_manager:
 					base_floor_manager.remove_scene_floors(scene.id)
 				killed_count += 1
-			else:
-				if scene.is_global:
-					prints("[SCENE_FLOW]", "TELEPORT: Keeping global scene:", scene.id)  # TEMP
-				elif scene.scene_number_id == -1:
-					prints("[SCENE_FLOW]", "TELEPORT: Scene still loading (number_id=-1):", scene.id)  # TEMP
 
-		prints("[SCENE_FLOW]", "TELEPORT: Killed", killed_count, "scenes, clearing loaded_scenes dict")  # TEMP
 		loaded_scenes.clear()
-		prints("[SCENE_FLOW]", "TELEPORT: loaded_scenes after clear:", loaded_scenes.size())  # TEMP
 
-		# Clear floating island hash to force regeneration on next load  # TEMP
-		prints("[SCENE_FLOW]", "TELEPORT: Clearing last_scene_group_hash to force island regeneration")  # TEMP
-		last_scene_group_hash = ""  # TEMP
+		# Clear floating island hash to force regeneration on next load
+		last_scene_group_hash = ""
 
 	if not is_using_floating_islands() or is_teleport:
-		prints("[SCENE_FLOW]", "Updating coordinator position to:", current_position)  # TEMP
 		scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 	player_parcel_changed.emit(new_position)
-	prints("[SCENE_FLOW]", "<<< update_position() completed")  # TEMP
 
 
 func async_load_scene(
 	scene_entity_id: String, scene_entity_definition: DclSceneEntityDefinition
 ) -> Promise:
-	prints("[SCENE_FLOW]", ">>> async_load_scene() started for:", scene_entity_id)  # TEMP
 
 	# Check if scene is already in loaded_scenes
 	if loaded_scenes.has(scene_entity_id):
 		var existing_scene: SceneItem = loaded_scenes[scene_entity_id]
-		prints("[SCENE_FLOW]", "WARNING: Scene already in loaded_scenes! scene_number_id:", existing_scene.scene_number_id)  # TEMP
+		printerr("WARNING: Scene already in loaded_scenes! scene_number_id:", existing_scene.scene_number_id)
 
 	var parcels := scene_entity_definition.get_parcels()
 
@@ -578,7 +494,6 @@ func async_load_scene(
 	scene_item.is_global = scene_entity_definition.is_global()
 
 	loaded_scenes[scene_entity_id] = scene_item
-	prints("[SCENE_FLOW]", "Scene item created with", parcels.size(), "parcels, is_global:", scene_item.is_global, "scene_number_id:", scene_item.scene_number_id)  # TEMP
 
 	var content_mapping := scene_entity_definition.get_content_mapping()
 
@@ -602,35 +517,31 @@ func async_load_scene(
 			local_main_js_path = "user://content/" + script_hash
 
 	if script_promise != null:
-		prints("[SCENE_FLOW]", "Awaiting script promise for:", scene_entity_id)  # TEMP
 		var script_res = await PromiseUtils.async_awaiter(script_promise)
 		if script_res is PromiseError:
 			printerr(
-				"[SCENE_FLOW] ERROR: Scene ",
+				"Scene ",
 				scene_entity_id,
 				" fail getting the script code content, error message: ",
 				script_res.get_error()
-			)  # TEMP
+			)
 			return PromiseUtils.resolved(false)
-		prints("[SCENE_FLOW]", "Script promise resolved successfully for:", scene_entity_id)  # TEMP
 
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
 	var local_main_crdt_path: String = String()
 	if not main_crdt_file_hash.is_empty():
-		prints("[SCENE_FLOW]", "Fetching main.crdt for:", scene_entity_id)  # TEMP
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
 		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
 
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
 			printerr(
-				"[SCENE_FLOW] ERROR: Scene ",
+				"Scene ",
 				scene_entity_id,
 				" fail getting the main crdt content, error message: ",
 				res.get_error()
-			)  # TEMP
+			)
 			return PromiseUtils.resolved(false)
-		prints("[SCENE_FLOW]", "main.crdt fetched successfully for:", scene_entity_id)  # TEMP
 
 	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
 	var asset_url: String = (
@@ -640,28 +551,18 @@ func async_load_scene(
 	# Check if optimized zip already exists to avoid re-download hang
 	var zip_file_path = "user://content/" + scene_hash_zip
 	var download_res = null
-	var file_exists = FileAccess.file_exists(zip_file_path)  # TEMP
-	prints("[SCENE_FLOW]", "Checking zip file existence:", zip_file_path, "exists:", file_exists)  # TEMP
-	if file_exists:
-		prints("[SCENE_FLOW]", "Optimized zip already exists for:", scene_entity_id)  # TEMP
+	if FileAccess.file_exists(zip_file_path):
 		download_res = true  # Pretend success since file exists
 	else:
-		prints("[SCENE_FLOW]", "Downloading optimized zip for:", scene_entity_id, "from:", asset_url)  # TEMP
 		var download_promise: Promise = Global.content_provider.fetch_file_by_url(
 			scene_hash_zip, asset_url
 		)
-		prints("[SCENE_FLOW]", "Created download promise, awaiting...")  # TEMP
 		download_res = await PromiseUtils.async_awaiter(download_promise)
-		prints("[SCENE_FLOW]", "Download promise resolved, type:", typeof(download_res))  # TEMP
-		if download_res is PromiseError:
-			prints("[SCENE_FLOW]", "Optimized zip download failed for:", scene_entity_id, "error:", download_res.get_error())  # TEMP
-		else:
-			prints("[SCENE_FLOW]", "Optimized zip downloaded for:", scene_entity_id)  # TEMP
 
 	if Global.is_xr() or Global.get_testing_scene_mode():
-		prints("[SCENE_FLOW]", "Scene optimization skipped (XR/testing mode)")  # TEMP
+		pass  # Scene optimization skipped (XR/testing mode)
 	elif download_res is PromiseError:
-		printerr("[SCENE_FLOW]", "Scene ", scene_entity_id, " is not optimized, failed to download zip.")  # TEMP
+		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
 	else:
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
 		if not ok:
@@ -682,62 +583,50 @@ func async_load_scene(
 				printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #2")
 
 	# the scene was removed while it was loading...
-	prints("[SCENE_FLOW]", "Checking if scene still in loaded_scenes:", scene_entity_id, "->", loaded_scenes.has(scene_entity_id))  # TEMP
 	if not loaded_scenes.has(scene_entity_id):
-		printerr("[SCENE_FLOW] ERROR: Scene was removed while loading:", scene_entity_id)  # TEMP
+		printerr("Scene was removed while loading:", scene_entity_id)
 		return PromiseUtils.resolved(false)
 
 	var scene_in_dict = loaded_scenes[scene_entity_id]
-	prints("[SCENE_FLOW]", "Scene found in loaded_scenes, current scene_number_id:", scene_in_dict.scene_number_id)  # TEMP
-	prints("[SCENE_FLOW]", "Calling _on_try_spawn_scene for:", scene_entity_id)  # TEMP
 	var spawn_result = _on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)
-	prints("[SCENE_FLOW]", "_on_try_spawn_scene returned:", spawn_result, "final scene_number_id:", scene_in_dict.scene_number_id)  # TEMP
-	prints("[SCENE_FLOW]", "<<< async_load_scene() completed for:", scene_entity_id)  # TEMP
 	return PromiseUtils.resolved(true)
 
 
 func _on_try_spawn_scene(
 	scene_item: SceneItem, local_main_js_path: String, local_main_crdt_path: String
 ):
-	prints("[SCENE_FLOW]", ">>> _on_try_spawn_scene() for:", scene_item.id, "current scene_number_id:", scene_item.scene_number_id)  # TEMP
 	if not local_main_js_path.is_empty() and not FileAccess.file_exists(local_main_js_path):
-		printerr("[SCENE_FLOW] ERROR: Couldn't get main.js file:", local_main_js_path)  # TEMP
+		printerr("Couldn't get main.js file:", local_main_js_path)
 		local_main_js_path = ""
 
 	if not local_main_crdt_path.is_empty() and not FileAccess.file_exists(local_main_crdt_path):
-		printerr("[SCENE_FLOW] ERROR: Couldn't get main.crdt file:", local_main_crdt_path)  # TEMP
+		printerr("Couldn't get main.crdt file:", local_main_crdt_path)
 		local_main_crdt_path = ""
 
 	if local_main_crdt_path.is_empty() and local_main_js_path.is_empty():
-		printerr("[SCENE_FLOW] ERROR: Couldn't spawn the scene (no js/crdt):", scene_item.id)  # TEMP
+		printerr("Couldn't spawn the scene (no js/crdt):", scene_item.id)
 		return false
 
 	var enable_js_inspector: bool = false
 	if Global.has_javascript_debugger and _debugging_js_scene_id == scene_item.id:
 		enable_js_inspector = true
 
-	prints("[SCENE_FLOW]", "Starting scene runner for:", scene_item.id, "js:", !local_main_js_path.is_empty(), "crdt:", !local_main_crdt_path.is_empty())  # TEMP
 	var scene_number_id: int = Global.scene_runner.start_scene(
 		local_main_js_path,
 		local_main_crdt_path,
 		scene_item.scene_entity_definition,
 		enable_js_inspector
 	)
-	prints("[SCENE_FLOW]", "!!! scene_number_id changed from", scene_item.scene_number_id, "->", scene_number_id, "for scene:", scene_item.id)  # TEMP
 	scene_item.scene_number_id = scene_number_id
-	prints("[SCENE_FLOW]", "Scene spawned successfully with scene_number_id:", scene_number_id, "for:", scene_item.id)  # TEMP
 
 	# Add base floors for this scene's parcels
 	if base_floor_manager:
-		prints("[SCENE_FLOW]", "Adding base floors for", scene_item.parcels.size(), "parcels")  # TEMP
 		base_floor_manager.add_scene_floors(scene_item.id, scene_item.parcels)
 
-	# Regenerate floating islands after scene spawns (deferred to ensure scene is fully initialized)  # TEMP
-	if is_using_floating_islands():  # TEMP
-		prints("[SCENE_FLOW]", "Scheduling deferred _regenerate_floating_islands() after spawn")  # TEMP
-		_regenerate_floating_islands.call_deferred()  # TEMP
+	# Regenerate floating islands after scene spawns (deferred to ensure scene is fully initialized)
+	if is_using_floating_islands():
+		_regenerate_floating_islands.call_deferred()
 
-	prints("[SCENE_FLOW]", "<<< _on_try_spawn_scene() completed for:", scene_item.id)  # TEMP
 	return true
 
 
