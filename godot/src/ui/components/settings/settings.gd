@@ -24,7 +24,6 @@ var _dirty_connected: bool = false
 @onready var text_edit_cache_path = %TextEdit_CachePath
 @onready var label_current_cache_size = %Label_CurrentCacheSize
 @onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
-@onready var check_box_loading_scenes: CheckBox = %CheckBox_LoadingScenes
 
 @onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
@@ -66,9 +65,6 @@ var _dirty_connected: bool = false
 @onready var h_slider_process_tick_quota = %HSlider_ProcessTickQuota
 @onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
 
-@onready var label_scene_radius_value = %Label_SceneRadiusValue
-@onready var h_slider_scene_radius = %HSlider_SceneRadius
-
 @onready var spin_box_gravity = %SpinBox_Gravity
 @onready var spin_box_jump_velocity = %SpinBox_JumpVelocity
 @onready var spin_box_run_speed = %SpinBox_RunSpeed
@@ -88,9 +84,6 @@ func _ready():
 	# general
 	text_edit_cache_path.text = Global.get_config().local_content_dir
 	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
-	check_box_loading_scenes.button_pressed = (
-		Global.get_config().loading_scene_arround_only_when_you_pass
-	)
 
 	preview_viewport_container.hide()
 	check_box_dynamic_skybox.button_pressed = Global.get_config().dynamic_skybox
@@ -166,9 +159,7 @@ func refresh_values():
 	spin_box_run_speed.value = Global.get_config().run_velocity
 	spin_box_jump_velocity.value = Global.get_config().jump_velocity
 	h_slider_process_tick_quota.set_value_no_signal(Global.get_config().process_tick_quota_ms)
-	h_slider_scene_radius.set_value_no_signal(Global.get_config().scene_radius)
 	label_process_tick_quota_value.text = str(Global.get_config().process_tick_quota_ms)
-	label_scene_radius_value.text = str(Global.get_config().scene_radius)
 
 	if is_instance_valid(Global.raycast_debugger):
 		check_box_raycast_debugger.set_pressed_no_signal(true)
@@ -259,13 +250,6 @@ func _on_spin_box_jump_velocity_value_changed(value):
 func _on_spin_box_gravity_value_changed(value):
 	Global.get_config().gravity = value
 	Global.get_config().save_to_settings_file()
-
-
-func _on_h_slider_scene_radius_value_changed(value):
-	if value != Global.get_config().scene_radius:
-		Global.get_config().scene_radius = h_slider_scene_radius.value
-		label_scene_radius_value.text = str(h_slider_scene_radius.value)
-		Global.get_config().save_to_settings_file()
 
 
 func _on_button_connect_preview_pressed():
@@ -435,12 +419,6 @@ func _on_container_general_visibility_changed():
 	_update_current_cache_size()
 
 
-func _on_check_box_loading_scenes_toggled(toggled_on: bool) -> void:
-	if Global.get_config().loading_scene_arround_only_when_you_pass != toggled_on:
-		Global.get_config().loading_scene_arround_only_when_you_pass = toggled_on
-		Global.get_config().save_to_settings_file()
-
-
 func _on_check_box_dynamic_skybox_toggled(toggled_on: bool) -> void:
 	h_slider_skybox_time.visible = !toggled_on
 	label_skybox_time.visible = !toggled_on
@@ -459,10 +437,6 @@ func _on_h_slider_skybox_time_value_changed(value: float) -> void:
 
 	if Global.get_config().skybox_time != time:
 		Global.get_config().skybox_time = time
-
-
-func _on_h_slider_scene_radius_drag_ended(_value_changed: bool) -> void:
-	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_skybox_time_drag_started() -> void:

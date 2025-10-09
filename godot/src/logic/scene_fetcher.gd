@@ -71,8 +71,9 @@ func _ready():
 	# Initialize global uniforms
 	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
 
-	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
-	Global.get_config().param_changed.connect(self._on_config_changed)
+	# Hardcoded scene radius: 2 for normal mode, 1 for XR
+	var scene_radius = 1 if Global.is_xr() else 2
+	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
 	Global.loading_finished.connect(self.on_loading_finished)
@@ -107,11 +108,6 @@ func on_scene_killed(killed_scene_id, _entity_id):
 			return
 
 
-func _on_config_changed(param: ConfigData.ConfigParams):
-	if param == ConfigData.ConfigParams.SCENE_RADIUS:
-		scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
-
-
 func get_current_scene_data() -> SceneItem:
 	return get_scene_data(current_position)
 
@@ -142,12 +138,9 @@ func _process(_dt):
 
 	var version := scene_entity_coordinator.get_version()
 
-	# When the loading-check is disable, early process this and return
 	# For dynamic loading (no floating islands), always use continuous loading
-	var use_continuous_loading = (
-		not Global.get_config().loading_scene_arround_only_when_you_pass
-		or not is_using_floating_islands()
-	)
+	# For floating islands, use on-demand loading (only when player enters new scene)
+	var use_continuous_loading = not is_using_floating_islands()
 	if use_continuous_loading:
 		if version != last_version_updated:
 			last_version_updated = scene_entity_coordinator.get_version()
