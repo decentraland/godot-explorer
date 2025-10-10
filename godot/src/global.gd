@@ -363,7 +363,10 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
-	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+	if Global.is_mobile() and !Global.is_virtual_mobile():
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+	else:
+		get_window().size = Vector2i(1280, 720)
 
 
 func is_orientation_portrait():
@@ -372,7 +375,10 @@ func is_orientation_portrait():
 
 
 func set_orientation_portrait():
-	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+	if Global.is_mobile() and !Global.is_virtual_mobile():
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+	else:
+		get_window().size = Vector2i(720, 1280)
 
 
 func set_orientation_sensor():
