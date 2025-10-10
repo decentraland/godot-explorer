@@ -367,6 +367,7 @@ func set_orientation_landscape():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	else:
 		get_window().size = Vector2i(1280, 720)
+		get_window().move_to_center()
 
 
 func is_orientation_portrait():
@@ -379,6 +380,7 @@ func set_orientation_portrait():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 	else:
 		get_window().size = Vector2i(720, 1280)
+		get_window().move_to_center()
 
 
 func set_orientation_sensor():

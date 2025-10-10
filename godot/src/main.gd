@@ -36,6 +36,7 @@ func start():
 
 	if Global.is_mobile():
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		InputMap.action_erase_events("ia_pointer")
 
 	self._start.call_deferred()
 
