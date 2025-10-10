@@ -30,7 +30,7 @@ use std::{
     sync::Arc,
 };
 
-use godot::{prelude::*, test::itest};
+use godot::prelude::*;
 
 use crate::{
     godot_classes::dcl_global::DclGlobal,
