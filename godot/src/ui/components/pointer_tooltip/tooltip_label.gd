@@ -46,7 +46,9 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 		if index == -1 and action_lower == "ia_any":
 			key = "Any"
 		elif index != -1:
-			var action_events: Array[InputEvent] = InputMap.action_get_events(InputMap.get_actions()[index])
+			var action_events: Array[InputEvent] = InputMap.action_get_events(
+				InputMap.get_actions()[index]
+			)
 			if !action_events.is_empty():
 				var event = action_events[0]
 				if event is InputEventKey:
