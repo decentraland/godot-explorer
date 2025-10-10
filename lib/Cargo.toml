@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.32.0"
+version = "0.35.0"
 edition = "2021"
 publish = false
 
