@@ -84,30 +84,66 @@ impl<'de> serde::Deserialize<'de> for SceneMetaScene {
         D: serde::Deserializer<'de>,
     {
         let s: OriginalSceneMetaScene = OriginalSceneMetaScene::deserialize(deserializer)?;
-        let parcel_from_str = |s: &str| -> Vector2i {
+
+        // Helper function to parse parcel string, returns None for invalid parcels
+        let parcel_from_str = |s: &str| -> Option<Vector2i> {
             let base_parcel = s.split(',').collect::<Vec<&str>>();
             if base_parcel.len() != 2 {
-                tracing::warn!("Invalid parcel: {}", s);
-                return Vector2i::new(0, 0);
+                return None;
             }
-            let Ok(x) = base_parcel[0].parse::<i32>() else {
-                tracing::warn!("Invalid parcel: {}", s);
-                return Vector2i::new(0, 0);
-            };
-            let Ok(y) = base_parcel[1].parse::<i32>() else {
-                tracing::warn!("Invalid parcel: {}", s);
-                return Vector2i::new(0, 0);
+
+            let x = match base_parcel[0].parse::<i32>() {
+                Ok(val) => val,
+                Err(_) => return None,
             };
 
-            Vector2i::new(x, y)
+            let y = match base_parcel[1].parse::<i32>() {
+                Ok(val) => val,
+                Err(_) => return None,
+            };
+
+            Some(Vector2i::new(x, y))
         };
 
-        let base_parcel = parcel_from_str(s.base.as_str());
-        let parcels = s.parcels.iter().map(|p| parcel_from_str(p)).collect();
+        // Parse base parcel - this must be valid
+        let base_parcel = parcel_from_str(s.base.as_str())
+            .ok_or_else(|| serde::de::Error::custom(format!("Invalid base parcel: {}", s.base)))?;
+
+        // Parse all parcels and filter out outliers
+        let mut all_parcels: Vec<Vector2i> = Vec::new();
+        for parcel_str in s.parcels.iter() {
+            if let Some(parcel) = parcel_from_str(parcel_str) {
+                all_parcels.push(parcel);
+            }
+        }
+
+        // Filter out suspicious outlier parcels
+        const MAX_DISTANCE_FROM_BASE: i32 = 50; // Maximum reasonable distance from base parcel
+        let mut valid_parcels = Vec::new();
+
+        for parcel in all_parcels {
+            let distance_from_base = (parcel.x - base_parcel.x)
+                .abs()
+                .max((parcel.y - base_parcel.y).abs());
+
+            // Filter out parcels too far from base (likely data errors)
+            // Also filter (0,0) if it's far from base, as it's likely a default/error value
+            if distance_from_base > MAX_DISTANCE_FROM_BASE {
+                continue;
+            }
+
+            // Parcel is within valid distance, keep it
+            valid_parcels.push(parcel);
+        }
+
+        // Ensure base parcel is always included if not already
+        if !valid_parcels.contains(&base_parcel) {
+            valid_parcels.insert(0, base_parcel);
+        }
 
         Ok(SceneMetaScene {
             base: base_parcel,
-            parcels,
+            parcels: valid_parcels,
         })
     }
 }

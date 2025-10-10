@@ -12,6 +12,8 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var debug_map_container: DebugMapContainer = null
+
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -67,7 +69,7 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		Global.scene_fetcher.update_position(parcel_position)
+		Global.scene_fetcher.update_position(parcel_position, false)
 		_last_parcel_position = parcel_position
 		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
@@ -109,6 +111,12 @@ func _ready():
 		player.vr_screen.set_instantiate_scene(ui_root)
 
 	emote_wheel.avatar_node = player.avatar
+
+	# Add debug map container only if --debug-minimap flag is present
+	if Global.cli.debug_minimap:
+		debug_map_container = load("res://src/ui/components/debug_map/debug_map_container.gd").new()
+		ui_root.add_child(debug_map_container)
+		debug_map_container.set_enabled(true)
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
@@ -165,6 +173,9 @@ func _ready():
 	)
 
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
+
+	#Global.scene_fetcher.current_position = start_parcel_position
+	Global.scene_fetcher.update_position(start_parcel_position, true)
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
@@ -317,6 +328,11 @@ func _on_control_menu_toggle_minimap(visibility):
 	control_minimap.visible = visibility
 
 
+func toggle_debug_minimap(enabled: bool):
+	if debug_map_container:
+		debug_map_container.set_enabled(enabled)
+
+
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
 
@@ -370,7 +386,6 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
-			loading_ui.enable_loading_screen()
 		else:
 			Global.on_chat_message.emit(
 				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
@@ -406,11 +421,13 @@ func move_to(position: Vector3, skip_loading: bool):
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
+	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
+	move_to(move_to_position, false)
+
 	if not realm.is_empty() && realm != Global.realm.get_realm_string():
 		Global.realm.async_set_realm(realm)
 
-	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
-	move_to(move_to_position, false)
+	Global.scene_fetcher.update_position(parcel, true)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true

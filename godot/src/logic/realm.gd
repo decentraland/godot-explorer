@@ -130,6 +130,7 @@ func async_clear_realm():
 
 
 func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> void:
+	prints("async_set_realm", new_realm_string, search_new_pos)
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
@@ -222,9 +223,6 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 
 		set_realm_min_bounds(min_bounds)
 		set_realm_max_bounds(max_bounds)
-
-		print("Min bounds: ", min_bounds)
-		print("Max bounds: ", max_bounds)
 
 		content_base_url = Realm.ensure_ends_with_slash(
 			realm_about.get("content", {}).get("publicUrl")
