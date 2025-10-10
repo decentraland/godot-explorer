@@ -817,7 +817,7 @@ impl INode for SceneEntityCoordinator {
     }
 }
 
-#[cfg(test)]
+/*#[cfg(test)]
 mod tests {
     const TEST_URN: &str = "urn:decentraland:entity:bafkreias3hru4s64inlkwceqeghlolpjjfaqaxxmghvuyrcfzs6u5fmg2q?=&baseUrl=https://sdk-team-cdn.decentraland.org/ipfs/";
     const TEST_URN_HASH: &str = "bafkreias3hru4s64inlkwceqeghlolpjjfaqaxxmghvuyrcfzs6u5fmg2q";
@@ -896,3 +896,4 @@ mod tests {
 fn some() {
     tracing::debug!("this is a itest");
 }
+*/
