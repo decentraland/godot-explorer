@@ -29,7 +29,7 @@
 [ext_resource type="PackedScene" uid="uid://cuduuu2b4u4bn" path="res://src/ui/components/profile_settings/profile_settings.tscn" id="18_x0kg3"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="22_1kuym"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
-[ext_resource type="PackedScene" uid="uid://duuasgi2pnb8k" path="res://src/ui/components/map_satellite/map_satellite.tscn" id="25_53o0i"]
+[ext_resource type="PackedScene" uid="uid://c7xids68ikyt4" path="res://src/ui/components/map_satellite/map_satellite.tscn" id="25_53o0i"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5emsx"]
 

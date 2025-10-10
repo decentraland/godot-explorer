@@ -3,14 +3,8 @@ extends Control
 var lobby: Lobby = null
 
 
-func is_platform_supported():
-	return OS.get_name() == "Android" and not Global.is_xr()
-
-
 func _ready():
-	if !is_platform_supported():
-		queue_free()
-		return
+	pass
 
 
 func set_lobby(new_lobby: Lobby):
@@ -18,7 +12,11 @@ func set_lobby(new_lobby: Lobby):
 
 
 func async_login(social: bool):
-	Global.player_identity.try_connect_account("androidSocial" if social else "androidWeb3")
+	#TODO: Use Global.is_android() and connect directly with the selected provider
+	if OS.get_name() == "Android":
+		Global.player_identity.try_connect_account("androidSocial" if social else "androidWeb3")
+	else:
+		Global.player_identity.try_connect_account("")
 	lobby.container_sign_in_step1.hide()
 	lobby.container_sign_in_step2.show()
 	lobby.waiting_for_new_wallet = true

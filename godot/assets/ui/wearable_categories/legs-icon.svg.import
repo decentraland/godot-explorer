@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://kxlueau7wo2u"
-path="res://.godot/imported/apple.svg-641aec9d79b14fbb47eb0d04902e71d2.ctex"
+uid="uid://fn7dyed7qhv5"
+path="res://.godot/imported/legs-icon.svg-d1fdb97f15a1075360fa90508802b3fe.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://src/ui/components/auth/images/apple.svg"
-dest_files=["res://.godot/imported/apple.svg-641aec9d79b14fbb47eb0d04902e71d2.ctex"]
+source_file="res://assets/ui/wearable_categories/legs-icon.svg"
+dest_files=["res://.godot/imported/legs-icon.svg-d1fdb97f15a1075360fa90508802b3fe.ctex"]
 
 [params]
 
@@ -32,6 +32,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=2.0
+svg/scale=5.0
 editor/scale_with_editor_scale=false
 editor/convert_colors_with_editor_theme=false

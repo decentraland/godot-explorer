@@ -7,6 +7,9 @@ signal clear_filter
 enum WearableCategoryEnum {
 	ALL,
 	BODY,
+	HEAD,
+	TORSO,
+	LEGS,
 	HAIR,
 	EYEBROWS,
 	EYES,
@@ -23,7 +26,8 @@ enum WearableCategoryEnum {
 	TIARA,
 	TOP_HEAD,
 	HELMET,
-	SKIN
+	SKIN,
+	BODY_SHAPE
 }
 
 @export var filter_category: WearableCategoryEnum:
@@ -72,7 +76,13 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 		WearableCategoryEnum.ALL:
 			result = Wearables.Categories.ALL
 		WearableCategoryEnum.BODY:
-			result = Wearables.Categories.BODY_SHAPE
+			result = Wearables.Categories.BODY
+		WearableCategoryEnum.HEAD:
+			result = Wearables.Categories.HEAD
+		WearableCategoryEnum.TORSO:
+			result = Wearables.Categories.TORSO
+		WearableCategoryEnum.LEGS:
+			result = Wearables.Categories.LEGS
 		WearableCategoryEnum.HAIR:
 			result = Wearables.Categories.HAIR
 		WearableCategoryEnum.EYEBROWS:
@@ -107,6 +117,8 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 			result = Wearables.Categories.HELMET
 		WearableCategoryEnum.SKIN:
 			result = Wearables.Categories.SKIN
+		WearableCategoryEnum.BODY_SHAPE:
+			result = Wearables.Categories.BODY_SHAPE
 
 	return result
 
@@ -115,9 +127,15 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 	var text := "Unknown"
 	match category_enum:
 		WearableCategoryEnum.ALL:
-			text = "All Wearables"
+			text = "All"
 		WearableCategoryEnum.BODY:
-			text = "Body Shape"
+			text = "Body"
+		WearableCategoryEnum.HEAD:
+			text = "Head"
+		WearableCategoryEnum.TORSO:
+			text = "Torso"
+		WearableCategoryEnum.LEGS:
+			text = "Legs"
 		WearableCategoryEnum.HAIR:
 			text = "Hair"
 		WearableCategoryEnum.EYEBROWS:
@@ -131,7 +149,7 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 		WearableCategoryEnum.UPPER_BODY:
 			text = "Upper Body"
 		WearableCategoryEnum.HANDWEAR:
-			text = "Gloves"
+			text = "Hands"
 		WearableCategoryEnum.LOWER_BODY:
 			text = "Lower Body"
 		WearableCategoryEnum.FEET:
@@ -152,6 +170,8 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 			text = "Helmets"
 		WearableCategoryEnum.SKIN:
 			text = "Skin"
+		WearableCategoryEnum.BODY_SHAPE:
+			text = "Body Shape"
 	return text
 
 

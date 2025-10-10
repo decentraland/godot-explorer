@@ -22,7 +22,7 @@ var mutable_profile: DclUserProfile
 var current_profile: DclUserProfile
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
-var main_category_selected: String = "body_shape"
+var main_category_selected: String = "body"
 var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
 
@@ -165,7 +165,9 @@ func _update_visible_categories():
 		var filter_categories: Array = Wearables.Categories.MAIN_CATEGORIES.get(
 			main_category_selected
 		)
-		var category_is_visible: bool = filter_categories.has(category)
+		var category_is_visible: bool = (
+			filter_categories != null and filter_categories.has(category)
+		)
 		wearable_filter_button.visible = category_is_visible
 		if category_is_visible:
 			showed_subcategories += 1
