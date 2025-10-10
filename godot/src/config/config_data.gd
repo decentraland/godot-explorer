@@ -13,7 +13,6 @@ enum ConfigParams {
 	WALK_VELOCITY,
 	RUN_VELOCITY,
 	PROCESS_TICK_QUOTA_MS,
-	SCENE_RADIUS,
 	SHOW_FPS,
 	LIMIT_FPS,
 	SKY_BOX,
@@ -23,7 +22,6 @@ enum ConfigParams {
 	SHADOW_QUALITY,
 	ANTI_ALIASING,
 	GRAPHIC_PROFILE,
-	LOADING_SCENES_ARROUND,
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
 }
@@ -80,20 +78,10 @@ var process_tick_quota_ms: int = 10:
 		process_tick_quota_ms = value
 		param_changed.emit(ConfigParams.PROCESS_TICK_QUOTA_MS)
 
-var scene_radius: int = 2:
-	set(value):
-		scene_radius = value
-		param_changed.emit(ConfigParams.SCENE_RADIUS)
-
 var show_fps: bool = true:
 	set(value):
 		show_fps = value
 		param_changed.emit(ConfigParams.SHOW_FPS)
-
-var loading_scene_arround_only_when_you_pass: bool = true:
-	set(value):
-		loading_scene_arround_only_when_you_pass = value
-		param_changed.emit(ConfigParams.LOADING_SCENES_ARROUND)
 
 var dynamic_skybox: bool = true:
 	set(value):
@@ -227,7 +215,6 @@ func load_from_default():
 	self.run_velocity = 6.0
 
 	self.process_tick_quota_ms = 10
-	self.scene_radius = 2
 	self.limit_fps = 0
 
 	self.skybox = 0  # basic
@@ -240,7 +227,6 @@ func load_from_default():
 	self.max_cache_size = 1
 
 	self.show_fps = true
-	self.loading_scene_arround_only_when_you_pass = true
 
 	self.dynamic_skybox = true
 	self.skybox_time = 43200
@@ -272,13 +258,6 @@ func load_from_settings_file():
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
 
-	# TODO: Change the way of loading the scenes in XR (https://github.com/decentraland/godot-explorer/issues/274)
-	if Global.is_xr():
-		self.scene_radius = 1
-	else:
-		self.scene_radius = settings_file.get_value(
-			"config", "scene_radius", data_default.scene_radius
-		)
 	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(
@@ -298,11 +277,6 @@ func load_from_settings_file():
 		"config", "max_cache_size", data_default.max_cache_size
 	)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
-	self.loading_scene_arround_only_when_you_pass = settings_file.get_value(
-		"config",
-		"loading_scene_arround_only_when_you_pass",
-		data_default.loading_scene_arround_only_when_you_pass
-	)
 
 	self.dynamic_skybox = settings_file.get_value(
 		"config", "dynamic_skybox", data_default.dynamic_skybox
@@ -376,7 +350,6 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "walk_velocity", self.walk_velocity)
 	new_settings_file.set_value("config", "run_velocity", self.run_velocity)
 	new_settings_file.set_value("config", "process_tick_quota_ms", self.process_tick_quota_ms)
-	new_settings_file.set_value("config", "scene_radius", self.scene_radius)
 	new_settings_file.set_value("config", "limit_fps", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)
 	new_settings_file.set_value("config", "shadow_quality", self.shadow_quality)
@@ -385,11 +358,6 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
-	new_settings_file.set_value(
-		"config",
-		"loading_scene_arround_only_when_you_pass",
-		self.loading_scene_arround_only_when_you_pass
-	)
 	new_settings_file.set_value("config", "dynamic_skybox", self.dynamic_skybox)
 	new_settings_file.set_value("config", "skybox_time", self.skybox_time)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)

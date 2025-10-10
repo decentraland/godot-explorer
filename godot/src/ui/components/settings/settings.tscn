@@ -182,59 +182,6 @@ theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="VBoxContainer_SceneRadius" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 10
-alignment = 1
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius"]
-layout_mode = 2
-
-[node name="Label_SceneRadius" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer2"]
-layout_mode = 2
-theme = SubResource("Theme_eontw")
-text = "Scene loading radius"
-
-[node name="Label_SceneRadius2" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer2"]
-self_modulate = Color(1, 1, 1, 0.784314)
-layout_mode = 2
-theme = SubResource("Theme_eontw")
-theme_override_font_sizes/font_size = 12
-text = "(lower value might improve performance)"
-vertical_alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius"]
-layout_mode = 2
-mouse_filter = 2
-
-[node name="HSlider_SceneRadius" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 30)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 1
-mouse_filter = 1
-max_value = 4.0
-value = 1.0
-
-[node name="Label_SceneRadiusValue" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 0)
-layout_mode = 2
-text = "1"
-horizontal_alignment = 1
-
-[node name="CheckBox_LoadingScenes" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Loading scenes arround you only when you pass from one scene to another"
-
-[node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
-layout_mode = 2
-
 [node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 layout_mode = 2
 theme_override_constants/separation = 20
@@ -883,8 +830,6 @@ focus_mode = 1
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
 [connection signal="toggled" from="ColorRect_Navbar/MarginContainer/HBoxContainer/HBoxContainer2/Button_ResetAll" to="." method="_on_monitoring_button_toggled"]
 [connection signal="visibility_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
-[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_value_changed"]
-[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_LoadingScenes" to="." method="_on_check_box_loading_scenes_toggled"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize/RadioSelector_MaxCacheSize" to="." method="_on_radio_selector_max_cache_size_select_item"]
 [connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/CheckBox_DynamicSkybox" to="." method="_on_check_box_dynamic_skybox_toggled"]
