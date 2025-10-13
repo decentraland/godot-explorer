@@ -11,7 +11,7 @@ var loading = false
 var discover_carrousel_item_loading: Control = null
 
 
-func on_request(offset: int, limit: int) -> void:
+func on_request(_offset: int, limit: int) -> void:
 	if no_more_elements and not new_search:
 		return  # we reach the capacity...
 
@@ -108,6 +108,7 @@ func _sort_events_by_priority(events_array: Array) -> void:
 	events_array.sort_custom(_compare_events_priority)
 
 
+# gdlint:disable=max-returns
 func _compare_events_priority(a: Dictionary, b: Dictionary) -> bool:
 	var a_live = a.get("live", false)
 	var b_live = b.get("live", false)
@@ -156,3 +157,4 @@ func _compare_events_priority(a: Dictionary, b: Dictionary) -> bool:
 		return false
 
 	return false
+# gdlint:enable=too-many-returns

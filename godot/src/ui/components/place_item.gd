@@ -413,8 +413,7 @@ func _format_timestamp(timestamp: int) -> String:
 	if hours_diff < 48:
 		if hours_diff > 2:
 			return "IN " + str(int(hours_diff)) + " HOURS"
-		else:
-			return "IN " + str(int(hours_diff)) + " HOUR"
+		return "IN " + str(int(hours_diff)) + " HOUR"
 
 	# Si faltan 7 días o menos: IN X DAYS
 	if days_diff <= 7:
