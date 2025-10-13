@@ -67,7 +67,7 @@ func show_panel(child_node: Control, subpanel: Control = null):
 func show_restore_screen():
 	current_screen_name = "COMEBACK"
 	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush()
+	Global.metrics.flush.call_deferred()
 	restore_name_head.show()
 	restore_name_footer.show()
 	label_name.show()
@@ -79,7 +79,7 @@ func show_restore_screen():
 func show_avatar_naming_screen():
 	current_screen_name = "AVATAR_NAMING"
 	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush()
+	Global.metrics.flush.call_deferred()
 	restore_name_head.hide()
 	restore_name_footer.hide()
 	label_name.hide()
@@ -91,14 +91,14 @@ func show_avatar_naming_screen():
 func show_loading_screen():
 	current_screen_name = "LOBBY_LOADING"
 	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush()
+	Global.metrics.flush.call_deferred()
 	show_panel(control_loading)
 
 
 func show_account_home_screen():
 	current_screen_name = "ACCOUNT_HOME"
 	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush()
+	Global.metrics.flush.call_deferred()
 	show_panel(control_start)
 
 
@@ -114,7 +114,7 @@ func get_auth_home_screen_name():
 func show_auth_home_screen():
 	current_screen_name = get_auth_home_screen_name()
 	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush()
+	Global.metrics.flush.call_deferred()
 	container_sign_in_step1.show()
 	container_sign_in_step2.hide()
 	show_panel(control_signin)
@@ -123,7 +123,7 @@ func show_auth_home_screen():
 func show_auth_browser_open_screen():
 	current_screen_name = "AUTH_BROWSER_OPEN"
 	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush()
+	Global.metrics.flush.call_deferred()
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
 	show_panel(control_signin)
@@ -132,7 +132,7 @@ func show_auth_browser_open_screen():
 func show_avatar_create_screen():
 	current_screen_name = "AVATAR_CREATE"
 	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush()
+	Global.metrics.flush.call_deferred()
 	show_panel(control_backpack)
 
 
