@@ -90,8 +90,6 @@ func show_avatar_naming_screen():
 
 func show_loading_screen():
 	current_screen_name = "LOBBY_LOADING"
-	Global.metrics.track_screen_viewed(current_screen_name)
-	Global.metrics.flush.call_deferred()
 	show_panel(control_loading)
 
 
@@ -140,6 +138,10 @@ func async_close_sign_in(generate_snapshots: bool = true):
 	if generate_snapshots:
 		var avatar := current_profile.get_avatar()
 		await backpack.async_prepare_snapshots(avatar, current_profile)
+
+	Global.metrics.update_identity(
+		Global.player_identity.get_address_str(), Global.player_identity.is_guest
+	)
 
 	if Global.is_xr():
 		change_scene.emit("res://src/ui/components/menu/menu.tscn")
@@ -216,9 +218,11 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		loading_first_profile = false
 		if profile_has_name():
 			label_avatar_name.set_text(new_profile.get_name())
-
 			show_restore_screen()
 			_show_avatar_preview()
+			Global.metrics.update_identity(
+				Global.player_identity.get_address_str(), Global.player_identity.is_guest
+			)
 			if _skip_lobby:
 				go_to_explorer.call_deferred()
 		else:
@@ -247,6 +251,7 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 
 func _on_button_different_account_pressed():
+	Global.metrics.update_identity("unauthenticated", false)
 	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
 	Global.get_config().session_account = {}
 

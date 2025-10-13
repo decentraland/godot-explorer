@@ -11,6 +11,7 @@ signal request_debug_panel(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
 #signals from advanced settings
 
+var is_in_game: bool = false  # when it is playing in the 3D Game or not
 var buttons_quantity: int = 0
 var pressed_index: int = 0
 
@@ -47,6 +48,7 @@ var fade_out_tween: Tween = null
 
 
 func _ready():
+	is_in_game = self != get_tree().current_scene
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
 
@@ -58,9 +60,11 @@ func _ready():
 	)
 
 	self.modulate = Color(1, 1, 1, 1)
-	current_screen_name = (
-		"DISCOVER_PORTRAIT" if Global.is_orientation_portrait() else "DISCOVER_LANDSCAPE"
-	)
+	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
+	if !is_in_game:
+		Global.metrics.track_screen_viewed(current_screen_name)
+		Global.metrics.flush()
+
 	button_discover.set_pressed(true)
 	portrait_button_discover.set_pressed(true)
 	selected_node = control_discover
@@ -180,39 +184,31 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 
 func select_settings_screen(play_sfx: bool = true):
-	current_screen_name = (
-		"SETTINGS_PORTRAIT" if Global.is_orientation_portrait() else "SETTINGS_LANDSCAPE"
-	)
+	current_screen_name = ("SETTINGS" if Global.is_orientation_portrait() else "SETTINGS_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name)
 	select_node(control_settings, play_sfx)
 
 
 func select_map_screen(play_sfx: bool = true):
-	current_screen_name = "MAP_PORTRAIT" if Global.is_orientation_portrait() else "MAP_LANDSCAPE"
+	current_screen_name = "MAP" if Global.is_orientation_portrait() else "MAP_IN_GAME"
 	Global.metrics.track_screen_viewed(current_screen_name)
 	select_node(control_map_satellite, play_sfx)
 
 
 func select_discover_screen(play_sfx: bool = true):
-	current_screen_name = (
-		"DISCOVER_PORTRAIT" if Global.is_orientation_portrait() else "DISCOVER_LANDSCAPE"
-	)
+	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name)
 	select_node(control_discover, play_sfx)
 
 
 func select_backpack_screen(play_sfx: bool = true):
-	current_screen_name = (
-		"BACKPACK_PORTRAIT" if Global.is_orientation_portrait() else "BACKPACK_LANDSCAPE"
-	)
+	current_screen_name = ("BACKPACK" if Global.is_orientation_portrait() else "BACKPACK_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name)
 	select_node(control_backpack, play_sfx)
 
 
 func select_profile_screen(play_sfx: bool = true):
-	current_screen_name = (
-		"PROFILE_PORTRAIT" if Global.is_orientation_portrait() else "PROFILE_LANDSCAPE"
-	)
+	current_screen_name = ("PROFILE" if Global.is_orientation_portrait() else "PROFILE_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name)
 	select_node(control_profile_settings, play_sfx)
 
