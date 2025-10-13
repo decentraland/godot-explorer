@@ -15,7 +15,7 @@ var buttons_quantity: int = 0
 var pressed_index: int = 0
 
 var selected_node: Control
-
+var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
@@ -58,6 +58,9 @@ func _ready():
 	)
 
 	self.modulate = Color(1, 1, 1, 1)
+	current_screen_name = (
+		"DISCOVER_PORTRAIT" if Global.is_orientation_portrait() else "DISCOVER_LANDSCAPE"
+	)
 	button_discover.set_pressed(true)
 	portrait_button_discover.set_pressed(true)
 	selected_node = control_discover
@@ -124,31 +127,31 @@ func show_last():
 
 
 func show_discover():
-	select_node(control_discover, false)
+	select_discover_screen(false)
 	button_discover.set_pressed(true)
 	_open()
 
 
 func show_map():
-	select_node(control_map_satellite, false)
+	select_map_screen(false)
 	button_map.set_pressed(true)
 	_open()
 
 
 func show_backpack():
-	select_node(control_backpack, false)
+	select_backpack_screen(false)
 	button_backpack.set_pressed(true)
 	_open()
 
 
 func show_settings():
-	select_node(control_settings, false)
+	select_settings_screen(false)
 	button_settings.set_pressed(true)
 	_open()
 
 
 func show_own_profile():
-	select_node(control_profile_settings, false)
+	select_profile_screen(false)
 	button_settings.set_pressed(false)
 	button_backpack.set_pressed(false)
 	button_map.set_pressed(false)
@@ -176,6 +179,44 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 	emit_signal("toggle_ram", visibility)
 
 
+func select_settings_screen(play_sfx: bool = true):
+	current_screen_name = (
+		"SETTINGS_PORTRAIT" if Global.is_orientation_portrait() else "SETTINGS_LANDSCAPE"
+	)
+	Global.metrics.track_screen_viewed(current_screen_name)
+	select_node(control_settings, play_sfx)
+
+
+func select_map_screen(play_sfx: bool = true):
+	current_screen_name = "MAP_PORTRAIT" if Global.is_orientation_portrait() else "MAP_LANDSCAPE"
+	Global.metrics.track_screen_viewed(current_screen_name)
+	select_node(control_map_satellite, play_sfx)
+
+
+func select_discover_screen(play_sfx: bool = true):
+	current_screen_name = (
+		"DISCOVER_PORTRAIT" if Global.is_orientation_portrait() else "DISCOVER_LANDSCAPE"
+	)
+	Global.metrics.track_screen_viewed(current_screen_name)
+	select_node(control_discover, play_sfx)
+
+
+func select_backpack_screen(play_sfx: bool = true):
+	current_screen_name = (
+		"BACKPACK_PORTRAIT" if Global.is_orientation_portrait() else "BACKPACK_LANDSCAPE"
+	)
+	Global.metrics.track_screen_viewed(current_screen_name)
+	select_node(control_backpack, play_sfx)
+
+
+func select_profile_screen(play_sfx: bool = true):
+	current_screen_name = (
+		"PROFILE_PORTRAIT" if Global.is_orientation_portrait() else "PROFILE_LANDSCAPE"
+	)
+	Global.metrics.track_screen_viewed(current_screen_name)
+	select_node(control_profile_settings, play_sfx)
+
+
 func select_node(node: Node, play_sfx: bool = true):
 	if selected_node != node:
 		fade_out(selected_node)
@@ -186,23 +227,23 @@ func select_node(node: Node, play_sfx: bool = true):
 
 
 func _on_button_settings_pressed():
-	select_node(control_settings)
+	select_settings_screen()
 
 
 func _on_button_map_pressed():
-	select_node(control_map_satellite)
+	select_map_screen()
 
 
 func _on_button_discover_pressed():
-	select_node(control_discover)
+	select_discover_screen()
 
 
 func _on_button_backpack_pressed():
-	select_node(control_backpack)
+	select_backpack_screen()
 
 
 func _on_menu_profile_button_open_menu_profile():
-	select_node(control_profile_settings)
+	select_profile_screen()
 
 
 func fade_in(node: Control):

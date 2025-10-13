@@ -398,7 +398,7 @@ theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 24
 disabled = true
-text = "LET'S GO"
+text = "NEXT"
 icon_alignment = 2
 
 [node name="RestoreNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]

@@ -11,6 +11,7 @@ var guest_account_created: bool = false
 var waiting_for_new_wallet: bool = false
 
 var loading_first_profile: bool = false
+var current_screen_name: String = ""
 
 var _skip_lobby: bool = false
 var _last_panel: Control = null
@@ -63,6 +64,78 @@ func show_panel(child_node: Control, subpanel: Control = null):
 		_last_panel = subpanel
 
 
+func show_restore_screen():
+	current_screen_name = "COMEBACK"
+	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.flush()
+	restore_name_head.show()
+	restore_name_footer.show()
+	label_name.show()
+	choose_name_head.hide()
+	choose_name_footer.hide()
+	show_panel(control_restore_and_choose_name)
+
+
+func show_avatar_naming_screen():
+	current_screen_name = "AVATAR_NAMING"
+	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.flush()
+	restore_name_head.hide()
+	restore_name_footer.hide()
+	label_name.hide()
+	choose_name_head.show()
+	choose_name_footer.show()
+	show_panel(control_restore_and_choose_name)
+
+
+func show_loading_screen():
+	current_screen_name = "LOBBY_LOADING"
+	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.flush()
+	show_panel(control_loading)
+
+
+func show_account_home_screen():
+	current_screen_name = "ACCOUNT_HOME"
+	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.flush()
+	show_panel(control_start)
+
+
+func get_auth_home_screen_name():
+	if Global.is_ios():
+		return "AUTH_HOME_IOS"
+	if Global.is_android():
+		return "AUTH_HOME_ANDROID"
+
+	return "AUTH_HOME_DESKTOP"
+
+
+func show_auth_home_screen():
+	current_screen_name = get_auth_home_screen_name()
+	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.flush()
+	container_sign_in_step1.show()
+	container_sign_in_step2.hide()
+	show_panel(control_signin)
+
+
+func show_auth_browser_open_screen():
+	current_screen_name = "AUTH_BROWSER_OPEN"
+	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.flush()
+	container_sign_in_step1.hide()
+	container_sign_in_step2.show()
+	show_panel(control_signin)
+
+
+func show_avatar_create_screen():
+	current_screen_name = "AVATAR_CREATE"
+	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.flush()
+	show_panel(control_backpack)
+
+
 func async_close_sign_in(generate_snapshots: bool = true):
 	if generate_snapshots:
 		var avatar := current_profile.get_avatar()
@@ -87,7 +160,7 @@ func _ready():
 	login.set_lobby(self)
 	login.show()
 
-	show_panel(control_loading)
+	show_loading_screen()
 
 	UiSounds.install_audio_recusirve(self)
 	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
@@ -112,13 +185,13 @@ func _ready():
 
 	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
-		show_panel(control_loading)
+		show_loading_screen()
 
 	elif _skip_lobby:
-		show_panel(control_loading)
+		show_loading_screen()
 		go_to_explorer.call_deferred()
 	else:
-		show_panel(control_start)
+		show_account_home_screen()
 
 
 func go_to_explorer():
@@ -144,17 +217,12 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		if profile_has_name():
 			label_avatar_name.set_text(new_profile.get_name())
 
-			restore_name_head.show()
-			restore_name_footer.show()
-			label_name.show()
-			choose_name_head.hide()
-			choose_name_footer.hide()
-			show_panel(control_restore_and_choose_name)
+			show_restore_screen()
 			_show_avatar_preview()
 			if _skip_lobby:
 				go_to_explorer.call_deferred()
 		else:
-			show_panel(control_start)
+			show_account_home_screen()
 
 	if _skip_lobby:
 		go_to_explorer()
@@ -162,10 +230,6 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
 		await async_close_sign_in()
-
-
-func show_connect():
-	show_panel(control_signin)
 
 
 func _on_need_open_url(url: String, _description: String, use_webview: bool) -> void:
@@ -183,6 +247,7 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 
 func _on_button_different_account_pressed():
+	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
 	Global.get_config().session_account = {}
 
 	# Clear the current social blacklist when switching accounts
@@ -190,30 +255,32 @@ func _on_button_different_account_pressed():
 	Global.social_blacklist.clear_muted()
 
 	Global.get_config().save_to_settings_file()
-	show_panel(control_start)
-	#avatar_preview.hide()
+	show_account_home_screen()
 
 
 func _on_button_continue_pressed():
+	Global.metrics.track_click_button("next", current_screen_name, "")
 	_async_on_profile_changed(backpack.mutable_profile)
-	show_panel(control_restore_and_choose_name)
+	show_avatar_naming_screen()
 
 
 func _on_button_start_pressed():
+	Global.metrics.track_click_button("create_account", current_screen_name, "")
 	button_enter_as_guest.show()
 	sign_in_title.text = "Create Your Account"
 	create_guest_account_if_needed()
 	is_creating_account = true
-	show_panel(control_backpack)
+	show_avatar_create_screen()
 
 
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
+	Global.metrics.track_click_button("next", current_screen_name, "")
 	if lineedit_choose_name.text.is_empty():
 		return
 
 	avatar_preview.hide()
-	show_panel(control_loading)
+	show_loading_screen()
 	current_profile.set_name(lineedit_choose_name.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
@@ -224,8 +291,7 @@ func _on_button_next_pressed():
 
 	await ProfileService.async_deploy_profile(current_profile, true)
 
-	#await async_close_sign_in(false)
-	show_panel(control_signin)
+	show_auth_home_screen()
 
 
 func _on_button_random_name_pressed():
@@ -234,16 +300,16 @@ func _on_button_random_name_pressed():
 
 
 func _on_button_go_to_sign_in_pressed():
-	show_connect()
+	Global.metrics.track_click_button("sign_in", current_screen_name, "")
 	button_enter_as_guest.hide()
 	sign_in_title.text = "Sign In to Decentraland"
+	show_auth_home_screen()
 
 
 func _on_button_cancel_pressed():
+	Global.metrics.track_click_button("cancel", current_screen_name, "")
 	Global.player_identity.abort_try_connect_account()
-	show_panel(control_signin)
-	container_sign_in_step1.show()
-	container_sign_in_step2.hide()
+	show_auth_home_screen()
 
 
 func create_guest_account_if_needed():
@@ -265,6 +331,7 @@ func profile_has_name():
 
 # gdlint:ignore = async-function-name
 func _on_button_enter_as_guest_pressed():
+	Global.metrics.track_click_button("enter_as_guest", current_screen_name, "")
 	create_guest_account_if_needed()
 	await async_close_sign_in()
 
@@ -276,6 +343,7 @@ func _show_avatar_preview():
 
 # gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():
+	Global.metrics.track_click_button("lets_go", current_screen_name, "")
 	await async_close_sign_in()
 
 
