@@ -16,6 +16,7 @@ pub mod content;
 pub mod dcl;
 pub mod godot_classes;
 pub mod http_request;
+pub mod notifications;
 pub mod profile;
 pub mod realm;
 pub mod scene_runner;
