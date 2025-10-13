@@ -7,6 +7,7 @@ signal close
 
 @export var texture: Texture2D = texture_placeholder
 @export var title: String = "Scene Title"
+@export var event_name: String = "Event Name"
 @export var description: String = "Scene Description"
 @export var views: int = 0
 @export var onlines: int = 0
@@ -21,6 +22,8 @@ var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
 var _node_cache: Dictionary = {}
 
+@onready var border: PanelContainer = %Border
+
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
@@ -33,6 +36,7 @@ func _ready():
 		set_views(views)
 		set_online(onlines)
 		set_title(title)
+		set_event_name(event_name)
 		set_description(description)
 		set_likes_percent(likes_percent)
 		set_location(location)
@@ -76,6 +80,26 @@ func _get_container_creator() -> Control:
 
 func _get_label_title() -> Label:
 	return _get_node_safe("Label_Title")
+
+
+func _get_label_event_name() -> Label:
+	return _get_node_safe("Label_EventName")
+
+
+func _get_trending_pill() -> Control:
+	return _get_node_safe("TrendingPill")
+
+
+func _get_label_time_pill() -> Control:
+	return _get_node_safe("Label_TimePill")
+
+
+func _get_label_live_pill() -> Control:
+	return _get_node_safe("Label_LivePill")
+
+
+func _get_label_attendees_number() -> Label:
+	return _get_node_safe("Label_AttendeesNumber")
 
 
 func _get_label_description() -> Label:
@@ -191,11 +215,22 @@ func set_data(item_data):
 
 	set_title(item_data.get("title", "Unknown place"))
 	set_description(_get_or_empty_string(item_data, "description"))
-
+	set_attendees_number(item_data.get("total_attendees", 0))
+	set_event_name(item_data.get("name", "Event Name"))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
+	set_trending(item_data.get("trending", false))
+
+	# Manejar start_at para eventos (timestamp Unix)
+	var next_start_at = item_data.get("next_start_at", "")
+	var live = item_data.get("live", false)
+	if next_start_at != "":
+		# Convertir ISO string a timestamp Unix
+		var timestamp = _parse_iso_timestamp(next_start_at)
+		if timestamp > 0:
+			set_time(timestamp, live)
 
 	if _get_texture_image():
 		var image_url = item_data.get("image", "")
@@ -213,7 +248,8 @@ func set_data(item_data):
 	var world = item_data.get("world", false)
 	if world:
 		var world_name = item_data.get("world_name")
-		set_realm(world_name, world_name)
+		if world_name:
+			set_realm(world_name, world_name)
 	else:
 		set_realm(Realm.MAIN_REALM, "Genesis City")
 
@@ -275,3 +311,118 @@ func _get_or_empty_string(dict: Dictionary, key: String) -> String:
 	if value is String:
 		return value
 	return ""
+
+
+func set_event_name(_event_name: String) -> void:
+	var label = _get_label_event_name()
+	if label:
+		label.text = _event_name
+
+
+func set_trending(_trending: bool) -> void:
+	var trending_pill = _get_trending_pill()
+	if trending_pill:
+		trending_pill.set_visible(_trending)
+
+
+func set_time(_start_at: int, live: bool) -> void:
+	var time_pill = _get_label_time_pill()
+	var live_pill = _get_label_live_pill()
+	if time_pill and live_pill:
+		if live:
+			live_pill.text = "LIVE"
+			border.self_modulate = "#FFFFFF"
+			live_pill.get_parent().show()
+			time_pill.get_parent().hide()
+			return
+		var time_text = _format_timestamp(_start_at)
+		time_pill.text = time_text
+		live_pill.text = time_text
+
+
+func set_attendees_number(_attendees: int) -> void:
+	var label = _get_label_attendees_number()
+	if label:
+		label.text = str(_attendees)
+
+
+func _parse_iso_timestamp(iso_string: String) -> int:
+	# Convertir ISO string (ej: "2025-10-06T12:00:00.000Z") a timestamp Unix
+	if iso_string.is_empty():
+		return 0
+
+	# Parsear la fecha ISO
+	var date_parts = iso_string.split("T")
+	if date_parts.size() != 2:
+		return 0
+
+	var date_part = date_parts[0]  # "2025-10-06"
+	var time_part = date_parts[1].replace("Z", "").split(".")[0]  # "12:00:00"
+
+	var date_components = date_part.split("-")
+	var time_components = time_part.split(":")
+
+	if date_components.size() != 3 or time_components.size() != 3:
+		return 0
+
+	var year = int(date_components[0])
+	var month = int(date_components[1])
+	var day = int(date_components[2])
+	var hour = int(time_components[0])
+	var minute = int(time_components[1])
+	var second = int(time_components[2])
+
+	# Crear diccionario de fecha y convertir a timestamp
+	var date_dict = {
+		"year": year, "month": month, "day": day, "hour": hour, "minute": minute, "second": second
+	}
+
+	return Time.get_unix_time_from_datetime_dict(date_dict)
+
+
+func _format_timestamp(timestamp: int) -> String:
+	var now = Time.get_unix_time_from_system()
+	var time_diff = timestamp - now
+
+	# Si el evento ya pasó, mostrar fecha
+	if time_diff <= 0:
+		var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
+		var month_names = [
+			"", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+		]
+		return month_names[time_dict.month] + " " + str(time_dict.day)
+
+	# Calcular diferencias
+	var minutes_diff = time_diff / 60
+	var hours_diff = time_diff / 3600
+	var days_diff = time_diff / 86400
+
+	# Si faltan menos de 5 minutos: IN X MINS
+
+	if minutes_diff < 5:
+		_get_label_live_pill().get_parent().show()
+		_get_label_time_pill().get_parent().hide()
+		border.self_modulate = "#FFFFFF"
+		return "IN " + str(int(minutes_diff)) + " MINS"
+
+	# Si falta menos de 1 hora: IN XX MINUTES
+	if hours_diff < 1:
+		return "IN " + str(int(minutes_diff)) + " MINS"
+
+	# Si faltan menos de 48 horas: IN XX HOURS
+	if hours_diff < 48:
+		if hours_diff > 2:
+			return "IN " + str(int(hours_diff)) + " HOURS"
+		else:
+			return "IN " + str(int(hours_diff)) + " HOUR"
+
+	# Si faltan 7 días o menos: IN X DAYS
+	if days_diff <= 7:
+		return "IN " + str(int(days_diff)) + " DAYS"
+
+	# Si faltan más de 7 días: Poner la fecha con formato SEPT 31
+	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
+	var month_names = [
+		"", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+	]
+	return month_names[time_dict.month] + " " + str(time_dict.day)

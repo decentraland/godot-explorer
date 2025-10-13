@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=28 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -15,6 +15,7 @@
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="9_pwm2g"]
 [ext_resource type="Texture2D" uid="uid://cj4xqne10w3ka" path="res://assets/ui/discover/genesis_banner.png" id="11_t2lm2"]
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
+[ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -419,6 +420,15 @@ generator = NodePath("CustomPlacesGenerator")
 title = "Featured"
 
 [node name="CustomPlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("7_ehm1e")]
+discover = NodePath("../../../../../../../..")
+
+[node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("EventsGenerator")
+title = "Events"
+
+[node name="EventsGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
 discover = NodePath("../../../../../../../..")
 
 [node name="PlacesMostActive" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
