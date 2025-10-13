@@ -162,7 +162,6 @@ func _update_visible_categories():
 	var first_wearable_filter_button: WearableFilterButton = null
 	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
 		var category = wearable_filter_button.get_category_name()
-		prints(category)
 		var filter_categories: Array = Wearables.Categories.MAIN_CATEGORIES.get(
 			main_category_selected
 		)
