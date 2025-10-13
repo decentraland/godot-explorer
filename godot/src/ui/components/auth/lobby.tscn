@@ -275,6 +275,7 @@ theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 36
 text = "Pick Your Name"
 label_settings = ExtResource("18_ypsmd")
+horizontal_alignment = 1
 
 [node name="HSeparator2" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
 layout_mode = 2
