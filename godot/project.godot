@@ -14,9 +14,10 @@ config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
 config/features=PackedStringArray("4.4")
-boot_splash/fullsize=false
-boot_splash/image="res://assets/ui/isologotipo.png"
+boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
+boot_splash/image="uid://de6dww6t0a7v"
 config/icon="res://decentraland_logo_squared.png"
+boot_splash/minimum_display_time=300
 
 [autoload]
 
@@ -24,6 +25,7 @@ UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 XRToolsUserSettings="*res://addons/godot-xr-tools/user_settings/user_settings.gd"
 XRToolsRumbleManager="*res://addons/godot-xr-tools/rumble/rumble_manager.gd"
+EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 
 [debug]
 
@@ -36,9 +38,13 @@ gdscript/warnings/redundant_await=false
 
 window/size/viewport_width=720
 window/size/viewport_height=720
-window/size/window_width_override=1280
-window/size/window_height_override=720
+window/size/window_width_override=720
+window/size/window_height_override=1280
 window/handheld/orientation=6
+
+[editor]
+
+run/main_run_args="--force-mobile --skip-lobby"
 
 [editor_plugins]
 
@@ -136,7 +142,6 @@ ia_action_6={
 ia_pointer={
 "deadzone": 0.5,
 "events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":0,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":false,"double_click":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":8,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
 ia_walk={
