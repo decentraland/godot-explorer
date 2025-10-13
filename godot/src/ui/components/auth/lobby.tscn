@@ -239,7 +239,6 @@ icon_alignment = 2
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -276,6 +275,7 @@ theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 36
 text = "Pick Your Name"
 label_settings = ExtResource("18_ypsmd")
+horizontal_alignment = 1
 
 [node name="HSeparator2" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
 layout_mode = 2
@@ -384,7 +384,6 @@ autowrap_mode = 2
 
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 
@@ -404,6 +403,7 @@ icon_alignment = 2
 
 [node name="RestoreNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -443,6 +443,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn"]
