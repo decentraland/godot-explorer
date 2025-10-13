@@ -12,6 +12,28 @@ signal notification_error(error_message: String)
 const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 
+## Supported notification types (whitelist)
+## Only these types will be shown to the user
+const SUPPORTED_NOTIFICATION_TYPES = [
+	"item_sold",  # Marketplace: Item sold
+	"bid_accepted",  # Marketplace: Bid accepted
+	"bid_received",  # Marketplace: Bid received
+	"royalties_earned",  # Marketplace: Royalties earned
+	"governance_announcement",  # DAO: Governance announcements
+	"governance_proposal_enacted",  # DAO: Proposal enacted
+	"governance_voting_ended",  # DAO: Voting ended
+	"governance_coauthor_requested",  # DAO: Co-author requested
+	"land",  # Land-related notifications
+	"worlds_access_restored",  # Worlds: Access restored
+	"worlds_access_restricted",  # Worlds: Access restricted
+	"worlds_missing_resources",  # Worlds: Missing resources
+	"worlds_permission_granted",  # Worlds: Permission granted
+	"worlds_permission_revoked",  # Worlds: Permission revoked
+	# Excluded: "reward" - rewards system not implemented
+	# Excluded: "events_*" - events system not implemented
+	# Excluded: "friends_*" - friends system not implemented
+]
+
 var _notifications: Array = []
 var _poll_timer: Timer = null
 var _is_polling: bool = false
@@ -44,6 +66,31 @@ func stop_polling() -> void:
 ## Get currently cached notifications
 func get_notifications() -> Array:
 	return _notifications.duplicate()
+
+
+## Filter notifications to only include supported types
+func _filter_notifications(notifications: Array) -> Array:
+	var filtered = []
+	var filtered_types = {}  # Track which types were filtered out
+
+	for notif in notifications:
+		if notif is Dictionary and "type" in notif:
+			var notif_type = notif["type"]
+			if notif_type in SUPPORTED_NOTIFICATION_TYPES:
+				filtered.append(notif)
+			else:
+				# Track unsupported types
+				if not filtered_types.has(notif_type):
+					filtered_types[notif_type] = 0
+				filtered_types[notif_type] += 1
+
+	# Log filtered types for debugging
+	if filtered_types.size() > 0:
+		print("NotificationsManager: Filtered out unsupported notification types:")
+		for notif_type in filtered_types.keys():
+			print("  - ", notif_type, " (", filtered_types[notif_type], " notifications)")
+
+	return filtered
 
 
 ## Fetch notifications from the API
@@ -125,10 +172,12 @@ func fetch_notifications(
 							var data = json.data
 							if data is Dictionary and "notifications" in data:
 								var notifications = data["notifications"]
-								_notifications = notifications
-								new_notifications.emit(notifications)
+								# Filter to only show supported notification types
+								var filtered_notifications = _filter_notifications(notifications)
+								_notifications = filtered_notifications
+								new_notifications.emit(filtered_notifications)
 								notifications_updated.emit()
-								promise.resolve_with_data(notifications)
+								promise.resolve_with_data(filtered_notifications)
 							else:
 								var error_msg = "Invalid response format"
 								notification_error.emit(error_msg)
