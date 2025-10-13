@@ -7,6 +7,7 @@ var lobby: Lobby = null
 @onready var button_social_large: Button = $Button_SocialLarge
 @onready var button_social: Button = $HBoxContainer_SocialButtons/Button_Social
 
+
 func _ready():
 	if OS.get_name() == "Android":
 		button_social.icon = GOOGLE
