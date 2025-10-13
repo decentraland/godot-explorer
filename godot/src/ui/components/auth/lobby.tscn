@@ -239,6 +239,7 @@ icon_alignment = 2
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -442,7 +443,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn"]
@@ -459,6 +459,7 @@ offset_right = 200.5
 offset_bottom = 155.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 0
 alignment = 1
 
 [node name="TextureRect" type="TextureRect" parent="Main/SignIn/VBoxContainer"]
@@ -492,7 +493,7 @@ autowrap_mode = 3
 [node name="HSeparator5" type="HSeparator" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 10
+theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Login" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1" instance=ExtResource("17_vcjym")]
@@ -502,7 +503,7 @@ layout_mode = 2
 [node name="HSeparator6" type="HSeparator" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 10
+theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_EnterAsGuest" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]

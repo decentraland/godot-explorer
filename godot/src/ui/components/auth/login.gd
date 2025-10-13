@@ -1,10 +1,21 @@
 extends Control
 
-var lobby: Lobby = null
+const GOOGLE = preload("res://src/ui/components/auth/images/google.svg")
+const APPLE = preload("res://src/ui/components/auth/images/apple.svg")
 
+var lobby: Lobby = null
+@onready var button_social_large: Button = $Button_SocialLarge
+@onready var button_social: Button = $HBoxContainer_SocialButtons/Button_Social
 
 func _ready():
-	pass
+	if OS.get_name() == "Android":
+		button_social.icon = GOOGLE
+		button_social_large.icon = GOOGLE
+		button_social_large.text = "GOOGLE"
+	else:
+		button_social.icon = APPLE
+		button_social_large.icon = APPLE
+		button_social_large.text = "APPLE"
 
 
 func set_lobby(new_lobby: Lobby):

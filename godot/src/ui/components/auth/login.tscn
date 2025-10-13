@@ -1,6 +1,6 @@
 [gd_scene load_steps=10 format=3 uid="uid://bi3eesytuc1tr"]
 
-[ext_resource type="Script" path="res://src/ui/components/auth/login.gd" id="1_f6pdb"]
+[ext_resource type="Script" uid="uid://cpe0atflphcxw" path="res://src/ui/components/auth/login.gd" id="1_f6pdb"]
 [ext_resource type="Texture2D" uid="uid://ie2f054vn7kc" path="res://src/ui/components/auth/images/magic.svg" id="2_y8nwo"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_55bff"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="3_kk1uc"]
@@ -11,9 +11,10 @@
 [ext_resource type="Texture2D" uid="uid://kxlueau7wo2u" path="res://src/ui/components/auth/images/apple.svg" id="9_tuhne"]
 
 [node name="Login" type="VBoxContainer"]
+custom_minimum_size = Vector2(425, 0)
 offset_right = 207.0
 offset_bottom = 116.0
-theme_override_constants/separation = 25
+theme_override_constants/separation = 30
 script = ExtResource("1_f6pdb")
 
 [node name="HBoxContainerMagicInfo" type="HBoxContainer" parent="."]
@@ -29,7 +30,7 @@ text = "Access secured by"
 layout_mode = 2
 texture = ExtResource("2_y8nwo")
 
-[node name="ButtonSocial" type="Button" parent="."]
+[node name="Button_SocialLarge" type="Button" parent="."]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -57,7 +58,7 @@ icon = ExtResource("5_mqpw2")
 
 [node name="HBoxContainer_SocialButtons" type="HBoxContainer" parent="."]
 layout_mode = 2
-theme_override_constants/separation = 25
+theme_override_constants/separation = 30
 
 [node name="Button_Discord" type="Button" parent="HBoxContainer_SocialButtons"]
 custom_minimum_size = Vector2(0, 60)
@@ -89,7 +90,7 @@ icon = ExtResource("8_8hgbb")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Apple" type="Button" parent="HBoxContainer_SocialButtons"]
+[node name="Button_Social" type="Button" parent="HBoxContainer_SocialButtons"]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -104,8 +105,8 @@ icon = ExtResource("9_tuhne")
 icon_alignment = 1
 expand_icon = true
 
-[connection signal="pressed" from="ButtonSocial" to="." method="_on_button_social_pressed"]
+[connection signal="pressed" from="Button_SocialLarge" to="." method="_on_button_social_pressed"]
 [connection signal="pressed" from="ButtonWalletConnect" to="." method="_on_button_wallet_connect_pressed"]
 [connection signal="pressed" from="HBoxContainer_SocialButtons/Button_Discord" to="." method="_on_button_social_pressed"]
 [connection signal="pressed" from="HBoxContainer_SocialButtons/Button_X" to="." method="_on_button_social_pressed"]
-[connection signal="pressed" from="HBoxContainer_SocialButtons/Button_Apple" to="." method="_on_button_social_pressed"]
+[connection signal="pressed" from="HBoxContainer_SocialButtons/Button_Social" to="." method="_on_button_social_pressed"]
