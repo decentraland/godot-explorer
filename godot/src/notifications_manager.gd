@@ -130,70 +130,36 @@ func fetch_notifications(
 
 	var url = BASE_URL + "/notifications" + query_string
 
-	# Get signed headers first
-	var headers_promise = Global.player_identity.async_get_identity_headers(url, "{}", "GET")  # Empty metadata for GET request
-
-	headers_promise.on_resolved.connect(
-		func():
-			if headers_promise.is_rejected():
-				var error = headers_promise.get_data()
-				if error is PromiseError:
-					promise.reject("Auth error: " + error.get_error())
-				else:
-					promise.reject("Auth error: " + str(error))
-				return
-
-			var headers: Dictionary = headers_promise.get_data()
-
-			# Make HTTP request with signed headers
-			var http_promise = Global.http_requester.request_json(
-				url, HTTPClient.METHOD_GET, "", headers  # Empty body for GET
-			)
-
-			http_promise.on_resolved.connect(
-				func():
-					if http_promise.is_rejected():
-						var error = http_promise.get_data()
-						var error_msg = (
-							"HTTP error: "
-							+ (error.get_error() if error is PromiseError else str(error))
-						)
-						notification_error.emit(error_msg)
-						promise.reject(error_msg)
-						return
-
-					var response = http_promise.get_data()
-
-					# Parse JSON response
-					if response is String:
-						var json = JSON.new()
-						var parse_result = json.parse(response)
-						if parse_result == OK:
-							var data = json.data
-							if data is Dictionary and "notifications" in data:
-								var notifications = data["notifications"]
-								# Filter to only show supported notification types
-								var filtered_notifications = _filter_notifications(notifications)
-								_notifications = filtered_notifications
-								new_notifications.emit(filtered_notifications)
-								notifications_updated.emit()
-								promise.resolve_with_data(filtered_notifications)
-							else:
-								var error_msg = "Invalid response format"
-								notification_error.emit(error_msg)
-								promise.reject(error_msg)
-						else:
-							var error_msg = "JSON parse error: " + json.get_error_message()
-							notification_error.emit(error_msg)
-							promise.reject(error_msg)
-					else:
-						var error_msg = "Unexpected response type"
-						notification_error.emit(error_msg)
-						promise.reject(error_msg)
-			)
-	)
+	# Execute async fetch in a coroutine
+	_async_fetch_notifications(promise, url)
 
 	return promise
+
+
+## Internal async helper for fetching notifications
+func _async_fetch_notifications(promise: Promise, url: String) -> void:
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "{}")
+
+	if response is PromiseError:
+		var error_msg = "Fetch error: " + response.get_error()
+		notification_error.emit(error_msg)
+		promise.reject(error_msg)
+		return
+
+	var data: Dictionary = response.get_string_response_as_json()
+
+	if not (data is Dictionary and "notifications" in data):
+		var error_msg = "Invalid response format"
+		notification_error.emit(error_msg)
+		promise.reject(error_msg)
+		return
+
+	var notifications = data["notifications"]
+	var filtered_notifications = _filter_notifications(notifications)
+	_notifications = filtered_notifications
+	new_notifications.emit(filtered_notifications)
+	notifications_updated.emit()
+	promise.resolve_with_data(filtered_notifications)
 
 
 ## Mark notifications as read
@@ -207,7 +173,6 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 		promise.reject("No notification IDs provided")
 		return promise
 
-	# Check if user is authenticated
 	if not Global.player_identity:
 		promise.reject("Player identity not available")
 		return promise
@@ -218,81 +183,44 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 		return promise
 
 	var url = BASE_URL + "/notifications/read"
-
-	# Build request body
 	var body = {"notificationIds": Array(notification_ids)}
 	var body_json = JSON.stringify(body)
 
-	# Get signed headers first
-	var headers_promise = Global.player_identity.async_get_identity_headers(url, "{}", "PUT")  # Empty metadata for PUT request
-
-	headers_promise.on_resolved.connect(
-		func():
-			if headers_promise.is_rejected():
-				var error = headers_promise.get_data()
-				if error is PromiseError:
-					promise.reject("Auth error: " + error.get_error())
-				else:
-					promise.reject("Auth error: " + str(error))
-				return
-
-			var headers: Dictionary = headers_promise.get_data()
-			headers["Content-Type"] = "application/json"
-
-			# Make HTTP request with signed headers
-			var http_promise = Global.http_requester.request_json(
-				url, HTTPClient.METHOD_PUT, body_json, headers
-			)
-
-			http_promise.on_resolved.connect(
-				func():
-					if http_promise.is_rejected():
-						var error = http_promise.get_data()
-						var error_msg = (
-							"HTTP error: "
-							+ (error.get_error() if error is PromiseError else str(error))
-						)
-						notification_error.emit(error_msg)
-						promise.reject(error_msg)
-						return
-
-					var response = http_promise.get_data()
-
-					# Parse JSON response
-					if response is String:
-						var json = JSON.new()
-						var parse_result = json.parse(response)
-						if parse_result == OK:
-							var data = json.data
-							if data is Dictionary and "updated" in data:
-								var updated_count = data["updated"]
-
-								# Update local cache
-								for notif in _notifications:
-									if notif["id"] in notification_ids:
-										notif["read"] = true
-
-								notifications_updated.emit()
-								promise.resolve_with_data(updated_count)
-							else:
-								var error_msg = "Invalid response format"
-								notification_error.emit(error_msg)
-								promise.reject(error_msg)
-						else:
-							var error_msg = "JSON parse error: " + json.get_error_message()
-							notification_error.emit(error_msg)
-							promise.reject(error_msg)
-					else:
-						var error_msg = "Unexpected response type"
-						notification_error.emit(error_msg)
-						promise.reject(error_msg)
-			)
-	)
+	_async_mark_as_read(promise, url, body_json, notification_ids)
 
 	return promise
 
 
+## Internal async helper for marking notifications as read
+func _async_mark_as_read(
+	promise: Promise, url: String, body_json: String, notification_ids: PackedStringArray
+) -> void:
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PUT, body_json)
+
+	if response is PromiseError:
+		var error_msg = "Mark as read error: " + response.get_error()
+		notification_error.emit(error_msg)
+		promise.reject(error_msg)
+		return
+
+	var data: Dictionary = response.get_string_response_as_json()
+
+	if not (data is Dictionary and "updated" in data):
+		var error_msg = "Invalid response format"
+		notification_error.emit(error_msg)
+		promise.reject(error_msg)
+		return
+
+	var updated_count = data["updated"]
+
+	for notif in _notifications:
+		if notif["id"] in notification_ids:
+			notif["read"] = true
+
+	notifications_updated.emit()
+	promise.resolve_with_data(updated_count)
+
+
 func _on_poll_timeout() -> void:
 	if _is_polling:
-		# Fetch only unread notifications during polling
 		fetch_notifications(-1, 50, true)
