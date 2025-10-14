@@ -31,8 +31,10 @@ var dirty_is_dragging
 @onready var directional_light_3d = $SubViewport/DirectionalLight3D
 @onready var outline_system = %OutlineSystem
 
+
 func get_body_camera_position() -> Vector3:
 	return BODY_CAMERA_POSITION_WITH_PLATFORM if show_platform else BODY_CAMERA_POSITION
+
 
 func _ready():
 	if custom_environment != null:
