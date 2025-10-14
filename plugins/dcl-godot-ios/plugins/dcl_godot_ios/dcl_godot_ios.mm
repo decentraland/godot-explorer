@@ -2,6 +2,11 @@
 #include "core/version.h"
 #import <SafariServices/SafariServices.h>
 #import <AuthenticationServices/AuthenticationServices.h>
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#import <Network/Network.h>
+#import <sys/sysctl.h>
+#import <mach/mach.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -105,6 +110,7 @@ DclGodotiOS *DclGodotiOS::instance = NULL;
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
+    ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
 }
 
 void DclGodotiOS::print_version() {
@@ -163,6 +169,131 @@ void DclGodotiOS::open_webview_url(String url) {
         [rootVC presentViewController:safariVC animated:YES completion:nil];
     });
     #endif
+}
+
+Dictionary DclGodotiOS::get_mobile_device_info() {
+    Dictionary info;
+
+    #if TARGET_OS_IOS
+    // Static variables for battery drain calculation
+    static float initial_battery_level = -1.0f;
+    static NSDate *initial_battery_timestamp = nil;
+
+    // Enable battery monitoring
+    [[UIDevice currentDevice] setBatteryMonitoringEnabled:YES];
+
+    // Get thermal state
+    NSProcessInfo *processInfo = [NSProcessInfo processInfo];
+    NSString *thermalState = @"unknown";
+    switch (processInfo.thermalState) {
+        case NSProcessInfoThermalStateNominal:
+            thermalState = @"nominal";
+            break;
+        case NSProcessInfoThermalStateFair:
+            thermalState = @"fair";
+            break;
+        case NSProcessInfoThermalStateSerious:
+            thermalState = @"serious";
+            break;
+        case NSProcessInfoThermalStateCritical:
+            thermalState = @"critical";
+            break;
+    }
+    info["thermal_state"] = String(thermalState.UTF8String);
+
+    // Get battery level and calculate drain
+    float current_battery_level = [[UIDevice currentDevice] batteryLevel] * 100.0f; // 0-100
+    info["battery_level"] = current_battery_level;
+
+    if (initial_battery_level < 0.0f) {
+        // First call - initialize
+        initial_battery_level = current_battery_level;
+        initial_battery_timestamp = [NSDate date];
+        info["battery_drain_pct_per_hour"] = 0.0f;
+    } else {
+        // Calculate drain rate
+        NSTimeInterval elapsed_seconds = [[NSDate date] timeIntervalSinceDate:initial_battery_timestamp];
+        float elapsed_hours = elapsed_seconds / 3600.0f;
+
+        if (elapsed_hours > 0.0f) {
+            float drain_pct_per_hour = (initial_battery_level - current_battery_level) / elapsed_hours;
+            info["battery_drain_pct_per_hour"] = drain_pct_per_hour;
+        } else {
+            info["battery_drain_pct_per_hour"] = 0.0f;
+        }
+    }
+
+    // Device brand
+    info["device_brand"] = "Apple";
+
+    // Get device model using sysctlbyname
+    char model_buffer[256];
+    size_t model_size = sizeof(model_buffer);
+    if (sysctlbyname("hw.machine", model_buffer, &model_size, NULL, 0) == 0) {
+        info["device_model"] = String(model_buffer);
+    } else {
+        // Fallback to UIDevice model
+        NSString *model = [[UIDevice currentDevice] model];
+        info["device_model"] = String(model.UTF8String);
+    }
+
+    // OS version
+    NSString *os_version = [[UIDevice currentDevice] systemVersion];
+    info["os_version"] = String([NSString stringWithFormat:@"iOS %@", os_version].UTF8String);
+
+    // Get total RAM using sysctl
+    uint64_t total_memory = 0;
+    size_t size = sizeof(total_memory);
+    if (sysctlbyname("hw.memsize", &total_memory, &size, NULL, 0) == 0) {
+        info["total_ram_mb"] = (int)(total_memory / (1024 * 1024));
+    } else {
+        info["total_ram_mb"] = 0;
+    }
+
+    // Get RAM consumption using task_info
+    struct mach_task_basic_info mach_task_info;
+    mach_msg_type_number_t task_info_count = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&mach_task_info, &task_info_count) == KERN_SUCCESS) {
+        info["ram_consumption_mb"] = (int)(mach_task_info.resident_size / (1024 * 1024));
+    } else {
+        info["ram_consumption_mb"] = 0;
+    }
+
+    // Get network type using NWPathMonitor (simplified synchronous check)
+    __block String network_type = "Unknown";
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+
+    nw_path_monitor_t monitor = nw_path_monitor_create();
+    nw_path_monitor_set_queue(monitor, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
+    nw_path_monitor_set_update_handler(monitor, ^(nw_path_t path) {
+        if (nw_path_get_status(path) == nw_path_status_satisfied) {
+            if (nw_path_uses_interface_type(path, nw_interface_type_wifi)) {
+                network_type = "WiFi";
+            } else if (nw_path_uses_interface_type(path, nw_interface_type_cellular)) {
+                // Try to determine cellular generation (simplified)
+                network_type = "Cellular";
+            } else if (nw_path_uses_interface_type(path, nw_interface_type_wired)) {
+                network_type = "Wired";
+            } else {
+                network_type = "Other";
+            }
+        } else {
+            network_type = "No Connection";
+        }
+        dispatch_semaphore_signal(semaphore);
+    });
+    nw_path_monitor_start(monitor);
+
+    // Wait for network check with timeout
+    dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC));
+    nw_path_monitor_cancel(monitor);
+
+    info["network_type"] = network_type;
+    info["network_speed_mbps"] = 0.0f; // To be calculated later
+
+    #endif
+
+    return info;
 }
 
 DclGodotiOS *DclGodotiOS::get_singleton() {

@@ -100,6 +100,37 @@ pub struct SegmentEventPerformanceMetrics {
     pub used_jsheap_size: i32,
     // Memory used only by the explorer in kilo bytes
     pub memory_usage: i32,
+    // Mobile-specific metrics (only sent on iOS/Android)
+    // Device temperature in Celsius (Android only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_temperature_celsius: Option<f32>,
+    // Device thermal state (iPhone only: nominal/fair/serious/critical)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_thermal_state: Option<String>,
+    // Battery drain percentage per hour
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub battery_drain_pct_per_hour: Option<f32>,
+    // Device brand (e.g., "Apple", "Samsung")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_brand: Option<String>,
+    // Device model (e.g., "iPhone 15 Pro", "Galaxy A53")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_model: Option<String>,
+    // OS version (e.g., "iOS 17.0", "Android 15.0")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub os_version: Option<String>,
+    // Total device RAM in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_ram_mb: Option<u32>,
+    // Current RAM consumption in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ram_consumption_mb: Option<u32>,
+    // Network type (WiFi, Carrier 3G, Carrier 4G, Carrier 5G)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_type: Option<String>,
+    // Network speed in Mbps (to be calculated later)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_speed_mbps: Option<f32>,
 }
 
 #[derive(Serialize)]
