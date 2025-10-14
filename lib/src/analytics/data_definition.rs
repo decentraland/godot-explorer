@@ -98,7 +98,7 @@ pub struct SegmentEventPerformanceMetrics {
     pub player_count: i32,
     // Javascript heap memory used by the scenes in kilo bytes
     pub used_jsheap_size: i32,
-    // Memory used only by the explorer in kilo bytes
+    // Memory used only by the explorer in kilo bytes (or populated from mobile metrics)
     pub memory_usage: i32,
     // Mobile-specific metrics (only sent on iOS/Android)
     // Device temperature in Celsius (Android only)
@@ -122,9 +122,6 @@ pub struct SegmentEventPerformanceMetrics {
     // Total device RAM in megabytes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_ram_mb: Option<u32>,
-    // Current RAM consumption in megabytes
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ram_consumption_mb: Option<u32>,
     // Network type (WiFi, Carrier 3G, Carrier 4G, Carrier 5G)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network_type: Option<String>,

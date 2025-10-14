@@ -250,13 +250,14 @@ Dictionary DclGodotiOS::get_mobile_device_info() {
         info["total_ram_mb"] = 0;
     }
 
-    // Get RAM consumption using task_info
-    struct mach_task_basic_info mach_task_info;
-    mach_msg_type_number_t task_info_count = MACH_TASK_BASIC_INFO_COUNT;
-    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&mach_task_info, &task_info_count) == KERN_SUCCESS) {
-        info["ram_consumption_mb"] = (int)(mach_task_info.resident_size / (1024 * 1024));
+    // Get RAM consumption using phys_footprint (what Xcode uses)
+    struct task_vm_info vm_info;
+    mach_msg_type_number_t vm_info_count = TASK_VM_INFO_COUNT;
+    if (task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vm_info, &vm_info_count) == KERN_SUCCESS) {
+        // phys_footprint is the actual physical memory used (what Xcode shows)
+        info["memory_usage"] = (int)(vm_info.phys_footprint / (1024 * 1024));
     } else {
-        info["ram_consumption_mb"] = 0;
+        info["memory_usage"] = 0;
     }
 
     // Get network type using NWPathMonitor (simplified synchronous check)

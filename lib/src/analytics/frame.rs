@@ -56,8 +56,8 @@ impl Frame {
             let os_name = godot::engine::Os::singleton().get_name().to_string();
             let is_mobile = os_name == "iOS" || os_name == "Android";
 
-            let (device_temperature_celsius, device_thermal_state, battery_drain_pct_per_hour,
-                 device_brand, device_model, os_version, total_ram_mb, ram_consumption_mb,
+            let (memory_usage, device_temperature_celsius, device_thermal_state, battery_drain_pct_per_hour,
+                 device_brand, device_model, os_version, total_ram_mb,
                  network_type, network_speed_mbps) = if is_mobile && os_name == "iOS" {
                 // Try to get DclGodotiOS singleton and fetch mobile device info
                 match godot::engine::Engine::singleton().get_singleton(StringName::from("DclGodotiOS")) {
@@ -67,6 +67,9 @@ impl Frame {
                         let info = dcl_ios.call(StringName::from("get_mobile_device_info"), &[]);
 
                         if let Ok(dict) = info.try_to::<Dictionary>() {
+                            let memory_usage = dict.get("memory_usage")
+                                .and_then(|v| v.try_to::<i32>().ok())
+                                .unwrap_or(-1);
                             let thermal_state = dict.get("thermal_state")
                                 .and_then(|v| v.try_to::<GString>().ok())
                                 .map(|s| s.to_string());
@@ -84,29 +87,26 @@ impl Frame {
                             let total_ram = dict.get("total_ram_mb")
                                 .and_then(|v| v.try_to::<i32>().ok())
                                 .map(|i| i as u32);
-                            let ram_consumption = dict.get("ram_consumption_mb")
-                                .and_then(|v| v.try_to::<i32>().ok())
-                                .map(|i| i as u32);
                             let net_type = dict.get("network_type")
                                 .and_then(|v| v.try_to::<GString>().ok())
                                 .map(|s| s.to_string());
                             let net_speed = dict.get("network_speed_mbps")
                                 .and_then(|v| v.try_to::<f32>().ok());
 
-                            (None, thermal_state, battery_drain, brand, model, os_ver,
-                             total_ram, ram_consumption, net_type, net_speed)
+                            (memory_usage, None, thermal_state, battery_drain, brand, model, os_ver,
+                             total_ram, net_type, net_speed)
                         } else {
-                            (None, None, None, None, None, None, None, None, None, None)
+                            (-1, None, None, None, None, None, None, None, None, None)
                         }
                     }
                     None => {
                         tracing::warn!("DclGodotiOS singleton not found");
-                        (None, None, None, None, None, None, None, None, None, None)
+                        (-1, None, None, None, None, None, None, None, None, None)
                     }
                 }
             } else {
                 // Not on mobile or not iOS
-                (None, None, None, None, None, None, None, None, None, None)
+                (-1, None, None, None, None, None, None, None, None, None)
             };
 
             let event = SegmentEvent::PerformanceMetrics(SegmentEventPerformanceMetrics {
@@ -132,7 +132,7 @@ impl Frame {
                 // TODO
                 player_count: -1,
                 used_jsheap_size: -1,
-                memory_usage: -1,
+                memory_usage,
 
                 // Mobile metrics
                 device_temperature_celsius,
@@ -142,7 +142,6 @@ impl Frame {
                 device_model,
                 os_version,
                 total_ram_mb,
-                ram_consumption_mb,
                 network_type,
                 network_speed_mbps,
             });
