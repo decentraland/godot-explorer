@@ -58,8 +58,15 @@ func _ready():
 	)
 
 
-func _on_submit_message(_message: String):
-	UiSounds.play_sound("widget_chat_message_private_send")
+func _on_submit_message(message: String):
+	if !message.is_empty():
+		var is_command: bool = message.begins_with("/")
+		var is_mention: bool = message.contains("@")
+		Global.metrics.track_chat_message_sent(
+			message.length(), "nearby", false, is_mention, is_command, "", "CHAT"
+		)
+
+		UiSounds.play_sound("widget_chat_message_private_send")
 
 
 func _scroll_to_bottom() -> void:
