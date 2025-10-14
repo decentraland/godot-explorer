@@ -69,6 +69,7 @@ func track_lobby_screen(screen_name: String):
 	Global.metrics.track_screen_viewed(screen_name)
 	Global.metrics.flush.call_deferred()
 
+
 func show_restore_screen():
 	track_lobby_screen("COMEBACK")
 	restore_name_head.show()
@@ -90,7 +91,7 @@ func show_avatar_naming_screen():
 
 
 func show_loading_screen():
-	track_lobby_screen("LOBBY_LOADING")
+	current_screen_name = "LOBBY_LOADING"
 	show_panel(control_loading)
 
 
