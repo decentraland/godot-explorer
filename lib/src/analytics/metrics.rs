@@ -13,8 +13,9 @@ use crate::{
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, SegmentEvent, SegmentEventCommonExplorerFields,
-        SegmentEventExplorerMoveToParcel,
+        build_segment_event_batch_item, SegmentEvent, SegmentEventChatMessageSent,
+        SegmentEventClickButton, SegmentEventCommonExplorerFields,
+        SegmentEventExplorerMoveToParcel, SegmentEventScreenViewed,
     },
     frame::Frame,
 };
@@ -79,55 +80,7 @@ impl INode for Metrics {
 impl Metrics {
     #[func]
     fn timer_timeout(&mut self) {
-        if !self.events.is_empty() || self.serialized_events.is_empty() {
-            let http_requester = DclGlobal::singleton()
-                .bind_mut()
-                .get_http_requester()
-                .bind_mut()
-                .get_http_queue_requester();
-
-            let mut accumulated_length: usize =
-                self.serialized_events.iter().map(|s| s.len()).sum();
-
-            while let Some(event) = self.events.pop() {
-                let raw_event =
-                    build_segment_event_batch_item(self.user_id.clone(), &self.common, event);
-
-                let json_body =
-                    serde_json::to_string(&raw_event).expect("Failed to serialize event body");
-
-                if json_body.len() > SEGMENT_EVENT_SIZE_LIMIT_BYTES {
-                    tracing::error!("Event too large: {}", json_body.len());
-                    continue;
-                }
-
-                if accumulated_length + json_body.len() > SEGMENT_BATCH_SIZE_LIMIT_BYTES {
-                    let http_requester = http_requester.clone();
-                    let write_key = self.write_key.clone();
-                    let serialized_events = std::mem::take(&mut self.serialized_events);
-                    TokioRuntime::spawn(async move {
-                        Self::send_segment_batch(http_requester, &write_key, &serialized_events)
-                            .await;
-                    });
-
-                    // This events is queued until the next time is available to send events
-                    self.serialized_events.push(json_body);
-                    return;
-                }
-
-                accumulated_length += json_body.len();
-                self.serialized_events.push(json_body);
-            }
-
-            if !self.serialized_events.is_empty() {
-                let http_requester = http_requester.clone();
-                let write_key = self.write_key.clone();
-                let serialized_events = std::mem::take(&mut self.serialized_events);
-                TokioRuntime::spawn(async move {
-                    Self::send_segment_batch(http_requester, &write_key, &serialized_events).await;
-                });
-            }
-        }
+        self.process_and_send_events(false);
     }
 
     #[func]
@@ -164,6 +117,147 @@ impl Metrics {
         ));
         self.common.position = position;
     }
+
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    pub fn track_chat_message_sent(
+        &mut self,
+        length: u32,
+        channel: String,
+        is_private: bool,
+        is_mention: bool,
+        is_command: bool,
+        community_id: String,
+        screen_name: String,
+    ) {
+        self.events
+            .push(SegmentEvent::ChatMessageSent(SegmentEventChatMessageSent {
+                length,
+                channel,
+                is_command,
+                is_private,
+                community_id: if community_id.is_empty() {
+                    None
+                } else {
+                    Some(community_id)
+                },
+                is_mention,
+                screen_name: if screen_name.is_empty() {
+                    None
+                } else {
+                    Some(screen_name)
+                },
+            }));
+    }
+
+    #[func]
+    pub fn track_click_button(
+        &mut self,
+        button_text: String,
+        screen_name: String,
+        extra_properties: String,
+    ) {
+        self.events
+            .push(SegmentEvent::ClickButton(SegmentEventClickButton {
+                button_text,
+                screen_name,
+                extra_properties: if extra_properties.is_empty() {
+                    None
+                } else {
+                    Some(extra_properties)
+                },
+            }));
+    }
+
+    #[func]
+    pub fn track_screen_viewed(&mut self, screen_name: String) {
+        self.events
+            .push(SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
+                screen_name,
+            }));
+    }
+
+    #[func]
+    pub fn flush(&mut self) {
+        tracing::warn!("Flushing metrics - forcing immediate send of all pending events");
+
+        // Process all events with ignore_batch_limit = true
+        self.process_and_send_events(true);
+    }
+
+    fn process_and_send_events(&mut self, ignore_batch_limit: bool) {
+        tracing::info!(
+            "process_and_send_events: events={}, serialized={}, ignore_limit={}",
+            self.events.len(),
+            self.serialized_events.len(),
+            ignore_batch_limit
+        );
+
+        if self.events.is_empty() && self.serialized_events.is_empty() {
+            tracing::info!("No events to process, returning early");
+            return;
+        }
+
+        let http_requester = DclGlobal::singleton()
+            .bind_mut()
+            .get_http_requester()
+            .bind_mut()
+            .get_http_queue_requester();
+
+        let mut accumulated_length: usize = self.serialized_events.iter().map(|s| s.len()).sum();
+
+        tracing::info!("Starting event processing loop");
+        while let Some(event) = self.events.pop() {
+            let raw_event =
+                build_segment_event_batch_item(self.user_id.clone(), &self.common, event);
+
+            let json_body =
+                serde_json::to_string(&raw_event).expect("Failed to serialize event body");
+
+            if json_body.len() > SEGMENT_EVENT_SIZE_LIMIT_BYTES {
+                tracing::error!("Event too large: {}", json_body.len());
+                continue;
+            }
+
+            if !ignore_batch_limit
+                && accumulated_length + json_body.len() > SEGMENT_BATCH_SIZE_LIMIT_BYTES
+            {
+                let http_requester = http_requester.clone();
+                let write_key = self.write_key.clone();
+                let serialized_events = std::mem::take(&mut self.serialized_events);
+                TokioRuntime::spawn(async move {
+                    Self::send_segment_batch(http_requester, &write_key, &serialized_events).await;
+                });
+
+                // This event is queued until the next time is available to send events
+                self.serialized_events.push(json_body);
+                return;
+            }
+
+            accumulated_length += json_body.len();
+            self.serialized_events.push(json_body);
+        }
+
+        tracing::info!(
+            "Event processing loop complete. Serialized events: {}",
+            self.serialized_events.len()
+        );
+
+        if !self.serialized_events.is_empty() {
+            let http_requester = http_requester.clone();
+            let write_key = self.write_key.clone();
+            let serialized_events = std::mem::take(&mut self.serialized_events);
+            tracing::info!(
+                "Spawning async task to send {} events",
+                serialized_events.len()
+            );
+            TokioRuntime::spawn(async move {
+                Self::send_segment_batch(http_requester, &write_key, &serialized_events).await;
+            });
+        } else {
+            tracing::info!("No serialized events to send");
+        }
+    }
 }
 
 impl Metrics {
@@ -172,6 +266,18 @@ impl Metrics {
         write_key: &str,
         events: &[String],
     ) {
+        // Log the events being sent
+        tracing::warn!("Sending segment batch with {} events", events.len());
+
+        // Parse and log each event name
+        for (idx, event) in events.iter().enumerate() {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(event) {
+                if let Some(event_name) = parsed.get("event").and_then(|v| v.as_str()) {
+                    tracing::info!("  Event {}: {}", idx + 1, event_name);
+                }
+            }
+        }
+
         let json_body = format!(
             "{{\"writeKey\":\"{}\",\"batch\":[{}]}}",
             write_key,
@@ -192,6 +298,8 @@ impl Metrics {
         );
         if let Err(err) = http_requester.request(request, 0).await {
             tracing::error!("Failed to send segment batch: {:?}", err);
+        } else {
+            tracing::info!("Segment batch sent successfully");
         }
     }
 }

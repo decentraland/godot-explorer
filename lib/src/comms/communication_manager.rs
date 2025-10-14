@@ -1244,6 +1244,23 @@ impl CommunicationManager {
         self.current_connection_str.clone()
     }
 
+    #[func]
+    pub fn get_current_scene_room_id(&self) -> GString {
+        self.current_scene_id.clone().unwrap_or_default()
+    }
+
+    #[func]
+    pub fn is_connected_to_scene_room(&self) -> bool {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.scene_room.is_some()
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        {
+            false
+        }
+    }
+
     #[cfg(feature = "use_livekit")]
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
         tracing::info!(

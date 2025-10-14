@@ -572,6 +572,12 @@ impl ContentProvider {
     pub fn fetch_file_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
 
+        // Check cache first - prevent duplicate downloads of the same file
+        if let Some(entry) = self.cached.get_mut(&file_hash) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
         let ctx = self.get_context();
@@ -607,6 +613,15 @@ impl ContentProvider {
             }
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
+
+        // Insert into cache to prevent duplicate downloads
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
 
         promise
     }

@@ -1,12 +1,13 @@
 extends DclGlobal
 
-signal player_said(address: String, message: String)
 signal on_menu_open
 signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile(avatar: DclAvatar)
+signal on_chat_message(address: String, message: String, timestamp: float)
+signal change_virtual_keyboard(height: int)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -35,6 +36,8 @@ var nft_frame_loader: NftFrameStyleLoader
 
 var music_player: MusicPlayer
 
+var preload_assets: PreloadAssets
+
 var standalone = false
 var dcl_android_plugin
 var dcl_godot_android_plugin
@@ -42,6 +45,42 @@ var dcl_godot_ios_plugin
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
+
+var url_popup_instance = null
+var jump_in_popup_instance = null
+
+var last_emitted_height: int = 0
+var current_height: int = -1
+var previous_height: int = -1
+var previous_height_2: int = -1
+
+
+func set_url_popup_instance(popup_instance) -> void:
+	url_popup_instance = popup_instance
+
+
+func show_url_popup(url: String) -> void:
+	if url_popup_instance != null:
+		url_popup_instance.open(url)
+
+
+func hide_url_popup() -> void:
+	if url_popup_instance != null:
+		url_popup_instance.close()
+
+
+func set_jump_in_popup_instance(popup_instance) -> void:
+	jump_in_popup_instance = popup_instance
+
+
+func show_jump_in_popup(coordinates: Vector2i) -> void:
+	if jump_in_popup_instance != null:
+		jump_in_popup_instance.open(coordinates)
+
+
+func hide_jump_in_popup() -> void:
+	if jump_in_popup_instance != null:
+		jump_in_popup_instance.close()
 
 
 func is_xr() -> bool:
@@ -57,6 +96,7 @@ func _ready():
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
+	preload_assets = PreloadAssets.new()
 
 	var args = cli.get_all_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
@@ -323,7 +363,11 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
-	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+	if Global.is_mobile() and !Global.is_virtual_mobile():
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+	else:
+		get_window().size = Vector2i(1280, 720)
+		get_window().move_to_center()
 
 
 func is_orientation_portrait():
@@ -332,7 +376,11 @@ func is_orientation_portrait():
 
 
 func set_orientation_portrait():
-	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+	if Global.is_mobile() and !Global.is_virtual_mobile():
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+	else:
+		get_window().size = Vector2i(720, 1280)
+		get_window().move_to_center()
 
 
 func set_orientation_sensor():
@@ -344,6 +392,11 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 	if is_instance_valid(explorer):
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
+		Global.on_chat_message.emit(
+			"system",
+			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]",
+			Time.get_unix_time_from_system()
+		)
 	else:
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
@@ -412,3 +465,22 @@ func get_backpack() -> Backpack:
 		return explorer.control_menu.control_backpack
 	var control_menu = get_node_or_null("/root/Menu")
 	return control_menu.control_backpack
+
+
+func _process(_delta: float) -> void:
+	if Global.is_mobile() and !Global.is_virtual_mobile():
+		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
+
+		# Shift the values
+		previous_height_2 = previous_height
+		previous_height = current_height
+		current_height = virtual_keyboard_height
+
+		# Check if stable (same for 3 frames) and different from last emitted
+		if (
+			current_height == previous_height
+			and current_height == previous_height_2
+			and current_height != last_emitted_height
+		):
+			last_emitted_height = current_height
+			change_virtual_keyboard.emit(last_emitted_height)

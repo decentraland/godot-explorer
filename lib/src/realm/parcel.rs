@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use godot::builtin::Vector2i;
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Coord(pub i16, pub i16);
 
 #[derive(Debug)]

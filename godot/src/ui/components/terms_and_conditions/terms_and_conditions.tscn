@@ -1,8 +1,22 @@
-[gd_scene load_steps=5 format=3 uid="uid://3tdl1oo7a282"]
+[gd_scene load_steps=13 format=3 uid="uid://3tdl1oo7a282"]
 
-[ext_resource type="Script" path="res://src/ui/components/terms_and_conditions/terms_and_conditions.gd" id="1_v76mk"]
+[ext_resource type="Script" uid="uid://3gpw3k7sbwla" path="res://src/ui/components/terms_and_conditions/terms_and_conditions.gd" id="1_v76mk"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="1_yiehh"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_r6r1x"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_x1g4l"]
+[ext_resource type="LabelSettings" uid="uid://ipxcah14n2ng" path="res://assets/themes/lobby_title.tres" id="5_ratj3"]
+[ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="6_ratj3"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_vm4ah"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="7_4l5lg"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="9_w7xww"]
+
+[sub_resource type="Gradient" id="Gradient_vm4ah"]
+offsets = PackedFloat32Array(0.00296736, 1)
+colors = PackedColorArray(0.776471, 0.25098, 0.803922, 1, 0.411765, 0.121569, 0.662745, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_r6r1x"]
+gradient = SubResource("Gradient_vm4ah")
+fill_to = Vector2(0, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_o0won"]
 
@@ -13,133 +27,147 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 script = ExtResource("1_v76mk")
 
-[node name="TextureRect" type="ColorRect" parent="."]
+[node name="TextureRect" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.141176, 0.141176, 0.141176, 1)
+texture = SubResource("GradientTexture2D_r6r1x")
+expand_mode = 3
 
-[node name="VBoxContainer_Terms" type="VBoxContainer" parent="."]
+[node name="Main" type="MarginContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -20.0
-offset_top = -20.0
-offset_right = 20.0
-offset_bottom = 20.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("2_r6r1x")
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer_Terms"]
+[node name="MarginContainer" type="MarginContainer" parent="Main"]
+layout_mode = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxContainer_Terms" type="VBoxContainer" parent="Main/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(425, 450)
+layout_mode = 2
+size_flags_vertical = 4
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="Main/MarginContainer/VBoxContainer_Terms"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 texture = ExtResource("1_yiehh")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer_Terms"]
+[node name="HSeparator" type="HSeparator" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="Label_Name" type="Label" parent="VBoxContainer_Terms"]
+[node name="Label_Title" type="Label" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("2_x1g4l")
 theme_override_font_sizes/font_size = 36
-text = "Before you get started..."
+text = "Welcome!"
+label_settings = ExtResource("5_ratj3")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer_Terms"]
+[node name="Label_Title2" type="Label" parent="Main/MarginContainer/VBoxContainer_Terms"]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+text = "Before playing, you have to agree to our terms"
+label_settings = ExtResource("6_ratj3")
+autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer_Terms"]
+[node name="HSeparator2" type="HSeparator" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 69
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Terms"]
-layout_mode = 2
-
-[node name="Control" type="Control" parent="VBoxContainer_Terms/HBoxContainer"]
-custom_minimum_size = Vector2(60, 0)
-layout_mode = 2
-
-[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="VBoxContainer_Terms/HBoxContainer/Control"]
+[node name="Control_Separator" type="Control" parent="Main/MarginContainer/VBoxContainer_Terms"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 110)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Main/MarginContainer/VBoxContainer_Terms/Control_Separator"]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -19.0
-offset_top = -19.0
-offset_right = 19.0
-offset_bottom = 19.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 7
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer_Terms/HBoxContainer"]
+[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("6_vm4ah")
+theme_override_constants/icon_max_width = 40
+autowrap_mode = 2
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="RichTextLabel2" type="RichTextLabel" parent="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/line_separation = 10
-theme_override_font_sizes/bold_italics_font_size = 22
-theme_override_font_sizes/italics_font_size = 22
-theme_override_font_sizes/mono_font_size = 22
-theme_override_font_sizes/normal_font_size = 22
-theme_override_font_sizes/bold_font_size = 22
+theme_override_fonts/normal_font = ExtResource("7_4l5lg")
+theme_override_font_sizes/bold_italics_font_size = 28
+theme_override_font_sizes/italics_font_size = 28
+theme_override_font_sizes/mono_font_size = 28
+theme_override_font_sizes/normal_font_size = 28
+theme_override_font_sizes/bold_font_size = 28
 bbcode_enabled = true
-text = "To use this app, you must agree to our
-[b][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/b], [b][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/b] and [b][url=\"https://decentraland.org/content/\"]Content Policy[/url][/b]"
+text = "I have read and accept Decentraland's [color=#FF2D55][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#FF2D55][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#FF2D55][url=\"https://decentraland.org/content/\"]Contet Policy[/url][/color]"
 fit_content = true
 scroll_active = false
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer_Terms"]
+[node name="HSeparator3" type="HSeparator" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 90
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer_Terms"]
-layout_mode = 2
-
-[node name="Button_Reject" type="Button" parent="VBoxContainer_Terms/HBoxContainer2"]
+[node name="Button_Accept" type="Button" parent="Main/MarginContainer/VBoxContainer_Terms"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(250, 50)
+custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_type_variation = &"WhiteButton"
-theme_override_constants/icon_max_width = 24
-theme_override_fonts/font = ExtResource("2_x1g4l")
-theme_override_font_sizes/font_size = 24
-text = "REJECT"
-icon_alignment = 2
-
-[node name="Button_Accept" type="Button" parent="VBoxContainer_Terms/HBoxContainer2"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(250, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_override_constants/icon_max_width = 24
-theme_override_fonts/font = ExtResource("2_x1g4l")
-theme_override_font_sizes/font_size = 24
+theme = ExtResource("6_vm4ah")
+theme_override_font_sizes/font_size = 30
 disabled = true
-text = "CONTINUE"
+text = "ACCEPT"
 icon_alignment = 2
 
-[connection signal="gui_input" from="VBoxContainer_Terms/HBoxContainer/Control" to="." method="_on_control_gui_input"]
-[connection signal="toggled" from="VBoxContainer_Terms/HBoxContainer/Control/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
-[connection signal="meta_clicked" from="VBoxContainer_Terms/HBoxContainer/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="pressed" from="VBoxContainer_Terms/HBoxContainer2/Button_Reject" to="." method="_on_button_reject_pressed"]
-[connection signal="pressed" from="VBoxContainer_Terms/HBoxContainer2/Button_Accept" to="." method="_on_button_accept_pressed"]
+[node name="Spinner" parent="Main/MarginContainer/VBoxContainer_Terms" instance=ExtResource("9_w7xww")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+speed_scale = 2.0
+
+[node name="Timer" type="Timer" parent="."]
+one_shot = true
+
+[connection signal="gui_input" from="Main/MarginContainer/VBoxContainer_Terms/Control_Separator" to="." method="_on_control_gui_input"]
+[connection signal="toggled" from="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
+[connection signal="meta_clicked" from="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer/RichTextLabel2" to="." method="_on_rich_text_label_meta_clicked"]
+[connection signal="pressed" from="Main/MarginContainer/VBoxContainer_Terms/Button_Accept" to="." method="_on_button_accept_pressed"]
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

@@ -21,6 +21,27 @@ pub enum CrdtMessageType {
 
 const CRDT_HEADER_SIZE: usize = 8;
 
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+fn debug_check_component(component: SceneComponentId, entity: SceneEntityId, operation: &str) {
+    // List of component IDs to debug with their names
+    const DEBUG_COMPONENTS: &[(u32, &str)] = &[
+        (1078, "PBInputModifier"),
+        (1079, "PBLightSource"),
+        (1099, "PBGltfNodeModifiers"),
+        // Add more components here as needed
+    ];
+
+    if let Some((_, name)) = DEBUG_COMPONENTS.iter().find(|(id, _)| *id == component.0) {
+        tracing::warn!(
+            "{} ({}) detected in {} for entity {:?}",
+            name,
+            component.0,
+            operation,
+            entity
+        );
+    }
+}
+
 fn process_message(
     scene_crdt_state: &mut SceneCrdtState,
     crdt_type: CrdtMessageType,
@@ -30,6 +51,10 @@ fn process_message(
         CrdtMessageType::PutComponent => {
             let entity = stream.read()?;
             let component: SceneComponentId = stream.read()?;
+
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            debug_check_component(component, entity, "PutComponent");
+
             let timestamp: SceneCrdtTimestamp = stream.read()?;
             let _content_len = stream.read_u32()? as usize;
 
@@ -47,6 +72,10 @@ fn process_message(
         CrdtMessageType::DeleteComponent => {
             let entity = stream.read()?;
             let component: SceneComponentId = stream.read()?;
+
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            debug_check_component(component, entity, "DeleteComponent");
+
             let timestamp: SceneCrdtTimestamp = stream.read()?;
 
             if !scene_crdt_state.entities.try_init(entity) {
@@ -67,6 +96,10 @@ fn process_message(
         CrdtMessageType::AppendValue => {
             let entity = stream.read()?;
             let component: SceneComponentId = stream.read()?;
+
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            debug_check_component(component, entity, "AppendValue");
+
             let timestamp: SceneCrdtTimestamp = stream.read()?;
             let _content_len = stream.read_u32()? as usize;
 
