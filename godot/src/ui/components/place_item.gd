@@ -26,6 +26,7 @@ var _node_cache: Dictionary = {}
 
 
 func _ready():
+	mouse_filter = Control.MOUSE_FILTER_PASS
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
 

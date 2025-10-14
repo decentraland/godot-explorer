@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_fhlt6"]
-[ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="3_fhlt6"]
+[ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="4_kyirg"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kyirg"]
 bg_color = Color(1, 0.176471, 0.333333, 1)
@@ -82,6 +82,8 @@ offset_right = 332.0
 offset_bottom = 318.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
+mouse_filter = 1
+mouse_force_pass_scroll_events = false
 script = ExtResource("1_kyirg")
 
 [node name="Border" type="PanelContainer" parent="."]
@@ -92,10 +94,12 @@ custom_minimum_size = Vector2(332, 318)
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kyirg")
 
 [node name="Content" type="MarginContainer" parent="Border"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 4
 theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 4
@@ -104,17 +108,20 @@ theme_override_constants/margin_bottom = 4
 [node name="PanelContainer" type="PanelContainer" parent="Border/Content"]
 clip_children = 2
 layout_mode = 2
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0vt0d")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Border/Content/PanelContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="TextureRect_Image" type="TextureRect" parent="Border/Content/PanelContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-size_flags_stretch_ratio = 200.0
+size_flags_stretch_ratio = 210.0
+mouse_filter = 2
 texture = ExtResource("1_vtdag")
 expand_mode = 2
 
@@ -122,14 +129,15 @@ expand_mode = 2
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 90.0
+mouse_filter = 2
 theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 9
 theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 7
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 1
 
 [node name="Label_EventName" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -141,12 +149,14 @@ text_overrun_behavior = 3
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 12
 
 [node name="LivePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(75, 24)
 layout_mode = 2
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_6bu5y")
 
 [node name="Label_LivePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/LivePill"]
@@ -161,6 +171,7 @@ uppercase = true
 [node name="TimePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(22, 24)
 layout_mode = 2
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_aes4k")
 
 [node name="Label_TimePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TimePill"]
@@ -176,6 +187,7 @@ uppercase = true
 unique_name_in_owner = true
 custom_minimum_size = Vector2(75, 24)
 layout_mode = 2
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_gwscp")
 
 [node name="Label" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TrendingPill"]
@@ -188,13 +200,15 @@ uppercase = true
 
 [node name="Attendees" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="TextureRect" type="TextureRect" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees"]
 modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(22, 0)
 layout_mode = 2
-texture = ExtResource("3_fhlt6")
+mouse_filter = 2
+texture = ExtResource("4_kyirg")
 expand_mode = 5
 
 [node name="Label_AttendeesNumber" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees"]
