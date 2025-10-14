@@ -22,8 +22,11 @@ adjustment_enabled = true
 adjustment_brightness = 1.4
 
 [node name="AvatarPreview" type="SubViewportContainer"]
-offset_right = 256.0
-offset_bottom = 500.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 4
 script = ExtResource("1_sayag")
 
