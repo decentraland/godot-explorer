@@ -290,19 +290,30 @@ pub fn get_godot_executable_path() -> Option<String> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
 
-    let os_url = match (os, arch) {
-        ("linux", "x86_64") => {
-            Some(format!("godot.{}.stable.linux.editor.x86_64", GODOT_CURRENT_VERSION).to_string())
+    let numeric_version = GODOT_CURRENT_VERSION.parse::<f32>().ok()?;
+
+    let os_url = if numeric_version >= 4.5 {
+        match (os, arch) {
+            ("linux", "x86_64") => Some("linux_editor.x86_64".to_string()),
+            ("windows", "x86_64") => Some("windows_editor_x86_64.exe".to_string()),
+            ("macos", _) => Some("godot.macos.editor.universal".to_string()),
+            _ => None,
         }
-        ("windows", "x86_64") => Some(
-            format!(
-                "godot.{}.stable.windows.editor.x86_64.exe",
-                GODOT_CURRENT_VERSION
-            )
-            .to_string(),
-        ),
-        ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
-        _ => None,
+    } else {
+        match (os, arch) {
+            ("linux", "x86_64") => Some(
+                format!("godot.{}.stable.linux.editor.x86_64", GODOT_CURRENT_VERSION).to_string(),
+            ),
+            ("windows", "x86_64") => Some(
+                format!(
+                    "godot.{}.stable.windows.editor.x86_64.exe",
+                    GODOT_CURRENT_VERSION
+                )
+                .to_string(),
+            ),
+            ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
+            _ => None,
+        }
     }?;
 
     Some(os_url)
