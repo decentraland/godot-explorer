@@ -44,6 +44,8 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_renderer_mode: bool,
     #[var(get)]
+    pub client_test_mode: bool,
+    #[var(get)]
     pub test_runner: bool,
     #[var(get)]
     pub clear_cache_startup: bool,
@@ -53,6 +55,8 @@ pub struct DclCli {
     pub network_debugger: bool,
     #[var(get)]
     pub spawn_avatars: bool,
+    #[var(get)]
+    pub debug_minimap: bool,
     #[var(get)]
     pub use_test_input: bool,
     #[var(get)]
@@ -150,6 +154,12 @@ impl DclCli {
                 category: "Testing".to_string(),
             },
             ArgDefinition {
+                name: "--client-test".to_string(),
+                description: "Run client visual tests (avatar outline tests)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
                 name: "--scene-renderer".to_string(),
                 description: "Run in scene renderer mode".to_string(),
                 arg_type: ArgType::Flag,
@@ -207,6 +217,12 @@ impl DclCli {
             ArgDefinition {
                 name: "--network-debugger".to_string(),
                 description: "Enable network inspector window".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--debug-minimap".to_string(),
+                description: "Enable debug minimap overlay".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
@@ -292,6 +308,9 @@ impl INode for DclCli {
         let args = Os::singleton().get_cmdline_args();
         let mut args_map = HashMap::new();
 
+        // Add default arguments
+        //args_map.insert("--skip-lobby".to_string(), None); // debug
+
         // Parse command line arguments into a map
         let args_vec = args.to_vec();
         let mut i = 0;
@@ -327,11 +346,13 @@ impl INode for DclCli {
         let scene_test_mode = args_map.contains_key("--scene-test");
         let scene_renderer_mode = args_map.contains_key("--scene-renderer");
         let avatar_renderer_mode = args_map.contains_key("--avatar-renderer");
+        let client_test_mode = args_map.contains_key("--client-test");
         let test_runner = args_map.contains_key("--test-runner");
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
         let raycast_debugger = args_map.contains_key("--raycast-debugger");
         let network_debugger = args_map.contains_key("--network-debugger");
         let spawn_avatars = args_map.contains_key("--spawn-avatars");
+        let debug_minimap = args_map.contains_key("--debug-minimap");
         let use_test_input = args_map.contains_key("--use-test-input");
         let test_camera_tune = args_map.contains_key("--test-camera-tune");
         let measure_perf = args_map.contains_key("--measure-perf");
@@ -378,11 +399,13 @@ impl INode for DclCli {
             scene_test_mode,
             scene_renderer_mode,
             avatar_renderer_mode,
+            client_test_mode,
             test_runner,
             clear_cache_startup,
             raycast_debugger,
             network_debugger,
             spawn_avatars,
+            debug_minimap,
             use_test_input,
             test_camera_tune,
             measure_perf,

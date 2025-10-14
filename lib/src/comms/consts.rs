@@ -9,7 +9,8 @@ pub const DISABLE_SCENE_ROOM: bool = false;
 
 // Constants for bounded queue sizes to prevent memory exhaustion
 pub const MAX_CHAT_MESSAGES: usize = 100;
-pub const MAX_SCENE_MESSAGES_PER_SCENE: usize = 50;
+pub const MAX_CHAT_MESSAGE_SIZE: usize = 200;
+pub const MAX_SCENE_MESSAGES_PER_SCENE: usize = 500;
 pub const MAX_SCENE_IDS: usize = 20;
 
 // Message channel sizes

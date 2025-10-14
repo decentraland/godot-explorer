@@ -82,14 +82,14 @@ func _ready():
 
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
-	Global.player_said.connect(on_player_said)
+	Global.on_chat_message.connect(on_chat_message)
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
 
 
-func on_player_said(address: String, message: String):
+func on_chat_message(address: String, message: String, _timestamp: float):
 	if avatar_id != address:
 		return
 	nickname_ui.async_show_message(message)

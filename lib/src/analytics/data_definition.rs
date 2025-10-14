@@ -51,6 +51,9 @@ pub enum SegmentEvent {
     ExplorerSceneLoadTimes(SegmentEventExplorerSceneLoadTimes),
     ExplorerMoveToParcel(String, SegmentEventExplorerMoveToParcel),
     SystemInfoReport(SegmentEventSystemInfoReport),
+    ChatMessageSent(SegmentEventChatMessageSent),
+    ClickButton(SegmentEventClickButton),
+    ScreenViewed(SegmentEventScreenViewed),
 }
 
 #[derive(Serialize)]
@@ -130,7 +133,7 @@ pub struct SegmentEventExplorerMoveToParcel {
 pub struct SegmentEventSystemInfoReport {
     // Processor used by the user.
     processor_type: String,
-    // How many processors are available in user’s device.
+    // How many processors are available in user's device.
     processor_count: u32,
     // Graphic Device used by the user.
     graphics_device_name: String,
@@ -138,6 +141,43 @@ pub struct SegmentEventSystemInfoReport {
     graphics_memory_mb: u32,
     // RAM memory in mb.
     system_memory_size_mb: u32,
+}
+
+#[derive(Serialize)]
+pub struct SegmentEventChatMessageSent {
+    // Length of the message sent.
+    pub length: u32,
+    // Whether it is Public or Private.
+    pub channel: String,
+    // Whether the message typed is a command or not (if applies).
+    pub is_command: bool,
+    // Whether the message is Private or not.
+    pub is_private: bool,
+    // ID of the Community the message was sent to. Otherwise NULL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub community_id: Option<String>,
+    // Whether the message contains a mention from another User (i.e. @XYZ).
+    pub is_mention: bool,
+    // If the user is not in world, this is the screen where the event is fired.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screen_name: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct SegmentEventClickButton {
+    // Text of the button clicked.
+    pub button_text: String,
+    // Screen Name where the user clicked the button.
+    pub screen_name: String,
+    // JSON with extra payload, in case we need to track additional metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_properties: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct SegmentEventScreenViewed {
+    // Name of the screen viewed.
+    pub screen_name: String,
 }
 
 pub fn build_segment_event_batch_item(
@@ -168,6 +208,21 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::SystemInfoReport(event) => (
             "System Info Report".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::ChatMessageSent(event) => (
+            "Chat Message Sent".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::ClickButton(event) => (
+            "Click Button".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::ScreenViewed(event) => (
+            "Screen Viewed".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

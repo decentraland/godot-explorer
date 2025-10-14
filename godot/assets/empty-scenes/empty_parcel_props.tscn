@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3 uid="uid://bpajvybr0b2sy"]
+
+[ext_resource type="PackedScene" uid="uid://bsc24q006jwnn" path="res://assets/empty-scenes/props.gltf" id="1_xirrl"]
+
+[node name="EmptyParcelProps" instance=ExtResource("1_xirrl")]
+
+[node name="Scene Collection" parent="." index="0"]
+process_mode = 4
+visible = false
+
+[node name="Props" parent="Scene Collection" index="0"]
+unique_name_in_owner = true
+
+[node name="Trees" parent="Scene Collection" index="1"]
+unique_name_in_owner = true
+
+[node name="Rocks" parent="Scene Collection" index="2"]
+unique_name_in_owner = true

@@ -17,7 +17,7 @@ pub struct SceneMainCrdt(pub Option<Vec<u8>>);
 pub struct SceneTickCounter(pub u32);
 pub struct SceneDying(pub bool);
 
-pub struct SceneProcessMainThreadMessages(pub bool);
+pub struct CommunicatedWithRenderer;
 
 pub struct SceneElapsedTime(pub f32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

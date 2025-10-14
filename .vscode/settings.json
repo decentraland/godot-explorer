@@ -3,5 +3,17 @@
         "Cargo.toml",
         "lib/Cargo.toml"
     ],
-    "godotTools.editorPath.godot4": "/Users/kuruk/Projects/godot-explorer/.bin/godot/Godot.app"
+    "godotTools.editorPath.godot4": "/Users/kuruk/Projects/godot-explorer/.bin/godot/Godot.app",
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/target": true,
+        "**/.git": true,
+        "plugins/dcl-godot-ios/godot/**": true
+    },
+    "files.exclude": {
+        "plugins/dcl-godot-ios/godot/**": true
+    },
+    "files.watcherExclude": {
+        "plugins/dcl-godot-ios/godot/**": true
+    }
 }

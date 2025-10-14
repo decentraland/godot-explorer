@@ -15,6 +15,7 @@ pub mod mesh_renderer;
 pub mod nft_shape;
 pub mod pointer_events;
 pub mod raycast;
+pub mod realm_info;
 pub mod text_shape;
 pub mod transform_and_parent;
 pub mod tween;

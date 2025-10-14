@@ -8,8 +8,9 @@ const MIN_CAMERA_Y = 0.8
 const MAX_CAMERA_Y = 2.3
 
 const DEFAULT_ROTATION = Vector3(-20, 180, 0)
-const BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.5)
-const HEAD_CAMERA_POSITION = Vector3(0, 2, -1.25)
+const BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.0)
+const BODY_CAMERA_POSITION_WITH_PLATFORM = Vector3(0, 2.15, -3.3)
+const HEAD_CAMERA_POSITION = Vector3(0, 2.2, -1.15)
 
 @export var hide_name: bool = false
 @export var show_platform: bool = false
@@ -28,6 +29,11 @@ var dirty_is_dragging
 @onready var subviewport: SubViewport = %SubViewport
 @onready var world_environment = $SubViewport/WorldEnvironment
 @onready var directional_light_3d = $SubViewport/DirectionalLight3D
+@onready var outline_system = %OutlineSystem
+
+
+func get_body_camera_position() -> Vector3:
+	return BODY_CAMERA_POSITION_WITH_PLATFORM if show_platform else BODY_CAMERA_POSITION
 
 
 func _ready():
@@ -39,8 +45,11 @@ func _ready():
 	avatar.hide_name = hide_name
 	platform.set_visible(show_platform)
 
-	camera_3d.set_position(BODY_CAMERA_POSITION)
+	camera_3d.set_position(get_body_camera_position())
 	camera_3d.set_rotation_degrees(DEFAULT_ROTATION)
+
+	if outline_system:
+		outline_system.setup(camera_3d)
 
 	if can_move:
 		gui_input.connect(self._on_gui_input)
@@ -64,7 +73,7 @@ func focus_camera_on(type):
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
 			tween.tween_property(camera_3d, "position", HEAD_CAMERA_POSITION, 0.5)
 		_:
-			tween.tween_property(camera_3d, "position", BODY_CAMERA_POSITION, 0.5)
+			tween.tween_property(camera_3d, "position", get_body_camera_position(), 0.5)
 	tween.play()
 
 
@@ -111,6 +120,16 @@ func _on_gui_input(event):
 
 func reset_avatar_rotation() -> void:
 	avatar.rotation.y = 0.0
+
+
+func enable_outline():
+	if outline_system and avatar:
+		outline_system.set_outlined_avatar(avatar)
+
+
+func disable_outline():
+	if outline_system:
+		outline_system.set_outlined_avatar(null)
 
 
 func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) -> Image:

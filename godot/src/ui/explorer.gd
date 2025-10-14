@@ -2,7 +2,6 @@ class_name Explorer
 extends Node
 
 var player: Node3D = null
-
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -13,9 +12,13 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var debug_map_container: DebugMapContainer = null
+
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
+var _avatar_under_crosshair: Avatar = null
+var _last_outlined_avatar: Avatar = null
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -26,7 +29,12 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
+@onready var url_popup = %UrlPopup
+@onready var jump_in_popup = %JumpInPopup
 
+@onready var panel_profile: Panel = %Panel_Profile
+
+@onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
@@ -43,6 +51,16 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
+@onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
+@onready var control_safe_bottom_area: Control = %Control_SafeBottomArea
+@onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
+@onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
+@onready var notifications: Control = %Notifications
+
+@onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
+
+@onready var chat_container: Control = %ChatContainer
+@onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
 
 func _process(_dt):
@@ -51,7 +69,7 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		Global.scene_fetcher.update_position(parcel_position)
+		Global.scene_fetcher.update_position(parcel_position, false)
 		_last_parcel_position = parcel_position
 		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
@@ -70,9 +88,15 @@ func get_params_from_cmd():
 
 
 func _ready():
+	label_version.set_text("v" + Global.get_version())
+	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
+
+	# Register popup instances in Global
+	Global.set_url_popup_instance(url_popup)
+	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	if Global.is_xr():
 		player = load("res://src/logic/player/xr_player.tscn").instantiate()
@@ -87,6 +111,12 @@ func _ready():
 		player.vr_screen.set_instantiate_scene(ui_root)
 
 	emote_wheel.avatar_node = player.avatar
+
+	# Add debug map container only if --debug-minimap flag is present
+	if Global.cli.debug_minimap:
+		debug_map_container = load("res://src/ui/components/debug_map/debug_map_container.gd").new()
+		ui_root.add_child(debug_map_container)
+		debug_map_container.set_enabled(true)
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
@@ -117,6 +147,7 @@ func _ready():
 	else:
 		mobile_ui.hide()
 
+	chat_container.hide()
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -142,6 +173,9 @@ func _ready():
 	)
 
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
+
+	#Global.scene_fetcher.current_position = start_parcel_position
+	Global.scene_fetcher.update_position(start_parcel_position, true)
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
@@ -180,7 +214,6 @@ func _ready():
 	ui_root.grab_focus.call_deferred()
 
 	if OS.get_cmdline_args().has("--scene-renderer"):
-		prints("load scene_orchestor")
 		var scene_renderer_orchestor = (
 			load("res://src/tool/scene_renderer/scene_orchestor.tscn").instantiate()
 		)
@@ -222,6 +255,15 @@ func _on_pointer_tooltip_changed():
 func change_tooltips():
 	var tooltip_data = Global.scene_runner.pointer_tooltips.duplicate()
 
+	# Check if there's an avatar behind the crosshair
+	_avatar_under_crosshair = player.get_avatar_under_crosshair()
+	Global.selected_avatar = _avatar_under_crosshair
+
+	# Handle outline changes through the outline system
+	if _avatar_under_crosshair != _last_outlined_avatar:
+		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
+		_last_outlined_avatar = _avatar_under_crosshair
+
 	# Tooltips now include avatar detection from scene_runner
 	if not tooltip_data.is_empty():
 		control_pointer_tooltip.set_pointer_data(tooltip_data)
@@ -257,8 +299,9 @@ func _unhandled_input(event):
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
 
-			if event.pressed and event.keycode == KEY_ENTER:
-				panel_chat.toggle_open_chat()
+			#if event.pressed and event.keycode == KEY_ENTER:
+			#	panel_chat.toggle_chat_visibility(true)
+			#	panel_chat.line_edit_command.grab_focus.call_deferred()
 
 
 func _on_control_minimap_request_open_map():
@@ -283,6 +326,11 @@ func _on_control_menu_toggle_fps(visibility):
 
 func _on_control_menu_toggle_minimap(visibility):
 	control_minimap.visible = visibility
+
+
+func toggle_debug_minimap(enabled: bool):
+	if debug_map_container:
+		debug_map_container.set_enabled(enabled)
 
 
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
@@ -320,13 +368,17 @@ func _on_panel_chat_submit_message(message: String):
 			elif params.size() > 2:
 				dest_vector = Vector2i(int(params[1]), int(params[2]))
 
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Teleport to " + str(dest_vector) + "[/color]"
+			Global.on_chat_message.emit(
+				"system",
+				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+				Time.get_unix_time_from_system()
 			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			panel_chat.add_chat_message(
-				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
+			Global.on_chat_message.emit(
+				"system",
+				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]",
+				Time.get_unix_time_from_system()
 			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
@@ -334,37 +386,48 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
-			loading_ui.enable_loading_screen()
 		else:
-			pass
-			# TODO: unknown command
+			Global.on_chat_message.emit(
+				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
+			)
 	else:
 		Global.comms.send_chat(message)
-		panel_chat.on_chats_arrived([[Global.player_identity.get_address_str(), 0, message]])
+		Global.on_chat_message.emit(
+			Global.player_identity.get_address_str(), message, Time.get_unix_time_from_system()
+		)
 
 
 func _on_control_menu_request_pause_scenes(enabled):
 	Global.scene_runner.set_pause(enabled)
 
 
+## Moves the player to a specific position
+##
+## @param position: The 3D position to move the player to
+## @param skip_loading: When true, skips showing the loading screen.
+##                      This is used when teleporting inside a scene to avoid
+##                      showing the loading UI for an already-loaded area.
 func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
-	player.set_position(position)
-	var cur_parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	prints("cur_parcel_position:", cur_parcel_position, position)
+
+	player.async_move_to(position)
+	var cur_parcel_position = Vector2i(
+		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
+	)
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 			loading_ui.enable_loading_screen()
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
+	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
+	move_to(move_to_position, false)
+
 	if not realm.is_empty() && realm != Global.realm.get_realm_string():
 		Global.realm.async_set_realm(realm)
 
-	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
-	prints("Teleport to parcel: ", parcel, move_to_position)
-	move_to(move_to_position, false)
+	Global.scene_fetcher.update_position(parcel, true)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
@@ -377,14 +440,16 @@ func player_look_at(look_at_position: Vector3):
 
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	label_crosshair.show()
-	ui_root.grab_focus.call_deferred()
+	if label_crosshair and ui_root:
+		label_crosshair.show()
+		ui_root.grab_focus.call_deferred()
 
 
 func release_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	if not Global.is_mobile():
-		label_crosshair.hide()
+		if label_crosshair:
+			label_crosshair.hide()
 
 
 func set_visible_ui(value: bool):
@@ -413,7 +478,7 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
+	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.get_config().save_to_settings_file()
@@ -438,7 +503,8 @@ func _on_button_jump_gui_input(event):
 
 
 func _on_button_open_chat_pressed():
-	panel_chat.toggle_open_chat()
+	panel_chat.async_start_chat()
+	release_mouse()
 
 
 func reset_cursor_position():
@@ -492,6 +558,7 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 
 
 func _async_open_profile(avatar: DclAvatar):
+	panel_chat.exit_chat()
 	if avatar == null or not is_instance_valid(avatar):
 		return
 
@@ -517,5 +584,32 @@ func _open_own_profile() -> void:
 	release_mouse()
 
 
-func ui_has_focus() -> bool:
-	return ui_root.has_focus()
+func _get_viewport_scale_factors() -> Vector2:
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var viewport_size = get_viewport().get_visible_rect().size
+	var x_factor: float = viewport_size.x / window_size.x
+	var y_factor: float = viewport_size.y / window_size.y
+	return Vector2(x_factor, y_factor)
+
+
+func _on_panel_chat_on_open_chat() -> void:
+	safe_margin_container_hud.hide()
+	chat_container.show()
+
+
+func _on_panel_chat_on_exit_chat() -> void:
+	safe_margin_container_hud.show()
+	chat_container.hide()
+	if Global.is_mobile():
+		mobile_ui.show()
+
+
+func _on_change_virtual_keyboard(virtual_keyboard_height: int):
+	if virtual_keyboard_height != 0:
+		var window_size: Vector2i = DisplayServer.window_get_size()
+		var viewport_size = get_viewport().get_visible_rect().size
+
+		var y_factor: float = viewport_size.y / window_size.y
+		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
+	elif virtual_keyboard_height == 0:
+		panel_chat.exit_chat()

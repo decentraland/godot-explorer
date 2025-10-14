@@ -1,0 +1,17 @@
+[config]
+name="DclGodotiOS"
+binary="dcl_godot_ios.xcframework"
+
+initialization="register_dcl_godot_ios_types"
+deinitialization="unregister_dcl_godot_ios_types"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=["SafariServices", "AuthenticationServices"]
+
+capabilities=[]
+
+files=[]
+
+[plist]

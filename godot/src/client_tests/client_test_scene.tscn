@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://ckwmixj7bha5n"]
+
+[ext_resource type="Script" uid="uid://ci4co13v3nbk" path="res://src/client_tests/client_test_scene.gd" id="1_k3xp6"]
+
+[node name="ClientTestScene" type="Node3D"]
+script = ExtResource("1_k3xp6")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 5, 10)
+cull_mask = 524287

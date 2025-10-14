@@ -1,15 +1,19 @@
-extends Panel
+extends PanelContainer
 
 signal submit_message(message: String)
-
-const EMOTE: String = "␐"
-const REQUEST_PING: String = "␑"
-const ACK: String = "␆"
+signal on_exit_chat
+signal on_open_chat
+signal release_mouse
 
 var hide_tween = null
+var open_tween = null
+var close_tween = null
 var nearby_avatars = null
+var is_open: bool = false
+var scrolled: bool = false
+var new_messages_count: int = 0
 
-@onready var rich_text_label_chat = %RichTextLabel_Chat
+@onready var panel_line_edit: PanelContainer = %PanelLineEdit
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
 @onready var button_nearby_users: Button = %Button_NearbyUsers
@@ -18,89 +22,78 @@ var nearby_avatars = null
 @onready var button_back: Button = %Button_Back
 @onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
-@onready var timer_hide = %Timer_Hide
-@onready var avatars_list: Control = $VBoxContainer/AvatarsList
+@onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
+@onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
+@onready var avatars_list: Control = %AvatarsList
+@onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
+@onready var margin_container_go_to_new_messages: MarginContainer = %MarginContainer_GoToNewMessages
+@onready var button_go_to_last: Button = %Button_GoToLast
+@onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
+@onready var label_new_messages: Label = %Label_NewMessages
 
 
+# gdlint:ignore = async-function-name
 func _ready():
-	_on_button_back_pressed()
-	avatars_list.async_update_nearby_users(Global.avatars.get_avatars())
+	#_on_button_back_pressed()
 
 	# Connect to avatar scene changed signal instead of using timer
-	Global.avatars.avatar_scene_changed.connect(avatars_list.async_update_nearby_users)
 	avatars_list.size_changed.connect(self.update_nearby_quantity)
 
-	add_chat_message(
-		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
-	)
-
-	Global.comms.chat_message.connect(self.on_chats_arrived)
-
+	Global.on_chat_message.connect(self._on_chat_message_arrived)
+	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
 	submit_message.connect(self._on_submit_message)
 
-	h_box_container_line_edit.hide()
+	exit_chat.call_deferred()
+	button_go_to_last.hide()
+
+	scroll_container_chats_list.get_v_scroll_bar().scrolling.connect(
+		self._on_chat_scrollbar_scrolling
+	)
+
+	await Global.loading_finished
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b]",
+		Time.get_unix_time_from_system()
+	)
 
 
-func _on_submit_message(_message: String):
-	UiSounds.play_sound("widget_chat_message_private_send")
-	_set_open_chat(false)
+func _on_submit_message(message: String):
+	if !message.is_empty():
+		var is_command: bool = message.begins_with("/")
+		var is_mention: bool = message.contains("@")
+		Global.metrics.track_chat_message_sent(
+			message.length(), "nearby", false, is_mention, is_command, "", "CHAT"
+		)
+
+		UiSounds.play_sound("widget_chat_message_private_send")
 
 
-func add_chat_message(bb_text: String) -> void:
-	rich_text_label_chat.append_text(bb_text)
-	rich_text_label_chat.newline()
+func _scroll_to_bottom() -> void:
+	if not scroll_container_chats_list:
+		return
 
-	if hide_tween != null:
-		hide_tween.stop()
-	modulate = Color.WHITE
-	timer_hide.start()
-
-
-func on_chats_arrived(chats: Array):
-	for chat in chats:
-		var address: String = chat[0]
-		# var _timestamp: float = chat[1]
-		var message: String = chat[2]
-
-		var avatar = Global.avatars.get_avatar_by_address(address)
-		if avatar == null:
-			if address == Global.player_identity.get_address_str():
-				avatar = Global.scene_runner.player_avatar_node
-
-		var avatar_name: String = ""
-		if avatar != null and is_instance_valid(avatar):
-			avatar_name = avatar.get_avatar_name()
-
-		if avatar_name.is_empty():
-			if address.length() > 32:
-				avatar_name = DclEther.shorten_eth_address(address)
-			else:
-				avatar_name = "Unknown"
-
-		if message.begins_with(EMOTE):
-			message = message.substr(1)  # Remove prefix
-			var expression_id = message.split(" ")[0]  # Get expression id ([1] is timestamp)
-			if avatar != null and is_instance_valid(avatar):
-				avatar.emote_controller.async_play_emote(expression_id)
-		elif message.begins_with(REQUEST_PING):
-			pass  # TODO: Send ACK
-		elif message.begins_with(ACK):
-			pass  # TODO: Calculate ping
-		else:
-			Global.player_said.emit(address, message)
-			var text = "[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar_name, message]
-			add_chat_message(text)
-			UiSounds.play_sound("notification_chatmessage_public_appear")
+	new_messages_count = 0
+	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
+	if scrollbar:
+		scroll_container_chats_list.set_v_scroll.call_deferred(scrollbar.max_value - scrollbar.page)
+		scrolled = false
+		button_go_to_last.hide()
 
 
 func _on_button_send_pressed():
 	submit_message.emit(line_edit_command.text)
 	line_edit_command.text = ""
+	exit_chat()
+	DisplayServer.virtual_keyboard_hide()
 
 
 func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
+	line_edit_command.focus_exited.emit()
+	grab_focus.call_deferred()
+	exit_chat()
 
 
 func finish():
@@ -109,42 +102,13 @@ func finish():
 		line_edit_command.text = ""
 
 
-func _on_line_edit_command_focus_exited():
-	_set_open_chat(false)
-
-
-func toggle_open_chat():
+func toggle_chat_visibility(visibility: bool):
 	_on_button_back_pressed()
-	_set_open_chat(not h_box_container_line_edit.visible)
-
-
-func _set_open_chat(value: bool):
-	h_box_container_line_edit.visible = value
-
-	if hide_tween != null:
-		hide_tween.stop()
-
-	if value:
-		line_edit_command.grab_focus()
+	if visibility:
 		UiSounds.play_sound("widget_chat_open")
-		timer_hide.stop()
-		modulate = Color.WHITE
 	else:
 		Global.explorer_grab_focus()
 		UiSounds.play_sound("widget_chat_close")
-		timer_hide.start()
-		modulate = Color.WHITE
-
-
-func _on_timer_hide_timeout():
-	if avatars_list.visible:
-		return
-	if hide_tween != null:
-		hide_tween.stop()
-
-	hide_tween = get_tree().create_tween()
-	modulate = Color.WHITE
-	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
 
 
 func update_nearby_quantity() -> void:
@@ -153,22 +117,111 @@ func update_nearby_quantity() -> void:
 
 
 func _on_button_nearby_users_pressed() -> void:
-	self_modulate = "#00000080"
-	avatars_list.show()
-	button_back.show()
-	h_box_container_nearby_users.show()
-	margin_container_chat.hide()
-	texture_rect_logo.hide()
-	button_nearby_users.hide()
-	timer_hide.stop()
+	show_nearby_players()
 
 
 func _on_button_back_pressed() -> void:
-	self_modulate = "#00000040"
+	panel_line_edit.show()
 	avatars_list.hide()
 	button_back.hide()
 	h_box_container_nearby_users.hide()
 	margin_container_chat.show()
 	texture_rect_logo.show()
 	button_nearby_users.show()
-	timer_hide.start()
+	line_edit_command.grab_focus()
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			exit_chat()
+		if event.pressed and event.keycode == KEY_ENTER:
+			toggle_chat_visibility(true)
+			async_start_chat()
+			line_edit_command.grab_focus.call_deferred()
+
+
+func exit_chat() -> void:
+	hide()
+	on_exit_chat.emit()
+	DisplayServer.virtual_keyboard_hide()
+
+
+func async_start_chat():
+	show()
+	panel_container_navbar.show()
+
+	Global.get_explorer().release_mouse()
+	DisplayServer.virtual_keyboard_show("")
+	h_box_container_line_edit.show()
+	line_edit_command.grab_focus()
+	on_open_chat.emit()
+	if !scrolled:
+		await get_tree().process_frame
+		_scroll_to_bottom()
+
+
+func show_nearby_players() -> void:
+	avatars_list.show()
+	button_back.show()
+	h_box_container_nearby_users.show()
+	margin_container_chat.hide()
+	texture_rect_logo.hide()
+	button_nearby_users.hide()
+	panel_line_edit.hide()
+
+
+func _on_chat_message_arrived(address: String, message: String, timestamp: float):
+	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
+	v_box_container_chat.add_child(new_chat)
+	new_chat.compact_view = true
+	new_chat.reduce_text = false
+	new_chat.max_panel_width = 550
+	new_chat.set_chat(address, message, timestamp)
+
+	if !scrolled:
+		_scroll_to_bottom()
+	else:
+		new_messages_count = new_messages_count + 1
+		if new_messages_count == 0:
+			panel_container_new_messages.hide()
+		else:
+			panel_container_new_messages.show()
+			label_new_messages.text = str(new_messages_count)
+
+
+func _on_line_edit_command_gui_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			exit_chat()
+
+
+func is_at_bottom() -> bool:
+	if not scroll_container_chats_list or not is_instance_valid(scroll_container_chats_list):
+		return true  # Consider it "at bottom" if container doesn't exist
+
+	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
+	if not scrollbar or not is_instance_valid(scrollbar) or not scrollbar.visible:
+		return true  # No scrollbar means all content visible, so we're "at bottom"
+
+	# Check if at bottom with small tolerance
+	var tolerance = 5.0
+	return scrollbar.value + scrollbar.page >= scrollbar.max_value - tolerance
+
+
+func _on_chat_scrollbar_scrolling() -> void:
+	scrolled = !is_at_bottom()
+	button_go_to_last.visible = scrolled
+
+
+func _on_button_go_to_last_pressed() -> void:
+	_scroll_to_bottom()
+
+
+func _async_on_change_virtual_keyboard(_new_safe_area) -> void:
+	await get_tree().process_frame
+	_scroll_to_bottom()
+
+
+func _on_line_edit_command_focus_exited() -> void:
+	line_edit_command.grab_focus()

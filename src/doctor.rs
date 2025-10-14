@@ -119,6 +119,16 @@ pub fn run_doctor() -> anyhow::Result<()> {
     print_section("Environment Variables");
     check_environment_variables();
 
+    // Check version consistency
+    print_divider();
+    if let Err(e) = crate::version_check::run_version_check() {
+        print_message(
+            MessageType::Error,
+            &format!("Version check failed: {}", e),
+        );
+        all_tools_ok = false;
+    }
+
     // Summary
     print_divider();
     print_section("Summary");

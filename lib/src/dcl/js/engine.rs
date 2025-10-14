@@ -5,11 +5,11 @@ use std::{
 };
 
 use deno_core::{op2, OpDecl, OpState};
+use tokio::sync::mpsc::Receiver;
 
 use crate::dcl::{
     common::{
-        SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
-        SceneProcessMainThreadMessages,
+        CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
     },
     crdt::{
         message::{
@@ -36,11 +36,6 @@ pub fn ops() -> Vec<OpDecl> {
 // receive and process a buffer of crdt messages
 #[op2(fast)]
 fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messages: &[u8]) {
-    let dying = op_state.borrow().borrow::<SceneDying>().0;
-    if dying {
-        return;
-    }
-
     let mut op_state = op_state.borrow_mut();
     let elapsed_time = op_state.borrow::<SceneElapsedTime>().0;
     let scene_id = op_state.take::<SceneId>();
@@ -84,18 +79,11 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
 async fn op_crdt_recv_from_renderer(
     op_state: Rc<RefCell<OpState>>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    let dying = op_state.borrow().borrow::<SceneDying>().0;
-    if dying {
-        return Ok(vec![]);
-    }
-
-    let mut receiver = op_state
+    let receiver = op_state
         .borrow_mut()
-        .try_take::<tokio::sync::mpsc::Receiver<RendererResponse>>()
-        .ok_or(anyhow::Error::msg(
-            "Failed to borrow `tokio::sync::mpsc::Receiver<RendererResponse>`: it is already borrowed elsewhere. Ensure the receiver is not in use concurrently."
-        ))?;
-    let response = receiver.recv().await;
+        .borrow_mut::<Arc<tokio::sync::Mutex<Receiver<RendererResponse>>>>()
+        .clone();
+    let response = receiver.lock().await.recv().await;
 
     let mut op_state = op_state.borrow_mut();
     op_state.put(receiver);
@@ -181,7 +169,7 @@ async fn op_crdt_recv_from_renderer(
         }
     };
 
-    op_state.put(SceneProcessMainThreadMessages(true));
+    op_state.put(CommunicatedWithRenderer);
 
     op_state.put(Vec::<LocalCall>::new());
     op_state.put(mutex_scene_crdt_state);

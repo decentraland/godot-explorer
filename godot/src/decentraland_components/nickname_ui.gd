@@ -68,6 +68,9 @@ func create_message_container(message: String):
 
 
 func async_show_message(message: String):
+	if message.length() > MAX_CHAR_COUNT:
+		message = message.substr(0, MAX_CHAR_COUNT) + "..."
+
 	for child in message_clip.get_children():
 		child.queue_free()
 	if message == "":
