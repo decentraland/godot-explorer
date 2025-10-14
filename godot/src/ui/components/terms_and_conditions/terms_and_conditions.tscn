@@ -41,39 +41,43 @@ grow_vertical = 2
 texture = SubResource("GradientTexture2D_r6r1x")
 expand_mode = 3
 
-[node name="CenterContainer" type="CenterContainer" parent="TextureRect"]
+[node name="Main" type="MarginContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="Main" type="MarginContainer" parent="TextureRect/CenterContainer"]
-unique_name_in_owner = true
-layout_mode = 2
 script = ExtResource("2_r6r1x")
 
-[node name="VBoxContainer_Terms" type="VBoxContainer" parent="TextureRect/CenterContainer/Main"]
+[node name="MarginContainer" type="MarginContainer" parent="Main"]
+layout_mode = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxContainer_Terms" type="VBoxContainer" parent="Main/MarginContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(425, 450)
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="TextureRect" type="TextureRect" parent="Main/MarginContainer/VBoxContainer_Terms"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 texture = ExtResource("1_yiehh")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="HSeparator" type="HSeparator" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="Label_Title" type="Label" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="Label_Title" type="Label" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("2_x1g4l")
@@ -81,7 +85,7 @@ theme_override_font_sizes/font_size = 36
 text = "Welcome!"
 label_settings = ExtResource("5_ratj3")
 
-[node name="Label_Title2" type="Label" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="Label_Title2" type="Label" parent="Main/MarginContainer/VBoxContainer_Terms"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -89,18 +93,18 @@ text = "Before playing, you have to agree to our terms"
 label_settings = ExtResource("6_ratj3")
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="HSeparator2" type="HSeparator" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
-theme_override_constants/separation = 50
+theme_override_constants/separation = 69
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="Control_Separator" type="Control" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="Control_Separator" type="Control" parent="Main/MarginContainer/VBoxContainer_Terms"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 80)
+custom_minimum_size = Vector2(80, 110)
 layout_mode = 2
 size_flags_vertical = 4
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Main/MarginContainer/VBoxContainer_Terms/Control_Separator"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -109,7 +113,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 7
 
-[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
+[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -119,37 +123,39 @@ autowrap_mode = 2
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="RichTextLabel2" type="RichTextLabel" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
+[node name="RichTextLabel2" type="RichTextLabel" parent="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer"]
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("7_4l5lg")
-theme_override_font_sizes/bold_italics_font_size = 22
-theme_override_font_sizes/italics_font_size = 22
-theme_override_font_sizes/mono_font_size = 22
-theme_override_font_sizes/normal_font_size = 22
-theme_override_font_sizes/bold_font_size = 22
+theme_override_font_sizes/bold_italics_font_size = 28
+theme_override_font_sizes/italics_font_size = 28
+theme_override_font_sizes/mono_font_size = 28
+theme_override_font_sizes/normal_font_size = 28
+theme_override_font_sizes/bold_font_size = 28
 bbcode_enabled = true
 text = "I have read and accept Decentraland's [color=#FF2D55][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#FF2D55][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#FF2D55][url=\"https://decentraland.org/content/\"]Contet Policy[/url][/color]"
 fit_content = true
 scroll_active = false
 
-[node name="Control2" type="Control" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="HSeparator3" type="HSeparator" parent="Main/MarginContainer/VBoxContainer_Terms"]
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/separation = 90
+theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="Button_Accept" type="Button" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms"]
+[node name="Button_Accept" type="Button" parent="Main/MarginContainer/VBoxContainer_Terms"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("6_vm4ah")
+theme_override_font_sizes/font_size = 30
 disabled = true
 text = "ACCEPT"
 icon_alignment = 2
 
-[node name="Spinner" parent="TextureRect/CenterContainer/Main/VBoxContainer_Terms" instance=ExtResource("9_w7xww")]
+[node name="Spinner" parent="Main/MarginContainer/VBoxContainer_Terms" instance=ExtResource("9_w7xww")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -160,8 +166,8 @@ speed_scale = 2.0
 [node name="Timer" type="Timer" parent="."]
 one_shot = true
 
-[connection signal="gui_input" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator" to="." method="_on_control_gui_input"]
-[connection signal="toggled" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
-[connection signal="meta_clicked" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Control_Separator/HBoxContainer/RichTextLabel2" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="pressed" from="TextureRect/CenterContainer/Main/VBoxContainer_Terms/Button_Accept" to="." method="_on_button_accept_pressed"]
+[connection signal="gui_input" from="Main/MarginContainer/VBoxContainer_Terms/Control_Separator" to="." method="_on_control_gui_input"]
+[connection signal="toggled" from="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
+[connection signal="meta_clicked" from="Main/MarginContainer/VBoxContainer_Terms/Control_Separator/HBoxContainer/RichTextLabel2" to="." method="_on_rich_text_label_meta_clicked"]
+[connection signal="pressed" from="Main/MarginContainer/VBoxContainer_Terms/Button_Accept" to="." method="_on_button_accept_pressed"]
 [connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

@@ -5,11 +5,12 @@
 
 [node name="Wearable_Button" type="Button"]
 offset_right = 94.0
-offset_bottom = 40.0
+offset_bottom = 48.0
 focus_mode = 0
 mouse_filter = 1
 mouse_default_cursor_shape = 2
 theme_type_variation = &"WhiteButton"
+theme_override_font_sizes/font_size = 24
 toggle_mode = true
 action_mode = 0
 keep_pressed_outside = true
