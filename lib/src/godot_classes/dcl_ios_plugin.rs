@@ -1,58 +1,22 @@
 use godot::prelude::*;
 
-/// Mobile device static information (doesn't change during runtime)
-#[derive(GodotClass, Debug, Clone)]
-#[class(base=RefCounted)]
+/// Mobile device static information (doesn't change during runtime) - internal Rust struct
+#[derive(Debug, Clone)]
 pub struct DclMobileDeviceInfo {
-    #[var]
-    pub device_brand: GString,
-    #[var]
-    pub device_model: GString,
-    #[var]
-    pub os_version: GString,
-    #[var]
+    pub device_brand: String,
+    pub device_model: String,
+    pub os_version: String,
     pub total_ram_mb: i32,
 }
 
-/// Mobile device dynamic metrics (changes during runtime)
-#[derive(GodotClass, Debug, Clone)]
-#[class(base=RefCounted)]
+/// Mobile device dynamic metrics (changes during runtime) - internal Rust struct
+#[derive(Debug, Clone)]
 pub struct DclMobileMetrics {
-    #[var]
     pub memory_usage: i32,
-    #[var]
     pub device_temperature_celsius: f32,
-    #[var]
-    pub device_thermal_state: GString,
-    #[var]
+    pub device_thermal_state: String,
     pub battery_percent: f32,
-    #[var]
-    pub charging_state: GString,
-}
-
-#[godot_api]
-impl IRefCounted for DclMobileDeviceInfo {
-    fn init(_base: Base<RefCounted>) -> Self {
-        Self {
-            device_brand: GString::new(),
-            device_model: GString::new(),
-            os_version: GString::new(),
-            total_ram_mb: -1,
-        }
-    }
-}
-
-#[godot_api]
-impl IRefCounted for DclMobileMetrics {
-    fn init(_base: Base<RefCounted>) -> Self {
-        Self {
-            memory_usage: -1,
-            device_temperature_celsius: -1.0,
-            device_thermal_state: GString::new(),
-            battery_percent: -1.0,
-            charging_state: GString::from("unknown"),
-        }
-    }
+    pub charging_state: String,
 }
 
 impl DclMobileDeviceInfo {
@@ -61,14 +25,17 @@ impl DclMobileDeviceInfo {
             device_brand: dict
                 .get("device_brand")
                 .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
                 .unwrap_or_default(),
             device_model: dict
                 .get("device_model")
                 .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
                 .unwrap_or_default(),
             os_version: dict
                 .get("os_version")
                 .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
                 .unwrap_or_default(),
             total_ram_mb: dict
                 .get("total_ram_mb")
@@ -92,6 +59,7 @@ impl DclMobileMetrics {
             device_thermal_state: dict
                 .get("thermal_state")
                 .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
                 .unwrap_or_default(),
             battery_percent: dict
                 .get("battery_percent")
@@ -100,14 +68,20 @@ impl DclMobileMetrics {
             charging_state: dict
                 .get("charging_state")
                 .and_then(|v| v.try_to::<GString>().ok())
-                .unwrap_or(GString::from("unknown")),
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "unknown".to_string()),
         }
     }
 }
 
 /// Static wrapper for the DclGodotiOS plugin that provides typed access to iOS-specific functionality
-pub struct DclIosPlugin;
+#[derive(GodotClass)]
+#[class(init, base=RefCounted)]
+pub struct DclIosPlugin {
+    _base: Base<RefCounted>,
+}
 
+#[godot_api]
 impl DclIosPlugin {
     /// Try to get the DclGodotiOS singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
@@ -116,16 +90,16 @@ impl DclIosPlugin {
         Some(singleton.cast::<Object>())
     }
 
-    /// Get static mobile device information (doesn't change during runtime)
-    pub fn get_mobile_device_info() -> Option<DclMobileDeviceInfo> {
+    /// Get static mobile device information (doesn't change during runtime) - internal use only
+    pub(crate) fn get_mobile_device_info_internal() -> Option<DclMobileDeviceInfo> {
         let mut singleton = Self::try_get_singleton()?;
         let info = singleton.call(StringName::from("get_mobile_device_info"), &[]);
         let dict = info.try_to::<Dictionary>().ok()?;
         Some(DclMobileDeviceInfo::from_dictionary(dict))
     }
 
-    /// Get dynamic mobile metrics (changes during runtime)
-    pub fn get_mobile_metrics() -> Option<DclMobileMetrics> {
+    /// Get dynamic mobile metrics (changes during runtime) - internal use only
+    pub(crate) fn get_mobile_metrics_internal() -> Option<DclMobileMetrics> {
         let mut singleton = Self::try_get_singleton()?;
         let metrics = singleton.call(StringName::from("get_mobile_metrics"), &[]);
         let dict = metrics.try_to::<Dictionary>().ok()?;
@@ -133,6 +107,7 @@ impl DclIosPlugin {
     }
 
     /// Open a URL in a webview
+    #[func]
     pub fn open_webview_url(url: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
@@ -142,6 +117,7 @@ impl DclIosPlugin {
     }
 
     /// Open a URL for authentication
+    #[func]
     pub fn open_auth_url(url: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
@@ -151,6 +127,7 @@ impl DclIosPlugin {
     }
 
     /// Check if the iOS plugin is available
+    #[func]
     pub fn is_available() -> bool {
         Self::try_get_singleton().is_some()
     }

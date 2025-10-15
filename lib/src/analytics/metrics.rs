@@ -88,11 +88,11 @@ impl INode for Metrics {
         // Check which mobile plugin is available and fetch static device info (checked once)
         if DclIosPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Ios);
-            self.device_info = DclIosPlugin::get_mobile_device_info();
+            self.device_info = DclIosPlugin::get_mobile_device_info_internal();
             tracing::info!("iOS mobile platform detected for metrics collection");
         } else if DclGodotAndroidPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Android);
-            self.device_info = DclGodotAndroidPlugin::get_mobile_device_info();
+            self.device_info = DclGodotAndroidPlugin::get_mobile_device_info_internal();
             tracing::info!("Android mobile platform detected for metrics collection");
         }
     }
@@ -100,8 +100,8 @@ impl INode for Metrics {
     fn process(&mut self, delta: f64) {
         // Get fresh mobile metrics based on detected platform
         let mobile_metrics = match self.mobile_platform {
-            Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics(),
-            Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics(),
+            Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
+            Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics_internal(),
             None => None,
         };
 

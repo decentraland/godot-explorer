@@ -1,7 +1,6 @@
 use crate::analytics::data_definition::{SegmentEvent, SegmentEventPerformanceMetrics};
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
-use godot::prelude::GString;
 
 const HICCUP_THRESHOLD_MS: f32 = 50.0;
 const FRAME_AMOUNT_TO_MEASURE: usize = 1000;
@@ -66,17 +65,17 @@ impl Frame {
                         if info.device_brand.is_empty() {
                             None
                         } else {
-                            Some(info.device_brand.to_string())
+                            Some(info.device_brand.clone())
                         },
                         if info.device_model.is_empty() {
                             None
                         } else {
-                            Some(info.device_model.to_string())
+                            Some(info.device_model.clone())
                         },
                         if info.os_version.is_empty() {
                             None
                         } else {
-                            Some(info.os_version.to_string())
+                            Some(info.os_version.clone())
                         },
                         if info.total_ram_mb >= 0 {
                             Some(info.total_ram_mb as u32)
@@ -102,19 +101,17 @@ impl Frame {
                     if metrics.device_thermal_state.is_empty() {
                         None
                     } else {
-                        Some(metrics.device_thermal_state.to_string())
+                        Some(metrics.device_thermal_state.clone())
                     },
                     if metrics.battery_percent >= 0.0 {
                         Some(metrics.battery_percent)
                     } else {
                         None
                     },
-                    if metrics.charging_state.is_empty()
-                        || metrics.charging_state == GString::from("unknown")
-                    {
+                    if metrics.charging_state.is_empty() || metrics.charging_state == "unknown" {
                         None
                     } else {
-                        Some(metrics.charging_state.to_string())
+                        Some(metrics.charging_state.clone())
                     },
                 )
             } else {

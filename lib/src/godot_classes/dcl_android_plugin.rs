@@ -3,8 +3,13 @@ use godot::prelude::*;
 use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
 
 /// Static wrapper for the DclAndroidPlugin (old plugin) that provides typed access to Android-specific functionality
-pub struct DclAndroidPlugin;
+#[derive(GodotClass)]
+#[class(init, base=RefCounted)]
+pub struct DclAndroidPlugin {
+    _base: Base<RefCounted>,
+}
 
+#[godot_api]
 impl DclAndroidPlugin {
     /// Try to get the DclAndroidPlugin singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
@@ -14,6 +19,7 @@ impl DclAndroidPlugin {
     }
 
     /// Show a Decentraland mobile toast notification
+    #[func]
     pub fn show_decentraland_mobile_toast() -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
@@ -23,6 +29,7 @@ impl DclAndroidPlugin {
     }
 
     /// Open a URL
+    #[func]
     pub fn open_url(url: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
@@ -32,14 +39,20 @@ impl DclAndroidPlugin {
     }
 
     /// Check if the old DclAndroidPlugin is available
+    #[func]
     pub fn is_available() -> bool {
         Self::try_get_singleton().is_some()
     }
 }
 
 /// Static wrapper for the dcl-godot-android plugin (new plugin) that provides typed access to Android-specific functionality
-pub struct DclGodotAndroidPlugin;
+#[derive(GodotClass)]
+#[class(init, base=RefCounted)]
+pub struct DclGodotAndroidPlugin {
+    _base: Base<RefCounted>,
+}
 
+#[godot_api]
 impl DclGodotAndroidPlugin {
     /// Try to get the dcl-godot-android singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
@@ -49,6 +62,7 @@ impl DclGodotAndroidPlugin {
     }
 
     /// Open a URL in a custom tab (for social)
+    #[func]
     pub fn open_custom_tab_url(url: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
@@ -58,6 +72,7 @@ impl DclGodotAndroidPlugin {
     }
 
     /// Open a URL in a webview (for wallet connect)
+    #[func]
     pub fn open_webview(url: GString, param: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
@@ -69,16 +84,16 @@ impl DclGodotAndroidPlugin {
         true
     }
 
-    /// Get static mobile device information (doesn't change during runtime)
-    pub fn get_mobile_device_info() -> Option<DclMobileDeviceInfo> {
+    /// Get static mobile device information (doesn't change during runtime) - internal use only
+    pub(crate) fn get_mobile_device_info_internal() -> Option<DclMobileDeviceInfo> {
         let mut singleton = Self::try_get_singleton()?;
         let info = singleton.call(StringName::from("getMobileDeviceInfo"), &[]);
         let dict = info.try_to::<Dictionary>().ok()?;
         Some(DclMobileDeviceInfo::from_dictionary(dict))
     }
 
-    /// Get dynamic mobile metrics (changes during runtime)
-    pub fn get_mobile_metrics() -> Option<DclMobileMetrics> {
+    /// Get dynamic mobile metrics (changes during runtime) - internal use only
+    pub(crate) fn get_mobile_metrics_internal() -> Option<DclMobileMetrics> {
         let mut singleton = Self::try_get_singleton()?;
         let metrics = singleton.call(StringName::from("getMobileMetrics"), &[]);
         let dict = metrics.try_to::<Dictionary>().ok()?;
@@ -86,6 +101,7 @@ impl DclGodotAndroidPlugin {
     }
 
     /// Check if the dcl-godot-android plugin is available
+    #[func]
     pub fn is_available() -> bool {
         Self::try_get_singleton().is_some()
     }
