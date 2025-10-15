@@ -15,6 +15,8 @@ pub mod dcl_global;
 pub mod dcl_global_time;
 pub mod dcl_gltf_container;
 pub mod dcl_hashing;
+pub mod dcl_ios_plugin;
+pub mod dcl_android_plugin;
 pub mod dcl_node_entity_3d;
 pub mod dcl_realm;
 #[cfg(feature = "use_resource_tracking")]

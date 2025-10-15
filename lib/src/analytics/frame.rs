@@ -1,4 +1,6 @@
 use crate::analytics::data_definition::{SegmentEvent, SegmentEventPerformanceMetrics};
+use crate::godot_classes::dcl_global::DclGlobal;
+use crate::godot_classes::dcl_ios_plugin::DclIosPlugin;
 use godot::prelude::*;
 
 const HICCUP_THRESHOLD_MS: f32 = 50.0;
@@ -52,10 +54,7 @@ impl Frame {
             let p95_frame_time = self.dt_ms_vec[(n_samples * 95) / 100];
             let p99_frame_time = self.dt_ms_vec[(n_samples * 99) / 100];
 
-            // Detect platform and get mobile device info if on iOS or Android
-            let os_name = godot::engine::Os::singleton().get_name().to_string();
-            let is_mobile = os_name == "iOS" || os_name == "Android";
-
+            // Get mobile device info if on iOS
             let (
                 memory_usage,
                 device_temperature_celsius,
@@ -65,79 +64,59 @@ impl Frame {
                 device_model,
                 os_version,
                 total_ram_mb,
-                network_type,
-                network_speed_mbps,
-            ) = if is_mobile && os_name == "iOS" {
-                // Try to get DclGodotiOS singleton and fetch mobile device info
-                match godot::engine::Engine::singleton()
-                    .get_singleton(StringName::from("DclGodotiOS"))
-                {
-                    Some(singleton) => {
-                        let mut dcl_ios = singleton.cast::<godot::engine::Object>();
-                        // Call get_mobile_device_info method
-                        let info = dcl_ios.call(StringName::from("get_mobile_device_info"), &[]);
-
-                        if let Ok(dict) = info.try_to::<Dictionary>() {
-                            let memory_usage = dict
-                                .get("memory_usage")
-                                .and_then(|v| v.try_to::<i32>().ok())
-                                .unwrap_or(-1);
-                            let thermal_state = dict
-                                .get("thermal_state")
-                                .and_then(|v| v.try_to::<GString>().ok())
-                                .map(|s| s.to_string());
-                            let battery_drain = dict
-                                .get("battery_drain_pct_per_hour")
-                                .and_then(|v| v.try_to::<f32>().ok());
-                            let brand = dict
-                                .get("device_brand")
-                                .and_then(|v| v.try_to::<GString>().ok())
-                                .map(|s| s.to_string());
-                            let model = dict
-                                .get("device_model")
-                                .and_then(|v| v.try_to::<GString>().ok())
-                                .map(|s| s.to_string());
-                            let os_ver = dict
-                                .get("os_version")
-                                .and_then(|v| v.try_to::<GString>().ok())
-                                .map(|s| s.to_string());
-                            let total_ram = dict
-                                .get("total_ram_mb")
-                                .and_then(|v| v.try_to::<i32>().ok())
-                                .map(|i| i as u32);
-                            let net_type = dict
-                                .get("network_type")
-                                .and_then(|v| v.try_to::<GString>().ok())
-                                .map(|s| s.to_string());
-                            let net_speed = dict
-                                .get("network_speed_mbps")
-                                .and_then(|v| v.try_to::<f32>().ok());
-
-                            (
-                                memory_usage,
-                                None,
-                                thermal_state,
-                                battery_drain,
-                                brand,
-                                model,
-                                os_ver,
-                                total_ram,
-                                net_type,
-                                net_speed,
-                            )
-                        } else {
-                            (-1, None, None, None, None, None, None, None, None, None)
-                        }
-                    }
-                    None => {
-                        tracing::warn!("DclGodotiOS singleton not found");
-                        (-1, None, None, None, None, None, None, None, None, None)
-                    }
-                }
+            ) = if let Some(info) = DclIosPlugin::get_mobile_device_info() {
+                (
+                    info.memory_usage,
+                    Some(info.device_temperature_celsius),
+                    if info.device_thermal_state.is_empty() {
+                        None
+                    } else {
+                        Some(info.device_thermal_state.to_string())
+                    },
+                    if info.battery_drain_pct_per_hour >= 0.0 {
+                        Some(info.battery_drain_pct_per_hour)
+                    } else {
+                        None
+                    },
+                    if info.device_brand.is_empty() {
+                        None
+                    } else {
+                        Some(info.device_brand.to_string())
+                    },
+                    if info.device_model.is_empty() {
+                        None
+                    } else {
+                        Some(info.device_model.to_string())
+                    },
+                    if info.os_version.is_empty() {
+                        None
+                    } else {
+                        Some(info.os_version.to_string())
+                    },
+                    if info.total_ram_mb >= 0 {
+                        Some(info.total_ram_mb as u32)
+                    } else {
+                        None
+                    },
+                )
             } else {
-                // Not on mobile or not iOS
-                (-1, None, None, None, None, None, None, None, None, None)
+                // iOS plugin not available
+                (-1, None, None, None, None, None, None, None)
             };
+
+            // Get download speed from content provider
+            let network_speed_mbps = DclGlobal::try_singleton().and_then(|global| {
+                let content_provider = global.bind().content_provider.clone();
+                let download_speed = content_provider.bind().get_download_speed_mbs();
+                if download_speed > 0.0 {
+                    Some(download_speed)
+                } else {
+                    None
+                }
+            });
+
+            // Network type is not available yet
+            let network_type: Option<String> = None;
 
             let event = SegmentEvent::PerformanceMetrics(SegmentEventPerformanceMetrics {
                 samples: n_samples as u32,
