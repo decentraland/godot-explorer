@@ -4,10 +4,9 @@ use reqwest::blocking::Client;
 use serde_json::Value;
 use std::env;
 use std::fs::{self, File};
-use std::io::{self, BufReader};
+use std::io::{self};
 use std::path::Path;
 use tar::Archive;
-use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
 use crate::consts::*;
@@ -28,45 +27,6 @@ use crate::consts::{
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
-    }
-    Ok(())
-}
-
-fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
-    fs::create_dir_all(&dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.as_ref().join(entry.file_name());
-
-        let metadata = entry.metadata()?;
-        if metadata.is_dir() {
-            copy_dir_all(&src_path, &dst_path)?;
-        } else if metadata.file_type().is_symlink() {
-            // Remove existing file/symlink if it exists
-            if dst_path.exists() {
-                fs::remove_file(&dst_path).ok();
-            }
-
-            // Handle symlinks
-            #[cfg(unix)]
-            {
-                let link_target = fs::read_link(&src_path)?;
-                use std::os::unix::fs::symlink;
-                symlink(&link_target, &dst_path)?;
-            }
-            #[cfg(not(unix))]
-            {
-                // On non-Unix, just copy the file
-                fs::copy(&src_path, &dst_path)?;
-            }
-        } else {
-            // Regular file - remove existing if present
-            if dst_path.exists() {
-                fs::remove_file(&dst_path)?;
-            }
-            fs::copy(&src_path, &dst_path)?;
-        }
     }
     Ok(())
 }
@@ -394,7 +354,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     fs::create_dir_all(BIN_FOLDER)?;
 
     // Download Android dependencies
-    let android_deps_url = "https://godot-artifacts.kuruk.net/android_deps.zip";
+    let android_deps_url = "https://files.dclexplorer.com/android_deps.zip";
     let android_deps_path = BinPaths::android_deps_zip();
     let android_deps_extracted_path = BinPaths::android_deps();
 
@@ -570,51 +530,6 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
 
     let next_steps = get_next_steps_instructions();
     println!("{}", next_steps);
-
-    Ok(())
-}
-
-pub fn download_and_extract_tar_xz(
-    url: &str,
-    destination_path: &str,
-    persistent_cache: Option<String>,
-) -> Result<(), anyhow::Error> {
-    if Path::new("./tmp-file.tar.xz").exists() {
-        fs::remove_file("./tmp-file.tar.xz")?;
-    }
-
-    // If the cached file exists, use it
-    if let Some(already_existing_file) = get_existing_cached_file(persistent_cache.clone()) {
-        print_message(
-            MessageType::Info,
-            &format!("Using cached file: {}", already_existing_file),
-        );
-        fs::copy(already_existing_file, "./tmp-file.tar.xz")?;
-    } else {
-        print_message(MessageType::Info, &format!("Downloading: {}", url));
-        download_file(url, "./tmp-file.tar.xz")?;
-
-        // when the download is done, copy the file to the persistent cache if it applies
-        if let Some(persistent_cache) = persistent_cache {
-            let persistent_path = get_persistent_path(Some(persistent_cache)).unwrap();
-            fs::copy("./tmp-file.tar.xz", persistent_path)?;
-        }
-    }
-
-    let file = File::open("./tmp-file.tar.xz")?;
-    let reader = BufReader::new(file);
-    let xz_decoder = XzDecoder::new(reader);
-    let mut tar_archive = Archive::new(xz_decoder);
-
-    // Create destination directory if it doesn't exist
-    fs::create_dir_all(destination_path)?;
-
-    // Extract the archive preserving symlinks
-    tar_archive.set_preserve_permissions(true);
-    tar_archive.set_preserve_ownerships(false);
-    tar_archive.unpack(destination_path)?;
-
-    fs::remove_file("./tmp-file.tar.xz")?;
 
     Ok(())
 }

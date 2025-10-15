@@ -1,9 +1,7 @@
 use std::{env, fs, io, path::Path};
 
 use crate::{
-    consts::{BIN_FOLDER, RUST_LIB_PROJECT_FOLDER},
-    helpers::get_lib_extension,
-    path::adjust_canonicalization,
+    consts::RUST_LIB_PROJECT_FOLDER, helpers::get_lib_extension, path::adjust_canonicalization,
 };
 
 pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
@@ -181,38 +179,6 @@ fn copy_with_error_context(
             e
         )
     })?;
-
-    Ok(())
-}
-
-// Function to move the directory and its contents recursively
-/// Create a symlink helper function
-fn create_symlink(target: &str, link_path: &str) -> io::Result<()> {
-    // Remove existing file/link if it exists
-    if Path::new(link_path).exists() {
-        fs::remove_file(link_path).ok();
-    }
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::symlink;
-        symlink(target, link_path)?;
-        println!(
-            "Created symlink: {} -> {}",
-            Path::new(link_path).file_name().unwrap().to_string_lossy(),
-            target
-        );
-    }
-
-    #[cfg(not(unix))]
-    {
-        // On non-Unix systems, just copy the file
-        let link_dir = Path::new(link_path).parent().unwrap();
-        let target_path = link_dir.join(target);
-        if target_path.exists() {
-            fs::copy(&target_path, link_path)?;
-        }
-    }
 
     Ok(())
 }

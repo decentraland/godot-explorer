@@ -202,10 +202,6 @@ impl BinPaths {
     pub fn keystore(filename: &str) -> PathBuf {
         PathBuf::from(BIN_FOLDER).join(filename)
     }
-
-    pub fn temp_dir(name: &str) -> PathBuf {
-        PathBuf::from(BIN_FOLDER).join(name)
-    }
 }
 
 /// Common Android SDK path patterns

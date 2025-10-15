@@ -84,7 +84,9 @@ pub fn run_version_check() -> anyhow::Result<()> {
                     .parse::<u32>()
                     .expect("Failed to parse Android version/code as u32"),
             );
-        } else if in_quest_preset && line.starts_with("version/code=") && quest_version_code.is_none()
+        } else if in_quest_preset
+            && line.starts_with("version/code=")
+            && quest_version_code.is_none()
         {
             quest_version_code = Some(
                 line.split('=')
@@ -94,9 +96,7 @@ pub fn run_version_check() -> anyhow::Result<()> {
                     .parse::<u32>()
                     .expect("Failed to parse Quest version/code as u32"),
             );
-        } else if in_ios_preset
-            && line.starts_with("application/version=")
-            && ios_version.is_none()
+        } else if in_ios_preset && line.starts_with("application/version=") && ios_version.is_none()
         {
             ios_version = Some(
                 line.split('=')
@@ -110,8 +110,7 @@ pub fn run_version_check() -> anyhow::Result<()> {
         }
     }
 
-    let android_version_code =
-        android_version_code.expect("Failed to find Android version/code");
+    let android_version_code = android_version_code.expect("Failed to find Android version/code");
     let quest_version_code = quest_version_code.expect("Failed to find Quest version/code");
     let ios_version = ios_version.expect("Failed to find iOS application/version");
 
