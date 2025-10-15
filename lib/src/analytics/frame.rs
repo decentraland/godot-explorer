@@ -1,6 +1,6 @@
 use crate::analytics::data_definition::{SegmentEvent, SegmentEventPerformanceMetrics};
 use crate::godot_classes::dcl_global::DclGlobal;
-use crate::godot_classes::dcl_ios_plugin::DclMobileDeviceInfo;
+use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
 use godot::prelude::GString;
 
 const HICCUP_THRESHOLD_MS: f32 = 50.0;
@@ -29,7 +29,12 @@ impl Frame {
         }
     }
 
-    pub fn process(&mut self, dt_ms: f32, device_info: Option<&DclMobileDeviceInfo>) -> Option<SegmentEvent> {
+    pub fn process(
+        &mut self,
+        dt_ms: f32,
+        device_info: Option<&DclMobileDeviceInfo>,
+        mobile_metrics: Option<&DclMobileMetrics>,
+    ) -> Option<SegmentEvent> {
         self.sum_dt += dt_ms;
         self.dt_ms_vec.push(dt_ms);
         if dt_ms > HICCUP_THRESHOLD_MS {
@@ -54,61 +59,66 @@ impl Frame {
             let p95_frame_time = self.dt_ms_vec[(n_samples * 95) / 100];
             let p99_frame_time = self.dt_ms_vec[(n_samples * 99) / 100];
 
-            // Get mobile device info from parameter (collected by Metrics)
+            // Get static device info (collected once at startup)
+            let (device_brand, device_model, os_version, total_ram_mb) =
+                if let Some(info) = device_info {
+                    (
+                        if info.device_brand.is_empty() {
+                            None
+                        } else {
+                            Some(info.device_brand.to_string())
+                        },
+                        if info.device_model.is_empty() {
+                            None
+                        } else {
+                            Some(info.device_model.to_string())
+                        },
+                        if info.os_version.is_empty() {
+                            None
+                        } else {
+                            Some(info.os_version.to_string())
+                        },
+                        if info.total_ram_mb >= 0 {
+                            Some(info.total_ram_mb as u32)
+                        } else {
+                            None
+                        },
+                    )
+                } else {
+                    (None, None, None, None)
+                };
+
+            // Get dynamic mobile metrics (collected every time)
             let (
                 memory_usage,
                 device_temperature_celsius,
                 device_thermal_state,
-                battery_drain_pct_per_hour,
+                battery_percent,
                 charging_state,
-                device_brand,
-                device_model,
-                os_version,
-                total_ram_mb,
-            ) = if let Some(info) = device_info {
-                // Device info provided
+            ) = if let Some(metrics) = mobile_metrics {
                 (
-                    info.memory_usage,
-                    Some(info.device_temperature_celsius),
-                    if info.device_thermal_state.is_empty() {
+                    metrics.memory_usage,
+                    Some(metrics.device_temperature_celsius),
+                    if metrics.device_thermal_state.is_empty() {
                         None
                     } else {
-                        Some(info.device_thermal_state.to_string())
+                        Some(metrics.device_thermal_state.to_string())
                     },
-                    if info.battery_drain_pct_per_hour >= 0.0 {
-                        Some(info.battery_drain_pct_per_hour)
+                    if metrics.battery_percent >= 0.0 {
+                        Some(metrics.battery_percent)
                     } else {
                         None
                     },
-                    if info.charging_state.is_empty() || info.charging_state == GString::from("unknown") {
+                    if metrics.charging_state.is_empty()
+                        || metrics.charging_state == GString::from("unknown")
+                    {
                         None
                     } else {
-                        Some(info.charging_state.to_string())
-                    },
-                    if info.device_brand.is_empty() {
-                        None
-                    } else {
-                        Some(info.device_brand.to_string())
-                    },
-                    if info.device_model.is_empty() {
-                        None
-                    } else {
-                        Some(info.device_model.to_string())
-                    },
-                    if info.os_version.is_empty() {
-                        None
-                    } else {
-                        Some(info.os_version.to_string())
-                    },
-                    if info.total_ram_mb >= 0 {
-                        Some(info.total_ram_mb as u32)
-                    } else {
-                        None
+                        Some(metrics.charging_state.to_string())
                     },
                 )
             } else {
-                // No device info available
-                (-1, None, None, None, None, None, None, None, None)
+                (-1, None, None, None, None)
             };
 
             // Get download speed from content provider
@@ -150,15 +160,17 @@ impl Frame {
                 used_jsheap_size: -1,
                 memory_usage,
 
-                // Mobile metrics
-                device_temperature_celsius,
-                device_thermal_state,
-                battery_drain_pct_per_hour,
-                charging_state,
+                // Mobile device info (static)
                 device_brand,
                 device_model,
                 os_version,
                 total_ram_mb,
+
+                // Mobile metrics (dynamic)
+                device_temperature_celsius,
+                device_thermal_state,
+                battery_percent,
+                charging_state,
                 network_type,
                 network_speed_mbps,
             });

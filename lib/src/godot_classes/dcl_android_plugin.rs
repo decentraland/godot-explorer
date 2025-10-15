@@ -1,6 +1,6 @@
 use godot::prelude::*;
 
-use crate::godot_classes::dcl_ios_plugin::DclMobileDeviceInfo;
+use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
 
 /// Static wrapper for the DclAndroidPlugin (old plugin) that provides typed access to Android-specific functionality
 pub struct DclAndroidPlugin;
@@ -69,12 +69,20 @@ impl DclGodotAndroidPlugin {
         true
     }
 
-    /// Get mobile device information including memory, thermal state, battery, etc.
+    /// Get static mobile device information (doesn't change during runtime)
     pub fn get_mobile_device_info() -> Option<DclMobileDeviceInfo> {
         let mut singleton = Self::try_get_singleton()?;
         let info = singleton.call(StringName::from("getMobileDeviceInfo"), &[]);
         let dict = info.try_to::<Dictionary>().ok()?;
         Some(DclMobileDeviceInfo::from_dictionary(dict))
+    }
+
+    /// Get dynamic mobile metrics (changes during runtime)
+    pub fn get_mobile_metrics() -> Option<DclMobileMetrics> {
+        let mut singleton = Self::try_get_singleton()?;
+        let metrics = singleton.call(StringName::from("getMobileMetrics"), &[]);
+        let dict = metrics.try_to::<Dictionary>().ok()?;
+        Some(DclMobileMetrics::from_dictionary(dict))
     }
 
     /// Check if the dcl-godot-android plugin is available

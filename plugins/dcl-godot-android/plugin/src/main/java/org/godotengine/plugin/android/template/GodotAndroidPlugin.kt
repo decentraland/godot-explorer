@@ -259,30 +259,53 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
         activity?.let { ctx ->
             try {
-                // Get memory usage
+                // Get total RAM
                 val activityManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
                 val memInfo = ActivityManager.MemoryInfo()
                 activityManager.getMemoryInfo(memInfo)
-
-                // Current app memory usage (approximate)
-                val runtime = Runtime.getRuntime()
-                val usedMemoryMB = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
-                info["memory_usage"] = usedMemoryMB.toInt()
-
-                // Total RAM
                 val totalRamMB = memInfo.totalMem / (1024 * 1024)
                 info["total_ram_mb"] = totalRamMB.toInt()
 
-                // Get battery information
-                val batteryManager = ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+                // Device information (static)
+                info["device_brand"] = Build.BRAND
+                info["device_model"] = Build.MODEL
+                info["os_version"] = "Android ${Build.VERSION.RELEASE}"
 
-                // Battery temperature (in tenths of a degree Celsius)
+                Log.d(pluginName, "Mobile device info collected successfully")
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error collecting mobile device info: ${e.message}")
+                // Return defaults on error
+                info["device_brand"] = ""
+                info["device_model"] = ""
+                info["os_version"] = ""
+                info["total_ram_mb"] = -1
+            }
+        } ?: run {
+            Log.e(pluginName, "Activity is null, cannot collect device info")
+        }
+
+        return info
+    }
+
+    @UsedByGodot
+    fun getMobileMetrics(): Dictionary {
+        val metrics = Dictionary()
+
+        activity?.let { ctx ->
+            try {
+                // Get memory usage
+                val runtime = Runtime.getRuntime()
+                val usedMemoryMB = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+                metrics["memory_usage"] = usedMemoryMB.toInt()
+
+                // Get battery information
                 val batteryIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
                 val batteryStatus = ctx.registerReceiver(null, batteryIntentFilter)
+
+                // Battery temperature (in tenths of a degree Celsius)
                 val temperature = batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
                 val temperatureCelsius = if (temperature > 0) temperature / 10.0f else -1.0f
-
-                info["device_temperature_celsius"] = temperatureCelsius
+                metrics["device_temperature_celsius"] = temperatureCelsius
 
                 // Approximate thermal state based on temperature
                 val thermalState = when {
@@ -292,16 +315,17 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     temperatureCelsius < 50.0f -> "serious"
                     else -> "critical"
                 }
-                info["thermal_state"] = thermalState
+                metrics["thermal_state"] = thermalState
 
-                // Battery level, status, and charging state
+                // Battery level
                 val batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
                 val batteryScale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-                val batteryPct = if (batteryLevel >= 0 && batteryScale > 0) {
+                val batteryPercent = if (batteryLevel >= 0 && batteryScale > 0) {
                     (batteryLevel.toFloat() / batteryScale.toFloat()) * 100.0f
                 } else {
                     -1.0f
                 }
+                metrics["battery_percent"] = batteryPercent
 
                 // Get charging state with detailed type information
                 val plugged = batteryStatus?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: -1
@@ -316,55 +340,23 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     plugged == 0 -> "unplugged"
                     else -> "unknown"
                 }
-                info["charging_state"] = chargingState
+                metrics["charging_state"] = chargingState
 
-                // Calculate battery drain rate
-                val currentTime = System.currentTimeMillis()
-                val batteryDrainPctPerHour = if (initialBatteryLevel < 0.0f) {
-                    // First call - initialize
-                    initialBatteryLevel = batteryPct
-                    initialBatteryTimestamp = currentTime
-                    0.0f
-                } else {
-                    // Calculate drain rate
-                    val elapsedHours = (currentTime - initialBatteryTimestamp) / (1000.0f * 3600.0f)
-                    if (elapsedHours > 0.0f) {
-                        (initialBatteryLevel - batteryPct) / elapsedHours
-                    } else {
-                        0.0f
-                    }
-                }
-                info["battery_drain_pct_per_hour"] = batteryDrainPctPerHour
-
-                // Device information
-                info["device_brand"] = Build.BRAND
-                info["device_model"] = Build.MODEL
-                info["os_version"] = "Android ${Build.VERSION.RELEASE}"
-
-                Log.d(pluginName, "Mobile device info collected successfully")
+                Log.d(pluginName, "Mobile metrics collected successfully")
             } catch (e: Exception) {
-                Log.e(pluginName, "Error collecting mobile device info: ${e.message}")
+                Log.e(pluginName, "Error collecting mobile metrics: ${e.message}")
                 // Return defaults on error
-                info["memory_usage"] = -1
-                info["device_temperature_celsius"] = -1.0f
-                info["thermal_state"] = "unknown"
-                info["battery_drain_pct_per_hour"] = -1.0f
-                info["device_brand"] = ""
-                info["device_model"] = ""
-                info["os_version"] = ""
-                info["total_ram_mb"] = -1
+                metrics["memory_usage"] = -1
+                metrics["device_temperature_celsius"] = -1.0f
+                metrics["thermal_state"] = "unknown"
+                metrics["battery_percent"] = -1.0f
+                metrics["charging_state"] = "unknown"
             }
         } ?: run {
-            Log.e(pluginName, "Activity is null, cannot collect device info")
+            Log.e(pluginName, "Activity is null, cannot collect metrics")
         }
 
-        return info
-    }
-
-    companion object {
-        // Static variables for battery drain calculation
-        private var initialBatteryLevel: Float = -1.0f
-        private var initialBatteryTimestamp: Long = 0L
+        return metrics
     }
 
 }

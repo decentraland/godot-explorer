@@ -258,17 +258,17 @@ func release_mouse():
 func open_webview_url(url):
 	if DclIosPlugin.open_webview_url(url):
 		return
-	elif DclGodotAndroidPlugin.open_custom_tab_url(url):
+	if DclGodotAndroidPlugin.open_custom_tab_url(url):
 		return
-	else:
-		OS.shell_open(url)
+
+	OS.shell_open(url)
 
 
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
 		if DclIosPlugin.open_auth_url(url):
 			return
-		elif DclGodotAndroidPlugin.is_available():
+		if DclGodotAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
 				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 			else:

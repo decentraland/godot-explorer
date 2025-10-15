@@ -100,19 +100,7 @@ pub struct SegmentEventPerformanceMetrics {
     pub used_jsheap_size: i32,
     // Memory used only by the explorer in kilo bytes (or populated from mobile metrics)
     pub memory_usage: i32,
-    // Mobile-specific metrics (only sent on iOS/Android)
-    // Device temperature in Celsius (Android only)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub device_temperature_celsius: Option<f32>,
-    // Device thermal state (iPhone only: nominal/fair/serious/critical)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub device_thermal_state: Option<String>,
-    // Battery drain percentage per hour
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub battery_drain_pct_per_hour: Option<f32>,
-    // Battery charging state (unknown/unplugged/plugged/usb/wireless/full)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub charging_state: Option<String>,
+    // Mobile device info (static - doesn't change during runtime)
     // Device brand (e.g., "Apple", "Samsung")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub device_brand: Option<String>,
@@ -125,6 +113,20 @@ pub struct SegmentEventPerformanceMetrics {
     // Total device RAM in megabytes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_ram_mb: Option<u32>,
+
+    // Mobile metrics (dynamic - changes during runtime)
+    // Device temperature in Celsius
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_temperature_celsius: Option<f32>,
+    // Device thermal state (nominal/fair/serious/critical)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_thermal_state: Option<String>,
+    // Battery percentage (0-100)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub battery_percent: Option<f32>,
+    // Battery charging state (unknown/unplugged/plugged/usb/wireless/full)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub charging_state: Option<String>,
     // Network type (WiFi, Carrier 3G, Carrier 4G, Carrier 5G)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network_type: Option<String>,

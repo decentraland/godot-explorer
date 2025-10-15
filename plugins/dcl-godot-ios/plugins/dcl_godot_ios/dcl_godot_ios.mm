@@ -111,6 +111,7 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
     ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
+    ClassDB::bind_method(D_METHOD("get_mobile_metrics"), &DclGodotiOS::get_mobile_metrics);
 }
 
 void DclGodotiOS::print_version() {
@@ -175,73 +176,6 @@ Dictionary DclGodotiOS::get_mobile_device_info() {
     Dictionary info;
 
     #if TARGET_OS_IOS
-    // Static variables for battery drain calculation
-    static float initial_battery_level = -1.0f;
-    static NSDate *initial_battery_timestamp = nil;
-
-    // Enable battery monitoring
-    [[UIDevice currentDevice] setBatteryMonitoringEnabled:YES];
-
-    // Get thermal state
-    NSProcessInfo *processInfo = [NSProcessInfo processInfo];
-    NSString *thermalState = @"unknown";
-    switch (processInfo.thermalState) {
-        case NSProcessInfoThermalStateNominal:
-            thermalState = @"nominal";
-            break;
-        case NSProcessInfoThermalStateFair:
-            thermalState = @"fair";
-            break;
-        case NSProcessInfoThermalStateSerious:
-            thermalState = @"serious";
-            break;
-        case NSProcessInfoThermalStateCritical:
-            thermalState = @"critical";
-            break;
-    }
-    info["thermal_state"] = String(thermalState.UTF8String);
-
-    // Get battery state and level
-    UIDeviceBatteryState batteryState = [[UIDevice currentDevice] batteryState];
-    float current_battery_level = [[UIDevice currentDevice] batteryLevel] * 100.0f; // 0-100
-    info["battery_level"] = current_battery_level;
-
-    // Map battery state to charging state string
-    NSString *chargingState;
-    switch (batteryState) {
-        case UIDeviceBatteryStateUnknown:
-            chargingState = @"unknown";
-            break;
-        case UIDeviceBatteryStateUnplugged:
-            chargingState = @"unplugged";
-            break;
-        case UIDeviceBatteryStateCharging:
-            chargingState = @"plugged";  // iOS doesn't differentiate USB/wireless
-            break;
-        case UIDeviceBatteryStateFull:
-            chargingState = @"full";
-            break;
-    }
-    info["charging_state"] = String(chargingState.UTF8String);
-
-    if (initial_battery_level < 0.0f) {
-        // First call - initialize
-        initial_battery_level = current_battery_level;
-        initial_battery_timestamp = [NSDate date];
-        info["battery_drain_pct_per_hour"] = 0.0f;
-    } else {
-        // Calculate drain rate
-        NSTimeInterval elapsed_seconds = [[NSDate date] timeIntervalSinceDate:initial_battery_timestamp];
-        float elapsed_hours = elapsed_seconds / 3600.0f;
-
-        if (elapsed_hours > 0.0f) {
-            float drain_pct_per_hour = (initial_battery_level - current_battery_level) / elapsed_hours;
-            info["battery_drain_pct_per_hour"] = drain_pct_per_hour;
-        } else {
-            info["battery_drain_pct_per_hour"] = 0.0f;
-        }
-    }
-
     // Device brand
     info["device_brand"] = "Apple";
 
@@ -268,52 +202,76 @@ Dictionary DclGodotiOS::get_mobile_device_info() {
     } else {
         info["total_ram_mb"] = 0;
     }
+    #endif
+
+    return info;
+}
+
+Dictionary DclGodotiOS::get_mobile_metrics() {
+    Dictionary metrics;
+
+    #if TARGET_OS_IOS
+    // Enable battery monitoring
+    [[UIDevice currentDevice] setBatteryMonitoringEnabled:YES];
+
+    // Get thermal state
+    NSProcessInfo *processInfo = [NSProcessInfo processInfo];
+    NSString *thermalState = @"unknown";
+    switch (processInfo.thermalState) {
+        case NSProcessInfoThermalStateNominal:
+            thermalState = @"nominal";
+            break;
+        case NSProcessInfoThermalStateFair:
+            thermalState = @"fair";
+            break;
+        case NSProcessInfoThermalStateSerious:
+            thermalState = @"serious";
+            break;
+        case NSProcessInfoThermalStateCritical:
+            thermalState = @"critical";
+            break;
+    }
+    metrics["thermal_state"] = String(thermalState.UTF8String);
+
+    // Get battery state and level
+    UIDeviceBatteryState batteryState = [[UIDevice currentDevice] batteryState];
+    float battery_percent = [[UIDevice currentDevice] batteryLevel] * 100.0f; // 0-100
+    metrics["battery_percent"] = battery_percent;
+
+    // Map battery state to charging state string
+    NSString *chargingState;
+    switch (batteryState) {
+        case UIDeviceBatteryStateUnknown:
+            chargingState = @"unknown";
+            break;
+        case UIDeviceBatteryStateUnplugged:
+            chargingState = @"unplugged";
+            break;
+        case UIDeviceBatteryStateCharging:
+            chargingState = @"plugged";  // iOS doesn't differentiate USB/wireless
+            break;
+        case UIDeviceBatteryStateFull:
+            chargingState = @"full";
+            break;
+    }
+    metrics["charging_state"] = String(chargingState.UTF8String);
+
+    // Get temperature (battery temperature approximation)
+    // iOS doesn't expose CPU/device temperature directly, so we use -1.0 as placeholder
+    metrics["device_temperature_celsius"] = -1.0f;
 
     // Get RAM consumption using phys_footprint (what Xcode uses)
     struct task_vm_info vm_info;
     mach_msg_type_number_t vm_info_count = TASK_VM_INFO_COUNT;
     if (task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vm_info, &vm_info_count) == KERN_SUCCESS) {
         // phys_footprint is the actual physical memory used (what Xcode shows)
-        info["memory_usage"] = (int)(vm_info.phys_footprint / (1024 * 1024));
+        metrics["memory_usage"] = (int)(vm_info.phys_footprint / (1024 * 1024));
     } else {
-        info["memory_usage"] = 0;
+        metrics["memory_usage"] = 0;
     }
-
-    // Get network type using NWPathMonitor (simplified synchronous check)
-    __block String network_type = "Unknown";
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-
-    nw_path_monitor_t monitor = nw_path_monitor_create();
-    nw_path_monitor_set_queue(monitor, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
-    nw_path_monitor_set_update_handler(monitor, ^(nw_path_t path) {
-        if (nw_path_get_status(path) == nw_path_status_satisfied) {
-            if (nw_path_uses_interface_type(path, nw_interface_type_wifi)) {
-                network_type = "WiFi";
-            } else if (nw_path_uses_interface_type(path, nw_interface_type_cellular)) {
-                // Try to determine cellular generation (simplified)
-                network_type = "Cellular";
-            } else if (nw_path_uses_interface_type(path, nw_interface_type_wired)) {
-                network_type = "Wired";
-            } else {
-                network_type = "Other";
-            }
-        } else {
-            network_type = "No Connection";
-        }
-        dispatch_semaphore_signal(semaphore);
-    });
-    nw_path_monitor_start(monitor);
-
-    // Wait for network check with timeout
-    dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC));
-    nw_path_monitor_cancel(monitor);
-
-    info["network_type"] = network_type;
-    info["network_speed_mbps"] = 0.0f; // To be calculated later
-
     #endif
 
-    return info;
+    return metrics;
 }
 
 DclGodotiOS *DclGodotiOS::get_singleton() {

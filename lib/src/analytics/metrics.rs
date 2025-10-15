@@ -4,8 +4,9 @@ use godot::{engine::Timer, prelude::*};
 
 use crate::{
     godot_classes::{
-        dcl_android_plugin::DclGodotAndroidPlugin, dcl_global::DclGlobal,
-        dcl_ios_plugin::DclIosPlugin,
+        dcl_android_plugin::DclGodotAndroidPlugin,
+        dcl_global::DclGlobal,
+        dcl_ios_plugin::{DclIosPlugin, DclMobileDeviceInfo},
     },
     http_request::{
         http_queue_requester::HttpQueueRequester,
@@ -48,6 +49,8 @@ pub struct Metrics {
 
     // Which mobile platform is available (checked once at ready)
     mobile_platform: Option<MobilePlatform>,
+    // Static mobile device info (fetched once at ready)
+    device_info: Option<DclMobileDeviceInfo>,
 
     base: Base<Node>,
 }
@@ -66,6 +69,7 @@ impl INode for Metrics {
             events: Vec::new(),
             serialized_events: Vec::new(),
             mobile_platform: None,
+            device_info: None,
             base,
         }
     }
@@ -81,25 +85,31 @@ impl INode for Metrics {
 
         self.base_mut().add_child(timer.upcast());
 
-        // Check which mobile plugin is available (checked once)
+        // Check which mobile plugin is available and fetch static device info (checked once)
         if DclIosPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Ios);
+            self.device_info = DclIosPlugin::get_mobile_device_info();
             tracing::info!("iOS mobile platform detected for metrics collection");
         } else if DclGodotAndroidPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Android);
+            self.device_info = DclGodotAndroidPlugin::get_mobile_device_info();
             tracing::info!("Android mobile platform detected for metrics collection");
         }
     }
 
     fn process(&mut self, delta: f64) {
-        // Get fresh device info based on detected platform
-        let device_info = match self.mobile_platform {
-            Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_device_info(),
-            Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_device_info(),
+        // Get fresh mobile metrics based on detected platform
+        let mobile_metrics = match self.mobile_platform {
+            Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics(),
+            Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics(),
             None => None,
         };
 
-        if let Some(frame_data) = self.frame.process(1000.0 * delta as f32, device_info.as_ref()) {
+        if let Some(frame_data) = self.frame.process(
+            1000.0 * delta as f32,
+            self.device_info.as_ref(),
+            mobile_metrics.as_ref(),
+        ) {
             self.events.push(frame_data);
         }
     }
@@ -122,6 +132,7 @@ impl Metrics {
             events: Vec::new(),
             serialized_events: Vec::new(),
             mobile_platform: None,
+            device_info: None,
             base,
         })
     }
