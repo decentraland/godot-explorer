@@ -51,9 +51,6 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
-      - name: debug
-        run: |
-          ls -la /home/runner/.cache/devgodot/
       - name: cargo run -- install
         run: cargo run -- install --no-templates
 
