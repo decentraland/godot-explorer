@@ -93,7 +93,7 @@ func _async_fetch_events(url: String, limit: int = 100):
 		item_container.add_child(item)
 
 		item.set_data(event_data)
-		item.item_pressed.connect(discover.on_item_pressed)
+		item.event_pressed.connect(discover.on_event_pressed)
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
 

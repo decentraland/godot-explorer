@@ -12,9 +12,11 @@ corner_radius_top_left = 24
 corner_radius_top_right = 24
 
 [node name="EventDetails" type="ColorRect"]
-custom_minimum_size = Vector2(1080, 1920)
-offset_right = 1080.0
-offset_bottom = 1920.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 color = Color(0, 0, 0, 0.501961)
@@ -23,29 +25,12 @@ script = ExtResource("1_vapvi")
 [node name="EventDetailsPortrait" parent="." instance=ExtResource("2_vapvi")]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -834.0
-offset_right = 0.0
-offset_bottom = 0.0
-grow_horizontal = 2
-grow_vertical = 0
+offset_top = -706.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_dsiqj")
 
 [node name="EventDetailsLandscape" parent="." instance=ExtResource("3_vapvi")]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 11
-anchor_left = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -833.0
-offset_right = 0.0
-offset_bottom = 0.0
-grow_horizontal = 0
-grow_vertical = 2
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("2_yptc8")]
 unique_name_in_owner = true

@@ -74,10 +74,8 @@ font = ExtResource("2_fhlt6")
 font_size = 14
 font_color = Color(0, 0, 0, 1)
 
-[node name="EventDiscoverCard" type="Control"]
+[node name="EventDiscoverCard" type="TextureButton"]
 custom_minimum_size = Vector2(332, 318)
-layout_mode = 3
-anchors_preset = 0
 offset_right = 332.0
 offset_bottom = 318.0
 size_flags_horizontal = 0
@@ -220,3 +218,5 @@ text = "263"
 label_settings = SubResource("LabelSettings_kyirg")
 vertical_alignment = 1
 uppercase = true
+
+[connection signal="pressed" from="." to="." method="_on_event_pressed"]

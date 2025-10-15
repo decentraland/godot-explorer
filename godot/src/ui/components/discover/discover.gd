@@ -4,6 +4,7 @@ extends Control
 var search_text: String = ""
 
 @onready var jump_in = %JumpIn
+@onready var event_details: EventDetailWrapper = %EventDetails
 
 @onready var button_search_bar: Button = %Button_SearchBar
 @onready var line_edit_search_bar: LineEdit = %LineEdit_SearchBar
@@ -19,6 +20,7 @@ var search_text: String = ""
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	jump_in.hide()
+	event_details.hide()
 	button_search_bar.show()
 	button_clear_filter.hide()
 	line_edit_search_bar.hide()
@@ -28,6 +30,10 @@ func on_item_pressed(data):
 	jump_in.set_data(data)
 	jump_in.show_animation()
 
+
+func on_event_pressed(data):
+	event_details.set_data(data)
+	event_details.show_animation()
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	jump_in.hide()
@@ -77,3 +83,8 @@ func _on_line_edit_search_bar_text_changed(new_text: String) -> void:
 
 func _on_timer_search_debounce_timeout() -> void:
 	set_search_filter_text(search_text)
+
+
+func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
+	event_details.hide()
+	Global.teleport_to(parcel_position, realm)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=29 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" uid="uid://cj4xqne10w3ka" path="res://assets/ui/discover/genesis_banner.png" id="11_t2lm2"]
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
+[ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -467,6 +468,10 @@ layout_mode = 2
 unique_name_in_owner = true
 visible = false
 
+[node name="EventDetails" parent="CanvasLayer" instance=ExtResource("17_lvgj0")]
+unique_name_in_owner = true
+visible = false
+
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
 [connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
@@ -474,3 +479,4 @@ visible = false
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
 [connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
 [connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
+[connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]
