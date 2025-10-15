@@ -13,6 +13,8 @@ pub struct DclMobileDeviceInfo {
     #[var]
     pub battery_drain_pct_per_hour: f32,
     #[var]
+    pub charging_state: GString,
+    #[var]
     pub device_brand: GString,
     #[var]
     pub device_model: GString,
@@ -30,6 +32,7 @@ impl IRefCounted for DclMobileDeviceInfo {
             device_temperature_celsius: -1.0,
             device_thermal_state: GString::new(),
             battery_drain_pct_per_hour: -1.0,
+            charging_state: GString::from("unknown"),
             device_brand: GString::new(),
             device_model: GString::new(),
             os_version: GString::new(),
@@ -57,6 +60,10 @@ impl DclMobileDeviceInfo {
                 .get("battery_drain_pct_per_hour")
                 .and_then(|v| v.try_to::<f32>().ok())
                 .unwrap_or(-1.0),
+            charging_state: dict
+                .get("charging_state")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .unwrap_or(GString::from("unknown")),
             device_brand: dict
                 .get("device_brand")
                 .and_then(|v| v.try_to::<GString>().ok())

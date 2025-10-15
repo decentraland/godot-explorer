@@ -3,7 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 use godot::{engine::Timer, prelude::*};
 
 use crate::{
-    godot_classes::dcl_global::DclGlobal,
+    godot_classes::{
+        dcl_android_plugin::DclGodotAndroidPlugin, dcl_global::DclGlobal,
+        dcl_ios_plugin::DclIosPlugin,
+    },
     http_request::{
         http_queue_requester::HttpQueueRequester,
         request_response::{RequestOption, ResponseType},
@@ -19,6 +22,12 @@ use super::{
     },
     frame::Frame,
 };
+
+#[derive(Clone, Copy)]
+enum MobilePlatform {
+    Ios,
+    Android,
+}
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -37,6 +46,9 @@ pub struct Metrics {
     events: Vec<SegmentEvent>,
     serialized_events: Vec<String>,
 
+    // Which mobile platform is available (checked once at ready)
+    mobile_platform: Option<MobilePlatform>,
+
     base: Base<Node>,
 }
 
@@ -53,6 +65,7 @@ impl INode for Metrics {
             frame: Frame::new(),
             events: Vec::new(),
             serialized_events: Vec::new(),
+            mobile_platform: None,
             base,
         }
     }
@@ -67,10 +80,26 @@ impl INode for Metrics {
         timer.connect("timeout".into(), callable);
 
         self.base_mut().add_child(timer.upcast());
+
+        // Check which mobile plugin is available (checked once)
+        if DclIosPlugin::is_available() {
+            self.mobile_platform = Some(MobilePlatform::Ios);
+            tracing::info!("iOS mobile platform detected for metrics collection");
+        } else if DclGodotAndroidPlugin::is_available() {
+            self.mobile_platform = Some(MobilePlatform::Android);
+            tracing::info!("Android mobile platform detected for metrics collection");
+        }
     }
 
     fn process(&mut self, delta: f64) {
-        if let Some(frame_data) = self.frame.process(1000.0 * delta as f32) {
+        // Get fresh device info based on detected platform
+        let device_info = match self.mobile_platform {
+            Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_device_info(),
+            Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_device_info(),
+            None => None,
+        };
+
+        if let Some(frame_data) = self.frame.process(1000.0 * delta as f32, device_info.as_ref()) {
             self.events.push(frame_data);
         }
     }
@@ -92,6 +121,7 @@ impl Metrics {
             frame: Frame::new(),
             events: Vec::new(),
             serialized_events: Vec::new(),
+            mobile_platform: None,
             base,
         })
     }

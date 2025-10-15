@@ -110,6 +110,9 @@ pub struct SegmentEventPerformanceMetrics {
     // Battery drain percentage per hour
     #[serde(skip_serializing_if = "Option::is_none")]
     pub battery_drain_pct_per_hour: Option<f32>,
+    // Battery charging state (unknown/unplugged/plugged/usb/wireless/full)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub charging_state: Option<String>,
     // Device brand (e.g., "Apple", "Samsung")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub device_brand: Option<String>,

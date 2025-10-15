@@ -201,9 +201,28 @@ Dictionary DclGodotiOS::get_mobile_device_info() {
     }
     info["thermal_state"] = String(thermalState.UTF8String);
 
-    // Get battery level and calculate drain
+    // Get battery state and level
+    UIDeviceBatteryState batteryState = [[UIDevice currentDevice] batteryState];
     float current_battery_level = [[UIDevice currentDevice] batteryLevel] * 100.0f; // 0-100
     info["battery_level"] = current_battery_level;
+
+    // Map battery state to charging state string
+    NSString *chargingState;
+    switch (batteryState) {
+        case UIDeviceBatteryStateUnknown:
+            chargingState = @"unknown";
+            break;
+        case UIDeviceBatteryStateUnplugged:
+            chargingState = @"unplugged";
+            break;
+        case UIDeviceBatteryStateCharging:
+            chargingState = @"plugged";  // iOS doesn't differentiate USB/wireless
+            break;
+        case UIDeviceBatteryStateFull:
+            chargingState = @"full";
+            break;
+    }
+    info["charging_state"] = String(chargingState.UTF8String);
 
     if (initial_battery_level < 0.0f) {
         // First call - initialize

@@ -1,7 +1,7 @@
 use crate::analytics::data_definition::{SegmentEvent, SegmentEventPerformanceMetrics};
 use crate::godot_classes::dcl_global::DclGlobal;
-use crate::godot_classes::dcl_ios_plugin::DclIosPlugin;
-use godot::prelude::*;
+use crate::godot_classes::dcl_ios_plugin::DclMobileDeviceInfo;
+use godot::prelude::GString;
 
 const HICCUP_THRESHOLD_MS: f32 = 50.0;
 const FRAME_AMOUNT_TO_MEASURE: usize = 1000;
@@ -29,7 +29,7 @@ impl Frame {
         }
     }
 
-    pub fn process(&mut self, dt_ms: f32) -> Option<SegmentEvent> {
+    pub fn process(&mut self, dt_ms: f32, device_info: Option<&DclMobileDeviceInfo>) -> Option<SegmentEvent> {
         self.sum_dt += dt_ms;
         self.dt_ms_vec.push(dt_ms);
         if dt_ms > HICCUP_THRESHOLD_MS {
@@ -54,17 +54,19 @@ impl Frame {
             let p95_frame_time = self.dt_ms_vec[(n_samples * 95) / 100];
             let p99_frame_time = self.dt_ms_vec[(n_samples * 99) / 100];
 
-            // Get mobile device info if on iOS
+            // Get mobile device info from parameter (collected by Metrics)
             let (
                 memory_usage,
                 device_temperature_celsius,
                 device_thermal_state,
                 battery_drain_pct_per_hour,
+                charging_state,
                 device_brand,
                 device_model,
                 os_version,
                 total_ram_mb,
-            ) = if let Some(info) = DclIosPlugin::get_mobile_device_info() {
+            ) = if let Some(info) = device_info {
+                // Device info provided
                 (
                     info.memory_usage,
                     Some(info.device_temperature_celsius),
@@ -77,6 +79,11 @@ impl Frame {
                         Some(info.battery_drain_pct_per_hour)
                     } else {
                         None
+                    },
+                    if info.charging_state.is_empty() || info.charging_state == GString::from("unknown") {
+                        None
+                    } else {
+                        Some(info.charging_state.to_string())
                     },
                     if info.device_brand.is_empty() {
                         None
@@ -100,8 +107,8 @@ impl Frame {
                     },
                 )
             } else {
-                // iOS plugin not available
-                (-1, None, None, None, None, None, None, None)
+                // No device info available
+                (-1, None, None, None, None, None, None, None, None)
             };
 
             // Get download speed from content provider
@@ -109,7 +116,7 @@ impl Frame {
                 let content_provider = global.bind().content_provider.clone();
                 let download_speed = content_provider.bind().get_download_speed_mbs();
                 if download_speed > 0.0 {
-                    Some(download_speed)
+                    Some(download_speed as f32)
                 } else {
                     None
                 }
@@ -147,6 +154,7 @@ impl Frame {
                 device_temperature_celsius,
                 device_thermal_state,
                 battery_drain_pct_per_hour,
+                charging_state,
                 device_brand,
                 device_model,
                 os_version,
