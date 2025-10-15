@@ -118,16 +118,28 @@ impl Frame {
                 (-1, None, None, None, None)
             };
 
-            // Get download speed from content provider
-            let network_speed_mbps = DclGlobal::try_singleton().and_then(|global| {
-                let content_provider = global.bind().content_provider.clone();
-                let download_speed = content_provider.bind().get_download_speed_mbs();
-                if download_speed > 0.0 {
-                    Some(download_speed as f32)
-                } else {
-                    None
-                }
-            });
+            // Get data from DclGlobal singleton (network speed and player count)
+            let (network_speed_mbps, player_count) = DclGlobal::try_singleton()
+                .map(|global| {
+                    let global_bind = global.bind();
+
+                    // Get download speed from content provider
+                    let network_speed = {
+                        let content_provider = global_bind.content_provider.clone();
+                        let download_speed = content_provider.bind().get_download_speed_mbs();
+                        if download_speed > 0.0 {
+                            Some(download_speed as f32)
+                        } else {
+                            None
+                        }
+                    };
+
+                    // Get player count from avatar scene
+                    let avatars_count = global_bind.avatars.bind().get_avatars_count();
+
+                    (network_speed, avatars_count)
+                })
+                .unwrap_or((None, -1));
 
             // Network type is not available yet
             let network_type: Option<String> = None;
@@ -152,8 +164,7 @@ impl Frame {
                 p95_frame_time,
                 p99_frame_time,
 
-                // TODO
-                player_count: -1,
+                player_count,
                 used_jsheap_size: -1,
                 memory_usage,
 
