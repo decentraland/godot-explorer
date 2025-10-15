@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Download Godot Lib Artifact
         uses: actions/download-artifact@v4
