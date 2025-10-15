@@ -18,7 +18,7 @@ var _notification_items: Array[Control] = []
 
 func _ready() -> void:
 	button_close.pressed.connect(_on_close_pressed)
-	button_mark_all_read.pressed.connect(_on_mark_all_read_pressed)
+	button_mark_all_read.pressed.connect(_async_on_mark_all_read_pressed)
 
 	# Connect to NotificationsManager signals
 	NotificationsManager.new_notifications.connect(_on_new_notifications)
@@ -72,7 +72,7 @@ func _display_notifications(notifications: Array) -> void:
 		item.set_notification(notif)
 
 		# Connect signals
-		item.mark_as_read_clicked.connect(_on_notification_mark_as_read)
+		item.mark_as_read_clicked.connect(_async_on_notification_mark_as_read)
 		item.notification_clicked.connect(_on_notification_clicked)
 
 		_notification_items.append(item)
@@ -90,7 +90,7 @@ func _on_notification_error(error_message: String) -> void:
 	printerr("NotificationsPanel: Error - ", error_message)
 
 
-func _on_notification_mark_as_read(notification_id: String) -> void:
+func _async_on_notification_mark_as_read(notification_id: String) -> void:
 	var ids = PackedStringArray([notification_id])
 	var promise = NotificationsManager.mark_as_read(ids)
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -99,7 +99,7 @@ func _on_notification_mark_as_read(notification_id: String) -> void:
 		printerr("NotificationsPanel: Failed to mark as read - ", result.get_error())
 
 
-func _on_mark_all_read_pressed() -> void:
+func _async_on_mark_all_read_pressed() -> void:
 	var notifications = NotificationsManager.get_notifications()
 	var unread_ids: Array[String] = []
 

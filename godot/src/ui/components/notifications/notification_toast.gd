@@ -77,10 +77,10 @@ func _set_icon_for_type(notif_type: String) -> void:
 
 
 func _on_timer_timeout() -> void:
-	hide_toast()
+	async_hide_toast()
 
 
-func hide_toast() -> void:
+func async_hide_toast() -> void:
 	# Animate slide out to top
 	var tween = create_tween()
 	tween.set_ease(Tween.EASE_IN)
@@ -95,9 +95,9 @@ func _on_gui_input(event: InputEvent) -> void:
 		if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			toast_clicked.emit(notification_data)
 			Global.notification_clicked.emit(notification_data)
-			hide_toast()
+			async_hide_toast()
 	elif event is InputEventScreenTouch:
 		if event.pressed:
 			toast_clicked.emit(notification_data)
 			Global.notification_clicked.emit(notification_data)
-			hide_toast()
+			async_hide_toast()
