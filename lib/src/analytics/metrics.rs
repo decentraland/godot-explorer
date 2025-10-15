@@ -21,14 +21,8 @@ use super::{
         SegmentEventClickButton, SegmentEventCommonExplorerFields,
         SegmentEventExplorerMoveToParcel, SegmentEventScreenViewed,
     },
-    frame::Frame,
+    frame::{Frame, MobilePlatform},
 };
-
-#[derive(Clone, Copy)]
-enum MobilePlatform {
-    Ios,
-    Android,
-}
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -65,7 +59,7 @@ impl INode for Metrics {
             user_id: "".into(),
             common: SegmentEventCommonExplorerFields::new("".into()),
             write_key: "".into(),
-            frame: Frame::new(),
+            frame: Frame::new(None, None),
             events: Vec::new(),
             serialized_events: Vec::new(),
             mobile_platform: None,
@@ -95,21 +89,15 @@ impl INode for Metrics {
             self.device_info = DclGodotAndroidPlugin::get_mobile_device_info_internal();
             tracing::info!("Android mobile platform detected for metrics collection");
         }
+
+        // Set mobile info on Frame so it can fetch metrics only when needed
+        self.frame
+            .set_mobile_info(self.mobile_platform, self.device_info.clone());
     }
 
     fn process(&mut self, delta: f64) {
-        // Get fresh mobile metrics based on detected platform
-        let mobile_metrics = match self.mobile_platform {
-            Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
-            Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics_internal(),
-            None => None,
-        };
-
-        if let Some(frame_data) = self.frame.process(
-            1000.0 * delta as f32,
-            self.device_info.as_ref(),
-            mobile_metrics.as_ref(),
-        ) {
+        // Mobile metrics are now fetched inside frame.process() only when the event is sent
+        if let Some(frame_data) = self.frame.process(1000.0 * delta as f32) {
             self.events.push(frame_data);
         }
     }
@@ -128,7 +116,7 @@ impl Metrics {
             user_id,
             common: SegmentEventCommonExplorerFields::new(session_id),
             write_key: "EAdAcIyGP6lIQAfpFF2BXpNzpj7XNWMm".into(),
-            frame: Frame::new(),
+            frame: Frame::new(None, None),
             events: Vec::new(),
             serialized_events: Vec::new(),
             mobile_platform: None,

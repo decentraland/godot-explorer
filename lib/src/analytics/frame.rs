@@ -1,39 +1,59 @@
 use crate::analytics::data_definition::{SegmentEvent, SegmentEventPerformanceMetrics};
-use crate::godot_classes::dcl_global::DclGlobal;
-use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
+use crate::godot_classes::{
+    dcl_android_plugin::DclGodotAndroidPlugin,
+    dcl_global::DclGlobal,
+    dcl_ios_plugin::{DclIosPlugin, DclMobileDeviceInfo},
+};
 
 const HICCUP_THRESHOLD_MS: f32 = 50.0;
 const FRAME_AMOUNT_TO_MEASURE: usize = 1000;
+
+#[derive(Clone, Copy)]
+pub enum MobilePlatform {
+    Ios,
+    Android,
+}
 
 pub struct Frame {
     dt_ms_vec: Vec<f32>,
     hiccups_count: u32,
     hiccups_time_ms: f32,
     sum_dt: f32,
+    mobile_platform: Option<MobilePlatform>,
+    device_info: Option<DclMobileDeviceInfo>,
 }
 
 impl Default for Frame {
     fn default() -> Self {
-        Self::new()
+        Self::new(None, None)
     }
 }
 
 impl Frame {
-    pub fn new() -> Self {
+    pub fn new(
+        mobile_platform: Option<MobilePlatform>,
+        device_info: Option<DclMobileDeviceInfo>,
+    ) -> Self {
         Self {
             dt_ms_vec: Vec::new(),
             hiccups_count: 0,
             hiccups_time_ms: 0.0,
             sum_dt: 0.0,
+            mobile_platform,
+            device_info,
         }
     }
 
-    pub fn process(
+    pub fn set_mobile_info(
         &mut self,
-        dt_ms: f32,
-        device_info: Option<&DclMobileDeviceInfo>,
-        mobile_metrics: Option<&DclMobileMetrics>,
-    ) -> Option<SegmentEvent> {
+        mobile_platform: Option<MobilePlatform>,
+        device_info: Option<DclMobileDeviceInfo>,
+    ) {
+        self.mobile_platform = mobile_platform;
+        self.device_info = device_info;
+    }
+
+    pub fn process(&mut self, dt_ms: f32) -> Option<SegmentEvent> {
         self.sum_dt += dt_ms;
         self.dt_ms_vec.push(dt_ms);
         if dt_ms > HICCUP_THRESHOLD_MS {
@@ -60,7 +80,7 @@ impl Frame {
 
             // Get static device info (collected once at startup)
             let (device_brand, device_model, os_version, total_ram_mb) =
-                if let Some(info) = device_info {
+                if let Some(info) = &self.device_info {
                     (
                         if info.device_brand.is_empty() {
                             None
@@ -87,7 +107,13 @@ impl Frame {
                     (None, None, None, None)
                 };
 
-            // Get dynamic mobile metrics (collected every time)
+            // Get dynamic mobile metrics (ONLY when event is about to be sent)
+            let mobile_metrics = match self.mobile_platform {
+                Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
+                Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics_internal(),
+                None => None,
+            };
+
             let (
                 memory_usage,
                 device_temperature_celsius,
