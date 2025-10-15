@@ -90,20 +90,6 @@ pub fn print_install_instructions(tool: &str, platform: &str) {
             println!("  ");
             println!("  It will be available at: .bin/protoc/bin/protoc");
         }
-        ("ffmpeg", "linux") => {
-            println!("  # Ubuntu/Debian:");
-            println!("  sudo apt-get install ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswscale-dev");
-            println!("  # Fedora:");
-            println!("  sudo dnf install ffmpeg ffmpeg-devel");
-            println!("  # Arch:");
-            println!("  sudo pacman -S ffmpeg");
-        }
-        ("ffmpeg", "macos") => {
-            println!("  brew install ffmpeg");
-        }
-        ("ffmpeg", "windows") => {
-            println!("  The xtask will download FFmpeg automatically for Windows");
-        }
         _ => {
             println!(
                 "  Please refer to the official documentation for {} on {}",

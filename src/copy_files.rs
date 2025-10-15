@@ -57,9 +57,6 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
             let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_ios/libdclgodot.dylib");
 
             copy_with_error_context(&source_file, &dest, false)?;
-
-            // If you need ffmpeg for iOS specifically:
-            // copy_ffmpeg_libraries(target, format!("{}ios/", GODOT_PROJECT_FOLDER), false)?;
         }
 
         "android" => {
@@ -72,9 +69,6 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_android/libdclgodot.so");
 
             copy_with_error_context(&source_file, &dest, false)?;
-
-            // If you need ffmpeg for Android specifically:
-            // copy_ffmpeg_libraries(target, format!("{}android/arm64/", GODOT_PROJECT_FOLDER), false)?;
         }
 
         "win64" | "linux" | "macos" => {
@@ -153,10 +147,6 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                     )
                 })?;
             }
-
-            copy_ffmpeg_libraries(target, lib_folder.clone(), false).map_err(|e| {
-                anyhow::anyhow!("Failed to copy FFmpeg libraries to {}: {}", lib_folder, e)
-            })?;
         }
 
         other => return Err(anyhow::anyhow!("Unknown target: {}", other)),
@@ -192,109 +182,6 @@ fn copy_with_error_context(
         )
     })?;
 
-    Ok(())
-}
-
-pub fn copy_ffmpeg_libraries(
-    target: &str,
-    dest_folder: String,
-    link_libs: bool,
-) -> Result<(), anyhow::Error> {
-    match target {
-        "win64" => {
-            // copy ffmpeg .dll
-            let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/bin");
-
-            // Check if the folder exists
-            if !Path::new(&ffmpeg_dll_folder).exists() {
-                println!(
-                    "Warning: FFmpeg bin folder not found at {}",
-                    ffmpeg_dll_folder
-                );
-                return Ok(());
-            }
-
-            // copy all dlls in ffmpeg_dll_folder to exports folder
-            for entry in fs::read_dir(&ffmpeg_dll_folder)? {
-                let entry = entry?;
-                let ty = entry.file_type()?;
-                if ty.is_file() {
-                    let file_name = entry.file_name().to_str().unwrap().to_string();
-
-                    if file_name.ends_with(".dll") {
-                        let dest_path = format!("{dest_folder}{file_name}");
-                        let source_path = entry.path().to_str().unwrap().to_string();
-                        copy_with_error_context(&source_path, &dest_path, link_libs)?;
-                    }
-                }
-            }
-        }
-        "linux" => {
-            // copy ffmpeg .so files from local installation
-            let ffmpeg_lib_folder = format!("{BIN_FOLDER}ffmpeg/lib");
-
-            if Path::new(&ffmpeg_lib_folder).exists() {
-                // Strategy: Only copy the actual versioned .so files (e.g., libavcodec.so.60.3.100)
-                // Then create symlinks for the others
-                let mut copied_libs: std::collections::HashMap<String, String> =
-                    std::collections::HashMap::new();
-
-                // First, find and copy only the fully versioned libraries
-                for entry in fs::read_dir(&ffmpeg_lib_folder)? {
-                    let entry = entry?;
-                    let file_name = entry.file_name().to_str().unwrap().to_string();
-
-                    // Look for fully versioned libraries (e.g., libavcodec.so.60.3.100)
-                    if file_name.starts_with("lib")
-                        && file_name.contains(".so.")
-                        && file_name.matches('.').count() >= 4
-                    {
-                        let dest_path = format!("{dest_folder}{file_name}");
-                        let source_path = entry.path().to_str().unwrap().to_string();
-                        copy_with_error_context(&source_path, &dest_path, link_libs)?;
-
-                        // Extract library base name (e.g., "libavcodec" from "libavcodec.so.60.3.100")
-                        if let Some(base) = file_name.split(".so.").next() {
-                            copied_libs.insert(base.to_string(), file_name.clone());
-                        }
-                        println!("Copied: {}", file_name);
-                    }
-                }
-
-                // Now create symlinks for each library
-                for (base_name, versioned_file) in &copied_libs {
-                    // Extract version parts (e.g., "60.3.100" -> ["60", "3", "100"])
-                    let version_part = versioned_file.split(".so.").nth(1).unwrap_or("");
-                    let version_parts: Vec<&str> = version_part.split('.').collect();
-
-                    // Create symlinks from most specific to least specific
-                    // e.g., libavcodec.so.60 -> libavcodec.so.60.3.100
-                    //       libavcodec.so -> libavcodec.so.60
-                    if !version_parts.is_empty() {
-                        // Create major version symlink (e.g., libavcodec.so.60)
-                        let major_link =
-                            format!("{}{}.so.{}", dest_folder, base_name, version_parts[0]);
-                        create_symlink(versioned_file, &major_link)?;
-
-                        // Create base symlink (e.g., libavcodec.so)
-                        let base_link = format!("{}{}.so", dest_folder, base_name);
-                        let major_link_name = format!("{}.so.{}", base_name, version_parts[0]);
-                        create_symlink(&major_link_name, &base_link)?;
-                    }
-                }
-
-                println!("Copied FFmpeg shared libraries to {}", dest_folder);
-            } else {
-                println!(
-                    "Warning: FFmpeg lib folder not found at {}",
-                    ffmpeg_lib_folder
-                );
-            }
-        }
-        _ => {
-            // No FFmpeg libraries to copy for other platforms
-        }
-    }
     Ok(())
 }
 
