@@ -1,56 +1,29 @@
 use crate::analytics::data_definition::{SegmentEvent, SegmentEventPerformanceMetrics};
-use crate::godot_classes::{
-    dcl_android_plugin::DclGodotAndroidPlugin,
-    dcl_global::DclGlobal,
-    dcl_ios_plugin::{DclIosPlugin, DclMobileDeviceInfo},
-};
 
 const HICCUP_THRESHOLD_MS: f32 = 50.0;
 const FRAME_AMOUNT_TO_MEASURE: usize = 1000;
-
-#[derive(Clone, Copy)]
-pub enum MobilePlatform {
-    Ios,
-    Android,
-}
 
 pub struct Frame {
     dt_ms_vec: Vec<f32>,
     hiccups_count: u32,
     hiccups_time_ms: f32,
     sum_dt: f32,
-    mobile_platform: Option<MobilePlatform>,
-    device_info: Option<DclMobileDeviceInfo>,
 }
 
 impl Default for Frame {
     fn default() -> Self {
-        Self::new(None, None)
+        Self::new()
     }
 }
 
 impl Frame {
-    pub fn new(
-        mobile_platform: Option<MobilePlatform>,
-        device_info: Option<DclMobileDeviceInfo>,
-    ) -> Self {
+    pub fn new() -> Self {
         Self {
             dt_ms_vec: Vec::new(),
             hiccups_count: 0,
             hiccups_time_ms: 0.0,
             sum_dt: 0.0,
-            mobile_platform,
-            device_info,
         }
-    }
-
-    pub fn set_mobile_info(
-        &mut self,
-        mobile_platform: Option<MobilePlatform>,
-        device_info: Option<DclMobileDeviceInfo>,
-    ) {
-        self.mobile_platform = mobile_platform;
-        self.device_info = device_info;
     }
 
     pub fn process(&mut self, dt_ms: f32) -> Option<SegmentEvent> {
@@ -78,97 +51,6 @@ impl Frame {
             let p95_frame_time = self.dt_ms_vec[(n_samples * 95) / 100];
             let p99_frame_time = self.dt_ms_vec[(n_samples * 99) / 100];
 
-            // Get static device info (collected once at startup)
-            let (device_brand, device_model, os_version, total_ram_mb) =
-                if let Some(info) = &self.device_info {
-                    (
-                        if info.device_brand.is_empty() {
-                            None
-                        } else {
-                            Some(info.device_brand.clone())
-                        },
-                        if info.device_model.is_empty() {
-                            None
-                        } else {
-                            Some(info.device_model.clone())
-                        },
-                        if info.os_version.is_empty() {
-                            None
-                        } else {
-                            Some(info.os_version.clone())
-                        },
-                        if info.total_ram_mb >= 0 {
-                            Some(info.total_ram_mb as u32)
-                        } else {
-                            None
-                        },
-                    )
-                } else {
-                    (None, None, None, None)
-                };
-
-            // Get dynamic mobile metrics (ONLY when event is about to be sent)
-            let mobile_metrics = match self.mobile_platform {
-                Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
-                Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics_internal(),
-                None => None,
-            };
-
-            let (
-                memory_usage,
-                device_temperature_celsius,
-                device_thermal_state,
-                battery_percent,
-                charging_state,
-            ) = if let Some(metrics) = mobile_metrics {
-                (
-                    metrics.memory_usage,
-                    Some(metrics.device_temperature_celsius),
-                    if metrics.device_thermal_state.is_empty() {
-                        None
-                    } else {
-                        Some(metrics.device_thermal_state.clone())
-                    },
-                    if metrics.battery_percent >= 0.0 {
-                        Some(metrics.battery_percent)
-                    } else {
-                        None
-                    },
-                    if metrics.charging_state.is_empty() || metrics.charging_state == "unknown" {
-                        None
-                    } else {
-                        Some(metrics.charging_state.clone())
-                    },
-                )
-            } else {
-                (-1, None, None, None, None)
-            };
-
-            // Get data from DclGlobal singleton (network speed and player count)
-            let (network_speed_mbps, player_count) = DclGlobal::try_singleton()
-                .map(|global| {
-                    let global_bind = global.bind();
-
-                    // Get download speed from content provider
-                    let network_speed = {
-                        let content_provider = global_bind.content_provider.clone();
-                        let download_speed = content_provider.bind().get_download_speed_mbs();
-                        if download_speed > 0.0 {
-                            Some(download_speed as f32)
-                        } else {
-                            None
-                        }
-                    };
-
-                    // Get player count from avatar scene
-                    let avatars_count = global_bind.avatars.bind().get_avatars_count();
-
-                    (network_speed, avatars_count)
-                })
-                .unwrap_or((None, -1));
-
-            // Network type is not available yet
-            let network_type: Option<String> = None;
 
             let event = SegmentEvent::PerformanceMetrics(SegmentEventPerformanceMetrics {
                 samples: n_samples as u32,
@@ -190,23 +72,21 @@ impl Frame {
                 p95_frame_time,
                 p99_frame_time,
 
-                player_count,
+                // These will be populated by metrics.rs
+                player_count: -1,
                 used_jsheap_size: -1,
-                memory_usage,
-
-                // Mobile device info (static)
-                device_brand,
-                device_model,
-                os_version,
-                total_ram_mb,
-
-                // Mobile metrics (dynamic)
-                device_temperature_celsius,
-                device_thermal_state,
-                battery_percent,
-                charging_state,
-                network_type,
-                network_speed_mbps,
+                memory_usage: -1,
+                device_brand: None,
+                device_model: None,
+                os_version: None,
+                total_ram_mb: None,
+                device_temperature_celsius: None,
+                device_thermal_state: None,
+                battery_percent: None,
+                charging_state: None,
+                network_type: None,
+                network_speed_peak_mbps: None,
+                network_used_last_minute_mb: None,
             });
 
             self.dt_ms_vec.resize(0, 0.0);

@@ -21,8 +21,14 @@ use super::{
         SegmentEventClickButton, SegmentEventCommonExplorerFields,
         SegmentEventExplorerMoveToParcel, SegmentEventScreenViewed,
     },
-    frame::{Frame, MobilePlatform},
+    frame::Frame,
 };
+
+#[derive(Clone, Copy)]
+enum MobilePlatform {
+    Ios,
+    Android,
+}
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -59,7 +65,7 @@ impl INode for Metrics {
             user_id: "".into(),
             common: SegmentEventCommonExplorerFields::new("".into()),
             write_key: "".into(),
-            frame: Frame::new(None, None),
+            frame: Frame::new(),
             events: Vec::new(),
             serialized_events: Vec::new(),
             mobile_platform: None,
@@ -89,15 +95,13 @@ impl INode for Metrics {
             self.device_info = DclGodotAndroidPlugin::get_mobile_device_info_internal();
             tracing::info!("Android mobile platform detected for metrics collection");
         }
-
-        // Set mobile info on Frame so it can fetch metrics only when needed
-        self.frame
-            .set_mobile_info(self.mobile_platform, self.device_info.clone());
     }
 
     fn process(&mut self, delta: f64) {
-        // Mobile metrics are now fetched inside frame.process() only when the event is sent
-        if let Some(frame_data) = self.frame.process(1000.0 * delta as f32) {
+        // frame.process() returns Some only when 1000 frames have been collected
+        if let Some(mut frame_data) = self.frame.process(1000.0 * delta as f32) {
+            // Enrich the event with mobile/device/network data
+            self.populate_event_metrics(&mut frame_data);
             self.events.push(frame_data);
         }
     }
@@ -116,7 +120,7 @@ impl Metrics {
             user_id,
             common: SegmentEventCommonExplorerFields::new(session_id),
             write_key: "EAdAcIyGP6lIQAfpFF2BXpNzpj7XNWMm".into(),
-            frame: Frame::new(None, None),
+            frame: Frame::new(),
             events: Vec::new(),
             serialized_events: Vec::new(),
             mobile_platform: None,
@@ -290,6 +294,80 @@ impl Metrics {
 }
 
 impl Metrics {
+    fn populate_event_metrics(&self, event: &mut SegmentEvent) {
+        if let SegmentEvent::PerformanceMetrics(metrics) = event {
+            // Fetch dynamic mobile metrics ONLY when event is about to be sent
+            let mobile_metrics = match self.mobile_platform {
+                Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
+                Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics_internal(),
+                None => None,
+            };
+
+            // Populate mobile metrics
+            if let Some(mobile_metrics) = mobile_metrics {
+                metrics.memory_usage = mobile_metrics.memory_usage;
+                metrics.device_temperature_celsius = Some(mobile_metrics.device_temperature_celsius);
+                metrics.device_thermal_state = if mobile_metrics.device_thermal_state.is_empty() {
+                    None
+                } else {
+                    Some(mobile_metrics.device_thermal_state)
+                };
+                metrics.battery_percent = if mobile_metrics.battery_percent >= 0.0 {
+                    Some(mobile_metrics.battery_percent)
+                } else {
+                    None
+                };
+                metrics.charging_state = if mobile_metrics.charging_state.is_empty() || mobile_metrics.charging_state == "unknown" {
+                    None
+                } else {
+                    Some(mobile_metrics.charging_state)
+                };
+            }
+
+            // Populate static device info
+            if let Some(device_info) = &self.device_info {
+                metrics.device_brand = if device_info.device_brand.is_empty() {
+                    None
+                } else {
+                    Some(device_info.device_brand.clone())
+                };
+                metrics.device_model = if device_info.device_model.is_empty() {
+                    None
+                } else {
+                    Some(device_info.device_model.clone())
+                };
+                metrics.os_version = if device_info.os_version.is_empty() {
+                    None
+                } else {
+                    Some(device_info.os_version.clone())
+                };
+                metrics.total_ram_mb = if device_info.total_ram_mb >= 0 {
+                    Some(device_info.total_ram_mb as u32)
+                } else {
+                    None
+                };
+            }
+
+            // Populate network and player count from DclGlobal
+            if let Some(global) = DclGlobal::try_singleton() {
+                let global_bind = global.bind();
+
+                // Network metrics
+                let content_provider = global_bind.content_provider.clone();
+                let content_provider_bind = content_provider.bind();
+
+                let peak_speed = content_provider_bind.get_network_speed_peak_mbs();
+                metrics.network_speed_peak_mbps = Some(peak_speed as f32);
+
+                let used_last_minute = content_provider_bind.get_network_used_last_minute_mb();
+                metrics.network_used_last_minute_mb = Some(used_last_minute as f32);
+
+                // Player count
+                metrics.player_count = global_bind.avatars.bind().get_avatars_count();
+            }
+        }
+    }
+
     async fn send_segment_batch(
         http_requester: Arc<HttpQueueRequester>,
         write_key: &str,

@@ -293,10 +293,23 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
         activity?.let { ctx ->
             try {
-                // Get memory usage
-                val runtime = Runtime.getRuntime()
-                val usedMemoryMB = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
-                metrics["memory_usage"] = usedMemoryMB.toInt()
+                // Get fresh memory info using ActivityManager (updated each call)
+                val activityManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val memInfo = android.os.Debug.MemoryInfo()
+                android.os.Debug.getMemoryInfo(memInfo)
+
+                // For Godot apps, we need Native + Graphics + Code + Stack + Java heap
+                // Using individual components gives us a fresh, accurate total
+                val nativeHeapKB = memInfo.nativePss
+                val dalvikHeapKB = memInfo.dalvikPss
+                val otherPssKB = memInfo.otherPss
+
+                val totalMemoryKB = nativeHeapKB + dalvikHeapKB + otherPssKB
+                val totalMemoryMB = totalMemoryKB / 1024
+
+                metrics["memory_usage"] = totalMemoryMB
+
+                Log.d(pluginName, "Memory: Native=${nativeHeapKB/1024}MB, Dalvik=${dalvikHeapKB/1024}MB, Other=${otherPssKB/1024}MB, Total=${totalMemoryMB}MB")
 
                 // Get battery information
                 val batteryIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)

@@ -130,9 +130,12 @@ pub struct SegmentEventPerformanceMetrics {
     // Network type (WiFi, Carrier 3G, Carrier 4G, Carrier 5G)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network_type: Option<String>,
-    // Network speed in Mbps (to be calculated later)
+    // Peak network speed in Mbps
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub network_speed_mbps: Option<f32>,
+    pub network_speed_peak_mbps: Option<f32>,
+    // Total MB downloaded in the last minute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_used_last_minute_mb: Option<f32>,
 }
 
 #[derive(Serialize)]
