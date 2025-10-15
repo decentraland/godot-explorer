@@ -12,6 +12,12 @@ signal notification_error(error_message: String)
 const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 
+## TESTING: Set to true to inject fake notifications for testing
+const ENABLE_FAKE_NOTIFICATIONS = false
+
+## TESTING: Set to false to disable type filtering and show all notifications
+const ENABLE_NOTIFICATION_FILTER = true
+
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user
 const SUPPORTED_NOTIFICATION_TYPES = [
@@ -37,6 +43,7 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 var _notifications: Array = []
 var _poll_timer: Timer = null
 var _is_polling: bool = false
+var _previous_notification_ids: Array = []
 
 
 func _ready() -> void:
@@ -70,27 +77,67 @@ func get_notifications() -> Array:
 
 ## Filter notifications to only include supported types
 func _filter_notifications(notifications: Array) -> Array:
+	# If filtering is disabled, return all notifications
+	if not ENABLE_NOTIFICATION_FILTER:
+		return notifications
+
 	var filtered = []
-	var filtered_types = {}  # Track which types were filtered out
 
 	for notif in notifications:
 		if notif is Dictionary and "type" in notif:
 			var notif_type = notif["type"]
 			if notif_type in SUPPORTED_NOTIFICATION_TYPES:
 				filtered.append(notif)
-			else:
-				# Track unsupported types
-				if not filtered_types.has(notif_type):
-					filtered_types[notif_type] = 0
-				filtered_types[notif_type] += 1
-
-	# Log filtered types for debugging
-	if filtered_types.size() > 0:
-		print("NotificationsManager: Filtered out unsupported notification types:")
-		for notif_type in filtered_types.keys():
-			print("  - ", notif_type, " (", filtered_types[notif_type], " notifications)")
 
 	return filtered
+
+
+## Generate a fake notification for testing
+func _generate_fake_notification() -> Dictionary:
+	var fake_types = [
+		{
+			"type": "item_sold",
+			"title": "Item Sold!",
+			"description": "Your item 'Cool Wearable' sold for 100 MANA"
+		},
+		{
+			"type": "bid_accepted",
+			"title": "Bid Accepted",
+			"description": "Your bid of 50 MANA was accepted"
+		},
+		{
+			"type": "governance_announcement",
+			"title": "DAO Announcement",
+			"description": "New governance proposal is now live"
+		},
+		{
+			"type": "land",
+			"title": "Land Update",
+			"description": "Your LAND at 52,-52 has been updated"
+		},
+		{
+			"type": "worlds_permission_granted",
+			"title": "Permission Granted",
+			"description": "You now have access to World XYZ"
+		},
+	]
+
+	var random_type = fake_types[randi() % fake_types.size()]
+	var timestamp = Time.get_unix_time_from_system() * 1000  # milliseconds
+
+	return {
+		"id": "fake_notification_" + str(timestamp) + "_" + str(randi()),
+		"type": random_type["type"],
+		"address": "0x1234567890abcdef",
+		"timestamp": int(timestamp),
+		"read": false,
+		"metadata":
+		{
+			"title": random_type["title"],
+			"description": random_type["description"],
+			"link": "https://decentraland.org"
+		}
+	}
 
 
 ## Fetch notifications from the API
@@ -156,6 +203,29 @@ func _async_fetch_notifications(promise: Promise, url: String) -> void:
 
 	var notifications = data["notifications"]
 	var filtered_notifications = _filter_notifications(notifications)
+
+	# TESTING: Inject fake notification for testing toast popups
+	if ENABLE_FAKE_NOTIFICATIONS:
+		var fake_notif = _generate_fake_notification()
+		filtered_notifications.append(fake_notif)
+
+	# Detect new notifications
+	var new_notifs: Array = []
+	for notif in filtered_notifications:
+		if "id" in notif:
+			var notif_id = notif["id"]
+			if notif_id not in _previous_notification_ids:
+				# This is a new notification
+				if not notif.get("read", false):  # Only show unread notifications as toasts
+					new_notifs.append(notif)
+					Global.notification_received.emit(notif)
+
+	# Update previous IDs
+	_previous_notification_ids.clear()
+	for notif in filtered_notifications:
+		if "id" in notif:
+			_previous_notification_ids.append(notif["id"])
+
 	_notifications = filtered_notifications
 	new_notifications.emit(filtered_notifications)
 	notifications_updated.emit()

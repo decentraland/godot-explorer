@@ -18,6 +18,8 @@
 [ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_gwcjv"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="13_tdhdx"]
+[ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/notifications/notification_bell_button.tscn" id="13_notif_bell"]
+[ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/notifications/notifications_panel.tscn" id="14_notif_panel"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
 [ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="14_xlu8p"]
 [ext_resource type="PackedScene" uid="uid://bkjdjy0wlvltq" path="res://src/ui/components/chat/notifications.tscn" id="15_ky6fv"]
@@ -315,6 +317,10 @@ icon = ExtResource("9_hj43f")
 icon_alignment = 1
 expand_icon = true
 
+[node name="NotificationBellButton" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" instance=ExtResource("13_notif_bell")]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="Button_LoadScenes" type="Button" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
@@ -328,6 +334,11 @@ expand_icon = true
 [node name="Notifications" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide" instance=ExtResource("15_ky6fv")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 400)
+layout_mode = 2
+
+[node name="NotificationsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide" instance=ExtResource("14_notif_panel")]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="Control_SafeBottomArea" type="PanelContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide"]

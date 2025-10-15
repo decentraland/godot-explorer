@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://bpwxrhqtpbdou"]
-
-[ext_resource type="Script" uid="uid://dq8u6dvxcdst2" path="res://src/test_notifications.gd" id="1_yvdx5"]
-
-[node name="TestNotifs" type="Node"]
-script = ExtResource("1_yvdx5")

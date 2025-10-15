@@ -33,6 +33,8 @@ var _last_outlined_avatar: Avatar = null
 @onready var jump_in_popup = %JumpInPopup
 
 @onready var panel_profile: Panel = %Panel_Profile
+@onready var notification_bell_button: Button = %NotificationBellButton
+@onready var notifications_panel: PanelContainer = %NotificationsPanel
 
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
@@ -97,6 +99,13 @@ func _ready():
 	# Register popup instances in Global
 	Global.set_url_popup_instance(url_popup)
 	Global.set_jump_in_popup_instance(jump_in_popup)
+
+	# Connect notification bell button
+	notification_bell_button.bell_clicked.connect(_on_notification_bell_clicked)
+	notifications_panel.panel_closed.connect(_on_notifications_panel_closed)
+
+	# Connect to Global notification signals
+	Global.notification_received.connect(_on_notification_received)
 
 	if Global.is_xr():
 		player = load("res://src/logic/player/xr_player.tscn").instantiate()
@@ -194,6 +203,7 @@ func _ready():
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
+	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
@@ -226,6 +236,9 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 
 
 func _on_player_logout():
+	# Stop notifications polling
+	NotificationsManager.stop_polling()
+
 	# Clean stored session
 	Global.get_config().session_account = {}
 	Global.get_config().save_to_settings_file()
@@ -235,6 +248,11 @@ func _on_player_logout():
 
 	# TODO: Temporal solution
 	get_tree().quit()
+
+
+func _on_player_profile_changed(_profile: DclUserProfile) -> void:
+	# Start notifications polling when authenticated
+	NotificationsManager.start_polling()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -613,3 +631,22 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
 	elif virtual_keyboard_height == 0:
 		panel_chat.exit_chat()
+
+
+func _on_notification_bell_clicked() -> void:
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	else:
+		notifications_panel.show_panel()
+
+
+func _on_notifications_panel_closed() -> void:
+	notifications_panel.hide()
+
+
+func _on_notification_received(notification: Dictionary) -> void:
+	# Create and show toast notification
+	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
+	var toast = toast_scene.instantiate()
+	ui_root.add_child(toast)
+	toast.show_notification(notification)
