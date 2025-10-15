@@ -56,45 +56,75 @@ impl Frame {
             let os_name = godot::engine::Os::singleton().get_name().to_string();
             let is_mobile = os_name == "iOS" || os_name == "Android";
 
-            let (memory_usage, device_temperature_celsius, device_thermal_state, battery_drain_pct_per_hour,
-                 device_brand, device_model, os_version, total_ram_mb,
-                 network_type, network_speed_mbps) = if is_mobile && os_name == "iOS" {
+            let (
+                memory_usage,
+                device_temperature_celsius,
+                device_thermal_state,
+                battery_drain_pct_per_hour,
+                device_brand,
+                device_model,
+                os_version,
+                total_ram_mb,
+                network_type,
+                network_speed_mbps,
+            ) = if is_mobile && os_name == "iOS" {
                 // Try to get DclGodotiOS singleton and fetch mobile device info
-                match godot::engine::Engine::singleton().get_singleton(StringName::from("DclGodotiOS")) {
+                match godot::engine::Engine::singleton()
+                    .get_singleton(StringName::from("DclGodotiOS"))
+                {
                     Some(singleton) => {
                         let mut dcl_ios = singleton.cast::<godot::engine::Object>();
                         // Call get_mobile_device_info method
                         let info = dcl_ios.call(StringName::from("get_mobile_device_info"), &[]);
 
                         if let Ok(dict) = info.try_to::<Dictionary>() {
-                            let memory_usage = dict.get("memory_usage")
+                            let memory_usage = dict
+                                .get("memory_usage")
                                 .and_then(|v| v.try_to::<i32>().ok())
                                 .unwrap_or(-1);
-                            let thermal_state = dict.get("thermal_state")
+                            let thermal_state = dict
+                                .get("thermal_state")
                                 .and_then(|v| v.try_to::<GString>().ok())
                                 .map(|s| s.to_string());
-                            let battery_drain = dict.get("battery_drain_pct_per_hour")
+                            let battery_drain = dict
+                                .get("battery_drain_pct_per_hour")
                                 .and_then(|v| v.try_to::<f32>().ok());
-                            let brand = dict.get("device_brand")
+                            let brand = dict
+                                .get("device_brand")
                                 .and_then(|v| v.try_to::<GString>().ok())
                                 .map(|s| s.to_string());
-                            let model = dict.get("device_model")
+                            let model = dict
+                                .get("device_model")
                                 .and_then(|v| v.try_to::<GString>().ok())
                                 .map(|s| s.to_string());
-                            let os_ver = dict.get("os_version")
+                            let os_ver = dict
+                                .get("os_version")
                                 .and_then(|v| v.try_to::<GString>().ok())
                                 .map(|s| s.to_string());
-                            let total_ram = dict.get("total_ram_mb")
+                            let total_ram = dict
+                                .get("total_ram_mb")
                                 .and_then(|v| v.try_to::<i32>().ok())
                                 .map(|i| i as u32);
-                            let net_type = dict.get("network_type")
+                            let net_type = dict
+                                .get("network_type")
                                 .and_then(|v| v.try_to::<GString>().ok())
                                 .map(|s| s.to_string());
-                            let net_speed = dict.get("network_speed_mbps")
+                            let net_speed = dict
+                                .get("network_speed_mbps")
                                 .and_then(|v| v.try_to::<f32>().ok());
 
-                            (memory_usage, None, thermal_state, battery_drain, brand, model, os_ver,
-                             total_ram, net_type, net_speed)
+                            (
+                                memory_usage,
+                                None,
+                                thermal_state,
+                                battery_drain,
+                                brand,
+                                model,
+                                os_ver,
+                                total_ram,
+                                net_type,
+                                net_speed,
+                            )
                         } else {
                             (-1, None, None, None, None, None, None, None, None, None)
                         }
