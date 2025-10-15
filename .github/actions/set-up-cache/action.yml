@@ -10,6 +10,7 @@ runs:
   steps:
     - uses: Swatinem/rust-cache@v2
       with:
+        prefix-key: "v1-rust"
         workspaces: |
           .
           lib/
