@@ -4,13 +4,13 @@ const BELL_OUTLINE = preload("res://assets/ui/bell-outline.svg")
 const UNSUSCRIBE = preload("res://assets/ui/unsuscribe.svg")
 const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 
-var event_id_value:String
+var event_id_value: String
 
 @onready var texture_progress_bar: TextureProgressBar = $TextureProgressBar
 
+
 func _ready() -> void:
 	pass
-
 
 
 func _async_on_toggled(toggled_on: bool) -> void:
@@ -18,12 +18,12 @@ func _async_on_toggled(toggled_on: bool) -> void:
 		printerr("NO ID")
 		set_pressed_no_signal(!toggled_on)
 		return
-	
+
 	_set_loading(true)
 
 	var url = EVENTS_API_BASE_URL + "/events/" + event_id_value + "/attendees"
 	var method: HTTPClient.Method
-	
+
 	if toggled_on:
 		method = HTTPClient.METHOD_POST
 	else:
@@ -46,8 +46,9 @@ func _async_on_toggled(toggled_on: bool) -> void:
 		printerr("Error unpdating attend intention")
 
 	_set_loading(false)
-	
-func _set_loading(status:bool) -> void:
+
+
+func _set_loading(status: bool) -> void:
 	if status:
 		texture_progress_bar.show()
 		self_modulate = "FFFFFF00"

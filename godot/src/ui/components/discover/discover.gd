@@ -35,6 +35,7 @@ func on_event_pressed(data):
 	event_details.set_data(data)
 	event_details.show_animation()
 
+
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	jump_in.hide()
 	Global.teleport_to(parcel_position, realm)

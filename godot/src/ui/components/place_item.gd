@@ -23,6 +23,7 @@ var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
 var _node_cache: Dictionary = {}
 
+
 func _ready():
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	UiSounds.install_audio_recusirve(self)
@@ -120,7 +121,7 @@ func _get_label_live_pill() -> Label:
 
 func _get_border() -> Control:
 	return _get_node_safe("Border")
-	
+
 
 func _get_label_attendees_number() -> Label:
 	return _get_node_safe("Label_AttendeesNumber")
@@ -128,7 +129,7 @@ func _get_label_attendees_number() -> Label:
 
 func _get_reminder_button() -> Button:
 	return _get_node_safe("Button_Reminder")
-	
+
 
 func _get_label_description() -> Label:
 	return _get_node_safe("Label_Description")
@@ -237,13 +238,15 @@ func set_realm(_realm: String, _realm_title: String):
 	if label:
 		label.text = _realm_title
 
+
 func set_user_name(_user_name: String):
 	var label = _get_label_user_name()
 	var container = _get_container_user_name()
 	if label and container:
 		container.set_visible(not _user_name.is_empty())
 		label.text = _user_name
-	
+
+
 func set_creator(_creator: String):
 	var label = _get_label_creator()
 	var container = _get_container_creator()
@@ -267,7 +270,7 @@ func set_data(item_data):
 	set_trending(item_data.get("trending", false))
 	set_duration(item_data.get("duration", 0))
 	set_recurrent(item_data.get("recurrent", false))
-	
+
 	# Manejar start_at para eventos (timestamp Unix)
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
@@ -287,8 +290,8 @@ func set_data(item_data):
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
 		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
-		
-	var event_location_vector = item_data.get("coordinates", [0,0])
+
+	var event_location_vector = item_data.get("coordinates", [0, 0])
 	if event_location_vector.size() == 2:
 		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
 
@@ -396,7 +399,7 @@ func set_time(_start_at: int, live: bool) -> void:
 	var border = _get_border()
 	var jump_in_button = _get_button_jump_in()
 	var reminder_button = _get_reminder_button()
-	
+
 	if time_pill and live_pill:
 		if live:
 			live_pill.text = "LIVE"
@@ -424,6 +427,7 @@ func set_attending(_attending: bool, _id: String) -> void:
 	if reminder_button:
 		reminder_button.button_pressed = _attending
 		reminder_button.event_id_value = _id
+
 
 func _parse_iso_timestamp(iso_string: String) -> int:
 	# Convertir ISO string (ej: "2025-10-06T12:00:00.000Z") a timestamp Unix
@@ -462,14 +466,17 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 func _format_timestamp_for_calendar(timestamp: int) -> String:
 	# Convertir timestamp Unix a formato ISO para Google Calendar (YYYYMMDDTHHMMSSZ)
 	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
-	return "%04d%02d%02dT%02d%02d%02dZ" % [
-		time_dict.year,
-		time_dict.month,
-		time_dict.day,
-		time_dict.hour,
-		time_dict.minute,
-		time_dict.second
-	]
+	return (
+		"%04d%02d%02dT%02d%02d%02dZ"
+		% [
+			time_dict.year,
+			time_dict.month,
+			time_dict.day,
+			time_dict.hour,
+			time_dict.minute,
+			time_dict.second
+		]
+	)
 
 
 func _format_timestamp(timestamp: int) -> String:
@@ -504,15 +511,15 @@ func _format_timestamp(timestamp: int) -> String:
 		if border:
 			border.self_modulate = "#FFFFFF"
 		return "IN " + str(int(minutes_diff)) + " MINS"
-	else:
-		live_pill_parent.hide()
-		time_pill_parent.show()
-		if jump_in_button and reminder_button:
-			jump_in_button.hide()
-			reminder_button.show()
-		if border:
-			border.self_modulate = "#FFFFFF00"
-		
+
+	live_pill_parent.hide()
+	time_pill_parent.show()
+	if jump_in_button and reminder_button:
+		jump_in_button.hide()
+		reminder_button.show()
+	if border:
+		border.self_modulate = "#FFFFFF00"
+
 	# Si falta menos de 1 hora: IN XX MINUTES
 	if hours_diff < 1:
 		return "IN " + str(int(minutes_diff)) + " MINS"
@@ -538,22 +545,20 @@ func _format_timestamp(timestamp: int) -> String:
 func _format_duration(duration: int) -> String:
 	# Convertir milisegundos a horas
 	var hours = duration / (1000 * 60 * 60)
-	
+
 	# Si es menor a 1 hora, mostrar minutos
 	if hours < 1:
 		var minutes = duration / (1000 * 60)
 		if minutes == 1:
 			return "1 MIN"
-		else:
-			return str(int(minutes)) + " MINS"
-	
+		return str(int(minutes)) + " MINS"
+
 	# Si es menor a 72 horas, mostrar horas
 	if hours < 72:
 		if hours == 1:
 			return "1 HR"
-		else:
-			return str(int(hours)) + " HRS"
-	
+		return str(int(hours)) + " HRS"
+
 	# Si es mayor a 72 horas, mostrar días
 	var days = hours / 24
 	return str(int(days)) + " DAYS"
@@ -562,38 +567,40 @@ func _format_duration(duration: int) -> String:
 func schedule_event() -> void:
 	if not _data:
 		return
-	
+
 	# Obtener datos del evento
 	var next_start_at = _data.get("next_start_at", "")
 	var next_finish_at = _data.get("next_finish_at", "")
-	
+
 	# Crear URL de jump in con las coordenadas de location
-	var jump_in_url = "https://decentraland.org/jump/events?position=%d%%2C%d&realm=main" % [location.x, location.y]
-	
+	var jump_in_url = (
+		"https://decentraland.org/jump/events?position=%d%%2C%d&realm=main"
+		% [location.x, location.y]
+	)
+
 	# Combinar descripción con URL de jump in
 	var details = description
 	if not description.is_empty():
 		details += "\n\n"
 	details += "jump in: " + jump_in_url
-	
+
 	# Crear fechas para Google Calendar
 	var dates_param = ""
 	if not next_start_at.is_empty() and not next_finish_at.is_empty():
 		var start_timestamp = _parse_iso_timestamp(next_start_at)
 		var finish_timestamp = _parse_iso_timestamp(next_finish_at)
-		
+
 		if start_timestamp > 0 and finish_timestamp > 0:
 			var start_iso = _format_timestamp_for_calendar(start_timestamp)
 			var finish_iso = _format_timestamp_for_calendar(finish_timestamp)
 			dates_param = "&dates=%s/%s" % [start_iso, finish_iso]
-	
+
 	# Crear deep link de Google Calendar
-	var calendar_url = "https://calendar.google.com/calendar/u/0/r/eventedit?text=%s&details=%s%s" % [
-		event_name.uri_encode(),
-		details.uri_encode(),
-		dates_param
-	]
-	
+	var calendar_url = (
+		"https://calendar.google.com/calendar/u/0/r/eventedit?text=%s&details=%s%s"
+		% [event_name.uri_encode(), details.uri_encode(), dates_param]
+	)
+
 	# Abrir el enlace en el navegador
 	OS.shell_open(calendar_url)
 
