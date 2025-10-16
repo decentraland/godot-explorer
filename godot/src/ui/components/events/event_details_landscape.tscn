@@ -1,12 +1,10 @@
-[gd_scene load_steps=35 format=3 uid="uid://jel6s7s7w8h3"]
+[gd_scene load_steps=33 format=3 uid="uid://jel6s7s7w8h3"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_4okyg"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_rf1tr"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_a1tfr"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="4_n1hx1"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="5_5x5cc"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_a7370"]
-[ext_resource type="LabelSettings" uid="uid://c8st3oitu2gpy" path="res://src/ui/components/events/event_title.tres" id="6_n1hx1"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="7_7s75a"]
 [ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="8_6i5jl"]
 [ext_resource type="Texture2D" uid="uid://dxry1i0smofqa" path="res://assets/ui/clock.svg" id="9_2wgl5"]
@@ -33,7 +31,7 @@ corner_radius_bottom_left = 24
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a7370"]
 content_margin_left = 10.0
-content_margin_top = 3.0
+content_margin_top = 0.0
 content_margin_right = 10.0
 bg_color = Color(1, 0.176471, 0.333333, 1)
 corner_radius_top_left = 24
@@ -45,9 +43,8 @@ corner_radius_bottom_left = 24
 font = ExtResource("6_a7370")
 font_size = 15
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6i5jl"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7s75a"]
 content_margin_left = 10.0
-content_margin_top = 3.0
 content_margin_right = 10.0
 bg_color = Color(1, 1, 1, 1)
 border_width_left = 1
@@ -67,7 +64,6 @@ font_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cdq3q"]
 content_margin_left = 10.0
-content_margin_top = 3.0
 content_margin_right = 10.0
 bg_color = Color(0.188235, 0.803922, 0, 1)
 corner_radius_top_left = 24
@@ -81,7 +77,6 @@ font_size = 15
 font_color = Color(0, 0, 0, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_bmyvb"]
-font = ExtResource("7_7s75a")
 font_size = 15
 font_color = Color(1, 0.176471, 0.333333, 1)
 
@@ -166,21 +161,28 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 11
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="Label_EventName" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/VBoxContainer"]
+[node name="RichTextLabel_EventName" type="RichTextLabel" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("5_5x5cc")
-theme_override_font_sizes/font_size = 20
-text = "The Meta Beast Roaming Party 3x The Vibes 1 aKIDcalledMake, DJvaped Lunar FREQ"
-label_settings = ExtResource("6_n1hx1")
+theme_override_colors/default_color = Color(0, 0, 0, 1)
+theme_override_fonts/normal_font = ExtResource("7_7s75a")
+theme_override_fonts/bold_font = ExtResource("23_6i5jl")
+theme_override_font_sizes/bold_italics_font_size = 28
+theme_override_font_sizes/italics_font_size = 28
+theme_override_font_sizes/mono_font_size = 28
+theme_override_font_sizes/normal_font_size = 28
+theme_override_font_sizes/bold_font_size = 28
+bbcode_enabled = true
+text = "[b]The Meta Beast Roaming Party 3x The Vibes 1 aKIDcal... [/b][font_size=15]by [color=\"#ff2d55\"][b]Matheo"
+fit_content = true
+scroll_active = false
 autowrap_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
@@ -207,7 +209,7 @@ uppercase = true
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_6i5jl")
+theme_override_styles/panel = SubResource("StyleBoxFlat_7s75a")
 
 [node name="Label_TimePill" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TimePill"]
 unique_name_in_owner = true
@@ -339,7 +341,7 @@ layout_mode = 2
 size_flags_vertical = 5
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_font_sizes/font_size = 20
-text = "by"
+text = "created by"
 label_settings = SubResource("LabelSettings_uxho7")
 
 [node name="Label_UserName" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_UserName"]
@@ -347,7 +349,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 5
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("5_5x5cc")
+theme_override_fonts/font = ExtResource("6_a7370")
 theme_override_font_sizes/font_size = 12
 text = "Matheo"
 label_settings = SubResource("LabelSettings_bmyvb")

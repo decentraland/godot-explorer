@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_fhlt6"]
 [ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="4_kyirg"]
+[ext_resource type="LabelSettings" uid="uid://k8jblhm4mnv4" path="res://src/ui/components/events/event_info.tres" id="5_aes4k"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kyirg"]
 bg_color = Color(1, 0.176471, 0.333333, 1)
@@ -25,23 +26,21 @@ font = ExtResource("2_fhlt6")
 font_size = 22
 font_color = Color(0, 0, 0, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6bu5y"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fhlt6"]
 content_margin_left = 10.0
-content_margin_top = 3.0
 content_margin_right = 10.0
 bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 
-[sub_resource type="LabelSettings" id="LabelSettings_7lpam"]
+[sub_resource type="LabelSettings" id="LabelSettings_kyirg"]
 font = ExtResource("2_fhlt6")
-font_size = 14
+font_size = 15
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aes4k"]
 content_margin_left = 10.0
-content_margin_top = 3.0
 content_margin_right = 10.0
 bg_color = Color(1, 1, 1, 1)
 border_width_left = 1
@@ -56,23 +55,17 @@ corner_radius_bottom_left = 11
 
 [sub_resource type="LabelSettings" id="LabelSettings_6bu5y"]
 font = ExtResource("2_fhlt6")
-font_size = 14
+font_size = 15
 font_color = Color(0, 0, 0, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gwscp"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lpam"]
 content_margin_left = 10.0
-content_margin_top = 3.0
 content_margin_right = 10.0
 bg_color = Color(0.188235, 0.803922, 0, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-
-[sub_resource type="LabelSettings" id="LabelSettings_kyirg"]
-font = ExtResource("2_fhlt6")
-font_size = 14
-font_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 
 [node name="EventDiscoverCard" type="TextureButton"]
 custom_minimum_size = Vector2(290, 250)
@@ -151,28 +144,30 @@ clip_text = true
 text_overrun_behavior = 3
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 12
 
 [node name="LivePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(75, 24)
+custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_6bu5y")
+theme_override_styles/panel = SubResource("StyleBoxFlat_fhlt6")
 
 [node name="Label_LivePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/LivePill"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 1
 text = "live"
-label_settings = SubResource("LabelSettings_7lpam")
+label_settings = SubResource("LabelSettings_kyirg")
 horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
 [node name="TimePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(22, 24)
+visible = false
+custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_aes4k")
@@ -180,10 +175,11 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_aes4k")
 [node name="Label_TimePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TimePill"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 1
 text = "IN 35 MINS"
 label_settings = SubResource("LabelSettings_6bu5y")
 horizontal_alignment = 1
-vertical_alignment = 2
+vertical_alignment = 1
 uppercase = true
 
 [node name="TrendingPill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
@@ -192,14 +188,15 @@ visible = false
 custom_minimum_size = Vector2(75, 24)
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_gwscp")
+theme_override_styles/panel = SubResource("StyleBoxFlat_7lpam")
 
 [node name="Label" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TrendingPill"]
 layout_mode = 2
+size_flags_vertical = 1
 text = "trending"
-label_settings = SubResource("LabelSettings_7lpam")
+label_settings = SubResource("LabelSettings_kyirg")
 horizontal_alignment = 1
-vertical_alignment = 2
+vertical_alignment = 1
 uppercase = true
 
 [node name="Attendees" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
@@ -214,14 +211,14 @@ layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("4_kyirg")
 expand_mode = 5
+stretch_mode = 5
 
 [node name="Label_AttendeesNumber" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 21)
 layout_mode = 2
-size_flags_vertical = 8
+size_flags_vertical = 1
 text = "263"
-label_settings = SubResource("LabelSettings_kyirg")
+label_settings = ExtResource("5_aes4k")
 vertical_alignment = 1
 uppercase = true
 

@@ -25,12 +25,13 @@ script = ExtResource("1_vapvi")
 [node name="EventDetailsPortrait" parent="." instance=ExtResource("2_vapvi")]
 unique_name_in_owner = true
 layout_mode = 1
-offset_top = -706.0
+offset_top = -626.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_dsiqj")
 
 [node name="EventDetailsLandscape" parent="." instance=ExtResource("3_vapvi")]
 unique_name_in_owner = true
 layout_mode = 1
+offset_left = -506.0
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("2_yptc8")]
 unique_name_in_owner = true

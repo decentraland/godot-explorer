@@ -1,9 +1,10 @@
-[gd_scene load_steps=22 format=3 uid="uid://nexo8k0ub5ty"]
+[gd_scene load_steps=25 format=3 uid="uid://nexo8k0ub5ty"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_w66jn"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
-[ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="3_o4xes"]
+[ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="3_w66jn"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_4uq2a"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_2slho"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_uutqn"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="6_ak6x4"]
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_marjo"]
@@ -12,24 +13,20 @@
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mv7ex"]
 bg_color = Color(1, 1, 1, 0.635294)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
 shadow_color = Color(1, 1, 1, 0.176471)
 shadow_size = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
-border_width_left = 5
-border_width_top = 5
-border_width_right = 5
-border_width_bottom = 5
 border_color = Color(0.988235, 0.988235, 0.988235, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
 
 [sub_resource type="Gradient" id="Gradient_e8nv0"]
 colors = PackedColorArray(0, 0, 0, 0.686275, 0, 0, 0, 0)
@@ -39,12 +36,22 @@ gradient = SubResource("Gradient_e8nv0")
 fill_from = Vector2(1, 1)
 fill_to = Vector2(1, 0.82906)
 
+[sub_resource type="LabelSettings" id="LabelSettings_2d6b2"]
+line_spacing = 0.0
+font = ExtResource("5_2slho")
+font_size = 22
+font_color = Color(0, 0, 0, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_368si"]
+content_margin_left = 10.0
+content_margin_right = 10.0
 bg_color = Color(0.0392157, 0.0392157, 0.0392157, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2slho"]
 
 [sub_resource type="Curve" id="Curve_6fe12"]
 _limits = [0.0, 2.0, 0.0, 1.0]
@@ -65,7 +72,7 @@ colors = PackedColorArray(0.914015, 0.145083, 0.329259, 1, 0.917647, 0.145098, 0
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_js3n0"]
 
 [node name="DiscoverCarrouselItem" type="TextureButton"]
-custom_minimum_size = Vector2(235, 226)
+custom_minimum_size = Vector2(290, 250)
 offset_right = 225.0
 offset_bottom = 175.0
 mouse_filter = 1
@@ -73,12 +80,15 @@ script = ExtResource("1_w66jn")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
-offset_right = 235.0
-offset_bottom = 226.0
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
 
 [node name="PanelShadow" type="Panel" parent="MarginContainer"]
 visible = false
@@ -97,29 +107,17 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_c0877")
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Control" type="Control" parent="MarginContainer/Panel/DiscoverCarrouselItem"]
+[node name="TextureRect_Image" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="TextureRect_Image" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -5.0
-offset_top = -5.0
-offset_right = 5.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_vertical = 3
+size_flags_stretch_ratio = 210.0
 theme = ExtResource("2_gao81")
-texture = ExtResource("3_o4xes")
+texture = ExtResource("3_w66jn")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/TextureRect_Image"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/TextureRect_Image"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -128,22 +126,60 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_e6dy7")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control"]
+[node name="Panel" type="Control" parent="MarginContainer/Panel/DiscoverCarrouselItem"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 90.0
+mouse_filter = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer"]
 layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
 
-[node name="Container_Online" type="PanelContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("6_ak6x4")
+text = "Scene Title"
+label_settings = SubResource("LabelSettings_2d6b2")
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="Label_Description" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("9_havap")
+text = "Scene Description"
+justification_flags = 161
+clip_text = true
+max_lines_visible = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 11
+alignment = 2
+
+[node name="Container_Online" type="PanelContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 25)
 layout_mode = 2
@@ -152,22 +188,22 @@ size_flags_vertical = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_368si")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online"]
 layout_mode = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online/MarginContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online/MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 texture = ExtResource("4_4uq2a")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Online" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
+[node name="Label_Online" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -175,41 +211,37 @@ theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "0"
 horizontal_alignment = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
-size_flags_vertical = 3
-alignment = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_2slho")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-theme_override_constants/separation = 11
-alignment = 2
-
-[node name="HBoxContainer_Views" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer_Views" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
+modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 texture = ExtResource("7_marjo")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Views" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
+[node name="Label_Views" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
 unique_name_in_owner = true
+modulate = Color(0, 0, 0, 1)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "546"
 horizontal_alignment = 2
 
-[node name="HBoxContainer_Likes" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer_Likes" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CPUParticles2D" type="CPUParticles2D" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+[node name="CPUParticles2D" type="CPUParticles2D" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
 position = Vector2(11, 21)
 emitting = false
 amount = 20
@@ -228,7 +260,8 @@ scale_amount_curve = SubResource("Curve_6fe12")
 color = Color(0.960784, 0.152941, 0.345098, 1)
 color_ramp = SubResource("Gradient_w2th8")
 
-[node name="Button_Like" type="Button" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+[node name="Button_Like" type="Button" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(25, 0)
 layout_mode = 2
 theme = ExtResource("5_uutqn")
@@ -249,55 +282,14 @@ icon = ExtResource("8_kyqbr")
 flat = true
 icon_alignment = 1
 
-[node name="Label_Likes" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+[node name="Label_Likes" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
 unique_name_in_owner = true
+modulate = Color(0, 0, 0, 1)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "78%"
 horizontal_alignment = 2
-
-[node name="Panel" type="Control" parent="MarginContainer/Panel/DiscoverCarrouselItem"]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-size_flags_vertical = 0
-mouse_filter = 1
-
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 15
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 15
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer"]
-layout_mode = 2
-
-[node name="Label_Title" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_fonts/font = ExtResource("6_ak6x4")
-text = "Scene Title"
-vertical_alignment = 1
-clip_text = true
-
-[node name="Label_Description" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_fonts/font = ExtResource("9_havap")
-text = "Scene Description"
-justification_flags = 161
-clip_text = true
-max_lines_visible = 1
 
 [node name="MouseHover" type="Control" parent="."]
 visible = false

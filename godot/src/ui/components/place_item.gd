@@ -95,6 +95,10 @@ func _get_label_title() -> Label:
 	return _get_node_safe("Label_Title")
 
 
+func _get_rich_label_event_name() -> RichTextLabel:
+	return _get_node_safe("RichTextLabel_EventName")
+
+
 func _get_label_event_name() -> Label:
 	return _get_node_safe("Label_EventName")
 
@@ -262,7 +266,7 @@ func set_data(item_data):
 	set_description(_get_or_empty_string(item_data, "description"))
 	set_attendees_number(item_data.get("total_attendees", 0))
 	set_attending(item_data.get("attending", false), item_data.get("id", "id"))
-	set_event_name(item_data.get("name", "Event Name"))
+	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
 	set_likes_percent(like_score if like_score is float else 0.0)
@@ -296,7 +300,6 @@ func set_data(item_data):
 		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
-	set_user_name(_get_or_empty_string(item_data, "user_name"))
 	var world = item_data.get("world", false)
 	if world:
 		var world_name = item_data.get("world_name")
@@ -365,8 +368,25 @@ func _get_or_empty_string(dict: Dictionary, key: String) -> String:
 	return ""
 
 
-func set_event_name(_event_name: String) -> void:
+func set_event_name(_event_name: String, _user_name: String = "") -> void:
+	
 	event_name = _event_name
+	var limit_to_trim = 90
+	var modified_event_name: String
+	if _user_name.length() > 0:
+		limit_to_trim = limit_to_trim - 4 - _user_name.length()
+		if event_name.length() > limit_to_trim:
+			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "...[/b] "#[font_size=15]by [color='#ff2d55'][b]" + _user_name
+		else:
+			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "[/b]"# [font_size=15]by [color='#ff2d55'][b]" + _user_name
+	else:
+		if _event_name.length() > limit_to_trim:
+			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "...[/b]"
+		else:
+			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "[/b]"
+	var rich_text_label = _get_rich_label_event_name()
+	if rich_text_label:
+		rich_text_label.text = modified_event_name
 	var label = _get_label_event_name()
 	if label:
 		label.text = _event_name
@@ -483,6 +503,26 @@ func _format_timestamp_for_calendar(timestamp: int) -> String:
 func _format_timestamp(timestamp: int) -> String:
 	var now = Time.get_unix_time_from_system()
 	var time_diff = timestamp - now
+	var live_pill_parent = _get_label_live_pill().get_parent()
+	var time_pill = _get_label_time_pill()
+	var time_pill_parent = time_pill.get_parent()
+	var border = _get_border()
+	var jump_in_button = _get_button_jump_in()
+	var reminder_button = _get_reminder_button()
+	# Crear estilos únicos para esta instancia
+	var time_pill_parent_style = time_pill_parent.get_theme_stylebox("panel")
+	if time_pill_parent_style:
+		var unique_style = time_pill_parent_style.duplicate()
+		unique_style.border_color = Color("#161518")
+		time_pill_parent.add_theme_stylebox_override("panel", unique_style)
+	
+	if time_pill:
+		var unique_label_settings = LabelSettings.new()
+		unique_label_settings.font_color = Color("#161518")
+		if time_pill.get_theme_font("font"):
+			unique_label_settings.font = time_pill.get_theme_font("font")
+		unique_label_settings.font_size = time_pill.get_theme_font_size("font_size")
+		time_pill.label_settings = unique_label_settings
 
 	# Si el evento ya pasó, mostrar fecha
 	if time_diff <= 0:
@@ -497,12 +537,7 @@ func _format_timestamp(timestamp: int) -> String:
 	var hours_diff = time_diff / 3600
 	var days_diff = time_diff / 86400
 
-	var live_pill_parent = _get_label_live_pill().get_parent()
-	var time_pill = _get_label_time_pill()
-	var time_pill_parent = time_pill.get_parent()
-	var border = _get_border()
-	var jump_in_button = _get_button_jump_in()
-	var reminder_button = _get_reminder_button()
+	
 
 	if minutes_diff < 5:
 		live_pill_parent.show()
@@ -524,24 +559,21 @@ func _format_timestamp(timestamp: int) -> String:
 
 	# Si falta menos de 1 hora: IN XX MINUTES
 	if hours_diff < 1:
-		# Cambiar estilo del time_pill_parent (borde) y time_pill (color de fuente) a #FF2D55
+		# Crear estilos únicos para esta instancia con color rojo
 		if time_pill_parent:
-			# Crear un StyleBox único para esta instancia
 			var original_style = time_pill_parent.get_theme_stylebox("panel")
 			if original_style:
-				var new_style = original_style.duplicate()
-				new_style.border_color = Color("#FF2D55")
-				time_pill_parent.add_theme_stylebox_override("panel", new_style)
+				var red_style = original_style.duplicate()
+				red_style.border_color = Color("#ff2d55")
+				time_pill_parent.add_theme_stylebox_override("panel", red_style)
 		
 		if time_pill:
-			# Crear un LabelSettings único para esta instancia
-			var original_settings = time_pill.get_theme_font_size("font_size")
-			var new_settings = LabelSettings.new()
-			new_settings.font_color = Color("#FF2D55")
+			var red_label_settings = LabelSettings.new()
+			red_label_settings.font_color = Color("#ff2d55")
 			if time_pill.get_theme_font("font"):
-				new_settings.font = time_pill.get_theme_font("font")
-			new_settings.font_size = original_settings
-			time_pill.label_settings = new_settings
+				red_label_settings.font = time_pill.get_theme_font("font")
+			red_label_settings.font_size = time_pill.get_theme_font_size("font_size")
+			time_pill.label_settings = red_label_settings
 		
 		return "IN " + str(int(minutes_diff)) + " MINS"
 
