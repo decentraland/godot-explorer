@@ -39,12 +39,3 @@ pub const ANDROID_NDK_VERSION: &str = "27.1.12297006";
 pub const ANDROID_SDK_BUILD_TOOLS_VERSION: &str = "35.0.0";
 #[allow(dead_code)]
 pub const ANDROID_PLATFORM_VERSION: &str = "android-35";
-
-// FFmpeg constants
-// TODO: Refactor FFmpeg URL construction to use these constants
-#[allow(dead_code)]
-pub const FFMPEG_BASE_URL: &str = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest";
-#[allow(dead_code)]
-pub const FFMPEG_VERSION_TAG: &str = "n6.1-latest";
-#[allow(dead_code)]
-pub const FFMPEG_BUILD_TYPE: &str = "lgpl-shared-6.1";

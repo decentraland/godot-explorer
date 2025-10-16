@@ -92,11 +92,6 @@ pub fn run_doctor() -> anyhow::Result<()> {
     print_section("Godot Engine");
     check_godot_installation();
 
-    // Check FFmpeg installation
-    print_divider();
-    print_section("FFmpeg");
-    check_ffmpeg_installation();
-
     // Check Android development
     print_divider();
     print_section("Android Development");
@@ -122,10 +117,7 @@ pub fn run_doctor() -> anyhow::Result<()> {
     // Check version consistency
     print_divider();
     if let Err(e) = crate::version_check::run_version_check() {
-        print_message(
-            MessageType::Error,
-            &format!("Version check failed: {}", e),
-        );
+        print_message(MessageType::Error, &format!("Version check failed: {}", e));
         all_tools_ok = false;
     }
 
@@ -191,77 +183,6 @@ fn check_rust_targets() {
                 break;
             }
         }
-    }
-}
-
-fn check_ffmpeg_installation() {
-    if let Some(ffmpeg_path) = crate::helpers::get_tool_path("ffmpeg") {
-        // Check if it's the local FFmpeg by seeing if the path contains .bin
-        let path_str = ffmpeg_path.to_string_lossy();
-        let is_local = path_str.contains(".bin");
-
-        // If it's local FFmpeg, we need to set LD_LIBRARY_PATH
-        let mut cmd = std::process::Command::new(&ffmpeg_path);
-        cmd.arg("-version");
-
-        if is_local {
-            // Set LD_LIBRARY_PATH to include the lib directory
-            let lib_path = Path::new(".bin/ffmpeg/lib");
-            if lib_path.exists() {
-                let lib_path_str = lib_path.to_string_lossy();
-                if let Ok(existing_ld_path) = env::var("LD_LIBRARY_PATH") {
-                    cmd.env(
-                        "LD_LIBRARY_PATH",
-                        format!("{}:{}", lib_path_str, existing_ld_path),
-                    );
-                } else {
-                    cmd.env("LD_LIBRARY_PATH", lib_path_str.to_string());
-                }
-            }
-        }
-
-        let output = cmd.output();
-
-        match output {
-            Ok(output) => {
-                let version_str = String::from_utf8_lossy(&output.stdout);
-                let first_line = version_str.lines().next().unwrap_or("");
-
-                if version_str.contains("ffmpeg version n6.") {
-                    print_message(
-                        MessageType::Success,
-                        &format!(
-                            "FFmpeg 6.x found ({}) - {}",
-                            if is_local { "local" } else { "system" },
-                            first_line
-                        ),
-                    );
-                } else {
-                    print_message(
-                        MessageType::Warning,
-                        &format!(
-                            "FFmpeg found ({}) but not version 6.x - {}",
-                            if is_local { "local" } else { "system" },
-                            first_line
-                        ),
-                    );
-                    println!("  FFmpeg 6.x is required. Run: cargo run -- install");
-                }
-            }
-            Err(e) => {
-                print_message(
-                    MessageType::Error,
-                    &format!("Failed to check FFmpeg version: {}", e),
-                );
-                if is_local {
-                    println!("  This might be due to missing shared libraries.");
-                    println!("  Try running: cargo run -- install");
-                }
-            }
-        }
-    } else {
-        print_message(MessageType::Error, "FFmpeg not found");
-        println!("  Run: cargo run -- install");
     }
 }
 

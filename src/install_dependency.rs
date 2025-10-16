@@ -4,10 +4,9 @@ use reqwest::blocking::Client;
 use serde_json::Value;
 use std::env;
 use std::fs::{self, File};
-use std::io::{self, BufReader};
+use std::io::{self};
 use std::path::Path;
 use tar::Archive;
-use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
 use crate::consts::*;
@@ -28,45 +27,6 @@ use crate::consts::{
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
-    }
-    Ok(())
-}
-
-fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
-    fs::create_dir_all(&dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.as_ref().join(entry.file_name());
-
-        let metadata = entry.metadata()?;
-        if metadata.is_dir() {
-            copy_dir_all(&src_path, &dst_path)?;
-        } else if metadata.file_type().is_symlink() {
-            // Remove existing file/symlink if it exists
-            if dst_path.exists() {
-                fs::remove_file(&dst_path).ok();
-            }
-
-            // Handle symlinks
-            #[cfg(unix)]
-            {
-                let link_target = fs::read_link(&src_path)?;
-                use std::os::unix::fs::symlink;
-                symlink(&link_target, &dst_path)?;
-            }
-            #[cfg(not(unix))]
-            {
-                // On non-Unix, just copy the file
-                fs::copy(&src_path, &dst_path)?;
-            }
-        } else {
-            // Regular file - remove existing if present
-            if dst_path.exists() {
-                fs::remove_file(&dst_path)?;
-            }
-            fs::copy(&src_path, &dst_path)?;
-        }
     }
     Ok(())
 }
@@ -394,7 +354,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     fs::create_dir_all(BIN_FOLDER)?;
 
     // Download Android dependencies
-    let android_deps_url = "https://godot-artifacts.kuruk.net/android_deps.zip";
+    let android_deps_url = "https://files.dclexplorer.com/android_deps.zip";
     let android_deps_path = BinPaths::android_deps_zip();
     let android_deps_extracted_path = BinPaths::android_deps();
 
@@ -481,17 +441,6 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
             print_message(MessageType::Info, "\nTo install missing dependencies, run:");
             println!("\n{}\n", install_cmd);
 
-            // Add macOS-specific help
-            if platform.os == "macos" {
-                print_message(
-                    MessageType::Info,
-                    "\nNote: If FFmpeg is installed but not detected:",
-                );
-                println!("  1. Check if PKG_CONFIG_PATH is set correctly");
-                println!("  2. For Homebrew ffmpeg@6: export PKG_CONFIG_PATH=\"/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH\"");
-                println!("  3. For Intel Macs: export PKG_CONFIG_PATH=\"/usr/local/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH\"");
-            }
-
             print_message(
                 MessageType::Warning,
                 "Please install these dependencies before continuing.",
@@ -521,9 +470,6 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         install_android_tools()?;
         download_prebuilt_dependencies()?;
     }
-
-    // Install FFmpeg 6 for all platforms
-    install_ffmpeg()?;
 
     // Check if protoc is already installed
     if !crate::helpers::is_tool_installed("protoc") {
@@ -584,242 +530,6 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
 
     let next_steps = get_next_steps_instructions();
     println!("{}", next_steps);
-
-    Ok(())
-}
-
-pub fn download_and_extract_tar_xz(
-    url: &str,
-    destination_path: &str,
-    persistent_cache: Option<String>,
-) -> Result<(), anyhow::Error> {
-    if Path::new("./tmp-file.tar.xz").exists() {
-        fs::remove_file("./tmp-file.tar.xz")?;
-    }
-
-    // If the cached file exists, use it
-    if let Some(already_existing_file) = get_existing_cached_file(persistent_cache.clone()) {
-        print_message(
-            MessageType::Info,
-            &format!("Using cached file: {}", already_existing_file),
-        );
-        fs::copy(already_existing_file, "./tmp-file.tar.xz")?;
-    } else {
-        print_message(MessageType::Info, &format!("Downloading: {}", url));
-        download_file(url, "./tmp-file.tar.xz")?;
-
-        // when the download is done, copy the file to the persistent cache if it applies
-        if let Some(persistent_cache) = persistent_cache {
-            let persistent_path = get_persistent_path(Some(persistent_cache)).unwrap();
-            fs::copy("./tmp-file.tar.xz", persistent_path)?;
-        }
-    }
-
-    let file = File::open("./tmp-file.tar.xz")?;
-    let reader = BufReader::new(file);
-    let xz_decoder = XzDecoder::new(reader);
-    let mut tar_archive = Archive::new(xz_decoder);
-
-    // Create destination directory if it doesn't exist
-    fs::create_dir_all(destination_path)?;
-
-    // Extract the archive preserving symlinks
-    tar_archive.set_preserve_permissions(true);
-    tar_archive.set_preserve_ownerships(false);
-    tar_archive.unpack(destination_path)?;
-
-    fs::remove_file("./tmp-file.tar.xz")?;
-
-    Ok(())
-}
-
-pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
-    let ffmpeg_folder = BinPaths::ffmpeg();
-
-    // Check if FFmpeg is already installed
-    if let Some(ffmpeg_path) = crate::helpers::get_tool_path("ffmpeg") {
-        // Check if it's the local FFmpeg by seeing if the path contains .bin
-        let path_str = ffmpeg_path.to_string_lossy();
-        let is_local = path_str.contains(".bin");
-
-        if is_local {
-            // For local FFmpeg, we need to set LD_LIBRARY_PATH
-            let mut cmd = std::process::Command::new(&ffmpeg_path);
-            cmd.arg("-version");
-
-            // Set LD_LIBRARY_PATH to include the lib directory
-            let lib_path = Path::new(".bin/ffmpeg/lib");
-            if lib_path.exists() {
-                let lib_path_str = lib_path.to_string_lossy();
-                if let Ok(existing_ld_path) = env::var("LD_LIBRARY_PATH") {
-                    cmd.env(
-                        "LD_LIBRARY_PATH",
-                        format!("{}:{}", lib_path_str, existing_ld_path),
-                    );
-                } else {
-                    cmd.env("LD_LIBRARY_PATH", lib_path_str.to_string());
-                }
-            }
-
-            let output = cmd.output();
-
-            if let Ok(output) = output {
-                let version_str = String::from_utf8_lossy(&output.stdout);
-                if version_str.contains("ffmpeg version n6.") {
-                    print_message(MessageType::Success, "FFmpeg 6.x already installed");
-                    return Ok(());
-                } else {
-                    print_message(
-                        MessageType::Warning,
-                        "FFmpeg found but not version 6.x, reinstalling...",
-                    );
-                    fs::remove_dir_all(&ffmpeg_folder).ok();
-                }
-            } else {
-                // If we can't run ffmpeg, it might be missing libraries
-                print_message(
-                    MessageType::Warning,
-                    "Failed to check FFmpeg version, reinstalling...",
-                );
-                fs::remove_dir_all(&ffmpeg_folder).ok();
-            }
-        }
-    }
-
-    print_section("Installing FFmpeg 6.1");
-
-    match env::consts::OS {
-        "linux" => {
-            // Use BtbN's shared library builds for FFmpeg 6.1
-            let url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-05-31-14-01/ffmpeg-n6.1.2-31-gf120f66838-linux64-lgpl-shared-6.1.tar.xz";
-
-            let temp_extract_path = BinPaths::temp_dir("ffmpeg_temp");
-
-            // Clean up any existing temp directory first
-            if temp_extract_path.exists() {
-                fs::remove_dir_all(&temp_extract_path)?;
-            }
-
-            download_and_extract_tar_xz(
-                url,
-                temp_extract_path.to_str().unwrap(),
-                Some("ffmpeg-n6.1.2-31-gf120f66838-linux64-lgpl-shared-6.1.tar.xz".to_string()),
-            )?;
-
-            // The archive extracts to a folder like ffmpeg
-            // We need to move its contents to our ffmpeg folder
-            let extracted_folder =
-                temp_extract_path.join("ffmpeg-n6.1.2-31-gf120f66838-linux64-lgpl-shared-6.1");
-
-            // Create the final ffmpeg folder
-            fs::create_dir_all(&ffmpeg_folder)?;
-
-            // Copy everything from the extracted folder
-            // This includes bin/, lib/, include/ directories needed for development
-            for entry in fs::read_dir(extracted_folder)? {
-                let entry = entry?;
-                let file_name = entry.file_name();
-                let src = entry.path();
-                let dst = ffmpeg_folder.join(file_name);
-
-                if src.is_dir() {
-                    // Copy directory recursively using a simple recursive copy
-                    copy_dir_all(&src, &dst)?;
-                } else {
-                    // Remove existing file if present
-                    if dst.exists() {
-                        fs::remove_file(&dst)?;
-                    }
-                    fs::copy(&src, &dst)?;
-                }
-            }
-
-            // Set executable permissions for binaries
-            let bin_dir = ffmpeg_folder.join("bin");
-            if bin_dir.exists() {
-                for entry in fs::read_dir(&bin_dir)? {
-                    let entry = entry?;
-                    set_executable_permission(&entry.path())?;
-                }
-            }
-
-            // Clean up temp directory - this time with error handling
-            if let Err(e) = fs::remove_dir_all(&temp_extract_path) {
-                print_message(
-                    MessageType::Warning,
-                    &format!("Failed to clean up temp directory: {}", e),
-                );
-            }
-
-            print_message(
-                MessageType::Success,
-                "FFmpeg 6.1 shared libraries installed for Linux",
-            );
-        }
-        "windows" => {
-            let temp_extract_path = BinPaths::temp_dir("ffmpeg_temp");
-
-            // Clean up any existing temp directory first
-            if temp_extract_path.exists() {
-                fs::remove_dir_all(&temp_extract_path)?;
-            }
-
-            download_and_extract_zip(
-                "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-08-29-13-31/ffmpeg-n6.1.3-win64-lgpl-shared-6.1.zip",
-                temp_extract_path.to_str().unwrap(),
-                Some("ffmpeg-n6.1-win64.zip".to_string()),
-            )?;
-
-            // The archive extracts to a folder like ffmpeg-n6.1-latest-win64-lgpl-shared-6.1
-            let extracted_folder = temp_extract_path.join("ffmpeg-n6.1-win64");
-
-            // Create the final ffmpeg folder
-            fs::create_dir_all(&ffmpeg_folder)?;
-
-            // Copy everything from the extracted folder
-            for entry in fs::read_dir(extracted_folder)? {
-                let entry = entry?;
-                let file_name = entry.file_name();
-                let src = entry.path();
-                let dst = ffmpeg_folder.join(file_name);
-
-                if src.is_dir() {
-                    copy_dir_all(&src, &dst)?;
-                } else {
-                    if dst.exists() {
-                        fs::remove_file(&dst)?;
-                    }
-                    fs::copy(&src, &dst)?;
-                }
-            }
-
-            // Clean up temp directory
-            if let Err(e) = fs::remove_dir_all(&temp_extract_path) {
-                print_message(
-                    MessageType::Warning,
-                    &format!("Failed to clean up temp directory: {}", e),
-                );
-            }
-
-            print_message(MessageType::Success, "FFmpeg 6.1 installed for Windows");
-        }
-        "macos" => {
-            // For macOS, we could use evermeet.cx builds or similar
-            print_message(
-                MessageType::Warning,
-                "FFmpeg installation for macOS not yet implemented. Please install via Homebrew: brew install ffmpeg@6",
-            );
-        }
-        _ => {
-            print_message(
-                MessageType::Warning,
-                &format!(
-                    "FFmpeg installation not supported for OS: {}",
-                    env::consts::OS
-                ),
-            );
-        }
-    }
 
     Ok(())
 }
