@@ -75,9 +75,9 @@ font_size = 14
 font_color = Color(0, 0, 0, 1)
 
 [node name="EventDiscoverCard" type="TextureButton"]
-custom_minimum_size = Vector2(332, 318)
-offset_right = 332.0
-offset_bottom = 318.0
+custom_minimum_size = Vector2(290, 250)
+offset_right = 290.0
+offset_bottom = 250.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
 mouse_filter = 1
@@ -88,10 +88,13 @@ script = ExtResource("1_kyirg")
 unique_name_in_owner = true
 self_modulate = Color(1, 1, 1, 0)
 clip_contents = true
-custom_minimum_size = Vector2(332, 318)
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+custom_minimum_size = Vector2(290, 250)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_kyirg")
 
@@ -131,11 +134,12 @@ size_flags_stretch_ratio = 90.0
 mouse_filter = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 0
 alignment = 1
 
 [node name="Label_EventName" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
@@ -184,6 +188,7 @@ uppercase = true
 
 [node name="TrendingPill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(75, 24)
 layout_mode = 2
 mouse_filter = 2

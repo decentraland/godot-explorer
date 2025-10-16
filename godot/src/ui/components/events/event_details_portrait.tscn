@@ -1,4 +1,4 @@
-[gd_scene load_steps=33 format=3 uid="uid://4luuuxo6tbcp"]
+[gd_scene load_steps=36 format=3 uid="uid://4luuuxo6tbcp"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyf7t"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_div8d"]
@@ -23,6 +23,7 @@
 [ext_resource type="LabelSettings" uid="uid://dj8crtu0eembr" path="res://src/ui/components/events/event_description.tres" id="17_l1b7y"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="18_kyf7t"]
 [ext_resource type="StyleBox" uid="uid://doxrea38sohxr" path="res://assets/themes/dcl_theme/snow_outlined_black_normal.tres" id="19_l1b7y"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="23_bmyvb"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsiqj"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -37,29 +38,19 @@ corner_radius_top_right = 48
 corner_radius_bottom_right = 48
 corner_radius_bottom_left = 48
 
-[sub_resource type="LabelSettings" id="LabelSettings_l1b7y"]
-font = ExtResource("7_kyf7t")
-font_size = 13
-font_color = Color(0, 0, 0, 1)
-
-[sub_resource type="LabelSettings" id="LabelSettings_bmyvb"]
-font = ExtResource("7_kyf7t")
-font_size = 13
-font_color = Color(1, 0.176471, 0.333333, 1)
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wcxms"]
 content_margin_left = 10.0
 content_margin_top = 3.0
 content_margin_right = 10.0
 bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 
 [sub_resource type="LabelSettings" id="LabelSettings_dbho5"]
 font = ExtResource("6_3nhog")
-font_size = 13
+font_size = 15
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ygmng"]
 content_margin_left = 10.0
@@ -71,14 +62,14 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0, 0, 0, 1)
-corner_radius_top_left = 11
-corner_radius_top_right = 11
-corner_radius_bottom_right = 11
-corner_radius_bottom_left = 11
+corner_radius_top_left = 19
+corner_radius_top_right = 19
+corner_radius_bottom_right = 19
+corner_radius_bottom_left = 19
 
 [sub_resource type="LabelSettings" id="LabelSettings_hgyl2"]
 font = ExtResource("6_3nhog")
-font_size = 13
+font_size = 15
 font_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j8tr7"]
@@ -86,10 +77,40 @@ content_margin_left = 10.0
 content_margin_top = 3.0
 content_margin_right = 10.0
 bg_color = Color(0.188235, 0.803922, 0, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="LabelSettings" id="LabelSettings_l1b7y"]
+font = ExtResource("7_kyf7t")
+font_size = 15
+font_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_bmyvb"]
+font = ExtResource("7_kyf7t")
+font_size = 15
+font_color = Color(1, 0.176471, 0.333333, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l1b7y"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="LabelSettings" id="LabelSettings_wcxms"]
+font = ExtResource("23_bmyvb")
+font_size = 22
 
 [node name="EventDetailsPortrait" type="PanelContainer"]
 anchors_preset = 12
@@ -127,13 +148,14 @@ theme_override_constants/separation = 30
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 30
+theme_override_constants/separation = 15
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 clip_children = 2
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.75
 theme_override_styles/panel = SubResource("StyleBoxFlat_3ujld")
 
 [node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/PanelContainer"]
@@ -170,34 +192,6 @@ theme_override_font_sizes/font_size = 20
 text = "The Meta Beast Roaming Party 3x The Vibes 1 aKIDcalledMake, DJvaped Lunar FREQ "
 label_settings = ExtResource("6_6psy8")
 autowrap_mode = 2
-
-[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_constants/separation = 2
-
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer_UserName"]
-layout_mode = 2
-size_flags_vertical = 5
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_font_sizes/font_size = 20
-text = "by"
-label_settings = SubResource("LabelSettings_l1b7y")
-
-[node name="Label_UserName" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer_UserName"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 5
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("5_3ujld")
-theme_override_font_sizes/font_size = 12
-text = "Matheo"
-label_settings = SubResource("LabelSettings_bmyvb")
-
-[node name="Control" type="Control" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
@@ -237,7 +231,6 @@ uppercase = true
 
 [node name="TrendingPill" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(75, 24)
 layout_mode = 2
 mouse_filter = 2
@@ -342,6 +335,34 @@ theme_override_font_sizes/font_size = 13
 text = "YES"
 label_settings = ExtResource("10_3ujld")
 
+[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_UserName"]
+layout_mode = 2
+size_flags_vertical = 5
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_font_sizes/font_size = 20
+text = "by"
+label_settings = SubResource("LabelSettings_l1b7y")
+
+[node name="Label_UserName" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_UserName"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 5
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_fonts/font = ExtResource("5_3ujld")
+theme_override_font_sizes/font_size = 12
+text = "Matheo"
+label_settings = SubResource("LabelSettings_bmyvb")
+
+[node name="Control" type="Control" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
@@ -380,13 +401,13 @@ a 3X is hard to find don't miss it fam!"
 label_settings = ExtResource("17_l1b7y")
 autowrap_mode = 2
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 66)
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 2
 
-[node name="Button_Share" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="Button_Share" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
 custom_minimum_size = Vector2(66, 0)
 layout_mode = 2
 focus_mode = 0
@@ -395,11 +416,12 @@ theme_type_variation = &"SnowOutlinedToggleButton"
 theme_override_constants/icon_max_width = 35
 theme_override_styles/hover_pressed = ExtResource("19_l1b7y")
 theme_override_styles/hover = ExtResource("19_l1b7y")
+theme_override_styles/normal = SubResource("StyleBoxFlat_l1b7y")
 icon = ExtResource("14_6psy8")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Calendar" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="Button_Calendar" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
 custom_minimum_size = Vector2(66, 0)
 layout_mode = 2
 focus_mode = 0
@@ -408,17 +430,18 @@ theme_type_variation = &"SnowOutlinedToggleButton"
 theme_override_constants/icon_max_width = 35
 theme_override_styles/hover_pressed = ExtResource("19_l1b7y")
 theme_override_styles/hover = ExtResource("19_l1b7y")
+theme_override_styles/normal = SubResource("StyleBoxFlat_l1b7y")
 icon = ExtResource("17_div8d")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Reminder" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4" instance=ExtResource("17_3nhog")]
+[node name="Button_Reminder" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons" instance=ExtResource("17_3nhog")]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 35
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 19
 
-[node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
@@ -428,11 +451,35 @@ focus_mode = 0
 theme = ExtResource("13_0a5n6")
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 14
-text = "JUMP IN"
-icon = ExtResource("18_kyf7t")
 icon_alignment = 2
 expand_icon = true
 
-[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4/Button_Share" to="." method="_on_button_share_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4/Button_Calendar" to="." method="_on_button_calendar_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn/HBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "JUMP IN"
+label_settings = SubResource("LabelSettings_wcxms")
+
+[node name="TextureRect_Add" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn/HBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("18_kyf7t")
+expand_mode = 3
+
+[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Share" to="." method="_on_button_share_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Calendar" to="." method="_on_button_calendar_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]

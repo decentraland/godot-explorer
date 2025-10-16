@@ -427,6 +427,7 @@ func set_attending(_attending: bool, _id: String) -> void:
 	if reminder_button:
 		reminder_button.event_id_value = _id
 		reminder_button.set_pressed_no_signal(_attending)
+		reminder_button.update_styles(_attending)
 
 
 func _parse_iso_timestamp(iso_string: String) -> int:
@@ -497,7 +498,8 @@ func _format_timestamp(timestamp: int) -> String:
 	var days_diff = time_diff / 86400
 
 	var live_pill_parent = _get_label_live_pill().get_parent()
-	var time_pill_parent = _get_label_time_pill().get_parent()
+	var time_pill = _get_label_time_pill()
+	var time_pill_parent = time_pill.get_parent()
 	var border = _get_border()
 	var jump_in_button = _get_button_jump_in()
 	var reminder_button = _get_reminder_button()
@@ -522,6 +524,25 @@ func _format_timestamp(timestamp: int) -> String:
 
 	# Si falta menos de 1 hora: IN XX MINUTES
 	if hours_diff < 1:
+		# Cambiar estilo del time_pill_parent (borde) y time_pill (color de fuente) a #FF2D55
+		if time_pill_parent:
+			# Crear un StyleBox único para esta instancia
+			var original_style = time_pill_parent.get_theme_stylebox("panel")
+			if original_style:
+				var new_style = original_style.duplicate()
+				new_style.border_color = Color("#FF2D55")
+				time_pill_parent.add_theme_stylebox_override("panel", new_style)
+		
+		if time_pill:
+			# Crear un LabelSettings único para esta instancia
+			var original_settings = time_pill.get_theme_font_size("font_size")
+			var new_settings = LabelSettings.new()
+			new_settings.font_color = Color("#FF2D55")
+			if time_pill.get_theme_font("font"):
+				new_settings.font = time_pill.get_theme_font("font")
+			new_settings.font_size = original_settings
+			time_pill.label_settings = new_settings
+		
 		return "IN " + str(int(minutes_diff)) + " MINS"
 
 	# Si faltan menos de 48 horas: IN XX HOURS
@@ -634,7 +655,6 @@ func _on_button_share_pressed() -> void:
 	#Global.show_message("URL copied to clipboard: " + event_url)
 	var clipboard_text = "Visit the event: " + event_title + "following this link: " + event_url
 	DisplayServer.clipboard_set(clipboard_text)
-	Global.show_message("URL copied to clipboard: " + event_url)
 
 
 func _on_button_calendar_pressed() -> void:

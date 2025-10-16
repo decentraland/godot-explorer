@@ -1,12 +1,14 @@
 extends Button
 
-const BELL_OUTLINE = preload("res://assets/ui/bell-outline.svg")
-const UNSUSCRIBE = preload("res://assets/ui/unsuscribe.svg")
 const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 
 var event_id_value: String
 
 @onready var texture_progress_bar: TextureProgressBar = $TextureProgressBar
+@onready var texture_rect_add: TextureRect = %TextureRect_Add
+@onready var texture_rect_remove: TextureRect = %TextureRect_Remove
+@onready var label: Label = %Label
+@onready var h_box_container_content: HBoxContainer = %HBoxContainer_Content
 
 
 func _ready() -> void:
@@ -35,11 +37,16 @@ func _async_on_toggled(toggled_on: bool) -> void:
 		set_pressed_no_signal(!toggled_on)
 	elif response != null:
 		if toggled_on:
-			icon = UNSUSCRIBE
-			text = "REMOVE REMINDER"
+			label.text = "REMOVE REMINDER"
+			label.label_settings.font_color = "#fcfcfc"
+
+			texture_rect_add.hide()
+			texture_rect_remove.show()
 		else:
-			icon = BELL_OUTLINE
-			text = "REMINDER"
+			label.text = "REMINDER"
+			label.label_settings.font_color = "#ff2d55" 
+			texture_rect_add.show()
+			texture_rect_remove.hide()
 	else:
 		set_pressed_no_signal(!toggled_on)
 		printerr("Error unpdating attend intention")
@@ -51,6 +58,23 @@ func _set_loading(status: bool) -> void:
 	if status:
 		texture_progress_bar.show()
 		self_modulate = "FFFFFF00"
+		h_box_container_content.modulate = "FFFFFF00"
+		disabled = true
 	else:
+		disabled = false
 		texture_progress_bar.hide()
 		self_modulate = "FFFFFF"
+		h_box_container_content.modulate = "FFFFFF"
+		
+		
+func update_styles(toggled_on):
+	if toggled_on:
+			label.text = "REMOVE REMINDER"
+			label.label_settings.font_color = "#fcfcfc"
+			texture_rect_add.hide()
+			texture_rect_remove.show()
+	else:
+		label.text = "REMINDER"
+		label.label_settings.font_color = "#ff2d55" 
+		texture_rect_add.show()
+		texture_rect_remove.hide()

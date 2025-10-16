@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://cm0sccjf036pe"]
+[gd_scene load_steps=9 format=3 uid="uid://cm0sccjf036pe"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_k4u78"]
 [ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="2_ghua5"]
@@ -6,9 +6,13 @@
 [ext_resource type="Texture2D" uid="uid://ohtsxq22tjgr" path="res://assets/ui/bell-outline.svg" id="4_kix6m"]
 [ext_resource type="Script" uid="uid://jusvx3prmk47" path="res://src/ui/components/events/button_reminder.gd" id="5_0dsnb"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="5_ghua5"]
+[ext_resource type="Texture2D" uid="uid://caklflmda3gbl" path="res://assets/ui/bell-fill.svg" id="6_1umtk"]
+[ext_resource type="LabelSettings" uid="uid://dac81qnuuwamy" path="res://assets/themes/dcl_theme/button_text.tres" id="8_1umtk"]
 
 [node name="Button_Reminder" type="Button"]
 custom_minimum_size = Vector2(250, 66)
+offset_right = 500.0
+offset_bottom = 66.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_mode = 0
@@ -28,8 +32,6 @@ theme_override_styles/hover = ExtResource("3_0dsnb")
 theme_override_styles/pressed = ExtResource("2_ghua5")
 theme_override_styles/normal = ExtResource("3_0dsnb")
 toggle_mode = true
-text = "REMINDER"
-icon = ExtResource("4_kix6m")
 expand_icon = true
 script = ExtResource("5_0dsnb")
 
@@ -50,5 +52,40 @@ grow_horizontal = 2
 grow_vertical = 2
 scale = Vector2(0.2, 0.2)
 pivot_offset = Vector2(64, 64)
+
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="TextureRect_Add" type="TextureRect" parent="HBoxContainer_Content"]
+unique_name_in_owner = true
+modulate = Color(1, 0.176471, 0.333333, 1)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("6_1umtk")
+expand_mode = 3
+
+[node name="TextureRect_Remove" type="TextureRect" parent="HBoxContainer_Content"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("4_kix6m")
+expand_mode = 3
+
+[node name="Label" type="Label" parent="HBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "REMINDER"
+label_settings = ExtResource("8_1umtk")
 
 [connection signal="toggled" from="." to="." method="_async_on_toggled"]
