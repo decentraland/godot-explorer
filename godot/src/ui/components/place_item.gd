@@ -275,11 +275,11 @@ func set_data(item_data):
 	set_duration(item_data.get("duration", 0))
 	set_recurrent(item_data.get("recurrent", false))
 
-	# Manejar start_at para eventos (timestamp Unix)
+	# Handle start_at for events (Unix timestamp)
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
 	if next_start_at != "":
-		# Convertir ISO string a timestamp Unix
+		# Convert ISO string to Unix timestamp
 		var timestamp = _parse_iso_timestamp(next_start_at)
 		if timestamp > 0:
 			set_time(timestamp, live)
@@ -346,16 +346,12 @@ func _format_number(num: int) -> String:
 func get_hash_from_url(url: String) -> String:
 	if url.contains("/content/contents/"):
 		var parts = url.split("/")
-		return parts[parts.size() - 1]  # Return the last part
+		return parts[parts.size() - 1]
 
-	# Convert URL to a hexadecimal
 	var context := HashingContext.new()
 	if context.start(HashingContext.HASH_SHA256) == OK:
-		# Convert the URL string to UTF-8 bytes and update the context with this data
 		context.update(url.to_utf8_buffer())
-		# Finalize the hashing process and get the hash as a PackedByteArray
 		var url_hash: PackedByteArray = context.finish()
-		# Encode the hash as hexadecimal
 		return url_hash.hex_encode()
 
 	return "temp-file"
@@ -369,16 +365,15 @@ func _get_or_empty_string(dict: Dictionary, key: String) -> String:
 
 
 func set_event_name(_event_name: String, _user_name: String = "") -> void:
-	
 	event_name = _event_name
 	var limit_to_trim = 90
 	var modified_event_name: String
 	if _user_name.length() > 0:
 		limit_to_trim = limit_to_trim - 4 - _user_name.length()
 		if event_name.length() > limit_to_trim:
-			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "...[/b] "#[font_size=15]by [color='#ff2d55'][b]" + _user_name
+			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "...[/b] "  #[font_size=15]by [color='#ff2d55'][b]" + _user_name
 		else:
-			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "[/b]"# [font_size=15]by [color='#ff2d55'][b]" + _user_name
+			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "[/b]"  # [font_size=15]by [color='#ff2d55'][b]" + _user_name
 	else:
 		if _event_name.length() > limit_to_trim:
 			modified_event_name = "[font_size=28][b]" + _event_name.left(limit_to_trim) + "...[/b]"
@@ -451,11 +446,11 @@ func set_attending(_attending: bool, _id: String) -> void:
 
 
 func _parse_iso_timestamp(iso_string: String) -> int:
-	# Convertir ISO string (ej: "2025-10-06T12:00:00.000Z") a timestamp Unix
+	# Convert ISO string (e.g. "2025-10-06T12:00:00.000Z") to Unix timestamp
 	if iso_string.is_empty():
 		return 0
 
-	# Parsear la fecha ISO
+	# Parse ISO date
 	var date_parts = iso_string.split("T")
 	if date_parts.size() != 2:
 		return 0
@@ -476,7 +471,7 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 	var minute = int(time_components[1])
 	var second = int(time_components[2])
 
-	# Crear diccionario de fecha y convertir a timestamp
+	# Create date dictionary and convert to timestamp
 	var date_dict = {
 		"year": year, "month": month, "day": day, "hour": hour, "minute": minute, "second": second
 	}
@@ -485,7 +480,7 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 
 
 func _format_timestamp_for_calendar(timestamp: int) -> String:
-	# Convertir timestamp Unix a formato ISO para Google Calendar (YYYYMMDDTHHMMSSZ)
+	# Convert Unix timestamp to ISO format for Google Calendar (YYYYMMDDTHHMMSSZ)
 	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
 	return (
 		"%04d%02d%02dT%02d%02d%02dZ"
@@ -509,13 +504,13 @@ func _format_timestamp(timestamp: int) -> String:
 	var border = _get_border()
 	var jump_in_button = _get_button_jump_in()
 	var reminder_button = _get_reminder_button()
-	# Crear estilos únicos para esta instancia
+	# Create unique styles for this instance
 	var time_pill_parent_style = time_pill_parent.get_theme_stylebox("panel")
 	if time_pill_parent_style:
 		var unique_style = time_pill_parent_style.duplicate()
 		unique_style.border_color = Color("#161518")
 		time_pill_parent.add_theme_stylebox_override("panel", unique_style)
-	
+
 	if time_pill:
 		var unique_label_settings = LabelSettings.new()
 		unique_label_settings.font_color = Color("#161518")
@@ -524,7 +519,7 @@ func _format_timestamp(timestamp: int) -> String:
 		unique_label_settings.font_size = time_pill.get_theme_font_size("font_size")
 		time_pill.label_settings = unique_label_settings
 
-	# Si el evento ya pasó, mostrar fecha
+	# If event has passed, show date
 	if time_diff <= 0:
 		var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
 		var month_names = [
@@ -532,12 +527,10 @@ func _format_timestamp(timestamp: int) -> String:
 		]
 		return month_names[time_dict.month] + " " + str(time_dict.day)
 
-	# Calcular diferencias
+	# Calculate time differences
 	var minutes_diff = time_diff / 60
 	var hours_diff = time_diff / 3600
 	var days_diff = time_diff / 86400
-
-	
 
 	if minutes_diff < 5:
 		live_pill_parent.show()
@@ -557,16 +550,16 @@ func _format_timestamp(timestamp: int) -> String:
 	if border:
 		border.self_modulate = "#FFFFFF00"
 
-	# Si falta menos de 1 hora: IN XX MINUTES
+	# If less than 1 hour remaining: IN XX MINUTES
 	if hours_diff < 1:
-		# Crear estilos únicos para esta instancia con color rojo
+		# Create unique styles for this instance with red color
 		if time_pill_parent:
 			var original_style = time_pill_parent.get_theme_stylebox("panel")
 			if original_style:
 				var red_style = original_style.duplicate()
 				red_style.border_color = Color("#ff2d55")
 				time_pill_parent.add_theme_stylebox_override("panel", red_style)
-		
+
 		if time_pill:
 			var red_label_settings = LabelSettings.new()
 			red_label_settings.font_color = Color("#ff2d55")
@@ -574,20 +567,20 @@ func _format_timestamp(timestamp: int) -> String:
 				red_label_settings.font = time_pill.get_theme_font("font")
 			red_label_settings.font_size = time_pill.get_theme_font_size("font_size")
 			time_pill.label_settings = red_label_settings
-		
+
 		return "IN " + str(int(minutes_diff)) + " MINS"
 
-	# Si faltan menos de 48 horas: IN XX HOURS
+	# If less than 48 hours remaining: IN XX HOURS
 	if hours_diff < 48:
 		if hours_diff > 2:
 			return "IN " + str(int(hours_diff)) + " HRS"
 		return "IN " + str(int(hours_diff)) + " HR"
 
-	# Si faltan 7 días o menos: IN X DAYS
+	# If 7 days or less remaining: IN X DAYS
 	if days_diff <= 7:
 		return "IN " + str(int(days_diff)) + " DAYS"
 
-	# Si faltan más de 7 días: Poner la fecha con formato SEPT 31
+	# If more than 7 days remaining: Show date in SEPT 31 format
 	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
 	var month_names = [
 		"", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
@@ -596,23 +589,23 @@ func _format_timestamp(timestamp: int) -> String:
 
 
 func _format_duration(duration: int) -> String:
-	# Convertir milisegundos a horas
+	# Convert milliseconds to hours
 	var hours = duration / (1000 * 60 * 60)
 
-	# Si es menor a 1 hora, mostrar minutos
+	# If less than 1 hour, show minutes
 	if hours < 1:
 		var minutes = duration / (1000 * 60)
 		if minutes == 1:
 			return "1 MIN"
 		return str(int(minutes)) + " MINS"
 
-	# Si es menor a 72 horas, mostrar horas
+	# If less than 72 hours, show hours
 	if hours < 72:
 		if hours == 1:
 			return "1 HR"
 		return str(int(hours)) + " HRS"
 
-	# Si es mayor a 72 horas, mostrar días
+	# If more than 72 hours, show days
 	var days = hours / 24
 	return str(int(days)) + " DAYS"
 
@@ -621,23 +614,23 @@ func schedule_event() -> void:
 	if not _data:
 		return
 
-	# Obtener datos del evento
+	# Get event data
 	var next_start_at = _data.get("next_start_at", "")
 	var next_finish_at = _data.get("next_finish_at", "")
 
-	# Crear URL de jump in con las coordenadas de location
+	# Create jump in URL with location coordinates
 	var jump_in_url = (
 		"https://decentraland.org/jump/events?position=%d%%2C%d&realm=main"
 		% [location.x, location.y]
 	)
 
-	# Combinar descripción con URL de jump in
+	# Combine description with jump in URL
 	var details = description
 	if not description.is_empty():
 		details += "\n\n"
 	details += "jump in: " + jump_in_url
 
-	# Crear fechas para Google Calendar
+	# Create dates for Google Calendar
 	var dates_param = ""
 	if not next_start_at.is_empty() and not next_finish_at.is_empty():
 		var start_timestamp = _parse_iso_timestamp(next_start_at)
@@ -648,13 +641,13 @@ func schedule_event() -> void:
 			var finish_iso = _format_timestamp_for_calendar(finish_timestamp)
 			dates_param = "&dates=%s/%s" % [start_iso, finish_iso]
 
-	# Crear deep link de Google Calendar
+	# Create Google Calendar deep link
 	var calendar_url = (
 		"https://calendar.google.com/calendar/u/0/r/eventedit?text=%s&details=%s%s"
 		% [event_name.uri_encode(), details.uri_encode(), dates_param]
 	)
 
-	# Abrir el enlace en el navegador
+	# Open link in browser
 	OS.shell_open(calendar_url)
 
 
@@ -672,19 +665,10 @@ func _on_button_share_pressed() -> void:
 		printerr("Event ID not available")
 		return
 
-	# Create the event URL
 	var event_url = "https://decentraland.org/events/event/?id=" + event_id
 
-	# Get the event title for the subject
 	var event_title = _data.get("name", "Decentraland Event")
 
-	## Share using Android plugin
-	#if Global.dcl_godot_android_plugin != null:
-	#Global.dcl_godot_android_plugin.shareText(event_url, event_title)
-	#else:
-	# Fallback: copy to clipboard and show message
-	#DisplayServer.clipboard_set(event_url)
-	#Global.show_message("URL copied to clipboard: " + event_url)
 	var clipboard_text = "Visit the event: " + event_title + "following this link: " + event_url
 	DisplayServer.clipboard_set(clipboard_text)
 

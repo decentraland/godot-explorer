@@ -44,7 +44,7 @@ func _async_on_toggled(toggled_on: bool) -> void:
 			texture_rect_remove.show()
 		else:
 			label.text = "REMINDER"
-			label.label_settings.font_color = "#ff2d55" 
+			label.label_settings.font_color = "#ff2d55"
 			texture_rect_add.show()
 			texture_rect_remove.hide()
 	else:
@@ -65,16 +65,16 @@ func _set_loading(status: bool) -> void:
 		texture_progress_bar.hide()
 		self_modulate = "FFFFFF"
 		h_box_container_content.modulate = "FFFFFF"
-		
-		
+
+
 func update_styles(toggled_on):
 	if toggled_on:
-			label.text = "REMOVE REMINDER"
-			label.label_settings.font_color = "#fcfcfc"
-			texture_rect_add.hide()
-			texture_rect_remove.show()
+		label.text = "REMOVE REMINDER"
+		label.label_settings.font_color = "#fcfcfc"
+		texture_rect_add.hide()
+		texture_rect_remove.show()
 	else:
 		label.text = "REMINDER"
-		label.label_settings.font_color = "#ff2d55" 
+		label.label_settings.font_color = "#ff2d55"
 		texture_rect_add.show()
 		texture_rect_remove.hide()
