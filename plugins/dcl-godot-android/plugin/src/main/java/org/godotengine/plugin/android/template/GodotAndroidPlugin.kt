@@ -309,8 +309,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
                 metrics["memory_usage"] = totalMemoryMB
 
-                Log.d(pluginName, "Memory: Native=${nativeHeapKB/1024}MB, Dalvik=${dalvikHeapKB/1024}MB, Other=${otherPssKB/1024}MB, Total=${totalMemoryMB}MB")
-
                 // Get battery information
                 val batteryIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
                 val batteryStatus = ctx.registerReceiver(null, batteryIntentFilter)
