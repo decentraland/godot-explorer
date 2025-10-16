@@ -425,8 +425,8 @@ func set_attendees_number(_attendees: int) -> void:
 func set_attending(_attending: bool, _id: String) -> void:
 	var reminder_button = _get_reminder_button()
 	if reminder_button:
-		reminder_button.button_pressed = _attending
 		reminder_button.event_id_value = _id
+		reminder_button.set_pressed_no_signal(_attending)
 
 
 func _parse_iso_timestamp(iso_string: String) -> int:
@@ -610,7 +610,31 @@ func _on_event_pressed() -> void:
 
 
 func _on_button_share_pressed() -> void:
-	pass
+	if not _data or not _data.has("id"):
+		printerr("No event data available to share")
+		return
+
+	var event_id = _data.get("id", "")
+	if event_id.is_empty():
+		printerr("Event ID not available")
+		return
+
+	# Create the event URL
+	var event_url = "https://decentraland.org/events/event/?id=" + event_id
+
+	# Get the event title for the subject
+	var event_title = _data.get("name", "Decentraland Event")
+
+	## Share using Android plugin
+	#if Global.dcl_godot_android_plugin != null:
+	#Global.dcl_godot_android_plugin.shareText(event_url, event_title)
+	#else:
+	# Fallback: copy to clipboard and show message
+	#DisplayServer.clipboard_set(event_url)
+	#Global.show_message("URL copied to clipboard: " + event_url)
+	var clipboard_text = "Visit the event: " + event_title + "following this link: " + event_url
+	DisplayServer.clipboard_set(clipboard_text)
+	Global.show_message("URL copied to clipboard: " + event_url)
 
 
 func _on_button_calendar_pressed() -> void:

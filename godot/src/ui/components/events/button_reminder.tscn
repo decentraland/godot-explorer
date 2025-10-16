@@ -1,9 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://cm0sccjf036pe"]
+[gd_scene load_steps=7 format=3 uid="uid://cm0sccjf036pe"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_k4u78"]
 [ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="2_ghua5"]
 [ext_resource type="StyleBox" uid="uid://cvd354aiai815" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed.tres" id="3_0dsnb"]
-[ext_resource type="StyleBox" uid="uid://uskyptougkeg" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed_hover.tres" id="3_kix6m"]
 [ext_resource type="Texture2D" uid="uid://ohtsxq22tjgr" path="res://assets/ui/bell-outline.svg" id="4_kix6m"]
 [ext_resource type="Script" uid="uid://jusvx3prmk47" path="res://src/ui/components/events/button_reminder.gd" id="5_0dsnb"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="5_ghua5"]
@@ -25,7 +24,7 @@ theme_override_colors/font_color = Color(1, 0.176471, 0.333333, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 50
 theme_override_styles/hover_pressed = ExtResource("2_ghua5")
-theme_override_styles/hover = ExtResource("3_kix6m")
+theme_override_styles/hover = ExtResource("3_0dsnb")
 theme_override_styles/pressed = ExtResource("2_ghua5")
 theme_override_styles/normal = ExtResource("3_0dsnb")
 toggle_mode = true

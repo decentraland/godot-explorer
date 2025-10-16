@@ -30,7 +30,6 @@ func _async_on_toggled(toggled_on: bool) -> void:
 		method = HTTPClient.METHOD_DELETE
 
 	var response = await Global.async_signed_fetch(url, method)
-	print(method, " - ", url)
 	if response is PromiseError:
 		printerr("Error unpdating attend intention: ", response.get_error())
 		set_pressed_no_signal(!toggled_on)

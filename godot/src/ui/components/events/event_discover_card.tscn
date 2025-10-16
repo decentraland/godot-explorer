@@ -122,6 +122,7 @@ size_flags_stretch_ratio = 210.0
 mouse_filter = 2
 texture = ExtResource("1_vtdag")
 expand_mode = 2
+stretch_mode = 6
 
 [node name="MarginContainer" type="MarginContainer" parent="Border/Content/PanelContainer/VBoxContainer"]
 layout_mode = 2
