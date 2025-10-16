@@ -258,7 +258,7 @@ func set_data(item_data):
 	set_title(item_data.get("title", "Unknown place"))
 	set_description(_get_or_empty_string(item_data, "description"))
 	set_attendees_number(item_data.get("total_attendees", 0))
-	set_attending(item_data.get("attending", false), item_data.get("event_id", "id"))
+	set_attending(item_data.get("attending", false), item_data.get("id", "id"))
 	set_event_name(item_data.get("name", "Event Name"))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)

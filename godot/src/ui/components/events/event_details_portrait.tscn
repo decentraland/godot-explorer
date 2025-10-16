@@ -408,12 +408,13 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="Button_Reminder" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4" instance=ExtResource("17_3nhog")]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 14
-text = "REMINDER"
 
 [node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
