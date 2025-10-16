@@ -51,24 +51,13 @@ Decentraland Godot Explorer is a cross-platform metaverse client built with Godo
 sudo apt-get update && sudo apt-get install -y \
   libasound2-dev libudev-dev \
   clang curl pkg-config \
-  libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev \
   libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
 ```
 
 ### macOS
 ```bash
-brew install ffmpeg@6 pkg-config
-
-# Set environment variables (add to ~/.zshrc)
-export PKG_CONFIG_PATH="/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH"
+brew install pkg-config
 ```
-
-### Windows
-1. Download [FFmpeg shared libraries](https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z)
-2. Set environment variables:
-   - `FFMPEG_DIR` = path to unzipped FFmpeg
-   - `LIBCLANG_PATH` = path to LLVM\x64\bin (comes with Visual Studio)
-3. Add `%FFMPEG_DIR%\bin` to PATH
 
 ### Android Development
 - Android SDK with NDK 27.1.12297006
