@@ -431,7 +431,6 @@ layout_mode = 2
 
 [node name="Button_Next" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(425, 80)
 layout_mode = 2
 focus_mode = 0
@@ -445,6 +444,7 @@ icon_alignment = 2
 
 [node name="RestoreNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 theme_override_constants/separation = 25
