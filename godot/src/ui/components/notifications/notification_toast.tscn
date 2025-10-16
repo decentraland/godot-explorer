@@ -1,0 +1,73 @@
+[gd_scene load_steps=3 format=3 uid="uid://b3qk7n8vh2m9x"]
+
+[ext_resource type="Script" path="res://src/ui/components/notifications/notification_toast.gd" id="1_toast"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_toast"]
+bg_color = Color(0.086, 0.082, 0.094, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.4, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_size = 4
+shadow_color = Color(0, 0, 0, 0.5)
+
+[node name="NotificationToast" type="PanelContainer"]
+custom_minimum_size = Vector2(400, 100)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 120.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_toast")
+script = ExtResource("1_toast")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="IconTexture" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+size_flags_vertical = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="LabelTitle" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New Notification"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+uppercase = true
+clip_text = true
+
+[node name="LabelDescription" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "You have a new notification"
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+clip_text = true
+max_lines_visible = 2

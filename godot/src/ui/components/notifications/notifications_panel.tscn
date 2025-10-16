@@ -1,0 +1,91 @@
+[gd_scene load_steps=3 format=3 uid="uid://cw8x2h5p3y6kn"]
+
+[ext_resource type="Script" path="res://src/ui/components/notifications/notifications_panel.gd" id="1_notifications_panel"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
+bg_color = Color(0, 0, 0, 0.533333)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="NotificationsPanel" type="PanelContainer"]
+custom_minimum_size = Vector2(370, 500)
+offset_right = 370.0
+offset_bottom = 500.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
+script = ExtResource("1_notifications_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Label_Title" type="Label" parent="MarginContainer/VBoxContainer/Header/VBoxContainer"]
+layout_mode = 2
+text = "Notifications"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+
+[node name="LabelUnreadCount" type="Label" parent="MarginContainer/VBoxContainer/Header/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0 unread"
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="ButtonMarkAllRead" type="Button" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Mark all read"
+
+[node name="ButtonClose" type="Button" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+text = "✕"
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="NotificationsList" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="LabelEmptyState" type="Label" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+text = "No notifications yet.
+Check back later for updates!"
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3

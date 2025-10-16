@@ -8,6 +8,8 @@ signal change_parcel(new_parcel: Vector2i)
 signal open_profile(avatar: DclAvatar)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
+signal notification_clicked(notification: Dictionary)
+signal notification_received(notification: Dictionary)
 
 enum CameraMode {
 	FIRST_PERSON = 0,

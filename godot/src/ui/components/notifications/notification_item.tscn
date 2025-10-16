@@ -1,0 +1,77 @@
+[gd_scene load_steps=3 format=3 uid="uid://dpr7n8jvh7k4y"]
+
+[ext_resource type="Script" path="res://src/ui/components/notifications/notification_item.gd" id="1_notification_item"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_notif_panel"]
+bg_color = Color(0.086, 0.082, 0.094, 0.784)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="NotificationItem" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 80)
+theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
+script = ExtResource("1_notification_item")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="IconTexture" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="HBoxContainer_Header" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="LabelTitle" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Notification Title"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+uppercase = true
+clip_text = true
+
+[node name="LabelTimestamp" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "5m ago"
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="LabelDescription" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Notification description goes here..."
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 3
+clip_text = true
+max_lines_visible = 2
+
+[node name="ButtonMarkRead" type="Button" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 0
+tooltip_text = "Mark as read"
+text = "✓"
