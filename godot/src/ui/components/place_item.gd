@@ -267,6 +267,7 @@ func set_data(item_data):
 	set_attendees_number(item_data.get("total_attendees", 0))
 	set_attending(item_data.get("attending", false), item_data.get("id", "id"))
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
+	set_user_name(item_data.get("user_name",""))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
 	set_likes_percent(like_score if like_score is float else 0.0)
