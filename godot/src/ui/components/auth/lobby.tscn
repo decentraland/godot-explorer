@@ -291,7 +291,7 @@ grow_vertical = 2
 theme_override_constants/margin_left = 100
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 100
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 125
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer"]
 custom_minimum_size = Vector2(425, 0)
@@ -452,8 +452,8 @@ alignment = 1
 
 [node name="HSeparator3" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter"]
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 90
+size_flags_vertical = 4
+theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_JumpIn" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter"]
