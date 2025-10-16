@@ -214,7 +214,8 @@ impl INode for ContentProvider {
             }
 
             // Track last 60 seconds of downloads
-            self.network_download_history_mb.push_back(downloaded_size_mb);
+            self.network_download_history_mb
+                .push_back(downloaded_size_mb);
             if self.network_download_history_mb.len() > 60 {
                 self.network_download_history_mb.pop_front();
             }

@@ -51,7 +51,6 @@ impl Frame {
             let p95_frame_time = self.dt_ms_vec[(n_samples * 95) / 100];
             let p99_frame_time = self.dt_ms_vec[(n_samples * 99) / 100];
 
-
             let event = SegmentEvent::PerformanceMetrics(SegmentEventPerformanceMetrics {
                 samples: n_samples as u32,
                 total_time: self.sum_dt,

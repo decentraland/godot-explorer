@@ -299,14 +299,17 @@ impl Metrics {
             // Fetch dynamic mobile metrics ONLY when event is about to be sent
             let mobile_metrics = match self.mobile_platform {
                 Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
-                Some(MobilePlatform::Android) => DclGodotAndroidPlugin::get_mobile_metrics_internal(),
+                Some(MobilePlatform::Android) => {
+                    DclGodotAndroidPlugin::get_mobile_metrics_internal()
+                }
                 None => None,
             };
 
             // Populate mobile metrics
             if let Some(mobile_metrics) = mobile_metrics {
                 metrics.memory_usage = mobile_metrics.memory_usage;
-                metrics.device_temperature_celsius = Some(mobile_metrics.device_temperature_celsius);
+                metrics.device_temperature_celsius =
+                    Some(mobile_metrics.device_temperature_celsius);
                 metrics.device_thermal_state = if mobile_metrics.device_thermal_state.is_empty() {
                     None
                 } else {
@@ -317,7 +320,9 @@ impl Metrics {
                 } else {
                     None
                 };
-                metrics.charging_state = if mobile_metrics.charging_state.is_empty() || mobile_metrics.charging_state == "unknown" {
+                metrics.charging_state = if mobile_metrics.charging_state.is_empty()
+                    || mobile_metrics.charging_state == "unknown"
+                {
                     None
                 } else {
                     Some(mobile_metrics.charging_state)
