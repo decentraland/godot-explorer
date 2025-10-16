@@ -275,8 +275,6 @@ pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str
                 "ALSA sound library",
             ),
             ("libudev-dev", check_pkg_config("libudev"), "udev library"),
-            // FFmpeg is now installed locally via cargo run -- install
-            // No need to check for system FFmpeg dev packages
             // LiveKit deps
             ("libssl-dev", check_pkg_config("openssl"), "OpenSSL library"),
             ("libx11-dev", check_pkg_config("x11"), "X11 library"),
@@ -294,15 +292,11 @@ pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str
                 "Package configuration tool",
             ),
         ],
-        "macos" => vec![
-            (
-                "pkg-config",
-                check_command("pkg-config"),
-                "Package configuration tool",
-            ),
-            // FFmpeg is now installed locally via cargo run -- install
-            // No need to check for system FFmpeg packages
-        ],
+        "macos" => vec![(
+            "pkg-config",
+            check_command("pkg-config"),
+            "Package configuration tool",
+        )],
         "windows" => vec![
             // Windows-specific checks
             (
@@ -327,8 +321,6 @@ fn check_pkg_config(lib: &str) -> bool {
     }
 
     let mut cmd = std::process::Command::new("pkg-config");
-
-    // FFmpeg is now installed locally, no need to check system paths
 
     cmd.args(["--exists", lib])
         .status()
@@ -503,15 +495,10 @@ pub fn get_next_steps_instructions() -> String {
                     instructions.push_str(&install_cmd);
                     instructions.push('\n');
                 }
-
-                // FFmpeg is now installed locally via cargo run -- install
-                // No need for system environment setup
             }
             "windows" => {
                 instructions.push_str("For Windows development:\n");
-                instructions.push_str(
-                    "\n# FFmpeg will be downloaded automatically during the build process.\n",
-                );
+
                 instructions.push_str(
                     "# Make sure you have Visual Studio with C++ development tools installed.\n",
                 );

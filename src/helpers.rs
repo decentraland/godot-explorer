@@ -109,10 +109,6 @@ impl AndroidBuildEnv {
             self.cargo_target_linker.clone(),
         );
         env.insert(
-            "CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(),
-            "1".to_string(),
-        );
-        env.insert(
             "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG".to_string(),
             "true".to_string(),
         );
@@ -138,56 +134,10 @@ impl AndroidBuildEnv {
     }
 }
 
-/// Construct FFmpeg download URL for a given platform
-// TODO: Refactor install_dependency.rs to use this function instead of hardcoded URLs
-#[allow(dead_code)]
-pub fn get_ffmpeg_url(platform: &str) -> String {
-    let arch = match platform {
-        "linux" => "linux64",
-        "windows" | "win64" => "win64",
-        "macos" => "macos64",
-        _ => "linux64",
-    };
-
-    let extension = match platform {
-        "windows" | "win64" => "zip",
-        _ => "tar.xz",
-    };
-
-    format!(
-        "{}/ffmpeg-{}-{}-{}.{}",
-        FFMPEG_BASE_URL, FFMPEG_VERSION_TAG, arch, FFMPEG_BUILD_TYPE, extension
-    )
-}
-
-/// Extract filename from FFmpeg URL
-#[allow(dead_code)]
-pub fn get_ffmpeg_filename_from_url(url: &str) -> Option<String> {
-    url.split('/').last().map(|s| s.to_string())
-}
-
-/// Get the extracted folder name from FFmpeg archive
-// TODO: Use in install_dependency.rs to avoid hardcoding folder names
-#[allow(dead_code)]
-pub fn get_ffmpeg_extracted_folder(platform: &str) -> String {
-    let arch = match platform {
-        "linux" => "linux64",
-        "windows" | "win64" => "win64",
-        "macos" => "macos64",
-        _ => "linux64",
-    };
-
-    format!(
-        "ffmpeg-{}-{}-{}",
-        FFMPEG_VERSION_TAG, arch, FFMPEG_BUILD_TYPE
-    )
-}
-
 /// Check if a tool is installed (only in .bin folder)
 pub fn is_tool_installed(tool: &str) -> bool {
     match tool {
         "protoc" => BinPaths::protoc_bin().exists(),
-        "ffmpeg" => BinPaths::ffmpeg_bin().exists(),
         "godot" | "godot4_bin" => BinPaths::godot_bin().exists(),
         _ => which::which(tool).is_ok(),
     }
@@ -198,14 +148,6 @@ pub fn get_tool_path(tool: &str) -> Option<PathBuf> {
     match tool {
         "protoc" => {
             let local = BinPaths::protoc_bin();
-            if local.exists() {
-                Some(local)
-            } else {
-                None
-            }
-        }
-        "ffmpeg" => {
-            let local = BinPaths::ffmpeg_bin();
             if local.exists() {
                 Some(local)
             } else {
@@ -249,19 +191,6 @@ impl BinPaths {
         Self::protoc().join("bin").join(protoc_name)
     }
 
-    pub fn ffmpeg() -> PathBuf {
-        PathBuf::from(BIN_FOLDER).join("ffmpeg")
-    }
-
-    pub fn ffmpeg_bin() -> PathBuf {
-        let ffmpeg_name = if cfg!(windows) {
-            "ffmpeg.exe"
-        } else {
-            "ffmpeg"
-        };
-        Self::ffmpeg().join("bin").join(ffmpeg_name)
-    }
-
     pub fn android_deps() -> PathBuf {
         PathBuf::from(BIN_FOLDER).join("android_deps")
     }
@@ -272,10 +201,6 @@ impl BinPaths {
 
     pub fn keystore(filename: &str) -> PathBuf {
         PathBuf::from(BIN_FOLDER).join(filename)
-    }
-
-    pub fn temp_dir(name: &str) -> PathBuf {
-        PathBuf::from(BIN_FOLDER).join(name)
     }
 }
 
