@@ -29,6 +29,7 @@ EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 
 [debug]
 
+settings/gdscript/always_track_call_stacks=true
 gdscript/warnings/unused_variable=2
 gdscript/warnings/unused_signal=0
 gdscript/warnings/shadowed_variable=2
@@ -206,6 +207,12 @@ environment/screen_space_reflection/roughness_quality=0
 environment/subsurface_scattering/subsurface_scattering_quality=0
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
+
+[sentry]
+
+options/dsn="https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984"
+options/debug_printing=0
+options/diagnostic_level=4
 
 [shader_globals]
 

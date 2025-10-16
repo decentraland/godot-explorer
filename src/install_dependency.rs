@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tar::Archive;
 use zip::ZipArchive;
 
@@ -506,6 +506,25 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         print_message(MessageType::Success, "Godot binary installed");
     } else {
         print_message(MessageType::Success, "Godot binary already installed");
+    }
+
+    if !PathBuf::from(GODOT_SENTRY_ADDON_FOLDER).exists() {
+        print_section("Installing Sentry Addon");
+
+        let sentry_addon_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER);
+        let uncompressed_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER).join("zip");
+        download_and_extract_zip(
+            SENTRY_ADDON_URL,
+            uncompressed_folder.to_str().unwrap(),
+            Some(format!("sentry.zip")),
+        )?;
+
+        fs::rename(
+            uncompressed_folder.join("addons/sentry/bin"),
+            sentry_addon_folder.join("bin"),
+        )?;
+
+        fs::remove_dir_all(uncompressed_folder)?;
     }
 
     // Set executable permissions for protoc if on Unix-like systems
