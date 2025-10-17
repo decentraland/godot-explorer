@@ -25,6 +25,8 @@ public:
     void print_version();
     void open_auth_url(String url);
     void open_webview_url(String url);
+    Dictionary get_mobile_device_info();
+    Dictionary get_mobile_metrics();
 
     static DclGodotiOS *get_singleton();
 

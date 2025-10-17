@@ -71,10 +71,21 @@ impl Frame {
                 p95_frame_time,
                 p99_frame_time,
 
-                // TODO
+                // These will be populated by metrics.rs
                 player_count: -1,
                 used_jsheap_size: -1,
                 memory_usage: -1,
+                device_brand: None,
+                device_model: None,
+                os_version: None,
+                total_ram_mb: None,
+                device_temperature_celsius: None,
+                device_thermal_state: None,
+                battery_percent: None,
+                charging_state: None,
+                network_type: None,
+                network_speed_peak_mbps: None,
+                network_used_last_minute_mb: None,
             });
 
             self.dt_ms_vec.resize(0, 0.0);

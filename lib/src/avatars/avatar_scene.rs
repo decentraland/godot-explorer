@@ -228,6 +228,11 @@ impl AvatarScene {
     }
 
     #[func]
+    pub fn get_avatars_count(&self) -> i32 {
+        self.avatar_godot_scene.len() as i32
+    }
+
+    #[func]
     pub fn on_scene_spawned(&mut self, _scene_id: i32, _entity_id: GString) {
         for (_, avatar) in self.avatar_godot_scene.iter_mut() {
             avatar.bind_mut().on_parcel_scenes_changed();
