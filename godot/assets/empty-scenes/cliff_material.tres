@@ -11,8 +11,8 @@ cellular_distance_function = 3
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_j8e8d"]
 width = 256
 height = 256
-seamless = true
 noise = SubResource("FastNoiseLite_mqm50")
+seamless = true
 
 [resource]
 render_priority = 0
