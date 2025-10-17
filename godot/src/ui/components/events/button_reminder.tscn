@@ -3,10 +3,10 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_k4u78"]
 [ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="2_ghua5"]
 [ext_resource type="StyleBox" uid="uid://cvd354aiai815" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed.tres" id="3_0dsnb"]
-[ext_resource type="Texture2D" uid="uid://ohtsxq22tjgr" path="res://assets/ui/bell-outline.svg" id="4_kix6m"]
 [ext_resource type="Script" uid="uid://jusvx3prmk47" path="res://src/ui/components/events/button_reminder.gd" id="5_0dsnb"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="5_ghua5"]
 [ext_resource type="Texture2D" uid="uid://caklflmda3gbl" path="res://assets/ui/bell-fill.svg" id="6_1umtk"]
+[ext_resource type="Texture2D" uid="uid://cnc4wxhobkhkr" path="res://assets/ui/unsuscribe.svg" id="7_1umtk"]
 [ext_resource type="LabelSettings" uid="uid://dac81qnuuwamy" path="res://assets/themes/dcl_theme/button_text.tres" id="8_1umtk"]
 
 [node name="Button_Reminder" type="Button"]
@@ -82,10 +82,12 @@ expand_mode = 3
 [node name="TextureRect_Remove" type="TextureRect" parent="HBoxContainer_Content"]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(40, 35)
 layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("4_kix6m")
-expand_mode = 3
+texture = ExtResource("7_1umtk")
+expand_mode = 1
 
 [node name="Label" type="Label" parent="HBoxContainer_Content"]
 unique_name_in_owner = true

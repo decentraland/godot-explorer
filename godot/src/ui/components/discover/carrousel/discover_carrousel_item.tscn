@@ -3,12 +3,13 @@
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_w66jn"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="3_w66jn"]
-[ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_4uq2a"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_2slho"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_uutqn"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="6_ak6x4"]
+[ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="7_2d6b2"]
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_marjo"]
 [ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/like_solid.svg" id="8_kyqbr"]
+[ext_resource type="LabelSettings" uid="uid://k8jblhm4mnv4" path="res://src/ui/components/events/event_info.tres" id="8_qlstj"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="9_havap"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mv7ex"]
@@ -41,15 +42,6 @@ line_spacing = 0.0
 font = ExtResource("5_2slho")
 font_size = 22
 font_color = Color(0, 0, 0, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_368si"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(0.0392157, 0.0392157, 0.0392157, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2slho"]
 
@@ -175,40 +167,31 @@ clip_text = true
 max_lines_visible = 1
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 theme_override_constants/separation = 11
 alignment = 2
 
-[node name="Container_Online" type="PanelContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Container_Online" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 25)
 layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 0
+
+[node name="TextureRect2" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online"]
+modulate = Color(0, 0, 0, 1)
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_368si")
-
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online"]
-layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_right = 5
-
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online/MarginContainer"]
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online/MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(20, 0)
-layout_mode = 2
-texture = ExtResource("4_4uq2a")
-expand_mode = 1
+texture = ExtResource("7_2d6b2")
+expand_mode = 5
 stretch_mode = 5
 
-[node name="Label_Online" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online/MarginContainer/HBoxContainer"]
+[node name="Label_Online" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2/Container_Online"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "0"
+label_settings = ExtResource("8_qlstj")
 horizontal_alignment = 2
 
 [node name="VSeparator" type="VSeparator" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
@@ -235,6 +218,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "546"
+label_settings = ExtResource("8_qlstj")
 horizontal_alignment = 2
 
 [node name="HBoxContainer_Likes" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer/HBoxContainer2"]
@@ -289,6 +273,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "78%"
+label_settings = ExtResource("8_qlstj")
 horizontal_alignment = 2
 
 [node name="MouseHover" type="Control" parent="."]

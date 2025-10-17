@@ -1,9 +1,11 @@
-[gd_scene load_steps=14 format=3 uid="uid://dj4nqjjptw0th"]
+[gd_scene load_steps=15 format=3 uid="uid://dj4nqjjptw0th"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_fhlt6"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_6bu5y"]
 [ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="4_kyirg"]
+[ext_resource type="LabelSettings" uid="uid://u04j325p422e" path="res://src/ui/components/events/time_pill_black.tres" id="5_7lpam"]
 [ext_resource type="LabelSettings" uid="uid://k8jblhm4mnv4" path="res://src/ui/components/events/event_info.tres" id="5_aes4k"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kyirg"]
@@ -36,7 +38,7 @@ corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
 
 [sub_resource type="LabelSettings" id="LabelSettings_kyirg"]
-font = ExtResource("2_fhlt6")
+font = ExtResource("4_6bu5y")
 font_size = 15
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aes4k"]
@@ -52,11 +54,6 @@ corner_radius_top_left = 11
 corner_radius_top_right = 11
 corner_radius_bottom_right = 11
 corner_radius_bottom_left = 11
-
-[sub_resource type="LabelSettings" id="LabelSettings_6bu5y"]
-font = ExtResource("2_fhlt6")
-font_size = 15
-font_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lpam"]
 content_margin_left = 10.0
@@ -177,7 +174,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
 text = "IN 35 MINS"
-label_settings = SubResource("LabelSettings_6bu5y")
+label_settings = ExtResource("5_7lpam")
 horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true

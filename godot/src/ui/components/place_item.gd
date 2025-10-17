@@ -6,6 +6,9 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
+const TIME_PILL_BLACK = preload("res://src/ui/components/events/time_pill_black.tres")
+const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres")
+
 @export var texture: Texture2D = texture_placeholder
 @export var title: String = "Scene Title"
 @export var event_name: String = "Event Name"
@@ -225,7 +228,7 @@ func set_likes_percent(_likes: float):
 	var container = _get_container_likes()
 	if label and container:
 		container.set_visible(_likes > 0.0)
-		label.text = str(round(_likes * 100)) + "%"
+		label.text = str(int(round(_likes * 100))) + "%"
 
 
 func set_online(_online: int):
@@ -340,8 +343,8 @@ func _format_number(num: int) -> String:
 	if num < 1e3:
 		return str(num)
 	if num < 1e6:
-		return str(ceil(num / 1000.0)) + "k"
-	return str(floor(num / 1000000.0)) + "M"
+		return str(int(ceil(num / 1000.0))) + "k"
+	return str(int(floor(num / 1000000.0))) + "M"
 
 
 func get_hash_from_url(url: String) -> String:
@@ -513,12 +516,7 @@ func _format_timestamp(timestamp: int) -> String:
 		time_pill_parent.add_theme_stylebox_override("panel", unique_style)
 
 	if time_pill:
-		var unique_label_settings = LabelSettings.new()
-		unique_label_settings.font_color = Color("#161518")
-		if time_pill.get_theme_font("font"):
-			unique_label_settings.font = time_pill.get_theme_font("font")
-		unique_label_settings.font_size = time_pill.get_theme_font_size("font_size")
-		time_pill.label_settings = unique_label_settings
+		time_pill.label_settings = TIME_PILL_BLACK
 
 	# If event has passed, show date
 	if time_diff <= 0:
@@ -562,12 +560,7 @@ func _format_timestamp(timestamp: int) -> String:
 				time_pill_parent.add_theme_stylebox_override("panel", red_style)
 
 		if time_pill:
-			var red_label_settings = LabelSettings.new()
-			red_label_settings.font_color = Color("#ff2d55")
-			if time_pill.get_theme_font("font"):
-				red_label_settings.font = time_pill.get_theme_font("font")
-			red_label_settings.font_size = time_pill.get_theme_font_size("font_size")
-			time_pill.label_settings = red_label_settings
+			time_pill.label_settings = TIME_PILL_RED
 
 		return "IN " + str(int(minutes_diff)) + " MINS"
 
