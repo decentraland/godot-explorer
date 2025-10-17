@@ -1,0 +1,124 @@
+[gd_scene load_steps=2 format=3 uid="uid://ul7c6ys6568e"]
+
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_q0jet"]
+
+[node name="TestingTheme" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = 214.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -18.0
+offset_right = 18.0
+offset_bottom = 454.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 100
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 100
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 15
+
+[node name="Button" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+text = "PRIMARY BUTTON"
+
+[node name="Button3" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+disabled = true
+text = "DISABLED PRIMARY BUTTON"
+
+[node name="Button2" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"SecondaryButton"
+text = "SECONDARY BUTTON"
+
+[node name="Button4" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"SecondaryButton"
+disabled = true
+text = "DISABLED SECONDARY BUTTON"
+
+[node name="Button5" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"SnowButton"
+text = "SNOW BUTTON"
+
+[node name="Button6" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"SnowButton"
+disabled = true
+text = "DISABLED SNOW BUTTON"
+
+[node name="Button8" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"WearableButton"
+toggle_mode = true
+text = "WEARABLE BUTTON"
+
+[node name="Button10" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"WearableButton"
+disabled = true
+toggle_mode = true
+text = "DISABLED WEARABLE BUTTON"
+
+[node name="Button11" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"SnowOutlinedToggleButton"
+toggle_mode = true
+text = "TOGGLE OUTLINED"
+
+[node name="Button13" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("1_q0jet")
+theme_type_variation = &"SnowOutlinedToggleButton"
+disabled = true
+toggle_mode = true
+text = "DISABLED TOGGLE OUTLINED"
