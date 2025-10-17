@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3 uid="uid://jel6s7s7w8h3"]
+[gd_scene load_steps=35 format=3 uid="uid://jel6s7s7w8h3"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_4okyg"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_rf1tr"]
@@ -79,6 +79,12 @@ font_color = Color(0, 0, 0, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_bmyvb"]
 font_size = 15
 font_color = Color(1, 0.176471, 0.333333, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a7370"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7s75a"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6i5jl"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_cdq3q"]
 font = ExtResource("23_6i5jl")
@@ -420,6 +426,9 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 19
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_a7370")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_7s75a")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_6i5jl")
 
 [node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
