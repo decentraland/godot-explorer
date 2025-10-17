@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3 uid="uid://4luuuxo6tbcp"]
+[gd_scene load_steps=34 format=3 uid="uid://4luuuxo6tbcp"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyf7t"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_div8d"]
@@ -21,7 +21,7 @@
 [ext_resource type="Texture2D" uid="uid://cmfalhha5iitd" path="res://assets/ui/calendar.svg" id="17_div8d"]
 [ext_resource type="LabelSettings" uid="uid://dj8crtu0eembr" path="res://src/ui/components/events/event_description.tres" id="17_l1b7y"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="18_kyf7t"]
-[ext_resource type="StyleBox" uid="uid://doxrea38sohxr" path="res://assets/themes/dcl_theme/snow_outlined_black_normal.tres" id="19_l1b7y"]
+[ext_resource type="StyleBox" uid="uid://boj0ysqy6fk2l" path="res://assets/themes/dcl_theme/snow_outlined_black_little_normal.tres" id="18_l1b7y"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="23_bmyvb"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsiqj"]
@@ -90,22 +90,6 @@ font_color = Color(0, 0, 0, 1)
 font = ExtResource("7_kyf7t")
 font_size = 15
 font_color = Color(1, 0.176471, 0.333333, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l1b7y"]
-content_margin_left = 16.0
-content_margin_top = 8.0
-content_margin_right = 16.0
-content_margin_bottom = 8.0
-bg_color = Color(0.988235, 0.988235, 0.988235, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_right = 18
-corner_radius_bottom_left = 18
 
 [sub_resource type="LabelSettings" id="LabelSettings_wcxms"]
 font = ExtResource("23_bmyvb")
@@ -411,9 +395,9 @@ focus_mode = 0
 theme = ExtResource("13_0a5n6")
 theme_type_variation = &"SnowOutlinedToggleButton"
 theme_override_constants/icon_max_width = 35
-theme_override_styles/hover_pressed = ExtResource("19_l1b7y")
-theme_override_styles/hover = ExtResource("19_l1b7y")
-theme_override_styles/normal = SubResource("StyleBoxFlat_l1b7y")
+theme_override_styles/hover_pressed = ExtResource("18_l1b7y")
+theme_override_styles/hover = ExtResource("18_l1b7y")
+theme_override_styles/normal = ExtResource("18_l1b7y")
 icon = ExtResource("14_6psy8")
 icon_alignment = 1
 expand_icon = true
@@ -425,9 +409,9 @@ focus_mode = 0
 theme = ExtResource("13_0a5n6")
 theme_type_variation = &"SnowOutlinedToggleButton"
 theme_override_constants/icon_max_width = 35
-theme_override_styles/hover_pressed = ExtResource("19_l1b7y")
-theme_override_styles/hover = ExtResource("19_l1b7y")
-theme_override_styles/normal = SubResource("StyleBoxFlat_l1b7y")
+theme_override_styles/hover_pressed = ExtResource("18_l1b7y")
+theme_override_styles/hover = ExtResource("18_l1b7y")
+theme_override_styles/normal = ExtResource("18_l1b7y")
 icon = ExtResource("17_div8d")
 icon_alignment = 1
 expand_icon = true
