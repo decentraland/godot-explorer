@@ -7,6 +7,8 @@ func _ready():
 
 
 func start():
+	get_tree().quit_on_go_back = false
+	
 	# Check if help was requested
 	if Global.cli.is_help_requested():
 		# Help text is already printed by the Rust side

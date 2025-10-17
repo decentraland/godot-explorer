@@ -48,6 +48,11 @@ var _last_panel: Control = null
 
 @onready var label_version = %Label_Version
 
+func _notification(what: int) -> void:
+	if what == Window.NOTIFICATION_WM_GO_BACK_REQUEST:
+		# Receive Back request (Android)
+		pass
+		
 
 func show_panel(child_node: Control, subpanel: Control = null):
 	for child in control_main.get_children():
