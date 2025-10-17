@@ -8,7 +8,7 @@ deinitialization="unregister_dcl_godot_ios_types"
 [dependencies]
 linked=[]
 embedded=[]
-system=["SafariServices", "AuthenticationServices"]
+system=["SafariServices", "AuthenticationServices", "Network"]
 
 capabilities=[]
 

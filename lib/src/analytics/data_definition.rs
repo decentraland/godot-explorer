@@ -98,8 +98,44 @@ pub struct SegmentEventPerformanceMetrics {
     pub player_count: i32,
     // Javascript heap memory used by the scenes in kilo bytes
     pub used_jsheap_size: i32,
-    // Memory used only by the explorer in kilo bytes
+    // Memory used only by the explorer in kilo bytes (or populated from mobile metrics)
     pub memory_usage: i32,
+    // Mobile device info (static - doesn't change during runtime)
+    // Device brand (e.g., "Apple", "Samsung")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_brand: Option<String>,
+    // Device model (e.g., "iPhone 15 Pro", "Galaxy A53")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_model: Option<String>,
+    // OS version (e.g., "iOS 17.0", "Android 15.0")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub os_version: Option<String>,
+    // Total device RAM in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_ram_mb: Option<u32>,
+
+    // Mobile metrics (dynamic - changes during runtime)
+    // Device temperature in Celsius
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_temperature_celsius: Option<f32>,
+    // Device thermal state (nominal/fair/serious/critical)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_thermal_state: Option<String>,
+    // Battery percentage (0-100)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub battery_percent: Option<f32>,
+    // Battery charging state (unknown/unplugged/plugged/usb/wireless/full)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub charging_state: Option<String>,
+    // Network type (WiFi, Carrier 3G, Carrier 4G, Carrier 5G)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_type: Option<String>,
+    // Peak network speed in Mbps
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_speed_peak_mbps: Option<f32>,
+    // Total MB downloaded in the last minute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_used_last_minute_mb: Option<f32>,
 }
 
 #[derive(Serialize)]
