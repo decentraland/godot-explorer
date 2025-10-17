@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=31 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -14,10 +14,10 @@
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_cpvjm"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="11_627ff"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="12_whm4w"]
-[ext_resource type="StyleBox" uid="uid://bjw0qd6a67c5f" path="res://src/ui/components/discover/jump_in/jump_in_button.tres" id="14_iy2p8"]
 [ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="14_nmmsr"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="14_qecj2"]
-[ext_resource type="StyleBox" uid="uid://dnfryl87xc26f" path="res://src/ui/components/discover/jump_in/jump_in_button_hover.tres" id="15_nmmsr"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="15_nmmsr"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="16_j63ba"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsiqj"]
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
@@ -44,6 +44,10 @@ colors = PackedColorArray(0.914015, 0.145083, 0.329259, 1, 0.917647, 0.145098, 0
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6svxf"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_js3n0"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_db46w"]
+font = ExtResource("16_j63ba")
+font_size = 22
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g0uym"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -330,6 +334,7 @@ text = "Genesis City "
 clip_text = true
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 
 [node name="EngagementBar" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3" instance=ExtResource("14_nmmsr")]
@@ -341,14 +346,34 @@ custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_override_styles/hover_pressed = ExtResource("14_iy2p8")
-theme_override_styles/hover = ExtResource("15_nmmsr")
-theme_override_styles/pressed = ExtResource("14_iy2p8")
-theme_override_styles/normal = ExtResource("14_iy2p8")
-text = "JUMP IN"
-icon = ExtResource("12_whm4w")
+theme = ExtResource("15_nmmsr")
+theme_override_constants/icon_max_width = 35
+theme_override_font_sizes/font_size = 14
 icon_alignment = 2
 expand_icon = true
+
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
+layout_mode = 2
+text = "JUMP IN"
+label_settings = SubResource("LabelSettings_db46w")
+
+[node name="TextureRect_Add" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("12_whm4w")
+expand_mode = 3
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2

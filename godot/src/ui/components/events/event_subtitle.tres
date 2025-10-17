@@ -1,0 +1,9 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://bn3a3myot2nii"]
+
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_6nrsl"]
+
+[resource]
+line_spacing = 0.0
+font = ExtResource("1_6nrsl")
+font_size = 15
+font_color = Color(0, 0, 0, 1)

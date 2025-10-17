@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://brrjhhjf1jey2"]
+
+[ext_resource type="Script" uid="uid://dnr7hqihagwq1" path="res://src/ui/components/events/events_generator.gd" id="1_7lpcq"]
+
+[node name="EventsGenerator" type="Node"]
+script = ExtResource("1_7lpcq")

@@ -169,7 +169,7 @@ mouse_filter = 2
 
 [node name="PortraitPanelContainer" type="PanelContainer" parent="SearchResultsContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(275, 290)
+custom_minimum_size = Vector2(275, 310)
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -251,13 +251,13 @@ autowrap_mode = 2
 
 [node name="LandscapePanelContainer" type="PanelContainer" parent="SearchResultsContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(275, 290)
+custom_minimum_size = Vector2(350, 290)
 layout_mode = 1
 anchors_preset = -1
 anchor_top = 0.156
 anchor_bottom = 1.0
 offset_top = -0.32
-offset_right = 275.0
+offset_right = 347.0
 grow_vertical = 2
 size_flags_horizontal = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
