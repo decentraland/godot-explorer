@@ -1,11 +1,16 @@
 package org.decentraland.godotexplorer
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.BatteryManager
+import android.os.Build
 import android.util.Log
 import android.webkit.WebResourceRequest
 import android.widget.FrameLayout
@@ -15,6 +20,7 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.browser.customtabs.CustomTabsService
+import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
 import org.godotengine.godot.plugin.UsedByGodot
@@ -245,6 +251,123 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         } catch (e: PackageManager.NameNotFoundException) {
             false
         }
+    }
+
+    @UsedByGodot
+    fun getMobileDeviceInfo(): Dictionary {
+        val info = Dictionary()
+
+        activity?.let { ctx ->
+            try {
+                // Get total RAM
+                val activityManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val memInfo = ActivityManager.MemoryInfo()
+                activityManager.getMemoryInfo(memInfo)
+                val totalRamMB = memInfo.totalMem / (1024 * 1024)
+                info["total_ram_mb"] = totalRamMB.toInt()
+
+                // Device information (static)
+                info["device_brand"] = Build.BRAND
+                info["device_model"] = Build.MODEL
+                info["os_version"] = "Android ${Build.VERSION.RELEASE}"
+
+                Log.d(pluginName, "Mobile device info collected successfully")
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error collecting mobile device info: ${e.message}")
+                // Return defaults on error
+                info["device_brand"] = ""
+                info["device_model"] = ""
+                info["os_version"] = ""
+                info["total_ram_mb"] = -1
+            }
+        } ?: run {
+            Log.e(pluginName, "Activity is null, cannot collect device info")
+        }
+
+        return info
+    }
+
+    @UsedByGodot
+    fun getMobileMetrics(): Dictionary {
+        val metrics = Dictionary()
+
+        activity?.let { ctx ->
+            try {
+                // Get fresh memory info using ActivityManager (updated each call)
+                val activityManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val memInfo = android.os.Debug.MemoryInfo()
+                android.os.Debug.getMemoryInfo(memInfo)
+
+                // For Godot apps, we need Native + Graphics + Code + Stack + Java heap
+                // Using individual components gives us a fresh, accurate total
+                val nativeHeapKB = memInfo.nativePss
+                val dalvikHeapKB = memInfo.dalvikPss
+                val otherPssKB = memInfo.otherPss
+
+                val totalMemoryKB = nativeHeapKB + dalvikHeapKB + otherPssKB
+                val totalMemoryMB = totalMemoryKB / 1024
+
+                metrics["memory_usage"] = totalMemoryMB
+
+                // Get battery information
+                val batteryIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+                val batteryStatus = ctx.registerReceiver(null, batteryIntentFilter)
+
+                // Battery temperature (in tenths of a degree Celsius)
+                val temperature = batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
+                val temperatureCelsius = if (temperature > 0) temperature / 10.0f else -1.0f
+                metrics["device_temperature_celsius"] = temperatureCelsius
+
+                // Approximate thermal state based on temperature
+                val thermalState = when {
+                    temperatureCelsius < 0 -> "unknown"
+                    temperatureCelsius < 40.0f -> "nominal"
+                    temperatureCelsius < 45.0f -> "fair"
+                    temperatureCelsius < 50.0f -> "serious"
+                    else -> "critical"
+                }
+                metrics["thermal_state"] = thermalState
+
+                // Battery level
+                val batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val batteryScale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+                val batteryPercent = if (batteryLevel >= 0 && batteryScale > 0) {
+                    (batteryLevel.toFloat() / batteryScale.toFloat()) * 100.0f
+                } else {
+                    -1.0f
+                }
+                metrics["battery_percent"] = batteryPercent
+
+                // Get charging state with detailed type information
+                val plugged = batteryStatus?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: -1
+                val status = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+
+                val chargingState = when {
+                    status == BatteryManager.BATTERY_STATUS_FULL -> "full"
+                    plugged == BatteryManager.BATTERY_PLUGGED_AC -> "plugged"
+                    plugged == BatteryManager.BATTERY_PLUGGED_USB -> "usb"
+                    plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS -> "wireless"
+                    plugged > 0 -> "plugged"  // Any other charging type
+                    plugged == 0 -> "unplugged"
+                    else -> "unknown"
+                }
+                metrics["charging_state"] = chargingState
+
+                Log.d(pluginName, "Mobile metrics collected successfully")
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error collecting mobile metrics: ${e.message}")
+                // Return defaults on error
+                metrics["memory_usage"] = -1
+                metrics["device_temperature_celsius"] = -1.0f
+                metrics["thermal_state"] = "unknown"
+                metrics["battery_percent"] = -1.0f
+                metrics["charging_state"] = "unknown"
+            }
+        } ?: run {
+            Log.e(pluginName, "Activity is null, cannot collect metrics")
+        }
+
+        return metrics
     }
 
 }

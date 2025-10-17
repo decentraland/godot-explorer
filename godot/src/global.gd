@@ -39,9 +39,6 @@ var music_player: MusicPlayer
 var preload_assets: PreloadAssets
 
 var standalone = false
-var dcl_android_plugin
-var dcl_godot_android_plugin
-var dcl_godot_ios_plugin
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
@@ -139,15 +136,6 @@ func _ready():
 
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
-
-	if Engine.has_singleton("DclAndroidPlugin"):
-		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
-
-	if Engine.has_singleton("dcl-godot-android"):
-		dcl_godot_android_plugin = Engine.get_singleton("dcl-godot-android")
-
-	if Engine.has_singleton("DclGodotiOS"):
-		dcl_godot_ios_plugin = Engine.get_singleton("DclGodotiOS")
 
 	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(
@@ -268,30 +256,30 @@ func release_mouse():
 
 
 func open_webview_url(url):
-	if dcl_godot_ios_plugin != null:
-		dcl_godot_ios_plugin.open_webview_url(url)
-	elif dcl_godot_android_plugin != null:
-		dcl_godot_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
-	else:
-		OS.shell_open(url)
+	if DclIosPlugin.open_webview_url(url):
+		return
+	if DclGodotAndroidPlugin.open_custom_tab_url(url):
+		return
+
+	OS.shell_open(url)
 
 
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
-		if dcl_godot_ios_plugin != null:
-			dcl_godot_ios_plugin.open_auth_url(url)
-		elif dcl_godot_android_plugin != null:
+		if DclIosPlugin.open_auth_url(url):
+			return
+		if DclGodotAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
-				dcl_godot_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
+				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 			else:
-				dcl_godot_android_plugin.openWebView(url, "")  # FOR WALLET CONNECT
+				DclGodotAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
 		else:
 			#printerr("No webkit plugin found")
 			OS.shell_open(url)
 	else:
-		if Global.dcl_android_plugin != null:
-			Global.dcl_android_plugin.showDecentralandMobileToast()
-			Global.dcl_android_plugin.openUrl(url)
+		if DclAndroidPlugin.is_available():
+			DclAndroidPlugin.show_decentraland_mobile_toast()
+			DclAndroidPlugin.open_url(url)
 		else:
 			OS.shell_open(url)
 

@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -98,6 +98,8 @@ pub struct ContentProvider {
     texture_quality: TextureQuality, // copy from DclGlobal on startup
     every_second_tick: f64,
     download_speed_mbs: f64,
+    network_speed_peak_mbs: f64,
+    network_download_history_mb: VecDeque<f64>, // Last 60 seconds of download sizes in MB
     loading_resources: Arc<AtomicU64>,
     loaded_resources: Arc<AtomicU64>,
     #[cfg(feature = "use_resource_tracking")]
@@ -154,6 +156,8 @@ impl INode for ContentProvider {
             loading_resources: Arc::new(AtomicU64::new(0)),
             loaded_resources: Arc::new(AtomicU64::new(0)),
             download_speed_mbs: 0.0,
+            network_speed_peak_mbs: 0.0,
+            network_download_history_mb: VecDeque::with_capacity(60),
             #[cfg(feature = "use_resource_tracking")]
             tracking_tick: 0.0,
             optimized_data: Arc::new(OptimizedData {
@@ -201,7 +205,20 @@ impl INode for ContentProvider {
             self.every_second_tick = 0.0;
 
             let downloaded_size = self.resource_provider.consume_download_size();
-            self.download_speed_mbs = (downloaded_size as f64) / 1024.0 / 1024.0;
+            let downloaded_size_mb = (downloaded_size as f64) / 1024.0 / 1024.0;
+            self.download_speed_mbs = downloaded_size_mb;
+
+            // Update peak speed
+            if self.download_speed_mbs > self.network_speed_peak_mbs {
+                self.network_speed_peak_mbs = self.download_speed_mbs;
+            }
+
+            // Track last 60 seconds of downloads
+            self.network_download_history_mb
+                .push_back(downloaded_size_mb);
+            if self.network_download_history_mb.len() > 60 {
+                self.network_download_history_mb.pop_front();
+            }
 
             // Clean cache
             self.cached.retain(|_hash_id, entry| {
@@ -1153,6 +1170,16 @@ impl ContentProvider {
     #[func]
     pub fn get_download_speed_mbs(&self) -> f64 {
         self.download_speed_mbs
+    }
+
+    #[func]
+    pub fn get_network_speed_peak_mbs(&self) -> f64 {
+        self.network_speed_peak_mbs
+    }
+
+    #[func]
+    pub fn get_network_used_last_minute_mb(&self) -> f64 {
+        self.network_download_history_mb.iter().sum()
     }
 
     #[func]
