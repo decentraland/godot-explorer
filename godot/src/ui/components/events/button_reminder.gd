@@ -36,17 +36,7 @@ func _async_on_toggled(toggled_on: bool) -> void:
 		printerr("Error unpdating attend intention: ", response.get_error())
 		set_pressed_no_signal(!toggled_on)
 	elif response != null:
-		if toggled_on:
-			label.text = "REMOVE REMINDER"
-			label.label_settings.font_color = "#fcfcfc"
-
-			texture_rect_add.hide()
-			texture_rect_remove.show()
-		else:
-			label.text = "REMINDER"
-			label.label_settings.font_color = "#ff2d55"
-			texture_rect_add.show()
-			texture_rect_remove.hide()
+		update_styles(toggled_on)
 	else:
 		set_pressed_no_signal(!toggled_on)
 		printerr("Error unpdating attend intention")
@@ -70,7 +60,7 @@ func _set_loading(status: bool) -> void:
 func update_styles(toggled_on):
 	if toggled_on:
 		label.text = "REMOVE REMINDER"
-		label.label_settings.font_color = "#fcfcfc"
+		label.label_settings.font_color = "#161518"
 		texture_rect_add.hide()
 		texture_rect_remove.show()
 	else:

@@ -324,7 +324,7 @@ layout_mode = 2
 size_flags_vertical = 5
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_font_sizes/font_size = 20
-text = "created by"
+text = "by"
 label_settings = SubResource("LabelSettings_l1b7y")
 
 [node name="Label_UserName" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_UserName"]

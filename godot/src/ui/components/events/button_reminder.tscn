@@ -1,12 +1,12 @@
 [gd_scene load_steps=9 format=3 uid="uid://cm0sccjf036pe"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_k4u78"]
-[ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="2_ghua5"]
 [ext_resource type="StyleBox" uid="uid://cvd354aiai815" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed.tres" id="3_0dsnb"]
+[ext_resource type="StyleBox" uid="uid://boj0ysqy6fk2l" path="res://assets/themes/dcl_theme/snow_outlined_black_little_normal.tres" id="4_gea50"]
 [ext_resource type="Script" uid="uid://jusvx3prmk47" path="res://src/ui/components/events/button_reminder.gd" id="5_0dsnb"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="5_ghua5"]
-[ext_resource type="Texture2D" uid="uid://caklflmda3gbl" path="res://assets/ui/bell-fill.svg" id="6_1umtk"]
-[ext_resource type="Texture2D" uid="uid://cnc4wxhobkhkr" path="res://assets/ui/unsuscribe.svg" id="7_1umtk"]
+[ext_resource type="Texture2D" uid="uid://bd8t5ce87gkep" path="res://assets/ui/subscribe.svg" id="6_1umtk"]
+[ext_resource type="Texture2D" uid="uid://bpq2p8ej3umfx" path="res://assets/ui/unsubscribe.svg" id="7_gea50"]
 [ext_resource type="LabelSettings" uid="uid://dac81qnuuwamy" path="res://assets/themes/dcl_theme/button_text.tres" id="8_1umtk"]
 
 [node name="Button_Reminder" type="Button"]
@@ -18,22 +18,14 @@ size_flags_vertical = 3
 focus_mode = 0
 theme = ExtResource("1_k4u78")
 theme_type_variation = &"SnowOutlinedToggleButton"
-theme_override_colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_hover_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_hover_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/font_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 50
-theme_override_styles/hover_pressed_mirrored = ExtResource("2_ghua5")
-theme_override_styles/hover_pressed = ExtResource("2_ghua5")
-theme_override_styles/hover_mirrored = ExtResource("2_ghua5")
+theme_override_styles/hover_pressed_mirrored = ExtResource("4_gea50")
+theme_override_styles/hover_pressed = ExtResource("4_gea50")
+theme_override_styles/hover_mirrored = ExtResource("3_0dsnb")
 theme_override_styles/hover = ExtResource("3_0dsnb")
-theme_override_styles/pressed_mirrored = ExtResource("3_0dsnb")
-theme_override_styles/pressed = ExtResource("2_ghua5")
-theme_override_styles/normal_mirrored = ExtResource("2_ghua5")
+theme_override_styles/pressed_mirrored = ExtResource("4_gea50")
+theme_override_styles/pressed = ExtResource("4_gea50")
+theme_override_styles/normal_mirrored = ExtResource("3_0dsnb")
 theme_override_styles/normal = ExtResource("3_0dsnb")
 toggle_mode = true
 expand_icon = true
@@ -82,12 +74,11 @@ expand_mode = 3
 [node name="TextureRect_Remove" type="TextureRect" parent="HBoxContainer_Content"]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(40, 35)
+modulate = Color(0.0862745, 0.0823529, 0.0941176, 1)
 layout_mode = 2
-size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("7_1umtk")
-expand_mode = 1
+texture = ExtResource("7_gea50")
+expand_mode = 3
 
 [node name="Label" type="Label" parent="HBoxContainer_Content"]
 unique_name_in_owner = true
