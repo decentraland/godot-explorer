@@ -94,6 +94,15 @@ impl DclTestingTools {
 
     #[func]
     fn exit_gracefully(&self, code: i32) {
-        std::process::exit(code);
+        use godot::engine::{Engine, SceneTree};
+
+        if let Some(main_loop) = Engine::singleton().get_main_loop() {
+            let mut tree = main_loop.cast::<SceneTree>();
+            tree.quit_ex().exit_code(code).done();
+        } else {
+            // Fallback to process exit if we can't get the main loop (shouldn't happen)
+            tracing::warn!("Could not get SceneTree, falling back to std::process::exit");
+            std::process::exit(code);
+        }
     }
 }
