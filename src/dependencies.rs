@@ -65,7 +65,7 @@ fn check_android_build(lib_target_path: &str) -> bool {
 }
 
 fn check_ios_build(lib_target_path: &str) -> bool {
-    let lib_path = format!("{}/libdclgodot_ios/libdclgodot.a", lib_target_path);
+    let lib_path = format!("{}/libdclgodot_ios/libdclgodot.dylib", lib_target_path);
     Path::new(&lib_path).exists()
 }
 
