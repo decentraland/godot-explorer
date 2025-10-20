@@ -127,7 +127,7 @@ pub fn clear_cache_dir() -> io::Result<()> {
     } else {
         Err(io::Error::new(
             io::ErrorKind::NotFound,
-            "No se pudo determinar el directorio de caché del proyecto",
+            "The project cache directory could not be determined",
         ))
     }
 }
