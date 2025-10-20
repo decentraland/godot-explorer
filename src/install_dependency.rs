@@ -106,6 +106,32 @@ fn get_protoc_url() -> Option<String> {
     Some(format!("{PROTOC_BASE_URL}{os_url}"))
 }
 
+pub fn clear_cache_dir() -> io::Result<()> {
+    if let Some(dirs) = ProjectDirs::from("org", "decentraland", "devgodot") {
+        let cache_dir = dirs.cache_dir();
+
+        if cache_dir.exists() {
+            for entry in fs::read_dir(cache_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+
+                if path.is_dir() {
+                    fs::remove_dir_all(&path)?;
+                } else {
+                    fs::remove_file(&path)?;
+                }
+            }
+        }
+
+        Ok(())
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "No se pudo determinar el directorio de caché del proyecto",
+        ))
+    }
+}
+
 fn get_existing_cached_file(persistent_cache: Option<String>) -> Option<String> {
     let persistent_cache = persistent_cache?;
     let dirs = ProjectDirs::from("org", "decentraland", "devgodot")?;
