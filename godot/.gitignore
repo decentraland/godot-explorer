@@ -4,6 +4,9 @@
 /android/
 /addons/**/~*.dll
 
+# It should be installed with tools
+/addons/sentry
+
 # Godot-specific ignores
 .import/
 export.cfg
