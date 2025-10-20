@@ -1,3 +1,4 @@
+use crate::consts::GODOT_SENTRY_ADDON_FOLDER;
 use crate::dependencies::BuildStatus;
 use crate::platform::{
     check_android_sdk, check_development_dependencies, check_ios_development, check_required_tools,
@@ -5,7 +6,7 @@ use crate::platform::{
 };
 use crate::ui::{print_divider, print_message, print_section, MessageType};
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Run system health check
 pub fn run_doctor() -> anyhow::Result<()> {
@@ -91,6 +92,11 @@ pub fn run_doctor() -> anyhow::Result<()> {
     print_divider();
     print_section("Godot Engine");
     check_godot_installation();
+
+    // Check Sentry installation
+    print_divider();
+    print_section("Sentry Addon");
+    all_tools_ok &= check_sentry_addon_installation();
 
     // Check Android development
     print_divider();
@@ -183,6 +189,30 @@ fn check_rust_targets() {
                 break;
             }
         }
+    }
+}
+
+fn check_sentry_addon_installation() -> bool {
+    let sentry_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER);
+    if sentry_folder.exists() {
+        let android_lib = sentry_folder.join("bin/android/sentry_android_godot_plugin.debug.aar");
+        if android_lib.exists() {
+            print_message(MessageType::Success, "Sentry addon found");
+            true
+        } else {
+            print_message(
+                MessageType::Error,
+                "Android lib for sentry addon NOT found.",
+            );
+            println!(
+                "  Remove the sentry folder (godot/addon/sentry) and run: cargo run -- install"
+            );
+            false
+        }
+    } else {
+        print_message(MessageType::Error, "Sentry addon NOT found");
+        println!("  Run: cargo run -- install");
+        false
     }
 }
 

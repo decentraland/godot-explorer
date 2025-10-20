@@ -410,7 +410,7 @@ func async_load_wearables():
 	var meshes: Array = []
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:
-			child.mesh = child.mesh.duplicate(true)
+			child.mesh = child.mesh.duplicate_deep(Resource.DEEP_DUPLICATE_NONE)
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
 	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
