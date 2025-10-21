@@ -41,7 +41,8 @@ func on_request(_offset: int, limit: int) -> void:
 	# TODO: Implementar más filtros (categorías, ordenamiento, etc.)
 	# Por ahora solo consultamos la URL de la API de eventos
 	var url = "https://events.decentraland.org/api/events/"
-
+	if search_param.length() > 0:
+		url += "?search=" + search_param.replace(" ", "%20")
 	_async_fetch_events(url, limit)
 
 

@@ -15,6 +15,7 @@ var search_text: String = ""
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var places_worlds: VBoxContainer = %PlacesWorlds
+@onready var events: VBoxContainer = %Events
 
 
 func _ready():
@@ -75,6 +76,7 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.hide()
 	places_most_active.set_search_param(new_text)
 	places_worlds.set_search_param(new_text)
+	events.set_search_param(new_text)
 
 
 func _on_line_edit_search_bar_text_changed(new_text: String) -> void:

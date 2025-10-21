@@ -58,13 +58,24 @@ func _set_loading(status: bool) -> void:
 
 
 func update_styles(toggled_on):
-	if toggled_on:
-		label.text = "REMINDER"
-		label.label_settings.font_color = "#161518"
+	var guest_profile := DclUserProfile.from_godot_dictionary(Global.get_config().guest_profile)
+	if guest_profile:
+		disabled = true
+		label.text = "SIGN IN TO USE REMINDERS"
+		label.label_settings.font_color = "#ffffff"
+		label.label_settings.font_size = 18
 		texture_rect_add.hide()
-		texture_rect_remove.show()
-	else:
-		label.text = "REMINDER"
-		label.label_settings.font_color = "#ff2d55"
-		texture_rect_add.show()
 		texture_rect_remove.hide()
+	else:
+		disabled = false
+		label.label_settings.font_size = 22
+		if toggled_on:
+			label.text = "REMINDER"
+			label.label_settings.font_color = "#161518"
+			texture_rect_add.hide()
+			texture_rect_remove.show()
+		else:
+			label.text = "REMINDER"
+			label.label_settings.font_color = "#ff2d55"
+			texture_rect_add.show()
+			texture_rect_remove.hide()
