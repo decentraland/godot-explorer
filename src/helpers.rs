@@ -114,7 +114,7 @@ impl AndroidBuildEnv {
         );
 
         // TODO: maybe the 35 should be api_version? Hardcoded for now, without 35 the cxx doesn't compile (pthread dep issue)
-        let cxxflags = "-v --target=aarch64-linux-android35";
+        let cxxflags = "-v --target=aarch64-linux-android35 -Wl,-z,max-page-size=16384";
 
         // Use the same host tag for lib path
         let host_tag = if cfg!(windows) {
@@ -126,7 +126,7 @@ impl AndroidBuildEnv {
         };
 
         let rustflags = format!(
-            "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl -max-page-size=16384",
+            "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl",
             self.ndk_path, host_tag
         );
 
