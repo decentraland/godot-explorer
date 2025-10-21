@@ -472,3 +472,10 @@ func _process(_delta: float) -> void:
 		):
 			last_emitted_height = current_height
 			change_virtual_keyboard.emit(last_emitted_height)
+		
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
+		if Global.is_mobile():
+			var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			prints(" - godot-sys notification", what, " - deep link url=", deep_link_url)
