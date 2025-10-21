@@ -472,7 +472,7 @@ func _process(_delta: float) -> void:
 		):
 			last_emitted_height = current_height
 			change_virtual_keyboard.emit(last_emitted_height)
-		
+
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
