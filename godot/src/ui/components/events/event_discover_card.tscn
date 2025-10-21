@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
-[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_fhlt6"]
+[ext_resource type="FontVariation" uid="uid://ct75rjpcbx4cb" path="res://src/ui/components/events/inter600_icons.tres" id="3_7lpam"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_6bu5y"]
 [ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="4_kyirg"]
 [ext_resource type="LabelSettings" uid="uid://u04j325p422e" path="res://src/ui/components/events/time_pill_black.tres" id="5_7lpam"]
@@ -24,7 +24,7 @@ corner_radius_bottom_left = 48
 
 [sub_resource type="LabelSettings" id="LabelSettings_aes4k"]
 line_spacing = 0.0
-font = ExtResource("2_fhlt6")
+font = ExtResource("3_7lpam")
 font_size = 22
 font_color = Color(0, 0, 0, 1)
 

@@ -1,0 +1,8 @@
+[gd_resource type="FontVariation" load_steps=3 format=3 uid="uid://ct75rjpcbx4cb"]
+
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="1_mvlvr"]
+[ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="2_7h08i"]
+
+[resource]
+fallbacks = Array[Font]([ExtResource("2_7h08i")])
+base_font = ExtResource("1_mvlvr")

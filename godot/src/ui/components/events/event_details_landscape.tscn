@@ -1,9 +1,10 @@
-[gd_scene load_steps=33 format=3 uid="uid://jel6s7s7w8h3"]
+[gd_scene load_steps=34 format=3 uid="uid://jel6s7s7w8h3"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_4okyg"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_rf1tr"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_a1tfr"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="4_n1hx1"]
+[ext_resource type="FontVariation" uid="uid://ct75rjpcbx4cb" path="res://src/ui/components/events/inter600_icons.tres" id="6_6i5jl"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_a7370"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="7_7s75a"]
 [ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="8_6i5jl"]
@@ -149,8 +150,8 @@ custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_colors/default_color = Color(0, 0, 0, 1)
-theme_override_fonts/normal_font = ExtResource("7_7s75a")
-theme_override_fonts/bold_font = ExtResource("23_6i5jl")
+theme_override_fonts/normal_font = ExtResource("6_6i5jl")
+theme_override_fonts/bold_font = ExtResource("6_6i5jl")
 theme_override_font_sizes/normal_font_size = 28
 theme_override_font_sizes/bold_font_size = 28
 theme_override_font_sizes/bold_italics_font_size = 28
