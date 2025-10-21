@@ -114,7 +114,7 @@ impl AndroidBuildEnv {
         );
 
         // TODO: maybe the 35 should be api_version? Hardcoded for now, without 35 the cxx doesn't compile (pthread dep issue)
-        let cxxflags = "-v --target=aarch64-linux-android35 -Wl,-z,max-page-size=16384";
+        let cxxflags = "-v --target=aarch64-linux-android35";
 
         // Use the same host tag for lib path
         let host_tag = if cfg!(windows) {
