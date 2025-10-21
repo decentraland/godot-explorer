@@ -59,7 +59,7 @@ func _set_loading(status: bool) -> void:
 
 func update_styles(toggled_on):
 	if toggled_on:
-		label.text = "REMOVE REMINDER"
+		label.text = "REMINDER"
 		label.label_settings.font_color = "#161518"
 		texture_rect_add.hide()
 		texture_rect_remove.show()

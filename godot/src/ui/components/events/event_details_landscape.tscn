@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://jel6s7s7w8h3"]
+[gd_scene load_steps=33 format=3 uid="uid://jel6s7s7w8h3"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_4okyg"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_rf1tr"]
@@ -78,14 +78,9 @@ font_size = 15
 font_color = Color(0, 0, 0, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_bmyvb"]
+font = ExtResource("7_7s75a")
 font_size = 15
 font_color = Color(1, 0.176471, 0.333333, 1)
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a7370"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7s75a"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6i5jl"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_cdq3q"]
 font = ExtResource("23_6i5jl")
@@ -137,23 +132,18 @@ use_top = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 30
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_top = 0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 11
 
-[node name="RichTextLabel_EventName" type="RichTextLabel" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="RichTextLabel_EventName" type="RichTextLabel" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
@@ -161,34 +151,30 @@ size_flags_vertical = 0
 theme_override_colors/default_color = Color(0, 0, 0, 1)
 theme_override_fonts/normal_font = ExtResource("7_7s75a")
 theme_override_fonts/bold_font = ExtResource("23_6i5jl")
+theme_override_font_sizes/normal_font_size = 28
+theme_override_font_sizes/bold_font_size = 28
 theme_override_font_sizes/bold_italics_font_size = 28
 theme_override_font_sizes/italics_font_size = 28
 theme_override_font_sizes/mono_font_size = 28
-theme_override_font_sizes/normal_font_size = 28
-theme_override_font_sizes/bold_font_size = 28
 bbcode_enabled = true
 text = "[b]The Meta Beast Roaming Party 3x The Vibes 1 aKIDcal... [/b][font_size=15]by [color=\"#ff2d55\"][b]Matheo"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 12
 
-[node name="LivePill" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="LivePill" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_a7370")
 
-[node name="Label_LivePill" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/LivePill"]
+[node name="Label_LivePill" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer/LivePill"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "live"
@@ -197,13 +183,13 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="TimePill" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TimePill" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_7s75a")
 
-[node name="Label_TimePill" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TimePill"]
+[node name="Label_TimePill" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer/TimePill"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "IN 35 MINS"
@@ -212,14 +198,14 @@ horizontal_alignment = 1
 vertical_alignment = 2
 uppercase = true
 
-[node name="TrendingPill" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TrendingPill" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(75, 24)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_cdq3q")
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TrendingPill"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer/TrendingPill"]
 layout_mode = 2
 text = "trending"
 label_settings = SubResource("LabelSettings_7s75a")
@@ -227,17 +213,17 @@ horizontal_alignment = 1
 vertical_alignment = 2
 uppercase = true
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
-[node name="Attendees" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Attendees" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Attendees"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Attendees"]
 modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(22, 0)
 layout_mode = 2
@@ -246,7 +232,7 @@ texture = ExtResource("8_6i5jl")
 expand_mode = 5
 stretch_mode = 5
 
-[node name="Label_AttendeesNumber" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Attendees"]
+[node name="Label_AttendeesNumber" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Attendees"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -255,11 +241,11 @@ label_settings = ExtResource("10_a7370")
 vertical_alignment = 1
 uppercase = true
 
-[node name="Duration" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Duration" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Duration"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Duration"]
 modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(20, 12)
 layout_mode = 2
@@ -267,7 +253,7 @@ texture = ExtResource("9_2wgl5")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Duration" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Duration"]
+[node name="Label_Duration" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Duration"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -276,11 +262,11 @@ theme_override_font_sizes/font_size = 13
 text = "2 HRS"
 label_settings = ExtResource("10_a7370")
 
-[node name="Location" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Location" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Location"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Location"]
 modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(14, 12)
 layout_mode = 2
@@ -288,7 +274,7 @@ texture = ExtResource("11_8uld2")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_EventLocation" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Location"]
+[node name="Label_EventLocation" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Location"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -297,11 +283,11 @@ theme_override_font_sizes/font_size = 13
 text = "0, 0"
 label_settings = ExtResource("10_a7370")
 
-[node name="Recurrent" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Recurrent" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Recurrent"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Recurrent"]
 modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(20, 12)
 layout_mode = 2
@@ -309,7 +295,7 @@ texture = ExtResource("12_2uhri")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Recurrent" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Recurrent"]
+[node name="Label_Recurrent" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/Recurrent"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -318,17 +304,17 @@ theme_override_font_sizes/font_size = 13
 text = "YES"
 label_settings = ExtResource("10_a7370")
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_UserName"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/HBoxContainer_UserName"]
 layout_mode = 2
 size_flags_vertical = 5
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -336,7 +322,7 @@ theme_override_font_sizes/font_size = 20
 text = "by"
 label_settings = SubResource("LabelSettings_uxho7")
 
-[node name="Label_UserName" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_UserName"]
+[node name="Label_UserName" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer3/HBoxContainer_UserName"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 5
@@ -345,10 +331,6 @@ theme_override_fonts/font = ExtResource("6_a7370")
 theme_override_font_sizes/font_size = 12
 text = "Matheo"
 label_settings = SubResource("LabelSettings_bmyvb")
-
-[node name="Control" type="Control" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -401,10 +383,10 @@ focus_mode = 0
 theme = ExtResource("15_up16k")
 theme_type_variation = &"SnowOutlinedToggleButton"
 theme_override_constants/icon_max_width = 35
-theme_override_styles/hover_pressed = ExtResource("19_7s75a")
-theme_override_styles/hover = ExtResource("20_7s75a")
-theme_override_styles/pressed = ExtResource("19_7s75a")
 theme_override_styles/normal = ExtResource("20_7s75a")
+theme_override_styles/pressed = ExtResource("19_7s75a")
+theme_override_styles/hover = ExtResource("20_7s75a")
+theme_override_styles/hover_pressed = ExtResource("19_7s75a")
 icon = ExtResource("16_rt4jo")
 icon_alignment = 1
 expand_icon = true
@@ -416,10 +398,10 @@ focus_mode = 0
 theme = ExtResource("15_up16k")
 theme_type_variation = &"SnowOutlinedToggleButton"
 theme_override_constants/icon_max_width = 35
-theme_override_styles/hover_pressed = ExtResource("19_7s75a")
-theme_override_styles/hover = ExtResource("20_7s75a")
-theme_override_styles/pressed = ExtResource("19_7s75a")
 theme_override_styles/normal = ExtResource("20_7s75a")
+theme_override_styles/pressed = ExtResource("19_7s75a")
+theme_override_styles/hover = ExtResource("20_7s75a")
+theme_override_styles/hover_pressed = ExtResource("19_7s75a")
 icon = ExtResource("17_a1tfr")
 icon_alignment = 1
 expand_icon = true
@@ -429,9 +411,6 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 19
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_a7370")
-theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_7s75a")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_6i5jl")
 
 [node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
