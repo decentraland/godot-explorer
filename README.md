@@ -60,7 +60,7 @@ brew install pkg-config
 ```
 
 ### Android Development
-- Android SDK with NDK 27.1.12297006
+- Android SDK with NDK 28.1.13356709
 - Set `ANDROID_SDK` or `ANDROID_HOME` environment variable
 - Run: `rustup target add aarch64-linux-android`
 
@@ -183,7 +183,7 @@ cargo run -- export --target android --format apk --release
 
 3. **Missing dependencies**: The doctor command will show what's missing and how to install it
 
-4. **Android build failures**: Ensure NDK 27.1.12297006 is installed and ANDROID_SDK is set
+4. **Android build failures**: Ensure NDK 28.1.13356709 is installed and ANDROID_SDK is set
 
 ## 🤝 Contributing
 
