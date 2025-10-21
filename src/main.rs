@@ -7,7 +7,7 @@ use image_comparison::compare_images_folders;
 use tests::test_godot_tools;
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
-use crate::consts::RUST_LIB_PROJECT_FOLDER;
+use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
 
 mod consts;
 mod copy_files;
@@ -82,6 +82,7 @@ fn main() -> Result<(), anyhow::Error> {
                 )
         )
         .subcommand(Command::new("update-protocol"))
+        .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
         .subcommand(
             Command::new("compare-image-folders")
                 .arg(
@@ -260,6 +261,7 @@ fn main() -> Result<(), anyhow::Error> {
             }
             result
         }
+        ("clean-cache", _) => clear_cache_dir().map_err(|e| anyhow::anyhow!(e)),
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
