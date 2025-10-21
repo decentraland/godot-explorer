@@ -12,7 +12,7 @@ jobs:
     runs-on: bigrunner
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
-      image: quay.io/decentraland/dcl-godot-android-builder:02ee2c576f49c1397710a6b90098549725bad4a5
+      image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
     steps:
@@ -58,9 +58,10 @@ jobs:
           pwd
           ls -la
           ls -la exports/
-          mkdir -p android-artifacts
-          mv exports/decentraland.godot.client.apk android-artifacts/ || true
-          mv exports/decentraland.godot.client.aab android-artifacts/ || true
+          mkdir -p android-artifacts-apk
+          mkdir -p android-artifacts-aab
+          mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
+          mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
 
       - name: Copy Meta Quest Artifacts
         if: success() || failure()
@@ -72,7 +73,14 @@ jobs:
         if: success() || failure()
         with:
           name: Android APK
-          path: android-artifacts/
+          path: android-artifacts-apk/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: Android AAB
+          path: android-artifacts-aab/
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
