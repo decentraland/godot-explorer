@@ -58,7 +58,8 @@ func _set_loading(status: bool) -> void:
 
 
 func update_styles(toggled_on):
-	var guest_profile := DclUserProfile.from_godot_dictionary(Global.get_config().guest_profile)
+	var guest_profile := Global.player_identity.is_guest
+	print(Global.player_identity.is_guest)
 	if guest_profile:
 		disabled = true
 		label.text = "SIGN IN TO USE REMINDERS"
