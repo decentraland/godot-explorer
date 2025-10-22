@@ -49,7 +49,10 @@ use crate::{
         RendererResponse, SceneId,
     },
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::components::avatar_shape::update_avatar_shape_emote_command,
+    scene_runner::components::{
+        avatar_shape::update_avatar_shape_emote_command,
+        virtual_cameras::update_main_and_virtual_cameras,
+    },
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
@@ -246,6 +249,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::CameraModeArea => {
                 update_camera_mode_area(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::VirtualCameras => {
+                update_main_and_virtual_cameras(scene, crdt_state);
                 false
             }
             SceneUpdateState::AudioSource => {
