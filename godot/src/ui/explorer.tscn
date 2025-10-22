@@ -317,10 +317,6 @@ icon = ExtResource("9_hj43f")
 icon_alignment = 1
 expand_icon = true
 
-[node name="NotificationBellButton" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" instance=ExtResource("13_notif_bell")]
-unique_name_in_owner = true
-layout_mode = 2
-
 [node name="Button_LoadScenes" type="Button" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
@@ -336,11 +332,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
 
-[node name="NotificationsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide" instance=ExtResource("14_notif_panel")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-
 [node name="Control_SafeBottomArea" type="PanelContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 200)
@@ -351,6 +342,32 @@ theme_override_styles/panel = SubResource("StyleBoxEmpty_u4dfr")
 [node name="Panel_Profile" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("13_tdhdx")]
 unique_name_in_owner = true
 layout_mode = 1
+
+[node name="NotificationBellButton" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("13_notif_bell")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -80.0
+offset_top = 110.0
+offset_right = -20.0
+offset_bottom = 170.0
+grow_horizontal = 0
+
+[node name="NotificationsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("14_notif_panel")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -480.0
+offset_top = 110.0
+offset_right = -80.0
+offset_bottom = 610.0
+grow_horizontal = 0
+custom_minimum_size = Vector2(400, 500)
 
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1

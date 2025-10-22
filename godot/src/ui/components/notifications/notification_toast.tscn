@@ -40,34 +40,72 @@ theme_override_constants/margin_bottom = 12
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="IconTexture" type="TextureRect" parent="MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
+[node name="ImageContainerWrapper" type="Control" parent="MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 size_flags_vertical = 4
+
+[node name="ImageContainer" type="Panel" parent="MarginContainer/HBoxContainer/ImageContainerWrapper"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+clip_children = 2
+
+[node name="NotificationImage" type="TextureRect" parent="MarginContainer/HBoxContainer/ImageContainerWrapper/ImageContainer"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="IconTexture" type="TextureRect" parent="MarginContainer/HBoxContainer/ImageContainerWrapper"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -26.0
+offset_top = -26.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 0
+grow_vertical = 0
 expand_mode = 1
 stretch_mode = 5
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 3
 
 [node name="LabelTitle" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "New Notification"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 18
-uppercase = true
+theme_override_font_sizes/font_size = 16
 clip_text = true
 
-[node name="LabelDescription" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="LabelDescription" type="RichTextLabel" parent="MarginContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
+size_flags_vertical = 0
 text = "You have a new notification"
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 14
-autowrap_mode = 3
-clip_text = true
-max_lines_visible = 2
+theme_override_font_sizes/font_size = 13
+bbcode_enabled = true
+fit_content = false
+scroll_active = false
+clip_contents = true

@@ -19,6 +19,8 @@ var _first_time_refresh_warning = true
 var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
+var _is_loading: bool = true  # Start as loading
+var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -104,8 +106,12 @@ func _ready():
 	notification_bell_button.bell_clicked.connect(_on_notification_bell_clicked)
 	notifications_panel.panel_closed.connect(_on_notifications_panel_closed)
 
-	# Connect to Global notification signals
-	Global.notification_received.connect(_on_notification_received)
+	# Connect to NotificationsManager queue signals
+	NotificationsManager.notification_queued.connect(_on_notification_queued)
+
+	# Connect to loading state signals
+	Global.loading_started.connect(_on_loading_started)
+	Global.loading_finished.connect(_on_loading_finished)
 
 	if Global.is_xr():
 		player = load("res://src/logic/player/xr_player.tscn").instantiate()
@@ -252,6 +258,7 @@ func _on_player_logout():
 
 func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 	# Start notifications polling when authenticated
+	print("[Explorer] Player profile changed - starting notifications polling")
 	NotificationsManager.start_polling()
 
 
@@ -634,19 +641,58 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 
 
 func _on_notification_bell_clicked() -> void:
+	# Toggle notification panel visibility
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+		notification_bell_button.set_panel_open(false)
 	else:
 		notifications_panel.show_panel()
+		notification_bell_button.set_panel_open(true)
+		# Close other panels if needed
+		if control_menu.visible:
+			control_menu.close()
 
 
 func _on_notifications_panel_closed() -> void:
 	notifications_panel.hide()
+	notification_bell_button.set_panel_open(false)
 
 
-func _on_notification_received(notification: Dictionary) -> void:
+func _on_notification_queued(notification: Dictionary) -> void:
+	# Only show notifications if not loading
+	if not _is_loading:
+		_show_notification_toast(notification)
+	else:
+		# Store the notification to show after loading finishes
+		if _pending_notification_toast.is_empty():
+			_pending_notification_toast = notification
+
+
+func _show_notification_toast(notification: Dictionary) -> void:
 	# Create and show toast notification
 	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
 	var toast = toast_scene.instantiate()
 	ui_root.add_child(toast)
+
+	# Connect to toast_closed signal to show next notification
+	toast.toast_closed.connect(_on_toast_closed)
+
 	toast.show_notification(notification)
+
+
+func _on_toast_closed() -> void:
+	# Dequeue the current notification and check for next one
+	NotificationsManager.dequeue_notification()
+
+
+func _on_loading_started() -> void:
+	_is_loading = true
+	_pending_notification_toast = {}  # Clear any pending notification
+
+
+func _on_loading_finished() -> void:
+	_is_loading = false
+	# Show pending notification if there was one queued during loading
+	if not _pending_notification_toast.is_empty():
+		_show_notification_toast(_pending_notification_toast)
+		_pending_notification_toast = {}

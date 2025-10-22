@@ -8,6 +8,7 @@ extends Node
 signal new_notifications(notifications: Array)
 signal notifications_updated
 signal notification_error(error_message: String)
+signal notification_queued(notification: Dictionary)
 
 const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
@@ -16,7 +17,7 @@ const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 const ENABLE_FAKE_NOTIFICATIONS = false
 
 ## TESTING: Set to false to disable type filtering and show all notifications
-const ENABLE_NOTIFICATION_FILTER = true
+const ENABLE_NOTIFICATION_FILTER = false
 
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user
@@ -44,19 +45,23 @@ var _notifications: Array = []
 var _poll_timer: Timer = null
 var _is_polling: bool = false
 var _previous_notification_ids: Array = []
+var _notification_queue: Array = []  # Queue for new unread notifications to show as toasts
 
 
 func _ready() -> void:
+	print("[NotificationsManager] Initializing NotificationsManager autoload")
 	# Create polling timer
 	_poll_timer = Timer.new()
 	_poll_timer.wait_time = POLL_INTERVAL_SECONDS
 	_poll_timer.timeout.connect(_on_poll_timeout)
 	add_child(_poll_timer)
+	print("[NotificationsManager] NotificationsManager ready")
 
 
 ## Start polling for new notifications
 func start_polling() -> void:
 	if not _is_polling:
+		print("[NotificationsManager] Starting notification polling (interval: ", POLL_INTERVAL_SECONDS, "s)")
 		_is_polling = true
 		_poll_timer.start()
 		# Fetch immediately
@@ -151,13 +156,18 @@ func fetch_notifications(
 ) -> Promise:
 	var promise := Promise.new()
 
+	print("[NotificationsManager] fetch_notifications called (from: ", from_timestamp, ", limit: ", limit, ", only_unread: ", only_unread, ")")
+
 	# Check if user is authenticated
 	if not Global.player_identity:
+		print("[NotificationsManager] ERROR: Player identity not available")
 		promise.reject("Player identity not available")
 		return promise
 
 	var address = Global.player_identity.get_address_str()
+	print("[NotificationsManager] User address: ", address)
 	if address.is_empty():
+		print("[NotificationsManager] ERROR: User not authenticated (empty address)")
 		promise.reject("User not authenticated")
 		return promise
 
@@ -185,51 +195,77 @@ func fetch_notifications(
 
 ## Internal async helper for fetching notifications
 func _async_fetch_notifications(promise: Promise, url: String) -> void:
+	print("[NotificationsManager] Fetching from URL: ", url)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "{}")
 
 	if response is PromiseError:
 		var error_msg = "Fetch error: " + response.get_error()
+		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
+	print("[NotificationsManager] Raw response received")
+	print("[NotificationsManager] Response status: ", response.status_code())
+	print("[NotificationsManager] Response body: ", response.get_response_as_string())
+
 	var data: Dictionary = response.get_string_response_as_json()
+	print("[NotificationsManager] Parsed data: ", JSON.stringify(data, "\t"))
 
 	if not (data is Dictionary and "notifications" in data):
 		var error_msg = "Invalid response format"
+		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
 	var notifications = data["notifications"]
+	print("[NotificationsManager] Total notifications received: ", notifications.size())
+	print("[NotificationsManager] Notifications array: ", JSON.stringify(notifications, "\t"))
+
 	var filtered_notifications = _filter_notifications(notifications)
+	print("[NotificationsManager] Filtered notifications count: ", filtered_notifications.size())
 
 	# TESTING: Inject fake notification for testing toast popups
 	if ENABLE_FAKE_NOTIFICATIONS:
 		var fake_notif = _generate_fake_notification()
 		filtered_notifications.append(fake_notif)
 
-	# Detect new notifications
+	# Merge new notifications with existing ones (avoid duplicates by ID)
+	var existing_ids = {}
+	for notif in _notifications:
+		if "id" in notif:
+			existing_ids[notif["id"]] = true
+
+	# Detect new notifications and queue them
 	var new_notifs: Array = []
 	for notif in filtered_notifications:
 		if "id" in notif:
 			var notif_id = notif["id"]
-			if notif_id not in _previous_notification_ids:
-				# This is a new notification
-				if not notif.get("read", false):  # Only show unread notifications as toasts
+			# Check if this is a new notification not in our existing set
+			if notif_id not in existing_ids:
+				# Add to notifications list
+				_notifications.append(notif)
+				existing_ids[notif_id] = true
+
+				# Queue unread notifications for toast display
+				if not notif.get("read", false):
 					new_notifs.append(notif)
-					Global.notification_received.emit(notif)
+					_notification_queue.append(notif)
 
-	# Update previous IDs
-	_previous_notification_ids.clear()
-	for notif in filtered_notifications:
-		if "id" in notif:
-			_previous_notification_ids.append(notif["id"])
+	print("[NotificationsManager] New unread notifications detected: ", new_notifs.size())
+	if new_notifs.size() > 0:
+		print("[NotificationsManager] New notifications: ", JSON.stringify(new_notifs, "\t"))
+		print("[NotificationsManager] Queue size: ", _notification_queue.size())
+		# Emit signal to start processing queue
+		if _notification_queue.size() == new_notifs.size():  # Only trigger if queue was empty
+			notification_queued.emit(_notification_queue[0])
 
-	_notifications = filtered_notifications
-	new_notifications.emit(filtered_notifications)
+	# Emit updated notifications list
+	new_notifications.emit(_notifications.duplicate())
 	notifications_updated.emit()
-	promise.resolve_with_data(filtered_notifications)
+	print("[NotificationsManager] Fetch complete. Total cached notifications: ", _notifications.size())
+	promise.resolve_with_data(_notifications.duplicate())
 
 
 ## Mark notifications as read
@@ -265,23 +301,33 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 func _async_mark_as_read(
 	promise: Promise, url: String, body_json: String, notification_ids: PackedStringArray
 ) -> void:
+	print("[NotificationsManager] Marking as read - URL: ", url)
+	print("[NotificationsManager] Request body: ", body_json)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PUT, body_json)
 
 	if response is PromiseError:
 		var error_msg = "Mark as read error: " + response.get_error()
+		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
+	print("[NotificationsManager] Mark as read response received")
+	print("[NotificationsManager] Response status: ", response.status_code())
+	print("[NotificationsManager] Response body: ", response.get_response_as_string())
+
 	var data: Dictionary = response.get_string_response_as_json()
+	print("[NotificationsManager] Parsed data: ", JSON.stringify(data, "\t"))
 
 	if not (data is Dictionary and "updated" in data):
 		var error_msg = "Invalid response format"
+		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
 	var updated_count = data["updated"]
+	print("[NotificationsManager] Successfully marked ", updated_count, " notifications as read")
 
 	for notif in _notifications:
 		if notif["id"] in notification_ids:
@@ -293,4 +339,38 @@ func _async_mark_as_read(
 
 func _on_poll_timeout() -> void:
 	if _is_polling:
+		print("[NotificationsManager] Poll timeout - fetching unread notifications...")
 		fetch_notifications(-1, 50, true)
+
+
+## Get the next notification from the queue
+func get_next_queued_notification() -> Dictionary:
+	if _notification_queue.size() > 0:
+		return _notification_queue[0]
+	return {}
+
+
+## Remove the first notification from the queue and return the next one
+func dequeue_notification() -> Dictionary:
+	if _notification_queue.size() > 0:
+		_notification_queue.pop_front()
+		print("[NotificationsManager] Dequeued notification. Queue size: ", _notification_queue.size())
+
+		# Return next notification if available
+		if _notification_queue.size() > 0:
+			var next_notif = _notification_queue[0]
+			# Emit signal for next notification
+			notification_queued.emit(next_notif)
+			return next_notif
+
+	return {}
+
+
+## Check if there are notifications in the queue
+func has_queued_notifications() -> bool:
+	return _notification_queue.size() > 0
+
+
+## Get the number of notifications in the queue
+func get_queue_size() -> int:
+	return _notification_queue.size()
