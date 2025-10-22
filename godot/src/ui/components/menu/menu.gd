@@ -322,3 +322,8 @@ func _on_size_changed() -> void:
 		color_rect_landscape_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		Global.check_deep_link_teleport_to()

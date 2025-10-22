@@ -51,6 +51,8 @@ var current_height: int = -1
 var previous_height: int = -1
 var previous_height_2: int = -1
 
+var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
+
 
 func set_url_popup_instance(popup_instance) -> void:
 	url_popup_instance = popup_instance
@@ -472,3 +474,27 @@ func _process(_delta: float) -> void:
 		):
 			last_emitted_height = current_height
 			change_virtual_keyboard.emit(last_emitted_height)
+
+
+func check_deep_link_teleport_to():
+	if Global.is_mobile():
+		var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+		Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+
+		if Global.deep_link_obj.is_location_defined():
+			var realm = Global.deep_link_obj.realm
+			if realm.is_empty():
+				realm = Realm.MAIN_REALM
+
+			Global.teleport_to(Global.deep_link_obj.location, realm)
+		elif not Global.deep_link_obj.realm.is_empty():
+			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
+		if Global.is_mobile():
+			var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+
+			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)
