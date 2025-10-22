@@ -370,4 +370,31 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return metrics
     }
 
+    @UsedByGodot
+    fun getLaunchIntentData(): Dictionary {
+        val result = Dictionary()
+
+        activity?.let { act ->
+            val intent = act.intent
+            val action = intent?.action
+            val data = intent?.dataString
+
+            result["action"] = action ?: ""
+            result["data"] = data ?: ""
+            result["extras"] = Dictionary()
+
+            // Copy extras (if any)
+            intent?.extras?.keySet()?.forEach { key ->
+                intent.extras?.get(key)?.let { value ->
+                    (result["extras"] as Dictionary)[key] = value.toString()
+                }
+            }
+        } ?: run {
+            Log.e(pluginName, "Activity is null, cannot retrieve intent")
+            result["error"] = "Activity is null"
+        }
+
+        return result
+    }
+
 }

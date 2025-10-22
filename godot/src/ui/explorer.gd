@@ -84,6 +84,15 @@ func get_params_from_cmd():
 		location_vector = null
 	var preview_mode = Global.cli.preview_mode
 	var spawn_avatars = Global.cli.spawn_avatars
+
+	if not Global.deep_link_obj.realm.is_empty() and realm_string == null:
+		realm_string = Global.deep_link_obj.realm
+
+	if Global.deep_link_obj.is_location_defined() and location_vector == null:
+		location_vector = Global.deep_link_obj.location
+		if realm_string == null:
+			realm_string = Realm.MAIN_REALM
+
 	return [realm_string, location_vector, preview_mode, spawn_avatars]
 
 
@@ -615,3 +624,8 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
 	elif virtual_keyboard_height == 0:
 		panel_chat.exit_chat()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		Global.check_deep_link_teleport_to()
