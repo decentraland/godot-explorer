@@ -1,4 +1,4 @@
-name: 🍏 iOS (only lib)
+name: 🍏 iOS
 on:
   workflow_call:
 
