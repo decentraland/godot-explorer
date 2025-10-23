@@ -19,8 +19,12 @@ jobs:
 
       - name: Delete branch in mobile deploy pipeline
         run: |
-          # Get the deleted branch name
-          BRANCH_NAME="${{ github.event.ref }}"
+          # Determine branch name based on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH_NAME="PR-${{ github.event.pull_request.number }}-${{ github.head_ref || github.ref_name }}"
+          else
+            BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          fi
 
           echo "Branch '$BRANCH_NAME' was deleted from source repository"
           echo "Attempting to delete it from deploy pipeline..."
@@ -47,13 +51,11 @@ jobs:
           cd ..
           rm -rf deploy-repo
 
+          echo "✅ Branch deletion synchronized"
+          echo "📦 Deploy Repository: https://github.com/decentraland/godot-mobile-deploy-pipeline"
+          echo "🗑️ Deleted Branch: ${BRANCH_NAME}"
+
       - name: Cleanup SSH key
         if: always()
         run: |
           rm -f ~/.ssh/deploy_key
-
-      - name: Summary
-        run: |
-          echo "✅ Branch deletion synchronized"
-          echo "📦 Deploy Repository: https://github.com/decentraland/godot-mobile-deploy-pipeline"
-          echo "🗑️ Deleted Branch: ${{ github.event.ref }}"

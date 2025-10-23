@@ -102,16 +102,17 @@ jobs:
           git lfs track "*.so"
           git add .gitattributes
 
-          # Move exports folder directly to ios (no copy)
+          # Move exports contents to root (not inside a folder)
           if [ -d "../exports" ]; then
-            mv ../exports ios
+            mv ../exports/* .
+            mv ../exports/.* . 2>/dev/null || true
           else
             echo "Warning: exports folder not found"
             exit 1
           fi
 
-          # Add files (now tracked by LFS)
-          git add ios/
+          # Add all files (now tracked by LFS)
+          git add .
           git commit -m "Deploy iOS artifacts
 
           Source: ${{ github.repository }}
