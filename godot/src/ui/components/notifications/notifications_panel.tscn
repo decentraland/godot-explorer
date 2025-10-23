@@ -1,15 +1,36 @@
-[gd_scene load_steps=3 format=3 uid="uid://cw8x2h5p3y6kn"]
+[gd_scene load_steps=6 format=3 uid="uid://cw8x2h5p3y6kn"]
 
-[ext_resource type="Script" path="res://src/ui/components/notifications/notifications_panel.gd" id="1_notifications_panel"]
+[ext_resource type="Script" uid="uid://cccx1ovxbd1xc" path="res://src/ui/components/notifications/notifications_panel.gd" id="1_notifications_panel"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
-bg_color = Color(0, 0, 0, 0.533333)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+bg_color = Color(0, 0, 0, 0.8)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.988235, 0.988235, 0.988235, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="Gradient" id="Gradient_fade"]
+colors = PackedColorArray(0.086275, 0.0823529, 0.0941176, 0, 0.086275, 0.0823529, 0.0941176, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fade"]
+gradient = SubResource("Gradient_fade")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
 
 [node name="NotificationsPanel" type="PanelContainer"]
+clip_contents = true
 custom_minimum_size = Vector2(370, 500)
 offset_right = 370.0
 offset_bottom = 500.0
@@ -36,39 +57,34 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
-[node name="Label_Title" type="Label" parent="MarginContainer/VBoxContainer/Header/VBoxContainer"]
+[node name="Label_Title" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Header/VBoxContainer"]
+custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
-text = "Notifications"
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 18
-
-[node name="LabelUnreadCount" type="Label" parent="MarginContainer/VBoxContainer/Header/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "0 unread"
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/normal_font_size = 16
+bbcode_enabled = true
+text = "[b]NOTIFICATIONS[/b]"
+fit_content = true
+scroll_active = false
+vertical_alignment = 2
 
 [node name="ButtonMarkAllRead" type="Button" parent="MarginContainer/VBoxContainer/Header"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-text = "Mark all read"
-
-[node name="ButtonClose" type="Button" parent="MarginContainer/VBoxContainer/Header"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-text = "✕"
-
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_font_sizes/font_size = 8
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+text = "READ ALL"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
 
 [node name="NotificationsList" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
 unique_name_in_owner = true
@@ -77,15 +93,28 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 6
 
+[node name="FadeOverlayContainer" type="Control" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="FadeOverlay" type="TextureRect" parent="MarginContainer/VBoxContainer/FadeOverlayContainer"]
+layout_mode = 2
+offset_top = -64.0
+offset_right = 346.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_fade")
+
 [node name="LabelEmptyState" type="Label" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
-text = "No notifications yet.
-Check back later for updates!"
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
+text = "No notifications yet.
+Check back later for updates!"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3

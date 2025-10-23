@@ -1,7 +1,14 @@
-[gd_scene load_steps=3 format=3 uid="uid://c6rqy3vx84bnm"]
+[gd_scene load_steps=4 format=3 uid="uid://c6rqy3vx84bnm"]
 
 [ext_resource type="Script" path="res://src/ui/components/notifications/notification_bell_button.gd" id="1_bell_button"]
-[ext_resource type="Texture2D" path="res://assets/ui/NotificationBell.png" id="2_bell_icon"]
+[ext_resource type="SpriteFrames" path="res://assets/ui/notifications/bell_animation.tres" id="2_bell_animation"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_bg"]
+bg_color = Color(0, 0, 0, 0.75)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 bg_color = Color(1, 0.2, 0.3, 1)
@@ -14,11 +21,17 @@ corner_radius_bottom_left = 12
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
-theme_override_constants/icon_max_width = 48
-icon = ExtResource("2_bell_icon")
-icon_alignment = 1
-expand_icon = true
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
 script = ExtResource("1_bell_button")
+
+[node name="BellAnimatedSprite" type="AnimatedSprite2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(30, 30)
+scale = Vector2(0.7, 0.7)
+sprite_frames = ExtResource("2_bell_animation")
+animation = &"toggle"
 
 [node name="Badge_Container" type="PanelContainer" parent="."]
 unique_name_in_owner = true

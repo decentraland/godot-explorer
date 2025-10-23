@@ -10,14 +10,15 @@ var _notification_items: Array[Control] = []
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
-@onready var label_unread_count: Label = %LabelUnreadCount
 @onready var label_empty_state: Label = %LabelEmptyState
-@onready var button_close: Button = %ButtonClose
 @onready var button_mark_all_read: Button = %ButtonMarkAllRead
 
 
 func _ready() -> void:
-	button_close.pressed.connect(_on_close_pressed)
+	# Ensure the panel blocks touch/mouse events from passing through
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	gui_input.connect(_on_gui_input)
+
 	button_mark_all_read.pressed.connect(_async_on_mark_all_read_pressed)
 
 	# Connect to NotificationsManager signals
@@ -27,6 +28,13 @@ func _ready() -> void:
 
 	# Initial load
 	_refresh_notifications()
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	# Consume all input events to prevent them from passing through the panel
+	if event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventMouseMotion or event is InputEventScreenDrag:
+		accept_event()
+		get_viewport().set_input_as_handled()
 
 
 func _refresh_notifications() -> void:
@@ -45,7 +53,6 @@ func _display_notifications(notifications: Array) -> void:
 		label_empty_state.visible = true
 		scroll_container.visible = false
 		button_mark_all_read.visible = false
-		label_unread_count.text = "No notifications"
 		return
 
 	label_empty_state.visible = false
@@ -59,10 +66,8 @@ func _display_notifications(notifications: Array) -> void:
 
 	# Update header
 	if unread_count > 0:
-		label_unread_count.text = "%d unread" % unread_count
 		button_mark_all_read.visible = true
 	else:
-		label_unread_count.text = "All caught up!"
 		button_mark_all_read.visible = false
 
 	# Create notification items
@@ -120,11 +125,6 @@ func _async_on_mark_all_read_pressed() -> void:
 
 func _on_notification_clicked(_notification: Dictionary) -> void:
 	pass
-
-
-func _on_close_pressed() -> void:
-	panel_closed.emit()
-	hide()
 
 
 func show_panel() -> void:

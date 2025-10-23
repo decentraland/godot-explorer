@@ -645,9 +645,15 @@ func _on_notification_bell_clicked() -> void:
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
 		notification_bell_button.set_panel_open(false)
+		if Global.is_mobile():
+			capture_mouse()
+			Global.explorer_grab_focus()
 	else:
 		notifications_panel.show_panel()
 		notification_bell_button.set_panel_open(true)
+		if Global.is_mobile():
+			release_mouse()
+			Global.explorer_release_focus()
 		# Close other panels if needed
 		if control_menu.visible:
 			control_menu.close()
@@ -656,6 +662,9 @@ func _on_notification_bell_clicked() -> void:
 func _on_notifications_panel_closed() -> void:
 	notifications_panel.hide()
 	notification_bell_button.set_panel_open(false)
+	if Global.is_mobile():
+		capture_mouse()
+		Global.explorer_grab_focus()
 
 
 func _on_notification_queued(notification: Dictionary) -> void:

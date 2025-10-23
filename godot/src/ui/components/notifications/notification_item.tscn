@@ -1,13 +1,21 @@
-[gd_scene load_steps=4 format=3 uid="uid://dpr7n8jvh7k4y"]
+[gd_scene load_steps=6 format=3 uid="uid://dpr7n8jvh7k4y"]
 
-[ext_resource type="Script" path="res://src/ui/components/notifications/notification_item.gd" id="1_notification_item"]
+[ext_resource type="Script" uid="uid://bka3ybfk1troc" path="res://src/ui/components/notifications/notification_item.gd" id="1_notification_item"]
+[ext_resource type="PackedScene" uid="uid://bkst8nn51e4iu" path="res://src/ui/components/notifications/notification_content.tscn" id="2_content"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_notif_panel"]
-bg_color = Color(0.086, 0.082, 0.094, 0.784)
+bg_color = Color(0.133333, 0.129412, 0.141176, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_item_image"]
+bg_color = Color(0.2, 0.2, 0.2, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_unread_dot"]
 bg_color = Color(0.9, 0.2, 0.2, 1)
@@ -17,7 +25,7 @@ corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
 [node name="NotificationItem" type="PanelContainer"]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(280, 67)
 theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
 script = ExtResource("1_notification_item")
 
@@ -32,80 +40,46 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="ImageContainerWrapper" type="Control" parent="MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(56, 56)
-layout_mode = 2
-size_flags_vertical = 4
-
-[node name="ImageContainer" type="Panel" parent="MarginContainer/HBoxContainer/ImageContainerWrapper"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-clip_children = 2
-
-[node name="NotificationImage" type="TextureRect" parent="MarginContainer/HBoxContainer/ImageContainerWrapper/ImageContainer"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="IconTexture" type="TextureRect" parent="MarginContainer/HBoxContainer/ImageContainerWrapper"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(20, 20)
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -22.0
-offset_top = -22.0
-offset_right = -2.0
-offset_bottom = -2.0
-grow_horizontal = 0
-grow_vertical = 0
-expand_mode = 1
-stretch_mode = 5
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="LabelTitle" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="NotificationContent" parent="MarginContainer/HBoxContainer" instance=ExtResource("2_content")]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Notification Title"
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 14
-clip_text = true
 
-[node name="LabelDescription" type="RichTextLabel" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="ImageContainerWrapper" parent="MarginContainer/HBoxContainer/NotificationContent" index="0"]
+custom_minimum_size = Vector2(45, 45)
+
+[node name="ImageContainer" parent="MarginContainer/HBoxContainer/NotificationContent/ImageContainerWrapper" index="0"]
+theme_override_styles/panel = SubResource("StyleBoxFlat_item_image")
+
+[node name="LabelTitle" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="0"]
+custom_minimum_size = Vector2(0, 0)
+theme_override_font_sizes/bold_italics_font_size = 12
+theme_override_font_sizes/italics_font_size = 12
+theme_override_font_sizes/normal_font_size = 12
+theme_override_font_sizes/bold_font_size = 12
+fit_content = true
+
+[node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="1"]
+clip_contents = false
+custom_minimum_size = Vector2(0, 0)
+size_flags_vertical = 2
+theme_override_font_sizes/bold_italics_font_size = 11
+theme_override_font_sizes/italics_font_size = 11
+theme_override_font_sizes/normal_font_size = 11
+theme_override_font_sizes/bold_font_size = 11
+fit_content = true
+
+[node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
-text = "Notification description goes here..."
-theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/default_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/bold_italics_font_size = 10
+theme_override_font_sizes/italics_font_size = 10
+theme_override_font_sizes/normal_font_size = 10
+theme_override_font_sizes/bold_font_size = 10
 bbcode_enabled = true
+text = "[b]5m ago[/b]"
 fit_content = true
 scroll_active = false
-
-[node name="LabelTimestamp" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "5m ago"
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/font_size = 11
 
 [node name="RightContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -118,3 +92,5 @@ custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_unread_dot")
+
+[editable path="MarginContainer/HBoxContainer/NotificationContent"]

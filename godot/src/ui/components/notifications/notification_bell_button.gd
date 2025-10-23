@@ -7,10 +7,7 @@ var _is_panel_open: bool = false
 
 @onready var label_badge: Label = %Label_Badge
 @onready var badge_container: PanelContainer = %Badge_Container
-
-# Colors for button state
-const COLOR_NORMAL = Color(1, 1, 1, 1)
-const COLOR_ACTIVE = Color(0.4, 0.7, 1.0, 1)  # Light blue when active
+@onready var bell_sprite: AnimatedSprite2D = %BellAnimatedSprite
 
 
 func _ready() -> void:
@@ -22,7 +19,7 @@ func _ready() -> void:
 
 	# Initial update
 	_update_badge()
-	_update_button_color()
+	_update_button_state()
 
 
 func _on_pressed() -> void:
@@ -31,14 +28,19 @@ func _on_pressed() -> void:
 
 func set_panel_open(is_open: bool) -> void:
 	_is_panel_open = is_open
-	_update_button_color()
+	_update_button_state()
 
 
-func _update_button_color() -> void:
+func _update_button_state() -> void:
+	if bell_sprite == null:
+		return
+
 	if _is_panel_open:
-		modulate = COLOR_ACTIVE
+		# Play animation forward (inactive -> active)
+		bell_sprite.play("toggle")
 	else:
-		modulate = COLOR_NORMAL
+		# Play animation backward (active -> inactive)
+		bell_sprite.play_backwards("toggle")
 
 
 func _on_notifications_updated(_notifications: Array = []) -> void:

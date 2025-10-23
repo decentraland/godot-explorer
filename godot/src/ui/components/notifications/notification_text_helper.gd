@@ -8,15 +8,16 @@ extends RefCounted
 
 ## Get avatar color from username (uses DclAvatar's color algorithm)
 static func _get_avatar_color_hex(username: String) -> String:
-	if Global.avatars == null:
-		return "FFFFFF"  # Default white if no avatars manager
+	var explorer = Global.get_explorer()
+	if explorer == null or explorer.player == null:
+		return "FFFFFF"  # Default white if no player
 
-	var avatars = Global.avatars.get_avatars()
-	if avatars.is_empty():
-		return "FFFFFF"  # Default white if no avatars exist
+	var player_avatar = explorer.player.avatar
+	if player_avatar == null:
+		return "FFFFFF"  # Default white if no player avatar
 
-	# Use any avatar instance to calculate the color (algorithm is the same for all)
-	var color = avatars[0].get_nickname_color(username)
+	# Use player's avatar instance to calculate the color
+	var color = player_avatar.get_nickname_color(username)
 	# Return as hex string without #
 	return color.to_html(false)
 
