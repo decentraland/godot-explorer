@@ -25,6 +25,7 @@ func _close():
 	self.hide()
 	UiSounds.play_sound("mainmenu_widget_close")
 
+
 func set_data(item_data):
 	event_details_landscape.set_data(item_data)
 	event_details_portrait.set_data(item_data)

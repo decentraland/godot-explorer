@@ -492,6 +492,7 @@ func check_deep_link_teleport_to():
 		elif deep_link_url.begins_with("https://decentraland.org/events/event/?id="):
 			print("Is event link")
 
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile():
