@@ -29,6 +29,8 @@ jobs:
   ios-build:
     name: 🍏 iOS
     uses: ./.github/workflows/ios_builds.yml
+    secrets:
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
 
   # linux-build:
   #   name: 🐧 Linux
