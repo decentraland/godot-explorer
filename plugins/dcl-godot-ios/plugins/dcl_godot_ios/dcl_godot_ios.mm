@@ -7,6 +7,8 @@
 #import <Network/Network.h>
 #import <sys/sysctl.h>
 #import <mach/mach.h>
+#import <EventKit/EventKit.h>
+#import <EventKitUI/EventKitUI.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -112,6 +114,7 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
     ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
     ClassDB::bind_method(D_METHOD("get_mobile_metrics"), &DclGodotiOS::get_mobile_metrics);
+    ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
 }
 
 void DclGodotiOS::print_version() {
@@ -272,6 +275,64 @@ Dictionary DclGodotiOS::get_mobile_metrics() {
     #endif
 
     return metrics;
+}
+
+bool DclGodotiOS::add_calendar_event(String title, String description, int64_t start_time, int64_t end_time, String location) {
+    #if TARGET_OS_IOS
+    __block bool result = false;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        EKEventStore *eventStore = [[EKEventStore alloc] init];
+
+        // Request access to calendar
+        [eventStore requestFullAccessToEventsWithCompletion:^(BOOL granted, NSError *error) {
+            if (!granted) {
+                printf("Calendar access not granted: %s\n", error ? error.localizedDescription.UTF8String : "Unknown error");
+                result = false;
+                return;
+            }
+
+            // Create the event
+            EKEvent *event = [EKEvent eventWithEventStore:eventStore];
+            event.title = [NSString stringWithUTF8String:title.utf8().get_data()];
+            event.notes = [NSString stringWithUTF8String:description.utf8().get_data()];
+            event.location = [NSString stringWithUTF8String:location.utf8().get_data()];
+
+            // Convert timestamps (milliseconds) to NSDate
+            event.startDate = [NSDate dateWithTimeIntervalSince1970:(start_time / 1000.0)];
+            event.endDate = [NSDate dateWithTimeIntervalSince1970:(end_time / 1000.0)];
+            event.calendar = [eventStore defaultCalendarForNewEvents];
+
+            // Create the event edit view controller
+            EKEventEditViewController *eventEditVC = [[EKEventEditViewController alloc] init];
+            eventEditVC.event = event;
+            eventEditVC.eventStore = eventStore;
+
+            // Set up the delegate to handle completion
+            eventEditVC.editViewDelegate = nil; // We don't need a delegate for simple cases
+
+            // Get the top-most view controller
+            dispatch_async(dispatch_get_main_queue(), ^{
+                UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+                while (rootVC.presentedViewController) {
+                    rootVC = rootVC.presentedViewController;
+                }
+
+                [rootVC presentViewController:eventEditVC animated:YES completion:^{
+                    printf("Calendar event editor presented successfully\n");
+                }];
+            });
+
+            result = true;
+        }];
+    });
+
+    // Note: Due to async nature, we return true if the request was initiated
+    // The actual result will depend on user interaction with the calendar UI
+    return true;
+    #else
+    return false;
+    #endif
 }
 
 DclGodotiOS *DclGodotiOS::get_singleton() {

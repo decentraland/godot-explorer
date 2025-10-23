@@ -118,4 +118,31 @@ impl DclGodotAndroidPlugin {
     pub fn is_available() -> bool {
         Self::try_get_singleton().is_some()
     }
+
+    /// Add a calendar event with title, description, start time, end time, and location
+    /// Times are in milliseconds since Unix epoch (Jan 1, 1970)
+    /// Returns true if the calendar UI was shown successfully, false otherwise
+    #[func]
+    pub fn add_calendar_event(
+        title: GString,
+        description: GString,
+        start_time_millis: i64,
+        end_time_millis: i64,
+        location: GString,
+    ) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = singleton.call(
+            StringName::from("addCalendarEvent"),
+            &[
+                title.to_variant(),
+                description.to_variant(),
+                start_time_millis.to_variant(),
+                end_time_millis.to_variant(),
+                location.to_variant(),
+            ],
+        );
+        result.try_to::<bool>().unwrap_or(false)
+    }
 }

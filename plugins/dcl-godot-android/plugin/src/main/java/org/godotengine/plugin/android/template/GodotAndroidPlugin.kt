@@ -1,5 +1,6 @@
 package org.decentraland.godotexplorer
 
+import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.ActivityNotFoundException
@@ -11,6 +12,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
+import android.provider.CalendarContract
 import android.util.Log
 import android.webkit.WebResourceRequest
 import android.widget.FrameLayout
@@ -20,6 +22,8 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.browser.customtabs.CustomTabsService
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
@@ -395,6 +399,76 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
 
         return result
+    }
+
+    @UsedByGodot
+    fun addCalendarEvent(
+        title: String,
+        description: String,
+        startTimeMillis: Long,
+        endTimeMillis: Long,
+        location: String
+    ): Boolean {
+        val act = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot add calendar event")
+            return false
+        }
+
+        // Check for calendar permissions
+        val hasReadPermission = ContextCompat.checkSelfPermission(
+            act,
+            Manifest.permission.READ_CALENDAR
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val hasWritePermission = ContextCompat.checkSelfPermission(
+            act,
+            Manifest.permission.WRITE_CALENDAR
+        ) == PackageManager.PERMISSION_GRANTED
+
+        // Request permissions if needed (Android 6.0+)
+        if (!hasReadPermission || !hasWritePermission) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                ActivityCompat.requestPermissions(
+                    act,
+                    arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+                    CALENDAR_PERMISSION_REQUEST_CODE
+                )
+                Log.d(pluginName, "Requesting calendar permissions")
+                // Return false as permissions need to be granted first
+                // User should call this function again after granting permissions
+                return false
+            }
+        }
+
+        try {
+            // Create an intent to insert a calendar event
+            val intent = Intent(Intent.ACTION_INSERT).apply {
+                data = CalendarContract.Events.CONTENT_URI
+                putExtra(CalendarContract.Events.TITLE, title)
+                putExtra(CalendarContract.Events.DESCRIPTION, description)
+                putExtra(CalendarContract.Events.EVENT_LOCATION, location)
+                putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTimeMillis)
+                putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endTimeMillis)
+                // Allow user to select calendar and edit the event
+                putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY)
+            }
+
+            // Launch the calendar app with the event details
+            act.startActivity(intent)
+            Log.d(pluginName, "Calendar event intent launched successfully")
+            return true
+        } catch (e: ActivityNotFoundException) {
+            Log.e(pluginName, "No calendar app found: ${e.message}")
+            showMessage("No calendar app found")
+            return false
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error adding calendar event: ${e.message}")
+            return false
+        }
+    }
+
+    companion object {
+        private const val CALENDAR_PERMISSION_REQUEST_CODE = 1001
     }
 
 }
