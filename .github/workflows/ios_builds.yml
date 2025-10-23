@@ -64,8 +64,14 @@ jobs:
 
       - name: Deploy README to mobile deploy pipeline (testing)
         run: |
-          # Get the current branch name
-          BRANCH_NAME="${{ github.ref_name }}"
+          # Determine branch name based on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH_NAME="PR-${{ github.event.pull_request.number }}"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+
+          echo "Deploying to branch: $BRANCH_NAME"
 
           # Clone the target repository using SSH
           GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git clone git@github.com:decentraland/godot-mobile-deploy-pipeline.git deploy-repo
@@ -88,7 +94,8 @@ jobs:
 
           Source: ${{ github.repository }}
           Commit: ${{ github.sha }}
-          Branch: ${{ github.ref_name }}
+          Deploy Branch: $BRANCH_NAME
+          Source Branch: ${{ github.ref_name }}
           Triggered by: ${{ github.actor }}
           Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" || echo "No changes to commit"
 
