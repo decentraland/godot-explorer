@@ -94,10 +94,9 @@ anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -533.0
+offset_left = -506.0
 grow_horizontal = 0
 grow_vertical = 2
-size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_4okyg")
 script = ExtResource("1_4okyg")
 

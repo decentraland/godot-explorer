@@ -12,6 +12,8 @@ signal close
 func _ready():
 	event_details_portrait.jump_in.connect(self._emit_jump_in)
 	event_details_portrait.close.connect(self._close)
+	event_details_landscape.jump_in.connect(self._emit_jump_in)
+	event_details_landscape.close.connect(self._close)
 	texture_progress_bar.hide()
 
 
@@ -22,38 +24,6 @@ func _emit_jump_in(pos: Vector2i, realm: String):
 func _close():
 	self.hide()
 	UiSounds.play_sound("mainmenu_widget_close")
-
-
-func async_load_place_position(pos: Vector2i):
-	event_details_portrait.hide()
-	event_details_landscape.hide()
-	show()
-	texture_progress_bar.show()
-	var url: String = "https://places.decentraland.org/api/places?limit=1"
-	url += "&positions=%d,%d" % [pos.x, pos.y]
-
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_GET, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	if result is PromiseError:
-		printerr("Error request places jump in", result.get_error())
-		return
-
-	var json: Dictionary = result.get_string_response_as_json()
-
-	if json.data.is_empty():
-		var unknown_place: Dictionary = {
-			"base_position": "%d,%d" % [pos.x, pos.y], "title": "Unknown place"
-		}
-		set_data(unknown_place)
-	else:
-		set_data(json.data[0])
-	texture_progress_bar.hide()
-	show_animation()
-
 
 func set_data(item_data):
 	event_details_landscape.set_data(item_data)
