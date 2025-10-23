@@ -17,7 +17,7 @@ const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 const ENABLE_FAKE_NOTIFICATIONS = false
 
 ## TESTING: Set to false to disable type filtering and show all notifications
-const ENABLE_NOTIFICATION_FILTER = true
+const ENABLE_NOTIFICATION_FILTER = false
 
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
