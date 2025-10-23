@@ -48,12 +48,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Clone target repository and push README
-        env:
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      - name: Setup SSH for deployment
         run: |
-          # Clone the target repository
-          git clone https://x-access-token:${DEPLOY_TOKEN}@github.com/decentraland/godot-mobile-deploy-pipeline.git deploy-repo
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone target repository and push README
+        run: |
+          # Clone the target repository using SSH
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git clone git@github.com:decentraland/godot-mobile-deploy-pipeline.git deploy-repo
 
           cd deploy-repo
 
@@ -76,11 +81,16 @@ Source branch: ${{ github.ref_name }}
 Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 
           # Force push to main, replacing all history
-          git push -f origin temp-branch:main
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push -f origin temp-branch:main
 
           # Cleanup
           cd ..
           rm -rf deploy-repo
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
 
       - name: Summary
         run: |
