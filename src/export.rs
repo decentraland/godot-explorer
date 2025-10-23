@@ -6,7 +6,6 @@ use crate::{
         EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
         GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
-    copy_files::copy_ffmpeg_libraries,
     helpers::get_exe_extension,
     install_dependency::{
         download_and_extract_zip, godot_export_templates_path, set_executable_permission,
@@ -247,8 +246,6 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     if target == "linux" {
         set_executable_permission(Path::new(output_rel_path.as_str()))?;
     }
-
-    copy_ffmpeg_libraries(&target, EXPORTS_FOLDER.to_string(), false)?;
 
     print_message(
         MessageType::Success,

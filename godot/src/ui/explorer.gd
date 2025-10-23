@@ -88,6 +88,15 @@ func get_params_from_cmd():
 		location_vector = null
 	var preview_mode = Global.cli.preview_mode
 	var spawn_avatars = Global.cli.spawn_avatars
+
+	if not Global.deep_link_obj.realm.is_empty() and realm_string == null:
+		realm_string = Global.deep_link_obj.realm
+
+	if Global.deep_link_obj.is_location_defined() and location_vector == null:
+		location_vector = Global.deep_link_obj.location
+		if realm_string == null:
+			realm_string = Realm.MAIN_REALM
+
 	return [realm_string, location_vector, preview_mode, spawn_avatars]
 
 
@@ -411,6 +420,8 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
+		elif command_str == "/crash":
+			OS.crash("User crashed on purpose")
 		else:
 			Global.on_chat_message.emit(
 				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
@@ -705,3 +716,8 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		Global.check_deep_link_teleport_to()

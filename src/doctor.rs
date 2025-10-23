@@ -1,3 +1,4 @@
+use crate::consts::GODOT_SENTRY_ADDON_FOLDER;
 use crate::dependencies::BuildStatus;
 use crate::platform::{
     check_android_sdk, check_development_dependencies, check_ios_development, check_required_tools,
@@ -5,7 +6,7 @@ use crate::platform::{
 };
 use crate::ui::{print_divider, print_message, print_section, MessageType};
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Run system health check
 pub fn run_doctor() -> anyhow::Result<()> {
@@ -92,10 +93,10 @@ pub fn run_doctor() -> anyhow::Result<()> {
     print_section("Godot Engine");
     check_godot_installation();
 
-    // Check FFmpeg installation
+    // Check Sentry installation
     print_divider();
-    print_section("FFmpeg");
-    check_ffmpeg_installation();
+    print_section("Sentry Addon");
+    all_tools_ok &= check_sentry_addon_installation();
 
     // Check Android development
     print_divider();
@@ -191,74 +192,27 @@ fn check_rust_targets() {
     }
 }
 
-fn check_ffmpeg_installation() {
-    if let Some(ffmpeg_path) = crate::helpers::get_tool_path("ffmpeg") {
-        // Check if it's the local FFmpeg by seeing if the path contains .bin
-        let path_str = ffmpeg_path.to_string_lossy();
-        let is_local = path_str.contains(".bin");
-
-        // If it's local FFmpeg, we need to set LD_LIBRARY_PATH
-        let mut cmd = std::process::Command::new(&ffmpeg_path);
-        cmd.arg("-version");
-
-        if is_local {
-            // Set LD_LIBRARY_PATH to include the lib directory
-            let lib_path = Path::new(".bin/ffmpeg/lib");
-            if lib_path.exists() {
-                let lib_path_str = lib_path.to_string_lossy();
-                if let Ok(existing_ld_path) = env::var("LD_LIBRARY_PATH") {
-                    cmd.env(
-                        "LD_LIBRARY_PATH",
-                        format!("{}:{}", lib_path_str, existing_ld_path),
-                    );
-                } else {
-                    cmd.env("LD_LIBRARY_PATH", lib_path_str.to_string());
-                }
-            }
-        }
-
-        let output = cmd.output();
-
-        match output {
-            Ok(output) => {
-                let version_str = String::from_utf8_lossy(&output.stdout);
-                let first_line = version_str.lines().next().unwrap_or("");
-
-                if version_str.contains("ffmpeg version n6.") {
-                    print_message(
-                        MessageType::Success,
-                        &format!(
-                            "FFmpeg 6.x found ({}) - {}",
-                            if is_local { "local" } else { "system" },
-                            first_line
-                        ),
-                    );
-                } else {
-                    print_message(
-                        MessageType::Warning,
-                        &format!(
-                            "FFmpeg found ({}) but not version 6.x - {}",
-                            if is_local { "local" } else { "system" },
-                            first_line
-                        ),
-                    );
-                    println!("  FFmpeg 6.x is required. Run: cargo run -- install");
-                }
-            }
-            Err(e) => {
-                print_message(
-                    MessageType::Error,
-                    &format!("Failed to check FFmpeg version: {}", e),
-                );
-                if is_local {
-                    println!("  This might be due to missing shared libraries.");
-                    println!("  Try running: cargo run -- install");
-                }
-            }
+fn check_sentry_addon_installation() -> bool {
+    let sentry_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER);
+    if sentry_folder.exists() {
+        let android_lib = sentry_folder.join("bin/android/sentry_android_godot_plugin.debug.aar");
+        if android_lib.exists() {
+            print_message(MessageType::Success, "Sentry addon found");
+            true
+        } else {
+            print_message(
+                MessageType::Error,
+                "Android lib for sentry addon NOT found.",
+            );
+            println!(
+                "  Remove the sentry folder (godot/addon/sentry) and run: cargo run -- install"
+            );
+            false
         }
     } else {
-        print_message(MessageType::Error, "FFmpeg not found");
+        print_message(MessageType::Error, "Sentry addon NOT found");
         println!("  Run: cargo run -- install");
+        false
     }
 }
 

@@ -41,9 +41,6 @@ var music_player: MusicPlayer
 var preload_assets: PreloadAssets
 
 var standalone = false
-var dcl_android_plugin
-var dcl_godot_android_plugin
-var dcl_godot_ios_plugin
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
@@ -55,6 +52,8 @@ var last_emitted_height: int = 0
 var current_height: int = -1
 var previous_height: int = -1
 var previous_height_2: int = -1
+
+var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 
 
 func set_url_popup_instance(popup_instance) -> void:
@@ -141,15 +140,6 @@ func _ready():
 
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
-
-	if Engine.has_singleton("DclAndroidPlugin"):
-		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
-
-	if Engine.has_singleton("dcl-godot-android"):
-		dcl_godot_android_plugin = Engine.get_singleton("dcl-godot-android")
-
-	if Engine.has_singleton("DclGodotiOS"):
-		dcl_godot_ios_plugin = Engine.get_singleton("DclGodotiOS")
 
 	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(
@@ -270,30 +260,30 @@ func release_mouse():
 
 
 func open_webview_url(url):
-	if dcl_godot_ios_plugin != null:
-		dcl_godot_ios_plugin.open_webview_url(url)
-	elif dcl_godot_android_plugin != null:
-		dcl_godot_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
-	else:
-		OS.shell_open(url)
+	if DclIosPlugin.open_webview_url(url):
+		return
+	if DclGodotAndroidPlugin.open_custom_tab_url(url):
+		return
+
+	OS.shell_open(url)
 
 
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
-		if dcl_godot_ios_plugin != null:
-			dcl_godot_ios_plugin.open_auth_url(url)
-		elif dcl_godot_android_plugin != null:
+		if DclIosPlugin.open_auth_url(url):
+			return
+		if DclGodotAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
-				dcl_godot_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
+				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 			else:
-				dcl_godot_android_plugin.openWebView(url, "")  # FOR WALLET CONNECT
+				DclGodotAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
 		else:
 			#printerr("No webkit plugin found")
 			OS.shell_open(url)
 	else:
-		if Global.dcl_android_plugin != null:
-			Global.dcl_android_plugin.showDecentralandMobileToast()
-			Global.dcl_android_plugin.openUrl(url)
+		if DclAndroidPlugin.is_available():
+			DclAndroidPlugin.show_decentraland_mobile_toast()
+			DclAndroidPlugin.open_url(url)
 		else:
 			OS.shell_open(url)
 
@@ -486,3 +476,27 @@ func _process(_delta: float) -> void:
 		):
 			last_emitted_height = current_height
 			change_virtual_keyboard.emit(last_emitted_height)
+
+
+func check_deep_link_teleport_to():
+	if Global.is_mobile():
+		var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+		Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+
+		if Global.deep_link_obj.is_location_defined():
+			var realm = Global.deep_link_obj.realm
+			if realm.is_empty():
+				realm = Realm.MAIN_REALM
+
+			Global.teleport_to(Global.deep_link_obj.location, realm)
+		elif not Global.deep_link_obj.realm.is_empty():
+			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
+		if Global.is_mobile():
+			var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+
+			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)

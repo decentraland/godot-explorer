@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.37.0"
+version = "0.40.0"
 edition = "2021"
 publish = false
 
@@ -32,7 +32,6 @@ ethers-providers = { version = "2.0", features = ["ws","rustls"] }
 async-trait = "0.1.68"
 
 cpal = { version = "0.15.2", optional = true }
-ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch="audioline-and-mobile-fix-6.1", optional = true }
 
 thiserror = "1.0"
 anyhow = "1.0.70"
@@ -52,6 +51,7 @@ num-derive = "0.4"
 num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
+url = "2.5"
 
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"
@@ -73,13 +73,12 @@ multipart = { version = "0.18.0", default-features = false, features = ["client"
 modular-bitfield = "0.11"
 
 [target.'cfg(target_os = "android")'.dependencies]
-ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix-6.1", features = ["fix_usize_size_t"], optional = true }
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
 [features]
 default = ["use_livekit", "use_deno"]
-use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
+use_ffmpeg = []
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
