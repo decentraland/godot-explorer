@@ -625,24 +625,21 @@ func schedule_event() -> void:
 	details += "jump in: " + jump_in_url
 
 	# Create dates for Google Calendar
-	var dates_param = ""
+	#var dates_param = ""
 	if not next_start_at.is_empty() and not next_finish_at.is_empty():
 		var start_timestamp = _parse_iso_timestamp(next_start_at)
 		var finish_timestamp = _parse_iso_timestamp(next_finish_at)
-
-		if start_timestamp > 0 and finish_timestamp > 0:
-			var start_iso = _format_timestamp_for_calendar(start_timestamp)
-			var finish_iso = _format_timestamp_for_calendar(finish_timestamp)
-			dates_param = "&dates=%s/%s" % [start_iso, finish_iso]
-
-	# Create Google Calendar deep link
-	var calendar_url = (
-		"https://calendar.google.com/calendar/u/0/r/eventedit?text=%s&details=%s%s"
-		% [event_name.uri_encode(), details.uri_encode(), dates_param]
-	)
-
-	# Open link in browser
-	OS.shell_open(calendar_url)
+		var start_time_millis = start_timestamp * 1000
+		var end_time_millis = finish_timestamp * 1000
+		var event_location: String = "Decentraland at " + str(location.x) + "," + str(location.y)
+		if DclGodotAndroidPlugin.is_available():
+			DclGodotAndroidPlugin.add_calendar_event(
+				event_name, details, start_time_millis, end_time_millis, event_location
+			)
+		if DclIosPlugin.is_available():
+			DclIosPlugin.add_calendar_event(
+				event_name, details, start_time_millis, end_time_millis, event_location
+			)
 
 
 func _on_event_pressed() -> void:
