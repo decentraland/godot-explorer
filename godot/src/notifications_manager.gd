@@ -17,28 +17,15 @@ const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 const ENABLE_FAKE_NOTIFICATIONS = false
 
 ## TESTING: Set to false to disable type filtering and show all notifications
-const ENABLE_NOTIFICATION_FILTER = false
+const ENABLE_NOTIFICATION_FILTER = true
 
 ## Supported notification types (whitelist)
-## Only these types will be shown to the user
+## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
-	"item_sold",  # Marketplace: Item sold
-	"bid_accepted",  # Marketplace: Bid accepted
-	"bid_received",  # Marketplace: Bid received
-	"royalties_earned",  # Marketplace: Royalties earned
-	"governance_announcement",  # DAO: Governance announcements
-	"governance_proposal_enacted",  # DAO: Proposal enacted
-	"governance_voting_ended",  # DAO: Voting ended
-	"governance_coauthor_requested",  # DAO: Co-author requested
-	"land",  # Land-related notifications
-	"worlds_access_restored",  # Worlds: Access restored
-	"worlds_access_restricted",  # Worlds: Access restricted
-	"worlds_missing_resources",  # Worlds: Missing resources
-	"worlds_permission_granted",  # Worlds: Permission granted
-	"worlds_permission_revoked",  # Worlds: Permission revoked
-	# Excluded: "reward" - rewards system not implemented
-	# Excluded: "events_*" - events system not implemented
-	# Excluded: "friends_*" - friends system not implemented
+	"event_created",  # Events: New event created
+	"events_starts_soon",  # Events: Event starts soon
+	"events_started",  # Events: Event has started
+	"reward_assigned",  # Rewards: Reward assigned to user
 ]
 
 var _notifications: Array = []
