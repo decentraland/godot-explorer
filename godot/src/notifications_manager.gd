@@ -151,8 +151,6 @@ func fetch_notifications(
 		promise.reject("User not authenticated")
 		return promise
 
-	var address = Global.player_identity.get_address_str()
-
 	# Build query parameters
 	var query_params: Array = []
 	if from_timestamp >= 0:
