@@ -161,24 +161,16 @@ func _apply_friend_notification_styling(notif_type: String, metadata: Dictionary
 	if notif_type != "social_service_friendship_request" and notif_type != "social_service_friendship_accepted":
 		return
 
-	print("[NotificationContent] Applying friend styling for type: ", notif_type)
-
 	if "sender" not in metadata or not metadata["sender"] is Dictionary:
-		print("[NotificationContent] No sender in metadata")
 		return
 
 	var sender_name = metadata["sender"].get("name", "")
 	if sender_name.is_empty():
-		print("[NotificationContent] Sender name is empty")
 		return
-
-	print("[NotificationContent] Sender name: ", sender_name)
 
 	# Get the avatar color for this username
 	var color = _get_avatar_color(sender_name)
-	print("[NotificationContent] Avatar color: ", color)
 	if color == Color.WHITE:  # Default fallback
-		print("[NotificationContent] Color is WHITE, skipping")
 		return
 
 	# Create a new StyleBoxFlat for the avatar with circular border
@@ -200,10 +192,7 @@ func _apply_friend_notification_styling(notif_type: String, metadata: Dictionary
 
 	# Apply the style to the image container
 	if image_container is Panel:
-		print("[NotificationContent] Applying style to image container")
 		image_container.add_theme_stylebox_override("panel", style_box)
-	else:
-		print("[NotificationContent] image_container is not a Panel!")
 
 
 func _get_avatar_color(username: String) -> Color:
