@@ -85,8 +85,11 @@ jobs:
           # Setup git lfs
           git lfs install
 
-          # Checkout or create the branch
-          git checkout "$BRANCH_NAME" 2>/dev/null || git checkout -b "$BRANCH_NAME"
+          # Create a fresh orphan branch (no history, fresh start)
+          git checkout --orphan temp-branch
+
+          # Remove all existing files from git
+          git rm -rf . 2>/dev/null || true
 
           # Setup git lfs tracking BEFORE adding files
           git lfs track "*.dylib"
@@ -98,9 +101,6 @@ jobs:
           git lfs track "*.pck"
           git lfs track "*.so"
           git add .gitattributes
-
-          # Remove old ios directory if exists
-          rm -rf ios
 
           # Move exports folder directly to ios (no copy)
           if [ -d "../exports" ]; then
@@ -121,8 +121,8 @@ jobs:
           Triggered by: ${{ github.actor }}
           Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 
-          # Force push to maintain one commit per branch
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push --force origin "$BRANCH_NAME"
+          # Force push orphan branch to target branch (replaces all history with single commit)
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push --force origin temp-branch:$BRANCH_NAME
 
           # Cleanup
           cd ..
