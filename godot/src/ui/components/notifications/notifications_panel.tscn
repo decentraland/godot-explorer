@@ -98,6 +98,7 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="FadeOverlay" type="TextureRect" parent="MarginContainer/VBoxContainer/FadeOverlayContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 offset_top = -64.0
 offset_right = 346.0

@@ -47,8 +47,11 @@ func _ready() -> void:
 
 ## Start polling for new notifications
 func start_polling() -> void:
+	# Don't poll for guests
+	if not _is_user_authenticated():
+		return
+
 	if not _is_polling:
-		print("[NotificationsManager] Starting notification polling (interval: ", POLL_INTERVAL_SECONDS, "s)")
 		_is_polling = true
 		_poll_timer.start()
 		# Fetch immediately
@@ -143,20 +146,12 @@ func fetch_notifications(
 ) -> Promise:
 	var promise := Promise.new()
 
-	print("[NotificationsManager] fetch_notifications called (from: ", from_timestamp, ", limit: ", limit, ", only_unread: ", only_unread, ")")
-
-	# Check if user is authenticated
-	if not Global.player_identity:
-		print("[NotificationsManager] ERROR: Player identity not available")
-		promise.reject("Player identity not available")
+	# Don't fetch for guests
+	if not _is_user_authenticated():
+		promise.reject("User not authenticated")
 		return promise
 
 	var address = Global.player_identity.get_address_str()
-	print("[NotificationsManager] User address: ", address)
-	if address.is_empty():
-		print("[NotificationsManager] ERROR: User not authenticated (empty address)")
-		promise.reject("User not authenticated")
-		return promise
 
 	# Build query parameters
 	var query_params: Array = []
@@ -361,3 +356,11 @@ func has_queued_notifications() -> bool:
 ## Get the number of notifications in the queue
 func get_queue_size() -> int:
 	return _notification_queue.size()
+
+
+## Check if user is authenticated (not a guest)
+func _is_user_authenticated() -> bool:
+	if not Global.player_identity:
+		return false
+	var address = Global.player_identity.get_address_str()
+	return not address.is_empty()

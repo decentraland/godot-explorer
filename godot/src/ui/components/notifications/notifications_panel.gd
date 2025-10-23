@@ -12,6 +12,7 @@ var _notification_items: Array[Control] = []
 @onready var notifications_list: VBoxContainer = %NotificationsList
 @onready var label_empty_state: Label = %LabelEmptyState
 @onready var button_mark_all_read: Button = %ButtonMarkAllRead
+@onready var fade_overlay: TextureRect = %FadeOverlay
 
 
 func _ready() -> void:
@@ -38,6 +39,11 @@ func _on_gui_input(event: InputEvent) -> void:
 
 
 func _refresh_notifications() -> void:
+	# Check if user is authenticated
+	if not _is_user_authenticated():
+		_show_guest_message()
+		return
+
 	var notifications = NotificationsManager.get_notifications()
 	_display_notifications(notifications)
 
@@ -53,6 +59,7 @@ func _display_notifications(notifications: Array) -> void:
 		label_empty_state.visible = true
 		scroll_container.visible = false
 		button_mark_all_read.visible = false
+		fade_overlay.visible = false
 		return
 
 	label_empty_state.visible = false
@@ -81,6 +88,10 @@ func _display_notifications(notifications: Array) -> void:
 		item.notification_clicked.connect(_on_notification_clicked)
 
 		_notification_items.append(item)
+
+	# Update gradient visibility after items are added (next frame)
+	await get_tree().process_frame
+	_update_gradient_visibility()
 
 
 func _on_new_notifications(notifications: Array) -> void:
@@ -134,3 +145,31 @@ func show_panel() -> void:
 
 func hide_panel() -> void:
 	hide()
+
+
+func _is_user_authenticated() -> bool:
+	var player_identity = Global.get_explorer_player_identity()
+	if player_identity == null:
+		return false
+	var address = player_identity.get_address_str()
+	return not address.is_empty()
+
+
+func _show_guest_message() -> void:
+	# Hide scroll container and button
+	scroll_container.visible = false
+	button_mark_all_read.visible = false
+	fade_overlay.visible = false
+
+	# Show custom message for guests
+	label_empty_state.visible = true
+	label_empty_state.text = "Sign in to get notifications!"
+
+
+func _update_gradient_visibility() -> void:
+	# Check if scrollbar is visible (content exceeds container height)
+	var v_scroll = scroll_container.get_v_scroll_bar()
+	if v_scroll:
+		fade_overlay.visible = v_scroll.visible
+	else:
+		fade_overlay.visible = false
