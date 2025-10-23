@@ -148,7 +148,7 @@ func hide_panel() -> void:
 
 
 func _is_user_authenticated() -> bool:
-	var player_identity = Global.get_explorer_player_identity()
+	var player_identity = Global.get_player_identity()
 	if player_identity == null:
 		return false
 	var address = player_identity.get_address_str()
