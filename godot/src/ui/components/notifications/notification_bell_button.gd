@@ -23,6 +23,8 @@ func _ready() -> void:
 
 
 func _on_pressed() -> void:
+	# Track metric: notification menu opened
+	Global.metrics.track_click_button("notification_bell", "HUD", "")
 	bell_clicked.emit()
 
 

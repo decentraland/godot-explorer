@@ -57,11 +57,22 @@ func async_hide_toast() -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_track_notification_opened()
 			toast_clicked.emit(notification_data)
 			Global.notification_clicked.emit(notification_data)
 			async_hide_toast()
 	elif event is InputEventScreenTouch:
 		if event.pressed:
+			_track_notification_opened()
 			toast_clicked.emit(notification_data)
 			Global.notification_clicked.emit(notification_data)
 			async_hide_toast()
+
+
+func _track_notification_opened() -> void:
+	# Track metric: notification opened from HUD toast
+	var extra_properties = JSON.stringify({
+		"notification_id": notification_data.get("id", ""),
+		"ui_source": "HUD"
+	})
+	Global.metrics.track_click_button("notification_opened", "HUD", extra_properties)

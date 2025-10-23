@@ -68,6 +68,7 @@ func _format_timestamp(timestamp_ms: int) -> String:
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_track_notification_opened()
 			notification_clicked.emit(notification_data)
 			Global.notification_clicked.emit(notification_data)
 			# Mark as read when clicked
@@ -76,8 +77,18 @@ func _on_gui_input(event: InputEvent) -> void:
 	elif event is InputEventScreenTouch:
 		# Only handle on release (not pressed) to allow drag events for scrolling
 		if not event.pressed:
+			_track_notification_opened()
 			notification_clicked.emit(notification_data)
 			Global.notification_clicked.emit(notification_data)
 			# Mark as read when clicked
 			if "id" in notification_data:
 				mark_as_read_clicked.emit(notification_data["id"])
+
+
+func _track_notification_opened() -> void:
+	# Track metric: notification opened from notifications panel
+	var extra_properties = JSON.stringify({
+		"notification_id": notification_data.get("id", ""),
+		"ui_source": "notif_menu"
+	})
+	Global.metrics.track_click_button("notification_opened", "NOTIFICATIONS_PANEL", extra_properties)
