@@ -88,6 +88,17 @@ jobs:
           # Checkout or create the branch
           git checkout "$BRANCH_NAME" 2>/dev/null || git checkout -b "$BRANCH_NAME"
 
+          # Setup git lfs tracking BEFORE adding files
+          git lfs track "*.dylib"
+          git lfs track "*.ipa"
+          git lfs track "*.app"
+          git lfs track "*.framework"
+          git lfs track "*.xcframework"
+          git lfs track "*.a"
+          git lfs track "*.pck"
+          git lfs track "*.so"
+          git add .gitattributes
+
           # Remove old ios directory if exists
           rm -rf ios
 
@@ -99,17 +110,8 @@ jobs:
             exit 1
           fi
 
-          # Track large files with git lfs
-          git lfs track "*.dylib"
-          git lfs track "*.ipa"
-          git lfs track "*.app"
-          git lfs track "*.framework"
-          git lfs track "*.xcframework"
-          git add .gitattributes
-
-          # Add and commit (force single commit per branch)
+          # Add files (now tracked by LFS)
           git add ios/
-          git add .gitattributes
           git commit -m "Deploy iOS artifacts
 
           Source: ${{ github.repository }}
