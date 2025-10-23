@@ -51,6 +51,7 @@ num-derive = "0.4"
 num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
+url = "2.5"
 
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"

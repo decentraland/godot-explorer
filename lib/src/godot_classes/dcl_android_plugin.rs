@@ -61,6 +61,19 @@ impl DclGodotAndroidPlugin {
         Some(singleton.cast::<Object>())
     }
 
+    #[func]
+    pub fn get_deeplink_args() -> Dictionary {
+        let mut no_dict = Dictionary::new();
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            no_dict.set("error", "No singleton returned");
+            return no_dict;
+        };
+
+        no_dict.set("error", "No dict returned");
+        let data = singleton.call(StringName::from("getLaunchIntentData"), &[]);
+        data.try_to::<Dictionary>().ok().unwrap_or(no_dict)
+    }
+
     /// Open a URL in a custom tab (for social)
     #[func]
     pub fn open_custom_tab_url(url: GString) -> bool {

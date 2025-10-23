@@ -36,7 +36,7 @@ pub const GODOT_PLATFORM_FILES: &[(&str, &[&str])] = &[
 ];
 
 // Android SDK/NDK constants - these are repeated 6+ times in the code
-pub const ANDROID_NDK_VERSION: &str = "27.1.12297006";
+pub const ANDROID_NDK_VERSION: &str = "28.1.13356709";
 // TODO: Use these constants to replace hardcoded values throughout the codebase
 #[allow(dead_code)]
 pub const ANDROID_SDK_BUILD_TOOLS_VERSION: &str = "35.0.0";

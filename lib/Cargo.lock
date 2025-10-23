@@ -839,6 +839,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-test",
+ "url",
  "urn",
  "uuid 1.11.0",
  "v8",

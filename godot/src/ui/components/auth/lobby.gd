@@ -137,6 +137,10 @@ func async_close_sign_in(generate_snapshots: bool = true):
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
+	if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty():
+		go_to_explorer()
+		return
+
 	if Global.is_xr():
 		change_scene.emit("res://src/ui/components/menu/menu.tscn")
 	else:
@@ -182,7 +186,6 @@ func _ready():
 	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
 		show_loading_screen()
-
 	elif _skip_lobby:
 		show_loading_screen()
 		go_to_explorer.call_deferred()
@@ -228,6 +231,10 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
 		await async_close_sign_in()
+	else:
+		if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty():
+			go_to_explorer()
+			return
 
 
 func _on_need_open_url(url: String, _description: String, use_webview: bool) -> void:
