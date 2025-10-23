@@ -1,4 +1,4 @@
-name: 📝 Push README to Deploy Pipeline
+name: 📝 Push README to Deploy Pipeline!
 
 on:
   push:
