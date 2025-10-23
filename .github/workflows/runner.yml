@@ -1,0 +1,103 @@
+name: 🔗 GHA
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-runner
+  cancel-in-progress: true
+
+jobs:
+  push-readme:
+    name: 📝 Push README to Deploy Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate README.md
+        run: |
+          cat > README.md << 'EOF'
+          # Godot Mobile Deploy Pipeline
+
+          This repository contains the mobile deployment pipeline for Decentraland Godot Explorer.
+
+          ## Latest Build Information
+
+          - **Source Repository**: https://github.com/${{ github.repository }}
+          - **Commit**: ${{ github.sha }}
+          - **Branch**: ${{ github.ref_name }}
+          - **Triggered by**: ${{ github.actor }}
+          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## Source Commit Message
+
+          ```
+          ${{ github.event.head_commit.message }}
+          ```
+
+          ---
+
+          *This README is automatically generated and updated by CI/CD pipeline.*
+          *Repository: https://github.com/${{ github.repository }}*
+          EOF
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup SSH for deployment
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone target repository and push README
+        run: |
+          # Clone the target repository using SSH
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git clone git@github.com:decentraland/godot-mobile-deploy-pipeline.git deploy-repo
+
+          cd deploy-repo
+
+          # Create a fresh orphan branch to start with clean history
+          git checkout --orphan temp-branch
+
+          # Remove all existing files
+          git rm -rf . 2>/dev/null || true
+
+          # Copy the new README
+          cp ../README.md .
+
+          # Add and commit
+          git add README.md
+          git commit -m "Update deployment pipeline status
+
+          Triggered by: ${{ github.actor }}
+          Source commit: ${{ github.sha }}
+          Source branch: ${{ github.ref_name }}
+          Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+
+          # Force push to main, replacing all history
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push -f origin temp-branch:main
+
+          # Cleanup
+          cd ..
+          rm -rf deploy-repo
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+
+      - name: Summary
+        run: |
+          echo "✅ Successfully pushed README.md to godot-mobile-deploy-pipeline"
+          echo "📦 Repository: https://github.com/decentraland/godot-mobile-deploy-pipeline"
+          echo "🔗 Commit: ${{ github.sha }}"
