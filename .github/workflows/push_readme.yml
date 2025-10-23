@@ -76,10 +76,10 @@ jobs:
           git add README.md
           git commit -m "Update deployment pipeline status
 
-Triggered by: ${{ github.actor }}
-Source commit: ${{ github.sha }}
-Source branch: ${{ github.ref_name }}
-Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          Triggered by: ${{ github.actor }}
+          Source commit: ${{ github.sha }}
+          Source branch: ${{ github.ref_name }}
+          Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 
           # Force push to main, replacing all history
           GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push -f origin temp-branch:main
