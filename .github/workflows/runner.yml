@@ -11,31 +11,35 @@ concurrency:
 
 jobs:
   # First stage: Only static checks, fast and prevent expensive builds from running.
-  # static-checks:
-  #   name: 📊 Static checks
-  #   uses: ./.github/workflows/static_checks.yml
+  static-checks:
+    name: 📊 Static checks
+    uses: ./.github/workflows/static_checks.yml
 
-  # # Second stage: Run all the builds and some of the tests.
-  # test-coverage:
-  #   name: 🔎 Test & Coverage
-  #   needs: static-checks
-  #   uses: ./.github/workflows/coverage.yml
+  # Second stage: Run all the builds and some of the tests.
+  test-coverage:
+    name: 🔎 Test & Coverage
+    needs: static-checks
+    uses: ./.github/workflows/coverage.yml
 
-  # android-build:
-  #   name: 🤖 Android (VR and Mobile)
-  #   needs: static-checks
-  #   uses: ./.github/workflows/android_builds.yml
+  android-build:
+    name: 🤖 Android (VR and Mobile)
+    needs: static-checks
+    uses: ./.github/workflows/android_builds.yml
+    secrets:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
   ios-build:
     name: 🍏 iOS
+    needs: static-checks
     uses: ./.github/workflows/ios_builds.yml
     secrets:
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
 
-  # linux-build:
-  #   name: 🐧 Linux
-  #   needs: static-checks
-  #   uses: ./.github/workflows/linux_builds.yml
+  linux-build:
+    name: 🐧 Linux
+    needs: static-checks
+    uses: ./.github/workflows/linux_builds.yml
   # Disable Windows and MacOS builds for now
   # macos-build:
   #   name: 🍎 macOS
@@ -48,10 +52,10 @@ jobs:
   #   uses: ./.github/workflows/windows_builds.yml
 
   # # Third stage: Extras
-  # docker-build-test:
-  #   name: 🐳 Docker builds and test
-  #   needs: linux-build
-  #   uses: ./.github/workflows/docker_build_test.yml
-  #   secrets:
-  #     QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-  #     QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+  docker-build-test:
+    name: 🐳 Docker builds and test
+    needs: linux-build
+    uses: ./.github/workflows/docker_build_test.yml
+    secrets:
+      QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
