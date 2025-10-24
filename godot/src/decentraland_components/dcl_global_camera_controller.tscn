@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dywsuli6ekwhc"]
+
+[ext_resource type="Script" uid="uid://bg6x8njtompyb" path="res://src/decentraland_components/dcl_global_camera_controller.gd" id="1_mrerd"]
+
+[node name="DclGlobalCameraController" type="Node"]
+script = ExtResource("1_mrerd")

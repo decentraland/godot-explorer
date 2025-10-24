@@ -52,6 +52,7 @@ var previous_height: int = -1
 var previous_height_2: int = -1
 
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
+var player_camera_node: DclCamera3D
 
 
 func set_url_popup_instance(popup_instance) -> void:

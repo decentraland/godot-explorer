@@ -168,7 +168,7 @@ func _ready():
 	)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
-	Global.scene_runner.camera_node = player.camera
+	Global.player_camera_node = player.camera
 	Global.scene_runner.player_avatar_node = player.avatar
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.console = self._on_scene_console_message
@@ -227,6 +227,11 @@ func _ready():
 			load("res://src/tool/scene_renderer/scene_orchestor.tscn").instantiate()
 		)
 		add_child(scene_renderer_orchestor)
+
+	var dcl_global_camera_controller = (
+		load("res://src/decentraland_components/dcl_global_camera_controller.tscn").instantiate()
+	)
+	add_child(dcl_global_camera_controller)
 
 
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
@@ -518,6 +523,14 @@ func _on_button_open_chat_pressed():
 	release_mouse()
 
 
+func set_cursor_position(position: Vector2):
+	if Global.scene_runner.raycast_use_cursor_position:
+		var crosshair_position = position - (label_crosshair.size / 2) - Vector2(0, 1)
+		label_crosshair.set_global_position(crosshair_position)
+		control_pointer_tooltip.set_global_cursor_position(position)
+		Global.scene_runner.set_cursor_position(position)
+
+
 func reset_cursor_position():
 	# Position crosshair at center of screen
 	var viewport_size = get_tree().root.get_viewport().get_visible_rect()
@@ -527,9 +540,10 @@ func reset_cursor_position():
 	control_pointer_tooltip.set_global_cursor_position(center_position)
 
 
-func _on_ui_root_gui_input(_event: InputEvent):
-	pass
-	# Touch events no longer modify cursor position - raycast always uses screen center
+func _on_ui_root_gui_input(event: InputEvent):
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			set_cursor_position(event.position)
 
 
 func _on_panel_profile_open_profile():
