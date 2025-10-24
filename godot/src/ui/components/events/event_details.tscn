@@ -1,0 +1,49 @@
+[gd_scene load_steps=6 format=3 uid="uid://bic3gcms4bi8g"]
+
+[ext_resource type="Script" uid="uid://gdwd1y5re5v4" path="res://src/ui/components/events/event_details.gd" id="1_vapvi"]
+[ext_resource type="PackedScene" uid="uid://4luuuxo6tbcp" path="res://src/ui/components/events/event_details_portrait.tscn" id="2_vapvi"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="2_yptc8"]
+[ext_resource type="PackedScene" uid="uid://jel6s7s7w8h3" path="res://src/ui/components/events/event_details_landscape.tscn" id="3_vapvi"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsiqj"]
+bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+border_color = Color(0.988235, 0.988235, 0.988235, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+
+[node name="EventDetails" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.501961)
+script = ExtResource("1_vapvi")
+
+[node name="EventDetailsPortrait" parent="." instance=ExtResource("2_vapvi")]
+unique_name_in_owner = true
+layout_mode = 1
+offset_top = -626.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_dsiqj")
+
+[node name="EventDetailsLandscape" parent="." instance=ExtResource("3_vapvi")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[node name="TextureProgressBar" parent="." instance=ExtResource("2_yptc8")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
