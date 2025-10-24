@@ -59,7 +59,3 @@ func _input(event):
 			_player.avatar.rotate_y(deg_to_rad(_touch_position.x) * HORIZONTAL_SENS)
 			_player.mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * VERTICAL_SENS)
 			_player.clamp_camera_rotation()
-
-			var explorer = Global.get_explorer()
-			if is_instance_valid(explorer):
-				explorer.reset_cursor_position()

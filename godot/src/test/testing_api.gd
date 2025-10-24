@@ -38,7 +38,6 @@ class SceneTestItem:
 var scene_tests: Array[SceneTestItem] = []
 var realm_change_emited: bool = false
 
-var test_camera_node: DclCamera3D
 var test_player_body_node: Node3D
 
 var snapshot_folder: String = ""
@@ -132,15 +131,11 @@ func on_realm_changed():
 	realm_change_emited = true
 	self.process_mode = Node.PROCESS_MODE_ALWAYS
 
-	test_camera_node = Global.scene_runner.camera_node
 	test_player_body_node = Global.scene_runner.player_body_node
 	var test_player_avatar_node = Global.scene_runner.player_avatar_node
 
-	Global.scene_runner.set_camera_and_player_node(
-		test_camera_node,
-		test_player_avatar_node,
-		test_player_body_node,
-		self._on_scene_console_message
+	Global.scene_runner.set_player_node(
+		test_player_avatar_node, test_player_body_node, self._on_scene_console_message
 	)
 	Global.scene_fetcher.set_scene_radius(0)
 
