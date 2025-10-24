@@ -478,7 +478,7 @@ func _process(_delta: float) -> void:
 
 func check_deep_link_teleport_to():
 	if Global.is_mobile():
-		var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+		var deep_link_url: String = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
 		Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
 		if Global.deep_link_obj.is_location_defined():
@@ -489,6 +489,8 @@ func check_deep_link_teleport_to():
 			Global.teleport_to(Global.deep_link_obj.location, realm)
 		elif not Global.deep_link_obj.realm.is_empty():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
+		elif deep_link_url.begins_with("https://decentraland.org/events/event/?id="):
+			print("Is event link")
 
 
 func _notification(what: int) -> void:
