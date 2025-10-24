@@ -15,4 +15,4 @@ capabilities=[]
 files=[]
 
 [plist]
-NSCalendarsWriteOnlyAccessUsageDescription="This app needs to add events to your calendar for events and places"
+NSCalendarsUsageDescription="This app needs to add events to your calendar for events and places"

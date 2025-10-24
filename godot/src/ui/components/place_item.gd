@@ -660,7 +660,7 @@ func _on_button_share_pressed() -> void:
 
 	var event_title = _data.get("name", "Decentraland Event")
 
-	var text = "Visit the event " + event_title + " following this link " + event_url
+	var text = "Visit the event '" + event_title + "' following this link " + event_url
 
 	if Global.is_android():
 		DclGodotAndroidPlugin.share_text(text)

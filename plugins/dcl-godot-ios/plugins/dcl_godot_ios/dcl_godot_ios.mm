@@ -108,6 +108,27 @@ const char* DCLGODOTIOS_VERSION = "1.0";
 
 @end
 
+// Helper class to handle calendar event edit view controller delegate
+@interface CalendarEventDelegate : NSObject <EKEventEditViewDelegate>
+@end
+
+@implementation CalendarEventDelegate
+
+- (void)eventEditViewController:(EKEventEditViewController *)controller didCompleteWithAction:(EKEventEditViewAction)action {
+    // Dismiss the event edit view controller
+    [controller.presentingViewController dismissViewControllerAnimated:YES completion:^{
+        if (action == EKEventEditViewActionSaved) {
+            printf("Calendar event saved successfully\n");
+        } else if (action == EKEventEditViewActionCanceled) {
+            printf("Calendar event creation cancelled\n");
+        } else if (action == EKEventEditViewActionDeleted) {
+            printf("Calendar event deleted\n");
+        }
+    }];
+}
+
+@end
+
 DclGodotiOS *DclGodotiOS::instance = NULL;
 
 void DclGodotiOS::_bind_methods() {
@@ -282,57 +303,43 @@ Dictionary DclGodotiOS::get_mobile_metrics() {
 
 bool DclGodotiOS::add_calendar_event(String title, String description, int64_t start_time, int64_t end_time, String location) {
     #if TARGET_OS_IOS
-    __block bool result = false;
-
     dispatch_async(dispatch_get_main_queue(), ^{
         EKEventStore *eventStore = [[EKEventStore alloc] init];
 
-        // Request write-only access to calendar (iOS 17+)
-        // For adding events, we only need write access, not full access to read the entire calendar
-        [eventStore requestWriteOnlyAccessToEventsWithCompletion:^(BOOL granted, NSError *error) {
-            if (!granted) {
-                printf("Calendar write access not granted: %s\n", error ? error.localizedDescription.UTF8String : "Unknown error");
-                result = false;
-                return;
-            }
+        // Create the event
+        // Note: EKEventEditViewController handles permissions internally,
+        // so we don't need to request authorization beforehand
+        EKEvent *event = [EKEvent eventWithEventStore:eventStore];
+        event.title = [NSString stringWithUTF8String:title.utf8().get_data()];
+        event.notes = [NSString stringWithUTF8String:description.utf8().get_data()];
+        event.location = [NSString stringWithUTF8String:location.utf8().get_data()];
 
-            // Create the event
-            EKEvent *event = [EKEvent eventWithEventStore:eventStore];
-            event.title = [NSString stringWithUTF8String:title.utf8().get_data()];
-            event.notes = [NSString stringWithUTF8String:description.utf8().get_data()];
-            event.location = [NSString stringWithUTF8String:location.utf8().get_data()];
+        // Convert timestamps (milliseconds) to NSDate
+        event.startDate = [NSDate dateWithTimeIntervalSince1970:(start_time / 1000.0)];
+        event.endDate = [NSDate dateWithTimeIntervalSince1970:(end_time / 1000.0)];
+        event.calendar = [eventStore defaultCalendarForNewEvents];
 
-            // Convert timestamps (milliseconds) to NSDate
-            event.startDate = [NSDate dateWithTimeIntervalSince1970:(start_time / 1000.0)];
-            event.endDate = [NSDate dateWithTimeIntervalSince1970:(end_time / 1000.0)];
-            event.calendar = [eventStore defaultCalendarForNewEvents];
+        // Create and retain the delegate
+        calendarDelegate = [[CalendarEventDelegate alloc] init];
 
-            // Create the event edit view controller
-            EKEventEditViewController *eventEditVC = [[EKEventEditViewController alloc] init];
-            eventEditVC.event = event;
-            eventEditVC.eventStore = eventStore;
+        // Create the event edit view controller
+        // This view controller will request calendar access if needed
+        EKEventEditViewController *eventEditVC = [[EKEventEditViewController alloc] init];
+        eventEditVC.event = event;
+        eventEditVC.eventStore = eventStore;
+        eventEditVC.editViewDelegate = calendarDelegate;
 
-            // Set up the delegate to handle completion
-            eventEditVC.editViewDelegate = nil; // We don't need a delegate for simple cases
+        // Get the top-most view controller
+        UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+        while (rootVC.presentedViewController) {
+            rootVC = rootVC.presentedViewController;
+        }
 
-            // Get the top-most view controller
-            dispatch_async(dispatch_get_main_queue(), ^{
-                UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
-                while (rootVC.presentedViewController) {
-                    rootVC = rootVC.presentedViewController;
-                }
-
-                [rootVC presentViewController:eventEditVC animated:YES completion:^{
-                    printf("Calendar event editor presented successfully\n");
-                }];
-            });
-
-            result = true;
+        [rootVC presentViewController:eventEditVC animated:YES completion:^{
+            printf("Calendar event editor presented successfully\n");
         }];
     });
 
-    // Note: Due to async nature, we return true if the request was initiated
-    // The actual result will depend on user interaction with the calendar UI
     return true;
     #else
     return false;
@@ -512,10 +519,12 @@ DclGodotiOS::DclGodotiOS() {
     instance = this;
     authSession = nullptr;
     authDelegate = nullptr;
+    calendarDelegate = nullptr;
 }
 
 DclGodotiOS::~DclGodotiOS() {
     instance = NULL;
     authSession = nullptr;
     authDelegate = nullptr;
+    calendarDelegate = nullptr;
 }

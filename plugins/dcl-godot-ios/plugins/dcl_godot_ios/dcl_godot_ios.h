@@ -8,9 +8,11 @@
 #ifdef __OBJC__
 @class ASWebAuthenticationSession;
 @class WebKitAuthenticationDelegate;
+@class CalendarEventDelegate;
 #else
 typedef void ASWebAuthenticationSession;
 typedef void WebKitAuthenticationDelegate;
+typedef void CalendarEventDelegate;
 #endif
 
 class DclGodotiOS : public Object {
@@ -21,6 +23,7 @@ class DclGodotiOS : public Object {
 
     ASWebAuthenticationSession *authSession;
     WebKitAuthenticationDelegate *authDelegate;
+    CalendarEventDelegate *calendarDelegate;
 
 public:
     void print_version();
