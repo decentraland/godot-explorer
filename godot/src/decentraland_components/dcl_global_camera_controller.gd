@@ -76,6 +76,10 @@ func _process(delta: float) -> void:
 			# Make the global virtual camera current
 			global_virtual_camera.make_current()
 
+			var explorer = Global.get_explorer()
+			if is_instance_valid(explorer):
+				explorer.player.avatar.show()
+
 		# Reset transition counter and store start transform
 		transition_time_counter = 0.0
 		transition_start_transform = global_virtual_camera.global_transform
@@ -129,15 +133,11 @@ func _process(delta: float) -> void:
 			var explorer = Global.get_explorer()
 			if is_instance_valid(explorer):
 				explorer.reset_cursor_position()
+				if explorer.player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
+					explorer.player.avatar.hide()
 	else:
 		# Transitioning to virtual camera target
 		var target_transform = desired_target.global_transform
-
-		# when desired_target != null and look_at_entity_node != null, compute the rotation (looking at)
-		if is_instance_valid(look_at_entity_node):
-			var look_at_target_pos = look_at_entity_node.global_position
-			var desired_rotation = target_transform.looking_at(look_at_target_pos, Vector3.UP)
-			target_transform.basis = desired_rotation.basis
 
 		global_virtual_camera.global_transform = transition_start_transform.interpolate_with(
 			target_transform, t
@@ -149,3 +149,7 @@ func _process(delta: float) -> void:
 				global_virtual_camera.reparent(desired_target)
 				global_virtual_camera.transform = Transform3D.IDENTITY
 				last_camera_reached = true
+
+		# when desired_target != null and look_at_entity_node != null, compute the rotation (looking at)
+		if is_instance_valid(look_at_entity_node):
+			global_virtual_camera.look_at(look_at_entity_node.global_position)
