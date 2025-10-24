@@ -1,14 +1,14 @@
 extends Node
 
-@onready var global_virtual_camera = Camera3D.new()
-var global_virtual_camera_transform: Transform3D
-
 const DEFAULT_TRANSITION_TIME = 0.35  # in seconds
 
+var global_virtual_camera_transform: Transform3D
 var last_virtual_camera_entity_node = null
 var last_camera_reached = true
 var transition_start_transform: Transform3D
 var transition_time_counter: float = 0.0
+
+@onready var global_virtual_camera = Camera3D.new()
 
 
 func _ready():
