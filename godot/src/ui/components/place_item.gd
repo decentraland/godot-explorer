@@ -661,11 +661,6 @@ func _on_button_share_pressed() -> void:
 	var event_title = _data.get("name", "Decentraland Event")
 
 	var text = "Visit the event " + event_title + " following this link " + event_url
-	#var image: Image = _get_texture_image().texture.get_image()
-	#if image.is_compressed():
-		#image = image.duplicate()
-		#image.decompress()
-		#prints("Decompress image...")
 
 	if DclGodotAndroidPlugin.is_available():
 		DclGodotAndroidPlugin.share_text(text)
