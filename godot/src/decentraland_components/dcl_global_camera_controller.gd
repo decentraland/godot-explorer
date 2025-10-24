@@ -8,7 +8,9 @@ var last_camera_reached = true
 var transition_start_transform: Transform3D
 var transition_time_counter: float = 0.0
 
-@onready var global_virtual_camera = Camera3D.new()
+@onready var global_virtual_camera = (
+	load("res://src/helpers_components/persistant_camera.tscn").instantiate()
+)
 
 
 func _ready():
@@ -29,12 +31,12 @@ func _process(delta: float) -> void:
 	var transition_speed: float = 0.0
 	var transition_time: float = 0.0
 
-	if is_instance_valid(scene_virtual_camera) and scene_virtual_camera.entity_id >= 0:
+	if is_instance_valid(scene_virtual_camera) and scene_virtual_camera.entity_id > 0:
 		desired_target = Global.scene_runner.get_scene_entity_node_or_null_3d(
 			current_scene_id, scene_virtual_camera.entity_id
 		)
 
-		if scene_virtual_camera.look_at_entity_id >= 0:
+		if scene_virtual_camera.look_at_entity_id > 0:
 			if scene_virtual_camera.look_at_entity_id == 1:
 				look_at_entity_node = Global.player_camera_node.get_parent_node_3d().get_parent()  # todo: it should be the feet
 			else:
