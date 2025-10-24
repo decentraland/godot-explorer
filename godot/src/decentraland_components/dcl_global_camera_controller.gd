@@ -17,7 +17,7 @@ func _ready():
 	global_virtual_camera.cull_mask = 0x7fff
 
 
-# in the process fn, this node has the responsability of transitioning the camera between player one and virtual one
+# in the process fn, this node has the responsibility of transitioning the camera between player one and virtual one
 #  virtuals can change between scenes or in the same scene, computed as desired_target
 #  desired_target can be removed from the scene tree, so global_virtual_camera could be orphan at this point
 func _process(delta: float) -> void:
@@ -49,14 +49,14 @@ func _process(delta: float) -> void:
 		transition_time = DEFAULT_TRANSITION_TIME
 
 	# if desired_target == null -> it should go to Global.player_camera_node
-	#  - immediately reparent to self conserving the last global transform annoted
+	#  - immediately reparent to self conserving the last global transform annotated
 	#  - once is next to Global.player_camera_node, set Global.player_camera_node.make_current()
 
 	# when desired_target == some node -> it should travel to the node
 	# - starting from get_viewport().get_camera_3d().position setting globally to global_virtual_camera and making global_virtual_camera.make_current()
 	# - once is next to the node, reparent the global_virtual_camera
 
-	# always use the scene_virtual_camera.transition_speed and time (fallbacking to default if == 0)
+	# always use the scene_virtual_camera.transition_speed and time (falling back to default if == 0)
 	# when goes to the player (desired_target == null) use the default time
 
 	# when desired_target != null and look_at_entity_node != null, compute the rotation (looking at)
@@ -84,7 +84,7 @@ func _process(delta: float) -> void:
 		transition_time_counter = 0.0
 		transition_start_transform = global_virtual_camera.global_transform
 		last_virtual_camera_entity_node = desired_target
-	# If desired = target, and transition_time_counter == 1.0, so we've already are attached
+	# If desired = target, and transition_time_counter == 1.0, so we're already attached
 	elif last_camera_reached:
 		if is_instance_valid(look_at_entity_node):
 			global_virtual_camera.look_at(look_at_entity_node.global_position)
