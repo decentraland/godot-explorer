@@ -1,5 +1,7 @@
 use godot::prelude::*;
 
+use godot::engine::Image;
+
 /// Mobile device static information (doesn't change during runtime) - internal Rust struct
 #[derive(Debug, Clone)]
 pub struct DclMobileDeviceInfo {
@@ -155,6 +157,32 @@ impl DclIosPlugin {
                 end_time_millis.to_variant(),
                 location.to_variant(),
             ],
+        );
+        result.try_to::<bool>().unwrap_or(false)
+    }
+
+    /// Share text using the system share sheet
+    /// Returns true if the share dialog was shown successfully, false otherwise
+    #[func]
+    pub fn share_text(text: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = singleton.call(StringName::from("share_text"), &[text.to_variant()]);
+        result.try_to::<bool>().unwrap_or(false)
+    }
+
+    /// Share text with an image using the system share sheet
+    /// image should be a Godot Image object
+    /// Returns true if the share dialog was shown successfully, false otherwise
+    #[func]
+    pub fn share_text_with_image(text: GString, image: Gd<Image>) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = singleton.call(
+            StringName::from("share_text_with_image"),
+            &[text.to_variant(), image.to_variant()],
         );
         result.try_to::<bool>().unwrap_or(false)
     }

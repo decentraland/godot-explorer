@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -28,6 +29,8 @@ import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
 import org.godotengine.godot.plugin.UsedByGodot
+import java.io.File
+import java.io.FileOutputStream
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
@@ -463,6 +466,108 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             return false
         } catch (e: Exception) {
             Log.e(pluginName, "Error adding calendar event: ${e.message}")
+            return false
+        }
+    }
+
+    @UsedByGodot
+    fun shareText(text: String): Boolean {
+        val act = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot share text")
+            return false
+        }
+
+        try {
+            val shareIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+            }
+
+            val chooserIntent = Intent.createChooser(shareIntent, "Share via")
+            act.startActivity(chooserIntent)
+            Log.d(pluginName, "Share text intent launched successfully")
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error sharing text: ${e.message}")
+            return false
+        }
+    }
+
+    @UsedByGodot
+    fun shareTextWithImage(text: String, width: Int, height: Int, imageData: ByteArray): Boolean {
+        val act = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot share text with image")
+            return false
+        }
+
+        try {
+            if (width <= 0 || height <= 0) {
+                Log.e(pluginName, "Invalid image dimensions: ${width}x${height}")
+                return false
+            }
+
+            if (imageData.size != width * height * 4) {
+                Log.e(pluginName, "Invalid image data size. Expected ${width * height * 4}, got ${imageData.size}")
+                return false
+            }
+
+            // Convert RGBA byte array to Android Bitmap
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+            // Copy pixel data to Bitmap
+            val pixels = IntArray(width * height)
+            for (i in 0 until width * height) {
+                val offset = i * 4
+                val r = imageData[offset].toInt() and 0xFF
+                val g = imageData[offset + 1].toInt() and 0xFF
+                val b = imageData[offset + 2].toInt() and 0xFF
+                val a = imageData[offset + 3].toInt() and 0xFF
+                pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+            }
+            bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+
+            // Save bitmap to cache directory
+            val cacheDir = act.cacheDir
+            val imageFile = File(cacheDir, "share_image_${System.currentTimeMillis()}.png")
+            FileOutputStream(imageFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+
+            // Try to use FileProvider if configured, otherwise fall back to file URI
+            val imageUri = try {
+                androidx.core.content.FileProvider.getUriForFile(
+                    act,
+                    "${act.packageName}.fileprovider",
+                    imageFile
+                )
+            } catch (e: IllegalArgumentException) {
+                // FileProvider not configured, use file URI as fallback
+                Log.w(pluginName, "FileProvider not configured, using file URI: ${e.message}")
+                Uri.fromFile(imageFile)
+            }
+
+            val shareIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "image/png"
+                putExtra(Intent.EXTRA_TEXT, text)
+                putExtra(Intent.EXTRA_STREAM, imageUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooserIntent = Intent.createChooser(shareIntent, "Share via")
+            act.startActivity(chooserIntent)
+            Log.d(pluginName, "Share text with image intent launched successfully")
+
+            // Clean up the temporary file after a delay (let the share complete first)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                imageFile.delete()
+            }, 5000)
+
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error sharing text with image: ${e.message}")
+            e.printStackTrace()
             return false
         }
     }

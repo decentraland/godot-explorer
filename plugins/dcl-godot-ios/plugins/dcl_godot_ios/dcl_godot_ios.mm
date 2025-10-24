@@ -9,6 +9,7 @@
 #import <mach/mach.h>
 #import <EventKit/EventKit.h>
 #import <EventKitUI/EventKitUI.h>
+#import <LinkPresentation/LinkPresentation.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -115,6 +116,8 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
     ClassDB::bind_method(D_METHOD("get_mobile_metrics"), &DclGodotiOS::get_mobile_metrics);
     ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
+    ClassDB::bind_method(D_METHOD("share_text", "text"), &DclGodotiOS::share_text);
+    ClassDB::bind_method(D_METHOD("share_text_with_image", "text", "image"), &DclGodotiOS::share_text_with_image);
 }
 
 void DclGodotiOS::print_version() {
@@ -329,6 +332,171 @@ bool DclGodotiOS::add_calendar_event(String title, String description, int64_t s
 
     // Note: Due to async nature, we return true if the request was initiated
     // The actual result will depend on user interaction with the calendar UI
+    return true;
+    #else
+    return false;
+    #endif
+}
+
+bool DclGodotiOS::share_text(String text) {
+    #if TARGET_OS_IOS
+    NSString *ns_text = [NSString stringWithUTF8String:text.utf8().get_data()];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSMutableArray *activityItems = [NSMutableArray array];
+
+        // Detect URLs in the text using NSDataDetector
+        NSError *error = nil;
+        NSDataDetector *detector = [NSDataDetector dataDetectorWithTypes:NSTextCheckingTypeLink error:&error];
+
+        if (detector) {
+            NSArray *matches = [detector matchesInString:ns_text options:0 range:NSMakeRange(0, [ns_text length])];
+
+            if (matches.count > 0) {
+                // Found at least one URL - add both text and URL for rich preview
+                [activityItems addObject:ns_text];
+
+                // Add the first URL found for rich link preview
+                NSTextCheckingResult *firstMatch = matches[0];
+                NSURL *url = firstMatch.URL;
+                if (url) {
+                    [activityItems addObject:url];
+                    printf("Sharing with URL for rich preview: %s\n", url.absoluteString.UTF8String);
+                }
+            } else {
+                // No URL found, just share the text
+                [activityItems addObject:ns_text];
+            }
+        } else {
+            // Error creating detector, fallback to plain text
+            [activityItems addObject:ns_text];
+            if (error) {
+                printf("Error creating URL detector: %s\n", error.localizedDescription.UTF8String);
+            }
+        }
+
+        // Create the activity view controller
+        UIActivityViewController *activityVC = [[UIActivityViewController alloc]
+            initWithActivityItems:activityItems
+            applicationActivities:nil];
+
+        // Get the top-most view controller
+        UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+        while (rootVC.presentedViewController) {
+            rootVC = rootVC.presentedViewController;
+        }
+
+        // For iPad, set the popover presentation controller
+        if (activityVC.popoverPresentationController) {
+            activityVC.popoverPresentationController.sourceView = rootVC.view;
+            activityVC.popoverPresentationController.sourceRect = CGRectMake(
+                rootVC.view.bounds.size.width / 2,
+                rootVC.view.bounds.size.height / 2,
+                0, 0
+            );
+        }
+
+        [rootVC presentViewController:activityVC animated:YES completion:^{
+            printf("Share text dialog presented successfully\n");
+        }];
+    });
+
+    return true;
+    #else
+    return false;
+    #endif
+}
+
+bool DclGodotiOS::share_text_with_image(String text, Ref<Image> image) {
+    #if TARGET_OS_IOS
+    if (image.is_null() || image->is_empty()) {
+        printf("Invalid or empty image\n");
+        return false;
+    }
+
+    NSString *ns_text = [NSString stringWithUTF8String:text.utf8().get_data()];
+
+    // Get image properties
+    int width = image->get_width();
+    int height = image->get_height();
+
+    // Convert image to RGBA8 format if needed
+    Ref<Image> rgba_image = image;
+    if (image->get_format() != Image::FORMAT_RGBA8) {
+        rgba_image = image->duplicate();
+        rgba_image->convert(Image::FORMAT_RGBA8);
+    }
+
+    // Get the raw pixel data
+    Vector<uint8_t> data = rgba_image->get_data();
+    const uint8_t *pixel_data = data.ptr();
+
+    // Create a CGColorSpace for RGB
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+
+    // Create a CGDataProvider from the pixel data
+    CFDataRef dataRef = CFDataCreate(NULL, pixel_data, width * height * 4);
+    CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData(dataRef);
+
+    // Create CGImage from the pixel data
+    CGImageRef cgImage = CGImageCreate(
+        width,                                  // width
+        height,                                 // height
+        8,                                      // bits per component
+        32,                                     // bits per pixel
+        width * 4,                              // bytes per row
+        colorSpace,                             // color space
+        kCGBitmapByteOrderDefault | kCGImageAlphaLast, // bitmap info
+        dataProvider,                           // data provider
+        NULL,                                   // decode
+        false,                                  // should interpolate
+        kCGRenderingIntentDefault              // rendering intent
+    );
+
+    // Convert CGImage to UIImage
+    UIImage *uiImage = [UIImage imageWithCGImage:cgImage];
+
+    // Clean up
+    CGImageRelease(cgImage);
+    CGDataProviderRelease(dataProvider);
+    CFRelease(dataRef);
+    CGColorSpaceRelease(colorSpace);
+
+    if (!uiImage) {
+        printf("Failed to convert Godot Image to UIImage\n");
+        return false;
+    }
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Create activity items array with text and image
+        NSArray *activityItems = @[ns_text, uiImage];
+
+        // Create the activity view controller
+        UIActivityViewController *activityVC = [[UIActivityViewController alloc]
+            initWithActivityItems:activityItems
+            applicationActivities:nil];
+
+        // Get the top-most view controller
+        UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+        while (rootVC.presentedViewController) {
+            rootVC = rootVC.presentedViewController;
+        }
+
+        // For iPad, set the popover presentation controller
+        if (activityVC.popoverPresentationController) {
+            activityVC.popoverPresentationController.sourceView = rootVC.view;
+            activityVC.popoverPresentationController.sourceRect = CGRectMake(
+                rootVC.view.bounds.size.width / 2,
+                rootVC.view.bounds.size.height / 2,
+                0, 0
+            );
+        }
+
+        [rootVC presentViewController:activityVC animated:YES completion:^{
+            printf("Share text with image dialog presented successfully\n");
+        }];
+    });
+
     return true;
     #else
     return false;
