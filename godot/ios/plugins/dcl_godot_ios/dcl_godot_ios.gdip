@@ -8,10 +8,11 @@ deinitialization="unregister_dcl_godot_ios_types"
 [dependencies]
 linked=[]
 embedded=[]
-system=["SafariServices", "AuthenticationServices", "Network"]
+system=["SafariServices", "AuthenticationServices", "Network", "EventKit", "EventKitUI"]
 
 capabilities=[]
 
 files=[]
 
 [plist]
+NSCalendarsWriteOnlyAccessUsageDescription="This app needs to add events to your calendar for events and places"

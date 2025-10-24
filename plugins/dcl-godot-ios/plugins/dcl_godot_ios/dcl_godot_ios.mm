@@ -287,10 +287,11 @@ bool DclGodotiOS::add_calendar_event(String title, String description, int64_t s
     dispatch_async(dispatch_get_main_queue(), ^{
         EKEventStore *eventStore = [[EKEventStore alloc] init];
 
-        // Request access to calendar
-        [eventStore requestFullAccessToEventsWithCompletion:^(BOOL granted, NSError *error) {
+        // Request write-only access to calendar (iOS 17+)
+        // For adding events, we only need write access, not full access to read the entire calendar
+        [eventStore requestWriteOnlyAccessToEventsWithCompletion:^(BOOL granted, NSError *error) {
             if (!granted) {
-                printf("Calendar access not granted: %s\n", error ? error.localizedDescription.UTF8String : "Unknown error");
+                printf("Calendar write access not granted: %s\n", error ? error.localizedDescription.UTF8String : "Unknown error");
                 result = false;
                 return;
             }
