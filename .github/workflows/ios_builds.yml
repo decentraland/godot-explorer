@@ -1,6 +1,9 @@
-name: 🍏 iOS (only lib)
+name: 🍏 iOS
 on:
   workflow_call:
+    secrets:
+      DEPLOY_SSH_KEY:
+        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
@@ -34,28 +37,99 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets ios
 
-      # - name: Build MacOS
-      #   run: cargo run -- build --release
+      - name: Build MacOS
+        run: cargo run -- build --release
 
       - name: Build iOS
         run: cargo run -- build --release --target ios
 
-      # - name: Import Assets
-      #   uses: ./.github/actions/import-assets
+      - name: Import Assets
+        uses: ./.github/actions/import-assets
 
-      # - name: Export
-      #   run: cargo run -- export --target ios
+      - name: Export
+        run: cargo run -- export --target ios
 
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: decentraland-godot-ios
-      #     path: |
-      #       exports/**/*
-      #     if-no-files-found: error
+      # Deploy to godot-mobile-deploy-pipeline
+      - name: Install Git LFS
+        run: |
+          brew install git-lfs
+          git lfs install
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: libdclgodot_ios
-          path: |
-            lib/target/aarch64-apple-ios/release/libdclgodot.dylib
-          if-no-files-found: error
+      - name: Setup SSH for deployment
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Deploy iOS exports to mobile deploy pipeline
+        run: |
+          # Determine branch name based on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH_NAME="PR-${{ github.event.pull_request.number }}-${{ github.head_ref || github.ref_name }}"
+          else
+            BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          fi
+
+          echo "Deploying to branch: $BRANCH_NAME"
+
+          # Clone the target repository using SSH
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git clone git@github.com:decentraland/godot-mobile-deploy-pipeline.git deploy-repo
+
+          cd deploy-repo
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Setup git lfs
+          git lfs install
+
+          # Create a fresh orphan branch (no history, fresh start)
+          git checkout --orphan temp-branch
+
+          # Remove all existing files from git
+          git rm -rf . 2>/dev/null || true
+
+          # Setup git lfs tracking BEFORE adding files
+          git lfs track "*.dylib"
+          git lfs track "*.ipa"
+          git lfs track "*.app"
+          git lfs track "*.framework"
+          git lfs track "*.xcframework"
+          git lfs track "*.a"
+          git lfs track "*.pck"
+          git lfs track "*.so"
+          git add .gitattributes
+
+          # Move exports contents to root (not inside a folder)
+          if [ -d "../exports" ]; then
+            mv ../exports/* .
+            mv ../exports/.* . 2>/dev/null || true
+          else
+            echo "Warning: exports folder not found"
+            exit 1
+          fi
+
+          # Add all files (now tracked by LFS)
+          git add .
+          git commit -m "Deploy iOS artifacts
+
+          Source: ${{ github.repository }}
+          Commit: ${{ github.sha }}
+          Deploy Branch: $BRANCH_NAME
+          Source Branch: ${{ github.head_ref || github.ref_name }}
+          Triggered by: ${{ github.actor }}
+          Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+
+          # Force push orphan branch to target branch (replaces all history with single commit)
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push --force origin temp-branch:$BRANCH_NAME
+
+          # Cleanup
+          cd ..
+          rm -rf deploy-repo
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
