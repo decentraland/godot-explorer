@@ -3,6 +3,7 @@
 
 #include "core/object/class_db.h"
 #include "core/version.h"
+#include "core/io/image.h"
 
 #ifdef __OBJC__
 @class ASWebAuthenticationSession;
@@ -27,6 +28,9 @@ public:
     void open_webview_url(String url);
     Dictionary get_mobile_device_info();
     Dictionary get_mobile_metrics();
+    bool add_calendar_event(String title, String description, int64_t start_time, int64_t end_time, String location);
+    bool share_text(String text);
+    bool share_text_with_image(String text, Ref<Image> image);
 
     static DclGodotiOS *get_singleton();
 
