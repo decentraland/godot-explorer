@@ -1,6 +1,11 @@
 name: 🤖 Android (VR and Mobile)
 on:
   workflow_call:
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: true
+      ANDROID_KEYSTORE_PASSWORD:
+        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
@@ -50,6 +55,28 @@ jobs:
       - name: Export Quest APK
         run: |
           cargo run -- export --target quest --format apk --release
+
+      # Decode and setup keystore for AAB signing
+      - name: Setup AAB Signing Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > dclgodot.upload.jks
+          ls -la dclgodot.upload.jks
+
+      # Sign the AAB file
+      - name: Sign Android AAB
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore dclgodot.upload.jks \
+            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -signedjar exports/decentraland.godot.client-signed.aab \
+            exports/decentraland.godot.client.aab \
+            upload
+
+          # Verify the signature
+          jarsigner -verify -verbose exports/decentraland.godot.client-signed.aab
+
+          # Replace unsigned with signed
+          mv exports/decentraland.godot.client-signed.aab exports/decentraland.godot.client.aab
 
       # Copy Android Artifacts
       - name: Copy Android Artifacts
