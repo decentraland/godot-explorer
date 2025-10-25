@@ -5,10 +5,62 @@ use crate::godot_classes::{
 };
 
 #[cfg(feature = "use_memory_debugger")]
-use std::sync::Mutex;
+use std::alloc::{GlobalAlloc, Layout, System};
 
 #[cfg(feature = "use_memory_debugger")]
-static PROFILER: Mutex<Option<dhat::Profiler>> = Mutex::new(None);
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+// ============================================================================
+// Tracking Allocator - Live Rust Heap Memory Monitoring
+// ============================================================================
+
+#[cfg(feature = "use_memory_debugger")]
+static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
+#[cfg(feature = "use_memory_debugger")]
+static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
+#[cfg(feature = "use_memory_debugger")]
+static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+#[cfg(feature = "use_memory_debugger")]
+static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+#[cfg(feature = "use_memory_debugger")]
+pub struct TrackingAllocator;
+
+#[cfg(feature = "use_memory_debugger")]
+unsafe impl GlobalAlloc for TrackingAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let ret = System.alloc(layout);
+        if !ret.is_null() {
+            ALLOCATED.fetch_add(layout.size(), Ordering::Relaxed);
+            ALLOCATION_COUNT.fetch_add(1, Ordering::Relaxed);
+        }
+        ret
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        System.dealloc(ptr, layout);
+        DEALLOCATED.fetch_add(layout.size(), Ordering::Relaxed);
+        DEALLOCATION_COUNT.fetch_add(1, Ordering::Relaxed);
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        let ret = System.alloc_zeroed(layout);
+        if !ret.is_null() {
+            ALLOCATED.fetch_add(layout.size(), Ordering::Relaxed);
+            ALLOCATION_COUNT.fetch_add(1, Ordering::Relaxed);
+        }
+        ret
+    }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        let ret = System.realloc(ptr, layout, new_size);
+        if !ret.is_null() {
+            DEALLOCATED.fetch_add(layout.size(), Ordering::Relaxed);
+            ALLOCATED.fetch_add(new_size, Ordering::Relaxed);
+        }
+        ret
+    }
+}
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -37,11 +89,6 @@ impl INode for MemoryDebugger {
 
         if self.is_enabled {
             tracing::info!("MemoryDebugger enabled (Godot debug export)");
-
-            #[cfg(feature = "use_memory_debugger")]
-            {
-                self.start_heap_profiling();
-            }
         } else {
             tracing::info!("MemoryDebugger disabled (Godot release export)");
         }
@@ -65,15 +112,6 @@ impl MemoryDebugger {
     #[func]
     pub fn set_enabled(&mut self, enabled: bool) {
         self.is_enabled = enabled;
-
-        #[cfg(feature = "use_memory_debugger")]
-        {
-            if enabled {
-                self.start_heap_profiling();
-            } else {
-                self.stop_heap_profiling();
-            }
-        }
     }
 
     #[func]
@@ -97,6 +135,7 @@ impl MemoryDebugger {
         godot_print!("╚══════════════════════════════════════════════════════════════╝");
 
         self.print_godot_memory_metrics();
+        self.print_gpu_memory_metrics();
         self.print_godot_object_metrics();
         self.print_godot_render_metrics();
         self.print_mobile_metrics();
@@ -119,6 +158,21 @@ impl MemoryDebugger {
         godot_print!("┌─ Godot Memory ─────────────────────────────────────────────┐");
         godot_print!("│  Static Memory:     {:.2} MB", static_memory);
         godot_print!("│  Peak Static:       {:.2} MB", static_memory_max);
+        godot_print!("└────────────────────────────────────────────────────────────┘");
+    }
+
+    fn print_gpu_memory_metrics(&self) {
+        let performance = Performance::singleton();
+
+        // GPU memory metrics (in MB)
+        let video_mem = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
+        let texture_mem = performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
+        let buffer_mem = performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+
+        godot_print!("┌─ GPU Memory ───────────────────────────────────────────────┐");
+        godot_print!("│  Video RAM:         {:.2} MB", video_mem);
+        godot_print!("│  Texture Memory:    {:.2} MB", texture_mem);
+        godot_print!("│  Buffer Memory:     {:.2} MB", buffer_mem);
         godot_print!("└────────────────────────────────────────────────────────────┘");
     }
 
@@ -175,63 +229,26 @@ impl MemoryDebugger {
 
     #[cfg(feature = "use_memory_debugger")]
     fn print_rust_heap_info(&self) {
-        godot_print!("┌─ Rust Heap Profiling ──────────────────────────────────────┐");
-        godot_print!("│  dhat profiling is ACTIVE");
-        godot_print!("│  Call stop_heap_profiling() to generate profile");
+        let allocated = ALLOCATED.load(Ordering::Relaxed);
+        let deallocated = DEALLOCATED.load(Ordering::Relaxed);
+        let current_usage = allocated.saturating_sub(deallocated);
+        let alloc_count = ALLOCATION_COUNT.load(Ordering::Relaxed);
+        let dealloc_count = DEALLOCATION_COUNT.load(Ordering::Relaxed);
+
+        let current_mb = current_usage as f64 / 1_048_576.0;
+        let total_allocated_mb = allocated as f64 / 1_048_576.0;
+        let total_deallocated_mb = deallocated as f64 / 1_048_576.0;
+
+        godot_print!("┌─ Rust Heap (Live Tracking) ────────────────────────────────┐");
+        godot_print!("│  Current Usage:     {:.2} MB ({} bytes)", current_mb, current_usage);
+        godot_print!("│  Total Allocated:   {:.2} MB ({} bytes)", total_allocated_mb, allocated);
+        godot_print!("│  Total Freed:       {:.2} MB ({} bytes)", total_deallocated_mb, deallocated);
+        godot_print!("│  Allocations:       {}", alloc_count);
+        godot_print!("│  Deallocations:     {}", dealloc_count);
+        godot_print!("│  Active Allocs:     {}", alloc_count.saturating_sub(dealloc_count));
         godot_print!("└────────────────────────────────────────────────────────────┘");
     }
 
-    #[cfg(feature = "use_memory_debugger")]
-    #[func]
-    pub fn start_heap_profiling(&mut self) {
-        let mut profiler = PROFILER.lock().unwrap();
-        if profiler.is_none() {
-            *profiler = Some(dhat::Profiler::new_heap());
-            tracing::info!("Started dhat heap profiling");
-            godot_print!("✓ Started Rust heap profiling with dhat");
-        } else {
-            tracing::warn!("Heap profiling already active");
-        }
-    }
-
-    #[cfg(feature = "use_memory_debugger")]
-    #[func]
-    pub fn stop_heap_profiling(&mut self) {
-        let mut profiler = PROFILER.lock().unwrap();
-        if let Some(p) = profiler.take() {
-            drop(p);
-            tracing::info!("Stopped dhat heap profiling - profile written to dhat-heap.json");
-            godot_print!("✓ Stopped Rust heap profiling - output written to dhat-heap.json");
-        } else {
-            tracing::warn!("No active heap profiling to stop");
-        }
-    }
-
-    #[cfg(feature = "use_memory_debugger")]
-    #[func]
-    pub fn is_heap_profiling_active(&self) -> bool {
-        PROFILER.lock().unwrap().is_some()
-    }
-
-    // Stub functions when feature is disabled
-    #[cfg(not(feature = "use_memory_debugger"))]
-    #[func]
-    pub fn start_heap_profiling(&mut self) {
-        tracing::warn!("Heap profiling not available - rebuild with --features use_memory_debugger");
-        godot_print!("⚠ Heap profiling not available - rebuild with --features use_memory_debugger");
-    }
-
-    #[cfg(not(feature = "use_memory_debugger"))]
-    #[func]
-    pub fn stop_heap_profiling(&mut self) {
-        tracing::warn!("Heap profiling not available - rebuild with --features use_memory_debugger");
-    }
-
-    #[cfg(not(feature = "use_memory_debugger"))]
-    #[func]
-    pub fn is_heap_profiling_active(&self) -> bool {
-        false
-    }
 
     /// Get current Godot memory usage in MB
     #[func]
@@ -259,5 +276,100 @@ impl MemoryDebugger {
     pub fn get_orphan_node_count(&self) -> i64 {
         let performance = Performance::singleton();
         performance.get_monitor(Monitor::OBJECT_ORPHAN_NODE_COUNT) as i64
+    }
+
+    /// Get video RAM usage in MB
+    #[func]
+    pub fn get_video_mem_mb(&self) -> f64 {
+        let performance = Performance::singleton();
+        performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0
+    }
+
+    /// Get texture memory usage in MB
+    #[func]
+    pub fn get_texture_mem_mb(&self) -> f64 {
+        let performance = Performance::singleton();
+        performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0
+    }
+
+    /// Get buffer memory usage in MB
+    #[func]
+    pub fn get_buffer_mem_mb(&self) -> f64 {
+        let performance = Performance::singleton();
+        performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0
+    }
+
+    /// Get current Rust heap memory usage in MB (live tracking)
+    #[cfg(feature = "use_memory_debugger")]
+    #[func]
+    pub fn get_rust_heap_usage_mb(&self) -> f64 {
+        let allocated = ALLOCATED.load(Ordering::Relaxed);
+        let deallocated = DEALLOCATED.load(Ordering::Relaxed);
+        let current_usage = allocated.saturating_sub(deallocated);
+        current_usage as f64 / 1_048_576.0
+    }
+
+    /// Get total allocated Rust heap memory in MB
+    #[cfg(feature = "use_memory_debugger")]
+    #[func]
+    pub fn get_rust_heap_total_allocated_mb(&self) -> f64 {
+        let allocated = ALLOCATED.load(Ordering::Relaxed);
+        allocated as f64 / 1_048_576.0
+    }
+
+    /// Get Rust allocation count
+    #[cfg(feature = "use_memory_debugger")]
+    #[func]
+    pub fn get_rust_allocation_count(&self) -> i64 {
+        ALLOCATION_COUNT.load(Ordering::Relaxed) as i64
+    }
+
+    /// Get Rust deallocation count
+    #[cfg(feature = "use_memory_debugger")]
+    #[func]
+    pub fn get_rust_deallocation_count(&self) -> i64 {
+        DEALLOCATION_COUNT.load(Ordering::Relaxed) as i64
+    }
+
+    /// Reset Rust heap statistics (useful for profiling specific sections)
+    #[cfg(feature = "use_memory_debugger")]
+    #[func]
+    pub fn reset_rust_heap_stats(&self) {
+        ALLOCATED.store(0, Ordering::Relaxed);
+        DEALLOCATED.store(0, Ordering::Relaxed);
+        ALLOCATION_COUNT.store(0, Ordering::Relaxed);
+        DEALLOCATION_COUNT.store(0, Ordering::Relaxed);
+        godot_print!("✓ Reset Rust heap statistics");
+    }
+
+    // Stub functions when feature is disabled
+    #[cfg(not(feature = "use_memory_debugger"))]
+    #[func]
+    pub fn get_rust_heap_usage_mb(&self) -> f64 {
+        0.0
+    }
+
+    #[cfg(not(feature = "use_memory_debugger"))]
+    #[func]
+    pub fn get_rust_heap_total_allocated_mb(&self) -> f64 {
+        0.0
+    }
+
+    #[cfg(not(feature = "use_memory_debugger"))]
+    #[func]
+    pub fn get_rust_allocation_count(&self) -> i64 {
+        0
+    }
+
+    #[cfg(not(feature = "use_memory_debugger"))]
+    #[func]
+    pub fn get_rust_deallocation_count(&self) -> i64 {
+        0
+    }
+
+    #[cfg(not(feature = "use_memory_debugger"))]
+    #[func]
+    pub fn reset_rust_heap_stats(&self) {
+        godot_print!("⚠ Rust heap tracking not available - rebuild with --features use_memory_debugger");
     }
 }
