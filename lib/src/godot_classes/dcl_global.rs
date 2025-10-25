@@ -19,7 +19,7 @@ use crate::{
     test_runner::testing_tools::DclTestingTools,
     tools::{
         network_inspector::{NetworkInspector, NetworkInspectorSender},
-        performance_debugger::PerformanceDebugger,
+        memory_debugger::MemoryDebugger,
     },
 };
 
@@ -108,7 +108,7 @@ pub struct DclGlobal {
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
     #[var]
-    pub performance_debugger: Gd<PerformanceDebugger>,
+    pub memory_debugger: Gd<MemoryDebugger>,
 
     #[var(get)]
     pub profile_service: Gd<ProfileService>,
@@ -146,7 +146,7 @@ impl INode for DclGlobal {
         let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
-        let mut performance_debugger: Gd<PerformanceDebugger> = PerformanceDebugger::new_alloc();
+        let mut memory_debugger: Gd<MemoryDebugger> = MemoryDebugger::new_alloc();
         let mut metrics: Gd<Metrics> = Metrics::new_alloc();
         let mut cli: Gd<DclCli> = DclCli::new_alloc();
 
@@ -171,7 +171,7 @@ impl INode for DclGlobal {
         portable_experience_controller.set_name("portable_experience_controller".into());
         network_inspector.set_name("network_inspector".into());
         social_blacklist.set_name("social_blacklist".into());
-        performance_debugger.set_name("performance_debugger".into());
+        memory_debugger.set_name("memory_debugger".into());
         metrics.set_name("metrics".into());
         cli.set_name("cli".into());
 
@@ -222,7 +222,7 @@ impl INode for DclGlobal {
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector,
             social_blacklist,
-            performance_debugger,
+            memory_debugger,
             profile_service: ProfileService::new_gd(),
 
             #[cfg(feature = "enable_inspector")]

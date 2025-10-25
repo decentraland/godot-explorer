@@ -1,2 +1,2 @@
 pub mod network_inspector;
-pub mod performance_debugger;
+pub mod memory_debugger;

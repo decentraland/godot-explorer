@@ -72,6 +72,8 @@ multipart = { version = "0.18.0", default-features = false, features = ["client"
 
 modular-bitfield = "0.11"
 
+dhat = { version = "0.3", optional = true }
+
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
@@ -83,6 +85,7 @@ use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 use_voice_chat = []
+use_memory_debugger = ["dep:dhat"]
 
 # TODO: Fix enable_inspector failure when cross-compiling to Android from Windows.
 #       The FastWebSockets build incorrectly includes `unmask`.
