@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://k7ufueequ8k0"
-path="res://.godot/imported/backpack-bg.png-41c903c3f42e70cafddee24788e175a6.ctex"
+path.s3tc="res://.godot/imported/backpack-bg.png-41c903c3f42e70cafddee24788e175a6.s3tc.ctex"
+path.etc2="res://.godot/imported/backpack-bg.png-41c903c3f42e70cafddee24788e175a6.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/ui/backpack/backpack-bg.png"
-dest_files=["res://.godot/imported/backpack-bg.png-41c903c3f42e70cafddee24788e175a6.ctex"]
+dest_files=["res://.godot/imported/backpack-bg.png-41c903c3f42e70cafddee24788e175a6.s3tc.ctex", "res://.godot/imported/backpack-bg.png-41c903c3f42e70cafddee24788e175a6.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dt13r06u87fib"
-path="res://.godot/imported/joystick_tip_arrows.png-778774c80dec16661c500a384107a3e3.ctex"
+path.s3tc="res://.godot/imported/joystick_tip_arrows.png-778774c80dec16661c500a384107a3e3.s3tc.ctex"
+path.etc2="res://.godot/imported/joystick_tip_arrows.png-778774c80dec16661c500a384107a3e3.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://src/mobile/joystick/textures/joystick_tip_arrows.png"
-dest_files=["res://.godot/imported/joystick_tip_arrows.png-778774c80dec16661c500a384107a3e3.ctex"]
+dest_files=["res://.godot/imported/joystick_tip_arrows.png-778774c80dec16661c500a384107a3e3.s3tc.ctex", "res://.godot/imported/joystick_tip_arrows.png-778774c80dec16661c500a384107a3e3.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
