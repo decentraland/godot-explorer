@@ -157,11 +157,13 @@ func _on_notification_clicked(_notification: Dictionary) -> void:
 
 func show_panel() -> void:
 	show()
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	_refresh_notifications()
 
 
 func hide_panel() -> void:
 	hide()
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _is_user_authenticated() -> bool:
