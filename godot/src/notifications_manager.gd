@@ -17,10 +17,10 @@ const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 const ENABLE_FAKE_NOTIFICATIONS = false
 
 ## TESTING: Set to false to disable type filtering and show all notifications
-const ENABLE_NOTIFICATION_FILTER = false
+const ENABLE_NOTIFICATION_FILTER = true
 
 ## DEBUG: Set to true to enable random notification generation for testing
-const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = true
+const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = false
 
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
@@ -28,7 +28,8 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 	"event_created",  # Events: New event created
 	"events_starts_soon",  # Events: Event starts soon
 	"events_started",  # Events: Event has started
-	"reward_assigned",  # Rewards: Reward assigned to user
+	"reward_assignment",  # Rewards: Reward assigned/received
+	"reward_in_progress",  # Rewards: Reward being processed
 ]
 
 var _notifications: Array = []

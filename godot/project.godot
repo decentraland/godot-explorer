@@ -30,13 +30,12 @@ EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 
 [debug]
 
+file_logging/enable_file_logging=true
 settings/gdscript/always_track_call_stacks=true
 gdscript/warnings/unused_variable=2
 gdscript/warnings/unused_signal=0
 gdscript/warnings/shadowed_variable=2
 gdscript/warnings/redundant_await=false
-file_logging/enable_file_logging=true
-file_logging/log_path="user://logs/godot.log"
 
 [display]
 

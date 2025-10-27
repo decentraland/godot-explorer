@@ -150,7 +150,9 @@ func _async_on_mark_all_read_pressed() -> void:
 
 
 func _on_notification_clicked(_notification: Dictionary) -> void:
-	pass
+	# Close the panel when a notification is clicked
+	hide_panel()
+	panel_closed.emit()
 
 
 func show_panel() -> void:
