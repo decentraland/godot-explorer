@@ -34,7 +34,6 @@ func _async_on_toggled(toggled_on: bool) -> void:
 		method = HTTPClient.METHOD_DELETE
 		Global.metrics.track_event_detail_reminder_remove(event_id_value, event_tags)
 
-
 	var response = await Global.async_signed_fetch(url, method)
 	if response is PromiseError:
 		printerr("Error unpdating attend intention: ", response.get_error())

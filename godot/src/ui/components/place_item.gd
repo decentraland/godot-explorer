@@ -21,14 +21,13 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 @export var realm: String = Realm.MAIN_REALM
 @export var realm_title: String = "Genesis City"
 
+var event_id: String
+var event_status: int
+var event_tags: int
 var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
 var _node_cache: Dictionary = {}
-
-var event_id: String
-var event_status: int
-var event_tags: int
 
 
 func _ready():
@@ -188,7 +187,7 @@ func _connect_signals():
 	if button_jump_in:
 		if not button_jump_in.pressed.is_connected(_on_button_jump_in_pressed):
 			button_jump_in.pressed.connect(_on_button_jump_in_pressed)
-			
+
 	var button_jump_to_event = _get_button_jump_to_event()
 	if button_jump_to_event:
 		if not button_jump_to_event.pressed.is_connected(_on_button_jump_to_event_pressed):
@@ -694,4 +693,3 @@ func _on_button_calendar_pressed() -> void:
 func _on_button_jump_to_event_pressed() -> void:
 	Global.metrics.track_event_detail_jumpto(event_id, event_tags)
 	jump_in.emit(location, realm)
-	

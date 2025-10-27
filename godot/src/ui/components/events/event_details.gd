@@ -4,13 +4,13 @@ extends Control
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
-@onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
-@onready var event_details_portrait: PlaceItem = %EventDetailsPortrait
-@onready var event_details_landscape: PlaceItem = %EventDetailsLandscape
-
 var event_id: String
 var event_status: int
 var event_tags: int
+
+@onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
+@onready var event_details_portrait: PlaceItem = %EventDetailsPortrait
+@onready var event_details_landscape: PlaceItem = %EventDetailsLandscape
 
 
 func _ready():
@@ -42,7 +42,7 @@ func show_animation() -> void:
 	self.show()
 	if event_details_portrait != null and event_details_landscape != null:
 		if Global.is_orientation_portrait():
-			Global.metrics.track_event_detail_show(event_id, event_status, event_tags, 0 )
+			Global.metrics.track_event_detail_show(event_id, event_status, event_tags, 0)
 			event_details_portrait.show()
 			event_details_landscape.hide()
 			var animation_target_y = event_details_portrait.position.y
@@ -58,7 +58,7 @@ func show_animation() -> void:
 				. set_ease(Tween.EASE_OUT)
 			)
 		else:
-			Global.metrics.track_event_detail_show(event_id, event_status, event_tags, 1 )
+			Global.metrics.track_event_detail_show(event_id, event_status, event_tags, 1)
 			event_details_portrait.hide()
 			event_details_landscape.show()
 			var animation_target_x = event_details_landscape.position.x
