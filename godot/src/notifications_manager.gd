@@ -37,6 +37,7 @@ var _is_polling: bool = false
 var _previous_notification_ids: Array = []
 var _notification_queue: Array = []  # Queue for new unread notifications to show as toasts
 var _debug_timer: Timer = null  # Timer for debug random notifications
+var _queue_paused: bool = false  # Whether the notification queue is paused
 
 
 func _ready() -> void:
@@ -319,8 +320,8 @@ func dequeue_notification() -> Dictionary:
 	if _notification_queue.size() > 0:
 		_notification_queue.pop_front()
 
-		# Return next notification if available
-		if _notification_queue.size() > 0:
+		# Return next notification if available and queue is not paused
+		if _notification_queue.size() > 0 and not _queue_paused:
 			var next_notif = _notification_queue[0]
 			# Emit signal for next notification
 			notification_queued.emit(next_notif)
@@ -337,6 +338,20 @@ func has_queued_notifications() -> bool:
 ## Get the number of notifications in the queue
 func get_queue_size() -> int:
 	return _notification_queue.size()
+
+
+## Pause the notification queue (prevents new toasts from showing)
+func pause_queue() -> void:
+	_queue_paused = true
+
+
+## Resume the notification queue (allows new toasts to show)
+## @param emit_next: If true, immediately emits the next notification signal (default: false)
+func resume_queue(emit_next: bool = false) -> void:
+	_queue_paused = false
+	# Only emit if explicitly requested (for when toast is dismissed)
+	if emit_next and _notification_queue.size() > 0:
+		notification_queued.emit(_notification_queue[0])
 
 
 ## Check if user is authenticated (not a guest)

@@ -656,15 +656,18 @@ func _on_notification_bell_clicked() -> void:
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
 		notification_bell_button.set_panel_open(false)
+		# On desktop, grab focus back to enable camera controls
+		# On mobile, also capture mouse
+		Global.explorer_grab_focus()
 		if Global.is_mobile():
 			capture_mouse()
-			Global.explorer_grab_focus()
 	else:
 		notifications_panel.show_panel()
 		notification_bell_button.set_panel_open(true)
+		# Release focus to prevent camera rotation while panel is open
+		Global.explorer_release_focus()
 		if Global.is_mobile():
 			release_mouse()
-			Global.explorer_release_focus()
 		# Close other panels if needed
 		if control_menu.visible:
 			control_menu.close()
@@ -673,9 +676,10 @@ func _on_notification_bell_clicked() -> void:
 func _on_notifications_panel_closed() -> void:
 	notifications_panel.hide()
 	notification_bell_button.set_panel_open(false)
+	# Grab focus back to enable camera controls
+	Global.explorer_grab_focus()
 	if Global.is_mobile():
 		capture_mouse()
-		Global.explorer_grab_focus()
 
 
 func _on_notification_queued(notification: Dictionary) -> void:
@@ -694,8 +698,9 @@ func _show_notification_toast(notification: Dictionary) -> void:
 	var toast = toast_scene.instantiate()
 	ui_root.add_child(toast)
 
-	# Connect to toast_closed signal to show next notification
+	# Connect to toast signals
 	toast.toast_closed.connect(_on_toast_closed)
+	toast.mark_as_read.connect(_on_toast_mark_as_read)
 
 	toast.show_notification(notification)
 
@@ -703,6 +708,14 @@ func _show_notification_toast(notification: Dictionary) -> void:
 func _on_toast_closed() -> void:
 	# Dequeue the current notification and check for next one
 	NotificationsManager.dequeue_notification()
+
+
+func _on_toast_mark_as_read(notification: Dictionary) -> void:
+	# Mark notification as read via drag gesture
+	var notification_id = notification.get("id", "")
+	if not notification_id.is_empty():
+		var ids = PackedStringArray([notification_id])
+		NotificationsManager.mark_as_read(ids)
 
 
 func _on_loading_started() -> void:

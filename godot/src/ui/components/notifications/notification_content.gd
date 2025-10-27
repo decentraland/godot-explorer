@@ -29,7 +29,9 @@ func _update_ui() -> void:
 
 	# Get notification type and metadata
 	var notif_type = notification_data.get("type", "")
-	var metadata: Dictionary = notification_data.get("metadata", {}) if "metadata" in notification_data else {}
+	var metadata: Dictionary = (
+		notification_data.get("metadata", {}) if "metadata" in notification_data else {}
+	)
 
 	# Generate header (title) and title (description) using helper
 	# Wrap title in [b] tags for bold
@@ -62,6 +64,9 @@ func _load_notification_image() -> void:
 				image_url = metadata.get("thumbnailUrl", "")
 			"badge_granted":
 				image_url = metadata.get("image", "")
+			"reward_assignment", "reward_in_progress":
+				# Use tokenImage for reward notifications
+				image_url = metadata.get("tokenImage", "")
 			"social_service_friendship_request":
 				# Use sender's profile image
 				if "sender" in metadata and metadata["sender"] is Dictionary:
@@ -158,7 +163,10 @@ func _set_icon_for_type(notif_type: String) -> void:
 
 func _apply_friend_notification_styling(notif_type: String, metadata: Dictionary) -> void:
 	# Only apply to friend notifications
-	if notif_type != "social_service_friendship_request" and notif_type != "social_service_friendship_accepted":
+	if (
+		notif_type != "social_service_friendship_request"
+		and notif_type != "social_service_friendship_accepted"
+	):
 		return
 
 	if "sender" not in metadata or not metadata["sender"] is Dictionary:

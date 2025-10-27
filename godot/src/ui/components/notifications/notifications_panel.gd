@@ -18,7 +18,7 @@ var _notification_items: Array[Control] = []
 func _ready() -> void:
 	# Ensure the panel blocks touch/mouse events from passing through
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	gui_input.connect(_on_gui_input)
+	set_process_input(true)
 
 	button_mark_all_read.pressed.connect(_async_on_mark_all_read_pressed)
 
@@ -31,11 +31,26 @@ func _ready() -> void:
 	_refresh_notifications()
 
 
-func _on_gui_input(event: InputEvent) -> void:
-	# Consume all input events to prevent them from passing through the panel
-	if event is InputEventMouseButton or event is InputEventScreenTouch or event is InputEventMouseMotion or event is InputEventScreenDrag:
-		accept_event()
-		get_viewport().set_input_as_handled()
+func _input(event: InputEvent) -> void:
+	# Only handle input when panel is visible
+	if not visible:
+		return
+
+	# Only process touch events (includes emulated touch from mouse)
+	# Ignore mouse events to avoid duplicate processing with emulation enabled
+	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
+		return
+
+	# Check if input is within the panel's rectangle
+	var pos = event.position
+	var rect = get_global_rect()
+	var is_inside_panel = rect.has_point(pos)
+
+	# Only release focus on touch press (not during drag) to prevent camera rotation
+	# This allows ScrollContainer to handle drag events normally
+	if is_inside_panel and event is InputEventScreenTouch and event.pressed:
+		if Global.explorer_has_focus():
+			Global.explorer_release_focus()
 
 
 func _refresh_notifications() -> void:

@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bkst8nn51e4iu" path="res://src/ui/components/notifications/notification_content.tscn" id="2_content"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_notif_panel"]
+resource_local_to_scene = true
 bg_color = Color(0.133333, 0.129412, 0.141176, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
@@ -26,11 +27,13 @@ corner_radius_bottom_left = 4
 
 [node name="NotificationItem" type="PanelContainer"]
 custom_minimum_size = Vector2(280, 67)
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
 script = ExtResource("1_notification_item")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
@@ -38,11 +41,13 @@ theme_override_constants/margin_bottom = 8
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 10
 
 [node name="NotificationContent" parent="MarginContainer/HBoxContainer" instance=ExtResource("2_content")]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
 
 [node name="ImageContainerWrapper" parent="MarginContainer/HBoxContainer/NotificationContent" index="0"]
 custom_minimum_size = Vector2(45, 45)
@@ -71,6 +76,7 @@ fit_content = true
 [node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
 theme_override_colors/default_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/bold_italics_font_size = 10
 theme_override_font_sizes/italics_font_size = 10
@@ -83,6 +89,7 @@ scroll_active = false
 
 [node name="RightContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 5
 
@@ -90,6 +97,7 @@ theme_override_constants/separation = 5
 unique_name_in_owner = true
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
+mouse_filter = 2
 size_flags_horizontal = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_unread_dot")
 
