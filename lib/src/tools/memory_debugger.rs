@@ -1,4 +1,7 @@
-use godot::{engine::{Os, Performance, performance::Monitor}, prelude::*};
+use godot::{
+    engine::{performance::Monitor, Os, Performance},
+    prelude::*,
+};
 
 use crate::godot_classes::{
     dcl_android_plugin::DclGodotAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
@@ -71,7 +74,7 @@ impl INode for MemoryDebugger {
         Self {
             base,
             metrics_print_timer: 0.0,
-            is_enabled: false, // Will be set in ready()
+            is_enabled: false,   // Will be set in ready()
             print_interval: 1.0, // Print metrics every second by default
             scene_manager_path: None,
         }
@@ -160,7 +163,8 @@ impl MemoryDebugger {
 
         // Memory metrics (in MB)
         let static_memory = performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
-        let static_memory_max = performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0;
+        let static_memory_max =
+            performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0;
 
         godot_print!("┌─ Godot Memory ─────────────────────────────────────────────┐");
         godot_print!("│  Static Memory:     {:.2} MB", static_memory);
@@ -172,9 +176,12 @@ impl MemoryDebugger {
         let performance = Performance::singleton();
 
         // GPU memory metrics (in MB)
-        let video_mem = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
-        let texture_mem = performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
-        let buffer_mem = performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+        let video_mem =
+            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
+        let texture_mem =
+            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
+        let buffer_mem =
+            performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
 
         godot_print!("┌─ GPU Memory ───────────────────────────────────────────────┐");
         godot_print!("│  Video RAM:         {:.2} MB", video_mem);
@@ -202,8 +209,10 @@ impl MemoryDebugger {
     fn print_godot_render_metrics(&self) {
         let performance = Performance::singleton();
 
-        let objects_in_frame = performance.get_monitor(Monitor::RENDER_TOTAL_OBJECTS_IN_FRAME) as i64;
-        let primitives_in_frame = performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64;
+        let objects_in_frame =
+            performance.get_monitor(Monitor::RENDER_TOTAL_OBJECTS_IN_FRAME) as i64;
+        let primitives_in_frame =
+            performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64;
         let draw_calls = performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64;
 
         godot_print!("┌─ Rendering ────────────────────────────────────────────────┐");
@@ -226,7 +235,10 @@ impl MemoryDebugger {
         if let Some(metrics) = metrics_data {
             godot_print!("┌─ Mobile Metrics ───────────────────────────────────────────┐");
             godot_print!("│  Memory Usage:      {} MB", metrics.memory_usage);
-            godot_print!("│  Temperature:       {}°C", metrics.device_temperature_celsius);
+            godot_print!(
+                "│  Temperature:       {}°C",
+                metrics.device_temperature_celsius
+            );
             godot_print!("│  Thermal State:     {}", metrics.device_thermal_state);
             godot_print!("│  Battery:           {}%", metrics.battery_percent);
             godot_print!("│  Charging:          {}", metrics.charging_state);
@@ -287,15 +299,29 @@ impl MemoryDebugger {
         let total_deallocated_mb = deallocated as f64 / 1_048_576.0;
 
         godot_print!("┌─ Rust Heap (Live Tracking) ────────────────────────────────┐");
-        godot_print!("│  Current Usage:     {:.2} MB ({} bytes)", current_mb, current_usage);
-        godot_print!("│  Total Allocated:   {:.2} MB ({} bytes)", total_allocated_mb, allocated);
-        godot_print!("│  Total Freed:       {:.2} MB ({} bytes)", total_deallocated_mb, deallocated);
+        godot_print!(
+            "│  Current Usage:     {:.2} MB ({} bytes)",
+            current_mb,
+            current_usage
+        );
+        godot_print!(
+            "│  Total Allocated:   {:.2} MB ({} bytes)",
+            total_allocated_mb,
+            allocated
+        );
+        godot_print!(
+            "│  Total Freed:       {:.2} MB ({} bytes)",
+            total_deallocated_mb,
+            deallocated
+        );
         godot_print!("│  Allocations:       {}", alloc_count);
         godot_print!("│  Deallocations:     {}", dealloc_count);
-        godot_print!("│  Active Allocs:     {}", alloc_count.saturating_sub(dealloc_count));
+        godot_print!(
+            "│  Active Allocs:     {}",
+            alloc_count.saturating_sub(dealloc_count)
+        );
         godot_print!("└────────────────────────────────────────────────────────────┘");
     }
-
 
     /// Get current Godot memory usage in MB
     #[func]
@@ -417,7 +443,9 @@ impl MemoryDebugger {
     #[cfg(not(feature = "use_memory_debugger"))]
     #[func]
     pub fn reset_rust_heap_stats(&self) {
-        godot_print!("⚠ Rust heap tracking not available - rebuild with --features use_memory_debugger");
+        godot_print!(
+            "⚠ Rust heap tracking not available - rebuild with --features use_memory_debugger"
+        );
     }
 
     /// Get total Deno/V8 memory usage in MB (requires scene_manager_path to be set)
@@ -485,11 +513,9 @@ impl MemoryDebugger {
     fn print_mobile_memory_breakdown(&self) {
         // Get total memory from mobile metrics
         let total_memory_mb = if DclIosPlugin::is_available() {
-            DclIosPlugin::get_mobile_metrics_internal()
-                .map(|m| m.memory_usage as f64)
+            DclIosPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
         } else if DclGodotAndroidPlugin::is_available() {
-            DclGodotAndroidPlugin::get_mobile_metrics_internal()
-                .map(|m| m.memory_usage as f64)
+            DclGodotAndroidPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
         } else {
             None
         };
@@ -506,9 +532,12 @@ impl MemoryDebugger {
         let performance = Performance::singleton();
 
         // Get component memory usage
-        let video_mem_mb = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
-        let texture_mem_mb = performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
-        let buffer_mem_mb = performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+        let video_mem_mb =
+            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
+        let texture_mem_mb =
+            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
+        let buffer_mem_mb =
+            performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
         let other_gpu_mb = (video_mem_mb - texture_mem_mb - buffer_mem_mb).max(0.0);
         let static_mem_mb = performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
 
@@ -540,14 +569,46 @@ impl MemoryDebugger {
         godot_print!("┌─ Memory Breakdown (Mobile) ────────────────────────────────┐");
         godot_print!("│  Total Memory:      {:.2} MB", total_mb);
         godot_print!("│");
-        godot_print!("│  Video RAM:         {:.1}% ({:.2} MB)", video_pct, video_mem_mb);
-        godot_print!("│    ├─ Textures:     {:.1}% ({:.2} MB)", texture_pct, texture_mem_mb);
-        godot_print!("│    ├─ Buffers:      {:.1}% ({:.2} MB)", buffer_pct, buffer_mem_mb);
-        godot_print!("│    └─ Other GPU:    {:.1}% ({:.2} MB)", other_gpu_pct, other_gpu_mb);
-        godot_print!("│  Static Memory:     {:.1}% ({:.2} MB)", static_pct, static_mem_mb);
-        godot_print!("│  Rust Heap:         {:.1}% ({:.2} MB)", rust_pct, rust_heap_mb);
-        godot_print!("│  Deno/V8:           {:.1}% ({:.2} MB)", deno_pct, deno_mem_mb);
-        godot_print!("│  Unknown:           {:.1}% ({:.2} MB)", unknown_pct, unknown_mb);
+        godot_print!(
+            "│  Video RAM:         {:.1}% ({:.2} MB)",
+            video_pct,
+            video_mem_mb
+        );
+        godot_print!(
+            "│    ├─ Textures:     {:.1}% ({:.2} MB)",
+            texture_pct,
+            texture_mem_mb
+        );
+        godot_print!(
+            "│    ├─ Buffers:      {:.1}% ({:.2} MB)",
+            buffer_pct,
+            buffer_mem_mb
+        );
+        godot_print!(
+            "│    └─ Other GPU:    {:.1}% ({:.2} MB)",
+            other_gpu_pct,
+            other_gpu_mb
+        );
+        godot_print!(
+            "│  Static Memory:     {:.1}% ({:.2} MB)",
+            static_pct,
+            static_mem_mb
+        );
+        godot_print!(
+            "│  Rust Heap:         {:.1}% ({:.2} MB)",
+            rust_pct,
+            rust_heap_mb
+        );
+        godot_print!(
+            "│  Deno/V8:           {:.1}% ({:.2} MB)",
+            deno_pct,
+            deno_mem_mb
+        );
+        godot_print!(
+            "│  Unknown:           {:.1}% ({:.2} MB)",
+            unknown_pct,
+            unknown_mb
+        );
         godot_print!("└────────────────────────────────────────────────────────────┘");
     }
 }
