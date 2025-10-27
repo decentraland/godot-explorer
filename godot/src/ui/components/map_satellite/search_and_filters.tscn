@@ -28,6 +28,11 @@ bg_color = Color(0.894118, 0.894118, 0.894118, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vrqoo"]
+bg_color = Color(0.894118, 0.894118, 0.894118, 1)
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+
 [sub_resource type="LabelSettings" id="LabelSettings_iemrq"]
 font = ExtResource("5_518ky")
 font_size = 24
@@ -36,11 +41,6 @@ font_color = Color(0.513233, 0.513233, 0.513233, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_77036"]
 font = ExtResource("8_fepdh")
 font_color = Color(0.513726, 0.513726, 0.513726, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vrqoo"]
-bg_color = Color(0.894118, 0.894118, 0.894118, 1)
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
 
 [node name="SearchAndFilters" type="Control"]
 layout_mode = 3
@@ -104,32 +104,32 @@ custom_minimum_size = Vector2(65, 65)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_default_cursor_shape = 2
-theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
 theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 6
 theme_override_fonts/font = ExtResource("5_518ky")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_c8imc")
-theme_override_styles/disabled_mirrored = SubResource("StyleBoxEmpty_c8imc")
-theme_override_styles/disabled = SubResource("StyleBoxEmpty_c8imc")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_c8imc")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_1gvcs")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_c8imc")
-theme_override_styles/hover = SubResource("StyleBoxFlat_1gvcs")
-theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_1gvcs")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_1gvcs")
-theme_override_styles/normal_mirrored = SubResource("StyleBoxEmpty_c8imc")
 theme_override_styles/normal = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/hover = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_c8imc")
 toggle_mode = true
 icon = ExtResource("6_mjn3i")
 icon_alignment = 1
@@ -190,11 +190,35 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 30
 
-[node name="SearchResults" type="Control" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer"]
+[node name="LandscapePanelContainer" type="PanelContainer" parent="SearchResultsContainer"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.156
+anchor_bottom = 1.0
+offset_top = -0.3199997
+offset_right = 338.0
+grow_vertical = 2
+size_flags_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
+
+[node name="LandscapeContainer" type="MarginContainer" parent="SearchResultsContainer/LandscapePanelContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
+script = ExtResource("9_q77y0")
+default_margin = 20
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="CardsScroll" type="ScrollContainer" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults"]
+[node name="HBoxContainer" type="HBoxContainer" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer"]
+layout_mode = 2
+
+[node name="SearchResults" type="Control" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(290, 0)
+layout_mode = 2
+
+[node name="CardsScroll" type="ScrollContainer" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer/HBoxContainer/SearchResults"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -206,17 +230,16 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3
 
-[node name="Cards" type="BoxContainer" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/CardsScroll"]
+[node name="Cards" type="BoxContainer" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer/HBoxContainer/SearchResults/CardsScroll"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
 size_flags_vertical = 3
+vertical = true
 script = ExtResource("2_q77y0")
 invert = true
 
-[node name="NoResults" type="VBoxContainer" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults"]
+[node name="NoResults" type="VBoxContainer" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer/HBoxContainer/SearchResults"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -227,7 +250,7 @@ size_flags_vertical = 3
 theme_override_constants/separation = 15
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/NoResults"]
+[node name="TextureRect" type="TextureRect" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer/HBoxContainer/SearchResults/NoResults"]
 modulate = Color(1, 1, 1, 0.419608)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -235,47 +258,19 @@ size_flags_vertical = 4
 texture = ExtResource("7_4gbog")
 stretch_mode = 3
 
-[node name="Label" type="Label" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/NoResults"]
+[node name="Label" type="Label" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer/HBoxContainer/SearchResults/NoResults"]
 layout_mode = 2
 text = "No results found"
 label_settings = SubResource("LabelSettings_iemrq")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/NoResults"]
+[node name="Label2" type="Label" parent="SearchResultsContainer/LandscapePanelContainer/LandscapeContainer/HBoxContainer/SearchResults/NoResults"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 text = "Make sure your search is spelled correctly."
 label_settings = SubResource("LabelSettings_77036")
 horizontal_alignment = 1
 autowrap_mode = 2
-
-[node name="LandscapePanelContainer" type="PanelContainer" parent="SearchResultsContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(350, 290)
-layout_mode = 1
-anchors_preset = -1
-anchor_top = 0.156
-anchor_bottom = 1.0
-offset_top = -0.32
-offset_right = 347.0
-grow_vertical = 2
-size_flags_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
-
-[node name="LandscapeContainer" type="MarginContainer" parent="SearchResultsContainer/LandscapePanelContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 30
-script = ExtResource("9_q77y0")
-default_margin = 20
-use_right = false
-use_top = false
-use_bottom = false
-metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
 [connection signal="resized" from="." to="." method="_on_resized"]
 [connection signal="toggled" from="PlacesSearchbar/OrientationContainer/HBoxContainer/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
