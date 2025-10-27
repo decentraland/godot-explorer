@@ -87,7 +87,7 @@ pub enum SceneResponse {
     Error(SceneId, String),
     Ok {
         scene_id: SceneId,
-        dirty_crdt_state: DirtyCrdtState,
+        dirty_crdt_state: Box<DirtyCrdtState>,
         logs: Vec<SceneLogMessage>,
         delta: f32,
         rpc_calls: Vec<RpcCall>,

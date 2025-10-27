@@ -64,14 +64,14 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
     // Get the latest Deno memory stats
     let deno_memory_stats = op_state
         .try_borrow::<super::super::DenoMemoryStats>()
-        .map(|s| *s);
+        .copied();
 
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
 
     sender
         .send(SceneResponse::Ok {
             scene_id,
-            dirty_crdt_state: dirty,
+            dirty_crdt_state: Box::new(dirty),
             logs: logs.0,
             delta: elapsed_time,
             rpc_calls,

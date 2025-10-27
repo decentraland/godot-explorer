@@ -178,7 +178,7 @@ pub(crate) fn scene_thread(
             thread_sender_to_main
                 .send(SceneResponse::Ok {
                     scene_id,
-                    dirty_crdt_state: dirty,
+                    dirty_crdt_state: Box::new(dirty),
                     logs: Vec::new(),
                     delta: 0.0,
                     rpc_calls: Vec::new(),

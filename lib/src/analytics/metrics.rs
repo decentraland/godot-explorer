@@ -370,20 +370,22 @@ impl Metrics {
                 // Player count
                 metrics.player_count = global_bind.avatars.bind().get_avatars_count();
 
-                // Deno/V8 JS heap memory metrics (requires use_deno feature)
+                // JavaScript (V8) heap memory metrics (requires use_deno feature)
                 #[cfg(feature = "use_deno")]
                 {
                     let scene_runner = global_bind.scene_runner.clone();
                     let scene_runner_bind = scene_runner.bind();
 
-                    let deno_total_mb = scene_runner_bind.get_total_deno_memory_mb();
-                    let deno_count = scene_runner_bind.get_deno_scene_count();
-                    let deno_avg_mb = scene_runner_bind.get_average_deno_memory_mb();
+                    let jsheap_total_mb = scene_runner_bind.get_total_deno_memory_mb();
+                    let jsheap_count = scene_runner_bind.get_deno_scene_count();
+                    let jsheap_avg_mb = scene_runner_bind.get_average_deno_memory_mb();
 
-                    if deno_count > 0 {
-                        metrics.deno_js_heap_mb = Some(deno_total_mb as f32);
-                        metrics.deno_scene_count = Some(deno_count);
-                        metrics.deno_average_js_heap_mb = Some(deno_avg_mb as f32);
+                    if jsheap_count > 0 {
+                        // Populate existing field in megabytes
+                        metrics.used_jsheap_size = jsheap_total_mb as i32;
+                        // Populate additional context fields
+                        metrics.js_scene_count = Some(jsheap_count);
+                        metrics.average_jsheap_mb = Some(jsheap_avg_mb as f32);
                     }
                 }
             }
