@@ -1,6 +1,7 @@
 use godot::prelude::*;
 
 use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
+use godot::engine::Image;
 
 /// Static wrapper for the DclAndroidPlugin (old plugin) that provides typed access to Android-specific functionality
 #[derive(GodotClass)]
@@ -117,5 +118,77 @@ impl DclGodotAndroidPlugin {
     #[func]
     pub fn is_available() -> bool {
         Self::try_get_singleton().is_some()
+    }
+
+    /// Add a calendar event with title, description, start time, end time, and location
+    /// Times are in milliseconds since Unix epoch (Jan 1, 1970)
+    /// Returns true if the calendar UI was shown successfully, false otherwise
+    #[func]
+    pub fn add_calendar_event(
+        title: GString,
+        description: GString,
+        start_time_millis: i64,
+        end_time_millis: i64,
+        location: GString,
+    ) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = singleton.call(
+            StringName::from("addCalendarEvent"),
+            &[
+                title.to_variant(),
+                description.to_variant(),
+                start_time_millis.to_variant(),
+                end_time_millis.to_variant(),
+                location.to_variant(),
+            ],
+        );
+        result.try_to::<bool>().unwrap_or(false)
+    }
+
+    /// Share text using the system share sheet
+    /// Returns true if the share dialog was shown successfully, false otherwise
+    #[func]
+    pub fn share_text(text: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = singleton.call(StringName::from("shareText"), &[text.to_variant()]);
+        result.try_to::<bool>().unwrap_or(false)
+    }
+
+    /// Share text with an image using the system share sheet
+    /// image should be a Godot Image object
+    /// Returns true if the share dialog was shown successfully, false otherwise
+    #[func]
+    pub fn share_text_with_image(text: GString, image: Gd<Image>) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+
+        // Extract image data for Android
+        let width = image.get_width();
+        let height = image.get_height();
+
+        // Convert image to RGBA8 format if needed
+        let mut rgba_image = image.clone();
+        if image.get_format() != godot::engine::image::Format::RGBA8 {
+            rgba_image.convert(godot::engine::image::Format::RGBA8);
+        }
+
+        // Get the pixel data as a byte array
+        let pixel_data = rgba_image.get_data();
+
+        let result = singleton.call(
+            StringName::from("shareTextWithImage"),
+            &[
+                text.to_variant(),
+                width.to_variant(),
+                height.to_variant(),
+                pixel_data.to_variant(),
+            ],
+        );
+        result.try_to::<bool>().unwrap_or(false)
     }
 }

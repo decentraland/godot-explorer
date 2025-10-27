@@ -89,7 +89,7 @@ label_settings = ExtResource("5_ratj3")
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-text = "Before playing, you have to agree to our terms"
+text = "Before playing, you have to agree to our terms."
 label_settings = ExtResource("6_ratj3")
 autowrap_mode = 2
 
@@ -128,13 +128,13 @@ clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("7_4l5lg")
+theme_override_font_sizes/normal_font_size = 28
+theme_override_font_sizes/bold_font_size = 28
 theme_override_font_sizes/bold_italics_font_size = 28
 theme_override_font_sizes/italics_font_size = 28
 theme_override_font_sizes/mono_font_size = 28
-theme_override_font_sizes/normal_font_size = 28
-theme_override_font_sizes/bold_font_size = 28
 bbcode_enabled = true
-text = "I have read and accept Decentraland's [color=#FF2D55][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#FF2D55][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#FF2D55][url=\"https://decentraland.org/content/\"]Contet Policy[/url][/color]"
+text = "I have read and accept Decentraland's [color=#FF2D55][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#FF2D55][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#FF2D55][url=\"https://decentraland.org/content/\"]Contet Policy[/url][/color]."
 fit_content = true
 scroll_active = false
 

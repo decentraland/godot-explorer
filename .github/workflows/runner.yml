@@ -25,11 +25,16 @@ jobs:
     name: 🤖 Android (VR and Mobile)
     needs: static-checks
     uses: ./.github/workflows/android_builds.yml
+    secrets:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
   ios-build:
-    name: 🍏 iOS (only lib)
+    name: 🍏 iOS
     needs: static-checks
     uses: ./.github/workflows/ios_builds.yml
+    secrets:
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
 
   linux-build:
     name: 🐧 Linux
@@ -46,7 +51,7 @@ jobs:
   #   needs: static-checks
   #   uses: ./.github/workflows/windows_builds.yml
 
-  # Third stage: Extras
+  # # Third stage: Extras
   docker-build-test:
     name: 🐳 Docker builds and test
     needs: linux-build
