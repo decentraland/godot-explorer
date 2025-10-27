@@ -478,7 +478,7 @@ fn main() -> Result<(), anyhow::Error> {
         ("explorer-version", sm) => {
             let verbose = sm.is_present("verbose");
             version::get_godot_explorer_version(verbose)
-        },
+        }
         _ => unreachable!("unreachable branch"),
     };
 
