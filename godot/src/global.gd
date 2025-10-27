@@ -139,12 +139,18 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
+
+	var session_id := DclConfig.generate_uuid_v4()
 	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(
-		self.config.analytics_user_id, DclConfig.generate_uuid_v4()
+		self.config.analytics_user_id, session_id
 	)
 	self.metrics.set_name("metrics")
-
+	
+	var sentry_user = SentryUser.new()
+	sentry_user.id = self.config.analytics_user_id
+	SentrySDK.set_tag("dcl_session_id", session_id)
+	
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
