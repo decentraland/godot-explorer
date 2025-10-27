@@ -19,6 +19,9 @@ const ENABLE_FAKE_NOTIFICATIONS = false
 ## TESTING: Set to false to disable type filtering and show all notifications
 const ENABLE_NOTIFICATION_FILTER = false
 
+## DEBUG: Set to true to enable random notification generation for testing
+const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = true
+
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
@@ -33,16 +36,23 @@ var _poll_timer: Timer = null
 var _is_polling: bool = false
 var _previous_notification_ids: Array = []
 var _notification_queue: Array = []  # Queue for new unread notifications to show as toasts
+var _debug_timer: Timer = null  # Timer for debug random notifications
 
 
 func _ready() -> void:
-	print("[NotificationsManager] Initializing NotificationsManager autoload")
 	# Create polling timer
 	_poll_timer = Timer.new()
 	_poll_timer.wait_time = POLL_INTERVAL_SECONDS
 	_poll_timer.timeout.connect(_on_poll_timeout)
 	add_child(_poll_timer)
-	print("[NotificationsManager] NotificationsManager ready")
+
+	# Create debug random notification timer
+	if ENABLE_DEBUG_RANDOM_NOTIFICATIONS:
+		_debug_timer = Timer.new()
+		_debug_timer.one_shot = false
+		_debug_timer.timeout.connect(_on_debug_timer_timeout)
+		add_child(_debug_timer)
+		_start_debug_timer()
 
 
 ## Start polling for new notifications
@@ -175,36 +185,25 @@ func fetch_notifications(
 
 ## Internal async helper for fetching notifications
 func _async_fetch_notifications(promise: Promise, url: String) -> void:
-	print("[NotificationsManager] Fetching from URL: ", url)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "{}")
 
 	if response is PromiseError:
 		var error_msg = "Fetch error: " + response.get_error()
-		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
-	print("[NotificationsManager] Raw response received")
-	print("[NotificationsManager] Response status: ", response.status_code())
-	print("[NotificationsManager] Response body: ", response.get_response_as_string())
-
 	var data: Dictionary = response.get_string_response_as_json()
-	print("[NotificationsManager] Parsed data: ", JSON.stringify(data, "\t"))
 
 	if not (data is Dictionary and "notifications" in data):
 		var error_msg = "Invalid response format"
-		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
 	var notifications = data["notifications"]
-	print("[NotificationsManager] Total notifications received: ", notifications.size())
-	print("[NotificationsManager] Notifications array: ", JSON.stringify(notifications, "\t"))
 
 	var filtered_notifications = _filter_notifications(notifications)
-	print("[NotificationsManager] Filtered notifications count: ", filtered_notifications.size())
 
 	# TESTING: Inject fake notification for testing toast popups
 	if ENABLE_FAKE_NOTIFICATIONS:
@@ -233,10 +232,7 @@ func _async_fetch_notifications(promise: Promise, url: String) -> void:
 					new_notifs.append(notif)
 					_notification_queue.append(notif)
 
-	print("[NotificationsManager] New unread notifications detected: ", new_notifs.size())
 	if new_notifs.size() > 0:
-		print("[NotificationsManager] New notifications: ", JSON.stringify(new_notifs, "\t"))
-		print("[NotificationsManager] Queue size: ", _notification_queue.size())
 		# Emit signal to start processing queue
 		if _notification_queue.size() == new_notifs.size():  # Only trigger if queue was empty
 			notification_queued.emit(_notification_queue[0])
@@ -244,7 +240,6 @@ func _async_fetch_notifications(promise: Promise, url: String) -> void:
 	# Emit updated notifications list
 	new_notifications.emit(_notifications.duplicate())
 	notifications_updated.emit()
-	print("[NotificationsManager] Fetch complete. Total cached notifications: ", _notifications.size())
 	promise.resolve_with_data(_notifications.duplicate())
 
 
@@ -281,33 +276,23 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 func _async_mark_as_read(
 	promise: Promise, url: String, body_json: String, notification_ids: PackedStringArray
 ) -> void:
-	print("[NotificationsManager] Marking as read - URL: ", url)
-	print("[NotificationsManager] Request body: ", body_json)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PUT, body_json)
 
 	if response is PromiseError:
 		var error_msg = "Mark as read error: " + response.get_error()
-		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
-	print("[NotificationsManager] Mark as read response received")
-	print("[NotificationsManager] Response status: ", response.status_code())
-	print("[NotificationsManager] Response body: ", response.get_response_as_string())
-
 	var data: Dictionary = response.get_string_response_as_json()
-	print("[NotificationsManager] Parsed data: ", JSON.stringify(data, "\t"))
 
 	if not (data is Dictionary and "updated" in data):
 		var error_msg = "Invalid response format"
-		print("[NotificationsManager] Error: ", error_msg)
 		notification_error.emit(error_msg)
 		promise.reject(error_msg)
 		return
 
 	var updated_count = data["updated"]
-	print("[NotificationsManager] Successfully marked ", updated_count, " notifications as read")
 
 	for notif in _notifications:
 		if notif["id"] in notification_ids:
@@ -319,7 +304,6 @@ func _async_mark_as_read(
 
 func _on_poll_timeout() -> void:
 	if _is_polling:
-		print("[NotificationsManager] Poll timeout - fetching unread notifications...")
 		fetch_notifications(-1, 50, true)
 
 
@@ -334,7 +318,6 @@ func get_next_queued_notification() -> Dictionary:
 func dequeue_notification() -> Dictionary:
 	if _notification_queue.size() > 0:
 		_notification_queue.pop_front()
-		print("[NotificationsManager] Dequeued notification. Queue size: ", _notification_queue.size())
 
 		# Return next notification if available
 		if _notification_queue.size() > 0:
@@ -362,3 +345,28 @@ func _is_user_authenticated() -> bool:
 		return false
 	var address = Global.player_identity.get_address_str()
 	return not address.is_empty()
+
+
+## DEBUG: Start the debug timer with a random interval between 7-10 seconds
+func _start_debug_timer() -> void:
+	if _debug_timer:
+		var random_interval = randf_range(7.0, 10.0)
+		_debug_timer.wait_time = random_interval
+		_debug_timer.start()
+
+
+## DEBUG: Called when debug timer times out - requeues a random old notification
+func _on_debug_timer_timeout() -> void:
+	# Pick a random notification from existing ones to requeue
+	if _notifications.size() > 0:
+		var random_index = randi() % _notifications.size()
+		var notif = _notifications[random_index]
+
+		# Add to queue for toast display
+		_notification_queue.append(notif)
+
+		# Emit signal to show toast
+		notification_queued.emit(notif)
+
+	# Restart timer with new random interval
+	_start_debug_timer()
