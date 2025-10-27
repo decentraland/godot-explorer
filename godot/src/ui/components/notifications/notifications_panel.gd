@@ -60,10 +60,10 @@ func _refresh_notifications() -> void:
 		return
 
 	var notifications = NotificationsManager.get_notifications()
-	_display_notifications(notifications)
+	async_display_notifications(notifications)
 
 
-func _display_notifications(notifications: Array) -> void:
+func async_display_notifications(notifications: Array) -> void:
 	# Clear existing items
 	for item in _notification_items:
 		item.queue_free()
@@ -110,7 +110,7 @@ func _display_notifications(notifications: Array) -> void:
 
 
 func _on_new_notifications(notifications: Array) -> void:
-	_display_notifications(notifications)
+	async_display_notifications(notifications)
 
 
 func _on_notifications_updated() -> void:

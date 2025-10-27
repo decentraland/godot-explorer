@@ -120,15 +120,15 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 						"[color=#%s]%s [color=#ECEBED]wants to be your friend!"
 						% [color_hex, sender_name]
 					)
-				else:
-					var address = sender.get("address", "")
-					var short_address = (
-						address.substr(address.length() - 4) if address.length() > 4 else address
-					)
-					return (
-						"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]wants to be your friend!"
-						% [color_hex, sender_name, short_address]
-					)
+
+				var address = sender.get("address", "")
+				var short_address = (
+					address.substr(address.length() - 4) if address.length() > 4 else address
+				)
+				return (
+					"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]wants to be your friend!"
+					% [color_hex, sender_name, short_address]
+				)
 			return "wants to be your friend!"
 
 		"social_service_friendship_accepted":
@@ -143,15 +143,15 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 						"[color=#%s]%s [color=#ECEBED]accepted your friend request."
 						% [color_hex, sender_name]
 					)
-				else:
-					var address = sender.get("address", "")
-					var short_address = (
-						address.substr(address.length() - 4) if address.length() > 4 else address
-					)
-					return (
-						"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]accepted your friend request."
-						% [color_hex, sender_name, short_address]
-					)
+
+				var address = sender.get("address", "")
+				var short_address = (
+					address.substr(address.length() - 4) if address.length() > 4 else address
+				)
+				return (
+					"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]accepted your friend request."
+					% [color_hex, sender_name, short_address]
+				)
 			return "accepted your friend request."
 
 		# Community notifications

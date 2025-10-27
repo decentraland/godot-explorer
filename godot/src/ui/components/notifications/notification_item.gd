@@ -3,13 +3,14 @@ extends PanelContainer
 signal notification_clicked(notification: Dictionary)
 signal mark_as_read_clicked(notification_id: String)
 
+const TAP_THRESHOLD_TIME: int = 300  # milliseconds
+const TAP_THRESHOLD_DISTANCE: float = 20.0  # pixels
+
 var notification_data: Dictionary = {}
 var original_bg_color: Color
 var tween: Tween
 var _press_start_time: int = 0
 var _press_start_pos: Vector2 = Vector2.ZERO
-const TAP_THRESHOLD_TIME: int = 300  # milliseconds
-const TAP_THRESHOLD_DISTANCE: float = 20.0  # pixels
 
 @onready var notification_content: Control = %NotificationContent
 @onready var label_timestamp: RichTextLabel = %LabelTimestamp

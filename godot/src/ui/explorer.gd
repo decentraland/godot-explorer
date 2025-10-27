@@ -702,7 +702,7 @@ func _show_notification_toast(notification: Dictionary) -> void:
 	toast.toast_closed.connect(_on_toast_closed)
 	toast.mark_as_read.connect(_on_toast_mark_as_read)
 
-	toast.show_notification(notification)
+	toast.async_show_notification(notification)
 
 
 func _on_toast_closed() -> void:

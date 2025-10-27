@@ -4,14 +4,14 @@ signal toast_clicked(notification: Dictionary)
 signal toast_closed
 signal mark_as_read(notification: Dictionary)
 
+enum DragDirection { NONE, LEFT, RIGHT, UP }
+
 const DISPLAY_DURATION = 5.0
 const SLIDE_IN_DURATION = 0.3
 const SLIDE_OUT_DURATION = 0.2
 const DRAG_THRESHOLD = 15.0  # Minimum pixels to distinguish tap from swipe
 const VELOCITY_DISMISS_THRESHOLD = 800.0  # Pixels per second to trigger swipe dismiss
 const INERTIA_DURATION = 0.4  # Duration of inertia animation
-
-enum DragDirection { NONE, LEFT, RIGHT, UP }
 
 var notification_data: Dictionary = {}
 var _timer: Timer
@@ -37,7 +37,7 @@ func _ready() -> void:
 	add_child(_timer)
 
 
-func show_notification(notification: Dictionary) -> void:
+func async_show_notification(notification: Dictionary) -> void:
 	notification_data = notification
 	notification_content.set_notification(notification)
 
@@ -231,7 +231,7 @@ func _end_swipe(pos: Vector2) -> void:
 			" px/s) - dismissing with inertia for notification: ",
 			notification_data.get("id", "unknown")
 		)
-		_dismiss_with_inertia()
+		async_dismiss_with_inertia()
 		return
 
 	# Not a fast swipe - just resume timer
@@ -270,7 +270,7 @@ func _cancel_swipe() -> void:
 	_timer.paused = false
 
 
-func _dismiss_with_inertia() -> void:
+func async_dismiss_with_inertia() -> void:
 	print("[NotificationToast] Starting inertia dismissal animation")
 	# Dismiss notification with momentum animation
 	# Mark as read and restore state
