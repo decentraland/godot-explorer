@@ -136,6 +136,17 @@ pub struct SegmentEventPerformanceMetrics {
     // Total MB downloaded in the last minute
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network_used_last_minute_mb: Option<f32>,
+
+    // Deno/V8 memory metrics (JavaScript runtime)
+    // Total Deno/V8 JS heap memory across all scenes in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deno_js_heap_mb: Option<f32>,
+    // Number of active scenes with Deno runtimes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deno_scene_count: Option<i32>,
+    // Average Deno JS heap memory per scene in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deno_average_js_heap_mb: Option<f32>,
 }
 
 #[derive(Serialize)]

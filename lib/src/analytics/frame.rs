@@ -86,6 +86,9 @@ impl Frame {
                 network_type: None,
                 network_speed_peak_mbps: None,
                 network_used_last_minute_mb: None,
+                deno_js_heap_mb: None,
+                deno_scene_count: None,
+                deno_average_js_heap_mb: None,
             });
 
             self.dt_ms_vec.resize(0, 0.0);
