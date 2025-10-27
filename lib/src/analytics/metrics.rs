@@ -17,9 +17,10 @@ use crate::{
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, SegmentEvent, SegmentEventChatMessageSent,
-        SegmentEventClickButton, SegmentEventCommonExplorerFields,
-        SegmentEventExplorerMoveToParcel, SegmentEventScreenViewed,
+        build_segment_event_batch_item, EventState, EventTags, Orientation, SegmentEvent,
+        SegmentEventChatMessageSent, SegmentEventClickButton, SegmentEventCommonExplorerFields,
+        SegmentEventEventsDetails, SegmentEventEventsGeneral, SegmentEventExplorerMoveToParcel,
+        SegmentEventScreenViewed,
     },
     frame::Frame,
 };
@@ -207,6 +208,78 @@ impl Metrics {
         self.events
             .push(SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
                 screen_name,
+            }));
+    }
+
+    #[func]
+    pub fn track_event_detail_show(
+        &mut self,
+        event_id: String,
+        event_state: i32,
+        event_tags: i32,
+        orientation: i32,
+    ) {
+        let state = match event_state {
+            0 => EventState::Live,
+            _ => EventState::Upcoming,
+        };
+        let tags = match event_tags {
+            0 => EventTags::Trending,
+            _ => EventTags::None,
+        };
+        let orient = match orientation {
+            0 => Orientation::Portrait,
+            _ => Orientation::Landscape,
+        };
+
+        self.events
+            .push(SegmentEvent::EventDetailShow(SegmentEventEventsDetails {
+                event_id,
+                event_state: state,
+                event_tags: tags,
+                orientation: orient,
+            }));
+    }
+
+    #[func]
+    pub fn track_event_detail_reminder_set(&mut self, event_id: String, event_tags: i32) {
+        let tags = match event_tags {
+            0 => EventTags::Trending,
+            _ => EventTags::None,
+        };
+
+        self.events
+            .push(SegmentEvent::EventDetailReminderSet(SegmentEventEventsGeneral {
+                event_id,
+                event_tags: tags,
+            }));
+    }
+
+    #[func]
+    pub fn track_event_detail_reminder_remove(&mut self, event_id: String, event_tags: i32) {
+        let tags = match event_tags {
+            0 => EventTags::Trending,
+            _ => EventTags::None,
+        };
+
+        self.events
+            .push(SegmentEvent::EventDetailReminderRemove(SegmentEventEventsGeneral {
+                event_id,
+                event_tags: tags,
+            }));
+    }
+
+    #[func]
+    pub fn track_event_detail_jumpto(&mut self, event_id: String, event_tags: i32) {
+        let tags = match event_tags {
+            0 => EventTags::Trending,
+            _ => EventTags::None,
+        };
+
+        self.events
+            .push(SegmentEvent::EventDetailJumpto(SegmentEventEventsGeneral {
+                event_id,
+                event_tags: tags,
             }));
     }
 

@@ -11,6 +11,27 @@ pub struct SegmentMetricEventBody {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EventState {
+    Live,
+    Upcoming,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EventTags {
+    Trending,
+    None,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Orientation {
+    Portrait,
+    Landscape,
+}
+
+#[derive(Serialize)]
 // Same for all events sent from the explorer
 pub struct SegmentEventCommonExplorerFields {
     // User’s wallet id, even for guests.
@@ -54,6 +75,10 @@ pub enum SegmentEvent {
     ChatMessageSent(SegmentEventChatMessageSent),
     ClickButton(SegmentEventClickButton),
     ScreenViewed(SegmentEventScreenViewed),
+    EventDetailShow(SegmentEventEventsDetails),
+    EventDetailReminderSet(SegmentEventEventsGeneral),
+    EventDetailReminderRemove(SegmentEventEventsGeneral),
+    EventDetailJumpto(SegmentEventEventsGeneral),
 }
 
 #[derive(Serialize)]
@@ -216,6 +241,26 @@ pub struct SegmentEventScreenViewed {
     pub screen_name: String,
 }
 
+#[derive(Serialize)]
+pub struct SegmentEventEventsDetails {
+    // Event ID.
+    pub event_id: String,
+    // Event state (live or upcoming).
+    pub event_state: EventState,
+    // Event tags (trending or none).
+    pub event_tags: EventTags,
+    // Screen orientation.
+    pub orientation: Orientation,
+}
+
+#[derive(Serialize)]
+pub struct SegmentEventEventsGeneral {
+    // Event ID.
+    pub event_id: String,
+    // Event tags (trending or none).
+    pub event_tags: EventTags,
+}
+
 pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
@@ -259,6 +304,26 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::ScreenViewed(event) => (
             "Screen Viewed".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::EventDetailShow(event) => (
+            "Event Detail Show".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::EventDetailReminderSet(event) => (
+            "Event Detail Reminder Set".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::EventDetailReminderRemove(event) => (
+            "Event Detail Reminder Remove".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::EventDetailJumpto(event) => (
+            "Event Detail Jumpto".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

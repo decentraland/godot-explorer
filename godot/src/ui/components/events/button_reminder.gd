@@ -3,6 +3,7 @@ extends Button
 const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 
 var event_id_value: String
+var event_tags: int
 
 @onready var texture_progress_bar: TextureProgressBar = $TextureProgressBar
 @onready var texture_rect_add: TextureRect = %TextureRect_Add
@@ -28,8 +29,11 @@ func _async_on_toggled(toggled_on: bool) -> void:
 
 	if toggled_on:
 		method = HTTPClient.METHOD_POST
+		Global.metrics.track_event_detail_reminder_set(event_id_value, event_tags)
 	else:
 		method = HTTPClient.METHOD_DELETE
+		Global.metrics.track_event_detail_reminder_remove(event_id_value, event_tags)
+
 
 	var response = await Global.async_signed_fetch(url, method)
 	if response is PromiseError:

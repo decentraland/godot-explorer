@@ -8,6 +8,10 @@ signal close
 @onready var event_details_portrait: PlaceItem = %EventDetailsPortrait
 @onready var event_details_landscape: PlaceItem = %EventDetailsLandscape
 
+var event_id: String
+var event_status: int
+var event_tags: int
+
 
 func _ready():
 	event_details_portrait.jump_in.connect(self._emit_jump_in)
@@ -29,12 +33,16 @@ func _close():
 func set_data(item_data):
 	event_details_landscape.set_data(item_data)
 	event_details_portrait.set_data(item_data)
+	event_id = item_data.get("id", "unknown-id")
+	event_status = 0 if item_data.get("live", false) else 1
+	event_tags = 0 if item_data.get("trending", false) else 1
 
 
 func show_animation() -> void:
 	self.show()
 	if event_details_portrait != null and event_details_landscape != null:
 		if Global.is_orientation_portrait():
+			Global.metrics.track_event_detail_show(event_id, event_status, event_tags, 0 )
 			event_details_portrait.show()
 			event_details_landscape.hide()
 			var animation_target_y = event_details_portrait.position.y
@@ -50,6 +58,7 @@ func show_animation() -> void:
 				. set_ease(Tween.EASE_OUT)
 			)
 		else:
+			Global.metrics.track_event_detail_show(event_id, event_status, event_tags, 1 )
 			event_details_portrait.hide()
 			event_details_landscape.show()
 			var animation_target_x = event_details_landscape.position.x
