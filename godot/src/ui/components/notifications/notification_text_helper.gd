@@ -6,6 +6,7 @@ extends RefCounted
 ## Generates notification headers (titles) and descriptions based on notification type and metadata.
 ## Follows the same pattern as Unity's notification system.
 
+
 ## Get avatar color from username (uses DclAvatar's color algorithm)
 static func _get_avatar_color_hex(username: String) -> String:
 	var explorer = Global.get_explorer()
@@ -115,11 +116,19 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				var color_hex = _get_avatar_color_hex(sender_name)
 
 				if has_claimed_name:
-					return "[color=#%s]%s [color=#ECEBED]wants to be your friend!" % [color_hex, sender_name]
+					return (
+						"[color=#%s]%s [color=#ECEBED]wants to be your friend!"
+						% [color_hex, sender_name]
+					)
 				else:
 					var address = sender.get("address", "")
-					var short_address = address.substr(address.length() - 4) if address.length() > 4 else address
-					return "[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]wants to be your friend!" % [color_hex, sender_name, short_address]
+					var short_address = (
+						address.substr(address.length() - 4) if address.length() > 4 else address
+					)
+					return (
+						"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]wants to be your friend!"
+						% [color_hex, sender_name, short_address]
+					)
 			return "wants to be your friend!"
 
 		"social_service_friendship_accepted":
@@ -130,11 +139,19 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				var color_hex = _get_avatar_color_hex(sender_name)
 
 				if has_claimed_name:
-					return "[color=#%s]%s [color=#ECEBED]accepted your friend request." % [color_hex, sender_name]
+					return (
+						"[color=#%s]%s [color=#ECEBED]accepted your friend request."
+						% [color_hex, sender_name]
+					)
 				else:
 					var address = sender.get("address", "")
-					var short_address = address.substr(address.length() - 4) if address.length() > 4 else address
-					return "[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]accepted your friend request." % [color_hex, sender_name, short_address]
+					var short_address = (
+						address.substr(address.length() - 4) if address.length() > 4 else address
+					)
+					return (
+						"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]accepted your friend request."
+						% [color_hex, sender_name, short_address]
+					)
 			return "accepted your friend request."
 
 		# Community notifications
@@ -165,7 +182,10 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 
 		"community_deleted_content_violation":
 			var community_name = metadata.get("communityName", "Unknown Community")
-			return "The [b][%s][/b] Community was deleted for violating Decentraland's Guidelines." % community_name
+			return (
+				"The [b][%s][/b] Community was deleted for violating Decentraland's Guidelines."
+				% community_name
+			)
 
 		"community_event_created":
 			var community_name = metadata.get("communityName", "Unknown Community")
@@ -174,7 +194,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 		"community_renamed":
 			var old_name = metadata.get("oldCommunityName", "Unknown")
 			var new_name = metadata.get("newCommunityName", "Unknown")
-			return "The [b][%s][/b] Community has been renamed to [b][%s][/b]." % [old_name, new_name]
+			return (
+				"The [b][%s][/b] Community has been renamed to [b][%s][/b]." % [old_name, new_name]
+			)
 
 		# Badge notifications - use metadata description
 		"badge_granted":
