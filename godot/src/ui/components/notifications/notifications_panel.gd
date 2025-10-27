@@ -16,7 +16,7 @@ var _notification_items: Array[Control] = []
 
 
 func _ready() -> void:
-	# Ensure the panel blocks touch/mouse events from passing through
+	# Ensure the panel blocks touch/mouse events from passing through when visible
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
 
@@ -32,8 +32,8 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Only handle input when panel is visible
-	if not visible:
+	# Only handle input when panel is visible in tree
+	if not is_visible_in_tree():
 		return
 
 	# Only process touch events (includes emulated touch from mouse)
@@ -157,13 +157,11 @@ func _on_notification_clicked(_notification: Dictionary) -> void:
 
 func show_panel() -> void:
 	show()
-	mouse_filter = Control.MOUSE_FILTER_STOP
 	_refresh_notifications()
 
 
 func hide_panel() -> void:
 	hide()
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _is_user_authenticated() -> bool:

@@ -77,6 +77,10 @@ func _format_timestamp(timestamp_ms: int) -> String:
 
 
 func _input(event: InputEvent) -> void:
+	# Only handle input when visible
+	if not is_visible_in_tree():
+		return
+
 	# Only handle touch events (includes emulated touch from mouse)
 	# Ignore mouse events to avoid duplicate processing
 	if not (event is InputEventScreenTouch):
