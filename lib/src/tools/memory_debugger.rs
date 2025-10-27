@@ -4,29 +4,20 @@ use crate::godot_classes::{
     dcl_android_plugin::DclGodotAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
 };
 
-#[cfg(feature = "use_memory_debugger")]
 use std::alloc::{GlobalAlloc, Layout, System};
-
-#[cfg(feature = "use_memory_debugger")]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 // ============================================================================
 // Tracking Allocator - Live Rust Heap Memory Monitoring
 // ============================================================================
 
-#[cfg(feature = "use_memory_debugger")]
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-#[cfg(feature = "use_memory_debugger")]
 static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
-#[cfg(feature = "use_memory_debugger")]
 static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
-#[cfg(feature = "use_memory_debugger")]
 static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-#[cfg(feature = "use_memory_debugger")]
 pub struct TrackingAllocator;
 
-#[cfg(feature = "use_memory_debugger")]
 unsafe impl GlobalAlloc for TrackingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ret = System.alloc(layout);
@@ -69,6 +60,9 @@ pub struct MemoryDebugger {
     metrics_print_timer: f64,
     is_enabled: bool,
     print_interval: f64,
+
+    #[export]
+    scene_manager_path: Option<Gd<Node>>,
 }
 
 #[godot_api]
@@ -79,6 +73,7 @@ impl INode for MemoryDebugger {
             metrics_print_timer: 0.0,
             is_enabled: false, // Will be set in ready()
             print_interval: 1.0, // Print metrics every second by default
+            scene_manager_path: None,
         }
     }
 
@@ -91,6 +86,20 @@ impl INode for MemoryDebugger {
             tracing::info!("MemoryDebugger enabled (Godot debug export)");
         } else {
             tracing::info!("MemoryDebugger disabled (Godot release export)");
+        }
+
+        // Automatically find and set the scene_manager_path if not already set
+        if self.scene_manager_path.is_none() {
+            if let Some(parent) = self.base().get_parent() {
+                // Try to find scene_runner as a sibling (both are children of Global)
+                let scene_runner_node = parent.get_node_or_null("scene_runner".into());
+                if let Some(node) = scene_runner_node {
+                    self.scene_manager_path = Some(node);
+                    tracing::info!("MemoryDebugger: Automatically found scene_runner");
+                } else {
+                    tracing::warn!("MemoryDebugger: Could not find scene_runner node");
+                }
+            }
         }
     }
 
@@ -131,7 +140,7 @@ impl MemoryDebugger {
 
     fn print_all_metrics(&self) {
         godot_print!("╔══════════════════════════════════════════════════════════════╗");
-        godot_print!("║                      MEMORY DEBUGGER                         ║");
+        godot_print!("║                      MEMORY DEBUGGER 3                       ║");
         godot_print!("╚══════════════════════════════════════════════════════════════╝");
 
         self.print_godot_memory_metrics();
@@ -139,11 +148,9 @@ impl MemoryDebugger {
         self.print_godot_object_metrics();
         self.print_godot_render_metrics();
         self.print_mobile_metrics();
-
-        #[cfg(feature = "use_memory_debugger")]
-        {
-            self.print_rust_heap_info();
-        }
+        self.print_rust_heap_info();
+        self.print_deno_memory_metrics();
+        self.print_mobile_memory_breakdown();
 
         godot_print!("════════════════════════════════════════════════════════════════");
     }
@@ -227,7 +234,47 @@ impl MemoryDebugger {
         }
     }
 
-    #[cfg(feature = "use_memory_debugger")]
+    #[cfg(feature = "use_deno")]
+    fn print_deno_memory_metrics(&self) {
+        use crate::scene_runner::scene_manager::SceneManager;
+
+        godot_print!("┌─ Deno/V8 Memory (JS Runtimes) ─────────────────────────────┐");
+
+        if let Some(scene_manager_node) = &self.scene_manager_path {
+            if let Ok(scene_manager) = scene_manager_node.clone().try_cast::<SceneManager>() {
+                let scene_manager = scene_manager.bind();
+                let total_used_mb = scene_manager.get_total_deno_memory_mb();
+                let total_heap_mb = scene_manager.get_total_deno_heap_size_mb();
+                let scene_count = scene_manager.get_deno_scene_count();
+                let average_mb = scene_manager.get_average_deno_memory_mb();
+
+                if scene_count > 0 {
+                    godot_print!("│  Active Scenes:     {}", scene_count);
+                    godot_print!("│  Total Used:        {:.2} MB", total_used_mb);
+                    godot_print!("│  Total Heap Size:   {:.2} MB", total_heap_mb);
+                    godot_print!("│  Average/Scene:     {:.2} MB", average_mb);
+                } else {
+                    godot_print!("│  No active scenes");
+                }
+            } else {
+                godot_print!("│  ⚠ Failed to cast scene_manager_path to SceneManager");
+            }
+        } else {
+            godot_print!("│  ⚠ Scene manager path not set");
+            godot_print!("│  Set the 'scene_manager_path' property to enable tracking");
+        }
+
+        godot_print!("└────────────────────────────────────────────────────────────┘");
+    }
+
+    #[cfg(not(feature = "use_deno"))]
+    fn print_deno_memory_metrics(&self) {
+        godot_print!("┌─ Deno/V8 Memory (JS Runtimes) ─────────────────────────────┐");
+        godot_print!("│  Deno feature not enabled");
+        godot_print!("│  Rebuild with --features use_deno to enable");
+        godot_print!("└────────────────────────────────────────────────────────────┘");
+    }
+
     fn print_rust_heap_info(&self) {
         let allocated = ALLOCATED.load(Ordering::Relaxed);
         let deallocated = DEALLOCATED.load(Ordering::Relaxed);
@@ -371,5 +418,136 @@ impl MemoryDebugger {
     #[func]
     pub fn reset_rust_heap_stats(&self) {
         godot_print!("⚠ Rust heap tracking not available - rebuild with --features use_memory_debugger");
+    }
+
+    /// Get total Deno/V8 memory usage in MB (requires scene_manager_path to be set)
+    #[cfg(feature = "use_deno")]
+    #[func]
+    pub fn get_deno_total_memory_mb(&self) -> f64 {
+        use crate::scene_runner::scene_manager::SceneManager;
+
+        if let Some(scene_manager_node) = &self.scene_manager_path {
+            if let Ok(scene_manager) = scene_manager_node.clone().try_cast::<SceneManager>() {
+                return scene_manager.bind().get_total_deno_memory_mb();
+            }
+        }
+        0.0
+    }
+
+    /// Get count of active Deno runtimes
+    #[cfg(feature = "use_deno")]
+    #[func]
+    pub fn get_deno_scene_count(&self) -> i32 {
+        use crate::scene_runner::scene_manager::SceneManager;
+
+        if let Some(scene_manager_node) = &self.scene_manager_path {
+            if let Ok(scene_manager) = scene_manager_node.clone().try_cast::<SceneManager>() {
+                return scene_manager.bind().get_deno_scene_count();
+            }
+        }
+        0
+    }
+
+    /// Get average Deno memory per scene in MB
+    #[cfg(feature = "use_deno")]
+    #[func]
+    pub fn get_deno_average_memory_mb(&self) -> f64 {
+        use crate::scene_runner::scene_manager::SceneManager;
+
+        if let Some(scene_manager_node) = &self.scene_manager_path {
+            if let Ok(scene_manager) = scene_manager_node.clone().try_cast::<SceneManager>() {
+                return scene_manager.bind().get_average_deno_memory_mb();
+            }
+        }
+        0.0
+    }
+
+    // Stub functions when use_deno feature is disabled
+    #[cfg(not(feature = "use_deno"))]
+    #[func]
+    pub fn get_deno_total_memory_mb(&self) -> f64 {
+        0.0
+    }
+
+    #[cfg(not(feature = "use_deno"))]
+    #[func]
+    pub fn get_deno_scene_count(&self) -> i32 {
+        0
+    }
+
+    #[cfg(not(feature = "use_deno"))]
+    #[func]
+    pub fn get_deno_average_memory_mb(&self) -> f64 {
+        0.0
+    }
+
+    /// Print memory breakdown showing percentage of total memory used by each component
+    fn print_mobile_memory_breakdown(&self) {
+        // Get total memory from mobile metrics
+        let total_memory_mb = if DclIosPlugin::is_available() {
+            DclIosPlugin::get_mobile_metrics_internal()
+                .map(|m| m.memory_usage as f64)
+        } else if DclGodotAndroidPlugin::is_available() {
+            DclGodotAndroidPlugin::get_mobile_metrics_internal()
+                .map(|m| m.memory_usage as f64)
+        } else {
+            None
+        };
+
+        // Only show breakdown if we have total memory from mobile
+        let Some(total_mb) = total_memory_mb else {
+            return;
+        };
+
+        if total_mb <= 0.0 {
+            return;
+        }
+
+        let performance = Performance::singleton();
+
+        // Get component memory usage
+        let video_mem_mb = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
+        let texture_mem_mb = performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
+        let buffer_mem_mb = performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+        let other_gpu_mb = (video_mem_mb - texture_mem_mb - buffer_mem_mb).max(0.0);
+        let static_mem_mb = performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
+
+        // Rust heap memory
+        let rust_heap_mb = {
+            let allocated = ALLOCATED.load(Ordering::Relaxed);
+            let deallocated = DEALLOCATED.load(Ordering::Relaxed);
+            let current_usage = allocated.saturating_sub(deallocated);
+            current_usage as f64 / 1_048_576.0
+        };
+
+        // Deno memory
+        let deno_mem_mb = self.get_deno_total_memory_mb();
+
+        // Calculate total tracked and unknown
+        let total_tracked_mb = video_mem_mb + static_mem_mb + rust_heap_mb + deno_mem_mb;
+        let unknown_mb = (total_mb - total_tracked_mb).max(0.0);
+
+        // Calculate percentages
+        let video_pct = (video_mem_mb / total_mb) * 100.0;
+        let texture_pct = (texture_mem_mb / total_mb) * 100.0;
+        let buffer_pct = (buffer_mem_mb / total_mb) * 100.0;
+        let other_gpu_pct = (other_gpu_mb / total_mb) * 100.0;
+        let static_pct = (static_mem_mb / total_mb) * 100.0;
+        let rust_pct = (rust_heap_mb / total_mb) * 100.0;
+        let deno_pct = (deno_mem_mb / total_mb) * 100.0;
+        let unknown_pct = (unknown_mb / total_mb) * 100.0;
+
+        godot_print!("┌─ Memory Breakdown (Mobile) ────────────────────────────────┐");
+        godot_print!("│  Total Memory:      {:.2} MB", total_mb);
+        godot_print!("│");
+        godot_print!("│  Video RAM:         {:.1}% ({:.2} MB)", video_pct, video_mem_mb);
+        godot_print!("│    ├─ Textures:     {:.1}% ({:.2} MB)", texture_pct, texture_mem_mb);
+        godot_print!("│    ├─ Buffers:      {:.1}% ({:.2} MB)", buffer_pct, buffer_mem_mb);
+        godot_print!("│    └─ Other GPU:    {:.1}% ({:.2} MB)", other_gpu_pct, other_gpu_mb);
+        godot_print!("│  Static Memory:     {:.1}% ({:.2} MB)", static_pct, static_mem_mb);
+        godot_print!("│  Rust Heap:         {:.1}% ({:.2} MB)", rust_pct, rust_heap_mb);
+        godot_print!("│  Deno/V8:           {:.1}% ({:.2} MB)", deno_pct, deno_mem_mb);
+        godot_print!("│  Unknown:           {:.1}% ({:.2} MB)", unknown_pct, unknown_mb);
+        godot_print!("└────────────────────────────────────────────────────────────┘");
     }
 }

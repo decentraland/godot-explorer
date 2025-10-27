@@ -182,6 +182,7 @@ pub(crate) fn scene_thread(
                     logs: Vec::new(),
                     delta: 0.0,
                     rpc_calls: Vec::new(),
+                    deno_memory_stats: None,
                 })
                 .expect("error sending scene response!!");
 
@@ -261,6 +262,9 @@ pub(crate) fn scene_thread(
         .borrow_mut()
         .put(SceneStartTime(std::time::SystemTime::now()));
 
+    // Initialize Deno memory stats tracking
+    state.borrow_mut().put(super::DenoMemoryStats::default());
+
     if inspector.is_some() {
         // TODO: maybe send a message to announce the inspector is being waited
         tracing::info!("Inspector is waiting...");
@@ -306,6 +310,7 @@ pub(crate) fn scene_thread(
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
+    let mut last_memory_stats_update = std::time::Instant::now();
 
     loop {
         let dt = std::time::SystemTime::now()
@@ -355,6 +360,22 @@ pub(crate) fn scene_thread(
             }
         } else if reported_error_filter > 0 {
             reported_error_filter -= 1;
+        }
+
+        // Collect V8 heap statistics every second
+        if last_memory_stats_update.elapsed() >= Duration::from_secs(1) {
+            let mut heap_stats = v8::HeapStatistics::default();
+            runtime.v8_isolate().get_heap_statistics(&mut heap_stats);
+
+            let deno_stats = super::DenoMemoryStats {
+                total_heap_size_bytes: heap_stats.total_heap_size(),
+                used_heap_size_bytes: heap_stats.used_heap_size(),
+                heap_size_limit_bytes: heap_stats.heap_size_limit(),
+                external_memory_bytes: heap_stats.external_memory(),
+            };
+
+            state.borrow_mut().put(deno_stats);
+            last_memory_stats_update = std::time::Instant::now();
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
