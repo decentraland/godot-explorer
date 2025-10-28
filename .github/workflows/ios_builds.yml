@@ -14,9 +14,8 @@ jobs:
     name: Build iOS
     strategy:
       fail-fast: false
-      matrix:
-        os: [macos-14-xlarge]
-    runs-on: ${{ matrix.os }}
+    runs-on: warp-macos-14-arm64-6x
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,6 +27,9 @@ jobs:
           toolchain: 1.79
           override: true
           target: aarch64-apple-ios
+
+      - name: Set up WarpBuild cache
+        uses: ./.github/actions/set-up-warp-cache
 
       # Dependencies section
       - name: Install dependencies
