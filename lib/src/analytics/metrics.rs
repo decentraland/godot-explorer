@@ -404,7 +404,7 @@ impl Metrics {
 
         let request = RequestOption::new(
             0,
-            "https://webhook.site/a1f4c6af-0623-43a9-835b-d028c7d12091".into(),
+            "https://api.segment.io/v1/batch".into(),
             http::Method::POST,
             ResponseType::AsString,
             Some(json_body.as_bytes().to_vec()),
