@@ -11,9 +11,7 @@ jobs:
     name: Build Windows
     strategy:
       fail-fast: false
-      matrix:
-        os: [bigwin]
-    runs-on: ${{ matrix.os }}
+    runs-on: warp-windows-latest-x64-4x
     steps:
       - uses: actions/checkout@v4
         with:

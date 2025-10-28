@@ -9,7 +9,7 @@ concurrency:
 jobs:
   static-checks:
     name: Code style and file formatting
-    runs-on: ubuntu-22.04
+    runs-on: warp-ubuntu-latest-x64-2x
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:

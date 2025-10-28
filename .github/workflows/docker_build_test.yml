@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build-images:
     name: Build images and test
-    runs-on: ubuntu-latest
+    runs-on: warp-ubuntu-latest-x64-2x
     timeout-minutes: 10
     steps:
       - name: Checkout sources

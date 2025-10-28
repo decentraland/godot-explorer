@@ -7,7 +7,7 @@ jobs:
   delete-branch:
     name: Delete branch in deploy pipeline
     if: github.event.ref_type == 'branch'
-    runs-on: ubuntu-latest
+    runs-on: warp-ubuntu-latest-x64-2x
 
     steps:
       - name: Setup SSH for deployment

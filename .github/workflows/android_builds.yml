@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build:
     name: Build VR and Mobile
-    runs-on: bigrunner
+    runs-on: warp-ubuntu-latest-x64-8x
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15

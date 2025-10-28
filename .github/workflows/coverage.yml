@@ -9,7 +9,7 @@ concurrency:
 jobs:
   coverage:
     name: Test & Coverage
-    runs-on: gpu-godot-docker
+    runs-on: warp-ubuntu-latest-x64-4x
     timeout-minutes: 30
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin

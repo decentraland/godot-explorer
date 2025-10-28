@@ -14,9 +14,7 @@ jobs:
     name: Build iOS
     strategy:
       fail-fast: false
-      matrix:
-        os: [macos-14-xlarge]
-    runs-on: ${{ matrix.os }}
+    runs-on: warp-macos-14-arm64-6x
     steps:
       - uses: actions/checkout@v4
         with:
