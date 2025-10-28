@@ -17,10 +17,9 @@ use crate::{
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, SegmentEvent,
-        SegmentEventChatMessageSent, SegmentEventClickButton, SegmentEventCommonExplorerFields,
-        SegmentEventExplorerMoveToParcel,
-        SegmentEventScreenViewed,
+        build_segment_event_batch_item, SegmentEvent, SegmentEventChatMessageSent,
+        SegmentEventClickButton, SegmentEventCommonExplorerFields,
+        SegmentEventExplorerMoveToParcel, SegmentEventScreenViewed,
     },
     frame::Frame,
 };
