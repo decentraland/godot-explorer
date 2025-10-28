@@ -22,8 +22,8 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 @export var realm_title: String = "Genesis City"
 
 var event_id: String
-var event_status: int
-var event_tags: int
+var event_status: String
+var event_tags: String
 var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
@@ -295,7 +295,7 @@ func set_data(item_data):
 	# Handle start_at for events (Unix timestamp)
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
-	event_status = 0 if live else 1
+	event_status = "live" if live else "upcoming"
 	if next_start_at != "":
 		# Convert ISO string to Unix timestamp
 		var timestamp = _parse_iso_timestamp(next_start_at)
@@ -406,10 +406,7 @@ func set_event_name(_event_name: String, _user_name: String = "") -> void:
 
 
 func set_trending(_trending: bool) -> void:
-	if _trending:
-		event_tags = 0
-	else:
-		event_tags = 1
+	event_tags = "trending" if _trending else "none"
 	var trending_pill = _get_trending_pill()
 	if trending_pill:
 		trending_pill.set_visible(_trending)
@@ -459,7 +456,7 @@ func set_attendees_number(_attendees: int) -> void:
 		label.text = str(_attendees)
 
 
-func set_attending(_attending: bool, _id: String, _event_tags) -> void:
+func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:
 	var reminder_button = _get_reminder_button()
 	if reminder_button:
 		reminder_button.event_id_value = _id
@@ -691,5 +688,7 @@ func _on_button_calendar_pressed() -> void:
 
 
 func _on_button_jump_to_event_pressed() -> void:
-	Global.metrics.track_event_detail_jumpto(event_id, event_tags)
+	Global.metrics.track_click_button(
+		"jump_to", "EVENT_DETAILS", JSON.stringify({"event_id": event_id, "event_tag": event_tags})
+	)
 	jump_in.emit(location, realm)

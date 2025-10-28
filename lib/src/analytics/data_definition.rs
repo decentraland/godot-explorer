@@ -75,10 +75,6 @@ pub enum SegmentEvent {
     ChatMessageSent(SegmentEventChatMessageSent),
     ClickButton(SegmentEventClickButton),
     ScreenViewed(SegmentEventScreenViewed),
-    EventDetailShow(SegmentEventEventsDetails),
-    EventDetailReminderSet(SegmentEventEventsGeneral),
-    EventDetailReminderRemove(SegmentEventEventsGeneral),
-    EventDetailJumpto(SegmentEventEventsGeneral),
 }
 
 #[derive(Serialize)]
@@ -239,6 +235,9 @@ pub struct SegmentEventClickButton {
 pub struct SegmentEventScreenViewed {
     // Name of the screen viewed.
     pub screen_name: String,
+    // JSON with extra payload, in case we need to track additional metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_properties: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -304,26 +303,6 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::ScreenViewed(event) => (
             "Screen Viewed".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::EventDetailShow(event) => (
-            "Event Detail Show".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::EventDetailReminderSet(event) => (
-            "Event Detail Reminder Set".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::EventDetailReminderRemove(event) => (
-            "Event Detail Reminder Remove".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::EventDetailJumpto(event) => (
-            "Event Detail Jumpto".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),
