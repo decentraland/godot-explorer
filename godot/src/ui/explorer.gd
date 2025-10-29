@@ -19,6 +19,8 @@ var _first_time_refresh_warning = true
 var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
+var _is_loading: bool = true  # Start as loading
+var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -33,6 +35,8 @@ var _last_outlined_avatar: Avatar = null
 @onready var jump_in_popup = %JumpInPopup
 
 @onready var panel_profile: Panel = %Panel_Profile
+@onready var notification_bell_button: Button = %NotificationBellButton
+@onready var notifications_panel: PanelContainer = %NotificationsPanel
 
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
@@ -106,6 +110,17 @@ func _ready():
 	# Register popup instances in Global
 	Global.set_url_popup_instance(url_popup)
 	Global.set_jump_in_popup_instance(jump_in_popup)
+
+	# Connect notification bell button
+	notification_bell_button.bell_clicked.connect(_on_notification_bell_clicked)
+	notifications_panel.panel_closed.connect(_on_notifications_panel_closed)
+
+	# Connect to NotificationsManager queue signals
+	NotificationsManager.notification_queued.connect(_on_notification_queued)
+
+	# Connect to loading state signals
+	Global.loading_started.connect(_on_loading_started)
+	Global.loading_finished.connect(_on_loading_finished)
 
 	if Global.is_xr():
 		player = load("res://src/logic/player/xr_player.tscn").instantiate()
@@ -203,6 +218,7 @@ func _ready():
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
+	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
@@ -235,6 +251,9 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 
 
 func _on_player_logout():
+	# Stop notifications polling
+	NotificationsManager.stop_polling()
+
 	# Clean stored session
 	Global.get_config().session_account = {}
 	Global.get_config().save_to_settings_file()
@@ -244,6 +263,12 @@ func _on_player_logout():
 
 	# TODO: Temporal solution
 	get_tree().quit()
+
+
+func _on_player_profile_changed(_profile: DclUserProfile) -> void:
+	# Start notifications polling when authenticated
+	print("[Explorer] Player profile changed - starting notifications polling")
+	NotificationsManager.start_polling()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -624,6 +649,86 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
 	elif virtual_keyboard_height == 0:
 		panel_chat.exit_chat()
+
+
+func _on_notification_bell_clicked() -> void:
+	# Toggle notification panel visibility
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+		notification_bell_button.set_panel_open(false)
+		# On desktop, grab focus back to enable camera controls
+		# On mobile, also capture mouse
+		Global.explorer_grab_focus()
+		if Global.is_mobile():
+			capture_mouse()
+	else:
+		notifications_panel.show_panel()
+		notification_bell_button.set_panel_open(true)
+		# Release focus to prevent camera rotation while panel is open
+		Global.explorer_release_focus()
+		if Global.is_mobile():
+			release_mouse()
+		# Close other panels if needed
+		if control_menu.visible:
+			control_menu.close()
+
+
+func _on_notifications_panel_closed() -> void:
+	notifications_panel.hide()
+	notification_bell_button.set_panel_open(false)
+	# Grab focus back to enable camera controls
+	Global.explorer_grab_focus()
+	if Global.is_mobile():
+		capture_mouse()
+
+
+func _on_notification_queued(notification: Dictionary) -> void:
+	# Only show notifications if not loading
+	if not _is_loading:
+		_show_notification_toast(notification)
+	else:
+		# Store the notification to show after loading finishes
+		if _pending_notification_toast.is_empty():
+			_pending_notification_toast = notification
+
+
+func _show_notification_toast(notification: Dictionary) -> void:
+	# Create and show toast notification
+	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
+	var toast = toast_scene.instantiate()
+	ui_root.add_child(toast)
+
+	# Connect to toast signals
+	toast.toast_closed.connect(_on_toast_closed)
+	toast.mark_as_read.connect(_on_toast_mark_as_read)
+
+	toast.async_show_notification(notification)
+
+
+func _on_toast_closed() -> void:
+	# Dequeue the current notification and check for next one
+	NotificationsManager.dequeue_notification()
+
+
+func _on_toast_mark_as_read(notification: Dictionary) -> void:
+	# Mark notification as read via drag gesture
+	var notification_id = notification.get("id", "")
+	if not notification_id.is_empty():
+		var ids = PackedStringArray([notification_id])
+		NotificationsManager.mark_as_read(ids)
+
+
+func _on_loading_started() -> void:
+	_is_loading = true
+	_pending_notification_toast = {}  # Clear any pending notification
+
+
+func _on_loading_finished() -> void:
+	_is_loading = false
+	# Show pending notification if there was one queued during loading
+	if not _pending_notification_toast.is_empty():
+		_show_notification_toast(_pending_notification_toast)
+		_pending_notification_toast = {}
 
 
 func _notification(what: int) -> void:
