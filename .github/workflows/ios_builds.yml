@@ -14,7 +14,7 @@ jobs:
     name: Build iOS
     strategy:
       fail-fast: false
-    runs-on: warp-macos-14-arm64-6x
+    runs-on: macos-14
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +28,8 @@ jobs:
           override: true
           target: aarch64-apple-ios
 
-      - name: Set up WarpBuild cache
-        uses: ./.github/actions/set-up-warp-cache
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
 
       # Dependencies section
       - name: Install dependencies
