@@ -20,15 +20,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Download Godot Lib Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: libdclgodot_linux
-
-          ## REVIEW: this is being overwritten by the next artifact 
-          ## -> libdclgodot_linux with a libdclgodot.so ~ 100MB
-          ## -> decentraland-godot-linux with a libdclgodot.so  ~ 520MB
-
       - name: Download Godot Executables Artifact
         uses: actions/download-artifact@v4
         with:
