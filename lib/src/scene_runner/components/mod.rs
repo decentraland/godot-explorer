@@ -22,4 +22,5 @@ pub mod tween;
 pub mod ui;
 #[cfg(feature = "use_ffmpeg")]
 pub mod video_player;
+pub mod virtual_cameras;
 pub mod visibility;

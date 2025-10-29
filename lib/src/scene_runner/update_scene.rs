@@ -37,7 +37,7 @@ use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                PbCameraMode, PbEngineInfo, PbPointerLock, PbUiCanvasInformation,
+                PbCameraMode, PbEngineInfo, PbMainCamera, PbPointerLock, PbUiCanvasInformation,
             },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
@@ -49,7 +49,10 @@ use crate::{
         RendererResponse, SceneId,
     },
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::components::avatar_shape::update_avatar_shape_emote_command,
+    scene_runner::components::{
+        avatar_shape::update_avatar_shape_emote_command,
+        virtual_cameras::update_main_and_virtual_cameras,
+    },
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
@@ -143,6 +146,15 @@ pub fn _process_scene(
                             filter_by_scene_id,
                             primary_player_inside,
                         );
+
+                    let main_camera =
+                        SceneCrdtStateProtoComponents::get_main_camera_mut(crdt_state);
+                    main_camera.put(
+                        SceneEntityId::CAMERA,
+                        Some(PbMainCamera {
+                            virtual_camera_entity: None,
+                        }),
+                    );
                 }
 
                 // PbRealmInfo
@@ -246,6 +258,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::CameraModeArea => {
                 update_camera_mode_area(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::VirtualCameras => {
+                update_main_and_virtual_cameras(scene, crdt_state);
                 false
             }
             SceneUpdateState::AudioSource => {
