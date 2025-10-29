@@ -27,6 +27,7 @@ use crate::{
     godot_classes::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
         dcl_ui_control::DclUiControl, dcl_video_player::DclVideoPlayer,
+        dcl_virtual_camera::DclVirtualCamera,
     },
     realm::scene_definition::SceneEntityDefinition,
 };
@@ -93,6 +94,7 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
+    VirtualCameras,
     AudioSource,
     ProcessRpcs,
     ComputeCrdtState,
@@ -130,7 +132,8 @@ impl SceneUpdateState {
             #[cfg(not(feature = "use_ffmpeg"))]
             &Self::Raycasts => Self::AvatarModifierArea,
             &Self::AvatarModifierArea => Self::CameraModeArea,
-            &Self::CameraModeArea => Self::AudioSource,
+            &Self::CameraModeArea => Self::VirtualCameras,
+            &Self::VirtualCameras => Self::AudioSource,
             &Self::AudioSource => Self::AvatarAttach,
             &Self::AvatarAttach => Self::SceneUi,
             &Self::SceneUi => Self::ProcessRpcs,
@@ -208,6 +211,8 @@ pub struct Scene {
     pub tweens: HashMap<SceneEntityId, Tween>,
     // Duplicated value to async-access the animator
     pub dup_animator: HashMap<SceneEntityId, PbAnimator>,
+
+    pub virtual_camera: Gd<DclVirtualCamera>,
 
     pub paused: bool,
 
@@ -310,6 +315,7 @@ impl Scene {
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
             paused: false,
+            virtual_camera: Default::default(),
             deno_memory_stats: None,
         }
     }
@@ -372,6 +378,7 @@ impl Scene {
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
             paused: false,
+            virtual_camera: Default::default(),
             deno_memory_stats: None,
         }
     }

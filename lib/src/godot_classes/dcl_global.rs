@@ -307,7 +307,7 @@ impl DclGlobal {
     }
 
     #[func]
-    pub fn get_version(&self) -> GString {
+    pub fn get_version() -> GString {
         env!("GODOT_EXPLORER_VERSION").into()
     }
 

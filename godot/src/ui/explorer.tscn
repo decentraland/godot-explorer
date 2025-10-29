@@ -18,6 +18,8 @@
 [ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_gwcjv"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="13_tdhdx"]
+[ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/notifications/notification_bell_button.tscn" id="13_notif_bell"]
+[ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/notifications/notifications_panel.tscn" id="14_notif_panel"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
 [ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="14_xlu8p"]
 [ext_resource type="PackedScene" uid="uid://bkjdjy0wlvltq" path="res://src/ui/components/chat/notifications.tscn" id="15_ky6fv"]
@@ -340,6 +342,32 @@ theme_override_styles/panel = SubResource("StyleBoxEmpty_u4dfr")
 [node name="Panel_Profile" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("13_tdhdx")]
 unique_name_in_owner = true
 layout_mode = 1
+
+[node name="NotificationBellButton" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("13_notif_bell")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -80.0
+offset_top = 110.0
+offset_right = -20.0
+offset_bottom = 170.0
+grow_horizontal = 0
+
+[node name="NotificationsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("14_notif_panel")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -485.0
+offset_top = 110.0
+offset_right = -85.0
+offset_bottom = 610.0
+grow_horizontal = 0
+custom_minimum_size = Vector2(400, 500)
 
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1
