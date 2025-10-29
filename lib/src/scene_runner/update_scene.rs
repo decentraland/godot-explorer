@@ -37,7 +37,7 @@ use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                PbCameraMode, PbEngineInfo, PbPointerLock, PbUiCanvasInformation,
+                PbCameraMode, PbEngineInfo, PbMainCamera, PbPointerLock, PbUiCanvasInformation,
             },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
@@ -146,6 +146,15 @@ pub fn _process_scene(
                             filter_by_scene_id,
                             primary_player_inside,
                         );
+
+                    let main_camera =
+                        SceneCrdtStateProtoComponents::get_main_camera_mut(crdt_state);
+                    main_camera.put(
+                        SceneEntityId::CAMERA,
+                        Some(PbMainCamera {
+                            virtual_camera_entity: None,
+                        }),
+                    );
                 }
 
                 // PbRealmInfo
