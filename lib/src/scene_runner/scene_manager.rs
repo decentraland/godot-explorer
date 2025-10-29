@@ -17,7 +17,7 @@ use crate::{
     },
     godot_classes::{
         dcl_avatar::DclAvatar, dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal,
-        dcl_ui_control::DclUiControl,
+        dcl_ui_control::DclUiControl, dcl_virtual_camera::DclVirtualCamera,
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
         JsonGodotClass,
     },
@@ -61,9 +61,6 @@ pub struct SceneManager {
     scenes: HashMap<SceneId, Scene>,
 
     #[export]
-    camera_node: Option<Gd<Camera3D>>,
-
-    #[export]
     player_avatar_node: Gd<Node3D>,
 
     #[export]
@@ -71,6 +68,12 @@ pub struct SceneManager {
 
     #[var]
     console: Callable,
+
+    #[var]
+    cursor_position: Vector2,
+
+    #[var]
+    raycast_use_cursor_position: bool,
 
     // Cached center position of viewport for raycasting
     viewport_center: Vector2,
@@ -283,14 +286,12 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_camera_and_player_node(
+    fn set_player_node(
         &mut self,
-        camera_node: Gd<Camera3D>,
         player_avatar_node: Gd<Node3D>,
         player_body_node: Gd<Node3D>,
         console: Callable,
     ) {
-        self.camera_node = Some(camera_node.clone());
         self.player_avatar_node = player_avatar_node.clone();
         self.player_body_node = player_body_node.clone();
         self.console = console;
@@ -401,19 +402,22 @@ impl SceneManager {
 
         self.receive_from_thread();
 
-        if self.camera_node.is_none() {
-            return;
-        }
-        let camera_node = self.camera_node.clone().unwrap();
-
         let player_global_transform = self.player_avatar_node.get_global_transform();
-        let camera_global_transform = camera_node.get_global_transform();
+        let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d());
 
-        let camera_node = camera_node.try_cast::<DclCamera3D>();
-        let camera_mode = if let Ok(camera_node) = camera_node {
-            camera_node.bind().get_camera_mode()
-        } else {
-            0
+        let (camera_global_transform, camera_mode) = match camera_node.as_ref() {
+            Some(camera_node) => {
+                let camera_global_transform = camera_node.get_global_transform();
+                let camera_node = camera_node.clone().try_cast::<DclCamera3D>();
+                let camera_mode = if let Ok(camera_node) = camera_node {
+                    camera_node.bind().get_camera_mode()
+                } else {
+                    0
+                };
+                (camera_global_transform, camera_mode)
+            }
+
+            None => (player_global_transform, 0),
         };
 
         let frames_count = godot::engine::Engine::singleton().get_physics_frames();
@@ -720,14 +724,17 @@ impl SceneManager {
         const CL_POINTER: u32 = 1;
         const CL_AVATAR: u32 = 536870912; // Layer 30 for avatars
 
-        self.camera_node.as_ref()?;
+        let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d())?;
 
-        let camera_node = self.camera_node.clone().unwrap();
+        let screen_point = if self.raycast_use_cursor_position {
+            self.cursor_position
+        } else {
+            self.viewport_center
+        };
 
         // Use cached viewport center for raycasting
-        let raycast_from = camera_node.project_ray_origin(self.viewport_center);
-        let raycast_to =
-            raycast_from + camera_node.project_ray_normal(self.viewport_center) * RAY_LENGTH;
+        let raycast_from = camera_node.project_ray_origin(screen_point);
+        let raycast_to = raycast_from + camera_node.project_ray_normal(screen_point) * RAY_LENGTH;
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
 
         // Update the cached raycast query parameters
@@ -953,6 +960,26 @@ impl SceneManager {
     }
 
     #[func]
+    pub fn get_scene_entity_node_or_null_3d(
+        &self,
+        scene_id: i32,
+        entity_id: u32,
+    ) -> Option<Gd<Node3D>> {
+        self.scenes.get(&SceneId(scene_id)).and_then(|x| {
+            x.godot_dcl_scene
+                .get_node_or_null_3d(&SceneEntityId::from_i32(entity_id as i32))
+                .cloned()
+        })
+    }
+
+    #[func]
+    pub fn get_scene_virtual_camera(&self, scene_id: i32) -> Option<Gd<DclVirtualCamera>> {
+        self.scenes
+            .get(&SceneId(scene_id))
+            .map(|x| x.virtual_camera.clone())
+    }
+
+    #[func]
     pub fn is_scene_tests_finished(&self, scene_id: i32) -> bool {
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
             return false;
@@ -1096,7 +1123,6 @@ impl INode for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            camera_node: None,
             player_avatar_node: Node3D::new_alloc(),
             player_body_node: Node3D::new_alloc(),
 
@@ -1115,6 +1141,8 @@ impl INode for SceneManager {
                 canvas_size.y as i32,
             ),
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
+            cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
+            raycast_use_cursor_position: false,
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,
@@ -1315,47 +1343,46 @@ impl INode for SceneManager {
                 .emit_signal("pointer_tooltip_changed".into(), &[]);
         }
 
-        if self.camera_node.is_none() {
-            return;
-        }
-        let player_camera_node = self.camera_node.clone().unwrap();
+        if let Some(current_camera_node) =
+            self.base().get_viewport().and_then(|x| x.get_camera_3d())
+        {
+            // Only update player/camera transforms for current scene and global scenes
+            let player_transform = self.player_avatar_node.get_global_transform();
+            let camera_transform = current_camera_node.get_global_transform();
 
-        // Only update player/camera transforms for current scene and global scenes
-        let player_transform = self.player_avatar_node.get_global_transform();
-        let camera_transform = player_camera_node.get_global_transform();
-
-        // Update current parcel scene
-        if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
-            if let Some(player_node) = scene
-                .godot_dcl_scene
-                .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
-            {
-                player_node.set_global_transform(player_transform);
-            }
-
-            if let Some(camera_node) = scene
-                .godot_dcl_scene
-                .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
-            {
-                camera_node.set_global_transform(camera_transform);
-            }
-        }
-
-        // Update global scenes
-        for scene_id in self.get_global_scene_ids().clone() {
-            if let Some(scene) = self.scenes.get_mut(&scene_id) {
-                if let Some(player_node) = scene
+            // Update current parcel scene
+            if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
+                if let Some(scene_player_entity_node) = scene
                     .godot_dcl_scene
                     .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
                 {
-                    player_node.set_global_transform(player_transform);
+                    scene_player_entity_node.set_global_transform(player_transform);
                 }
 
-                if let Some(camera_node) = scene
+                if let Some(scene_camera_entity_node) = scene
                     .godot_dcl_scene
                     .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
                 {
-                    camera_node.set_global_transform(camera_transform);
+                    scene_camera_entity_node.set_global_transform(camera_transform);
+                }
+            }
+
+            // Update global scenes
+            for scene_id in self.get_global_scene_ids().clone() {
+                if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                    if let Some(scene_player_entity_node) = scene
+                        .godot_dcl_scene
+                        .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
+                    {
+                        scene_player_entity_node.set_global_transform(player_transform);
+                    }
+
+                    if let Some(scene_camera_entity_node) = scene
+                        .godot_dcl_scene
+                        .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
+                    {
+                        scene_camera_entity_node.set_global_transform(camera_transform);
+                    }
                 }
             }
         }

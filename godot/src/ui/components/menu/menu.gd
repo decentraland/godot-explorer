@@ -75,6 +75,9 @@ func _ready():
 	control_profile_settings.hide()
 	control_map_satellite.jump_to.connect(_jump_to)
 
+	# Connect to notification clicked signal for reward notifications
+	Global.notification_clicked.connect(_on_notification_clicked)
+
 	# Leave it, because we can open a browser with the Magic Wallet
 	button_magic_wallet.visible = false
 
@@ -322,6 +325,16 @@ func _on_size_changed() -> void:
 		color_rect_landscape_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0
+
+
+func _on_notification_clicked(notification: Dictionary) -> void:
+	# Handle notification clicks - open backpack for reward notifications
+	var notif_type = notification.get("type", "")
+
+	# Check if this is a reward notification
+	if notif_type in ["reward_assignment", "reward_in_progress"]:
+		# Open the backpack to show the reward
+		show_backpack()
 
 
 func _notification(what: int) -> void:
