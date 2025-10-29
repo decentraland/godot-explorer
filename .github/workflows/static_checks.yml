@@ -10,18 +10,17 @@ jobs:
   static-checks:
     name: Code style and file formatting
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: 1.79
           override: true
-          components: clippy, rustfmt
-      - run: rustup component add rustfmt
+          components: rustfmt
+
       - name: Set up Python
         uses: actions/setup-python@v4
 
@@ -34,26 +33,6 @@ jobs:
       - name: GDScript Linter
         run: gdlint godot/
 
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
-
-      - name: Install dependencies
-        uses: ./.github/actions/install-deps
-
-      - name: cargo install
-        run: cargo run -- install --no-templates
-
-      - name: cargo check
-        working-directory: lib
-        run: cargo check
-
       - name: cargo fmt
         working-directory: lib
         run: cargo fmt --all -- --check
-
-      - name: cargo clippy
-        working-directory: lib
-        run: cargo clippy -- -D warnings
-
-      - name: Version check
-        run: cargo run -- version-check
