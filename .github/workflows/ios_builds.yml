@@ -37,11 +37,14 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets ios
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build MacOS
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Build iOS
-        run: cargo run -- build --release --target ios
+        run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
       - name: Import Assets
         uses: ./.github/actions/import-assets
