@@ -480,7 +480,10 @@ fn set_godot_explorer_version() {
             let timestamp = Utc::now()
                 .to_rfc3339()
                 .replace(|c: char| !c.is_ascii_digit(), "");
-            format!("{}-t{}-alpha{}-{}", version, timestamp, mode_suffix, env_suffix)
+            format!(
+                "{}-t{}-alpha{}-{}",
+                version, timestamp, mode_suffix, env_suffix
+            )
         }
     };
 
