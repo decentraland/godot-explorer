@@ -13,6 +13,7 @@ config_version=5
 config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
+run/main_loop_type="ProjectMainLoop"
 config/features=PackedStringArray("4.5")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/image="uid://de6dww6t0a7v"
@@ -212,6 +213,7 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 [sentry]
 
+options/auto_init=false
 options/dsn="https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984"
 options/debug_printing=0
 options/diagnostic_level=4
