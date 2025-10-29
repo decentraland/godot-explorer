@@ -1,0 +1,13 @@
+[gd_resource type="LabelSettings" load_steps=4 format=3 uid="uid://dj8crtu0eembr"]
+
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="1_qnuo4"]
+[ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="2_2pg2k"]
+
+[sub_resource type="FontVariation" id="FontVariation_5a6jb"]
+fallbacks = Array[Font]([ExtResource("2_2pg2k")])
+base_font = ExtResource("1_qnuo4")
+
+[resource]
+font = SubResource("FontVariation_5a6jb")
+font_size = 14
+font_color = Color(0, 0, 0, 1)
