@@ -79,7 +79,8 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		)
 		# Remove X offset for centered view in first person
 		tween_in.tween_property(mount_camera, "position:x", 0.0, 0.25).set_ease(Tween.EASE_IN_OUT)
-		avatar.set_hidden(true)
+		if camera.current:
+			avatar.set_hidden(true)
 		if play_sound:
 			UiSounds.play_sound("ui_fade_in")
 

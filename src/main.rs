@@ -24,6 +24,7 @@ mod platform;
 mod run;
 mod tests;
 mod ui;
+mod version;
 mod version_check;
 
 fn main() -> Result<(), anyhow::Error> {
@@ -65,6 +66,17 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
+        .subcommand(
+            Command::new("explorer-version")
+                .about("Get Godot Explorer version")
+                .arg(
+                    Arg::new("verbose")
+                        .short('v')
+                        .long("verbose")
+                        .help("show detailed warning messages")
+                        .takes_value(false),
+                )
+        )
         .subcommand(
             Command::new("install")
                 .arg(
@@ -463,6 +475,10 @@ fn main() -> Result<(), anyhow::Error> {
         ),
         ("doctor", _) => doctor::run_doctor(),
         ("version-check", _) => version_check::run_version_check(),
+        ("explorer-version", sm) => {
+            let verbose = sm.is_present("verbose");
+            version::get_godot_explorer_version(verbose)
+        }
         _ => unreachable!("unreachable branch"),
     };
 

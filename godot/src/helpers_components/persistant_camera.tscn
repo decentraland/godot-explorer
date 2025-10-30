@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://cn2faqed1k4hl"]
+
+[ext_resource type="Script" uid="uid://bxseiny8n2o5c" path="res://src/helpers_components/persistant_camera.gd" id="1_owvtf"]
+
+[node name="PersistantCamera" type="Camera3D"]
+script = ExtResource("1_owvtf")
+
+[connection signal="tree_exiting" from="." to="." method="_on_tree_exiting"]

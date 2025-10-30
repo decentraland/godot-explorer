@@ -210,16 +210,20 @@ func async_load_category(category: int) -> Array:
 
 func _on_size_changed() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
-	if window_size.x > window_size.y:
+	if window_size.x > window_size.y:  # PORTRAIT
 		closed_position = Vector2(-landscape_panel_container.size.x, 0)
 		search_results.reparent(landscape_container)
 		portrait_panel_container.hide()
 		landscape_panel_container.visible = !is_closed
-	else:
+		cards_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		cards_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	else:  # LANDSCAPE
 		closed_position = Vector2(0, portrait_panel_container.size.y)
 		search_results.reparent(portrait_container)
 		portrait_panel_container.visible = !is_closed
 		landscape_panel_container.hide()
+		cards_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		cards_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	if is_closed:
 		search_results_container.position = closed_position
 	else:

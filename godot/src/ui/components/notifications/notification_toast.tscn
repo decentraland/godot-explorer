@@ -1,0 +1,78 @@
+[gd_scene load_steps=5 format=3 uid="uid://b3qk7n8vh2nax"]
+
+[ext_resource type="Script" uid="uid://7b7emedxam5w" path="res://src/ui/components/notifications/notification_toast.gd" id="1_toast"]
+[ext_resource type="PackedScene" uid="uid://bkst8nn51e4iu" path="res://src/ui/components/notifications/notification_content.tscn" id="2_content"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_toast"]
+bg_color = Color(0, 0, 0, 0.8)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_image"]
+bg_color = Color(0.2, 0.2, 0.2, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="NotificationToast" type="Control"]
+custom_minimum_size = Vector2(383.64, 90.86)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -221.82
+offset_top = -20.0
+offset_right = 221.82
+offset_bottom = 130.86
+grow_horizontal = 2
+script = ExtResource("1_toast")
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -191.82
+offset_top = -45.43
+offset_right = 191.82
+offset_bottom = 45.43
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_toast")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="NotificationContent" parent="Panel/MarginContainer" instance=ExtResource("2_content")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ImageContainerWrapper" parent="Panel/MarginContainer/NotificationContent" index="0"]
+custom_minimum_size = Vector2(50, 50)
+
+[node name="ImageContainer" parent="Panel/MarginContainer/NotificationContent/ImageContainerWrapper" index="0"]
+theme_override_styles/panel = SubResource("StyleBoxFlat_image")
+
+[node name="VBoxContainer" parent="Panel/MarginContainer/NotificationContent" index="1"]
+theme_override_constants/separation = 2
+
+[node name="LabelTitle" parent="Panel/MarginContainer/NotificationContent/VBoxContainer" index="0"]
+size_flags_vertical = 4
+theme_override_font_sizes/bold_italics_font_size = 14
+theme_override_font_sizes/italics_font_size = 14
+theme_override_font_sizes/normal_font_size = 14
+theme_override_font_sizes/bold_font_size = 14
+
+[node name="LabelDescription" parent="Panel/MarginContainer/NotificationContent/VBoxContainer" index="1"]
+size_flags_vertical = 4
+
+[editable path="Panel/MarginContainer/NotificationContent"]
