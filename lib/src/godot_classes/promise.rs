@@ -35,7 +35,7 @@ pub struct Promise {
 #[godot_api]
 impl Promise {
     #[signal]
-    pub fn on_resolved(&self) {}
+    pub fn on_resolved();
 
     #[func]
     pub fn resolve(&mut self) {

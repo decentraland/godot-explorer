@@ -189,7 +189,7 @@ impl GodotDclScene {
             self.root_node_3d.add_child(new_node_3d.clone().upcast());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
-                let mut player_collider_filter = godot::engine::load::<PackedScene>(
+                let mut player_collider_filter = godot::tools::load::<PackedScene>(
                     "res://src/decentraland_components/player_collider_filter.tscn",
                 )
                 .instantiate()

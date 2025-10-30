@@ -5,7 +5,7 @@ use std::{
 };
 
 use godot::{
-    engine::text_server::{JustificationFlag, LineBreakFlag},
+    classes::text_server::{JustificationFlag, LineBreakFlag},
     obj::Gd,
 };
 
@@ -60,7 +60,7 @@ const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
 ];
 
 enum ContextNode {
-    UiText(bool, Gd<godot::engine::Label>),
+    UiText(bool, Gd<godot::classes::Label>),
 }
 
 fn update_layout(
@@ -127,7 +127,7 @@ fn update_layout(
 
             if let Some(ui_text_control) = ui_node
                 .base_control
-                .try_get_node_as::<godot::engine::Label>("text")
+                .try_get_node_as::<godot::classes::Label>("text")
             {
                 let text_wrapping = if let Some(ui_text) = ui_text_components
                     .get(entity)

@@ -1,4 +1,4 @@
-use godot::engine::ImageTexture;
+use godot::classes::ImageTexture;
 use godot::prelude::*;
 
 #[derive(GodotClass)]

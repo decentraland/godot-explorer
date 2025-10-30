@@ -197,7 +197,7 @@ impl NetworkInspector {
     }
 
     #[signal]
-    fn request_changed(&self, id: u32) {}
+    fn request_changed(id: u32);
 
     #[func]
     fn get_request_count(&self) -> u32 {
@@ -232,7 +232,7 @@ impl INode for NetworkInspector {
                 NetworkInspectPayload::Request(request) => {
                     let mut inspected_request = NetworkInspectedRequest {
                         requested_by: request.requester.into(),
-                        requested_at: godot::engine::Time::singleton().get_ticks_msec() as u32,
+                        requested_at: godot::classes::Time::singleton().get_ticks_msec() as u32,
                         url: request.url.into(),
                         method: request.method.as_str().into(),
                         request_headers: Dictionary::new(),
@@ -265,7 +265,7 @@ impl INode for NetworkInspector {
                     if let Some(request_gd) = self.requests.get_mut(&event.id) {
                         let mut request = request_gd.bind_mut();
                         request.response_received_at =
-                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                            godot::classes::Time::singleton().get_ticks_msec() as u32;
                         request.response_received = true;
 
                         match response {
@@ -291,7 +291,7 @@ impl INode for NetworkInspector {
                     if let Some(request_gd) = self.requests.get_mut(&event.id) {
                         let mut request = request_gd.bind_mut();
                         request.response_payload_received_at =
-                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                            godot::classes::Time::singleton().get_ticks_msec() as u32;
                         request.response_payload_received = true;
                         match response {
                             Ok(body) => {
@@ -309,11 +309,11 @@ impl INode for NetworkInspector {
                     if let Some(request_gd) = self.requests.get_mut(&event.id) {
                         let mut request = request_gd.bind_mut();
                         request.response_payload_received_at =
-                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                            godot::classes::Time::singleton().get_ticks_msec() as u32;
                         request.response_payload_received = true;
 
                         request.response_received_at =
-                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                            godot::classes::Time::singleton().get_ticks_msec() as u32;
                         request.response_received = true;
 
                         match response {

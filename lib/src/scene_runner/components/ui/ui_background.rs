@@ -55,7 +55,7 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             } else {
                 let mut node: Gd<DclUiBackground> = DclUiBackground::new_alloc();
                 node.set_name("bkg".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
 
                 existing_ui_background
                     .base_control

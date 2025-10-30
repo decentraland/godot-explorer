@@ -216,7 +216,7 @@ impl DclAvatarWireFormat {
     #[func]
     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclAvatarWireFormat> {
         // 1) stringify the Godot Dictionary → JSON5-ish string
-        let json_str = godot::engine::Json::stringify(dictionary.to_variant()).to_string();
+        let json_str = godot::classes::Json::stringify(dictionary.to_variant()).to_string();
 
         // 2) parse with json5 (tolerant of trailing commas)
         let avatar: AvatarWireFormat = json5::from_str(&json_str).unwrap_or_default();
@@ -228,7 +228,7 @@ impl DclAvatarWireFormat {
     #[func]
     pub fn to_godot_dictionary(&self) -> Dictionary {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
-        let value = godot::engine::Json::parse_string(value.into());
+        let value = godot::classes::Json::parse_string(value.into());
         value.to::<Dictionary>()
     }
 }

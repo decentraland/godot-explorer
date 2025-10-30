@@ -1,4 +1,4 @@
-use godot::engine::{Engine, Node, Os, SceneTree};
+use godot::classes::{Engine, Node, Os, SceneTree};
 use godot::prelude::*;
 use std::collections::HashMap;
 

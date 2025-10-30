@@ -18,7 +18,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D},
+    classes::{PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D},
     prelude::*,
 };
 

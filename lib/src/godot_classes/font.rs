@@ -13,12 +13,12 @@ impl Font {
         }
     }
 
-    pub fn try_get_font_resource(&self) -> Option<Gd<godot::engine::Font>> {
-        godot::engine::try_load(self.get_font_path()).ok()
+    pub fn try_get_font_resource(&self) -> Option<Gd<godot::classes::Font>> {
+        godot::classes::try_load(self.get_font_path()).ok()
     }
 
     // TODO: Maybe the load can be cached and then return a duplicated one
-    pub fn get_font_resource(&self) -> Gd<godot::engine::Font> {
+    pub fn get_font_resource(&self) -> Gd<godot::classes::Font> {
         self.try_get_font_resource().expect("Failed to load font")
     }
 }

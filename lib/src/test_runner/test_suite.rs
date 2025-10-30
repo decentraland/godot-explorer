@@ -82,7 +82,7 @@ impl TestRunnerSuite {
             print_test_pre(&test_case, test_file, &mut last_file, true);
             let result = test.call("run", &[]);
             // In case a test needs to disable error messages to ensure it runs properly.
-            godot::engine::Engine::singleton().set_print_error_messages(true);
+            godot::classes::Engine::singleton().set_print_error_messages(true);
 
             if let Some(duration) = get_execution_time(&test) {
                 extra_duration += duration;

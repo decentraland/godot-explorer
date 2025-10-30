@@ -513,10 +513,10 @@ impl CommunicationManager {
 #[godot_api]
 impl CommunicationManager {
     #[signal]
-    fn chat_message(chats: VariantArray) {}
+    fn chat_message(chats: VariantArray);
 
     #[signal]
-    fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString) {}
+    fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
 
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
@@ -821,7 +821,7 @@ impl CommunicationManager {
 
     #[func]
     pub fn send_emote(&mut self, emote_urn: GString) -> bool {
-        let timestamp = godot::engine::Time::singleton().get_unix_time_from_system() * 1000.0;
+        let timestamp = godot::classes::Time::singleton().get_unix_time_from_system() * 1000.0;
         self.send_chat(format!("␐{} {}", emote_urn, timestamp).into());
 
         self.last_emote_incremental_id += 1;

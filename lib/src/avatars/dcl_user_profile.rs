@@ -1,5 +1,5 @@
 use godot::{
-    builtin::{meta::ToGodot, Array, Dictionary, GString},
+    builtin::{Array, Dictionary, GString},
     obj::Gd,
     prelude::*,
 };
@@ -112,14 +112,14 @@ impl DclUserProfile {
 
     #[func]
     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclUserProfile> {
-        let value = godot::engine::Json::stringify(dictionary.to_variant());
+        let value = godot::classes::Json::stringify(dictionary.to_variant());
         DclUserProfile::from_gd(json5::from_str(value.to_string().as_str()).unwrap_or_default())
     }
 
     #[func]
     pub fn to_godot_dictionary(&self) -> Dictionary {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
-        let value = godot::engine::Json::parse_string(value.into());
+        let value = godot::classes::Json::parse_string(value.into());
         value.to::<Dictionary>()
     }
 

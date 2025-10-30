@@ -116,7 +116,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
-                    let mut new_avatar_shape = godot::engine::load::<PackedScene>(
+                    let mut new_avatar_shape = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )
                     .instantiate()

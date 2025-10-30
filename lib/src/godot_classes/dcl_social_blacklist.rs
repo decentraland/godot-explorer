@@ -35,7 +35,7 @@ impl INode for DclSocialBlacklist {
 impl DclSocialBlacklist {
     /// Signal emitted when the blocked or muted lists change
     #[signal]
-    fn blacklist_changed() {}
+    fn blacklist_changed();
 
     /// Add a single address to the blocked list
     #[func]

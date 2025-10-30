@@ -60,13 +60,13 @@ impl INode for DclPlayerIdentity {
 #[godot_api]
 impl DclPlayerIdentity {
     #[signal]
-    fn logout(&self);
+    fn logout();
 
     #[signal]
-    fn wallet_connected(&self, address: GString, chain_id: u64, is_guest: bool);
+    fn wallet_connected(address: GString, chain_id: u64, is_guest: bool);
 
     #[signal]
-    fn profile_changed(&self, new_profile: Gd<DclUserProfile>);
+    fn profile_changed(new_profile: Gd<DclUserProfile>);
 
     #[func]
     fn try_set_remote_wallet(

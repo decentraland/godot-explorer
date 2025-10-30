@@ -10,7 +10,7 @@ use crate::{
     godot_classes::dcl_audio_stream::DclAudioStream,
     scene_runner::scene::{Scene, SceneType},
 };
-use godot::{engine::AudioStreamGenerator, prelude::*};
+use godot::{classes::AudioStreamGenerator, prelude::*};
 enum AudioUpdateMode {
     OnlyChangeValues,
     ChangeAudio,
@@ -115,7 +115,7 @@ pub fn update_audio_stream(
                         godot_entity_node.audio_stream = Some((next_value.url.clone(), audio_sink));
                     }
                     AudioUpdateMode::FirstSpawnAudio => {
-                        let mut audio_stream_node = godot::engine::load::<PackedScene>(
+                        let mut audio_stream_node = godot::tools::load::<PackedScene>(
                             "res://src/decentraland_components/audio_stream.tscn",
                         )
                         .instantiate()

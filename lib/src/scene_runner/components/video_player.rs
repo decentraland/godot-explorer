@@ -19,7 +19,7 @@ use crate::{
     },
 };
 use godot::{
-    engine::{image::Format, AudioStreamGenerator, Image, ImageTexture},
+    classes::{image::Format, AudioStreamGenerator, Image, ImageTexture},
     prelude::*,
 };
 
@@ -198,7 +198,7 @@ pub fn update_video_player(
                         let texture = ImageTexture::create_from_image(image)
                             .expect("couldn't create an video image texture");
 
-                        let mut video_player_node = godot::engine::load::<PackedScene>(
+                        let mut video_player_node = godot::tools::load::<PackedScene>(
                             "res://src/decentraland_components/video_player.tscn",
                         )
                         .instantiate()

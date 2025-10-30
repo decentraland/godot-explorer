@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use godot::{engine::Timer, prelude::*};
+use godot::prelude::*;
 
 use crate::{
     godot_classes::{
@@ -75,15 +75,15 @@ impl INode for Metrics {
     }
 
     fn ready(&mut self) {
-        let mut timer = Timer::new_alloc();
+        let mut timer = godot::classes::Timer::new_alloc();
         timer.set_wait_time(10.0);
         timer.set_one_shot(false);
         timer.set_autostart(true);
 
         let callable = self.base().callable("timer_timeout");
-        timer.connect("timeout".into(), callable);
+        timer.connect("timeout".into(), &callable);
 
-        self.base_mut().add_child(timer.upcast());
+        self.base_mut().add_child(timer);
 
         // Check which mobile plugin is available and fetch static device info (checked once)
         if DclIosPlugin::is_available() {

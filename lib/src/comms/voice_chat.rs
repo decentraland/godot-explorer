@@ -1,19 +1,16 @@
-use godot::{
-    engine::{AudioEffectCapture, AudioServer, AudioStreamMicrophone},
-    prelude::*,
-};
+use godot::prelude::*;
 
 #[derive(GodotClass)]
 #[class(init, base=AudioStreamPlayer)]
 struct VoiceChatRecorder {
     recording_enabled: bool,
-    effect_capture: Option<Gd<AudioEffectCapture>>,
+    effect_capture: Option<Gd<godot::classes::AudioEffectCapture>>,
 
-    base: Base<AudioStreamPlayer>,
+    base: Base<godot::classes::AudioStreamPlayer>,
 }
 
 #[godot_api]
-impl IAudioStreamPlayer for VoiceChatRecorder {
+impl godot::classes::IAudioStreamPlayer for VoiceChatRecorder {
     fn process(&mut self, _dt: f64) {
         if self.recording_enabled {
             let Some(effect_capture) = &mut self.effect_capture else {
@@ -38,10 +35,10 @@ impl VoiceChatRecorder {
 
     #[func]
     fn setup_audio_server(&mut self) {
-        let mut audio_server = AudioServer::singleton();
+        let mut audio_server = godot::classes::AudioServer::singleton();
         let idx = audio_server.get_bus_index("Capture".into());
         if idx != -1 {
-            let bus_effect: Option<Gd<AudioEffectCapture>> = {
+            let bus_effect: Option<Gd<godot::classes::AudioEffectCapture>> = {
                 let mut found_effect = None;
                 for i in 0..audio_server.get_bus_effect_count(idx) {
                     if let Some(bus_effect) = audio_server.get_bus_effect(idx, i) {
@@ -57,7 +54,7 @@ impl VoiceChatRecorder {
 
             self.effect_capture = bus_effect;
             self.base_mut()
-                .set_stream(AudioStreamMicrophone::new_gd().upcast());
+                .set_stream(godot::classes::AudioStreamMicrophone::new_gd().upcast());
             self.base_mut().set_bus("Capture".into());
         }
     }

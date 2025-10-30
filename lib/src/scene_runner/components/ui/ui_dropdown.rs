@@ -54,7 +54,7 @@ pub fn update_ui_dropdown(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             } else {
                 let mut node: Gd<DclUiDropdown> = DclUiDropdown::new_alloc();
                 node.set_name("dropdown".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
                 node.bind_mut().set_dcl_entity_id(entity.as_i32());
 
                 existing_ui_dropdown

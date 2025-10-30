@@ -55,7 +55,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                         .bind_mut()
                         .set_forced_camera_mode(forced_camera_mode);
                 } else {
-                    let mut camera_mode_area_3d = godot::engine::load::<PackedScene>(
+                    let mut camera_mode_area_3d = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/camera_mode_area.tscn",
                     )
                     .instantiate()

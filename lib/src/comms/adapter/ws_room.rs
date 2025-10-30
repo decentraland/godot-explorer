@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use ethers_core::types::{Signature, H160};
-use godot::{engine::WebSocketPeer, prelude::*};
+use godot::prelude::*;
 use prost::Message;
 use tracing::error;
 
@@ -59,7 +59,7 @@ pub struct WebSocketRoom {
     // Connection
     ws_url: GString,
     last_try_to_connect: Instant,
-    ws_peer: Gd<WebSocketPeer>,
+    ws_peer: Gd<godot::classes::WebSocketPeer>,
     signature: Option<Signature>,
 
     // Self alias
@@ -102,7 +102,7 @@ impl WebSocketRoom {
         let old_time = Instant::now() - Duration::from_secs(INITIAL_TIMESTAMP_OFFSET_SECS);
 
         Self {
-            ws_peer: WebSocketPeer::new_gd(),
+            ws_peer: godot::classes::WebSocketPeer::new_gd(),
             ws_url: GString::from(ws_url),
             state: WsRoomState::Connecting,
             player_address: ephemeral_auth_chain.signer(),
@@ -165,7 +165,7 @@ impl WebSocketRoom {
         }
 
         let buf = PackedByteArray::from_iter(buf);
-        matches!(self.ws_peer.send(buf), godot::engine::global::Error::OK)
+        matches!(self.ws_peer.send(buf), godot::global::Error::OK)
     }
 
     fn _poll(&mut self) {
@@ -176,7 +176,7 @@ impl WebSocketRoom {
 
         match self.state.clone() {
             WsRoomState::Connecting => match ws_state {
-                godot::engine::web_socket_peer::State::CLOSED => {
+                godot::classes::web_socket_peer::State::CLOSED => {
                     if (Instant::now() - self.last_try_to_connect).as_secs()
                         > RECONNECT_INTERVAL_SECS
                     {
@@ -195,13 +195,13 @@ impl WebSocketRoom {
                         self.signature = None;
                     }
                 }
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self.state = WsRoomState::Connected;
                 }
                 _ => {}
             },
             WsRoomState::Connected => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self._send(
                         WsPacket {
                             message: Some(ws_packet::Message::PeerIdentification(
@@ -220,7 +220,7 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::IdentMessageSent => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             ws_packet::Message::ChallengeMessage(challenge_msg) => {
@@ -275,7 +275,7 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::ChallengeMessageSent => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             ws_packet::Message::WelcomeMessage(welcome_msg) => {
@@ -328,7 +328,7 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::WelcomeMessageReceived => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self._handle_messages();
                 }
                 _ => {
@@ -342,8 +342,8 @@ impl WebSocketRoom {
         let mut peer = self.ws_peer.clone();
         peer.close();
         match peer.get_ready_state() {
-            godot::engine::web_socket_peer::State::OPEN
-            | godot::engine::web_socket_peer::State::CONNECTING => {
+            godot::classes::web_socket_peer::State::OPEN
+            | godot::classes::web_socket_peer::State::CONNECTING => {
                 peer.close();
             }
             _ => {}
@@ -506,7 +506,9 @@ impl WebSocketRoom {
     }
 }
 
-fn get_next_packet(mut peer: Gd<WebSocketPeer>) -> Option<(usize, ws_packet::Message)> {
+fn get_next_packet(
+    mut peer: Gd<godot::classes::WebSocketPeer>,
+) -> Option<(usize, ws_packet::Message)> {
     if peer.get_available_packet_count() > 0 {
         let packet = peer.get_packet();
         let packet_length = packet.len();

@@ -1,7 +1,7 @@
 use godot::prelude::*;
 
 use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
-use godot::engine::Image;
+use godot::classes::Image;
 
 /// Static wrapper for the DclAndroidPlugin (old plugin) that provides typed access to Android-specific functionality
 #[derive(GodotClass)]
@@ -14,7 +14,7 @@ pub struct DclAndroidPlugin {
 impl DclAndroidPlugin {
     /// Try to get the DclAndroidPlugin singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
-        let singleton = godot::engine::Engine::singleton()
+        let singleton = godot::classes::Engine::singleton()
             .get_singleton(StringName::from("DclAndroidPlugin"))?;
         Some(singleton.cast::<Object>())
     }
@@ -57,7 +57,7 @@ pub struct DclGodotAndroidPlugin {
 impl DclGodotAndroidPlugin {
     /// Try to get the dcl-godot-android singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
-        let singleton = godot::engine::Engine::singleton()
+        let singleton = godot::classes::Engine::singleton()
             .get_singleton(StringName::from("dcl-godot-android"))?;
         Some(singleton.cast::<Object>())
     }
@@ -173,8 +173,8 @@ impl DclGodotAndroidPlugin {
 
         // Convert image to RGBA8 format if needed
         let mut rgba_image = image.clone();
-        if image.get_format() != godot::engine::image::Format::RGBA8 {
-            rgba_image.convert(godot::engine::image::Format::RGBA8);
+        if image.get_format() != godot::classes::image::Format::RGBA8 {
+            rgba_image.convert(godot::classes::image::Format::RGBA8);
         }
 
         // Get the pixel data as a byte array

@@ -25,7 +25,7 @@ use crate::{
     tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
 };
 use godot::{
-    engine::{
+    classes::{
         control::{LayoutPreset, MouseFilter},
         PhysicsRayQueryParameters3D,
     },
@@ -117,10 +117,10 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 #[godot_api]
 impl SceneManager {
     #[signal]
-    fn scene_spawned(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_spawned(scene_id: i32, entity_id: GString);
 
     #[signal]
-    fn scene_killed(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_killed(scene_id: i32, entity_id: GString);
 
     // Testing a comment for the API
     #[func]
@@ -420,7 +420,7 @@ impl SceneManager {
             None => (player_global_transform, 0),
         };
 
-        let frames_count = godot::engine::Engine::singleton().get_physics_frames();
+        let frames_count = godot::classes::Engine::singleton().get_physics_frames();
 
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,
@@ -833,11 +833,11 @@ impl SceneManager {
     }
 
     #[signal]
-    fn pointer_tooltip_changed() {}
+    fn pointer_tooltip_changed();
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
-        let window_size: Vector2i = godot::engine::DisplayServer::singleton().window_get_size();
+        let window_size: Vector2i = godot::classes::DisplayServer::singleton().window_get_size();
 
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
@@ -931,7 +931,7 @@ impl SceneManager {
     }
 
     #[signal]
-    fn on_change_scene_id(scene_id: i32) {}
+    fn on_change_scene_id(scene_id: i32);
 
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes

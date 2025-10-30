@@ -9,7 +9,7 @@ use std::{
 
 use futures_util::future::try_join_all;
 use godot::{
-    engine::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
+    classes::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -128,7 +128,7 @@ impl INode for ContentProvider {
     fn init(_base: Base<Node>) -> Self {
         let content_folder = Arc::new(format!(
             "{}/content/",
-            godot::engine::Os::singleton().get_user_data_dir()
+            godot::classes::Os::singleton().get_user_data_dir()
         ));
 
         #[cfg(feature = "use_resource_tracking")]
@@ -788,7 +788,7 @@ impl ContentProvider {
                     .load(godot_path.clone())
                     .unwrap();
 
-                let texture = resource.cast::<godot::engine::Texture2D>();
+                let texture = resource.cast::<godot::classes::Texture2D>();
                 let image = texture.get_image().unwrap();
 
                 let original_size = if let Some(original_size) = original_size {
@@ -1339,7 +1339,7 @@ impl ContentProvider {
         for hash_to_load in &hashes_to_load {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
             let zip_path = format!("user://content/{}", hash_zip).to_godot();
-            let result = godot::engine::ProjectSettings::singleton()
+            let result = godot::classes::ProjectSettings::singleton()
                 .load_resource_pack_ex(zip_path.clone())
                 .replace_files(false)
                 .done();

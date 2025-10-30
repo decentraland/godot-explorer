@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use godot::{
-    engine::{node::ProcessMode, Engine},
+    classes::{node::ProcessMode, Engine},
     prelude::*,
 };
 
@@ -181,7 +181,8 @@ impl INode for DclGlobal {
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
-        let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into()) || force_mobile;
+        let is_mobile =
+            godot::classes::Os::singleton().has_feature("mobile".into()) || force_mobile;
         let is_android = std::env::consts::OS == "android";
         let is_ios = std::env::consts::OS == "ios";
 

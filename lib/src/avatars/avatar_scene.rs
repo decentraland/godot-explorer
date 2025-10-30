@@ -95,7 +95,7 @@ fn sync_crdt_lww_component<T>(
 #[godot_api]
 impl AvatarScene {
     #[signal]
-    fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>) {}
+    fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>);
 
     #[func]
     pub fn update_primary_player_profile(&mut self, profile: Gd<DclUserProfile>) {
@@ -135,7 +135,7 @@ impl AvatarScene {
 
         self.avatar_entity.insert(alias, entity_id);
 
-        let mut new_avatar: Gd<DclAvatar> = godot::engine::load::<PackedScene>(
+        let mut new_avatar: Gd<DclAvatar> = godot::tools::load::<PackedScene>(
             "res://src/decentraland_components/avatar/avatar.tscn",
         )
         .instantiate()

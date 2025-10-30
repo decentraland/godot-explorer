@@ -344,7 +344,7 @@ pub fn _process_scene(
                         });
 
                 let is_pointer_locked = godot::prelude::Input::singleton().get_mouse_mode()
-                    == godot::engine::input::MouseMode::CAPTURED;
+                    == godot::classes::input::MouseMode::CAPTURED;
                 if maybe_is_pointer_locked != Some(is_pointer_locked) {
                     let pointer_lock_component = PbPointerLock { is_pointer_locked };
                     SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)

@@ -1,4 +1,4 @@
-use godot::{engine::node::InternalMode, prelude::*};
+use godot::{classes::node::InternalMode, prelude::*};
 
 #[derive(GodotClass)]
 #[class(init, base=Node)]

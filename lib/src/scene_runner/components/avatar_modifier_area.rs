@@ -63,7 +63,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                         .bind_mut()
                         .set_exclude_ids(exclude_ids);
                 } else {
-                    let mut avatar_modifier_area = godot::engine::load::<PackedScene>(
+                    let mut avatar_modifier_area = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar_modifier_area.tscn",
                     )
                     .instantiate()
