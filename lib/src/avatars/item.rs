@@ -205,12 +205,13 @@ impl DclItemEntityDefinition {
             || self.get_category().to_string() == "upper_body";
 
         // the rule is ignored if the wearable contains the removal of this default rule (newer upper bodies since the release of hands)
-        let removes_hand_default = wearable_data
-            .removes_default_hiding
-            .as_ref()
-            .is_some_and(|removes_default_hiding| {
-                removes_default_hiding.contains(&"hands".to_string())
-            });
+        let removes_hand_default =
+            wearable_data
+                .removes_default_hiding
+                .as_ref()
+                .is_some_and(|removes_default_hiding| {
+                    removes_default_hiding.contains(&"hands".to_string())
+                });
 
         // why we do this? because old upper bodies contains the base hand mesh, and they might clip with the new handwear items
         if is_or_hides_upper_body && !removes_hand_default {
