@@ -6,6 +6,12 @@ on:
         required: true
       ANDROID_KEYSTORE_PASSWORD:
         required: true
+      SENTRY_AUTH_TOKEN:
+        required: true
+      SENTRY_ORG:
+        required: true
+      SENTRY_PROJECT:
+        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
@@ -138,6 +144,7 @@ jobs:
           if-no-files-found: error
 
       - name: Setup tmate session
+        if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
         
       # Upload debug symbols to Sentry for production builds
