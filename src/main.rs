@@ -9,6 +9,7 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
 
+mod check_gdscript;
 mod consts;
 mod copy_files;
 mod dependencies;
@@ -65,6 +66,7 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
+        .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("explorer-version")
@@ -496,6 +498,7 @@ fn main() -> Result<(), anyhow::Error> {
                 .context("please provide a package with -p")?,
         ),
         ("doctor", _) => doctor::run_doctor(),
+        ("check-gdscript", _) => check_gdscript::check_gdscript(),
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => {
             let verbose = sm.is_present("verbose");
