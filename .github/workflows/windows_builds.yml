@@ -11,9 +11,7 @@ jobs:
     name: Build Windows
     strategy:
       fail-fast: false
-      matrix:
-        os: [bigwin]
-    runs-on: ${{ matrix.os }}
+    runs-on: warp-windows-latest-x64-4x
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,8 +23,8 @@ jobs:
           toolchain: 1.90
           override: true
 
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
+      - name: Set up WarpBuild cache
+        uses: ./.github/actions/set-up-warp-cache
 
       # Dependencies section
       - name: Install dependencies
@@ -36,8 +34,11 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets windows
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Test
         working-directory: lib
