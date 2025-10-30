@@ -155,7 +155,7 @@ jobs:
           echo "Explorer version: $EXPLORER_VERSION"
 
           # Check if this is a production build (no -dev suffix)
-          if [[ ! "$EXPLORER_VERSION" =~ -dev$ ]]; then
+          # if [[ ! "$EXPLORER_VERSION" =~ -dev$ ]]; then
             echo "Production build detected, uploading debug symbols to Sentry..."
             RELEASE_NAME="org.decentraland.godotexplorer@$EXPLORER_VERSION"
             echo "Release name: $RELEASE_NAME"
@@ -173,6 +173,6 @@ jobs:
               godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip
 
             echo "Debug symbols uploaded successfully to release: $RELEASE_NAME"
-          else
-            echo "Development build detected (-dev suffix found), skipping Sentry upload"
-          fi
+          #else
+          #  echo "Development build detected (-dev suffix found), skipping Sentry upload"
+          #fi
