@@ -16,11 +16,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.90
-          override: true
+          toolchain: "1.90"
 
       - name: Set up cache
         uses: ./.github/actions/set-up-cache

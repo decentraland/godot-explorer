@@ -35,10 +35,9 @@ jobs:
         # /changerealm http://localhost:7666/scene-explorer-tests/
 
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.90
-          override: true
+          toolchain: "1.90"
           components: llvm-tools-preview
 
       - name: Debug GPU and Install Vulkan drivers
