@@ -594,12 +594,12 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
         for track_idx in 0..anim.get_track_count() {
             let track_path = anim.track_get_path(track_idx).to_string();
             if !track_path.contains("Skeleton3D") {
-                let last_track_name = track_path.split('/').last().unwrap_or_default();
+                let last_track_name = track_path.split('/').next_back().unwrap_or_default();
                 let new_track_path = format!("Armature/Skeleton3D:{}", last_track_name);
                 anim.track_set_path(track_idx, new_track_path.into());
             }
             if track_path.contains("Armature_Prop/Skeleton3D") {
-                let track_subname = track_path.split(':').last().unwrap_or_default();
+                let track_subname = track_path.split(':').next_back().unwrap_or_default();
                 let new_track_path = format!("{armature_prefix}{track_subname}");
                 anim.track_set_path(track_idx, new_track_path.into());
             }

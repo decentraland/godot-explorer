@@ -208,7 +208,7 @@ impl DclItemEntityDefinition {
         let removes_hand_default = wearable_data
             .removes_default_hiding
             .as_ref()
-            .map_or(false, |removes_default_hiding| {
+            .is_some_and(|removes_default_hiding| {
                 removes_default_hiding.contains(&"hands".to_string())
             });
 

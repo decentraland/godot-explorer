@@ -248,9 +248,7 @@ impl SceneEntityCoordinator {
         };
 
         let is_global_scene = self
-            .global_desired_entities
-            .iter()
-            .any(|value| *value == entity_base);
+            .global_desired_entities.contains(&entity_base);
 
         let entity_definition_json = match SceneEntityDefinition::from_json_ex(
             Some(entity_base.hash.clone()),

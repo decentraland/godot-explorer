@@ -839,7 +839,7 @@ impl MessageProcessor {
                     && !self
                         .peer_identities
                         .get(&address)
-                        .map_or(false, |p| p.profile_fetch_attempted)
+                        .is_some_and(|p| p.profile_fetch_attempted)
                     && !is_banned
                 {
                     tracing::info!(
