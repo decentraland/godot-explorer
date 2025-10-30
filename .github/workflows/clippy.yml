@@ -1,0 +1,44 @@
+name: 🔧 Clippy & Build Checks
+on:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-clippy
+  cancel-in-progress: true
+
+jobs:
+  clippy:
+    name: Cargo check, clippy and version check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.79
+          override: true
+          components: clippy
+
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: cargo install
+        run: cargo run -- install --no-templates
+
+      - name: cargo check
+        working-directory: lib
+        run: cargo check
+
+      - name: cargo clippy
+        working-directory: lib
+        run: cargo clippy -- -D warnings
+
+      - name: Version check
+        run: cargo run -- version-check
