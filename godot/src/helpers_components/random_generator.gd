@@ -18,7 +18,6 @@ const FIRST_NAMES = [
 	"Thane",
 	"Elara",
 	"Riven",
-	"Zephyr",
 	"Eris",
 	"Drake",
 	"Iris",
@@ -31,42 +30,25 @@ const FIRST_NAMES = [
 	"Zane",
 	"Echo",
 	"Blaze",
-	"Sage",
-	"Aurora"
+	"Sage"
 ]
+
 const LAST_NAMES = [
-	"Starwalker",
-	"Voidseeker",
 	"Skyforge",
-	"Darkweaver",
-	"Lightbringer",
-	"Moonshadow",
-	"Stormrider",
-	"Sunwhisper",
-	"Flameheart",
 	"Nightwing",
 	"Ironheart",
 	"Frostborn",
 	"Dawnblade",
-	"Shadowmere",
-	"Starshield",
 	"Voidblade",
 	"Galewind",
-	"Mystweaver",
-	"Skybreaker",
-	"Dreamseeker",
 	"Wolfbane",
 	"Raveneye",
-	"Thunderstrike",
-	"Soulkeeper",
 	"Firebrand",
 	"Stargazer",
 	"Nightsky",
 	"Sunflare",
-	"Voidwalker",
 	"Starfall"
 ]
-
 
 static func generate_unique_name() -> String:
 	var first = FIRST_NAMES[randi() % FIRST_NAMES.size()]
