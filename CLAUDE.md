@@ -76,6 +76,9 @@ cargo clippy -- -D warnings
 gdformat godot/
 gdlint godot/
 
+# Validate all GDScript files
+cargo run -- check-gdscript
+
 # Generate test coverage
 cargo run -- coverage --dev
 
