@@ -33,8 +33,11 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets macos
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Test
         working-directory: lib

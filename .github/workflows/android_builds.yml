@@ -38,10 +38,14 @@ jobs:
           rustup target add aarch64-linux-android
       - name: Cargo install
         run: cargo run -- install --targets android linux
+
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build Rust libraries
         run: |
-          cargo run -- build --release
-          cargo run -- build --release --target android
+          cargo run -- build --release ${{ env.PROD_FLAG }}
+          cargo run -- build --release --target android ${{ env.PROD_FLAG }}
           cargo run -- import-assets
       
       - name: Export Android APK
