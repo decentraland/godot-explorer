@@ -112,6 +112,7 @@ pub enum RpcCall {
     MovePlayerTo {
         position_target: [f32; 3],
         camera_target: Option<[f32; 3]>,
+        avatar_target: Option<[f32; 3]>,
         response: RpcResultSender<Result<(), String>>,
     },
     TeleportTo {

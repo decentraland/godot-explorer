@@ -167,6 +167,7 @@ pub fn move_player_to(
     current_parcel_scene_id: &SceneId,
     position_target: &[f32; 3],
     camera_target: &Option<[f32; 3]>,
+    avatar_target: &Option<[f32; 3]>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
@@ -214,14 +215,24 @@ pub fn move_player_to(
         &[Variant::from(position_target), true.to_variant()],
     );
 
-    // Set camera to look at camera target position
-    if let Some(camera_target) = camera_target {
-        let camera_target =
-            Vector3::new(camera_target[0], camera_target[1], camera_target[2]) + scene_position;
-        let camera_target = Vector3::new(camera_target.x, camera_target.y, -camera_target.z);
+    // Handle avatar and camera targeting according to ADR-257:
+    // - avatarTarget: where the avatar body looks
+    // - cameraTarget: where the camera looks
+    // If only cameraTarget is set (backward compatibility), it affects both avatar and camera
+    let avatar_look_target = avatar_target.or(*camera_target);
 
-        explorer_node.call("player_look_at".into(), &[Variant::from(camera_target)]);
+    // Set avatar rotation
+    if let Some(target) = avatar_look_target {
+        let target_position =
+            Vector3::new(target[0], target[1], target[2]) + scene_position;
+        let target_position = Vector3::new(target_position.x, target_position.y, -target_position.z);
+
+        explorer_node.call("player_look_at".into(), &[Variant::from(target_position)]);
     }
+
+    // TODO: Set camera rotation independently when both avatarTarget and cameraTarget are provided
+    // This would require a new Godot method that sets only camera rotation without affecting avatar
+    // For now, when only cameraTarget is set, player_look_at handles both (backward compatible)
 
     response.send(Ok(()));
 }

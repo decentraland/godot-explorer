@@ -85,25 +85,32 @@ async fn op_open_external_url(
         .map_err(|e| anyhow!(e))
 }
 
-#[op2(async)]
+#[op2(fast)]
 #[allow(clippy::too_many_arguments)]
-async fn op_move_player_to(
+fn op_move_player_to(
     op_state: Rc<RefCell<OpState>>,
     position_x: f32,
     position_y: f32,
     position_z: f32,
-    camera: bool,
-    maybe_camera_x: f32,
-    maybe_camera_y: f32,
-    maybe_camera_z: f32,
-) -> Result<(), AnyError> {
-    let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+    camera_x: f32,
+    camera_y: f32,
+    camera_z: f32,
+    avatar_x: f32,
+    avatar_y: f32,
+    avatar_z: f32,
+) {
+    let (sx, _rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
     let position_target = [position_x, position_y, position_z];
-    let camera_target = if camera {
-        Some([maybe_camera_x, maybe_camera_y, maybe_camera_z])
-    } else {
+    let camera_target = if camera_x.is_nan() || camera_y.is_nan() || camera_z.is_nan() {
         None
+    } else {
+        Some([camera_x, camera_y, camera_z])
+    };
+    let avatar_target = if avatar_x.is_nan() || avatar_y.is_nan() || avatar_z.is_nan() {
+        None
+    } else {
+        Some([avatar_x, avatar_y, avatar_z])
     };
 
     op_state
@@ -112,12 +119,9 @@ async fn op_move_player_to(
         .push(RpcCall::MovePlayerTo {
             position_target,
             camera_target,
+            avatar_target,
             response: sx.into(),
         });
-
-    rx.await
-        .map_err(|e| anyhow::anyhow!(e))?
-        .map_err(|e| anyhow!(e))
 }
 
 #[op2(async)]
