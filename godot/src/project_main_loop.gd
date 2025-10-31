@@ -6,7 +6,7 @@ var is_dev_version = false
 
 func _initialize() -> void:
 	var release_string = "org.decentraland.godotexplorer@" + DclGlobal.get_version()
-	self.is_dev_version = false  # release_string.contains("dev")
+	self.is_dev_version = release_string.contains("dev")
 	SentrySDK.init(
 		func(options: SentryOptions) -> void:
 			if OS.is_debug_build() or self.is_dev_version:
