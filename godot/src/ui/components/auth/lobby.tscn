@@ -22,7 +22,7 @@
 [ext_resource type="LabelSettings" uid="uid://ipxcah14n2ng" path="res://assets/themes/lobby_title.tres" id="18_ypsmd"]
 [ext_resource type="FontFile" uid="uid://c578syx7u7pdh" path="res://assets/themes/fonts/lato_family/Lato-Italic.ttf" id="19_ypsmd"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="20_3tlbd"]
-[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="20_rqbts"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="20_rqbts"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="21_ypsmd"]
 
 [sub_resource type="Gradient" id="Gradient_kt8ab"]
@@ -65,6 +65,8 @@ corner_radius_bottom_left = 18
 [sub_resource type="LabelSettings" id="LabelSettings_2q7xc"]
 font = ExtResource("19_ypsmd")
 font_size = 20
+outline_size = 1
+outline_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ypsmd"]
 
@@ -79,6 +81,9 @@ base_font = ExtResource("20_rqbts")
 [sub_resource type="LabelSettings" id="LabelSettings_s1tin"]
 font = SubResource("FontVariation_vqtgj")
 font_size = 20
+font_color = Color(1, 0, 0, 1)
+outline_size = 1
+outline_color = Color(0, 0, 0, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_ypsmd"]
 font = ExtResource("18_2q7xc")
@@ -354,6 +359,7 @@ theme_override_constants/separation = 12
 alignment = 1
 
 [node name="PanelContainer_ErrorBorder" type="PanelContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
+unique_name_in_owner = true
 self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
@@ -369,7 +375,7 @@ theme_override_font_sizes/font_size = 24
 placeholder_text = "Username"
 clear_button_enabled = true
 script = ExtResource("13_2q7xc")
-allow_spaces = false
+allow_edge_spaces = null
 
 [node name="Button_RandomName" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
 texture_filter = 4

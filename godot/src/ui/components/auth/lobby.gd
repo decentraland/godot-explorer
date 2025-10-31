@@ -25,6 +25,7 @@ var _last_panel: Control = null
 @onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
 @onready var label_length: Label = %Label_Length
 @onready var label_error: Label = %Label_Error
+@onready var panel_container_error_border: PanelContainer = %PanelContainer_ErrorBorder
 
 @onready var line_edit_choose_name: LineEdit = %LineEdit_ChooseName
 
@@ -89,6 +90,7 @@ func show_avatar_naming_screen():
 	choose_name_head.show()
 	choose_name_footer.show()
 	show_panel(control_restore_and_choose_name)
+	_check_button_finish()
 
 
 func show_loading_screen():
@@ -302,7 +304,7 @@ func _on_button_next_pressed():
 
 
 func _on_button_random_name_pressed():
-	line_edit_choose_name.set_text(RandomGeneratorUtil.generate_unique_name())
+	line_edit_choose_name.set_text_value(RandomGeneratorUtil.generate_unique_name())
 	_check_button_finish()
 
 
@@ -363,16 +365,32 @@ func _on_line_edit_choose_name_text_changed(_new_text):
 
 
 func _check_button_finish():
+	var color: Color = Color.WHITE
+	var playing: String
 	label_length.text = str(line_edit_choose_name.text.length()) + "/" + str(line_edit_choose_name.character_limit)
+	if line_edit_choose_name.text.length()>line_edit_choose_name.character_limit:
+		color = Color.RED
+	else:
+		color = Color.WHITE
+	label_length.label_settings.font_color = color
+
 	if line_edit_choose_name.error:
 		label_error.show()
 		label_error.text = "⚠️ " + line_edit_choose_name.error_message
 		button_next.disabled = true
-		avatar_preview.avatar.emote_controller.play_emote("shrug")
+		if !avatar_preview.avatar.emote_controller.is_playing() or playing != "shrug":
+			avatar_preview.avatar.emote_controller.play_emote("shrug")
+			playing = "shrug"
+		panel_container_error_border.self_modulate = Color.RED
+		label_error.label_settings.font_color = Color.RED
 	else:
 		label_error.hide()
 		button_next.disabled = false
-		avatar_preview.avatar.emote_controller.play_emote("clap")
+		if !avatar_preview.avatar.emote_controller.is_playing() or playing != "clap":
+			avatar_preview.avatar.emote_controller.play_emote("clap")
+			playing = "clap"
+		panel_container_error_border.self_modulate = Color.TRANSPARENT
+		label_error.label_settings.font_color = Color.WHITE
 
 
 func _on_avatar_preview_gui_input(event: InputEvent) -> void:
