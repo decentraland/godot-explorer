@@ -367,8 +367,10 @@ func _on_line_edit_choose_name_text_changed(_new_text):
 func _check_button_finish():
 	var color: Color = Color.WHITE
 	var playing: String
-	label_length.text = str(line_edit_choose_name.text.length()) + "/" + str(line_edit_choose_name.character_limit)
-	if line_edit_choose_name.text.length()>line_edit_choose_name.character_limit:
+	label_length.text = (
+		str(line_edit_choose_name.text.length()) + "/" + str(line_edit_choose_name.character_limit)
+	)
+	if line_edit_choose_name.text.length() > line_edit_choose_name.character_limit:
 		color = Color.RED
 	else:
 		color = Color.WHITE

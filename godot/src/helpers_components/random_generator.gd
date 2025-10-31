@@ -50,6 +50,7 @@ const LAST_NAMES = [
 	"Starfall"
 ]
 
+
 static func generate_unique_name() -> String:
 	var first = FIRST_NAMES[randi() % FIRST_NAMES.size()]
 	var last = LAST_NAMES[randi() % LAST_NAMES.size()]
