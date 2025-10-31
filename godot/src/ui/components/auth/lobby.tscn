@@ -1,4 +1,4 @@
-[gd_scene load_steps=33 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=36 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" uid="uid://do4lb6hapbydx" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -22,6 +22,7 @@
 [ext_resource type="LabelSettings" uid="uid://ipxcah14n2ng" path="res://assets/themes/lobby_title.tres" id="18_ypsmd"]
 [ext_resource type="FontFile" uid="uid://c578syx7u7pdh" path="res://assets/themes/fonts/lato_family/Lato-Italic.ttf" id="19_ypsmd"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="20_3tlbd"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="20_rqbts"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="21_ypsmd"]
 
 [sub_resource type="Gradient" id="Gradient_kt8ab"]
@@ -70,6 +71,14 @@ font_size = 20
 [sub_resource type="LabelSettings" id="LabelSettings_vcjym"]
 font = ExtResource("18_2q7xc")
 font_size = 50
+
+[sub_resource type="FontVariation" id="FontVariation_vqtgj"]
+fallbacks = Array[Font]([ExtResource("20_3tlbd")])
+base_font = ExtResource("20_rqbts")
+
+[sub_resource type="LabelSettings" id="LabelSettings_s1tin"]
+font = SubResource("FontVariation_vqtgj")
+font_size = 20
 
 [sub_resource type="LabelSettings" id="LabelSettings_ypsmd"]
 font = ExtResource("18_2q7xc")
@@ -483,20 +492,7 @@ layout_mode = 2
 theme_override_constants/separation = 11
 alignment = 2
 
-[node name="HBoxContainer_Error" type="HBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-theme_override_constants/separation = 5
-alignment = 1
-
-[node name="Label_ErrorIcon" type="RichTextLabel" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/HBoxContainer_Error"]
-custom_minimum_size = Vector2(15, 0)
-layout_mode = 2
-theme_override_fonts/normal_font = ExtResource("20_3tlbd")
-text = "⚠️"
-
-[node name="Label_Error" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/HBoxContainer_Error"]
+[node name="Label_Error" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(10, 0)
 layout_mode = 2
@@ -504,7 +500,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("5_g62s5")
 theme_override_font_sizes/font_size = 20
-label_settings = ExtResource("16_ypsmd")
+label_settings = SubResource("LabelSettings_s1tin")
 autowrap_mode = 2
 
 [node name="Button_Next" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter"]
