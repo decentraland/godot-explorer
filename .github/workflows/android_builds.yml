@@ -61,7 +61,7 @@ jobs:
       
       - name: Export Android AAB
         run: |
-          cargo run -- export --target android --format aab
+          cargo run -- export --target android --format aab --release
       
       - name: Export Quest APK
         run: |

@@ -49,6 +49,9 @@ jobs:
         with:
           cache: false
 
+      - name: Validate GDScript
+        run: cargo run -- check-gdscript
+
       - name: Export
         run: cargo run -- export
 
