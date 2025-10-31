@@ -145,12 +145,12 @@ async fn op_teleport_to(
         .map_err(|e| anyhow!(e))
 }
 
-#[op2(async)]
-async fn op_trigger_emote(
+#[op2(fast)]
+fn op_trigger_emote(
     op_state: Rc<RefCell<OpState>>,
     #[string] emote_id: String,
-) -> Result<(), AnyError> {
-    let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+) {
+    let (sx, _rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
     op_state
         .borrow_mut()
@@ -159,19 +159,15 @@ async fn op_trigger_emote(
             emote_id,
             response: sx.into(),
         });
-
-    rx.await
-        .map_err(|e| anyhow::anyhow!(e))?
-        .map_err(|e| anyhow!(e))
 }
 
-#[op2(async)]
-async fn op_trigger_scene_emote(
+#[op2(fast)]
+fn op_trigger_scene_emote(
     op_state: Rc<RefCell<OpState>>,
     #[string] emote_src: String,
     looping: bool,
-) -> Result<(), AnyError> {
-    let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+) {
+    let (sx, _rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
     op_state
         .borrow_mut()
@@ -181,8 +177,4 @@ async fn op_trigger_scene_emote(
             looping,
             response: sx.into(),
         });
-
-    rx.await
-        .map_err(|e| anyhow::anyhow!(e))?
-        .map_err(|e| anyhow!(e))
 }

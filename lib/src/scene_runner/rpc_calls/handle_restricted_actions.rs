@@ -219,20 +219,33 @@ pub fn move_player_to(
     // - avatarTarget: where the avatar body looks
     // - cameraTarget: where the camera looks
     // If only cameraTarget is set (backward compatibility), it affects both avatar and camera
-    let avatar_look_target = avatar_target.or(*camera_target);
+    match (avatar_target, camera_target) {
+        (Some(avatar), Some(camera)) => {
+            // Both targets provided: independent control
+            let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
+            let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
+            explorer_node.call("player_look_at".into(), &[Variant::from(avatar_pos)]);
 
-    // Set avatar rotation
-    if let Some(target) = avatar_look_target {
-        let target_position =
-            Vector3::new(target[0], target[1], target[2]) + scene_position;
-        let target_position = Vector3::new(target_position.x, target_position.y, -target_position.z);
-
-        explorer_node.call("player_look_at".into(), &[Variant::from(target_position)]);
+            let camera_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
+            let camera_pos = Vector3::new(camera_pos.x, camera_pos.y, -camera_pos.z);
+            explorer_node.call("camera_look_at".into(), &[Variant::from(camera_pos)]);
+        }
+        (Some(avatar), None) => {
+            // Only avatar target: avatar looks at it
+            let target_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
+            let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
+            explorer_node.call("player_look_at".into(), &[Variant::from(target_pos)]);
+        }
+        (None, Some(camera)) => {
+            // Only camera target: backward compatibility (both avatar and camera look at it)
+            let target_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
+            let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
+            explorer_node.call("player_look_at".into(), &[Variant::from(target_pos)]);
+        }
+        (None, None) => {
+            // No targets: do nothing
+        }
     }
-
-    // TODO: Set camera rotation independently when both avatarTarget and cameraTarget are provided
-    // This would require a new Godot method that sets only camera rotation without affecting avatar
-    // For now, when only cameraTarget is set, player_look_at handles both (backward compatible)
 
     response.send(Ok(()));
 }
@@ -307,10 +320,13 @@ pub fn trigger_emote(
 
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call("async_play_emote".into(), &[emote_id.to_variant()]);
-    avatar_node.call(
-        "broadcast_avatar_animation".into(),
-        &[emote_id.to_variant()],
-    );
+
+    // Broadcast emote to other players via comms
+    DclGlobal::singleton()
+        .bind()
+        .get_comms()
+        .bind_mut()
+        .send_emote(emote_id.to_godot());
 
     response.send(Ok(()));
 }

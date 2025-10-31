@@ -479,6 +479,11 @@ func player_look_at(look_at_position: Vector3):
 		player.avatar_look_at(look_at_position)
 
 
+func camera_look_at(look_at_position: Vector3):
+	if not Global.is_xr():
+		player.camera_look_at(look_at_position)
+
+
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if label_crosshair and ui_root:

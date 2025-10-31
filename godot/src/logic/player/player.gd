@@ -252,6 +252,24 @@ func avatar_look_at(target_position: Vector3):
 	clamp_camera_rotation()
 
 
+func camera_look_at(target_position: Vector3):
+	var global_pos := get_global_position()
+	var target_direction = target_position - global_pos
+	target_direction = target_direction.normalized()
+
+	var y_rot = atan2(target_direction.x, target_direction.z)
+	var x_rot = atan2(
+		target_direction.y,
+		sqrt(target_direction.x * target_direction.x + target_direction.z * target_direction.z)
+	)
+
+	# Only set camera rotation, not avatar rotation
+	mount_camera.rotation.y = y_rot + PI
+	mount_camera.rotation.x = x_rot
+
+	clamp_camera_rotation()
+
+
 func _on_avatar_visibility_changed():
 	pass  # Replace with function body.
 
