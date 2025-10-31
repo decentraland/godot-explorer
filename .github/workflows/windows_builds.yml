@@ -19,7 +19,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.90.0"
+          toolchain: "1.90"
 
       - name: Set up WarpBuild cache
         uses: ./.github/actions/set-up-warp-cache

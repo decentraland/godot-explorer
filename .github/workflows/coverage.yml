@@ -37,7 +37,7 @@ jobs:
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.90.0"
+          toolchain: "1.90"
           components: llvm-tools-preview
 
       - name: Debug GPU and Install Vulkan drivers

@@ -18,7 +18,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.90.0"
+          toolchain: "1.90"
           components: clippy
 
       - name: Set up cache
