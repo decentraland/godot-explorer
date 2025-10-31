@@ -10,15 +10,6 @@ runs:
       if: runner.os == 'linux'
       shell: bash
       run: "sudo apt-get update\n# alsa and udev\nsudo apt-get install -y --no-install-recommends \\\n  libasound2-dev libudev-dev\n# ffmpeg deps\nsudo apt install -y --no-install-recommends \\\n  clang curl pkg-config \n# livekit deps\nsudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev        \n  #magic___^_^___line\n"
-    # => MacOS
-    - name: install ffmpeg deps (macOs)
-      if: runner.os == 'macos'
-      shell: bash
-      run: |
-        brew install ffmpeg@6 pkg-config
-        echo "PKG_CONFIG_PATH=/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I/opt/homebrew/opt/ffmpeg@6/include" >> $GITHUB_ENV
-        echo "LDFLAGS=-L/opt/homebrew/opt/ffmpeg@6/lib" >> $GITHUB_ENV
 
     # => Windows
     - name: set CLANG path for ffmpeg deps (windows)

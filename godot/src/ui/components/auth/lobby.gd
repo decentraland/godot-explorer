@@ -66,7 +66,7 @@ func show_panel(child_node: Control, subpanel: Control = null):
 
 func track_lobby_screen(screen_name: String):
 	current_screen_name = screen_name
-	Global.metrics.track_screen_viewed(screen_name)
+	Global.metrics.track_screen_viewed(screen_name, "")
 	Global.metrics.flush.call_deferred()
 
 

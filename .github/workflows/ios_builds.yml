@@ -14,20 +14,20 @@ jobs:
     name: Build iOS
     strategy:
       fail-fast: false
-      matrix:
-        os: [macos-14-xlarge]
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-14
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.79
-          override: true
-          target: aarch64-apple-ios
+          toolchain: "1.90"
+          targets: aarch64-apple-ios
+
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
 
       # Dependencies section
       - name: Install dependencies
@@ -37,11 +37,14 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets ios
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build MacOS
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Build iOS
-        run: cargo run -- build --release --target ios
+        run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
       - name: Import Assets
         uses: ./.github/actions/import-assets

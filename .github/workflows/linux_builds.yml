@@ -9,20 +9,16 @@ concurrency:
 jobs:
   build:
     name: Build Linux
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.79
-          override: true
+          toolchain: "1.90"
 
       - name: Set up cache
         uses: ./.github/actions/set-up-cache
@@ -35,8 +31,11 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets linux
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Test
         working-directory: lib
@@ -47,6 +46,9 @@ jobs:
         uses: ./.github/actions/import-assets
         with:
           cache: false
+
+      - name: Validate GDScript
+        run: cargo run -- check-gdscript
 
       - name: Export
         run: cargo run -- export

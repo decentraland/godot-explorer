@@ -215,6 +215,9 @@ pub struct SegmentEventClickButton {
 pub struct SegmentEventScreenViewed {
     // Name of the screen viewed.
     pub screen_name: String,
+    // JSON with extra payload, in case we need to track additional metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_properties: Option<String>,
 }
 
 pub fn build_segment_event_batch_item(

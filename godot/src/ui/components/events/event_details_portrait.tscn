@@ -424,7 +424,7 @@ layout_mode = 2
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 19
 
-[node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
+[node name="Button_JumpToEvent" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
@@ -437,7 +437,7 @@ theme_override_font_sizes/font_size = 14
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer_Content" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn"]
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 1
 anchors_preset = 14
@@ -449,12 +449,12 @@ grow_vertical = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn/HBoxContainer_Content"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent/HBoxContainer_Content"]
 layout_mode = 2
 text = "JUMP IN"
 label_settings = SubResource("LabelSettings_wcxms")
 
-[node name="TextureRect_Add" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn/HBoxContainer_Content"]
+[node name="TextureRect_Add" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent/HBoxContainer_Content"]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("18_kyf7t")
@@ -462,4 +462,4 @@ expand_mode = 3
 
 [connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Share" to="." method="_on_button_share_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Calendar" to="." method="_on_button_calendar_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent" to="." method="_on_button_jump_to_event_pressed"]

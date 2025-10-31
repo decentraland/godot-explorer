@@ -90,7 +90,6 @@ impl<T: 'static> RpcResultSender<T> {
             .write()
             .ok()
             .and_then(|mut guard| guard.take())
-            .take()
             .unwrap()
     }
 }
