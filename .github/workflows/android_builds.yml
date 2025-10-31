@@ -143,10 +143,6 @@ jobs:
           name: Android Native Debug Symbols
           path: android-debug-symbols/
           if-no-files-found: error
-
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
         
       # Upload debug symbols to Sentry for production builds
       - name: Upload debug symbols to Sentry
