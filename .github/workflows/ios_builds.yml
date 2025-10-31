@@ -23,7 +23,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.90"
+          toolchain: "1.90.0"
           targets: aarch64-apple-ios
 
       - name: Set up cache
