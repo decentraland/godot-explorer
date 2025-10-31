@@ -26,34 +26,35 @@ func has_leading_or_trailing_spaces(text: String) -> bool:
 	return regex.search(text) != null
 
 
+func _append_error_message(msg: String) -> void:
+	if error_message.length() > 0:
+		error_message += "\n"
+	error_message += msg
+
+
 func _check_error():
 	error_message = ""
 	error = false
+
 	if not is_optional and text.length() <= 0:
 		error = true
-		if error_message.length() > 0:
-			error_message = error_message + " - "
-		error_message = error_message + "Field is required"
+		_append_error_message("⚠️ Required field")
+
 	if character_limit != 0 and text.length() > character_limit:
 		error = true
-		if error_message.length() > 0:
-			error_message = error_message + " - "
-		error_message = error_message + "Characters Limit Reached"
-	if !allow_spaces and text.contains(" "):
+		_append_error_message("⚠️ Characters limit reached")
+
+	if not allow_spaces and text.contains(" "):
 		error = true
-		if error_message.length() > 0:
-			error_message = error_message + " - "
-		error_message = error_message + "Spaces aren't allowed"
+		_append_error_message("⚠️ Spaces aren't allowed")
+
 	if not allow_special_characters and not is_alphanumeric_with_spaces(text) and text.length() > 0:
 		error = true
-		if error_message.length() > 0:
-			error_message = error_message + " - "
-		error_message = error_message + "Special Characters aren't allowed"
+		_append_error_message("⚠️ Special characters aren't allowed")
+
 	if not allow_edge_spaces and has_leading_or_trailing_spaces(text) and text.length() > 0:
 		error = true
-		if error_message.length() > 0:
-			error_message = error_message + " - "
-		error_message = error_message + "Edge spaces aren't allowed"
+		_append_error_message("⚠️ Edge spaces aren't allowed")
 
 
 func _ready() -> void:
