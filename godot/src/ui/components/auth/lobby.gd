@@ -23,6 +23,10 @@ var _last_panel: Control = null
 @onready var control_start = %Start
 @onready var control_backpack = %BackpackContainer
 @onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
+@onready var label_length: Label = %Label_Length
+@onready var label_error: Label = %Label_Error
+
+@onready var line_edit_choose_name: LineEdit = %LineEdit_ChooseName
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
@@ -42,6 +46,7 @@ var _last_panel: Control = null
 @onready var choose_name_footer: VBoxContainer = %ChooseNameFooter
 @onready var restore_name_footer: VBoxContainer = %RestoreNameFooter
 @onready var label_name: Label = %Label_Name
+@onready var h_box_container_error: HBoxContainer = %HBoxContainer_Error
 
 @onready var button_enter_as_guest: Button = %Button_EnterAsGuest
 @onready var sign_in_title: Label = %SignInTitle
@@ -376,3 +381,14 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 					avatar_preview.avatar.emote_controller.play_emote("dance")
 				else:
 					avatar_preview.avatar.emote_controller.play_emote("wave")
+
+
+func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
+	label_length.text = str(line_edit_choose_name.text.length()) + "/" + str(line_edit_choose_name.character_limit)
+	if line_edit_choose_name.error:
+		h_box_container_error.show()
+		label_error.text = line_edit_choose_name.error_message
+		button_next.disabled = true
+	else:
+		h_box_container_error.hide()
+		button_next.disabled = false
