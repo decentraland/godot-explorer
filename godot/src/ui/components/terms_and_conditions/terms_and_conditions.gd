@@ -18,7 +18,7 @@ func _on_rich_text_label_meta_clicked(meta: Variant) -> void:
 
 
 func _on_button_accept_pressed() -> void:
-	Global.metrics.track_screen_viewed("ACCEPT_EULA")
+	Global.metrics.track_screen_viewed("ACCEPT_EULA", "")
 	Global.metrics.track_click_button("accept", "ACCEPT_EULA", "")
 	Global.metrics.flush()
 	spinner.show()
