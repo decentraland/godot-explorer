@@ -146,10 +146,7 @@ async fn op_teleport_to(
 }
 
 #[op2(fast)]
-fn op_trigger_emote(
-    op_state: Rc<RefCell<OpState>>,
-    #[string] emote_id: String,
-) {
+fn op_trigger_emote(op_state: Rc<RefCell<OpState>>, #[string] emote_id: String) {
     let (sx, _rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
     op_state
