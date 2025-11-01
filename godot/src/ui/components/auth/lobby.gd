@@ -387,12 +387,14 @@ func _check_button_finish():
 			avatar_preview.avatar.emote_controller.play_emote("shrug")
 			_playing = "shrug"
 		panel_container_error_border.self_modulate = Color.RED
-
 	else:
 		label_error.hide()
 		label_advise.show()
-		button_next.disabled = false
-		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "clap":
+		button_next.disabled = line_edit_choose_name.text.is_empty()
+		if (
+			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
+			or _playing != "clap"
+		):
 			avatar_preview.avatar.emote_controller.play_emote("clap")
 			_playing = "clap"
 		panel_container_error_border.self_modulate = Color.TRANSPARENT

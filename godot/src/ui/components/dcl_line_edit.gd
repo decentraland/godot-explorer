@@ -14,16 +14,16 @@ var error: bool = false
 var error_message: String = ""
 
 
-func is_alphanumeric_with_spaces(text: String) -> bool:
+func is_alphanumeric_with_spaces(value: String) -> bool:
 	var regex := RegEx.new()
 	regex.compile(r"^[A-Za-z0-9 ]+$")
-	return regex.search(text) != null
+	return regex.search(value) != null
 
 
-func has_leading_or_trailing_spaces(text: String) -> bool:
+func has_leading_or_trailing_spaces(value: String) -> bool:
 	var regex := RegEx.new()
 	regex.compile(r"(^\s)|(\s$)")
-	return regex.search(text) != null
+	return regex.search(value) != null
 
 
 func _append_error_message(msg: String) -> void:
@@ -35,10 +35,6 @@ func _append_error_message(msg: String) -> void:
 func _check_error():
 	error_message = ""
 	error = false
-
-	if not is_optional and text.length() <= 0:
-		error = true
-		_append_error_message("⚠️ Required field")
 
 	if character_limit != 0 and text.length() > character_limit:
 		error = true
@@ -65,7 +61,7 @@ func _ready() -> void:
 
 func _on_text_changed(_new_text: String) -> void:
 	_check_error()
-	emit_signal("dcl_line_edit_changed")
+	dcl_line_edit_changed.emit()
 
 
 func get_text_value() -> String:
@@ -75,4 +71,4 @@ func get_text_value() -> String:
 func set_text_value(new_text: String) -> void:
 	text = new_text
 	_check_error()
-	emit_signal("dcl_line_edit_changed")
+	dcl_line_edit_changed.emit()
