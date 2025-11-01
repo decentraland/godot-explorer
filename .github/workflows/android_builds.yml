@@ -14,7 +14,8 @@ concurrency:
 jobs:
   build:
     name: Build VR and Mobile
-    runs-on: bigrunner
+    runs-on: warp-ubuntu-latest-x64-8x
+    timeout-minutes: 25
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
@@ -54,7 +55,7 @@ jobs:
       
       - name: Export Android AAB
         run: |
-          cargo run -- export --target android --format aab
+          cargo run -- export --target android --format aab --release
       
       - name: Export Quest APK
         run: |
