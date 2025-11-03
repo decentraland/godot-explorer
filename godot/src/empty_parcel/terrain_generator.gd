@@ -162,7 +162,9 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 			parent_parcel.spawn_locations.append(spawn_loc2)
 
 	# Generate edge strips along loaded parcel boundaries
-	_generate_loaded_parcel_edges(surface_tool, grid_size, cell_size, start_pos, noise, noise_strength)
+	_generate_loaded_parcel_edges(
+		surface_tool, grid_size, cell_size, start_pos, noise, noise_strength
+	)
 
 
 func _get_random_point_in_triangle(v1: Vector3, v2: Vector3, v3: Vector3) -> Vector3:
@@ -283,7 +285,9 @@ func _generate_loaded_parcel_edges(
 		var terrain_top_right = Vector3(x_end, terrain_top_height, z_pos)
 		var terrain_top_left = Vector3(x_start, terrain_top_height, z_pos)
 
-		_add_quad_to_surface(surface_tool, base_bottom_left, base_bottom_right, terrain_top_right, terrain_top_left)
+		_add_quad_to_surface(
+			surface_tool, base_bottom_left, base_bottom_right, terrain_top_right, terrain_top_left
+		)
 
 	if corner_config.south == CornerConfiguration.ParcelState.LOADED:
 		var z_pos = start_pos + grid_size * cell_size
@@ -295,7 +299,9 @@ func _generate_loaded_parcel_edges(
 		var terrain_top_right = Vector3(x_end, terrain_top_height, z_pos)
 		var terrain_top_left = Vector3(x_start, terrain_top_height, z_pos)
 
-		_add_quad_to_surface(surface_tool, terrain_top_left, terrain_top_right, base_bottom_right, base_bottom_left)
+		_add_quad_to_surface(
+			surface_tool, terrain_top_left, terrain_top_right, base_bottom_right, base_bottom_left
+		)
 
 	if corner_config.east == CornerConfiguration.ParcelState.LOADED:
 		var x_pos = start_pos + grid_size * cell_size
@@ -307,7 +313,9 @@ func _generate_loaded_parcel_edges(
 		var terrain_top_far = Vector3(x_pos, terrain_top_height, z_end)
 		var terrain_top_near = Vector3(x_pos, terrain_top_height, z_start)
 
-		_add_quad_to_surface(surface_tool, base_bottom_near, base_bottom_far, terrain_top_far, terrain_top_near)
+		_add_quad_to_surface(
+			surface_tool, base_bottom_near, base_bottom_far, terrain_top_far, terrain_top_near
+		)
 
 	if corner_config.west == CornerConfiguration.ParcelState.LOADED:
 		var x_pos = start_pos
@@ -319,7 +327,9 @@ func _generate_loaded_parcel_edges(
 		var terrain_top_far = Vector3(x_pos, terrain_top_height, z_end)
 		var terrain_top_near = Vector3(x_pos, terrain_top_height, z_start)
 
-		_add_quad_to_surface(surface_tool, terrain_top_near, terrain_top_far, base_bottom_far, base_bottom_near)
+		_add_quad_to_surface(
+			surface_tool, terrain_top_near, terrain_top_far, base_bottom_far, base_bottom_near
+		)
 
 
 func _add_quad_to_surface(surface_tool: SurfaceTool, v1: Vector3, v2: Vector3, v3: Vector3, v4: Vector3):
