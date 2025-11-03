@@ -459,30 +459,31 @@ fn set_godot_explorer_version() {
     // Get the CARGO_PKG_VERSION env var
     let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());
 
-    // Check if building in CI with GitHub Actions run number
-    let github_run_number = env::var("GITHUB_RUN_NUMBER").ok();
+    // Check if this is a production build
+    let is_prod_build = env::var("DECENTRALAND_PROD_BUILD").is_ok();
 
     // Check if debug or release build
     let profile = env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
     let is_debug = profile == "debug";
 
-    let full_version = match (github_run_number, short_hash) {
-        // CI build: {version}-{run_number}-{short_hash}
-        (Some(run_number), Some(hash)) => format!("{}-{}-{}-alpha", version, run_number, hash),
-        // Local debug build: {version}-dev-{short_hash}
-        (None, Some(hash)) if is_debug => format!("{}-{}-alpha-dev", version, hash),
-        // Local release build: {version}-{short_hash}
-        (None, Some(hash)) => format!("{}-{}-alpha", version, hash),
+    // Determine environment suffix (dev or prod)
+    let env_suffix = if is_prod_build { "prod" } else { "dev" };
+
+    // Determine build mode suffix (debug for debug builds, none for release)
+    let mode_suffix = if is_debug { "-debug" } else { "" };
+
+    let full_version = match short_hash {
+        // With git hash: {version}-{short_hash}-alpha{-debug}-{dev|prod}
+        Some(hash) => format!("{}-{}-alpha{}-{}", version, hash, mode_suffix, env_suffix),
         // Fallback if no git hash available
         _ => {
             let timestamp = Utc::now()
                 .to_rfc3339()
                 .replace(|c: char| !c.is_ascii_digit(), "");
-            if is_debug {
-                format!("{}-t{}-alpha-dev", version, timestamp)
-            } else {
-                format!("{}-t{}-alpha", version, timestamp)
-            }
+            format!(
+                "{}-t{}-alpha{}-{}",
+                version, timestamp, mode_suffix, env_suffix
+            )
         }
     };
 
