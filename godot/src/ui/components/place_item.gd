@@ -659,7 +659,7 @@ func schedule_event() -> void:
 
 
 func _on_event_pressed() -> void:
-	event_pressed.emit(_data)
+	event_pressed.emit(event_id)
 
 
 func _on_button_share_pressed() -> void:

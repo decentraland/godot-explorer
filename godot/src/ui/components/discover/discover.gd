@@ -35,7 +35,7 @@ func on_item_pressed(data):
 	jump_in.show_animation()
 
 
-func on_event_pressed(data):
+func show_event_details(data):
 	event_details.set_data(data)
 	event_details.show_animation()
 
@@ -157,4 +157,4 @@ func _async_handle_event_notification(event_id: String) -> void:
 	var event_data = json["data"]
 
 	# Show event details
-	on_event_pressed(event_data)
+	show_event_details(event_data)
