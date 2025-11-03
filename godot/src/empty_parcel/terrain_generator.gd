@@ -162,9 +162,7 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 			parent_parcel.spawn_locations.append(spawn_loc2)
 
 	# Generate edge strips along loaded parcel boundaries
-	_generate_loaded_parcel_edges(
-		surface_tool, grid_size, cell_size, start_pos, noise, noise_strength
-	)
+	_generate_loaded_parcel_edges(surface_tool, grid_size, cell_size, start_pos)
 
 
 func _get_random_point_in_triangle(v1: Vector3, v2: Vector3, v3: Vector3) -> Vector3:
@@ -264,12 +262,7 @@ func _create_displaced_vertex(
 
 
 func _generate_loaded_parcel_edges(
-	surface_tool: SurfaceTool,
-	grid_size: int,
-	cell_size: float,
-	start_pos: float,
-	noise: FastNoiseLite,
-	noise_strength: float
+	surface_tool: SurfaceTool, grid_size: int, cell_size: float, start_pos: float
 ):
 	var corner_config = parent_parcel.corner_config
 	var base_floor_height = -0.05
