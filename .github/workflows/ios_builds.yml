@@ -28,8 +28,8 @@ jobs:
           override: true
           target: aarch64-apple-ios
 
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
+      # - name: Set up cache
+        # uses: ./.github/actions/set-up-cache
 
       # Dependencies section
       - name: Install dependencies
