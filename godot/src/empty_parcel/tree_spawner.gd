@@ -87,8 +87,7 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# North is -Z direction
 	if config.north == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x, parcel_min.y, parcel_min.z - 16.0),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x, parcel_min.y, parcel_min.z - 16.0), Vector3(16.0, 200.0, 16.0)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -96,8 +95,7 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# South is +Z direction
 	if config.south == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x, parcel_min.y, parcel_max.z),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x, parcel_min.y, parcel_max.z), Vector3(16.0, 200.0, 16.0)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -105,8 +103,7 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# East is +X direction
 	if config.east == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_max.x, parcel_min.y, parcel_min.z),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_max.x, parcel_min.y, parcel_min.z), Vector3(16.0, 200.0, 16.0)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -114,8 +111,7 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# West is -X direction
 	if config.west == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_min.z),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_min.z), Vector3(16.0, 200.0, 16.0)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -131,24 +127,21 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 
 	if config.northeast == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_max.x, parcel_min.y, parcel_min.z - 16.0),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_max.x, parcel_min.y, parcel_min.z - 16.0), Vector3(16.0, 200.0, 16.0)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
 
 	if config.southwest == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_max.z),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_max.z), Vector3(16.0, 200.0, 16.0)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
 
 	if config.southeast == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_max.x, parcel_min.y, parcel_max.z),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_max.x, parcel_min.y, parcel_max.z), Vector3(16.0, 200.0, 16.0)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -185,7 +178,9 @@ func _collect_tree_aabb_in_world_space(node: Node3D, accumulated_transform: Tran
 	# Recurse through children
 	for child in node.get_children():
 		if child is Node3D:
-			var child_aabb = _collect_tree_aabb_in_world_space(child, accumulated_transform * node.transform)
+			var child_aabb = _collect_tree_aabb_in_world_space(
+				child, accumulated_transform * node.transform
+			)
 			if child_aabb != null:
 				if combined_aabb == null:
 					combined_aabb = child_aabb

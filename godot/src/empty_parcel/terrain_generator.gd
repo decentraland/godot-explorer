@@ -332,7 +332,9 @@ func _generate_loaded_parcel_edges(
 		)
 
 
-func _add_quad_to_surface(surface_tool: SurfaceTool, v1: Vector3, v2: Vector3, v3: Vector3, v4: Vector3):
+func _add_quad_to_surface(
+	surface_tool: SurfaceTool, v1: Vector3, v2: Vector3, v3: Vector3, v4: Vector3
+):
 	var normal1 = (v2 - v1).cross(v3 - v1).normalized()
 	var normal2 = (v3 - v1).cross(v4 - v1).normalized()
 
