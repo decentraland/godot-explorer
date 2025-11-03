@@ -23,7 +23,7 @@ var orientation: String
 
 func _ready():
 	texture_progress_bar.hide()
-
+	
 
 func _emit_jump_in(pos: Vector2i, realm: String):
 	jump_in.emit(pos, realm)
@@ -122,7 +122,14 @@ func show_animation() -> void:
 			. set_trans(Tween.TRANS_SINE)
 			. set_ease(Tween.EASE_OUT)
 		)
+	
+	
+	if tracking_handler:
+		if item_data.is_empty():
+			printerr("SidePanel: WARNING - item_data is empty!")
 		tracking_handler.track_screen_viewed(item_data)
+	else:
+		printerr("SidePanel: tracking_handler is null")
 
 
 func _on_gui_input(event: InputEvent) -> void:

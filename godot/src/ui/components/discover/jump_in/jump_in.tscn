@@ -1,9 +1,14 @@
-[gd_scene load_steps=5 format=3 uid="uid://vc72j0sq70jq"]
+[gd_scene load_steps=7 format=3 uid="uid://vc72j0sq70jq"]
 
-[ext_resource type="Script" uid="uid://0ncqo78wbgqv" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_6j21g"]
+[ext_resource type="Script" uid="uid://d22htbtk8w5kn" path="res://src/ui/components/panels/side_panel.gd" id="1_gr74l"]
+[ext_resource type="Script" uid="uid://dkpoy3en6rfhc" path="res://src/logic/metrics/place_details_screen_tracking_handler.gd" id="2_j8c2j"]
 [ext_resource type="PackedScene" uid="uid://bc5irf8ns8k10" path="res://src/ui/components/discover/jump_in/panel_jump_in_portrait.tscn" id="2_mlrqc"]
 [ext_resource type="PackedScene" uid="uid://b8837sg55qd8m" path="res://src/ui/components/discover/jump_in/panel_jump_in_landscape.tscn" id="3_duas1"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_jvwlf"]
+
+[sub_resource type="Resource" id="Resource_mu208"]
+script = ExtResource("2_j8c2j")
+metadata/_custom_type_script = "uid://dkpoy3en6rfhc"
 
 [node name="JumpIn" type="ColorRect"]
 anchors_preset = 15
@@ -12,10 +17,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
-script = ExtResource("1_6j21g")
+script = ExtResource("1_gr74l")
 PORTRAIT_PANEL = ExtResource("2_mlrqc")
 LANDSCAPE_PANEL = ExtResource("3_duas1")
-SCREEN_NAME = "JUMP_IN"
+tracking_handler = SubResource("Resource_mu208")
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("4_jvwlf")]
 unique_name_in_owner = true
