@@ -5,7 +5,9 @@ signal jump_in(position: Vector2i, realm: String)
 signal close
 
 const EVENT_DETAILS_PORTRAIT = preload("res://src/ui/components/events/event_details_portrait.tscn")
-const EVENT_DETAILS_LANDSCAPE = preload("res://src/ui/components/events/event_details_landscape.tscn")
+const EVENT_DETAILS_LANDSCAPE = preload(
+	"res://src/ui/components/events/event_details_landscape.tscn"
+)
 
 var event_id: String
 var event_status: String
