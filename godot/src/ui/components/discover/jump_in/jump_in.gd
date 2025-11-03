@@ -4,16 +4,23 @@ extends Control
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
-@onready var panel_jump_in_portrait: PlaceItem = %PanelJumpInPortrait
-@onready var panel_jump_in_landscape: PlaceItem = %PanelJumpInLandscape
+const JUMP_IN_PORTRAIT = preload("res://src/ui/components/discover/jump_in/panel_jump_in_portrait.tscn")
+const JUMP_IN_LANDSCAPE = preload(
+	"res://src/ui/components/discover/jump_in/panel_jump_in_landscape.tscn"
+)
+
+@export var PORTRAIT_PANEL: PackedScene
+@export var LANDSCAPE_PANEL: PackedScene
+
+
+var portrait_panel: PlaceItem
+var landscape_panel: PlaceItem
+var item_data: Dictionary
+var orientation: String
+
 @onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 
-
 func _ready():
-	panel_jump_in_portrait.jump_in.connect(self._emit_jump_in)
-	panel_jump_in_landscape.jump_in.connect(self._emit_jump_in)
-	panel_jump_in_portrait.close.connect(self._close)
-	panel_jump_in_landscape.close.connect(self._close)
 	texture_progress_bar.hide()
 
 
@@ -23,12 +30,32 @@ func _emit_jump_in(pos: Vector2i, realm: String):
 
 func _close():
 	self.hide()
+	for child in get_children():
+		if child is PlaceItem:
+			child.queue_free()
 	UiSounds.play_sound("mainmenu_widget_close")
 
 
+func instantiate_portrait_panel():
+	portrait_panel = PORTRAIT_PANEL.instantiate()
+	self.add_child(portrait_panel)
+	portrait_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	portrait_panel.set_data(item_data)
+	portrait_panel.jump_in.connect(self._emit_jump_in)
+	set_data(item_data)
+
+
+func instantiate_landscape_panel():
+	landscape_panel = LANDSCAPE_PANEL.instantiate()
+	self.add_child(landscape_panel)
+	landscape_panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+	landscape_panel.set_data(item_data)
+	landscape_panel.jump_in.connect(self._emit_jump_in)
+	set_data(item_data)
+
+
 func async_load_place_position(pos: Vector2i):
-	panel_jump_in_portrait.hide()
-	panel_jump_in_landscape.hide()
+	_close()
 	show()
 	texture_progress_bar.show()
 	var url: String = "https://places.decentraland.org/api/places?limit=1"
@@ -57,44 +84,43 @@ func async_load_place_position(pos: Vector2i):
 	show_animation()
 
 
-func set_data(item_data):
-	panel_jump_in_landscape.set_data(item_data)
-	panel_jump_in_portrait.set_data(item_data)
+func set_data(data):
+	item_data = data
 
 
 func show_animation() -> void:
+	_close()
 	self.show()
-	if panel_jump_in_portrait != null and panel_jump_in_landscape != null:
-		if Global.is_orientation_portrait():
-			panel_jump_in_portrait.show()
-			panel_jump_in_landscape.hide()
-			var animation_target_y = panel_jump_in_portrait.position.y
-			# Place the menu off-screen above (its height above the target position)
-			panel_jump_in_portrait.position.y = (
-				panel_jump_in_portrait.position.y + panel_jump_in_portrait.size.y
-			)
+	if Global.is_orientation_portrait():
+		instantiate_portrait_panel()
+		orientation = "portrait"
+		var animation_target_y = portrait_panel.position.y
+		# Place the menu off-screen above (its height above the target position)
+		portrait_panel.position.y = (
+			portrait_panel.position.y + portrait_panel.size.y
+		)
 
-			(
-				create_tween()
-				. tween_property(panel_jump_in_portrait, "position:y", animation_target_y, 0.5)
-				. set_trans(Tween.TRANS_SINE)
-				. set_ease(Tween.EASE_OUT)
-			)
-		else:
-			panel_jump_in_portrait.hide()
-			panel_jump_in_landscape.show()
-			var animation_target_x = panel_jump_in_landscape.position.x
-			# Place the menu off-screen above (its height above the target position)
-			panel_jump_in_landscape.position.x = (
-				panel_jump_in_landscape.position.x + panel_jump_in_landscape.size.x
-			)
-
-			(
-				create_tween()
-				. tween_property(panel_jump_in_landscape, "position:x", animation_target_x, 0.5)
-				. set_trans(Tween.TRANS_SINE)
-				. set_ease(Tween.EASE_OUT)
-			)
+		(
+			create_tween()
+			. tween_property(portrait_panel, "position:y", animation_target_y, 0.5)
+			. set_trans(Tween.TRANS_SINE)
+			. set_ease(Tween.EASE_OUT)
+		)
+	else:
+		instantiate_landscape_panel()
+		orientation = "landscape"
+		var animation_target_x = landscape_panel.position.x
+		# Place the menu off-screen above (its height above the target position)
+		landscape_panel.position.x = (
+			landscape_panel.position.x + landscape_panel.size.x
+		)
+		
+		(
+			create_tween()
+			. tween_property(landscape_panel, "position:x", animation_target_x, 0.5)
+			. set_trans(Tween.TRANS_SINE)
+			. set_ease(Tween.EASE_OUT)
+		)
 
 
 func _on_gui_input(event: InputEvent) -> void:

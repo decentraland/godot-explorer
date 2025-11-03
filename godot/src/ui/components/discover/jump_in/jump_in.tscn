@@ -13,16 +13,9 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
 script = ExtResource("1_6j21g")
-
-[node name="PanelJumpInPortrait" parent="." instance=ExtResource("2_mlrqc")]
-unique_name_in_owner = true
-layout_mode = 1
-offset_top = -454.0
-
-[node name="PanelJumpInLandscape" parent="." instance=ExtResource("3_duas1")]
-unique_name_in_owner = true
-layout_mode = 1
-offset_left = -292.0
+PORTRAIT_PANEL = ExtResource("2_mlrqc")
+LANDSCAPE_PANEL = ExtResource("3_duas1")
+SCREEN_NAME = "JUMP_IN"
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("4_jvwlf")]
 unique_name_in_owner = true
