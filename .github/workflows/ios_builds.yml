@@ -57,6 +57,11 @@ jobs:
       - name: Export
         run: cargo run -- export --target ios
 
+
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+
       # Deploy to godot-mobile-deploy-pipeline
       - name: Install Git LFS
         run: |
