@@ -182,7 +182,7 @@ impl DclAvatar {
         if prev_scene_id != scene_id {
             self.current_parcel_scene_id = scene_id;
             self.base_mut().call_deferred(
-                "emit_signal".into(),
+                "emit_signal",
                 &[
                     "change_scene_id".to_variant(),
                     scene_id.to_variant(),
@@ -203,7 +203,7 @@ impl DclAvatar {
         if self.current_parcel_position != parcel_position {
             self.current_parcel_position = parcel_position;
             self.base_mut().call_deferred(
-                "emit_signal".into(),
+                "emit_signal",
                 &[
                     "change_parcel_position".to_variant(),
                     parcel_position.to_variant(),
@@ -219,7 +219,7 @@ impl DclAvatar {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
                 self.base_mut().call_deferred(
-                    "emit_signal".into(),
+                    "emit_signal",
                     &[
                         "change_scene_id".to_variant(),
                         scene_id.to_variant(),
@@ -238,7 +238,7 @@ impl DclAvatar {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
                 self.base_mut().call_deferred(
-                    "emit_signal".into(),
+                    "emit_signal",
                     &[
                         "change_scene_id".to_variant(),
                         scene_id.to_variant(),

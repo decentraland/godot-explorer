@@ -81,9 +81,9 @@ impl INode for Metrics {
         timer.set_autostart(true);
 
         let callable = self.base().callable("timer_timeout");
-        timer.connect("timeout".into(), &callable);
+        timer.connect("timeout", &callable);
 
-        self.base_mut().add_child(timer);
+        self.base_mut().add_child(&timer);
 
         // Check which mobile plugin is available and fetch static device info (checked once)
         if DclIosPlugin::is_available() {

@@ -12,12 +12,8 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    classes::{
-        global::{HorizontalAlignment, VerticalAlignment},
-        label_3d::AlphaCutMode,
-        text_server::AutowrapMode,
-        Label3D,
-    },
+    classes::{label_3d::AlphaCutMode, text_server::AutowrapMode, Label3D},
+    global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
 

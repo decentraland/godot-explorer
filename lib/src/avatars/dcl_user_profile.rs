@@ -40,7 +40,7 @@ impl DclUserProfile {
 
     #[func]
     fn get_base_url(&self) -> GString {
-        GString::from(self.inner.base_url.clone())
+        GString::from(&self.inner.base_url)
     }
 
     #[func]
@@ -50,7 +50,7 @@ impl DclUserProfile {
 
     #[func]
     fn get_name(&self) -> GString {
-        GString::from(self.inner.content.name.clone())
+        GString::from(&self.inner.content.name)
     }
 
     #[func]
@@ -60,12 +60,12 @@ impl DclUserProfile {
 
     #[func]
     fn get_description(&self) -> GString {
-        GString::from(self.inner.content.description.clone())
+        GString::from(&self.inner.content.description)
     }
 
     #[func]
     fn get_ethereum_address(&self) -> GString {
-        GString::from(self.inner.content.eth_address.clone())
+        GString::from(&self.inner.content.eth_address)
     }
 
     #[func]
@@ -112,14 +112,14 @@ impl DclUserProfile {
 
     #[func]
     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclUserProfile> {
-        let value = godot::classes::Json::stringify(dictionary.to_variant());
+        let value = godot::classes::Json::stringify(&dictionary.to_variant());
         DclUserProfile::from_gd(json5::from_str(value.to_string().as_str()).unwrap_or_default())
     }
 
     #[func]
     pub fn to_godot_dictionary(&self) -> Dictionary {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
-        let value = godot::classes::Json::parse_string(value.into());
+        let value = godot::classes::Json::parse_string(&value);
         value.to::<Dictionary>()
     }
 
@@ -128,7 +128,7 @@ impl DclUserProfile {
         let mut arr = Array::new();
         if let Some(blocked) = &self.inner.content.blocked {
             for addr in blocked {
-                arr.push(GString::from(addr.as_str()));
+                arr.push(&GString::from(addr));
             }
         }
         arr
@@ -139,7 +139,7 @@ impl DclUserProfile {
         let mut arr = Array::new();
         if let Some(muted) = &self.inner.content.muted {
             for addr in muted {
-                arr.push(GString::from(addr.as_str()));
+                arr.push(&GString::from(addr));
             }
         }
         arr
@@ -355,7 +355,7 @@ impl DclUserProfile {
         let mut arr = Array::new();
         if let Some(interests) = &self.inner.content.interests {
             for interest in interests {
-                arr.push(GString::from(interest.as_str()));
+                arr.push(&GString::from(interest));
             }
         }
         arr
@@ -401,7 +401,7 @@ impl DclUserProfile {
 
     #[func]
     fn get_user_id(&self) -> GString {
-        GString::from(self.inner.content.get_user_id())
+        GString::from(&self.inner.content.get_user_id())
     }
 
     #[func]
@@ -422,7 +422,7 @@ impl DclUserProfile {
                 let mut dict = Dictionary::new();
                 dict.set("title", link.title.clone());
                 dict.set("url", link.url.clone());
-                arr.push(dict);
+                arr.push(&dict);
             }
         }
         arr

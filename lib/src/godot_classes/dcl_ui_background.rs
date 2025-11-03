@@ -1,4 +1,5 @@
 use godot::{
+    builtin::Side,
     classes::{Control, INinePatchRect, NinePatchRect},
     prelude::*,
 };
@@ -136,8 +137,7 @@ impl DclUiBackground {
         }
 
         self.first_texture_load_shot = true;
-        self.base_mut()
-            .call_deferred("_on_texture_loaded".into(), &[]);
+        self.base_mut().call_deferred("_on_texture_loaded", &[]);
     }
 
     #[func]
@@ -189,13 +189,13 @@ impl DclUiBackground {
                     };
 
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::BOTTOM, patch_margin_bottom as i32);
+                    .set_patch_margin(Side::BOTTOM, patch_margin_bottom as i32);
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::LEFT, patch_margin_left as i32);
+                    .set_patch_margin(Side::LEFT, patch_margin_left as i32);
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::TOP, patch_margin_top as i32);
+                    .set_patch_margin(Side::TOP, patch_margin_top as i32);
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::RIGHT, patch_margin_right as i32);
+                    .set_patch_margin(Side::RIGHT, patch_margin_right as i32);
 
                 // TODO: should be TILE or STRETCH?
                 self.base_mut().set_h_axis_stretch_mode(
@@ -212,13 +212,13 @@ impl DclUiBackground {
                 self.base_mut()
                     .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::BOTTOM, 0);
+                    .set_patch_margin(Side::BOTTOM, 0);
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::LEFT, 0);
+                    .set_patch_margin(Side::LEFT, 0);
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::TOP, 0);
+                    .set_patch_margin(Side::TOP, 0);
                 self.base_mut()
-                    .set_patch_margin(godot::global::Side::RIGHT, 0);
+                    .set_patch_margin(Side::RIGHT, 0);
                 self.base_mut().set_h_axis_stretch_mode(
                     godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
@@ -296,8 +296,7 @@ impl DclUiBackground {
                         }
 
                         self.first_texture_load_shot = true;
-                        self.base_mut()
-                            .call_deferred("_on_texture_loaded".into(), &[]);
+                        self.base_mut().call_deferred("_on_texture_loaded", &[]);
                     }
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture
@@ -316,7 +315,7 @@ impl DclUiBackground {
                             );
                         } else {
                             self.base_mut()
-                                .call_deferred("_on_profile_for_texture_loaded".into(), &[]);
+                                .call_deferred("_on_profile_for_texture_loaded", &[]);
                         }
                     }
                 }
@@ -328,10 +327,10 @@ impl DclUiBackground {
             if self.current_value.texture.is_none() {
                 let mut base_mut = self.base_mut();
                 base_mut.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
-                base_mut.set_patch_margin(godot::global::Side::BOTTOM, 0);
-                base_mut.set_patch_margin(godot::global::Side::LEFT, 0);
-                base_mut.set_patch_margin(godot::global::Side::TOP, 0);
-                base_mut.set_patch_margin(godot::global::Side::RIGHT, 0);
+                base_mut.set_patch_margin(Side::BOTTOM, 0);
+                base_mut.set_patch_margin(Side::LEFT, 0);
+                base_mut.set_patch_margin(Side::TOP, 0);
+                base_mut.set_patch_margin(Side::RIGHT, 0);
                 base_mut.set_h_axis_stretch_mode(
                     godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );

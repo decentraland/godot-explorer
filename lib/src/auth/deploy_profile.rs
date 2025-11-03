@@ -1,6 +1,7 @@
 use std::io::Read;
 
 use anyhow::anyhow;
+use godot::obj::Singleton;
 
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;

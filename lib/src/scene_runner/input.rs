@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use godot::{classes::input::MouseMode, prelude::*};
+use godot::{classes::{Input, input::MouseMode}, prelude::*};
 
 use crate::{
     dcl::components::proto_components::sdk::components::common::InputAction,

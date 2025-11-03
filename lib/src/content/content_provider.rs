@@ -1340,7 +1340,7 @@ impl ContentProvider {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
             let zip_path = format!("user://content/{}", hash_zip).to_godot();
             let result = godot::classes::ProjectSettings::singleton()
-                .load_resource_pack_ex(zip_path.clone())
+                .load_resource_pack_ex(&zip_path)
                 .replace_files(false)
                 .done();
 

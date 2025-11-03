@@ -38,7 +38,7 @@ impl INode for DclTokioRpc {
                     use_webview,
                 } => {
                     self.base_mut().call_deferred(
-                        "emit_signal".into(),
+                        "emit_signal",
                         &[
                             "need_open_url".to_variant(),
                             url.to_variant(),

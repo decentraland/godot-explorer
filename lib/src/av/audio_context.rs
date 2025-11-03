@@ -165,7 +165,7 @@ impl AudioContext {
             Gd::<AudioStreamPlayer>::try_from_instance_id(audio_stream_player_instance_id)
         {
             audio_stream_player.call_deferred(
-                "init_audio".into(),
+                "init_audio",
                 &[
                     frame_rate.to_variant(),
                     input_stream.frames().to_variant(),
@@ -267,7 +267,7 @@ impl FfmpegContext for AudioContext {
         if let Ok(mut audio_stream_player) =
             Gd::<AudioStreamPlayer>::try_from_instance_id(self.audio_stream_player_instance_id)
         {
-            audio_stream_player.call_deferred("stream_buffer".into(), &[data.to_variant()]);
+            audio_stream_player.call_deferred("stream_buffer", &[data.to_variant()]);
         }
 
         self.current_frame += 1;

@@ -165,14 +165,16 @@ impl DclItemEntityDefinition {
     #[func]
     fn get_representation_main_file(&self, body_shape_id: String) -> GString {
         if self.inner.item.wearable_data.is_some() {
-            self.get_wearable_representation(&body_shape_id)
+            (&self
+                .get_wearable_representation(&body_shape_id)
                 .map(|representation| representation.main_file.clone())
-                .unwrap_or_default()
+                .unwrap_or_default())
                 .into()
         } else if self.inner.item.emote_data.is_some() {
-            self.get_emote_representation(&body_shape_id)
+            (&self
+                .get_emote_representation(&body_shape_id)
                 .map(|representation| representation.main_file.clone())
-                .unwrap_or_default()
+                .unwrap_or_default())
                 .into()
         } else {
             GString::from("")
@@ -266,17 +268,22 @@ impl DclItemEntityDefinition {
 
     #[func]
     fn get_id(&self) -> GString {
-        self.inner.id.clone().into()
+        (&self.inner.id).into()
     }
 
     #[func]
     fn get_thumbnail(&self) -> GString {
-        self.inner.item.thumbnail.clone().into()
+        (&self.inner.item.thumbnail).into()
     }
 
     #[func]
     fn get_rarity(&self) -> GString {
-        self.inner.item.rarity.clone().unwrap_or_default().into()
+        self.inner
+            .item
+            .rarity
+            .as_ref()
+            .map(GString::from)
+            .unwrap_or_default()
     }
 
     #[func]
@@ -324,7 +331,7 @@ impl DclItemEntityDefinition {
             let mut content_provider = _content_provider.bind_mut();
 
             if let Some(obj) = content_provider.get_gltf_from_hash(GString::from(main_file_hash)) {
-                obj.find_child("Skeleton3D".into()).is_some()
+                obj.find_child("Skeleton3D").is_some()
             } else if let Some(_obj) =
                 content_provider.get_texture_from_hash(GString::from(main_file_hash))
             {
@@ -342,7 +349,9 @@ impl DclItemEntityDefinition {
     #[func]
     fn to_json_string(&self) -> GString {
         serde_json::to_string(&self.inner.item)
+            .ok()
+            .as_ref()
+            .map(GString::from)
             .unwrap_or_default()
-            .into()
     }
 }

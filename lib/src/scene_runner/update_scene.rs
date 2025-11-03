@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
+use godot::{classes::Input, prelude::{Callable, GString, ToGodot, Transform3D, VariantArray}};
 
 #[cfg(feature = "use_ffmpeg")]
 use super::components::{audio_stream::update_audio_stream, video_player::update_video_player};
@@ -284,7 +284,7 @@ pub fn _process_scene(
                     scene
                         .godot_dcl_scene
                         .root_node_3d
-                        .call_deferred("emit_signal".into(), &["tree_changed".to_variant()]);
+                        .call_deferred("emit_signal", &["tree_changed".to_variant()]);
                     scene.godot_dcl_scene.hierarchy_changed_3d = false;
                 }
 
@@ -343,7 +343,7 @@ pub fn _process_scene(
                                 .map(|v| v.is_pointer_locked)
                         });
 
-                let is_pointer_locked = godot::prelude::Input::singleton().get_mouse_mode()
+                let is_pointer_locked = Input::singleton().get_mouse_mode()
                     == godot::classes::input::MouseMode::CAPTURED;
                 if maybe_is_pointer_locked != Some(is_pointer_locked) {
                     let pointer_lock_component = PbPointerLock { is_pointer_locked };

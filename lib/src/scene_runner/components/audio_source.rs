@@ -61,7 +61,7 @@ pub fn update_audio_source(
                 };
 
                 audio_source.call_deferred(
-                    "_async_refresh_data".into(),
+                    "_async_refresh_data",
                     &[new_value.current_time.is_some().to_variant()],
                 );
 

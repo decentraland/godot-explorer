@@ -103,7 +103,7 @@ impl WebSocketRoom {
 
         Self {
             ws_peer: godot::classes::WebSocketPeer::new_gd(),
-            ws_url: GString::from(ws_url),
+            ws_url: GString::from(&ws_url),
             state: WsRoomState::Connecting,
             player_address: ephemeral_auth_chain.signer(),
             ephemeral_auth_chain,
@@ -165,7 +165,7 @@ impl WebSocketRoom {
         }
 
         let buf = PackedByteArray::from_iter(buf);
-        matches!(self.ws_peer.send(buf), godot::global::Error::OK)
+        matches!(self.ws_peer.send(&buf), godot::global::Error::OK)
     }
 
     fn _poll(&mut self) {
@@ -182,12 +182,12 @@ impl WebSocketRoom {
                     {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
-                            v.push(GString::from("rfc5"));
+                            v.push(&GString::from("rfc5"));
                             v
                         };
 
-                        peer.set("supported_protocols".into(), ws_protocols.to_variant());
-                        peer.call("connect_to_url".into(), &[self.ws_url.clone().to_variant()]);
+                        peer.set("supported_protocols", &ws_protocols.to_variant());
+                        peer.call("connect_to_url", &[self.ws_url.clone().to_variant()]);
 
                         self.last_try_to_connect = Instant::now();
                         self.peer_identities.clear();
@@ -296,7 +296,7 @@ impl WebSocketRoom {
                                 for (alias, peer) in self.peer_identities.iter() {
                                     self.avatars.bind_mut().add_avatar(
                                         *alias,
-                                        GString::from(format!("{:#x}", peer.address)),
+                                        GString::from(&format!("{:#x}", peer.address)),
                                     );
 
                                     // Send PeerJoined event to MessageProcessor
@@ -364,7 +364,7 @@ impl WebSocketRoom {
                         self.peer_identities.insert(peer.alias, Peer::new(h160));
                         self.avatars
                             .bind_mut()
-                            .add_avatar(peer.alias, GString::from(format!("{:#x}", h160)));
+                            .add_avatar(peer.alias, GString::from(&format!("{:#x}", h160)));
 
                         // Send PeerJoined event to MessageProcessor
                         if let Some(sender) = &self.message_processor_sender {

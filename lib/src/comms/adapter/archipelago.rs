@@ -69,7 +69,7 @@ impl ArchipelagoManager {
 
         Self {
             ws_peer: godot::classes::WebSocketPeer::new_gd(),
-            ws_url: GString::from(ws_url),
+            ws_url: GString::from(&ws_url),
             state: ArchipelagoState::Connecting,
             player_address: ephemeral_auth_chain.signer(),
             ephemeral_auth_chain,
@@ -122,7 +122,7 @@ impl ArchipelagoManager {
         }
 
         let buf = PackedByteArray::from_iter(buf);
-        matches!(self.ws_peer.send(buf), godot::global::Error::OK)
+        matches!(self.ws_peer.send(&buf), godot::global::Error::OK)
     }
 
     pub fn poll(&mut self) {
@@ -139,12 +139,12 @@ impl ArchipelagoManager {
                     {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
-                            v.push(GString::from("archipelago"));
+                            v.push(&GString::from("archipelago"));
                             v
                         };
 
-                        peer.set("supported_protocols".into(), ws_protocols.to_variant());
-                        peer.call("connect_to_url".into(), &[self.ws_url.clone().to_variant()]);
+                        peer.set("supported_protocols", &ws_protocols.to_variant());
+                        peer.call("connect_to_url", &[self.ws_url.clone().to_variant()]);
 
                         self.last_try_to_connect = Instant::now();
                     }

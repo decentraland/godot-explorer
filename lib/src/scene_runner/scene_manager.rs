@@ -232,7 +232,7 @@ impl SceneManager {
         self.compute_scene_distance();
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &[
                 "scene_spawned".to_variant(),
                 signal_data.0 .0.to_variant(),
@@ -583,7 +583,7 @@ impl SceneManager {
             }
 
             self.base_mut().emit_signal(
-                "scene_killed".into(),
+                "scene_killed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
         }
@@ -676,7 +676,7 @@ impl SceneManager {
                             dcl_rpc_sender.bind_mut().set_sender(response);
 
                             testing_tools.call_deferred(
-                                "async_take_and_compare_snapshot".into(),
+                                "async_take_and_compare_snapshot",
                                 &[
                                     scene_id.0.to_variant(),
                                     src_stored_snapshot.to_variant(),
@@ -927,7 +927,7 @@ impl SceneManager {
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
-            .emit_signal("on_change_scene_id".into(), &[scene_id]);
+            .emit_signal("on_change_scene_id", &[scene_id]);
     }
 
     #[signal]
@@ -1150,8 +1150,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
 
                 // Handle pointer press/release on avatar for profile opening
@@ -1182,8 +1181,7 @@ impl INode for SceneManager {
                             if ui_has_focus {
                                 // Emit open_profile signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
-                                    global
-                                        .emit_signal("open_profile".into(), &[avatar.to_variant()]);
+                                    global.emit_signal("open_profile", &[avatar.to_variant()]);
                                 }
                             }
                         }
@@ -1207,8 +1205,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
             }
         }
@@ -1293,8 +1290,7 @@ impl INode for SceneManager {
 
         if self.pointer_tooltips != tooltips {
             self.set_pointer_tooltips(tooltips);
-            self.base_mut()
-                .emit_signal("pointer_tooltip_changed".into(), &[]);
+            self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
         if let Some(current_camera_node) =

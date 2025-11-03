@@ -44,7 +44,7 @@ impl Promise {
         }
         self.resolved = true;
         self.base_mut()
-            .call_deferred("emit_signal".into(), &["on_resolved".to_variant()]);
+            .call_deferred("emit_signal", &["on_resolved".to_variant()]);
     }
 
     #[func]

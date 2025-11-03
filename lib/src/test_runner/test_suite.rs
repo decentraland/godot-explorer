@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::{io::{self, Write}, time::{Duration, Instant}};
 
 use godot::prelude::*;
 use tracing::error;
@@ -214,7 +214,7 @@ fn print_test_pre(test_case: &str, test_file: String, last_file: &mut Option<Str
     if flush {
         // Flush in GDScript, because its own print may come sooner than Rust prints otherwise
         // (strictly speaking, this can also happen from Rust, when Godot prints something. So far, it didn't though...
-        godot::private::flush_stdout();
+        let _ = io::stdout().flush();
     }
 
     // State update for file-category-print

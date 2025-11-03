@@ -186,10 +186,8 @@ pub fn update_video_player(
                         });
 
                         if !file_hash.is_empty() {
-                            video_player_node.call_deferred(
-                                "async_request_video".into(),
-                                &[file_hash.to_variant()],
-                            );
+                            video_player_node
+                                .call_deferred("async_request_video", &[file_hash.to_variant()]);
                         }
                     }
                     VideoUpdateMode::FirstSpawnVideo => {
@@ -266,10 +264,8 @@ pub fn update_video_player(
                             .insert(*entity, video_player_node.clone());
 
                         if !file_hash.is_empty() {
-                            video_player_node.call_deferred(
-                                "async_request_video".into(),
-                                &[file_hash.to_variant()],
-                            );
+                            video_player_node
+                                .call_deferred("async_request_video", &[file_hash.to_variant()]);
                         }
                     }
                 }

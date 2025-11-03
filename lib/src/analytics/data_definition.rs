@@ -1,4 +1,4 @@
-use godot::{classes::Os, obj::Singleton};
+use godot::obj::Singleton;
 use serde::Serialize;
 
 #[derive(Serialize)]

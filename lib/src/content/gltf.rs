@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use godot::{
     classes::{
-        animation::TrackType, base_material_3d::TextureParam, node::ProcessMode, AnimatableBody3D,
+        animation::TrackType, base_material_3d::TextureParam, node::{DuplicateFlags, ProcessMode}, AnimatableBody3D,
         Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D, CollisionShape3D,
         ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
         StaticBody3D,
@@ -117,15 +117,17 @@ pub async fn internal_load_gltf(
             .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
     );
 
-    new_gltf_state.set_additional_data("base_path".into(), "some".to_variant());
-    new_gltf_state.set_additional_data("mappings".into(), mappings.to_variant());
+    new_gltf_state.set_additional_data("base_path", &"some".to_variant());
+    new_gltf_state.set_additional_data("mappings", &mappings.to_variant());
 
+    let absolute_path_str = GString::from(absolute_file_path.as_str());
+    let base_path_str = GString::from(ctx.content_folder.as_str());
     let err = new_gltf
         .append_from_file_ex(
-            GString::from(absolute_file_path.as_str()),
-            new_gltf_state.clone(),
+            &absolute_path_str,
+            &new_gltf_state.clone(),
         )
-        .base_path(GString::from(ctx.content_folder.as_str()))
+        .base_path(&base_path_str)
         .flags(0)
         .done();
 
@@ -138,7 +140,7 @@ pub async fn internal_load_gltf(
     }
 
     let node = new_gltf
-        .generate_scene(new_gltf_state)
+        .generate_scene(&new_gltf_state)
         .ok_or(anyhow::Error::msg(
             "Error loading gltf when generating scene".to_string(),
         ))?;
@@ -245,7 +247,7 @@ pub async fn apply_update_set_mask_colliders(
     let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
     let gltf_node = gltf_node
         .duplicate_ex()
-        .flags(8)
+        .flags(DuplicateFlags::USE_INSTANTIATION)
         .done()
         .ok_or(anyhow::Error::msg("unable to duplicate gltf node"))?;
 

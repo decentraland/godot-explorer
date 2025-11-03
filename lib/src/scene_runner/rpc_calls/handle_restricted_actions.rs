@@ -10,7 +10,7 @@ use crate::{
 };
 
 use godot::{
-    builtin::meta::ToGodot,
+    meta::ToGodot,
     prelude::{GString, PackedScene, Variant, Vector2i, Vector3},
 };
 use http::Uri;
@@ -43,7 +43,7 @@ pub fn change_realm(
     let mut realm_node = get_realm_node(scene);
 
     let confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
             .instantiate()
             .expect("ConfirmDialog instantiate error");
 
@@ -96,7 +96,7 @@ pub fn open_external_url(
     let mut dialog_stack = get_dialog_stack_node(scene);
 
     let confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
             .instantiate()
             .expect("ConfirmDialog instantiate error");
 
@@ -124,7 +124,7 @@ pub fn open_external_url(
         "No thanks",
         move |ok| {
             if ok {
-                godot::engine::Os::singleton().shell_open(godot_url);
+                godot::classes::Os::singleton().shell_open(godot_url);
                 response.send(Ok(()));
             } else {
                 response.send(Err("User rejected to open the url".to_string()));
@@ -149,7 +149,7 @@ pub fn open_nft_dialog(
     let mut dialog_stack = get_dialog_stack_node(scene);
 
     let mut confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/nft_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/nft_dialog.tscn")
             .instantiate()
             .expect("NftDialog instantiate error");
 
@@ -246,7 +246,7 @@ pub fn teleport_to(
 
     // TODO: We should implement a new Dialog, that shows the thumbnail of the destination
     let confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
             .instantiate()
             .expect("ConfirmDialog instantiate error");
 

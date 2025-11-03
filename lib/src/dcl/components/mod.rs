@@ -28,7 +28,7 @@ impl Var for SceneEntityId {
 }
 
 impl Export for SceneEntityId {
-    fn default_export_info() -> PropertyHintInfo {
+    fn export_hint() -> PropertyHintInfo {
         PropertyHintInfo {
             hint: PropertyHint::NONE,
             hint_string: "Entity ID in the owner scene".into(),

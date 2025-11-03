@@ -43,7 +43,7 @@ impl DclSocialBlacklist {
         if let Ok(addr) = address.to_string().parse::<H160>() {
             let changed = self.blocked_addresses.insert(addr);
             if changed {
-                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+                self.base_mut().emit_signal("blacklist_changed", &[]);
             }
             changed
         } else {
@@ -58,7 +58,7 @@ impl DclSocialBlacklist {
         if let Ok(addr) = address.to_string().parse::<H160>() {
             let changed = self.blocked_addresses.remove(&addr);
             if changed {
-                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+                self.base_mut().emit_signal("blacklist_changed", &[]);
             }
             changed
         } else {
@@ -83,7 +83,7 @@ impl DclSocialBlacklist {
         if let Ok(addr) = address.to_string().parse::<H160>() {
             let changed = self.muted_addresses.insert(addr);
             if changed {
-                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+                self.base_mut().emit_signal("blacklist_changed", &[]);
             }
             changed
         } else {
@@ -98,7 +98,7 @@ impl DclSocialBlacklist {
         if let Ok(addr) = address.to_string().parse::<H160>() {
             let changed = self.muted_addresses.remove(&addr);
             if changed {
-                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+                self.base_mut().emit_signal("blacklist_changed", &[]);
             }
             changed
         } else {
@@ -131,7 +131,7 @@ impl DclSocialBlacklist {
             }
         }
         if changed {
-            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            self.base_mut().emit_signal("blacklist_changed", &[]);
         }
     }
 
@@ -149,7 +149,7 @@ impl DclSocialBlacklist {
             }
         }
         if changed {
-            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            self.base_mut().emit_signal("blacklist_changed", &[]);
         }
     }
 
@@ -158,7 +158,7 @@ impl DclSocialBlacklist {
     pub fn clear_blocked(&mut self) {
         if !self.blocked_addresses.is_empty() {
             self.blocked_addresses.clear();
-            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            self.base_mut().emit_signal("blacklist_changed", &[]);
         }
     }
 
@@ -167,7 +167,7 @@ impl DclSocialBlacklist {
     pub fn clear_muted(&mut self) {
         if !self.muted_addresses.is_empty() {
             self.muted_addresses.clear();
-            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            self.base_mut().emit_signal("blacklist_changed", &[]);
         }
     }
 
@@ -225,7 +225,7 @@ impl DclSocialBlacklist {
 
         // Only emit signal if the lists actually changed
         if old_blocked != self.blocked_addresses || old_muted != self.muted_addresses {
-            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            self.base_mut().emit_signal("blacklist_changed", &[]);
         }
     }
 

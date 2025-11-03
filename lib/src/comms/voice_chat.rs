@@ -21,7 +21,7 @@ impl godot::classes::IAudioStreamPlayer for VoiceChatRecorder {
             let stereo_data = effect_capture.get_buffer(frames_available);
 
             self.base_mut()
-                .emit_signal("audio".into(), &[stereo_data.to_variant()]);
+                .emit_signal("audio", &[stereo_data.to_variant()]);
         }
     }
 }
@@ -36,7 +36,7 @@ impl VoiceChatRecorder {
     #[func]
     fn setup_audio_server(&mut self) {
         let mut audio_server = godot::classes::AudioServer::singleton();
-        let idx = audio_server.get_bus_index("Capture".into());
+        let idx = audio_server.get_bus_index("Capture");
         if idx != -1 {
             let bus_effect: Option<Gd<godot::classes::AudioEffectCapture>> = {
                 let mut found_effect = None;
@@ -54,8 +54,8 @@ impl VoiceChatRecorder {
 
             self.effect_capture = bus_effect;
             self.base_mut()
-                .set_stream(godot::classes::AudioStreamMicrophone::new_gd().upcast());
-            self.base_mut().set_bus("Capture".into());
+                .set_stream(&godot::classes::AudioStreamMicrophone::new_gd());
+            self.base_mut().set_bus("Capture");
         }
     }
 

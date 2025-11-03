@@ -49,26 +49,27 @@ pub async fn load_image_texture(
 
     let mut image = Image::new_gd();
     let err = if infer_mime::is_png(&bytes_vec) {
-        image.load_png_from_buffer(bytes)
+        image.load_png_from_buffer(&bytes)
     } else if infer_mime::is_jpeg(&bytes_vec) || infer_mime::is_jpeg2000(&bytes_vec) {
-        image.load_jpg_from_buffer(bytes)
+        image.load_jpg_from_buffer(&bytes)
     } else if infer_mime::is_webp(&bytes_vec) {
-        image.load_webp_from_buffer(bytes)
+        image.load_webp_from_buffer(&bytes)
     } else if infer_mime::is_tga(&bytes_vec) {
-        image.load_tga_from_buffer(bytes)
+        image.load_tga_from_buffer(&bytes)
     } else if infer_mime::is_ktx(&bytes_vec) {
-        image.load_ktx_from_buffer(bytes)
+        image.load_ktx_from_buffer(&bytes)
     } else if infer_mime::is_bmp(&bytes_vec) {
-        image.load_bmp_from_buffer(bytes)
+        image.load_bmp_from_buffer(&bytes)
     } else if infer_mime::is_svg(&bytes_vec) {
-        image.load_svg_from_buffer(bytes)
+        image.load_svg_from_buffer(&bytes)
     } else {
         // if we don't know the format... we try to load as png
-        image.load_png_from_buffer(bytes)
+        image.load_png_from_buffer(&bytes)
     };
 
     if err != Error::OK {
-        DirAccess::remove_absolute(GString::from(&absolute_file_path));
+        let path_str = GString::from(&absolute_file_path);
+        DirAccess::remove_absolute(&path_str);
         let err = err.to_variant().to::<i32>();
         return Err(anyhow::Error::msg(format!(
             "Error loading texture {absolute_file_path}: {}",
@@ -83,13 +84,14 @@ pub async fn load_image_texture(
         create_compressed_texture(&mut image, max_size)
     } else {
         resize_image(&mut image, max_size);
-        let texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
+        let texture = ImageTexture::create_from_image(&image).ok_or(anyhow::Error::msg(
             format!("Error creating texture from image {}", absolute_file_path),
         ))?;
         texture.upcast()
     };
 
-    texture.set_name(GString::from(&url));
+    let name_str = GString::from(&url);
+    texture.set_name(&name_str);
 
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
         image,
