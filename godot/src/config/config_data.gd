@@ -20,6 +20,7 @@ enum ConfigParams {
 	GUEST_PROFILE,
 	AUDIO_GENERAL_VOLUME,
 	SHADOW_QUALITY,
+	BLOOM_QUALITY,
 	ANTI_ALIASING,
 	GRAPHIC_PROFILE,
 	DYNAMIC_SKYBOX,
@@ -110,6 +111,12 @@ var shadow_quality: int = 0:
 	set(value):
 		shadow_quality = value
 		param_changed.emit(ConfigParams.SHADOW_QUALITY)
+
+# 0: Off, 1: Low, 2: High
+var bloom_quality: int = 0:
+	set(value):
+		bloom_quality = value
+		param_changed.emit(ConfigParams.BLOOM_QUALITY)
 
 # 0: Performance, 1: Balanced, 2: Quality, 3: Custom
 var graphic_profile: int = 0:
@@ -220,6 +227,7 @@ func load_from_default():
 	self.skybox = 0  # basic
 
 	self.shadow_quality = 0  # disabled
+	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
 	self.graphic_profile = 0
 
@@ -262,6 +270,9 @@ func load_from_settings_file():
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(
 		"config", "shadow_quality", data_default.shadow_quality
+	)
+	self.bloom_quality = settings_file.get_value(
+		"config", "bloom_quality", data_default.bloom_quality
 	)
 	self.anti_aliasing = settings_file.get_value(
 		"config", "anti_aliasing", data_default.anti_aliasing
@@ -353,6 +364,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "limit_fps", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)
 	new_settings_file.set_value("config", "shadow_quality", self.shadow_quality)
+	new_settings_file.set_value("config", "bloom_quality", self.bloom_quality)
 	new_settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
 	new_settings_file.set_value("config", "graphic_profile", self.graphic_profile)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
