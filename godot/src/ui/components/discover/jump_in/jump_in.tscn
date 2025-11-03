@@ -18,8 +18,8 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
 script = ExtResource("1_gr74l")
-PORTRAIT_PANEL = ExtResource("2_mlrqc")
-LANDSCAPE_PANEL = ExtResource("3_duas1")
+portrait_panel_resource = ExtResource("2_mlrqc")
+landscape_panel_resource = ExtResource("3_duas1")
 tracking_handler = SubResource("Resource_mu208")
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("4_jvwlf")]

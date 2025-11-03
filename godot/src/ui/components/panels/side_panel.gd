@@ -4,15 +4,16 @@ extends Control
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
-const JUMP_IN_PORTRAIT = preload("res://src/ui/components/discover/jump_in/panel_jump_in_portrait.tscn")
+const JUMP_IN_PORTRAIT = preload(
+	"res://src/ui/components/discover/jump_in/panel_jump_in_portrait.tscn"
+)
 const JUMP_IN_LANDSCAPE = preload(
 	"res://src/ui/components/discover/jump_in/panel_jump_in_landscape.tscn"
 )
 
-@export var PORTRAIT_PANEL: PackedScene
-@export var LANDSCAPE_PANEL: PackedScene
+@export var portrait_panel_resource: PackedScene
+@export var landscape_panel_resource: PackedScene
 @export var tracking_handler: ScreenTrackingHandler
-
 
 var portrait_panel: PlaceItem
 var landscape_panel: PlaceItem
@@ -21,9 +22,10 @@ var orientation: String
 
 @onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 
+
 func _ready():
 	texture_progress_bar.hide()
-	
+
 
 func _emit_jump_in(pos: Vector2i, realm: String):
 	jump_in.emit(pos, realm)
@@ -38,7 +40,7 @@ func _close():
 
 
 func instantiate_portrait_panel():
-	portrait_panel = PORTRAIT_PANEL.instantiate()
+	portrait_panel = portrait_panel_resource.instantiate()
 	self.add_child(portrait_panel)
 	portrait_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	portrait_panel.set_data(item_data)
@@ -47,7 +49,7 @@ func instantiate_portrait_panel():
 
 
 func instantiate_landscape_panel():
-	landscape_panel = LANDSCAPE_PANEL.instantiate()
+	landscape_panel = landscape_panel_resource.instantiate()
 	self.add_child(landscape_panel)
 	landscape_panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	landscape_panel.set_data(item_data)
@@ -97,9 +99,7 @@ func show_animation() -> void:
 		orientation = "portrait"
 		var animation_target_y = portrait_panel.position.y
 		# Place the menu off-screen above (its height above the target position)
-		portrait_panel.position.y = (
-			portrait_panel.position.y + portrait_panel.size.y
-		)
+		portrait_panel.position.y = (portrait_panel.position.y + portrait_panel.size.y)
 
 		(
 			create_tween()
@@ -112,18 +112,15 @@ func show_animation() -> void:
 		orientation = "landscape"
 		var animation_target_x = landscape_panel.position.x
 		# Place the menu off-screen above (its height above the target position)
-		landscape_panel.position.x = (
-			landscape_panel.position.x + landscape_panel.size.x
-		)
-		
+		landscape_panel.position.x = (landscape_panel.position.x + landscape_panel.size.x)
+
 		(
 			create_tween()
 			. tween_property(landscape_panel, "position:x", animation_target_x, 0.5)
 			. set_trans(Tween.TRANS_SINE)
 			. set_ease(Tween.EASE_OUT)
 		)
-	
-	
+
 	if tracking_handler:
 		if item_data.is_empty():
 			printerr("SidePanel: WARNING - item_data is empty!")

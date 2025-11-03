@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://njubmev0le2o" path="res://src/logic/metrics/event_details_screen_tracking_handler.gd" id="4_sxxyt"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="5_q0ryf"]
 
-[sub_resource type="Resource" id="Resource_7nqk8"]
+[sub_resource type="Resource" id="Resource_q0ryf"]
 script = ExtResource("4_sxxyt")
 metadata/_custom_type_script = "uid://njubmev0le2o"
 
@@ -18,9 +18,9 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
 script = ExtResource("1_vapvi")
-PORTRAIT_PANEL = ExtResource("2_q0ryf")
-LANDSCAPE_PANEL = ExtResource("3_tlmcm")
-tracking_handler = SubResource("Resource_7nqk8")
+portrait_panel_resource = ExtResource("2_q0ryf")
+landscape_panel_resource = ExtResource("3_tlmcm")
+tracking_handler = SubResource("Resource_q0ryf")
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("5_q0ryf")]
 unique_name_in_owner = true
