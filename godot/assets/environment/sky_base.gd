@@ -7,13 +7,18 @@ const MOON_ORIGIN = 0.82  # ~7:40 PM
 
 # Horizon colors for transitions
 @export var moon_horizon_color := Color("#ff7534")  # Orange
-@export var sun_horizon_color := Color("#8f0025")   # Deep red
+@export var sun_horizon_color := Color("#8f0025")  # Deep red
 
 # Debug mode - set to true to make a full day/night cycle every 10 seconds
 @export var debug_time_rotation: bool = false
 
 var last_time := 0.0
 var debug_time_accumulator: float = 0.0
+
+# Moon properties (night time) - hardcoded since we only have one physical light
+var initial_moon_energy: float = 0.3
+var initial_moon_color: Color = Color(0.77, 0.992333, 1, 1)
+var initial_moon_transform: Transform3D
 
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var main_light: DirectionalLight3D = $SkyLights/MainLight
@@ -22,11 +27,6 @@ var debug_time_accumulator: float = 0.0
 @onready var initial_sun_energy = main_light.light_energy
 @onready var initial_sun_transform = main_light.global_transform
 @onready var initial_sun_color = main_light.light_color
-
-# Moon properties (night time) - hardcoded since we only have one physical light
-var initial_moon_energy: float = 0.3
-var initial_moon_color: Color = Color(0.77, 0.992333, 1, 1)
-var initial_moon_transform: Transform3D
 
 @onready var sky_material = world_environment.environment.sky.sky_material
 @onready
@@ -87,8 +87,7 @@ func get_phase_blend(normalized_time: float) -> float:
 	# Sun is dominant from 0.0 to 0.5, moon from 0.5 to 1.0
 	if cycle < 0.5:
 		return 0.0  # Sun phase
-	else:
-		return 1.0  # Moon phase
+	return 1.0  # Moon phase
 
 
 # Get the transition factor (0.0 = full brightness, 1.0 = transitioning/faded)
@@ -98,7 +97,9 @@ func get_transition_fade(normalized_time: float) -> float:
 	var sun_angle = clamp(((sun_time - SUN_ORIGIN) - floor(sun_time - SUN_ORIGIN)) * 2.0, 0.0, 1.0)
 
 	var moon_time = 1.0 + normalized_time
-	var moon_angle = clamp(((moon_time - MOON_ORIGIN) - floor(moon_time - MOON_ORIGIN)) * 2.0, 0.0, 1.0)
+	var moon_angle = clamp(
+		((moon_time - MOON_ORIGIN) - floor(moon_time - MOON_ORIGIN)) * 2.0, 0.0, 1.0
+	)
 
 	# Near horizon = high fade value (close to 0 or 1)
 	# Overhead = low fade value (close to 0.5)
