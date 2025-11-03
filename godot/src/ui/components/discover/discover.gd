@@ -35,9 +35,8 @@ func on_item_pressed(data):
 	jump_in.show_animation()
 
 
-func show_event_details(data):
-	event_details.set_data(data)
-	event_details.show_animation()
+func on_event_pressed(data):
+	event_details.show_animation(data)
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
@@ -157,4 +156,4 @@ func _async_handle_event_notification(event_id: String) -> void:
 	var event_data = json["data"]
 
 	# Show event details
-	show_event_details(event_data)
+	on_event_pressed(event_data)
