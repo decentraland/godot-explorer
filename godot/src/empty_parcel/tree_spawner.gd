@@ -45,14 +45,151 @@ func populate_trees():
 		var tree_normal = Vector3.UP
 
 		var tree_to_duplicate = trees_parent.get_child(randi() % available_trees)
+		var final_scale = randf_range(1.0, 2.0)
+		var final_transform = ParcelUtils.create_aligned_transform(
+			tree_pos, tree_normal, true, final_scale
+		)
+
+		# Check if tree would overlap with loaded adjacent parcels before spawning
+		if _tree_would_overlap_loaded_parcel(tree_to_duplicate, final_transform):
+			continue
+
 		var chosen_tree = tree_to_duplicate.duplicate()
 		chosen_tree.name = "Tree_%d" % i
 		add_child(chosen_tree)
 
-		var final_scale = randf_range(1.0, 2.0)
-		chosen_tree.transform = ParcelUtils.create_aligned_transform(
-			tree_pos, tree_normal, true, final_scale
-		)
+		chosen_tree.transform = final_transform
 		for child in chosen_tree.get_children():
 			if child is StaticBody3D:
 				child.set_collision_layer_value(2, true)
+
+
+func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Transform3D) -> bool:
+	# Transform tree_transform to world space by combining with parent parcel's global transform
+	var world_transform = parent_parcel.global_transform * tree_transform
+
+	# Get the tree's combined AABB from all VisualInstance3D children and transform to world space
+	var world_aabb = _collect_tree_aabb_in_world_space(tree_template, world_transform)
+
+	if world_aabb == null:
+		return false
+
+	# Get the parcel's world position and corner configuration
+	var parcel_pos = parent_parcel.global_position
+	var config = parent_parcel.corner_config
+
+	# Define parcel boundaries in world space
+	# Parcel is centered at parcel_pos with size 16x16
+	var parcel_min = Vector3(parcel_pos.x - 8.0, parcel_pos.y - 100.0, parcel_pos.z - 8.0)
+	var parcel_max = Vector3(parcel_pos.x + 8.0, parcel_pos.y + 100.0, parcel_pos.z + 8.0)
+
+	# Check each adjacent direction that has a LOADED parcel
+	# North is -Z direction
+	if config.north == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_min.x, parcel_min.y, parcel_min.z - 16.0),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	# South is +Z direction
+	if config.south == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_min.x, parcel_min.y, parcel_max.z),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	# East is +X direction
+	if config.east == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_max.x, parcel_min.y, parcel_min.z),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	# West is -X direction
+	if config.west == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_min.z),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	# Check corner parcels
+	if config.northwest == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_min.z - 16.0),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	if config.northeast == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_max.x, parcel_min.y, parcel_min.z - 16.0),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	if config.southwest == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_max.z),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	if config.southeast == CornerConfiguration.ParcelState.LOADED:
+		var adjacent_aabb = AABB(
+			Vector3(parcel_max.x, parcel_min.y, parcel_max.z),
+			Vector3(16.0, 200.0, 16.0)
+		)
+		if world_aabb.intersects(adjacent_aabb):
+			return true
+
+	return false
+
+
+func _collect_tree_aabb_in_world_space(node: Node3D, accumulated_transform: Transform3D):
+	var combined_aabb = null
+
+	if node is VisualInstance3D:
+		var local_aabb = node.get_aabb()
+		var full_transform = accumulated_transform * node.transform
+
+		# Transform the 8 corners of this AABB to world space
+		var corners = [
+			local_aabb.position,
+			local_aabb.position + Vector3(local_aabb.size.x, 0, 0),
+			local_aabb.position + Vector3(0, local_aabb.size.y, 0),
+			local_aabb.position + Vector3(0, 0, local_aabb.size.z),
+			local_aabb.position + Vector3(local_aabb.size.x, local_aabb.size.y, 0),
+			local_aabb.position + Vector3(local_aabb.size.x, 0, local_aabb.size.z),
+			local_aabb.position + Vector3(0, local_aabb.size.y, local_aabb.size.z),
+			local_aabb.end
+		]
+
+		for corner in corners:
+			var world_corner = full_transform * corner
+			if combined_aabb == null:
+				combined_aabb = AABB(world_corner, Vector3.ZERO)
+			else:
+				combined_aabb = combined_aabb.expand(world_corner)
+
+	# Recurse through children
+	for child in node.get_children():
+		if child is Node3D:
+			var child_aabb = _collect_tree_aabb_in_world_space(child, accumulated_transform * node.transform)
+			if child_aabb != null:
+				if combined_aabb == null:
+					combined_aabb = child_aabb
+				else:
+					combined_aabb = combined_aabb.merge(child_aabb)
+
+	return combined_aabb
