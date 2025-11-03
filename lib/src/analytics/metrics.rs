@@ -203,10 +203,15 @@ impl Metrics {
     }
 
     #[func]
-    pub fn track_screen_viewed(&mut self, screen_name: String) {
+    pub fn track_screen_viewed(&mut self, screen_name: String, extra_properties: String) {
         self.events
             .push(SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
                 screen_name,
+                extra_properties: if extra_properties.is_empty() {
+                    None
+                } else {
+                    Some(extra_properties)
+                },
             }));
     }
 
