@@ -6,6 +6,12 @@
 
 use godot::prelude::*;
 
+// Use the tracking allocator to monitor Rust heap usage in real-time when memory debugging is enabled
+#[cfg(feature = "use_memory_debugger")]
+#[global_allocator]
+static GLOBAL: tools::memory_debugger::TrackingAllocator =
+    tools::memory_debugger::TrackingAllocator;
+
 pub mod analytics;
 pub mod auth;
 #[cfg(feature = "use_ffmpeg")]
