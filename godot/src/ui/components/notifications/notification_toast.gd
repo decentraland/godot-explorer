@@ -44,11 +44,11 @@ func async_show_notification(notification: Dictionary) -> void:
 	# Start above screen (position the Control node)
 	position.y = -size.y
 
-	# Animate slide in from top
+	# Animate slide in from top (align visible panel with profile button at 20px from top)
 	var tween = create_tween()
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_BACK)
-	tween.tween_property(self, "position:y", 20.0, SLIDE_IN_DURATION)
+	tween.tween_property(self, "position:y", -15.0, SLIDE_IN_DURATION)
 	await tween.finished
 
 	# Start auto-hide timer

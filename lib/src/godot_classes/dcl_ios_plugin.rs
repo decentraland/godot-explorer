@@ -131,7 +131,14 @@ impl DclIosPlugin {
     /// Check if the iOS plugin is available
     #[func]
     pub fn is_available() -> bool {
-        Self::try_get_singleton().is_some()
+        #[cfg(target_os = "ios")]
+        {
+            true
+        }
+        #[cfg(not(target_os = "ios"))]
+        {
+            false
+        }
     }
 
     /// Add a calendar event with title, description, start time, end time, and location

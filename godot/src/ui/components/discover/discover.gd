@@ -36,8 +36,7 @@ func on_item_pressed(data):
 
 
 func on_event_pressed(data):
-	event_details.set_data(data)
-	event_details.show_animation()
+	event_details.show_animation(data)
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
