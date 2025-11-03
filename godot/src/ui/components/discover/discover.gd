@@ -26,13 +26,16 @@ func _ready():
 	button_clear_filter.hide()
 	line_edit_search_bar.hide()
 
+	# Connect to notification clicked signal
+	Global.notification_clicked.connect(_on_notification_clicked)
+
 
 func on_item_pressed(data):
 	jump_in.set_data(data)
 	jump_in.show_animation()
 
 
-func on_event_pressed(data):
+func show_event_details(data):
 	event_details.set_data(data)
 	event_details.show_animation()
 
@@ -91,3 +94,67 @@ func _on_timer_search_debounce_timeout() -> void:
 func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
 	event_details.hide()
 	Global.teleport_to(parcel_position, realm)
+
+
+func _on_notification_clicked(notification: Dictionary) -> void:
+	# Handle notification clicks - open event details for event notifications
+	var notif_type = notification.get("type", "")
+
+	# Early return if not an event notification
+	if notif_type not in ["event_created", "events_starts_soon", "events_started"]:
+		return
+
+	var metadata = notification.get("metadata", {})
+
+	# Extract event ID from the link URL (e.g., "https://decentraland.org/jump/events?id=5f776ddc-...")
+	var link = metadata.get("link", "")
+	if link.is_empty():
+		printerr("[Discover] Event notification missing link in metadata")
+		return
+
+	# Parse event ID from URL query parameter
+	var event_id = _extract_event_id_from_url(link)
+	if event_id.is_empty():
+		printerr("[Discover] Could not extract event ID from link: ", link)
+		return
+
+	# Fetch event data and show event details
+	_async_handle_event_notification(event_id)
+
+
+func _extract_event_id_from_url(url: String) -> String:
+	# Extract event ID from URL like "https://decentraland.org/jump/events?id=5f776ddc-bcc9-49e5-aa2c-d84f0b5dda27"
+	var query_start = url.find("?")
+	if query_start == -1:
+		return ""
+
+	var query_string = url.substr(query_start + 1)
+	var params = query_string.split("&")
+
+	for param in params:
+		var key_value = param.split("=")
+		if key_value.size() == 2 and key_value[0] == "id":
+			return key_value[1]
+
+	return ""
+
+
+func _async_handle_event_notification(event_id: String) -> void:
+	# Fetch event data from API
+	var url = "https://events.decentraland.org/api/events/" + event_id
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+
+	if response is PromiseError:
+		printerr("[Discover] Failed to fetch event data: ", response.get_error())
+		return
+
+	var json: Dictionary = response.get_string_response_as_json()
+
+	if not json.has("data"):
+		printerr("[Discover] Invalid event response format")
+		return
+
+	var event_data = json["data"]
+
+	# Show event details
+	show_event_details(event_data)

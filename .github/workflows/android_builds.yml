@@ -14,7 +14,8 @@ concurrency:
 jobs:
   build:
     name: Build VR and Mobile
-    runs-on: bigrunner
+    runs-on: warp-ubuntu-latest-x64-8x
+    timeout-minutes: 25
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
@@ -38,10 +39,14 @@ jobs:
           rustup target add aarch64-linux-android
       - name: Cargo install
         run: cargo run -- install --targets android linux
+
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build Rust libraries
         run: |
-          cargo run -- build --release
-          cargo run -- build --release --target android
+          cargo run -- build --release ${{ env.PROD_FLAG }}
+          cargo run -- build --release --target android ${{ env.PROD_FLAG }}
           cargo run -- import-assets
       
       - name: Export Android APK
@@ -50,7 +55,7 @@ jobs:
       
       - name: Export Android AAB
         run: |
-          cargo run -- export --target android --format aab
+          cargo run -- export --target android --format aab --release
       
       - name: Export Quest APK
         run: |

@@ -8,6 +8,8 @@ signal change_parcel(new_parcel: Vector2i)
 signal open_profile(avatar: DclAvatar)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
+signal notification_clicked(notification: Dictionary)
+signal notification_received(notification: Dictionary)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -52,6 +54,7 @@ var previous_height: int = -1
 var previous_height_2: int = -1
 
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
+var player_camera_node: DclCamera3D
 
 
 func set_url_popup_instance(popup_instance) -> void:
@@ -139,11 +142,14 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
+	var session_id := DclConfig.generate_uuid_v4()
 	# Initialize metrics with proper user_id and session_id
-	self.metrics = Metrics.create_metrics(
-		self.config.analytics_user_id, DclConfig.generate_uuid_v4()
-	)
+	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
 	self.metrics.set_name("metrics")
+
+	var sentry_user = SentryUser.new()
+	sentry_user.id = self.config.analytics_user_id
+	SentrySDK.set_tag("dcl_session_id", session_id)
 
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()

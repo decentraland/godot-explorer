@@ -62,7 +62,7 @@ func _ready():
 	self.modulate = Color(1, 1, 1, 1)
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	if !is_in_game:
-		Global.metrics.track_screen_viewed(current_screen_name)
+		Global.metrics.track_screen_viewed(current_screen_name, "")
 		Global.metrics.flush()
 
 	button_discover.set_pressed(true)
@@ -74,6 +74,9 @@ func _ready():
 	control_backpack.hide()
 	control_profile_settings.hide()
 	control_map_satellite.jump_to.connect(_jump_to)
+
+	# Connect to notification clicked signal for reward notifications
+	Global.notification_clicked.connect(_on_notification_clicked)
 
 	# Leave it, because we can open a browser with the Magic Wallet
 	button_magic_wallet.visible = false
@@ -185,31 +188,31 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 func select_settings_screen(play_sfx: bool = true):
 	current_screen_name = ("SETTINGS" if Global.is_orientation_portrait() else "SETTINGS_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_settings, play_sfx)
 
 
 func select_map_screen(play_sfx: bool = true):
 	current_screen_name = "MAP" if Global.is_orientation_portrait() else "MAP_IN_GAME"
-	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_map_satellite, play_sfx)
 
 
 func select_discover_screen(play_sfx: bool = true):
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_discover, play_sfx)
 
 
 func select_backpack_screen(play_sfx: bool = true):
 	current_screen_name = ("BACKPACK" if Global.is_orientation_portrait() else "BACKPACK_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_backpack, play_sfx)
 
 
 func select_profile_screen(play_sfx: bool = true):
 	current_screen_name = ("PROFILE" if Global.is_orientation_portrait() else "PROFILE_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name)
+	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_profile_settings, play_sfx)
 
 
@@ -322,6 +325,16 @@ func _on_size_changed() -> void:
 		color_rect_landscape_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0
+
+
+func _on_notification_clicked(notification: Dictionary) -> void:
+	# Handle notification clicks - open backpack for reward notifications
+	var notif_type = notification.get("type", "")
+
+	# Check if this is a reward notification
+	if notif_type in ["reward_assignment", "reward_in_progress"]:
+		# Open the backpack to show the reward
+		show_backpack()
 
 
 func _notification(what: int) -> void:

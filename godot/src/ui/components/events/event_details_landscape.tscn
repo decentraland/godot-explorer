@@ -1,7 +1,6 @@
-[gd_scene load_steps=34 format=3 uid="uid://jel6s7s7w8h3"]
+[gd_scene load_steps=33 format=3 uid="uid://jel6s7s7w8h3"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_4okyg"]
-[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_rf1tr"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_a1tfr"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="4_n1hx1"]
 [ext_resource type="FontVariation" uid="uid://ct75rjpcbx4cb" path="res://src/ui/components/events/inter600_icons.tres" id="6_6i5jl"]
@@ -124,11 +123,6 @@ theme_override_constants/margin_left = 42
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 42
 theme_override_constants/margin_bottom = 42
-script = ExtResource("2_rf1tr")
-default_margin = 42
-use_left = false
-use_right = false
-use_top = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
 layout_mode = 2
@@ -412,7 +406,7 @@ layout_mode = 2
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 19
 
-[node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
+[node name="Button_JumpToEvent" type="Button" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
@@ -425,7 +419,7 @@ theme_override_font_sizes/font_size = 14
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer_Content" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn"]
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 1
@@ -438,13 +432,13 @@ grow_vertical = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn/HBoxContainer_Content"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent/HBoxContainer_Content"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "JUMP IN"
 label_settings = SubResource("LabelSettings_cdq3q")
 
-[node name="TextureRect_Add" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn/HBoxContainer_Content"]
+[node name="TextureRect_Add" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent/HBoxContainer_Content"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -453,4 +447,4 @@ expand_mode = 3
 
 [connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Share" to="." method="_on_button_share_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Calendar" to="." method="_on_button_calendar_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_JumpToEvent" to="." method="_on_button_jump_to_event_pressed"]

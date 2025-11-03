@@ -9,6 +9,7 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
 
+mod check_gdscript;
 mod consts;
 mod copy_files;
 mod dependencies;
@@ -24,6 +25,7 @@ mod platform;
 mod run;
 mod tests;
 mod ui;
+mod version;
 mod version_check;
 
 fn main() -> Result<(), anyhow::Error> {
@@ -64,7 +66,19 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
+        .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
+        .subcommand(
+            Command::new("explorer-version")
+                .about("Get Godot Explorer version")
+                .arg(
+                    Arg::new("verbose")
+                        .short('v')
+                        .long("verbose")
+                        .help("show detailed warning messages")
+                        .takes_value(false),
+                )
+        )
         .subcommand(
             Command::new("install")
                 .arg(
@@ -147,6 +161,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("prod")
+                        .long("prod")
+                        .help("mark as production build (affects version string)")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("itest")
                         .long("itest")
                         .help("run integration-tests"),
@@ -206,6 +226,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .short('r')
                         .long("release")
                         .help("build release mode (but it doesn't use godot release build")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("prod")
+                        .long("prod")
+                        .help("mark as production build (affects version string)")
                         .takes_value(false),
                 )
                 .arg(
@@ -272,6 +298,11 @@ fn main() -> Result<(), anyhow::Error> {
         ("run", sm) => {
             // Check dependencies first
             dependencies::check_command_dependencies("run", None)?;
+
+            // Set PROD environment variable if --prod flag is present
+            if sm.is_present("prod") {
+                std::env::set_var("DECENTRALAND_PROD_BUILD", "1");
+            }
 
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
@@ -383,6 +414,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Run version check first
             version_check::run_version_check()?;
 
+            // Set PROD environment variable if --prod flag is present
+            if sm.is_present("prod") {
+                std::env::set_var("DECENTRALAND_PROD_BUILD", "1");
+            }
+
             // Check dependencies first
             dependencies::check_command_dependencies("build", target)?;
 
@@ -462,7 +498,12 @@ fn main() -> Result<(), anyhow::Error> {
                 .context("please provide a package with -p")?,
         ),
         ("doctor", _) => doctor::run_doctor(),
+        ("check-gdscript", _) => check_gdscript::check_gdscript(),
         ("version-check", _) => version_check::run_version_check(),
+        ("explorer-version", sm) => {
+            let verbose = sm.is_present("verbose");
+            version::get_godot_explorer_version(verbose)
+        }
         _ => unreachable!("unreachable branch"),
     };
 
