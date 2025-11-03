@@ -4,6 +4,11 @@ extends Control
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
+var event_id: String
+var event_status: String
+var event_tags: String
+var orientation: String
+
 @onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 @onready var event_details_portrait: PlaceItem = %EventDetailsPortrait
 @onready var event_details_landscape: PlaceItem = %EventDetailsLandscape
@@ -29,12 +34,16 @@ func _close():
 func set_data(item_data):
 	event_details_landscape.set_data(item_data)
 	event_details_portrait.set_data(item_data)
+	event_id = item_data.get("id", "unknown-id")
+	event_status = "live" if item_data.get("live", false) else "upcoming"
+	event_tags = "trending" if item_data.get("trending", false) else "none"
 
 
 func show_animation() -> void:
 	self.show()
 	if event_details_portrait != null and event_details_landscape != null:
 		if Global.is_orientation_portrait():
+			orientation = "portrait"
 			event_details_portrait.show()
 			event_details_landscape.hide()
 			var animation_target_y = event_details_portrait.position.y
@@ -50,6 +59,7 @@ func show_animation() -> void:
 				. set_ease(Tween.EASE_OUT)
 			)
 		else:
+			orientation = "landscape"
 			event_details_portrait.hide()
 			event_details_landscape.show()
 			var animation_target_x = event_details_landscape.position.x
@@ -64,6 +74,17 @@ func show_animation() -> void:
 				. set_trans(Tween.TRANS_SINE)
 				. set_ease(Tween.EASE_OUT)
 			)
+		Global.metrics.track_screen_viewed(
+			"EVENT_DETAILS",
+			JSON.stringify(
+				{
+					"event_id": event_id,
+					"event_status": event_status,
+					"event_tags": event_tags,
+					"orientation": orientation
+				}
+			)
+		)
 
 
 func _on_gui_input(event: InputEvent) -> void:
