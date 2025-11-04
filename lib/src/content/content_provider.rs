@@ -1252,17 +1252,21 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn purge_file(&mut self, file_hash: GString) -> bool {
+    pub fn purge_file(&mut self, file_hash: GString) -> Gd<Promise> {
         let file_hash_str = file_hash.to_string();
+        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
 
-        // Remove from cached HashMap
-        if self.cached.remove(&file_hash_str).is_some() {
-            tracing::info!("Purged file {} from cache", file_hash_str);
-            true
-        } else {
-            tracing::warn!("File {} not found in cache", file_hash_str);
-            false
-        }
+        let resource_provider = self.resource_provider.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        self.cached.remove(&file_hash_str);
+
+        TokioRuntime::spawn(async move {
+            resource_provider.delete_file(&absolute_file_path).await;
+            then_promise(get_promise, Ok(None));
+        });
+
+        promise
     }
 }
 

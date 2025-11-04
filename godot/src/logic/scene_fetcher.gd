@@ -645,10 +645,6 @@ func reload_scene(scene_id: String) -> void:
 		if files.size() > 0:
 			for file_path in files:
 				var file_hash = content_mapping.get_hash(file_path)
-				var local_file_path: String = "user://content/" + file_hash
-				if not file_hash.is_empty() and FileAccess.file_exists(local_file_path):
-					DirAccess.remove_absolute(local_file_path)
-
 				Global.content_provider.purge_file(file_hash)
 
 		loaded_scenes.erase(scene_id)

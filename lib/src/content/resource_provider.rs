@@ -119,6 +119,11 @@ impl ResourceProvider {
         }
     }
 
+    pub async fn delete_file(&self, file_path: &str) -> Option<FileMetadata> {
+        let mut existing_files = self.existing_files.write().await;
+        self.remove_file(&mut existing_files, file_path).await
+    }
+
     fn total_size(&self, existing_files: &HashMap<String, FileMetadata>) -> i64 {
         existing_files
             .values()
