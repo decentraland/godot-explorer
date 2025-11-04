@@ -425,8 +425,12 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
-		elif command_str == "/crash":
+		elif command_str == "/godotcrash":
 			OS.crash("User crashed on purpose")
+		elif command_str == "/instantcrash":
+			DclCrashGenerator.static_crash()
+		elif command_str == "/delayedcrash":
+			add_child(DclCrashGenerator.new())
 		else:
 			Global.on_chat_message.emit(
 				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
