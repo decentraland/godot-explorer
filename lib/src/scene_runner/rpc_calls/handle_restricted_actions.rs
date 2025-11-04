@@ -167,11 +167,11 @@ pub fn move_player_to(
     current_parcel_scene_id: &SceneId,
     position_target: &[f32; 3],
     camera_target: &Option<[f32; 3]>,
-    response: &RpcResultSender<Result<(), String>>,
+    avatar_target: &Option<[f32; 3]>,
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Primary Player is outside the scene".to_string()));
+        tracing::warn!("movePlayerTo failed: Primary Player is outside the scene");
         return;
     }
 
@@ -203,7 +203,7 @@ pub fn move_player_to(
         .parcels
         .contains(&target_parcel)
     {
-        response.send(Err("Target position is outside the scene".to_string()));
+        tracing::warn!("movePlayerTo failed: Target position is outside the scene");
         return;
     }
 
@@ -214,16 +214,42 @@ pub fn move_player_to(
         &[Variant::from(position_target), true.to_variant()],
     );
 
-    // Set camera to look at camera target position
-    if let Some(camera_target) = camera_target {
-        let camera_target =
-            Vector3::new(camera_target[0], camera_target[1], camera_target[2]) + scene_position;
-        let camera_target = Vector3::new(camera_target.x, camera_target.y, -camera_target.z);
+    // Handle avatar and camera targeting according to ADR-257:
+    // - avatarTarget: where the avatar body looks
+    // - cameraTarget: where the camera looks
+    // If only cameraTarget is set (backward compatibility), it affects both avatar and camera
+    match (avatar_target, camera_target) {
+        (Some(avatar), Some(camera)) => {
+            // Both targets provided: independent control
+            // Call camera_look_at first (sets player body and camera to face camera target)
+            // Then avatar_look_at_independent (sets avatar to face avatar target relative to player)
+            let camera_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
+            let camera_pos = Vector3::new(camera_pos.x, camera_pos.y, -camera_pos.z);
+            explorer_node.call("camera_look_at".into(), &[Variant::from(camera_pos)]);
 
-        explorer_node.call("player_look_at".into(), &[Variant::from(camera_target)]);
+            let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
+            let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
+            explorer_node.call(
+                "avatar_look_at_independent".into(),
+                &[Variant::from(avatar_pos)],
+            );
+        }
+        (Some(avatar), None) => {
+            // Only avatar target: avatar looks at it
+            let target_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
+            let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
+            explorer_node.call("player_look_at".into(), &[Variant::from(target_pos)]);
+        }
+        (None, Some(camera)) => {
+            // Only camera target: backward compatibility (both avatar and camera look at it)
+            let target_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
+            let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
+            explorer_node.call("player_look_at".into(), &[Variant::from(target_pos)]);
+        }
+        (None, None) => {
+            // No targets: do nothing
+        }
     }
-
-    response.send(Ok(()));
 }
 
 // Teleport user to world coordinates
@@ -282,26 +308,22 @@ pub fn teleport_to(
     );
 }
 
-pub fn trigger_emote(
-    scene: &Scene,
-    current_parcel_scene_id: &SceneId,
-    emote_id: &str,
-    response: &RpcResultSender<Result<(), String>>,
-) {
+pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id: &str) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Primary Player is outside the scene".to_string()));
+        tracing::warn!("triggerEmote failed: Primary Player is outside the scene");
         return;
     }
 
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call("async_play_emote".into(), &[emote_id.to_variant()]);
-    avatar_node.call(
-        "broadcast_avatar_animation".into(),
-        &[emote_id.to_variant()],
-    );
 
-    response.send(Ok(()));
+    // Broadcast emote to other players via comms
+    DclGlobal::singleton()
+        .bind()
+        .get_comms()
+        .bind_mut()
+        .send_emote(emote_id.to_godot());
 }
 
 pub fn trigger_scene_emote(
@@ -309,16 +331,15 @@ pub fn trigger_scene_emote(
     current_parcel_scene_id: &SceneId,
     emote_src: &str,
     looping: &bool,
-    response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Primary Player is outside the scene".to_string()));
+        tracing::warn!("triggerSceneEmote failed: Primary Player is outside the scene");
         return;
     }
 
     let Some(file_hash) = scene.content_mapping.get_hash(emote_src) else {
-        response.send(Err("Emote not found".to_string()));
+        tracing::warn!("triggerSceneEmote failed: Emote not found");
         return;
     };
 
@@ -331,5 +352,4 @@ pub fn trigger_scene_emote(
         .get_comms()
         .bind_mut()
         .send_emote(urn.to_godot());
-    response.send(Ok(()));
 }

@@ -55,6 +55,7 @@ func _input(event):
 
 		if event is InputEventScreenDrag and !_two_fingers:
 			_touch_position = event.relative
+			# Only rotate the player on Y-axis, camera mount Y offset is preserved in local space
 			_player.rotate_y(deg_to_rad(-_touch_position.x) * HORIZONTAL_SENS)
 			_player.avatar.rotate_y(deg_to_rad(_touch_position.x) * HORIZONTAL_SENS)
 			_player.mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * VERTICAL_SENS)
