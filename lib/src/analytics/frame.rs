@@ -51,42 +51,45 @@ impl Frame {
             let p95_frame_time = self.dt_ms_vec[(n_samples * 95) / 100];
             let p99_frame_time = self.dt_ms_vec[(n_samples * 99) / 100];
 
-            let event = SegmentEvent::PerformanceMetrics(SegmentEventPerformanceMetrics {
-                samples: n_samples as u32,
-                total_time: self.sum_dt,
-                hiccups_in_thousand_frames: self.hiccups_count, // TODO: if FRAME_AMOUNT_TO_MEASURE is != 1000, this be measured in a different way
-                hiccups_time: self.hiccups_time_ms / 1000.0,
-                min_frame_time: *self.dt_ms_vec.first().unwrap(),
-                max_frame_time: *self.dt_ms_vec.last().unwrap(),
-                mean_frame_time: self.sum_dt / n_samples as f32,
-                median_frame_time,
-                p1_frame_time,
-                p5_frame_time,
-                p10_frame_time,
-                p20_frame_time,
-                p50_frame_time,
-                p75_frame_time,
-                p80_frame_time,
-                p90_frame_time,
-                p95_frame_time,
-                p99_frame_time,
+            let event =
+                SegmentEvent::PerformanceMetrics(Box::new(SegmentEventPerformanceMetrics {
+                    samples: n_samples as u32,
+                    total_time: self.sum_dt,
+                    hiccups_in_thousand_frames: self.hiccups_count, // TODO: if FRAME_AMOUNT_TO_MEASURE is != 1000, this be measured in a different way
+                    hiccups_time: self.hiccups_time_ms / 1000.0,
+                    min_frame_time: *self.dt_ms_vec.first().unwrap(),
+                    max_frame_time: *self.dt_ms_vec.last().unwrap(),
+                    mean_frame_time: self.sum_dt / n_samples as f32,
+                    median_frame_time,
+                    p1_frame_time,
+                    p5_frame_time,
+                    p10_frame_time,
+                    p20_frame_time,
+                    p50_frame_time,
+                    p75_frame_time,
+                    p80_frame_time,
+                    p90_frame_time,
+                    p95_frame_time,
+                    p99_frame_time,
 
-                // These will be populated by metrics.rs
-                player_count: -1,
-                used_jsheap_size: -1,
-                memory_usage: -1,
-                device_brand: None,
-                device_model: None,
-                os_version: None,
-                total_ram_mb: None,
-                device_temperature_celsius: None,
-                device_thermal_state: None,
-                battery_percent: None,
-                charging_state: None,
-                network_type: None,
-                network_speed_peak_mbps: None,
-                network_used_last_minute_mb: None,
-            });
+                    // These will be populated by metrics.rs
+                    player_count: -1,
+                    used_jsheap_size: -1,
+                    memory_usage: -1,
+                    device_brand: None,
+                    device_model: None,
+                    os_version: None,
+                    total_ram_mb: None,
+                    device_temperature_celsius: None,
+                    device_thermal_state: None,
+                    battery_percent: None,
+                    charging_state: None,
+                    network_type: None,
+                    network_speed_peak_mbps: None,
+                    network_used_last_minute_mb: None,
+                    js_scene_count: None,
+                    average_jsheap_mb: None,
+                }));
 
             self.dt_ms_vec.resize(0, 0.0);
             self.hiccups_count = 0;

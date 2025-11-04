@@ -203,10 +203,15 @@ impl Metrics {
     }
 
     #[func]
-    pub fn track_screen_viewed(&mut self, screen_name: String) {
+    pub fn track_screen_viewed(&mut self, screen_name: String, extra_properties: String) {
         self.events
             .push(SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
                 screen_name,
+                extra_properties: if extra_properties.is_empty() {
+                    None
+                } else {
+                    Some(extra_properties)
+                },
             }));
     }
 
@@ -369,6 +374,25 @@ impl Metrics {
 
                 // Player count
                 metrics.player_count = global_bind.avatars.bind().get_avatars_count();
+
+                // JavaScript (V8) heap memory metrics (requires use_deno feature)
+                #[cfg(feature = "use_deno")]
+                {
+                    let scene_runner = global_bind.scene_runner.clone();
+                    let scene_runner_bind = scene_runner.bind();
+
+                    let jsheap_total_mb = scene_runner_bind.get_total_deno_memory_mb();
+                    let jsheap_count = scene_runner_bind.get_deno_scene_count();
+                    let jsheap_avg_mb = scene_runner_bind.get_average_deno_memory_mb();
+
+                    if jsheap_count > 0 {
+                        // Populate existing field in megabytes
+                        metrics.used_jsheap_size = jsheap_total_mb as i32;
+                        // Populate additional context fields
+                        metrics.js_scene_count = Some(jsheap_count);
+                        metrics.average_jsheap_mb = Some(jsheap_avg_mb as f32);
+                    }
+                }
             }
         }
     }

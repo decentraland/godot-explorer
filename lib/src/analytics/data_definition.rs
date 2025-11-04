@@ -46,7 +46,7 @@ impl SegmentEventCommonExplorerFields {
 }
 
 pub enum SegmentEvent {
-    PerformanceMetrics(SegmentEventPerformanceMetrics),
+    PerformanceMetrics(Box<SegmentEventPerformanceMetrics>),
     ExplorerError(SegmentEventExplorerError),
     ExplorerSceneLoadTimes(SegmentEventExplorerSceneLoadTimes),
     ExplorerMoveToParcel(String, SegmentEventExplorerMoveToParcel),
@@ -96,7 +96,7 @@ pub struct SegmentEventPerformanceMetrics {
     pub p99_frame_time: f32,
     // How many users where nearby the current user
     pub player_count: i32,
-    // Javascript heap memory used by the scenes in kilo bytes
+    // Javascript heap memory used by the scenes in megabytes
     pub used_jsheap_size: i32,
     // Memory used only by the explorer in kilo bytes (or populated from mobile metrics)
     pub memory_usage: i32,
@@ -136,6 +136,14 @@ pub struct SegmentEventPerformanceMetrics {
     // Total MB downloaded in the last minute
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network_used_last_minute_mb: Option<f32>,
+
+    // JavaScript (V8) memory metrics (additional context)
+    // Number of active scenes with JavaScript runtimes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub js_scene_count: Option<i32>,
+    // Average JS heap memory per scene in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub average_jsheap_mb: Option<f32>,
 }
 
 #[derive(Serialize)]
@@ -214,6 +222,9 @@ pub struct SegmentEventClickButton {
 pub struct SegmentEventScreenViewed {
     // Name of the screen viewed.
     pub screen_name: String,
+    // JSON with extra payload, in case we need to track additional metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_properties: Option<String>,
 }
 
 pub fn build_segment_event_batch_item(
@@ -224,7 +235,7 @@ pub fn build_segment_event_batch_item(
     let (event_name, event_properties, override_position) = match event_data {
         SegmentEvent::PerformanceMetrics(event) => (
             "Performance Metrics".to_string(),
-            serde_json::to_value(event).unwrap(),
+            serde_json::to_value(*event).unwrap(),
             None,
         ),
         SegmentEvent::ExplorerError(event) => (

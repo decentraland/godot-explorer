@@ -10,12 +10,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # First stage: Only static checks, fast and prevent expensive builds from running.
+  # First stage: Fast formatting checks only
   static-checks:
     name: 📊 Static checks
     uses: ./.github/workflows/static_checks.yml
 
-  # Second stage: Run all the builds and some of the tests.
+  # Second stage: Clippy and build checks that require compilation
+  clippy:
+    name: 🔧 Clippy & Build Checks
+    needs: static-checks
+    uses: ./.github/workflows/clippy.yml
+
+  # Third stage: Run all the builds and tests (all depend on static-checks)
   test-coverage:
     name: 🔎 Test & Coverage
     needs: static-checks
@@ -28,7 +34,10 @@ jobs:
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      
   ios-build:
     name: 🍏 iOS
     needs: static-checks

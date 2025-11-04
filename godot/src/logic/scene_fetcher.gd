@@ -373,7 +373,9 @@ func get_scene_by_req_id(request_id: int):
 
 
 func is_using_floating_islands() -> bool:
-	return not (Global.cli.scene_test_mode or Global.cli.scene_renderer_mode)
+	return not (
+		Global.cli.scene_test_mode or Global.cli.scene_renderer_mode or Global.cli.preview_mode
+	)
 
 
 func _unload_scenes_except_current(current_scene_id: int) -> void:
@@ -636,23 +638,18 @@ func reload_scene(scene_id: String) -> void:
 			if base_floor_manager:
 				base_floor_manager.remove_scene_floors(scene_id)
 
-		var scene_entity_definition: DclSceneEntityDefinition = scene.scene_entity_definition
-		var local_main_js_path: String = (
-			"user://content/" + scene_entity_definition.get_main_js_hash()
+		var content_mapping: DclContentMappingAndUrl = (
+			scene.scene_entity_definition.get_content_mapping()
 		)
-		if not local_main_js_path.is_empty() and FileAccess.file_exists(local_main_js_path):
-			DirAccess.remove_absolute(local_main_js_path)
+		var files: PackedStringArray = content_mapping.get_files()
+		if files.size() > 0:
+			for file_path in files:
+				var file_hash = content_mapping.get_hash(file_path)
+				Global.content_provider.purge_file(file_hash)
 
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
 		_is_reloading = true
-
-	# TODO: clean file hash cached
-	# var dict = scene_entity_coordinator.get_scene_dict(scene_id)
-	# if dict.size() > 0:
-	# 	var content_dict: Dictionary = dict.get("content", {})
-	# 	for file_hash in content_dict.values():
-	# 		print("todo clean file hash ", file_hash)
 
 
 func set_debugging_js_scene_id(id: String) -> void:

@@ -14,9 +14,8 @@ jobs:
     name: Build iOS
     strategy:
       fail-fast: false
-      matrix:
-        os: [macos-14-xlarge]
-    runs-on: ${{ matrix.os }}
+    runs-on: warp-macos-14-arm64-6x
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +28,12 @@ jobs:
           override: true
           target: aarch64-apple-ios
 
+      # CACHE IS DISABLED
+      # - name: Set up cache
+      #   uses: ./.github/actions/set-up-cache
+      #   with:
+      #     cache_name: ${{ github.job }}-new-ios-release
+          
       # Dependencies section
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -37,11 +42,14 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets ios
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build MacOS
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Build iOS
-        run: cargo run -- build --release --target ios
+        run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
       - name: Import Assets
         uses: ./.github/actions/import-assets

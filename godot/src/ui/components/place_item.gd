@@ -21,6 +21,9 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 @export var realm: String = Realm.MAIN_REALM
 @export var realm_title: String = "Genesis City"
 
+var event_id: String
+var event_status: String
+var event_tags: String
 var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
@@ -64,6 +67,10 @@ func _get_button_close() -> Button:
 
 func _get_button_jump_in() -> Button:
 	return _get_node_safe("Button_JumpIn")
+
+
+func _get_button_jump_to_event() -> Button:
+	return _get_node_safe("Button_JumpToEvent")
 
 
 func _get_label_location() -> Label:
@@ -181,6 +188,11 @@ func _connect_signals():
 		if not button_jump_in.pressed.is_connected(_on_button_jump_in_pressed):
 			button_jump_in.pressed.connect(_on_button_jump_in_pressed)
 
+	var button_jump_to_event = _get_button_jump_to_event()
+	if button_jump_to_event:
+		if not button_jump_to_event.pressed.is_connected(_on_button_jump_to_event_pressed):
+			button_jump_to_event.pressed.connect(_on_button_jump_to_event_pressed)
+
 
 func set_location(_location: Vector2i):
 	var label = _get_label_location()
@@ -268,20 +280,22 @@ func set_data(item_data):
 	set_title(item_data.get("title", "Unknown place"))
 	set_description(_get_or_empty_string(item_data, "description"))
 	set_attendees_number(item_data.get("total_attendees", 0))
-	set_attending(item_data.get("attending", false), item_data.get("id", "id"))
+	set_trending(item_data.get("trending", false))
+	event_id = item_data.get("id", "id")
+	set_attending(item_data.get("attending", false), event_id, event_tags)
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
 	set_user_name(item_data.get("user_name", ""))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
-	set_trending(item_data.get("trending", false))
 	set_duration(item_data.get("duration", 0))
 	set_recurrent(item_data.get("recurrent", false))
 
 	# Handle start_at for events (Unix timestamp)
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
+	event_status = "live" if live else "upcoming"
 	if next_start_at != "":
 		# Convert ISO string to Unix timestamp
 		var timestamp = _parse_iso_timestamp(next_start_at)
@@ -392,6 +406,7 @@ func set_event_name(_event_name: String, _user_name: String = "") -> void:
 
 
 func set_trending(_trending: bool) -> void:
+	event_tags = "trending" if _trending else "none"
 	var trending_pill = _get_trending_pill()
 	if trending_pill:
 		trending_pill.set_visible(_trending)
@@ -416,14 +431,14 @@ func set_time(_start_at: int, live: bool) -> void:
 	var time_pill = _get_label_time_pill()
 	var live_pill = _get_label_live_pill()
 	var border = _get_border()
-	var jump_in_button = _get_button_jump_in()
+	var jump_to_event = _get_button_jump_to_event()
 	var reminder_button = _get_reminder_button()
 
 	if time_pill and live_pill:
 		if live:
 			live_pill.text = "LIVE"
-			if jump_in_button and reminder_button:
-				jump_in_button.show()
+			if jump_to_event and reminder_button:
+				jump_to_event.show()
 				reminder_button.hide()
 			if border:
 				border.self_modulate = "#FFFFFF"
@@ -441,10 +456,11 @@ func set_attendees_number(_attendees: int) -> void:
 		label.text = str(_attendees)
 
 
-func set_attending(_attending: bool, _id: String) -> void:
+func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:
 	var reminder_button = _get_reminder_button()
 	if reminder_button:
 		reminder_button.event_id_value = _id
+		reminder_button.event_tags = _event_tags
 		reminder_button.set_pressed_no_signal(_attending)
 		reminder_button.update_styles(_attending)
 
@@ -506,7 +522,7 @@ func _format_timestamp(timestamp: int) -> String:
 	var time_pill = _get_label_time_pill()
 	var time_pill_parent = time_pill.get_parent()
 	var border = _get_border()
-	var jump_in_button = _get_button_jump_in()
+	var jump_in_button = _get_button_jump_to_event()
 	var reminder_button = _get_reminder_button()
 	# Create unique styles for this instance
 	var time_pill_parent_style = time_pill_parent.get_theme_stylebox("panel")
@@ -632,18 +648,18 @@ func schedule_event() -> void:
 		var start_time_millis = start_timestamp * 1000
 		var end_time_millis = finish_timestamp * 1000
 		var event_location: String = "Decentraland at " + str(location.x) + "," + str(location.y)
-		if Global.is_android():
+		if DclGodotAndroidPlugin.is_available():
 			DclGodotAndroidPlugin.add_calendar_event(
 				event_name, details, start_time_millis, end_time_millis, event_location
 			)
-		elif Global.is_ios():
+		elif DclGodotAndroidPlugin.is_available():
 			DclIosPlugin.add_calendar_event(
 				event_name, details, start_time_millis, end_time_millis, event_location
 			)
 
 
 func _on_event_pressed() -> void:
-	event_pressed.emit(_data)
+	event_pressed.emit(event_id)
 
 
 func _on_button_share_pressed() -> void:
@@ -651,7 +667,6 @@ func _on_button_share_pressed() -> void:
 		printerr("No event data available to share")
 		return
 
-	var event_id = _data.get("id", "")
 	if event_id.is_empty():
 		printerr("Event ID not available")
 		return
@@ -670,3 +685,10 @@ func _on_button_share_pressed() -> void:
 
 func _on_button_calendar_pressed() -> void:
 	schedule_event()
+
+
+func _on_button_jump_to_event_pressed() -> void:
+	Global.metrics.track_click_button(
+		"jump_to", "EVENT_DETAILS", JSON.stringify({"event_id": event_id, "event_tag": event_tags})
+	)
+	jump_in.emit(location, realm)

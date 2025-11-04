@@ -174,6 +174,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
+	if "memory_debugger" in self:
+		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -264,18 +266,18 @@ func release_mouse():
 
 
 func open_webview_url(url):
-	if DclIosPlugin.open_webview_url(url):
-		return
-	if DclGodotAndroidPlugin.open_custom_tab_url(url):
-		return
+	if DclIosPlugin.is_available():
+		DclIosPlugin.open_webview_url(url)
+	if DclGodotAndroidPlugin.is_available():
+		DclGodotAndroidPlugin.open_custom_tab_url(url)
 
 	OS.shell_open(url)
 
 
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
-		if DclIosPlugin.open_auth_url(url):
-			return
+		if DclIosPlugin.is_available():
+			DclIosPlugin.open_auth_url(url)
 		if DclGodotAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
 				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
@@ -483,7 +485,7 @@ func _process(_delta: float) -> void:
 
 
 func check_deep_link_teleport_to():
-	if Global.is_mobile():
+	if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
 		var deep_link_url: String = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
 		Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
@@ -501,7 +503,7 @@ func check_deep_link_teleport_to():
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile():
+		if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
 			var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
