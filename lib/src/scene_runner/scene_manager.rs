@@ -608,8 +608,14 @@ impl SceneManager {
                         logs,
                         rpc_calls,
                         delta: _,
+                        deno_memory_stats,
                     } => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                            // Update Deno memory stats if present
+                            if deno_memory_stats.is_some() {
+                                scene.deno_memory_stats = deno_memory_stats;
+                            }
+
                             let dirty = Dirty {
                                 waiting_process: true,
                                 entities: dirty_crdt_state.entities,
@@ -1046,6 +1052,46 @@ impl SceneManager {
         dict.set("fail", test_fail.to_variant());
 
         dict
+    }
+
+    /// Get total Deno/V8 memory usage across all scenes in MB
+    #[func]
+    pub fn get_total_deno_memory_mb(&self) -> f64 {
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.deno_memory_stats)
+            .map(|stats| stats.used_heap_mb())
+            .sum()
+    }
+
+    /// Get total Deno/V8 heap size across all scenes in MB
+    #[func]
+    pub fn get_total_deno_heap_size_mb(&self) -> f64 {
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.deno_memory_stats)
+            .map(|stats| stats.total_heap_mb())
+            .sum()
+    }
+
+    /// Get count of active Deno runtimes (scenes with memory stats)
+    #[func]
+    pub fn get_deno_scene_count(&self) -> i32 {
+        self.scenes
+            .values()
+            .filter(|scene| scene.deno_memory_stats.is_some())
+            .count() as i32
+    }
+
+    /// Get average Deno memory usage per scene in MB
+    #[func]
+    pub fn get_average_deno_memory_mb(&self) -> f64 {
+        let count = self.get_deno_scene_count();
+        if count > 0 {
+            self.get_total_deno_memory_mb() / count as f64
+        } else {
+            0.0
+        }
     }
 }
 

@@ -28,7 +28,7 @@ func _initialize() -> void:
 
 func _before_send(event: SentryEvent) -> SentryEvent:
 	# Discard event if running in a develop build.
-	if is_dev_version:
+	if self.is_dev_version:
 		return null
 
 	# if event.message.contains("Bruno"):
