@@ -21,6 +21,17 @@ corner_radius_bottom_left = 6
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8g52q"]
 bg_color = Color(0, 0, 0, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mb7k1"]
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 10.0
+content_margin_bottom = 0.0
+bg_color = Color(0.168627, 0.160784, 0.188235, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_euk1h"]
 content_margin_left = 10.0
 content_margin_top = 0.0
@@ -32,17 +43,6 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mb7k1"]
-content_margin_left = 10.0
-content_margin_top = 0.0
-content_margin_right = 10.0
-content_margin_bottom = 0.0
-bg_color = Color(0.168627, 0.160784, 0.188235, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lt7hs"]
 content_margin_left = 10.0
@@ -118,12 +118,12 @@ layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme = ExtResource("1_ytipc")
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 40
-theme_override_styles/hover = SubResource("StyleBoxFlat_euk1h")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
 theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/hover = SubResource("StyleBoxFlat_euk1h")
 icon = ExtResource("3_lt7hs")
 icon_alignment = 1
 
@@ -133,14 +133,14 @@ custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("1_ytipc")
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 23
 theme_override_fonts/font = ExtResource("5_mb7k1")
 theme_override_font_sizes/font_size = 20
-theme_override_styles/hover = SubResource("StyleBoxFlat_lt7hs")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
 theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/hover = SubResource("StyleBoxFlat_lt7hs")
 text = "0"
 icon = ExtResource("3_bhyuy")
 
