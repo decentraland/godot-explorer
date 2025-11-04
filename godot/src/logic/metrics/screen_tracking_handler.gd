@@ -1,4 +1,4 @@
-class_name ScreenTrackingHandler
+abstract class_name ScreenTrackingHandler
 extends Resource
 
 ## Base class for screen tracking handlers
@@ -13,4 +13,4 @@ extends Resource
 
 
 func track_screen_viewed(_item_data: Dictionary):
-	push_error("ScreenTrackingHandler.track_screen_viewed() must be overridden in a derived class.")
+	pass
