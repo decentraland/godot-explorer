@@ -113,7 +113,6 @@ pub enum RpcCall {
         position_target: [f32; 3],
         camera_target: Option<[f32; 3]>,
         avatar_target: Option<[f32; 3]>,
-        response: RpcResultSender<Result<(), String>>,
     },
     TeleportTo {
         world_coordinates: [i32; 2],

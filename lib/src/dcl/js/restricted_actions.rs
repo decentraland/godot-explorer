@@ -99,8 +99,6 @@ fn op_move_player_to(
     avatar_y: f32,
     avatar_z: f32,
 ) {
-    let (sx, _rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
-
     let position_target = [position_x, position_y, position_z];
     let camera_target = if camera_x.is_nan() || camera_y.is_nan() || camera_z.is_nan() {
         None
@@ -120,7 +118,6 @@ fn op_move_player_to(
             position_target,
             camera_target,
             avatar_target,
-            response: sx.into(),
         });
 }
 

@@ -43,7 +43,6 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 position_target,
                 camera_target,
                 avatar_target,
-                response,
             } => {
                 move_player_to(
                     scene,
@@ -51,7 +50,6 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                     &position_target,
                     &camera_target,
                     &avatar_target,
-                    &response,
                 );
             }
             RpcCall::TeleportTo {

@@ -245,11 +245,24 @@ func avatar_look_at(target_position: Vector3):
 		sqrt(target_direction.x * target_direction.x + target_direction.z * target_direction.z)
 	)
 
+	# Set player body, avatar, and camera to look at same target (backward compatibility)
 	rotation.y = y_rot + PI
 	avatar.set_rotation(Vector3(0, 0, 0))
 	mount_camera.rotation.x = x_rot
 
 	clamp_camera_rotation()
+
+
+func set_avatar_rotation_independent(target_position: Vector3):
+	# Set avatar to face target independently from camera (used when both avatar and camera targets provided)
+	var global_pos := get_global_position()
+	var target_direction = target_position - global_pos
+	target_direction = target_direction.normalized()
+
+	var y_rot = atan2(target_direction.x, target_direction.z)
+
+	# Set avatar rotation relative to player body
+	avatar.rotation.y = (y_rot + PI) - rotation.y
 
 
 func camera_look_at(target_position: Vector3):
@@ -263,8 +276,8 @@ func camera_look_at(target_position: Vector3):
 		sqrt(target_direction.x * target_direction.x + target_direction.z * target_direction.z)
 	)
 
-	# Only set camera rotation, not avatar rotation
-	mount_camera.rotation.y = y_rot + PI
+	# Set player body Y rotation and camera mount X rotation (matches normal controls)
+	rotation.y = y_rot + PI
 	mount_camera.rotation.x = x_rot
 
 	clamp_camera_rotation()

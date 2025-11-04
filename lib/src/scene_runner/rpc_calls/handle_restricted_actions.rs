@@ -168,11 +168,10 @@ pub fn move_player_to(
     position_target: &[f32; 3],
     camera_target: &Option<[f32; 3]>,
     avatar_target: &Option<[f32; 3]>,
-    response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Primary Player is outside the scene".to_string()));
+        tracing::warn!("movePlayerTo failed: Primary Player is outside the scene");
         return;
     }
 
@@ -204,7 +203,7 @@ pub fn move_player_to(
         .parcels
         .contains(&target_parcel)
     {
-        response.send(Err("Target position is outside the scene".to_string()));
+        tracing::warn!("movePlayerTo failed: Target position is outside the scene");
         return;
     }
 
@@ -222,13 +221,15 @@ pub fn move_player_to(
     match (avatar_target, camera_target) {
         (Some(avatar), Some(camera)) => {
             // Both targets provided: independent control
-            let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
-            let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
-            explorer_node.call("player_look_at".into(), &[Variant::from(avatar_pos)]);
-
+            // Call camera_look_at first (sets player body and camera to face camera target)
+            // Then avatar_look_at_independent (sets avatar to face avatar target relative to player)
             let camera_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
             let camera_pos = Vector3::new(camera_pos.x, camera_pos.y, -camera_pos.z);
             explorer_node.call("camera_look_at".into(), &[Variant::from(camera_pos)]);
+
+            let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
+            let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
+            explorer_node.call("avatar_look_at_independent".into(), &[Variant::from(avatar_pos)]);
         }
         (Some(avatar), None) => {
             // Only avatar target: avatar looks at it
@@ -246,8 +247,6 @@ pub fn move_player_to(
             // No targets: do nothing
         }
     }
-
-    response.send(Ok(()));
 }
 
 // Teleport user to world coordinates
