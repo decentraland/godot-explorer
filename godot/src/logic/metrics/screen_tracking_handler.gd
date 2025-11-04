@@ -1,4 +1,4 @@
-abstract class_name ScreenTrackingHandler
+@abstract class_name ScreenTrackingHandler
 extends Resource
 
 ## Base class for screen tracking handlers
