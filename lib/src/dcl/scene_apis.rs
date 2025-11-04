@@ -128,12 +128,10 @@ pub enum RpcCall {
     },
     TriggerEmote {
         emote_id: String,
-        response: RpcResultSender<Result<(), String>>,
     },
     TriggerSceneEmote {
         emote_src: String,
         looping: bool,
-        response: RpcResultSender<Result<(), String>>,
     },
     // Portable Experiences
     SpawnPortable {

@@ -144,15 +144,10 @@ async fn op_teleport_to(
 
 #[op2(fast)]
 fn op_trigger_emote(op_state: Rc<RefCell<OpState>>, #[string] emote_id: String) {
-    let (sx, _rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
-
     op_state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::TriggerEmote {
-            emote_id,
-            response: sx.into(),
-        });
+        .push(RpcCall::TriggerEmote { emote_id });
 }
 
 #[op2(fast)]
@@ -161,14 +156,8 @@ fn op_trigger_scene_emote(
     #[string] emote_src: String,
     looping: bool,
 ) {
-    let (sx, _rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
-
     op_state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::TriggerSceneEmote {
-            emote_src,
-            looping,
-            response: sx.into(),
-        });
+        .push(RpcCall::TriggerSceneEmote { emote_src, looping });
 }

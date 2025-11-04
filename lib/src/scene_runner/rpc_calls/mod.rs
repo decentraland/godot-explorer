@@ -61,20 +61,12 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 &world_coordinates,
                 &response,
             ),
-            RpcCall::TriggerEmote { emote_id, response } => {
-                trigger_emote(scene, current_parcel_scene_id, &emote_id, &response)
+            RpcCall::TriggerEmote { emote_id } => {
+                trigger_emote(scene, current_parcel_scene_id, &emote_id)
             }
-            RpcCall::TriggerSceneEmote {
-                emote_src,
-                looping,
-                response,
-            } => trigger_scene_emote(
-                scene,
-                current_parcel_scene_id,
-                &emote_src,
-                &looping,
-                &response,
-            ),
+            RpcCall::TriggerSceneEmote { emote_src, looping } => {
+                trigger_scene_emote(scene, current_parcel_scene_id, &emote_src, &looping)
+            }
             // Portable Experiences
             RpcCall::SpawnPortable { location, response } => {
                 spawn_portable(scene, location, response)

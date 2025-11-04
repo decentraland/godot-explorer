@@ -224,4 +224,5 @@ func _async_on_change_virtual_keyboard(_new_safe_area) -> void:
 
 
 func _on_line_edit_command_focus_exited() -> void:
-	line_edit_command.grab_focus()
+	if !avatars_list.visible:
+		exit_chat()

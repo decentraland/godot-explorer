@@ -229,7 +229,10 @@ pub fn move_player_to(
 
             let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
             let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
-            explorer_node.call("avatar_look_at_independent".into(), &[Variant::from(avatar_pos)]);
+            explorer_node.call(
+                "avatar_look_at_independent".into(),
+                &[Variant::from(avatar_pos)],
+            );
         }
         (Some(avatar), None) => {
             // Only avatar target: avatar looks at it
@@ -305,15 +308,10 @@ pub fn teleport_to(
     );
 }
 
-pub fn trigger_emote(
-    scene: &Scene,
-    current_parcel_scene_id: &SceneId,
-    emote_id: &str,
-    response: &RpcResultSender<Result<(), String>>,
-) {
+pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id: &str) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Primary Player is outside the scene".to_string()));
+        tracing::warn!("triggerEmote failed: Primary Player is outside the scene");
         return;
     }
 
@@ -326,8 +324,6 @@ pub fn trigger_emote(
         .get_comms()
         .bind_mut()
         .send_emote(emote_id.to_godot());
-
-    response.send(Ok(()));
 }
 
 pub fn trigger_scene_emote(
@@ -335,16 +331,15 @@ pub fn trigger_scene_emote(
     current_parcel_scene_id: &SceneId,
     emote_src: &str,
     looping: &bool,
-    response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Primary Player is outside the scene".to_string()));
+        tracing::warn!("triggerSceneEmote failed: Primary Player is outside the scene");
         return;
     }
 
     let Some(file_hash) = scene.content_mapping.get_hash(emote_src) else {
-        response.send(Err("Emote not found".to_string()));
+        tracing::warn!("triggerSceneEmote failed: Emote not found");
         return;
     };
 
@@ -357,5 +352,4 @@ pub fn trigger_scene_emote(
         .get_comms()
         .bind_mut()
         .send_emote(urn.to_godot());
-    response.send(Ok(()));
 }
