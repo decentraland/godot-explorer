@@ -1250,6 +1250,20 @@ impl ContentProvider {
 
         promise
     }
+
+    #[func]
+    pub fn purge_file(&mut self, file_hash: GString) -> bool {
+        let file_hash_str = file_hash.to_string();
+
+        // Remove from cached HashMap
+        if self.cached.remove(&file_hash_str).is_some() {
+            tracing::info!("Purged file {} from cache", file_hash_str);
+            true
+        } else {
+            tracing::warn!("File {} not found in cache", file_hash_str);
+            false
+        }
+    }
 }
 
 impl ContentProvider {
