@@ -3,6 +3,14 @@ extends DclConfig
 
 signal param_changed(param: ConfigParams)
 
+enum FpsLimitMode {
+	VSYNC = 0,
+	NO_LIMIT = 1,
+	FPS_30 = 2,
+	FPS_60 = 3,
+	FPS_120 = 4,
+}
+
 enum ConfigParams {
 	CONTENT_DIRECTORY,
 	WINDOW_MODE,
@@ -93,8 +101,8 @@ var skybox_time: int = 43200:
 		skybox_time = value
 		param_changed.emit(ConfigParams.SKYBOX_TIME)
 
-# 0 - Vsync, 1 - No limit, Other-> Limit limit_fps that amount
-var limit_fps: int = 2:
+# See FpsLimitMode enum for available options
+var limit_fps: int = FpsLimitMode.FPS_30:
 	set(value):
 		limit_fps = value
 		param_changed.emit(ConfigParams.LIMIT_FPS)
@@ -215,7 +223,7 @@ func load_from_default():
 	self.run_velocity = 6.0
 
 	self.process_tick_quota_ms = 10
-	self.limit_fps = 2
+	self.limit_fps = FpsLimitMode.FPS_30
 
 	self.skybox = 0  # basic
 
