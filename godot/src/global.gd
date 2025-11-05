@@ -268,23 +268,22 @@ func release_mouse():
 func open_webview_url(url):
 	if DclIosPlugin.is_available():
 		DclIosPlugin.open_webview_url(url)
-	if DclGodotAndroidPlugin.is_available():
+	elif DclGodotAndroidPlugin.is_available():
 		DclGodotAndroidPlugin.open_custom_tab_url(url)
-
-	OS.shell_open(url)
+	else:
+		OS.shell_open(url)
 
 
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
 		if DclIosPlugin.is_available():
 			DclIosPlugin.open_auth_url(url)
-		if DclGodotAndroidPlugin.is_available():
+		elif DclGodotAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
 				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 			else:
 				DclGodotAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
 		else:
-			#printerr("No webkit plugin found")
 			OS.shell_open(url)
 	else:
 		if DclAndroidPlugin.is_available():
