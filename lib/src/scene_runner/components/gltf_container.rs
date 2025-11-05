@@ -69,7 +69,7 @@ pub fn update_gltf_container(
                     scene.gltf_loading.insert(*entity);
                 } else {
                     // TODO: preload this resource
-                    let mut new_gltf = godot::engine::load::<PackedScene>(
+                    let mut new_gltf = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/gltf_container.tscn",
                     )
                     .instantiate()

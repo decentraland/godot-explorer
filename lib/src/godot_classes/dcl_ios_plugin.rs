@@ -1,6 +1,6 @@
 use godot::prelude::*;
 
-use godot::engine::Image;
+use godot::classes::Image;
 
 /// Mobile device static information (doesn't change during runtime) - internal Rust struct
 #[derive(Debug, Clone)]
@@ -88,7 +88,7 @@ impl DclIosPlugin {
     /// Try to get the DclGodotiOS singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
         let singleton =
-            godot::engine::Engine::singleton().get_singleton(StringName::from("DclGodotiOS"))?;
+            godot::classes::Engine::singleton().get_singleton(StringName::from("DclGodotiOS"))?;
         Some(singleton.cast::<Object>())
     }
 

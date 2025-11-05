@@ -14,7 +14,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{BoxMesh, MeshInstance3D},
+    classes::{BoxMesh, MeshInstance3D},
     prelude::*,
 };
 
@@ -109,7 +109,7 @@ pub fn update_mesh_renderer(
                 let (mut mesh_instance_3d, add_to_base) = match existing {
                     Some(mesh_instance_3d) => (mesh_instance_3d, false),
                     None => (
-                        godot::engine::load::<PackedScene>(
+                        godot::tools::load::<PackedScene>(
                             "res://src/decentraland_components/mesh_renderer.tscn",
                         )
                         .instantiate()

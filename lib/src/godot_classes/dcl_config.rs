@@ -1,4 +1,4 @@
-use godot::{engine::ConfigFile, prelude::*};
+use godot::{classes::ConfigFile, prelude::*};
 
 #[derive(Clone, Var, GodotConvert, Export, PartialEq, Debug)]
 #[godot(via=i32)]

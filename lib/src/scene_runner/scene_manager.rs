@@ -25,7 +25,7 @@ use crate::{
     tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
 };
 use godot::{
-    engine::{
+    classes::{
         control::{LayoutPreset, MouseFilter},
         PhysicsRayQueryParameters3D,
     },
@@ -117,10 +117,10 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 #[godot_api]
 impl SceneManager {
     #[signal]
-    fn scene_spawned(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_spawned(scene_id: i32, entity_id: GString);
 
     #[signal]
-    fn scene_killed(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_killed(scene_id: i32, entity_id: GString);
 
     // Testing a comment for the API
     #[func]
@@ -232,7 +232,7 @@ impl SceneManager {
         self.compute_scene_distance();
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &[
                 "scene_spawned".to_variant(),
                 signal_data.0 .0.to_variant(),
@@ -420,7 +420,7 @@ impl SceneManager {
             None => (player_global_transform, 0),
         };
 
-        let frames_count = godot::engine::Engine::singleton().get_physics_frames();
+        let frames_count = godot::classes::Engine::singleton().get_physics_frames();
 
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,
@@ -583,7 +583,7 @@ impl SceneManager {
             }
 
             self.base_mut().emit_signal(
-                "scene_killed".into(),
+                "scene_killed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
         }
@@ -682,7 +682,7 @@ impl SceneManager {
                             dcl_rpc_sender.bind_mut().set_sender(response);
 
                             testing_tools.call_deferred(
-                                "async_take_and_compare_snapshot".into(),
+                                "async_take_and_compare_snapshot",
                                 &[
                                     scene_id.0.to_variant(),
                                     src_stored_snapshot.to_variant(),
@@ -839,11 +839,11 @@ impl SceneManager {
     }
 
     #[signal]
-    fn pointer_tooltip_changed() {}
+    fn pointer_tooltip_changed();
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
-        let window_size: Vector2i = godot::engine::DisplayServer::singleton().window_get_size();
+        let window_size: Vector2i = godot::classes::DisplayServer::singleton().window_get_size();
 
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
@@ -933,11 +933,11 @@ impl SceneManager {
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
-            .emit_signal("on_change_scene_id".into(), &[scene_id]);
+            .emit_signal("on_change_scene_id", &[scene_id]);
     }
 
     #[signal]
-    fn on_change_scene_id(scene_id: i32) {}
+    fn on_change_scene_id(scene_id: i32);
 
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
@@ -1196,8 +1196,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
 
                 // Handle pointer press/release on avatar for profile opening
@@ -1228,8 +1227,7 @@ impl INode for SceneManager {
                             if ui_has_focus {
                                 // Emit open_profile signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
-                                    global
-                                        .emit_signal("open_profile".into(), &[avatar.to_variant()]);
+                                    global.emit_signal("open_profile", &[avatar.to_variant()]);
                                 }
                             }
                         }
@@ -1253,8 +1251,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
             }
         }
@@ -1339,8 +1336,7 @@ impl INode for SceneManager {
 
         if self.pointer_tooltips != tooltips {
             self.set_pointer_tooltips(tooltips);
-            self.base_mut()
-                .emit_signal("pointer_tooltip_changed".into(), &[]);
+            self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
         if let Some(current_camera_node) =

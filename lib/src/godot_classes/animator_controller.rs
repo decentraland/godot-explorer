@@ -1,14 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use godot::{
-    builtin::{meta::ToGodot, StringName},
-    engine::{
+    classes::{
         AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
         AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer, AnimationTree,
         IAnimationTree, Node3D,
     },
     obj::{Base, Gd, NewGd, WithBaseField},
-    prelude::{godot_api, GodotClass},
+    prelude::*,
 };
 
 use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};

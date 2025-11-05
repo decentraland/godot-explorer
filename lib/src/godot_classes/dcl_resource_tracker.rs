@@ -1,4 +1,4 @@
-use godot::{engine::EngineDebugger, prelude::*};
+use godot::{classes::EngineDebugger, prelude::*};
 
 #[repr(i32)]
 pub enum ResourceTrackerState {

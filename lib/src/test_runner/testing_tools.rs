@@ -1,4 +1,4 @@
-use godot::engine::Image;
+use godot::classes::Image;
 use godot::prelude::*;
 
 #[derive(GodotClass)]
@@ -25,12 +25,12 @@ impl DclTestingTools {
         let height = img_a.get_height() as usize;
         let pixel_count = width * height;
 
-        if img_a.get_format() != godot::engine::image::Format::RGB8 {
-            img_a.convert(godot::engine::image::Format::RGB8);
+        if img_a.get_format() != godot::classes::image::Format::RGB8 {
+            img_a.convert(godot::classes::image::Format::RGB8);
         }
 
-        if img_b.get_format() != godot::engine::image::Format::RGB8 {
-            img_b.convert(godot::engine::image::Format::RGB8);
+        if img_b.get_format() != godot::classes::image::Format::RGB8 {
+            img_b.convert(godot::classes::image::Format::RGB8);
         }
 
         let a_data = img_a.get_data();
@@ -48,7 +48,7 @@ impl DclTestingTools {
                 width as i32,
                 height as i32,
                 false,
-                godot::engine::image::Format::RGB8,
+                godot::classes::image::Format::RGB8,
             )
             .expect("Failed to create diff image");
 
@@ -61,7 +61,7 @@ impl DclTestingTools {
                 width as i32,
                 height as i32,
                 false,
-                godot::engine::image::Format::RGB8,
+                godot::classes::image::Format::RGB8,
                 dest_data_packed_array,
             );
             diff_img.save_png(save_diff_to_path);
@@ -94,7 +94,7 @@ impl DclTestingTools {
 
     #[func]
     fn exit_gracefully(&self, code: i32) {
-        use godot::engine::{Engine, SceneTree};
+        use godot::classes::{Engine, SceneTree};
 
         if let Some(main_loop) = Engine::singleton().get_main_loop() {
             let mut tree = main_loop.cast::<SceneTree>();

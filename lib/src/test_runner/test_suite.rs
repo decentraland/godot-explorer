@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::{io::{self, Write}, time::{Duration, Instant}};
 
 use godot::prelude::*;
 use tracing::error;
@@ -82,7 +82,7 @@ impl TestRunnerSuite {
             print_test_pre(&test_case, test_file, &mut last_file, true);
             let result = test.call("run", &[]);
             // In case a test needs to disable error messages to ensure it runs properly.
-            godot::engine::Engine::singleton().set_print_error_messages(true);
+            godot::classes::Engine::singleton().set_print_error_messages(true);
 
             if let Some(duration) = get_execution_time(&test) {
                 extra_duration += duration;
@@ -198,12 +198,10 @@ fn run_rust_test(test: &RustTestCase, ctx: &TestContext) -> TestOutcome {
 
 fn print_test_pre(test_case: &str, test_file: String, last_file: &mut Option<String>, flush: bool) {
     // Check if we need to open a new category for a file
-    let print_file = last_file
-        .as_ref()
-        .map_or(true, |last_file| last_file != &test_file);
+    let print_file = last_file.as_ref() != Some(&test_file);
 
     if print_file {
-        let file_subtitle = if let Some(sep_pos) = test_file.rfind(&['/', '\\']) {
+        let file_subtitle = if let Some(sep_pos) = test_file.rfind(['/', '\\']) {
             &test_file[sep_pos + 1..]
         } else {
             test_file.as_str()
@@ -216,7 +214,7 @@ fn print_test_pre(test_case: &str, test_file: String, last_file: &mut Option<Str
     if flush {
         // Flush in GDScript, because its own print may come sooner than Rust prints otherwise
         // (strictly speaking, this can also happen from Rust, when Godot prints something. So far, it didn't though...
-        godot::private::flush_stdout();
+        let _ = io::stdout().flush();
     }
 
     // State update for file-category-print

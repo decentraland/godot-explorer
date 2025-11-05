@@ -35,10 +35,9 @@ jobs:
         run: |
           git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.79
-          override: true
+          toolchain: "1.90"
           components: clippy, rustfmt
       - name: Install Android targets
         run: |

@@ -1,4 +1,4 @@
-use godot::engine::{Engine, Node, Os, SceneTree};
+use godot::classes::{Engine, Node, Os, SceneTree};
 use godot::prelude::*;
 use std::collections::HashMap;
 
@@ -524,11 +524,7 @@ impl DclCli {
             .get_root()?
             .get_node_or_null("DclCli".into())?
             .try_cast::<Self>();
-        if let Ok(res) = res {
-            Some(res)
-        } else {
-            None
-        }
+        res.ok()
     }
 
     pub fn singleton() -> Gd<Self> {

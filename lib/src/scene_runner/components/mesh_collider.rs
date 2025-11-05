@@ -12,7 +12,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{
+    classes::{
         mesh::PrimitiveType, AnimatableBody3D, ArrayMesh, BoxShape3D, CollisionShape3D,
         CylinderShape3D, SphereShape3D,
     },

@@ -1,4 +1,4 @@
-use godot::engine::AnimationPlayer;
+use godot::classes::AnimationPlayer;
 use godot::prelude::*;
 
 use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};

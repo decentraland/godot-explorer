@@ -157,7 +157,7 @@ cargo run -- export --target ios
 
 - The project uses a forked Godot 4.5.1 - don't update the engine version
 - Windows users should clone to short paths (e.g., `C:/gexplorer`)
-- The Rust toolchain is pinned in `rust-toolchain.toml` (1.79)
+- The Rust toolchain is pinned in `rust-toolchain.toml` (1.90)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
 - Integration with Decentraland SDK7 requires the JavaScript runtime to be properly initialized
 - **Android builds**: No longer use cargo-ndk due to NDK 27 issues. Direct cargo build with `GN_ARGS=use_custom_libcxx=false`

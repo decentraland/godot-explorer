@@ -38,7 +38,7 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 let mut avatar_attach_node = if let Some(avatar_attach_node) = existing {
                     avatar_attach_node
                 } else {
-                    godot::engine::load::<PackedScene>(
+                    godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar_attach.tscn",
                     )
                     .instantiate()

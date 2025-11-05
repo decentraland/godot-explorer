@@ -1,4 +1,4 @@
-use godot::engine::Area3D;
+use godot::classes::Area3D;
 use godot::prelude::*;
 
 #[derive(GodotClass)]

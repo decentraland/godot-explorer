@@ -1,10 +1,6 @@
 use godot::{
-    engine::{
-        control::LayoutPreset,
-        global::{HorizontalAlignment, VerticalAlignment},
-        text_server::JustificationFlag,
-        ILabel, Label,
-    },
+    classes::{control::LayoutPreset, text_server::JustificationFlag, ILabel, Label},
+    global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
 
@@ -143,10 +139,10 @@ impl DclUiText {
 
         if new_value.text_wrap_compat() == TextWrap::TwWrap {
             self.base_mut()
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::WORD_SMART);
+                .set_autowrap_mode(godot::classes::text_server::AutowrapMode::WORD_SMART);
         } else {
             self.base_mut()
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::OFF);
+                .set_autowrap_mode(godot::classes::text_server::AutowrapMode::OFF);
         }
     }
 }

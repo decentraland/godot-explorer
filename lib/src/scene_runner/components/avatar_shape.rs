@@ -112,11 +112,11 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
-                        "async_update_avatar".into(),
+                        "async_update_avatar",
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
-                    let mut new_avatar_shape = godot::engine::load::<PackedScene>(
+                    let mut new_avatar_shape = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )
                     .instantiate()
@@ -127,7 +127,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     node_3d.add_child(new_avatar_shape.clone().upcast());
 
                     new_avatar_shape.call_deferred(
-                        "async_update_avatar".into(),
+                        "async_update_avatar",
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 }
@@ -180,7 +180,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 emote.emote_urn.clone()
             };
 
-            avatar_node.call_deferred("async_play_emote".into(), &[urn.to_variant()]);
+            avatar_node.call_deferred("async_play_emote", &[urn.to_variant()]);
         }
     }
 }

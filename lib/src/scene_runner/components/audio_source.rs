@@ -45,7 +45,7 @@ pub fn update_audio_source(
                 let mut audio_source = if let Some(audio_source_node) = existing {
                     audio_source_node.cast::<DclAudioSource>()
                 } else {
-                    let mut new_audio_source = godot::engine::load::<PackedScene>(
+                    let mut new_audio_source = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/audio_source.tscn",
                     )
                     .instantiate()
@@ -61,7 +61,7 @@ pub fn update_audio_source(
                 };
 
                 audio_source.call_deferred(
-                    "_async_refresh_data".into(),
+                    "_async_refresh_data",
                     &[new_value.current_time.is_some().to_variant()],
                 );
 

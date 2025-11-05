@@ -19,7 +19,7 @@ pub struct DclSceneNode {
 #[godot_api]
 impl DclSceneNode {
     #[signal]
-    pub fn tree_changed(&self) {}
+    pub fn tree_changed();
 
     pub fn new_alloc(scene_id: i32, is_global: bool) -> Gd<Self> {
         let mut obj = Gd::from_init_fn(|_base| {

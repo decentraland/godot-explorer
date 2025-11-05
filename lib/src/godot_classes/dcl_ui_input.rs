@@ -1,10 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use godot::{
-    engine::{
-        global::{HorizontalAlignment, VerticalAlignment},
-        ILineEdit, LineEdit, StyleBoxEmpty,
-    },
+    classes::{ILineEdit, LineEdit, StyleBoxEmpty},
+    global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
 
@@ -47,7 +45,7 @@ impl ILineEdit for DclUiInput {
     }
 
     fn ready(&mut self) {
-        let style_box_empty: Gd<godot::engine::StyleBox> = StyleBoxEmpty::new_gd().upcast();
+        let style_box_empty: Gd<godot::classes::StyleBox> = StyleBoxEmpty::new_gd().upcast();
         let new_font_resource = self.current_font.get_font_resource();
         self.base_mut()
             .add_theme_font_override("font".into(), new_font_resource);
