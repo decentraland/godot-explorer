@@ -4,13 +4,6 @@ extends Control
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
-const JUMP_IN_PORTRAIT = preload(
-	"res://src/ui/components/discover/jump_in/panel_jump_in_portrait.tscn"
-)
-const JUMP_IN_LANDSCAPE = preload(
-	"res://src/ui/components/discover/jump_in/panel_jump_in_landscape.tscn"
-)
-
 @export var portrait_panel_resource: PackedScene
 @export var landscape_panel_resource: PackedScene
 @export var tracking_handler: ScreenTrackingHandler
