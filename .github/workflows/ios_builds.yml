@@ -21,12 +21,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.79
-          override: true
-          target: aarch64-apple-ios
+          toolchain: "1.90"
+          targets: aarch64-apple-ios
 
       # CACHE IS DISABLED
       # - name: Set up cache

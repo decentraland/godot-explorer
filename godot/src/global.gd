@@ -266,25 +266,24 @@ func release_mouse():
 
 
 func open_webview_url(url):
-	if DclIosPlugin.open_webview_url(url):
-		return
-	if DclGodotAndroidPlugin.open_custom_tab_url(url):
-		return
-
-	OS.shell_open(url)
+	if DclIosPlugin.is_available():
+		DclIosPlugin.open_webview_url(url)
+	elif DclGodotAndroidPlugin.is_available():
+		DclGodotAndroidPlugin.open_custom_tab_url(url)
+	else:
+		OS.shell_open(url)
 
 
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
-		if DclIosPlugin.open_auth_url(url):
-			return
-		if DclGodotAndroidPlugin.is_available():
+		if DclIosPlugin.is_available():
+			DclIosPlugin.open_auth_url(url)
+		elif DclGodotAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
 				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 			else:
 				DclGodotAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
 		else:
-			#printerr("No webkit plugin found")
 			OS.shell_open(url)
 	else:
 		if DclAndroidPlugin.is_available():
@@ -485,7 +484,7 @@ func _process(_delta: float) -> void:
 
 
 func check_deep_link_teleport_to():
-	if Global.is_mobile():
+	if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
 		var deep_link_url: String = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
 		Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
@@ -503,7 +502,7 @@ func check_deep_link_teleport_to():
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile():
+		if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
 			var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
