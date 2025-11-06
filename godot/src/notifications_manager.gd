@@ -4,11 +4,17 @@ extends Node
 ##
 ## Autoload script for managing Decentraland notifications.
 ## Handles fetching, marking as read, and polling for new notifications.
+## Also provides a unified API for local notifications on Android and iOS.
 
 signal new_notifications(notifications: Array)
 signal notifications_updated
 signal notification_error(error_message: String)
 signal notification_queued(notification: Dictionary)
+
+# Local notification signals
+signal local_notification_permission_changed(granted: bool)
+signal local_notification_scheduled(notification_id: String)
+signal local_notification_cancelled(notification_id: String)
 
 const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
@@ -40,6 +46,13 @@ var _notification_queue: Array = []  # Queue for new unread notifications to sho
 var _debug_timer: Timer = null  # Timer for debug random notifications
 var _queue_paused: bool = false  # Whether the notification queue is paused
 
+# Local notifications
+var _android_plugin = null
+var _ios_plugin = null
+var _local_notification_channel_id = "dcl_local_notifications"
+var _local_notification_channel_name = "Decentraland Notifications"
+var _local_notification_channel_description = "Local notifications for Decentraland events"
+
 
 func _ready() -> void:
 	# Create polling timer
@@ -55,6 +68,12 @@ func _ready() -> void:
 		_debug_timer.timeout.connect(_on_debug_timer_timeout)
 		add_child(_debug_timer)
 		_start_debug_timer()
+
+	# Initialize platform-specific plugins
+	_initialize_local_notifications()
+
+	# Clear any badge from previous notifications
+	clear_badge_and_delivered_notifications()
 
 
 ## Start polling for new notifications
@@ -386,3 +405,150 @@ func _on_debug_timer_timeout() -> void:
 
 	# Restart timer with new random interval
 	_start_debug_timer()
+
+
+# =============================================================================
+# LOCAL NOTIFICATIONS
+# =============================================================================
+
+## Initialize platform-specific local notification plugins
+func _initialize_local_notifications() -> void:
+	if OS.get_name() == "Android":
+		_android_plugin = Engine.get_singleton("dcl-godot-android")
+		if _android_plugin:
+			print("Local notifications: Android plugin initialized")
+			# Create notification channel (Android 8.0+)
+			_android_plugin.createNotificationChannel(
+				_local_notification_channel_id,
+				_local_notification_channel_name,
+				_local_notification_channel_description
+			)
+		else:
+			push_warning("Local notifications: Android plugin not found")
+	elif OS.get_name() == "iOS":
+		_ios_plugin = Engine.get_singleton("DclGodotiOS")
+		if _ios_plugin:
+			print("Local notifications: iOS plugin initialized")
+		else:
+			push_warning("Local notifications: iOS plugin not found")
+
+
+## Request permission to show local notifications
+## This must be called before scheduling any notifications
+## On Android 13+, this will show a permission dialog
+## On iOS, this will show a permission dialog on first call
+func request_local_notification_permission() -> void:
+	if OS.get_name() == "Android" and _android_plugin:
+		var granted = _android_plugin.requestNotificationPermission()
+		local_notification_permission_changed.emit(granted)
+	elif OS.get_name() == "iOS" and _ios_plugin:
+		_ios_plugin.request_notification_permission()
+		# Permission result is async on iOS, we can check it later with has_local_notification_permission()
+
+
+## Check if local notification permission is granted
+## Returns true if permission is granted, false otherwise
+func has_local_notification_permission() -> bool:
+	if OS.get_name() == "Android" and _android_plugin:
+		return _android_plugin.hasNotificationPermission()
+	elif OS.get_name() == "iOS" and _ios_plugin:
+		return _ios_plugin.has_notification_permission()
+	return false
+
+
+## Schedule a local notification
+##
+## @param notification_id: Unique ID for this notification (for cancellation)
+## @param title: Notification title
+## @param body: Notification body text
+## @param delay_seconds: Delay in seconds before showing the notification
+## @return: true if scheduled successfully, false otherwise
+func schedule_local_notification(
+	notification_id: String, title: String, body: String, delay_seconds: int
+) -> bool:
+	if notification_id.is_empty():
+		push_error("Local notification: notification_id cannot be empty")
+		return false
+
+	if delay_seconds < 0:
+		push_error("Local notification: delay_seconds must be >= 0")
+		return false
+
+	var success = false
+
+	if OS.get_name() == "Android" and _android_plugin:
+		success = _android_plugin.scheduleLocalNotification(
+			notification_id, title, body, delay_seconds
+		)
+	elif OS.get_name() == "iOS" and _ios_plugin:
+		success = _ios_plugin.schedule_local_notification(
+			notification_id, title, body, delay_seconds
+		)
+	else:
+		push_warning("Local notifications not supported on this platform")
+		return false
+
+	if success:
+		local_notification_scheduled.emit(notification_id)
+		print(
+			"Local notification scheduled: id=%s, title=%s, delay=%ds"
+			% [notification_id, title, delay_seconds]
+		)
+
+	return success
+
+
+## Cancel a scheduled local notification
+##
+## @param notification_id: The ID of the notification to cancel
+## @return: true if cancelled successfully, false otherwise
+func cancel_local_notification(notification_id: String) -> bool:
+	if notification_id.is_empty():
+		push_error("Local notification: notification_id cannot be empty")
+		return false
+
+	var success = false
+
+	if OS.get_name() == "Android" and _android_plugin:
+		success = _android_plugin.cancelLocalNotification(notification_id)
+	elif OS.get_name() == "iOS" and _ios_plugin:
+		success = _ios_plugin.cancel_local_notification(notification_id)
+	else:
+		push_warning("Local notifications not supported on this platform")
+		return false
+
+	if success:
+		local_notification_cancelled.emit(notification_id)
+		print("Local notification cancelled: id=%s" % notification_id)
+
+	return success
+
+
+## Cancel all scheduled local notifications
+##
+## @return: true if cancelled successfully, false otherwise
+func cancel_all_local_notifications() -> bool:
+	var success = false
+
+	if OS.get_name() == "Android" and _android_plugin:
+		success = _android_plugin.cancelAllLocalNotifications()
+	elif OS.get_name() == "iOS" and _ios_plugin:
+		success = _ios_plugin.cancel_all_local_notifications()
+	else:
+		push_warning("Local notifications not supported on this platform")
+		return false
+
+	if success:
+		print("All local notifications cancelled")
+
+	return success
+
+
+## Clear the app badge number and remove delivered notifications
+## This should be called when the app launches to clear any badge
+## from notifications that were shown while the app was closed
+func clear_badge_and_delivered_notifications() -> void:
+	if OS.get_name() == "iOS" and _ios_plugin:
+		_ios_plugin.clear_badge_number()
+		print("Badge cleared on iOS")
+	# Android doesn't have a standard badge system, so nothing to do

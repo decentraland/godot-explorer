@@ -9,10 +9,12 @@
 @class ASWebAuthenticationSession;
 @class WebKitAuthenticationDelegate;
 @class CalendarEventDelegate;
+@class UNUserNotificationCenter;
 #else
 typedef void ASWebAuthenticationSession;
 typedef void WebKitAuthenticationDelegate;
 typedef void CalendarEventDelegate;
+typedef void UNUserNotificationCenter;
 #endif
 
 class DclGodotiOS : public Object {
@@ -34,6 +36,14 @@ public:
     bool add_calendar_event(String title, String description, int64_t start_time, int64_t end_time, String location);
     bool share_text(String text);
     bool share_text_with_image(String text, Ref<Image> image);
+
+    // Local notifications
+    void request_notification_permission();
+    bool has_notification_permission();
+    bool schedule_local_notification(String notification_id, String title, String body, int delay_seconds);
+    bool cancel_local_notification(String notification_id);
+    bool cancel_all_local_notifications();
+    void clear_badge_number();
 
     static DclGodotiOS *get_singleton();
 

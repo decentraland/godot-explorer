@@ -10,6 +10,7 @@
 #import <EventKit/EventKit.h>
 #import <EventKitUI/EventKitUI.h>
 #import <LinkPresentation/LinkPresentation.h>
+#import <UserNotifications/UserNotifications.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -139,6 +140,14 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
     ClassDB::bind_method(D_METHOD("share_text", "text"), &DclGodotiOS::share_text);
     ClassDB::bind_method(D_METHOD("share_text_with_image", "text", "image"), &DclGodotiOS::share_text_with_image);
+
+    // Local notifications
+    ClassDB::bind_method(D_METHOD("request_notification_permission"), &DclGodotiOS::request_notification_permission);
+    ClassDB::bind_method(D_METHOD("has_notification_permission"), &DclGodotiOS::has_notification_permission);
+    ClassDB::bind_method(D_METHOD("schedule_local_notification", "notification_id", "title", "body", "delay_seconds"), &DclGodotiOS::schedule_local_notification);
+    ClassDB::bind_method(D_METHOD("cancel_local_notification", "notification_id"), &DclGodotiOS::cancel_local_notification);
+    ClassDB::bind_method(D_METHOD("cancel_all_local_notifications"), &DclGodotiOS::cancel_all_local_notifications);
+    ClassDB::bind_method(D_METHOD("clear_badge_number"), &DclGodotiOS::clear_badge_number);
 }
 
 void DclGodotiOS::print_version() {
@@ -508,6 +517,145 @@ bool DclGodotiOS::share_text_with_image(String text, Ref<Image> image) {
     return true;
     #else
     return false;
+    #endif
+}
+
+// =============================================================================
+// LOCAL NOTIFICATIONS
+// =============================================================================
+
+void DclGodotiOS::request_notification_permission() {
+    #if TARGET_OS_IOS
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+
+    [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert |
+                                            UNAuthorizationOptionSound |
+                                            UNAuthorizationOptionBadge)
+                          completionHandler:^(BOOL granted, NSError * _Nullable error) {
+        if (granted) {
+            printf("Notification permission granted\n");
+        } else {
+            printf("Notification permission denied\n");
+        }
+        if (error) {
+            printf("Error requesting notification permission: %s\n", error.localizedDescription.UTF8String);
+        }
+    }];
+    #endif
+}
+
+bool DclGodotiOS::has_notification_permission() {
+    #if TARGET_OS_IOS
+    __block bool hasPermission = false;
+    __block bool completed = false;
+
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
+        hasPermission = (settings.authorizationStatus == UNAuthorizationStatusAuthorized);
+        completed = true;
+    }];
+
+    // Wait for completion (with timeout)
+    NSDate *timeout = [NSDate dateWithTimeIntervalSinceNow:1.0];
+    while (!completed && [[NSDate date] compare:timeout] == NSOrderedAscending) {
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    }
+
+    return hasPermission;
+    #else
+    return false;
+    #endif
+}
+
+bool DclGodotiOS::schedule_local_notification(String notification_id, String title, String body, int delay_seconds) {
+    #if TARGET_OS_IOS
+    NSString *ns_id = [NSString stringWithUTF8String:notification_id.utf8().get_data()];
+    NSString *ns_title = [NSString stringWithUTF8String:title.utf8().get_data()];
+    NSString *ns_body = [NSString stringWithUTF8String:body.utf8().get_data()];
+
+    // Create notification content
+    UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+    content.title = ns_title;
+    content.body = ns_body;
+    content.sound = [UNNotificationSound defaultSound];
+    content.badge = @(1);
+
+    // Create trigger (fire after delay_seconds)
+    UNTimeIntervalNotificationTrigger *trigger = [UNTimeIntervalNotificationTrigger
+        triggerWithTimeInterval:delay_seconds
+        repeats:NO];
+
+    // Create notification request
+    UNNotificationRequest *request = [UNNotificationRequest
+        requestWithIdentifier:ns_id
+        content:content
+        trigger:trigger];
+
+    // Schedule notification
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center addNotificationRequest:request withCompletionHandler:^(NSError * _Nullable error) {
+        if (error) {
+            printf("Error scheduling local notification: %s\n", error.localizedDescription.UTF8String);
+        } else {
+            printf("Local notification scheduled: id=%s, delay=%ds\n",
+                   notification_id.utf8().get_data(), delay_seconds);
+        }
+    }];
+
+    return true;
+    #else
+    return false;
+    #endif
+}
+
+bool DclGodotiOS::cancel_local_notification(String notification_id) {
+    #if TARGET_OS_IOS
+    NSString *ns_id = [NSString stringWithUTF8String:notification_id.utf8().get_data()];
+
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+
+    // Remove pending notification
+    [center removePendingNotificationRequestsWithIdentifiers:@[ns_id]];
+
+    // Also remove delivered notification from notification center
+    [center removeDeliveredNotificationsWithIdentifiers:@[ns_id]];
+
+    printf("Local notification cancelled: id=%s\n", notification_id.utf8().get_data());
+    return true;
+    #else
+    return false;
+    #endif
+}
+
+bool DclGodotiOS::cancel_all_local_notifications() {
+    #if TARGET_OS_IOS
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+
+    // Remove all pending notifications
+    [center removeAllPendingNotificationRequests];
+
+    // Remove all delivered notifications
+    [center removeAllDeliveredNotifications];
+
+    printf("All local notifications cancelled\n");
+    return true;
+    #else
+    return false;
+    #endif
+}
+
+void DclGodotiOS::clear_badge_number() {
+    #if TARGET_OS_IOS
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Clear the badge number
+        [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+
+        // Also remove all delivered notifications from notification center
+        UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+        [center removeAllDeliveredNotifications];
+
+        printf("Badge number cleared and delivered notifications removed\n");
+    });
     #endif
 }
 

@@ -3,6 +3,10 @@ package org.decentraland.godotexplorer
 import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
+import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -25,6 +29,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.browser.customtabs.CustomTabsService
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import org.decentraland.godotexplorer.NotificationReceiver
 import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
@@ -572,8 +577,245 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
+    // =============================================================================
+    // LOCAL NOTIFICATIONS
+    // =============================================================================
+
+    /**
+     * Request notification permission for Android 13+ (API 33+).
+     * For older versions, returns true immediately as no runtime permission is needed.
+     */
+    @UsedByGodot
+    fun requestNotificationPermission(): Boolean {
+        val act = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot request notification permission")
+            return false
+        }
+
+        // Android 13+ requires POST_NOTIFICATIONS runtime permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                act,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!hasPermission) {
+                ActivityCompat.requestPermissions(
+                    act,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+                Log.d(pluginName, "Requesting POST_NOTIFICATIONS permission")
+                return false
+            }
+            return true
+        }
+
+        // For Android 12 and below, permission is automatically granted
+        return true
+    }
+
+    /**
+     * Check if notification permission is granted.
+     */
+    @UsedByGodot
+    fun hasNotificationPermission(): Boolean {
+        val act = activity ?: return false
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                act,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Create a notification channel (required for Android 8.0+).
+     * This should be called before scheduling any notifications.
+     */
+    @UsedByGodot
+    fun createNotificationChannel(
+        channelId: String,
+        channelName: String,
+        channelDescription: String
+    ): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot create notification channel")
+            return false
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+                val channel = NotificationChannel(
+                    channelId,
+                    channelName,
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = channelDescription
+                    enableVibration(true)
+                    enableLights(true)
+                }
+
+                notificationManager.createNotificationChannel(channel)
+                Log.d(pluginName, "Notification channel created: $channelId")
+                return true
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error creating notification channel: ${e.message}")
+                return false
+            }
+        }
+
+        // For Android 7.1 and below, channels are not needed
+        return true
+    }
+
+    /**
+     * Schedule a local notification to be displayed after a delay.
+     *
+     * @param notificationId Unique ID for this notification (used for cancellation)
+     * @param title Notification title
+     * @param body Notification body text
+     * @param delaySeconds Delay in seconds before showing the notification
+     * @return true if scheduled successfully, false otherwise
+     */
+    @UsedByGodot
+    fun scheduleLocalNotification(
+        notificationId: String,
+        title: String,
+        body: String,
+        delaySeconds: Int
+    ): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot schedule notification")
+            return false
+        }
+
+        try {
+            // Convert string ID to integer hash for Android
+            val intId = notificationId.hashCode()
+
+            // Create intent for NotificationReceiver
+            val intent = Intent(ctx, NotificationReceiver::class.java).apply {
+                action = NotificationReceiver.NOTIFICATION_ACTION
+                putExtra(NotificationReceiver.EXTRA_NOTIFICATION_ID, intId)
+                putExtra(NotificationReceiver.EXTRA_TITLE, title)
+                putExtra(NotificationReceiver.EXTRA_BODY, body)
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                ctx,
+                intId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            // Schedule with AlarmManager
+            val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val triggerTimeMillis = System.currentTimeMillis() + (delaySeconds * 1000L)
+
+            // Use setExactAndAllowWhileIdle for precise timing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTimeMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTimeMillis,
+                    pendingIntent
+                )
+            }
+
+            Log.d(pluginName, "Local notification scheduled: id=$notificationId (hash=$intId), delay=${delaySeconds}s")
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error scheduling local notification: ${e.message}")
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    /**
+     * Cancel a scheduled local notification.
+     *
+     * @param notificationId The ID of the notification to cancel
+     * @return true if cancelled successfully, false otherwise
+     */
+    @UsedByGodot
+    fun cancelLocalNotification(notificationId: String): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot cancel notification")
+            return false
+        }
+
+        try {
+            val intId = notificationId.hashCode()
+
+            // Cancel the pending alarm
+            val intent = Intent(ctx, NotificationReceiver::class.java).apply {
+                action = NotificationReceiver.NOTIFICATION_ACTION
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                ctx,
+                intId,
+                intent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            if (pendingIntent != null) {
+                val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(pendingIntent)
+                pendingIntent.cancel()
+                Log.d(pluginName, "Local notification cancelled: id=$notificationId (hash=$intId)")
+            } else {
+                Log.w(pluginName, "No pending notification found with id=$notificationId")
+            }
+
+            // Also remove from notification tray if already displayed
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(intId)
+
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error cancelling local notification: ${e.message}")
+            return false
+        }
+    }
+
+    /**
+     * Cancel all scheduled local notifications.
+     */
+    @UsedByGodot
+    fun cancelAllLocalNotifications(): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot cancel all notifications")
+            return false
+        }
+
+        try {
+            // Clear all notifications from the notification tray
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancelAll()
+
+            Log.d(pluginName, "All local notifications cancelled")
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error cancelling all local notifications: ${e.message}")
+            return false
+        }
+    }
+
     companion object {
         private const val CALENDAR_PERMISSION_REQUEST_CODE = 1001
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
     }
 
 }
