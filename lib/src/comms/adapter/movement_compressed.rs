@@ -1,4 +1,5 @@
 #![allow(clippy::new_without_default)]
+#![allow(unused_parens)]
 use std::f32::consts::TAU;
 
 use godot::prelude::{Vector2i, Vector3};
