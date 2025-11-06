@@ -40,6 +40,37 @@ impl SceneId {
     pub const INVALID: SceneId = SceneId(-1);
 }
 
+/// V8/Deno heap memory statistics for a scene
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DenoMemoryStats {
+    pub total_heap_size_bytes: usize,
+    pub used_heap_size_bytes: usize,
+    pub heap_size_limit_bytes: usize,
+    pub external_memory_bytes: usize,
+}
+
+impl DenoMemoryStats {
+    /// Get total heap size in megabytes
+    pub fn total_heap_mb(&self) -> f64 {
+        self.total_heap_size_bytes as f64 / 1_048_576.0
+    }
+
+    /// Get used heap size in megabytes
+    pub fn used_heap_mb(&self) -> f64 {
+        self.used_heap_size_bytes as f64 / 1_048_576.0
+    }
+
+    /// Get heap limit in megabytes
+    pub fn heap_limit_mb(&self) -> f64 {
+        self.heap_size_limit_bytes as f64 / 1_048_576.0
+    }
+
+    /// Get external memory in megabytes
+    pub fn external_memory_mb(&self) -> f64 {
+        self.external_memory_bytes as f64 / 1_048_576.0
+    }
+}
+
 // data from renderer to scene
 #[derive(Debug)]
 pub enum RendererResponse {
@@ -56,10 +87,11 @@ pub enum SceneResponse {
     Error(SceneId, String),
     Ok {
         scene_id: SceneId,
-        dirty_crdt_state: DirtyCrdtState,
+        dirty_crdt_state: Box<DirtyCrdtState>,
         logs: Vec<SceneLogMessage>,
         delta: f32,
         rpc_calls: Vec<RpcCall>,
+        deno_memory_stats: Option<DenoMemoryStats>,
     },
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
     TakeSnapshot {

@@ -215,6 +215,9 @@ pub struct Scene {
     pub virtual_camera: Gd<DclVirtualCamera>,
 
     pub paused: bool,
+
+    // Deno/V8 memory statistics for this scene
+    pub deno_memory_stats: Option<crate::dcl::DenoMemoryStats>,
 }
 
 #[derive(Debug, Clone)]
@@ -313,6 +316,7 @@ impl Scene {
             dup_animator: HashMap::new(),
             paused: false,
             virtual_camera: Default::default(),
+            deno_memory_stats: None,
         }
     }
 
@@ -375,6 +379,7 @@ impl Scene {
             dup_animator: HashMap::new(),
             paused: false,
             virtual_camera: Default::default(),
+            deno_memory_stats: None,
         }
     }
 }

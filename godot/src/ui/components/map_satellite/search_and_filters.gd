@@ -14,6 +14,7 @@ var filtered_places: Array = []
 var is_closed: bool = true
 var ignore_button_signals := false
 var closed_position: Vector2
+var coords_regex := RegEx.new()
 
 @onready var searchbar: PanelContainer = %Searchbar
 @onready var archipelago_button: Button = %ArchipelagoButton
@@ -34,6 +35,7 @@ func _ready() -> void:
 	_on_size_changed()
 	_setup_ui()
 	async_load_initial_data()
+	coords_regex.compile(r"^-?\d+,-?\d+$")
 
 
 func _setup_ui():
@@ -173,6 +175,10 @@ func async_load_text_search(value: String) -> Array:
 		"https://places.decentraland.org/api/places?search=%s&offset=0&limit=50&order_by=most_active&order=desc&with_realms_detail=true"
 		% value
 	)
+
+	if coords_regex.search(value):
+		url = "https://places.decentraland.org/api/places?positions=%s" % value
+
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:

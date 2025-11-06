@@ -78,9 +78,11 @@ func _process(delta: float) -> void:
 			# Make the global virtual camera current
 			global_virtual_camera.make_current()
 
+			# When virtual camera is active we always show the primary avatar and hide outlines
 			var explorer = Global.get_explorer()
 			if is_instance_valid(explorer):
 				explorer.player.avatar.show()
+				explorer.player.outline_system.hide()
 
 		# Reset transition counter and store start transform
 		transition_time_counter = 0.0
@@ -132,9 +134,12 @@ func _process(delta: float) -> void:
 			global_virtual_camera.clear_current()
 			last_camera_reached = true
 			Global.scene_runner.raycast_use_cursor_position = false
+
+			# When coming back from virtual camera, we always show outline system and set the first/third person camera behaviour
 			var explorer = Global.get_explorer()
 			if is_instance_valid(explorer):
 				explorer.reset_cursor_position()
+				explorer.player.outline_system.show()
 				if explorer.player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
 					explorer.player.avatar.hide()
 	else:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3 uid="uid://b8837sg55qd8m"]
+[gd_scene load_steps=29 format=3 uid="uid://b8837sg55qd8m"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_limbe"]
@@ -6,7 +6,6 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_wh5hw"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_oea3m"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_38j5r"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_x7ql2"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_cpxdn"]
 [ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/like_solid.svg" id="6_h2ki8"]
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_ytgcx"]
@@ -23,15 +22,6 @@
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
 border_color = Color(0.988235, 0.988235, 0.988235, 1)
 corner_radius_top_left = 12
-corner_radius_bottom_left = 12
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bsiub"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(0.168627, 0.160784, 0.188235, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ak0ex"]
@@ -85,25 +75,6 @@ theme = ExtResource("1_gki2s")
 texture = ExtResource("2_7i6jj")
 expand_mode = 1
 stretch_mode = 6
-
-[node name="Button_Close" type="Button" parent="VBoxContainer/TextureRect_Image"]
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 1
-offset_left = 10.0
-offset_top = 10.0
-offset_right = 50.0
-offset_bottom = 50.0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme = ExtResource("5_38j5r")
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_bsiub")
-icon = ExtResource("5_x7ql2")
-icon_alignment = 1
-expand_icon = true
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
 layout_mode = 2
@@ -414,5 +385,4 @@ theme_override_fonts/font = ExtResource("10_yuhpx")
 theme_override_font_sizes/font_size = 13
 autowrap_mode = 2
 
-[connection signal="pressed" from="VBoxContainer/TextureRect_Image/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]

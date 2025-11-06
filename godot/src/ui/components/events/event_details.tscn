@@ -1,15 +1,14 @@
-[gd_scene load_steps=6 format=3 uid="uid://bic3gcms4bi8g"]
+[gd_scene load_steps=7 format=3 uid="uid://bic3gcms4bi8g"]
 
-[ext_resource type="Script" uid="uid://gdwd1y5re5v4" path="res://src/ui/components/events/event_details.gd" id="1_vapvi"]
-[ext_resource type="PackedScene" uid="uid://4luuuxo6tbcp" path="res://src/ui/components/events/event_details_portrait.tscn" id="2_vapvi"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="2_yptc8"]
-[ext_resource type="PackedScene" uid="uid://jel6s7s7w8h3" path="res://src/ui/components/events/event_details_landscape.tscn" id="3_vapvi"]
+[ext_resource type="Script" uid="uid://d22htbtk8w5kn" path="res://src/ui/components/panels/side_panel.gd" id="1_vapvi"]
+[ext_resource type="PackedScene" uid="uid://4luuuxo6tbcp" path="res://src/ui/components/events/event_details_portrait.tscn" id="2_q0ryf"]
+[ext_resource type="PackedScene" uid="uid://jel6s7s7w8h3" path="res://src/ui/components/events/event_details_landscape.tscn" id="3_tlmcm"]
+[ext_resource type="Script" uid="uid://njubmev0le2o" path="res://src/logic/metrics/event_details_screen_tracking_handler.gd" id="4_sxxyt"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="5_q0ryf"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsiqj"]
-bg_color = Color(0.988235, 0.988235, 0.988235, 1)
-border_color = Color(0.988235, 0.988235, 0.988235, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
+[sub_resource type="Resource" id="Resource_q0ryf"]
+script = ExtResource("4_sxxyt")
+metadata/_custom_type_script = "uid://njubmev0le2o"
 
 [node name="EventDetails" type="ColorRect"]
 anchors_preset = 15
@@ -19,18 +18,11 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
 script = ExtResource("1_vapvi")
+portrait_panel_resource = ExtResource("2_q0ryf")
+landscape_panel_resource = ExtResource("3_tlmcm")
+tracking_handler = SubResource("Resource_q0ryf")
 
-[node name="EventDetailsPortrait" parent="." instance=ExtResource("2_vapvi")]
-unique_name_in_owner = true
-layout_mode = 1
-offset_top = -626.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_dsiqj")
-
-[node name="EventDetailsLandscape" parent="." instance=ExtResource("3_vapvi")]
-unique_name_in_owner = true
-layout_mode = 1
-
-[node name="TextureProgressBar" parent="." instance=ExtResource("2_yptc8")]
+[node name="TextureProgressBar" parent="." instance=ExtResource("5_q0ryf")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

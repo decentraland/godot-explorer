@@ -3,8 +3,8 @@ extends Control
 
 var search_text: String = ""
 
-@onready var jump_in = %JumpIn
-@onready var event_details: EventDetailWrapper = %EventDetails
+@onready var jump_in: SidePanelWrapper = %JumpIn
+@onready var event_details: SidePanelWrapper = %EventDetails
 
 @onready var button_search_bar: Button = %Button_SearchBar
 @onready var line_edit_search_bar: LineEdit = %LineEdit_SearchBar
