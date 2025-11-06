@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=42 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
@@ -32,7 +32,6 @@
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://dd2w2ysk3akdj" path="res://src/ui/components/friends/friends_panel.tscn" id="21_cwgs4"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
-[ext_resource type="SpriteFrames" uid="uid://gq4877nacgyh" path="res://src/ui/components/friends/friends_animation.tres" id="22_ecwks"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
 [ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/components/profile/profile_container.tscn" id="25_c5h7v"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
@@ -42,10 +41,10 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_u4dfr"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ecwks"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_6q4se"]
 allow_unpress = true
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_t4gc2"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_kllev"]
 allow_unpress = true
 
 [node name="explorer" type="Node"]
@@ -356,64 +355,51 @@ unique_name_in_owner = true
 layout_mode = 1
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
-custom_minimum_size = Vector2(80, 0)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -100.0
-offset_top = 115.0
+offset_left = -80.0
+offset_top = 110.0
 offset_right = -20.0
-offset_bottom = 248.0
+offset_bottom = 234.0
 grow_horizontal = 0
-theme_override_constants/separation = 13
 
 [node name="HudButton_Notifications" parent="UI/SafeMarginContainerHUD/InteractableHUD/VBoxContainer" instance=ExtResource("13_notif_bell")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_ecwks")
+button_group = SubResource("ButtonGroup_6q4se")
 script = ExtResource("19_6q4se")
 sprite_frames_source = ExtResource("20_kllev")
 
 [node name="HudButton_Friends" parent="UI/SafeMarginContainerHUD/InteractableHUD/VBoxContainer" instance=ExtResource("13_notif_bell")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_t4gc2")
+button_group = SubResource("ButtonGroup_kllev")
 script = ExtResource("19_admxk")
-sprite_frames_source = ExtResource("22_ecwks")
 
-[node name="MarginContainer" type="MarginContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
+[node name="VBoxContainer_RightPanels" type="VBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1
-anchors_preset = 11
+anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -386.0
+offset_left = -485.0
+offset_top = 110.0
+offset_right = -85.0
+offset_bottom = 610.0
 grow_horizontal = 0
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 120
-theme_override_constants/margin_bottom = 16
-
-[node name="VBoxContainer_RightPanels" type="VBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer"]
-layout_mode = 2
 mouse_filter = 2
 
-[node name="NotificationsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer/VBoxContainer_RightPanels" instance=ExtResource("14_notif_panel")]
+[node name="NotificationsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/VBoxContainer_RightPanels" instance=ExtResource("14_notif_panel")]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(400, 500)
 layout_mode = 2
-size_flags_vertical = 3
 
-[node name="FriendsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer/VBoxContainer_RightPanels" instance=ExtResource("21_cwgs4")]
+[node name="FriendsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/VBoxContainer_RightPanels" instance=ExtResource("21_cwgs4")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-size_flags_vertical = 3
 
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1

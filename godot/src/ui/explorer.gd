@@ -35,8 +35,11 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var jump_in_popup = %JumpInPopup
 
 @onready var panel_profile: Panel = %Panel_Profile
-@onready var notification_bell_button: Button = %NotificationBellButton
+
+@onready var hud_button_notifications: Button = %HudButton_Notifications
+@onready var hud_button_friends: Button = %HudButton_Friends
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
+@onready var friends_panel: PanelContainer = %FriendsPanel
 
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
@@ -112,8 +115,12 @@ func _ready():
 	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	# Connect notification bell button
-	notification_bell_button.bell_clicked.connect(_on_notification_bell_clicked)
+	hud_button_notifications.bell_clicked.connect(_on_notification_bell_clicked)
 	notifications_panel.panel_closed.connect(_on_notifications_panel_closed)
+
+	# Connect friends button
+	hud_button_friends.friends_clicked.connect(_on_friends_clicked)
+	friends_panel.panel_closed.connect(_on_friends_panel_closed)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -679,11 +686,45 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 		panel_chat.exit_chat()
 
 
+func _on_friends_clicked() -> void:
+	# Toggle notification panel visibility
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+		hud_button_friends.set_panel_open(false)
+		# On desktop, grab focus back to enable camera controls
+		# On mobile, also capture mouse
+		Global.explorer_grab_focus()
+		if Global.is_mobile():
+			capture_mouse()
+	else:
+		friends_panel.show_panel()
+		hud_button_friends.set_panel_open(true)
+		if notifications_panel.visible:
+			notifications_panel.hide_panel()
+			hud_button_notifications.set_panel_open(false)
+		# Release focus to prevent camera rotation while panel is open
+		Global.explorer_release_focus()
+		if Global.is_mobile():
+			release_mouse()
+		# Close other panels if needed
+		if control_menu.visible:
+			control_menu.close()
+
+
+func _on_friends_panel_closed() -> void:
+	friends_panel.hide()
+	hud_button_friends.set_panel_open(false)
+	# Grab focus back to enable camera controls
+	Global.explorer_grab_focus()
+	if Global.is_mobile():
+		capture_mouse()
+
+
 func _on_notification_bell_clicked() -> void:
 	# Toggle notification panel visibility
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-		notification_bell_button.set_panel_open(false)
+		hud_button_notifications.set_panel_open(false)
 		# On desktop, grab focus back to enable camera controls
 		# On mobile, also capture mouse
 		Global.explorer_grab_focus()
@@ -691,7 +732,10 @@ func _on_notification_bell_clicked() -> void:
 			capture_mouse()
 	else:
 		notifications_panel.show_panel()
-		notification_bell_button.set_panel_open(true)
+		hud_button_notifications.set_panel_open(true)
+		if friends_panel.visible:
+			friends_panel.hide_panel()
+			hud_button_friends.set_panel_open(false)
 		# Release focus to prevent camera rotation while panel is open
 		Global.explorer_release_focus()
 		if Global.is_mobile():
@@ -703,7 +747,7 @@ func _on_notification_bell_clicked() -> void:
 
 func _on_notifications_panel_closed() -> void:
 	notifications_panel.hide()
-	notification_bell_button.set_panel_open(false)
+	hud_button_notifications.set_panel_open(false)
 	# Grab focus back to enable camera controls
 	Global.explorer_grab_focus()
 	if Global.is_mobile():

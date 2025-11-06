@@ -1,9 +1,10 @@
 extends BaseAnimatedButton
 
-signal bell_clicked
+signal friends_clicked
 
 
 func _get_unread_count() -> int:
+	#NEED TO SET FROM FRIENDS MANAGER
 	var notifications = NotificationsManager.get_notifications()
 	var count = 0
 	
@@ -15,14 +16,14 @@ func _get_unread_count() -> int:
 
 
 func _connect_update_signals() -> void:
-	# Connect to NotificationsManager signals
+	# NEED TO CONNECT FROM FRIENDS MANAGER
 	NotificationsManager.new_notifications.connect(_on_notifications_updated)
 	NotificationsManager.notifications_updated.connect(_on_notifications_updated)
 
 
 func _on_button_clicked() -> void:
-	bell_clicked.emit()
+	friends_clicked.emit()
 
 
 func _get_button_metric_name() -> String:
-	return "notification_bell"
+	return "friends_button"
