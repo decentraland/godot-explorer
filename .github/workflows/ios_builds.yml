@@ -14,23 +14,24 @@ jobs:
     name: Build iOS
     strategy:
       fail-fast: false
-    runs-on: macos-14
+    runs-on: warp-macos-14-arm64-6x
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.79
-          override: true
-          target: aarch64-apple-ios
+          toolchain: "1.90"
+          targets: aarch64-apple-ios
 
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
-
+      # CACHE IS DISABLED
+      # - name: Set up cache
+      #   uses: ./.github/actions/set-up-cache
+      #   with:
+      #     cache_name: ${{ github.job }}-new-ios-release
+          
       # Dependencies section
       - name: Install dependencies
         uses: ./.github/actions/install-deps

@@ -524,11 +524,7 @@ impl DclCli {
             .get_root()?
             .get_node_or_null("DclCli".into())?
             .try_cast::<Self>();
-        if let Ok(res) = res {
-            Some(res)
-        } else {
-            None
-        }
+        res.ok()
     }
 
     pub fn singleton() -> Gd<Self> {
