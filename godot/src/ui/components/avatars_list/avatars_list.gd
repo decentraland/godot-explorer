@@ -68,6 +68,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 	for avatar in avatars_to_add:
 		var avatar_item = Global.preload_assets.NEARBY_PLAYER_ITEM.instantiate()
 		v_box_container_nearby_players.add_child(avatar_item)
+		avatar_item.set_type(3)
 
 		if avatar is Avatar:
 			if not avatar.avatar_loaded.is_connected(avatar_item.async_set_data):

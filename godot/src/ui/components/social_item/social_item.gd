@@ -5,7 +5,16 @@ const UNMUTE = preload("res://assets/ui/audio_on.svg")
 const BLOCK = preload("res://assets/ui/block.svg")
 const UNBLOCK = preload("res://assets/ui/unblock.svg")
 
+@export var item_type: SocialType
+
+enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
+
 var avatar: DclAvatar = null
+
+@onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
+@onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
+@onready var h_box_container_request: HBoxContainer = %HBoxContainer_Request
+@onready var h_box_container_blocked: HBoxContainer = %HBoxContainer_Blocked
 
 @onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
 @onready var mic_enabled: MarginContainer = %MicEnabled
@@ -13,14 +22,15 @@ var avatar: DclAvatar = null
 @onready var hash_container: HBoxContainer = %Hash
 @onready var tag: Label = %Tag
 @onready var profile_picture: ProfilePicture = %ProfilePicture
-@onready var button_block_user: Button = %Button_BlockUser
-@onready var button_mute_user: Button = %Button_MuteUser
+#@onready var button_block_user: Button = %Button_BlockUser
+#@onready var button_mute_user: Button = %Button_MuteUser
 @onready var v_box_container_nickname: VBoxContainer = %VBoxContainer_Nickname
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 
 
 func _ready():
 	add_to_group("blacklist_ui_sync")
+	_update_elements_visibility()
 
 
 func async_set_data(avatar_param = null):
@@ -77,23 +87,24 @@ func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 
 
 func _update_buttons() -> void:
-	var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
-	button_block_user.set_pressed_no_signal(is_blocked)
-	if is_blocked:
-		button_block_user.icon = null
-		button_block_user.text = "UNBLOCK"
-		button_mute_user.hide()
-	else:
-		button_block_user.icon = BLOCK
-		button_block_user.text = ""
-		button_mute_user.show()
-
-	var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
-	button_mute_user.set_pressed_no_signal(is_muted)
-	if is_muted:
-		button_mute_user.icon = MUTE
-	else:
-		button_mute_user.icon = UNMUTE
+	pass
+	#var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
+	#button_block_user.set_pressed_no_signal(is_blocked)
+	#if is_blocked:
+		#button_block_user.icon = null
+		#button_block_user.text = "UNBLOCK"
+		#button_mute_user.hide()
+	#else:
+		#button_block_user.icon = BLOCK
+		#button_block_user.text = ""
+		#button_mute_user.show()
+#
+	#var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
+	#button_mute_user.set_pressed_no_signal(is_muted)
+	#if is_muted:
+		#button_mute_user.icon = MUTE
+	#else:
+		#button_mute_user.icon = UNMUTE
 
 
 func _on_button_block_user_pressed() -> void:
@@ -129,3 +140,28 @@ func _on_panel_nearby_player_item_gui_input(event: InputEvent) -> void:
 
 func _on_button_report_pressed() -> void:
 	pass  # Replace with function body.
+
+
+func _update_elements_visibility() -> void:
+	_hide_all_buttons()
+	match item_type:
+		SocialType.NEARBY:
+			h_box_container_nearby.show()
+		SocialType.ONLINE:
+			h_box_container_online.show()
+		SocialType.REQUEST:
+			h_box_container_blocked.show()
+		SocialType.BLOCKED:
+			h_box_container_request.show()
+		_:
+			pass
+
+func _hide_all_buttons() -> void:
+	h_box_container_online.hide()
+	h_box_container_nearby.hide()
+	h_box_container_request.hide()
+	h_box_container_blocked.hide()
+	
+func set_type(type:SocialType) -> void:
+	item_type = type
+	_update_elements_visibility()

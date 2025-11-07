@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://dd2w2ysk3akdj"]
+[gd_scene load_steps=7 format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
+[ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="2_l4o08"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
 bg_color = Color(0, 0, 0, 0.8)
@@ -8,6 +9,8 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_v2dsn"]
 
 [sub_resource type="Gradient" id="Gradient_fade"]
 colors = PackedColorArray(0.086275, 0.0823529, 0.0941176, 0, 0.086275, 0.0823529, 0.0941176, 1)
@@ -19,103 +22,126 @@ fill_to = Vector2(0.5, 1)
 
 [node name="FriendsPanel" type="PanelContainer"]
 clip_contents = true
-custom_minimum_size = Vector2(370, 500)
+custom_minimum_size = Vector2(450, 500)
 offset_right = 370.0
 offset_bottom = 500.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
 script = ExtResource("1_v2dsn")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MarginContainer_Header" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 0
+
+[node name="Header" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Header"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Header/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Friends" type="Button" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "FRIENDS"
+flat = true
+
+[node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
+[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Header/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Nearby" type="Button" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "NEARBY"
+flat = true
+
+[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
+[node name="VBoxContainer_BlockedTab" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Header/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Blocked" type="Button" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "BLOCKED"
+flat = true
+
+[node name="ColorRect_Blocked" type="ColorRect" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 8
 
-[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
-visible = false
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-alignment = 1
-
-[node name="Label_Title" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Header/VBoxContainer"]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/normal_font_size = 16
-bbcode_enabled = true
-text = "[b][center]FRIENDS[/center][/b]"
-fit_content = true
-scroll_active = false
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-alignment = 1
-
-[node name="Label_Title" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Header/VBoxContainer2"]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/normal_font_size = 16
-bbcode_enabled = true
-text = "[b][center]NEARBY[/center][/b]"
-fit_content = true
-scroll_active = false
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="VBoxContainer3" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-alignment = 1
-
-[node name="Label_Title" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Header/VBoxContainer3"]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/normal_font_size = 16
-bbcode_enabled = true
-text = "[b][center]BLOCKED[/center][/b]"
-fit_content = true
-scroll_active = false
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
-vertical_scroll_mode = 2
 
-[node name="NotificationsList" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+[node name="VBoxContainer_Content" type="VBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/ScrollContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 6
 
-[node name="FadeOverlayContainer" type="Control" parent="MarginContainer/VBoxContainer"]
+[node name="AvatarsList" parent="VBoxContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer_Content" instance=ExtResource("2_l4o08")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="FadeOverlayContainer" type="Control" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
 mouse_filter = 2
 
-[node name="FadeOverlay" type="TextureRect" parent="MarginContainer/VBoxContainer/FadeOverlayContainer"]
+[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/FadeOverlayContainer"]
 unique_name_in_owner = true
 layout_mode = 0
 offset_top = -64.0
@@ -125,8 +151,9 @@ grow_vertical = 0
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_fade")
 
-[node name="LabelEmptyState" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
@@ -136,3 +163,7 @@ is not implemented yet"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
+
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]
