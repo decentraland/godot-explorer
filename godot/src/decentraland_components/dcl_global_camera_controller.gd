@@ -2,13 +2,12 @@ extends Node
 
 const DEFAULT_TRANSITION_TIME = 0.35  # in seconds
 
-var global_virtual_camera_transform: Transform3D
 var last_virtual_camera_entity_node = null
 var last_camera_reached = true
 var transition_start_transform: Transform3D
 var transition_time_counter: float = 0.0
 
-@onready var global_virtual_camera = (
+@onready var global_virtual_camera : Camera3D = (
 	load("res://src/helpers_components/persistant_camera.tscn").instantiate()
 )
 
@@ -17,7 +16,16 @@ func _ready():
 	add_child(global_virtual_camera)
 	global_virtual_camera.clear_current()
 	global_virtual_camera.cull_mask = 0x7fff
+	global_virtual_camera.need_reparent.connect(self.on_global_virtual_camera_need_reparent)
 
+func on_global_virtual_camera_need_reparent(node_3d: Node3D = null) -> void:
+	var new_parent = self if node_3d == null else node_3d
+	if global_virtual_camera.is_inside_tree():
+		global_virtual_camera.reparent(new_parent)
+	else:
+		new_parent.add_child(global_virtual_camera)
+		
+	print_stack()
 
 # in the process fn, this node has the responsibility of transitioning the camera between player one and virtual one
 #  virtuals can change between scenes or in the same scene, computed as desired_target
@@ -30,6 +38,8 @@ func _process(delta: float) -> void:
 	var look_at_entity_node: Node3D = null
 	var transition_speed: float = 0.0
 	var transition_time: float = 0.0
+	
+	assert(is_instance_valid(global_virtual_camera))
 
 	if is_instance_valid(scene_virtual_camera) and scene_virtual_camera.entity_id > 0:
 		desired_target = Global.scene_runner.get_scene_entity_node_or_null_3d(
@@ -68,7 +78,7 @@ func _process(delta: float) -> void:
 		if desired_target == null:
 			# Going back to player camera - reparent to self conserving global transform
 			if global_virtual_camera.get_parent() != self:
-				global_virtual_camera.reparent(self)
+				on_global_virtual_camera_need_reparent()
 		else:
 			# Switching to virtual camera - start from current viewport camera position
 			var current_camera = get_viewport().get_camera_3d()
@@ -153,7 +163,7 @@ func _process(delta: float) -> void:
 		# once is next to the node, reparent the global_virtual_camera
 		if t >= 1.0:
 			if global_virtual_camera.get_parent() != desired_target:
-				global_virtual_camera.reparent(desired_target)
+				on_global_virtual_camera_need_reparent(desired_target)
 				global_virtual_camera.transform = Transform3D.IDENTITY
 				last_camera_reached = true
 

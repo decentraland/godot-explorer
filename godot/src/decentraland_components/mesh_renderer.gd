@@ -1,7 +1,7 @@
 class_name DclMeshRenderer
 extends MeshInstance3D
 
-enum MeshRendererPrimitiveType { NONE, MRPT_BOX, MRPT_CYLINDER, MRPT_SPHERE, MRPT_PLANE }
+enum MeshRendererPrimitiveType {NONE, MRPT_BOX, MRPT_CYLINDER, MRPT_SPHERE, MRPT_PLANE}
 
 var current_type: MeshRendererPrimitiveType = MeshRendererPrimitiveType.NONE
 
@@ -19,6 +19,7 @@ func _ready():
 
 
 func set_box(uvs):
+	print("Setting box with uvs ", uvs)
 	if current_type != MeshRendererPrimitiveType.MRPT_BOX:
 		current_type = MeshRendererPrimitiveType.MRPT_BOX
 		self.mesh = ArrayMesh.new()
@@ -34,6 +35,7 @@ func set_box(uvs):
 
 
 func set_plane(uvs: Array):
+	# print("Setting plane with uvs ", uvs)
 	if current_type != MeshRendererPrimitiveType.MRPT_PLANE:
 		current_type = MeshRendererPrimitiveType.MRPT_PLANE
 		self.mesh = ArrayMesh.new()
@@ -324,15 +326,15 @@ static func build_cylinder_arrays(radius_top: float, radius_bottom: float) -> Ar
 	uvs.resize(2 * num_vertices_plus_one + (num_vertices + 1) + (num_vertices + 1))
 
 	var slope: float = atan((radius_bottom - radius_top) / length)
-	var slope_sin: float = -sin(slope)
+	var slope_sin: float = - sin(slope)
 	var slope_cos = cos(slope)
 
 	for i in range(num_vertices):
 		var angle: float = 2 * PI * i / num_vertices
-		var angle_sin: float = -sin(angle)
+		var angle_sin: float = - sin(angle)
 		var angle_cos: float = cos(angle)
 		var angle_half: float = 2 * PI * (i + 0.5) / num_vertices
-		var angle_half_sin: float = -sin(angle_half)
+		var angle_half_sin: float = - sin(angle_half)
 		var angle_half_cos: float = cos(angle_half)
 
 		vertices[i] = Vector3(radius_top * angle_cos, length, radius_top * angle_sin) + offset_pos
@@ -368,7 +370,7 @@ static func build_cylinder_arrays(radius_top: float, radius_bottom: float) -> Ar
 	var covert_top_index_end: int = 2 * num_vertices_plus_one + num_vertices
 	for i in range(num_vertices):
 		var angle: float = 2 * PI * i / num_vertices
-		var angle_sin: float = -sin(angle)
+		var angle_sin: float = - sin(angle)
 		var angle_cos: float = cos(angle)
 
 		vertices[cover_top_index_start + i] = (
@@ -385,7 +387,7 @@ static func build_cylinder_arrays(radius_top: float, radius_bottom: float) -> Ar
 	var cover_bottom_index_end: int = cover_bottom_index_start + num_vertices
 	for i in range(num_vertices):
 		var angle: float = 2 * PI * i / num_vertices
-		var angle_sin: float = -sin(angle)
+		var angle_sin: float = - sin(angle)
 		var angle_cos: float = cos(angle)
 
 		vertices[cover_bottom_index_start + i] = (

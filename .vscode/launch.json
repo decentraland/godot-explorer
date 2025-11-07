@@ -130,24 +130,24 @@
     },
     {
       "name": "(MacOS) Launch",
-      "type": "cppdbg",
+      "type": "lldb",
       "request": "launch",
-      "targetArchitecture": "arm64",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot"],
-      "stopAtEntry": false,
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "--preview",
+        "--location",
+        "79,-30",
+        "--skip-lobby",
+        "--force-mobile"
+      ],
       "cwd": "${workspaceRoot}/godot",
-      "environment": [],
-      "externalConsole": true,
-      "preLaunchTask": "Build GDExtension Lib",
-      "MIMode": "lldb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
+      "env": {
+        "RUST_LOG": "dclgodot::scene_runner::components::material=debug"
+      },
+      "terminal": "integrated",
+      "preLaunchTask": "Build GDExtension Lib"
     }
   ]
 }

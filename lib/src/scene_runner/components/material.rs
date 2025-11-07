@@ -31,9 +31,18 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
 
     if let Some(material_dirty) = dirty_lww_components.get(&SceneComponentId::MATERIAL) {
+        tracing::debug!(
+            "Processing {} dirty material entities",
+            material_dirty.len()
+        );
         for entity in material_dirty {
+            tracing::debug!("Processing material update for entity {:?}", entity);
             let new_value = material_component.get(entity);
             if new_value.is_none() {
+                tracing::debug!(
+                    "Entity {:?} has no material component value, skipping",
+                    entity
+                );
                 continue;
             }
 
@@ -47,15 +56,26 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 None
             };
 
+            tracing::debug!(
+                "Entity {:?} material parsed: {:?}",
+                entity,
+                dcl_material.as_ref().map(|m| match m {
+                    DclMaterial::Unlit(_) => "Unlit".to_string(),
+                    DclMaterial::Pbr(pbr) => format!("PBR({:?})", pbr),
+                })
+            );
+
             let (godot_entity_node, node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             if let Some(dcl_material) = dcl_material {
                 let previous_dcl_material = godot_entity_node.material.as_ref();
                 if let Some(previous_dcl_material) = previous_dcl_material {
                     if previous_dcl_material.eq(&dcl_material) {
+                        tracing::debug!("Entity {:?} material unchanged, skipping", entity);
                         continue;
                     }
                 }
+                tracing::debug!("Entity {:?} has new material, updating", entity);
 
                 let existing_material = if let Some(material_item) = scene.materials.get(entity) {
                     let material_item = material_item.weak_ref.call("get_ref", &[]);
@@ -69,9 +89,15 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     None
                 };
 
-                if existing_material.is_none() {
-                    for tex in dcl_material.get_textures().into_iter().flatten() {
+                if let Some(value) = existing_material.as_ref() {
+                    scene.materials.get_mut(entity).unwrap().waiting_textures = true;
+                } else {
+                    let textures: Vec<_> =
+                        dcl_material.get_textures().into_iter().flatten().collect();
+                    tracing::debug!("Entity {:?} requesting {} textures", entity, textures.len());
+                    for tex in textures {
                         if let DclSourceTex::Texture(hash) = &tex.source {
+                            tracing::debug!("Entity {:?} fetching texture hash: {}", entity, hash);
                             content_provider.call_deferred(
                                 "fetch_texture_by_hash".into(),
                                 &[
@@ -87,6 +113,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 }
 
                 let mut godot_material = if let Some(material) = existing_material {
+                    tracing::debug!("Entity {:?} using existing Godot material", entity);
                     material.to::<Gd<StandardMaterial3D>>()
                 } else {
                     let godot_material = StandardMaterial3D::new_gd();
@@ -102,6 +129,12 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             }
                         }
                     };
+
+                    tracing::debug!(
+                        "Entity {:?} creating new Godot material, waiting_textures: {}",
+                        entity,
+                        waiting_textures
+                    );
 
                     scene.materials.insert(
                         *entity,
@@ -119,6 +152,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 match &dcl_material {
                     DclMaterial::Unlit(unlit) => {
+                        tracing::debug!("Entity {:?} applying Unlit material properties", entity);
                         godot_material.set_metallic(0.0);
                         godot_material.set_roughness(0.0);
                         godot_material.set_specular(0.0);
@@ -129,6 +163,8 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             .set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
                     }
                     DclMaterial::Pbr(pbr) => {
+                        tracing::debug!("Entity {:?} applying PBR material properties (metallic: {}, roughness: {}, specular: {})",
+                            entity, pbr.metallic.0, pbr.roughness.0, pbr.specular_intensity.0);
                         godot_material.set_metallic(pbr.metallic.0);
                         godot_material.set_roughness(pbr.roughness.0);
                         godot_material.set_specular(pbr.specular_intensity.0);
@@ -152,9 +188,16 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mesh_renderer =
                     node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
                 if let Some(mut mesh_renderer) = mesh_renderer {
+                    tracing::debug!("Entity {:?} applying material to MeshRenderer", entity);
                     mesh_renderer.set_surface_override_material(0, godot_material.upcast());
+                } else {
+                    tracing::debug!("Entity {:?} has no MeshRenderer node", entity);
                 }
             } else {
+                tracing::debug!(
+                    "Entity {:?} removing material (dcl_material is None)",
+                    entity
+                );
                 let mesh_renderer =
                     node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
 
@@ -172,6 +215,15 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     }
 
     if scene.dirty_materials {
+        tracing::debug!(
+            "Processing dirty materials, total materials tracked: {}, with pending textures {}",
+            scene.materials.len(),
+            scene
+                .materials
+                .iter()
+                .filter(|v| v.1.waiting_textures)
+                .count()
+        );
         let mut keep_dirty = false;
         let mut dead_materials = HashSet::with_capacity(scene.materials.capacity());
         let mut no_more_waiting_materials = HashSet::new();
@@ -179,8 +231,13 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         for (entity, item) in scene.materials.iter() {
             let dcl_material = item.dcl_mat.clone();
             if item.waiting_textures {
+                tracing::debug!("Entity {:?} is waiting for textures", entity);
                 let material_item = item.weak_ref.call("get_ref", &[]);
                 if material_item.is_nil() {
+                    tracing::debug!(
+                        "Entity {:?} material weak reference is nil, marking as dead",
+                        entity
+                    );
                     // item.alive = false;
                     dead_materials.insert(*entity);
                     continue;
@@ -191,6 +248,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 match dcl_material {
                     DclMaterial::Unlit(unlit_material) => {
+                        tracing::debug!("Entity {:?} checking Unlit material texture", entity);
                         ready &= check_texture(
                             godot::engine::base_material_3d::TextureParam::ALBEDO,
                             &unlit_material.texture,
@@ -200,6 +258,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         );
                     }
                     DclMaterial::Pbr(pbr) => {
+                        tracing::debug!("Entity {:?} checking PBR material textures", entity);
                         ready &= check_texture(
                             godot::engine::base_material_3d::TextureParam::ALBEDO,
                             &pbr.texture,
@@ -231,14 +290,25 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 }
 
                 if !ready {
+                    tracing::debug!(
+                        "Entity {:?} textures not ready yet, keeping dirty state",
+                        entity
+                    );
                     keep_dirty = true;
                 } else {
+                    tracing::debug!("Entity {:?} all textures loaded successfully", entity);
                     // item.waiting_textures = false;
                     no_more_waiting_materials.insert(*entity);
                 }
             }
         }
 
+        if !no_more_waiting_materials.is_empty() {
+            tracing::debug!(
+                "Marking {} materials as no longer waiting for textures",
+                no_more_waiting_materials.len()
+            );
+        }
         for materials in no_more_waiting_materials {
             scene
                 .materials
@@ -247,8 +317,15 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .waiting_textures = false;
         }
 
+        if !dead_materials.is_empty() {
+            tracing::debug!("Removing {} dead materials", dead_materials.len());
+        }
         scene.materials.retain(|k, _| !dead_materials.contains(k));
         scene.dirty_materials = keep_dirty;
+        tracing::debug!(
+            "Dirty materials processing complete, keep_dirty: {}",
+            keep_dirty
+        );
     }
 }
 
@@ -260,6 +337,7 @@ fn check_texture(
     _scene: &Scene,
 ) -> bool {
     if dcl_texture.is_none() {
+        tracing::debug!("No texture specified for param {:?}", param);
         return true;
     }
 
@@ -267,35 +345,74 @@ fn check_texture(
 
     match &dcl_texture.source {
         DclSourceTex::Texture(content_hash) => {
+            tracing::debug!(
+                "Checking texture param {:?} with hash: {}",
+                param,
+                content_hash
+            );
             if content_provider.is_resource_from_hash_loaded(GString::from(content_hash)) {
                 if let Some(resource) =
                     content_provider.get_texture_from_hash(GString::from(content_hash))
                 {
+                    tracing::debug!(
+                        "Texture {} loaded, applying to material param {:?}",
+                        content_hash,
+                        param
+                    );
                     material.set_texture(param, resource.upcast());
+                } else {
+                    tracing::debug!(
+                        "Texture {} marked as loaded but get_texture_from_hash returned None",
+                        content_hash
+                    );
                 }
                 return true;
             } else {
+                tracing::debug!("Texture {} not yet loaded, waiting", content_hash);
                 return false;
             }
         }
-        DclSourceTex::AvatarTexture(_user_id) => {
+        DclSourceTex::AvatarTexture(user_id) => {
+            tracing::debug!(
+                "Avatar texture requested for param {:?}, user_id: {:?} (not yet implemented)",
+                param,
+                user_id
+            );
             // TODO: implement load avatar texture
         }
 
         #[cfg(not(feature = "use_ffmpeg"))]
-        DclSourceTex::VideoTexture(_video_entity_id) => {
+        DclSourceTex::VideoTexture(video_entity_id) => {
+            tracing::debug!(
+                "Video texture requested for param {:?}, entity: {:?} (ffmpeg not enabled)",
+                param,
+                video_entity_id
+            );
             // TODO: set a texture with a `without-video build` message
         }
         #[cfg(feature = "use_ffmpeg")]
         DclSourceTex::VideoTexture(video_entity_id) => {
+            tracing::debug!(
+                "Video texture requested for param {:?}, entity: {:?}",
+                param,
+                video_entity_id
+            );
             if let Some(node) = _scene
                 .godot_dcl_scene
                 .get_godot_entity_node(video_entity_id)
             {
                 if let Some(data) = &node.video_player_data {
+                    tracing::debug!(
+                        "Video texture found for entity {:?}, applying to material",
+                        video_entity_id
+                    );
                     material.set_texture(param, data.video_sink.texture.clone().upcast());
                     return true;
+                } else {
+                    tracing::debug!("Entity {:?} has no video_player_data", video_entity_id);
                 }
+            } else {
+                tracing::debug!("Entity {:?} not found in scene", video_entity_id);
             }
             return false;
         }

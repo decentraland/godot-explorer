@@ -10,13 +10,13 @@ use super::{
     SceneEntityId,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RoundedFloat(pub f32);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RoundedColor3(pub Color3);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RoundedColor4(pub Color4);
 
 impl From<RoundedFloat> for f32 {
@@ -92,7 +92,7 @@ impl Eq for RoundedColor3 {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq)]
 pub enum DclSourceTex {
     Texture(String),
     AvatarTexture(String),
@@ -105,7 +105,7 @@ impl Default for DclSourceTex {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq, Default)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Default)]
 pub struct DclTexture {
     pub wrap_mode: TextureWrapMode,
     pub filter_mode: TextureFilterMode,
@@ -180,6 +180,11 @@ impl DclTexture {
     fn with_hash(&mut self, content_mapping_files: &ContentMappingAndUrlRef) {
         if let DclSourceTex::Texture(file_path) = &mut self.source {
             let content_hash = content_mapping_files.get_hash(file_path.as_str());
+            tracing::debug!(
+                "converting {} to {}",
+                file_path,
+                content_hash.cloned().unwrap_or_default()
+            );
 
             if content_hash.is_none() {
                 return;
@@ -213,7 +218,7 @@ pub struct DclUnlitMaterial {
     pub diffuse_color: RoundedColor4,
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq)]
 pub struct DclPbrMaterial {
     pub texture: Option<DclTexture>,
     pub alpha_test: RoundedFloat,
