@@ -99,7 +99,7 @@ fn parse_tag(bytes: &[u8]) -> Option<(Tag<'_>, usize)> {
 }
 
 /// Parses a color tag in various formats: <color=value>, <color="value">, or <color = value>
-fn parse_color_tag(bytes: &[u8]) -> Option<(Tag, usize)> {
+fn parse_color_tag(bytes: &[u8]) -> Option<(Tag<'_>, usize)> {
     if bytes.len() < 9 || &bytes[0..6] != b"<color" {
         return None;
     }
