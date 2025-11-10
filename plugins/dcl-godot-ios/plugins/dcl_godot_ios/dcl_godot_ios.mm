@@ -1,4 +1,5 @@
 #include "dcl_godot_ios.h"
+#include "NotificationDatabase.h"
 #include "core/version.h"
 #import <SafariServices/SafariServices.h>
 #import <AuthenticationServices/AuthenticationServices.h>
@@ -141,13 +142,29 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("share_text", "text"), &DclGodotiOS::share_text);
     ClassDB::bind_method(D_METHOD("share_text_with_image", "text", "image"), &DclGodotiOS::share_text_with_image);
 
-    // Local notifications
+    // Local notifications - Phase 1
     ClassDB::bind_method(D_METHOD("request_notification_permission"), &DclGodotiOS::request_notification_permission);
     ClassDB::bind_method(D_METHOD("has_notification_permission"), &DclGodotiOS::has_notification_permission);
     ClassDB::bind_method(D_METHOD("schedule_local_notification", "notification_id", "title", "body", "delay_seconds"), &DclGodotiOS::schedule_local_notification);
     ClassDB::bind_method(D_METHOD("cancel_local_notification", "notification_id"), &DclGodotiOS::cancel_local_notification);
     ClassDB::bind_method(D_METHOD("cancel_all_local_notifications"), &DclGodotiOS::cancel_all_local_notifications);
     ClassDB::bind_method(D_METHOD("clear_badge_number"), &DclGodotiOS::clear_badge_number);
+
+    // Database API - Phase 3
+    ClassDB::bind_method(D_METHOD("db_insert_notification", "id", "title", "body", "trigger_timestamp", "is_scheduled", "data"), &DclGodotiOS::db_insert_notification);
+    ClassDB::bind_method(D_METHOD("db_update_notification", "id", "updates"), &DclGodotiOS::db_update_notification);
+    ClassDB::bind_method(D_METHOD("db_delete_notification", "id"), &DclGodotiOS::db_delete_notification);
+    ClassDB::bind_method(D_METHOD("db_query_notifications", "where_clause", "order_by", "limit"), &DclGodotiOS::db_query_notifications);
+    ClassDB::bind_method(D_METHOD("db_count_notifications", "where_clause"), &DclGodotiOS::db_count_notifications);
+    ClassDB::bind_method(D_METHOD("db_clear_expired", "current_timestamp"), &DclGodotiOS::db_clear_expired);
+    ClassDB::bind_method(D_METHOD("db_mark_scheduled", "id", "is_scheduled"), &DclGodotiOS::db_mark_scheduled);
+    ClassDB::bind_method(D_METHOD("db_get_notification", "id"), &DclGodotiOS::db_get_notification);
+    ClassDB::bind_method(D_METHOD("db_clear_all"), &DclGodotiOS::db_clear_all);
+
+    // OS Notification API - Phase 3
+    ClassDB::bind_method(D_METHOD("os_schedule_notification", "notification_id", "title", "body", "delay_seconds"), &DclGodotiOS::os_schedule_notification);
+    ClassDB::bind_method(D_METHOD("os_cancel_notification", "notification_id"), &DclGodotiOS::os_cancel_notification);
+    ClassDB::bind_method(D_METHOD("os_get_scheduled_ids"), &DclGodotiOS::os_get_scheduled_ids);
 }
 
 void DclGodotiOS::print_version() {
@@ -659,6 +676,252 @@ void DclGodotiOS::clear_badge_number() {
     #endif
 }
 
+// =============================================================================
+// DATABASE API - Unified notification queue management (Phase 3)
+// =============================================================================
+
+bool DclGodotiOS::db_insert_notification(String id, String title, String body, int64_t trigger_timestamp, int is_scheduled, String data) {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return false;
+    }
+
+    NSString *ns_id = [NSString stringWithUTF8String:id.utf8().get_data()];
+    NSString *ns_title = [NSString stringWithUTF8String:title.utf8().get_data()];
+    NSString *ns_body = [NSString stringWithUTF8String:body.utf8().get_data()];
+    NSString *ns_data = data.is_empty() ? nil : [NSString stringWithUTF8String:data.utf8().get_data()];
+
+    return [notificationDatabase insertNotificationWithId:ns_id
+                                                    title:ns_title
+                                                     body:ns_body
+                                          triggerTimestamp:trigger_timestamp
+                                              isScheduled:is_scheduled
+                                                     data:ns_data];
+    #else
+    return false;
+    #endif
+}
+
+bool DclGodotiOS::db_update_notification(String id, Dictionary updates) {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return false;
+    }
+
+    NSString *ns_id = [NSString stringWithUTF8String:id.utf8().get_data()];
+
+    // Convert Godot Dictionary to NSDictionary
+    NSMutableDictionary *ns_updates = [NSMutableDictionary dictionary];
+    Array keys = updates.keys();
+    for (int i = 0; i < keys.size(); i++) {
+        String key = keys[i];
+        Variant value = updates[key];
+
+        NSString *ns_key = [NSString stringWithUTF8String:key.utf8().get_data()];
+
+        if (value.get_type() == Variant::STRING) {
+            ns_updates[ns_key] = [NSString stringWithUTF8String:String(value).utf8().get_data()];
+        } else if (value.get_type() == Variant::INT) {
+            ns_updates[ns_key] = @((long long)value);
+        }
+    }
+
+    return [notificationDatabase updateNotificationWithId:ns_id updates:ns_updates];
+    #else
+    return false;
+    #endif
+}
+
+bool DclGodotiOS::db_delete_notification(String id) {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return false;
+    }
+
+    NSString *ns_id = [NSString stringWithUTF8String:id.utf8().get_data()];
+    return [notificationDatabase deleteNotificationWithId:ns_id];
+    #else
+    return false;
+    #endif
+}
+
+TypedArray<Dictionary> DclGodotiOS::db_query_notifications(String where_clause, String order_by, int limit) {
+    TypedArray<Dictionary> result;
+
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return result;
+    }
+
+    NSString *ns_where = where_clause.is_empty() ? @"" : [NSString stringWithUTF8String:where_clause.utf8().get_data()];
+    NSString *ns_order = order_by.is_empty() ? @"" : [NSString stringWithUTF8String:order_by.utf8().get_data()];
+
+    NSArray<NSDictionary *> *ns_results = [notificationDatabase queryNotificationsWithWhere:ns_where
+                                                                                    orderBy:ns_order
+                                                                                      limit:limit];
+
+    // Convert NSArray to Godot TypedArray
+    for (NSDictionary *ns_dict in ns_results) {
+        Dictionary dict;
+
+        // Convert NSDictionary to Godot Dictionary
+        for (NSString *key in ns_dict.allKeys) {
+            NSObject *objc_value = ns_dict[key];
+            String str_key = String([key UTF8String]);
+
+            if ([objc_value isKindOfClass:[NSString class]]) {
+                dict[str_key] = String([(NSString *)objc_value UTF8String]);
+            } else if ([objc_value isKindOfClass:[NSNumber class]]) {
+                NSNumber *num = (NSNumber *)objc_value;
+                // Check if it's a long long or int
+                if (strcmp([num objCType], @encode(long long)) == 0) {
+                    dict[str_key] = (int64_t)[num longLongValue];
+                } else {
+                    dict[str_key] = [num intValue];
+                }
+            }
+        }
+
+        result.append(dict);
+    }
+    #endif
+
+    return result;
+}
+
+int DclGodotiOS::db_count_notifications(String where_clause) {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return 0;
+    }
+
+    NSString *ns_where = where_clause.is_empty() ? @"" : [NSString stringWithUTF8String:where_clause.utf8().get_data()];
+    return [notificationDatabase countNotificationsWithWhere:ns_where];
+    #else
+    return 0;
+    #endif
+}
+
+int DclGodotiOS::db_clear_expired(int64_t current_timestamp) {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return 0;
+    }
+
+    return [notificationDatabase clearExpiredWithTimestamp:current_timestamp];
+    #else
+    return 0;
+    #endif
+}
+
+bool DclGodotiOS::db_mark_scheduled(String id, bool is_scheduled) {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return false;
+    }
+
+    NSString *ns_id = [NSString stringWithUTF8String:id.utf8().get_data()];
+    return [notificationDatabase markScheduledWithId:ns_id isScheduled:is_scheduled];
+    #else
+    return false;
+    #endif
+}
+
+Dictionary DclGodotiOS::db_get_notification(String id) {
+    Dictionary result;
+
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return result;
+    }
+
+    NSString *ns_id = [NSString stringWithUTF8String:id.utf8().get_data()];
+    NSDictionary *ns_dict = [notificationDatabase getNotificationWithId:ns_id];
+
+    // Convert NSDictionary to Godot Dictionary
+    for (NSString *key in ns_dict.allKeys) {
+        NSObject *objc_value = ns_dict[key];
+        String str_key = String([key UTF8String]);
+
+        if ([objc_value isKindOfClass:[NSString class]]) {
+            result[str_key] = String([(NSString *)objc_value UTF8String]);
+        } else if ([objc_value isKindOfClass:[NSNumber class]]) {
+            NSNumber *num = (NSNumber *)objc_value;
+            if (strcmp([num objCType], @encode(long long)) == 0) {
+                result[str_key] = (int64_t)[num longLongValue];
+            } else {
+                result[str_key] = [num intValue];
+            }
+        }
+    }
+    #endif
+
+    return result;
+}
+
+int DclGodotiOS::db_clear_all() {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return 0;
+    }
+
+    return [notificationDatabase clearAll];
+    #else
+    return 0;
+    #endif
+}
+
+// =============================================================================
+// OS NOTIFICATION API - Renamed for clarity (Phase 3)
+// =============================================================================
+
+bool DclGodotiOS::os_schedule_notification(String notification_id, String title, String body, int delay_seconds) {
+    // This is the same as the existing schedule_local_notification
+    return schedule_local_notification(notification_id, title, body, delay_seconds);
+}
+
+bool DclGodotiOS::os_cancel_notification(String notification_id) {
+    // This is the same as the existing cancel_local_notification
+    return cancel_local_notification(notification_id);
+}
+
+PackedStringArray DclGodotiOS::os_get_scheduled_ids() {
+    PackedStringArray result;
+
+    #if TARGET_OS_IOS
+    // Query the UNUserNotificationCenter for pending notification requests
+    __block PackedStringArray pending_ids;
+    __block bool completed = false;
+
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center getPendingNotificationRequestsWithCompletionHandler:^(NSArray<UNNotificationRequest *> * _Nonnull requests) {
+        for (UNNotificationRequest *request in requests) {
+            pending_ids.append(String([request.identifier UTF8String]));
+        }
+        completed = true;
+    }];
+
+    // Wait for completion (with timeout)
+    NSDate *timeout = [NSDate dateWithTimeIntervalSinceNow:1.0];
+    while (!completed && [[NSDate date] compare:timeout] == NSOrderedAscending) {
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    }
+
+    result = pending_ids;
+    #endif
+
+    return result;
+}
+
 DclGodotiOS *DclGodotiOS::get_singleton() {
     return instance;
 }
@@ -668,6 +931,14 @@ DclGodotiOS::DclGodotiOS() {
     authSession = nullptr;
     authDelegate = nullptr;
     calendarDelegate = nullptr;
+
+    #if TARGET_OS_IOS
+    // Initialize notification database
+    notificationDatabase = [[NotificationDatabase alloc] init];
+    printf("Notification database initialized\n");
+    #else
+    notificationDatabase = nullptr;
+    #endif
 }
 
 DclGodotiOS::~DclGodotiOS() {
@@ -675,4 +946,10 @@ DclGodotiOS::~DclGodotiOS() {
     authSession = nullptr;
     authDelegate = nullptr;
     calendarDelegate = nullptr;
+
+    #if TARGET_OS_IOS
+    if (notificationDatabase) {
+        notificationDatabase = nullptr;
+    }
+    #endif
 }

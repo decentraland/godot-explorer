@@ -48,4 +48,5 @@ dependencies: plugins/dcl_godot_ios/dcl_godot_ios_module.cpp \
   godot/core/object/gdvirtual.gen.inc \
   godot/core/object/script_instance.h godot/core/templates/self_list.h \
   plugins/dcl_godot_ios/dcl_godot_ios.h godot/core/version.h \
-  godot/core/version_generated.gen.h godot/core/io/image.h
+  godot/core/version_generated.gen.h godot/core/io/image.h \
+  godot/core/variant/typed_array.h

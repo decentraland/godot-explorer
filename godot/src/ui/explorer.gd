@@ -758,36 +758,13 @@ func _on_loading_finished() -> void:
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
 
-	# TEST: Schedule a local notification for 10 seconds from now
-	_test_local_notification()
-
-
-## TEST: Schedule a local notification for testing
-func _test_local_notification() -> void:
-	print("🔔 [TEST] Requesting local notification permission...")
-	NotificationsManager.request_local_notification_permission()
-
-	# Wait a moment for permission dialog to be processed
-	await get_tree().create_timer(2.0).timeout
-
-	if NotificationsManager.has_local_notification_permission():
-		print("✅ [TEST] Permission granted, scheduling test notification...")
-		var success = NotificationsManager.schedule_local_notification(
-			"test_scene_entry",
-			"Decentraland Test",
-			"You entered a scene 10 seconds ago!",
-			10  # 10 seconds from now
-		)
-		if success:
-			print("📱 [TEST] Notification scheduled successfully! Check in 10 seconds.")
-		else:
-			print("❌ [TEST] Failed to schedule notification")
-	else:
-		print("⚠️ [TEST] Notification permission not granted")
-
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		# Clear badge when app comes to foreground
 		NotificationsManager.clear_badge_and_delivered_notifications()
+
+		# Resync notification queue to clean up fired notifications and reschedule next batch
+		NotificationsManager.force_queue_sync()
+
 		Global.check_deep_link_teleport_to()

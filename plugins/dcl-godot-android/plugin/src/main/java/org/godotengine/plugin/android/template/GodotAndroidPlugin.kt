@@ -43,6 +43,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private var isWebViewOpen: Boolean = false
     private var overlayLayout: FrameLayout? = null
 
+    // Notification database instance
+    private var notificationDatabase: NotificationDatabase? = null
+
     private val customPackageNames = arrayOf(
         "com.android.chrome",        // Google Chrome
         "org.mozilla.firefox",       // Mozilla Firefox
@@ -52,6 +55,15 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         "com.opera.mini.native",     // Opera Mini
         "com.sec.android.app.sbrowser" // Samsung Internet
     )
+
+    override fun onGodotSetupCompleted() {
+        super.onGodotSetupCompleted()
+        // Initialize notification database
+        activity?.let {
+            notificationDatabase = NotificationDatabase(it.applicationContext)
+            Log.d(pluginName, "Notification database initialized")
+        }
+    }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
 
@@ -811,6 +823,207 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             Log.e(pluginName, "Error cancelling all local notifications: ${e.message}")
             return false
         }
+    }
+
+    // =============================================================================
+    // DATABASE API - Unified notification queue management
+    // =============================================================================
+
+    /**
+     * Insert or replace a notification in the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbInsertNotification(
+        id: String,
+        title: String,
+        body: String,
+        triggerTimestamp: Long,
+        isScheduled: Int = 0,
+        data: String = ""
+    ): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        return db.insertNotification(
+            id,
+            title,
+            body,
+            triggerTimestamp,
+            isScheduled,
+            if (data.isEmpty()) null else data
+        )
+    }
+
+    /**
+     * Update notification fields in the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbUpdateNotification(id: String, updates: Dictionary): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        return db.updateNotification(id, updates)
+    }
+
+    /**
+     * Delete a notification from the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbDeleteNotification(id: String): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        return db.deleteNotification(id)
+    }
+
+    /**
+     * Query notifications from the database with filters.
+     * Part of the unified database API (Phase 3).
+     *
+     * @param whereClause SQL WHERE clause, e.g. "is_scheduled = 0 AND trigger_timestamp > 1699564800"
+     * @param orderBy SQL ORDER BY clause, e.g. "trigger_timestamp ASC"
+     * @param limit Maximum results, or -1 for no limit
+     */
+    @UsedByGodot
+    fun dbQueryNotifications(whereClause: String = "", orderBy: String = "", limit: Int = -1): Array<Dictionary> {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return emptyArray()
+        }
+
+        return db.queryNotifications(whereClause, orderBy, limit)
+    }
+
+    /**
+     * Get count of notifications matching filter.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbCountNotifications(whereClause: String = ""): Int {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return 0
+        }
+
+        return db.countNotifications(whereClause)
+    }
+
+    /**
+     * Clear expired notifications from the database.
+     * Part of the unified database API (Phase 3).
+     *
+     * @param currentTimestamp Current Unix timestamp (seconds)
+     * @return Number of deleted notifications
+     */
+    @UsedByGodot
+    fun dbClearExpired(currentTimestamp: Long): Int {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return 0
+        }
+
+        return db.clearExpired(currentTimestamp)
+    }
+
+    /**
+     * Mark a notification as scheduled/unscheduled in the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbMarkScheduled(id: String, isScheduled: Boolean): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        return db.markScheduled(id, isScheduled)
+    }
+
+    /**
+     * Get a single notification by ID from the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbGetNotification(id: String): Dictionary {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return Dictionary()
+        }
+
+        return db.getNotification(id)
+    }
+
+    /**
+     * Clear all notifications from the database.
+     * Part of the unified database API (Phase 3).
+     *
+     * @return Number of deleted notifications
+     */
+    @UsedByGodot
+    fun dbClearAll(): Int {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return 0
+        }
+
+        return db.clearAll()
+    }
+
+    // =============================================================================
+    // OS NOTIFICATION API - Renamed methods for clarity
+    // =============================================================================
+
+    /**
+     * Schedule a notification with the OS (AlarmManager).
+     * This is the low-level OS API (Phase 3).
+     */
+    @UsedByGodot
+    fun osScheduleNotification(
+        notificationId: String,
+        title: String,
+        body: String,
+        delaySeconds: Int
+    ): Boolean {
+        // This is the same as the existing scheduleLocalNotification
+        return scheduleLocalNotification(notificationId, title, body, delaySeconds)
+    }
+
+    /**
+     * Cancel a notification from the OS (AlarmManager).
+     * This is the low-level OS API (Phase 3).
+     */
+    @UsedByGodot
+    fun osCancelNotification(notificationId: String): Boolean {
+        // This is the same as the existing cancelLocalNotification
+        return cancelLocalNotification(notificationId)
+    }
+
+    /**
+     * Get IDs of notifications currently scheduled with the OS.
+     * Part of the unified OS API (Phase 3).
+     *
+     * Note: Android doesn't provide a direct way to query AlarmManager,
+     * so we maintain a registry in the database via is_scheduled flag.
+     */
+    @UsedByGodot
+    fun osGetScheduledIds(): Array<String> {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return emptyArray()
+        }
+
+        // Query notifications marked as scheduled
+        val scheduled = db.queryNotifications("is_scheduled = 1", "", -1)
+        return scheduled.map { it["id"].toString() }.toTypedArray()
     }
 
     companion object {

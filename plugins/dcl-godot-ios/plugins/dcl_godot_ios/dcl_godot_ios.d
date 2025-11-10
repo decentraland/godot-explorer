@@ -44,4 +44,6 @@ dependencies: plugins/dcl_godot_ios/dcl_godot_ios.mm \
   godot/core/version_generated.gen.h godot/core/io/image.h \
   godot/core/io/resource.h godot/core/io/resource_uid.h \
   godot/core/object/ref_counted.h godot/core/object/gdvirtual.gen.inc \
-  godot/core/object/script_instance.h godot/core/templates/self_list.h
+  godot/core/object/script_instance.h godot/core/templates/self_list.h \
+  godot/core/variant/typed_array.h \
+  plugins/dcl_godot_ios/NotificationDatabase.h
