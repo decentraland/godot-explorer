@@ -90,7 +90,6 @@ impl<T: 'static> RpcResultSender<T> {
             .write()
             .ok()
             .and_then(|mut guard| guard.take())
-            .take()
             .unwrap()
     }
 }
@@ -112,7 +111,7 @@ pub enum RpcCall {
     MovePlayerTo {
         position_target: [f32; 3],
         camera_target: Option<[f32; 3]>,
-        response: RpcResultSender<Result<(), String>>,
+        avatar_target: Option<[f32; 3]>,
     },
     TeleportTo {
         world_coordinates: [i32; 2],
@@ -128,12 +127,10 @@ pub enum RpcCall {
     },
     TriggerEmote {
         emote_id: String,
-        response: RpcResultSender<Result<(), String>>,
     },
     TriggerSceneEmote {
         emote_src: String,
         looping: bool,
-        response: RpcResultSender<Result<(), String>>,
     },
     // Portable Experiences
     SpawnPortable {

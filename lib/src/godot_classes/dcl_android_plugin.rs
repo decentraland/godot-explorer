@@ -42,7 +42,14 @@ impl DclAndroidPlugin {
     /// Check if the old DclAndroidPlugin is available
     #[func]
     pub fn is_available() -> bool {
-        Self::try_get_singleton().is_some()
+        #[cfg(target_os = "android")]
+        {
+            true
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            false
+        }
     }
 }
 
@@ -117,7 +124,14 @@ impl DclGodotAndroidPlugin {
     /// Check if the dcl-godot-android plugin is available
     #[func]
     pub fn is_available() -> bool {
-        Self::try_get_singleton().is_some()
+        #[cfg(target_os = "android")]
+        {
+            true
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            false
+        }
     }
 
     /// Add a calendar event with title, description, start time, end time, and location

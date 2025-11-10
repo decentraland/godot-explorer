@@ -3,8 +3,8 @@ extends Control
 
 var search_text: String = ""
 
-@onready var jump_in = %JumpIn
-@onready var event_details: EventDetailWrapper = %EventDetails
+@onready var jump_in: SidePanelWrapper = %JumpIn
+@onready var event_details: SidePanelWrapper = %EventDetails
 
 @onready var button_search_bar: Button = %Button_SearchBar
 @onready var line_edit_search_bar: LineEdit = %LineEdit_SearchBar
@@ -35,7 +35,7 @@ func on_item_pressed(data):
 	jump_in.show_animation()
 
 
-func show_event_details(data):
+func on_event_pressed(data):
 	event_details.set_data(data)
 	event_details.show_animation()
 
@@ -157,4 +157,4 @@ func _async_handle_event_notification(event_id: String) -> void:
 	var event_data = json["data"]
 
 	# Show event details
-	show_event_details(event_data)
+	on_event_pressed(event_data)
