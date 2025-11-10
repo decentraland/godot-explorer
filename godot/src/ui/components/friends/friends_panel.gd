@@ -5,8 +5,12 @@ signal panel_closed
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
 @onready var color_rect_blocked: ColorRect = %ColorRect_Blocked
-@onready var button_friends: Button = %Button_Friends
-@onready var avatars_list: Control = %AvatarsList
+@onready var scroll_container_friends: ScrollContainer = %ScrollContainer_Friends
+@onready var scroll_container_nearby: ScrollContainer = %ScrollContainer_Nearby
+@onready var scroll_container_blocked: ScrollContainer = %ScrollContainer_Blocked
+
+
+
 
 func _ready() -> void:
 	# Ensure the panel blocks touch/mouse events from passing through when visible
@@ -48,21 +52,26 @@ func _hide_all() -> void:
 	color_rect_friends.self_modulate = Color.TRANSPARENT
 	color_rect_nearby.self_modulate = Color.TRANSPARENT
 	color_rect_blocked.self_modulate = Color.TRANSPARENT
-
+	scroll_container_nearby.hide()
+	scroll_container_friends.hide()
+	scroll_container_blocked.hide()
 
 func _on_button_friends_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		_hide_all()
 		color_rect_friends.self_modulate = Color.WHITE
+		scroll_container_friends.show()
 
 
 func _on_button_nearby_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		_hide_all()
 		color_rect_nearby.self_modulate = Color.WHITE
+		scroll_container_nearby.show()
 
 
 func _on_button_blocked_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE
+		scroll_container_blocked.show()

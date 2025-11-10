@@ -1,14 +1,27 @@
-[gd_scene load_steps=7 format=3 uid="uid://dd2w2ysk3akdj"]
+[gd_scene load_steps=9 format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
-[ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="2_l4o08"]
+[ext_resource type="Script" uid="uid://cjlqmhcfpgaed" path="res://src/ui/components/social/social_list.gd" id="2_l4o08"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wese4"]
 bg_color = Color(0, 0, 0, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ifioe"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+shadow_color = Color(0, 0, 0, 0.356863)
+shadow_size = 2
+shadow_offset = Vector2(2, 2)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_v2dsn"]
 
@@ -20,36 +33,48 @@ gradient = SubResource("Gradient_fade")
 fill_from = Vector2(0.5, 0)
 fill_to = Vector2(0.5, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h1uhn"]
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+border_color = Color(0, 0, 0, 1)
+border_blend = true
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
 [node name="FriendsPanel" type="PanelContainer"]
 clip_contents = true
-custom_minimum_size = Vector2(450, 500)
-offset_right = 370.0
-offset_bottom = 500.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
+custom_minimum_size = Vector2(450, 300)
+offset_right = 450.0
+offset_bottom = 300.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_wese4")
 script = ExtResource("1_v2dsn")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
-theme_override_constants/separation = 8
 
-[node name="MarginContainer_Header" type="MarginContainer" parent="VBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ifioe")
+
+[node name="MarginContainer_Header" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 2
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 2
 theme_override_constants/margin_bottom = 0
 
-[node name="Header" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Header"]
+[node name="Header" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Header/Header"]
+[node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Button_Friends" type="Button" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+[node name="Button_Friends" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
@@ -59,19 +84,19 @@ button_group = SubResource("ButtonGroup_v2dsn")
 text = "FRIENDS"
 flat = true
 
-[node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+[node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 color = Color(1, 0.1764706, 0.33333334, 1)
 
-[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Header/Header"]
+[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Button_Nearby" type="Button" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 focus_mode = 0
@@ -80,19 +105,19 @@ button_group = SubResource("ButtonGroup_v2dsn")
 text = "NEARBY"
 flat = true
 
-[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 color = Color(1, 0.1764706, 0.33333334, 1)
 
-[node name="VBoxContainer_BlockedTab" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Header/Header"]
+[node name="VBoxContainer_BlockedTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Button_Blocked" type="Button" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+[node name="Button_Blocked" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 focus_mode = 0
@@ -101,7 +126,7 @@ button_group = SubResource("ButtonGroup_v2dsn")
 text = "BLOCKED"
 flat = true
 
-[node name="ColorRect_Blocked" type="ColorRect" parent="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+[node name="ColorRect_Blocked" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
@@ -110,50 +135,53 @@ color = Color(1, 0.1764706, 0.33333334, 1)
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
-layout_mode = 2
-
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="ScrollContainer_Friends" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
-[node name="VBoxContainer_Content" type="VBoxContainer" parent="VBoxContainer/MarginContainer/VBoxContainer/ScrollContainer"]
-unique_name_in_owner = true
+[node name="FriendsList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer_Friends"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 6
+script = ExtResource("2_l4o08")
 
-[node name="AvatarsList" parent="VBoxContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer_Content" instance=ExtResource("2_l4o08")]
+[node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
-[node name="FadeOverlayContainer" type="Control" parent="VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="NearbyList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer_Nearby"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("2_l4o08")
+player_list_type = 3
+
+[node name="ScrollContainer_Blocked" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="BlockedList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer_Blocked"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("2_l4o08")
+player_list_type = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
 visible = false
 layout_mode = 2
-mouse_filter = 2
-
-[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/FadeOverlayContainer"]
-unique_name_in_owner = true
-layout_mode = 0
-offset_top = -64.0
-offset_right = 346.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-texture = SubResource("GradientTexture2D_fade")
+size_flags_vertical = 3
 
 [node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
@@ -164,6 +192,25 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]
+[node name="FadeOverlayContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
+self_modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_vertical = 8
+mouse_filter = 2
+theme_override_constants/separation = -1
+
+[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/FadeOverlayContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_fade")
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/FadeOverlayContainer"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
+
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]

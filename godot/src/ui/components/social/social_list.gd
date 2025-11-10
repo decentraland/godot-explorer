@@ -2,9 +2,11 @@ extends Control
 
 signal size_changed
 
-var list_size: int = 0
+@export var player_list_type: SocialType
 
-@onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
+enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
+
+var list_size: int = 0
 
 
 func _ready():
@@ -18,7 +20,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 	list_size = remote_avatars.size()
 	size_changed.emit()
 	var children_avatars = []
-	for child in v_box_container_nearby_players.get_children():
+	for child in self.get_children():
 		if child.avatar != null and is_instance_valid(child.avatar):
 			children_avatars.append(child.avatar)
 	var avatars_to_remove = []
@@ -50,7 +52,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 		if not found:
 			avatars_to_add.append(remote_avatar)
 
-	for child in v_box_container_nearby_players.get_children():
+	for child in self.get_children():
 		if child.avatar != null and is_instance_valid(child.avatar):
 			for avatar_to_remove in avatars_to_remove:
 				if not is_instance_valid(avatar_to_remove):
@@ -66,16 +68,16 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 					break
 
 	for avatar in avatars_to_add:
-		var avatar_item = Global.preload_assets.NEARBY_PLAYER_ITEM.instantiate()
-		v_box_container_nearby_players.add_child(avatar_item)
-		avatar_item.set_type(3)
+		var avatar_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+		self.add_child(avatar_item)
+		avatar_item.set_type(player_list_type)
 
 		if avatar is Avatar:
 			if not avatar.avatar_loaded.is_connected(avatar_item.async_set_data):
 				avatar.avatar_loaded.connect(avatar_item.async_set_data)
 		await avatar_item.async_set_data(avatar)
 
-	var children = v_box_container_nearby_players.get_children()
+	var children = self.get_children()
 	var valid_children = []
 	for child in children:
 		if child.avatar != null and is_instance_valid(child.avatar):
@@ -84,7 +86,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 	valid_children.sort_custom(self._compare_avatar_names)
 
 	for child in valid_children:
-		v_box_container_nearby_players.move_child(child, -1)
+		self.move_child(child, -1)
 
 
 func _compare_avatar_names(a, b):

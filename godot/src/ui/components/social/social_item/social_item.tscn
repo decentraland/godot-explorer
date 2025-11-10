@@ -1,6 +1,6 @@
 [gd_scene load_steps=18 format=3 uid="uid://d30nejywxmhpn"]
 
-[ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/social_item/social_item.gd" id="1_qmekl"]
+[ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/social/social_item/social_item.gd" id="1_qmekl"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_wvdds"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="3_yus00"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_8x3v3"]
@@ -44,7 +44,6 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 mouse_filter = 2
-theme_override_constants/margin_right = 15
 
 [node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer"]
 unique_name_in_owner = true
@@ -212,6 +211,7 @@ expand_icon = true
 
 [node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -257,6 +257,7 @@ icon = ExtResource("13_5r2pa")
 
 [node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -300,6 +301,7 @@ icon = ExtResource("15_0guw6")
 
 [node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2

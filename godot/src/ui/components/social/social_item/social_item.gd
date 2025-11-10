@@ -150,9 +150,9 @@ func _update_elements_visibility() -> void:
 		SocialType.ONLINE:
 			h_box_container_online.show()
 		SocialType.REQUEST:
-			h_box_container_blocked.show()
-		SocialType.BLOCKED:
 			h_box_container_request.show()
+		SocialType.BLOCKED:
+			h_box_container_blocked.show()
 		_:
 			pass
 

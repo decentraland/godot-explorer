@@ -368,21 +368,21 @@ offset_bottom = 248.0
 grow_horizontal = 0
 theme_override_constants/separation = 13
 
-[node name="HudButton_Notifications" parent="UI/SafeMarginContainerHUD/InteractableHUD/VBoxContainer" instance=ExtResource("13_notif_bell")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_ecwks")
-script = ExtResource("19_6q4se")
-sprite_frames_source = ExtResource("20_kllev")
-
 [node name="HudButton_Friends" parent="UI/SafeMarginContainerHUD/InteractableHUD/VBoxContainer" instance=ExtResource("13_notif_bell")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_t4gc2")
+button_group = SubResource("ButtonGroup_ecwks")
 script = ExtResource("19_admxk")
 sprite_frames_source = ExtResource("22_ecwks")
+
+[node name="HudButton_Notifications" parent="UI/SafeMarginContainerHUD/InteractableHUD/VBoxContainer" instance=ExtResource("13_notif_bell")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+button_group = SubResource("ButtonGroup_t4gc2")
+script = ExtResource("19_6q4se")
+sprite_frames_source = ExtResource("20_kllev")
 
 [node name="MarginContainer" type="MarginContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1
@@ -397,8 +397,10 @@ mouse_filter = 2
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 120
 theme_override_constants/margin_bottom = 16
+metadata/_edit_lock_ = true
 
 [node name="VBoxContainer_RightPanels" type="VBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer"]
+custom_minimum_size = Vector2(450, 0)
 layout_mode = 2
 mouse_filter = 2
 
@@ -413,7 +415,7 @@ size_flags_vertical = 3
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 4
 
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1
