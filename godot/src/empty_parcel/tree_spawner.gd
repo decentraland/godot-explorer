@@ -99,7 +99,11 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	if config.north == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
 			Vector3(parcel_min.x, parcel_min.y, parcel_min.z - parent_parcel.PARCEL_SIZE),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -108,7 +112,11 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	if config.south == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
 			Vector3(parcel_min.x, parcel_min.y, parcel_max.z),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -117,7 +125,11 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	if config.east == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
 			Vector3(parcel_max.x, parcel_min.y, parcel_min.z),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -126,7 +138,11 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	if config.west == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
 			Vector3(parcel_min.x - parent_parcel.PARCEL_SIZE, parcel_min.y, parcel_min.z),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -134,8 +150,16 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# Check corner parcels
 	if config.northwest == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x - parent_parcel.PARCEL_SIZE, parcel_min.y, parcel_min.z - parent_parcel.PARCEL_SIZE),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parcel_min.x - parent_parcel.PARCEL_SIZE,
+				parcel_min.y,
+				parcel_min.z - parent_parcel.PARCEL_SIZE
+			),
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -143,7 +167,11 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	if config.northeast == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
 			Vector3(parcel_max.x, parcel_min.y, parcel_min.z - parent_parcel.PARCEL_SIZE),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -151,7 +179,11 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	if config.southwest == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
 			Vector3(parcel_min.x - parent_parcel.PARCEL_SIZE, parcel_min.y, parcel_max.z),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -159,7 +191,11 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	if config.southeast == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
 			Vector3(parcel_max.x, parcel_min.y, parcel_max.z),
-			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
+			Vector3(
+				parent_parcel.PARCEL_SIZE,
+				parent_parcel.PARCEL_FULL_HEIGHT,
+				parent_parcel.PARCEL_SIZE
+			)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
