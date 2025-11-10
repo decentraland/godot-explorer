@@ -1,6 +1,9 @@
 class_name TreeSpawner
 extends Node3D
 
+const MIN_TREE_SCALE: float = 1.0
+const MAX_TREE_SCALE: float = 2.0
+
 @export_range(0, 100, 1) var min_trees: int = 0
 @export_range(0, 100, 1) var max_trees: int = 0
 @export_range(0.0, 1.0, 0.1) var min_falloff_for_spawning: float = 0.3
@@ -45,7 +48,7 @@ func populate_trees():
 		var tree_normal = Vector3.UP
 
 		var tree_to_duplicate = trees_parent.get_child(randi() % available_trees)
-		var final_scale = randf_range(1.0, 2.0)
+		var final_scale = randf_range(MIN_TREE_SCALE, MAX_TREE_SCALE)
 		var final_transform = ParcelUtils.create_aligned_transform(
 			tree_pos, tree_normal, true, final_scale
 		)
@@ -61,7 +64,7 @@ func populate_trees():
 		chosen_tree.transform = final_transform
 		for child in chosen_tree.get_children():
 			if child is StaticBody3D:
-				child.set_collision_layer_value(2, true)
+				child.set_collision_layer_value(parent_parcel.OBSTACLE_COLLISION_LAYER, true)
 
 
 func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Transform3D) -> bool:
@@ -79,15 +82,24 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	var config = parent_parcel.corner_config
 
 	# Define parcel boundaries in world space
-	# Parcel is centered at parcel_pos with size 16x16
-	var parcel_min = Vector3(parcel_pos.x - 8.0, parcel_pos.y - 100.0, parcel_pos.z - 8.0)
-	var parcel_max = Vector3(parcel_pos.x + 8.0, parcel_pos.y + 100.0, parcel_pos.z + 8.0)
+	# Parcel is centered at parcel_pos with size PARCEL_SIZE x PARCEL_SIZE
+	var parcel_min = Vector3(
+		parcel_pos.x - parent_parcel.PARCEL_HALF_SIZE,
+		parcel_pos.y - parent_parcel.PARCEL_HEIGHT_BOUND,
+		parcel_pos.z - parent_parcel.PARCEL_HALF_SIZE
+	)
+	var parcel_max = Vector3(
+		parcel_pos.x + parent_parcel.PARCEL_HALF_SIZE,
+		parcel_pos.y + parent_parcel.PARCEL_HEIGHT_BOUND,
+		parcel_pos.z + parent_parcel.PARCEL_HALF_SIZE
+	)
 
 	# Check each adjacent direction that has a LOADED parcel
 	# North is -Z direction
 	if config.north == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x, parcel_min.y, parcel_min.z - 16.0), Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x, parcel_min.y, parcel_min.z - parent_parcel.PARCEL_SIZE),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -95,7 +107,8 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# South is +Z direction
 	if config.south == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x, parcel_min.y, parcel_max.z), Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x, parcel_min.y, parcel_max.z),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -103,7 +116,8 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# East is +X direction
 	if config.east == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_max.x, parcel_min.y, parcel_min.z), Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_max.x, parcel_min.y, parcel_min.z),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -111,7 +125,8 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# West is -X direction
 	if config.west == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_min.z), Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x - parent_parcel.PARCEL_SIZE, parcel_min.y, parcel_min.z),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
@@ -119,29 +134,32 @@ func _tree_would_overlap_loaded_parcel(tree_template: Node3D, tree_transform: Tr
 	# Check corner parcels
 	if config.northwest == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_min.z - 16.0),
-			Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x - parent_parcel.PARCEL_SIZE, parcel_min.y, parcel_min.z - parent_parcel.PARCEL_SIZE),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
 
 	if config.northeast == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_max.x, parcel_min.y, parcel_min.z - 16.0), Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_max.x, parcel_min.y, parcel_min.z - parent_parcel.PARCEL_SIZE),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
 
 	if config.southwest == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_min.x - 16.0, parcel_min.y, parcel_max.z), Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_min.x - parent_parcel.PARCEL_SIZE, parcel_min.y, parcel_max.z),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
 
 	if config.southeast == CornerConfiguration.ParcelState.LOADED:
 		var adjacent_aabb = AABB(
-			Vector3(parcel_max.x, parcel_min.y, parcel_max.z), Vector3(16.0, 200.0, 16.0)
+			Vector3(parcel_max.x, parcel_min.y, parcel_max.z),
+			Vector3(parent_parcel.PARCEL_SIZE, parent_parcel.PARCEL_FULL_HEIGHT, parent_parcel.PARCEL_SIZE)
 		)
 		if world_aabb.intersects(adjacent_aabb):
 			return true
