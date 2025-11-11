@@ -590,8 +590,8 @@ func _on_panel_profile_open_profile():
 	_open_own_profile()
 
 
-func _on_adapter_changed(voice_chat_enabled, _adapter_str):
-	button_mic.visible = false #voice_chat_enabled
+func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
+	button_mic.visible = false  #voice_chat_enabled
 
 
 func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
