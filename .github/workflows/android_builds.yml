@@ -6,6 +6,12 @@ on:
         required: true
       ANDROID_KEYSTORE_PASSWORD:
         required: true
+      SENTRY_AUTH_TOKEN:
+        required: true
+      SENTRY_ORG:
+        required: true
+      SENTRY_PROJECT:
+        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
@@ -14,7 +20,8 @@ concurrency:
 jobs:
   build:
     name: Build VR and Mobile
-    runs-on: bigrunner
+    runs-on: warp-ubuntu-latest-x64-8x
+    timeout-minutes: 25
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
@@ -28,20 +35,23 @@ jobs:
         run: |
           git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.79
-          override: true
+          toolchain: "1.90"
           components: clippy, rustfmt
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
       - name: Cargo install
         run: cargo run -- install --targets android linux
+
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build Rust libraries
         run: |
-          cargo run -- build --release
-          cargo run -- build --release --target android
+          cargo run -- build --release ${{ env.PROD_FLAG }}
+          cargo run -- build --release --target android ${{ env.PROD_FLAG }}
           cargo run -- import-assets
       
       - name: Export Android APK
@@ -50,7 +60,7 @@ jobs:
       
       - name: Export Android AAB
         run: |
-          cargo run -- export --target android --format aab
+          cargo run -- export --target android --format aab --release
       
       - name: Export Quest APK
         run: |
@@ -87,8 +97,10 @@ jobs:
           ls -la exports/
           mkdir -p android-artifacts-apk
           mkdir -p android-artifacts-aab
+          mkdir -p android-debug-symbols
           mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
           mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
+          cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
 
       - name: Copy Meta Quest Artifacts
         if: success() || failure()
@@ -123,3 +135,40 @@ jobs:
           path: |
             lib/target/aarch64-linux-android/release/libdclgodot.so
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: Android Native Debug Symbols
+          path: android-debug-symbols/
+          if-no-files-found: error
+        
+      # Upload debug symbols to Sentry for production builds
+      - name: Upload debug symbols to Sentry
+        if: success()
+        run: |
+          EXPLORER_VERSION=$(cargo run -- explorer-version)
+          echo "Explorer version: $EXPLORER_VERSION"
+
+          # Check if this is a production build (no -dev suffix)
+          if [[ ! "$EXPLORER_VERSION" =~ -dev$ ]]; then
+            echo "Production build detected, uploading debug symbols to Sentry..."
+            RELEASE_NAME="org.decentraland.godotexplorer@$EXPLORER_VERSION"
+            echo "Release name: $RELEASE_NAME"
+
+            # Install sentry-cli
+            curl -sL https://sentry.io/get-cli/ | bash
+
+            # Upload debug symbols
+            sentry-cli upload-dif \
+              --org ${{ secrets.SENTRY_ORG }} \
+              --project ${{ secrets.SENTRY_PROJECT }} \
+              --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+              --include-sources \
+              --wait \
+              godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip
+
+            echo "Debug symbols uploaded successfully to release: $RELEASE_NAME"
+          else
+            echo "Development build detected (-dev suffix found), skipping Sentry upload"
+          fi

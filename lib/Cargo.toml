@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.41.0"
+version = "0.42.0"
 edition = "2021"
 publish = false
 
@@ -93,3 +93,9 @@ enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", branch="0.6-h264-false-2", optional = true }
 prost-build = "0.11.8"
 chrono = "0.4.31"
+
+[profile.release]
+opt-level = 3
+lto = true
+debug = 1
+strip = false

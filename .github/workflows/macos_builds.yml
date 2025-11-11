@@ -11,19 +11,15 @@ jobs:
     name: Build macOS
     strategy:
       fail-fast: false
-      matrix:
-        os: [macos-14-xlarge]
-    runs-on: ${{ matrix.os }}
+    runs-on: warp-macos-14-arm64-6x
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.79
-          override: true
+          toolchain: "1.90"
 
       # Dependencies section
       - name: Install dependencies
@@ -33,8 +29,11 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets macos
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Test
         working-directory: lib

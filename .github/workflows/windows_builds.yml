@@ -11,22 +11,18 @@ jobs:
     name: Build Windows
     strategy:
       fail-fast: false
-      matrix:
-        os: [bigwin]
-    runs-on: ${{ matrix.os }}
+    runs-on: warp-windows-latest-x64-4x
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.79
-          override: true
+          toolchain: "1.90"
 
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
+      - name: Set up WarpBuild cache
+        uses: ./.github/actions/set-up-warp-cache
 
       # Dependencies section
       - name: Install dependencies
@@ -36,8 +32,11 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --targets windows
 
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
       - name: Build
-        run: cargo run -- build --release
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Test
         working-directory: lib

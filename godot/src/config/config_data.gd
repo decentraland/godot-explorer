@@ -3,6 +3,14 @@ extends DclConfig
 
 signal param_changed(param: ConfigParams)
 
+enum FpsLimitMode {
+	VSYNC = 0,
+	NO_LIMIT = 1,
+	FPS_30 = 2,
+	FPS_60 = 3,
+	FPS_120 = 4,
+}
+
 enum ConfigParams {
 	CONTENT_DIRECTORY,
 	WINDOW_MODE,
@@ -93,11 +101,11 @@ var skybox_time: int = 43200:
 		skybox_time = value
 		param_changed.emit(ConfigParams.SKYBOX_TIME)
 
-# 0 - Vsync, 1 - No limit, Other-> Limit limit_fps that amount
-var limit_fps: int = 0:
+# See FpsLimitMode enum for available options
+var limit_fps: int = FpsLimitMode.FPS_30:
 	set(value):
 		limit_fps = value
-		param_changed.emit(ConfigParams.GRAVITY)
+		param_changed.emit(ConfigParams.LIMIT_FPS)
 
 # 0- performance, 1- balanced, 2- high quality
 var skybox: int = 0:
@@ -215,7 +223,7 @@ func load_from_default():
 	self.run_velocity = 6.0
 
 	self.process_tick_quota_ms = 10
-	self.limit_fps = 0
+	self.limit_fps = FpsLimitMode.FPS_30
 
 	self.skybox = 0  # basic
 
@@ -258,7 +266,7 @@ func load_from_settings_file():
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
 
-	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
+	self.limit_fps = settings_file.get_value("config", "fps_limit", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(
 		"config", "shadow_quality", data_default.shadow_quality
@@ -350,7 +358,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "walk_velocity", self.walk_velocity)
 	new_settings_file.set_value("config", "run_velocity", self.run_velocity)
 	new_settings_file.set_value("config", "process_tick_quota_ms", self.process_tick_quota_ms)
-	new_settings_file.set_value("config", "limit_fps", self.limit_fps)
+	new_settings_file.set_value("config", "fps_limit", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)
 	new_settings_file.set_value("config", "shadow_quality", self.shadow_quality)
 	new_settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)

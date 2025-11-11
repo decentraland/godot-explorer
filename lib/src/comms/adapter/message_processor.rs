@@ -839,7 +839,7 @@ impl MessageProcessor {
                     && !self
                         .peer_identities
                         .get(&address)
-                        .map_or(false, |p| p.profile_fetch_attempted)
+                        .is_some_and(|p| p.profile_fetch_attempted)
                     && !is_banned
                 {
                     tracing::info!(
@@ -999,48 +999,6 @@ impl MessageProcessor {
                                 "ProfileRequest for our address but no profile available"
                             );
                         }
-                    } else if let Some(peer) = self.peer_identities.get(&requested_address) {
-                        // Check if we have this peer's profile cached
-                        if let Some(peer_profile) = &peer.profile {
-                            let serialized_profile = serde_json::to_string(&peer_profile.content)
-                                .unwrap_or_else(|_| "{}".to_string());
-
-                            let response_packet = rfc4::Packet {
-                                message: Some(rfc4::packet::Message::ProfileResponse(
-                                    rfc4::ProfileResponse {
-                                        serialized_profile,
-                                        base_url: peer_profile.base_url.clone(),
-                                    },
-                                )),
-                                protocol_version: DEFAULT_PROTOCOL_VERSION,
-                            };
-
-                            // Send response back to the requesting room
-                            let outgoing = OutgoingMessage {
-                                packet: response_packet,
-                                unreliable: false,
-                            };
-
-                            if let Err(e) = self.outgoing_sender.try_send(outgoing) {
-                                tracing::warn!(
-                                    "Failed to queue ProfileResponse for cached peer: {}",
-                                    e
-                                );
-                            } else {
-                                tracing::debug!(
-                                    "📤 Sending cached ProfileResponse for {:#x} to {:#x}",
-                                    requested_address,
-                                    address
-                                );
-                            }
-                        } else {
-                            tracing::debug!(
-                                "ProfileRequest for {:#x} but no cached profile available",
-                                requested_address
-                            );
-                        }
-                    } else {
-                        tracing::debug!("ProfileRequest for unknown peer {:#x}", requested_address);
                     }
                 } else {
                     tracing::warn!(

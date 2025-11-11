@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=33 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" uid="uid://do4lb6hapbydx" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -12,13 +12,16 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_ypsmd"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
+[ext_resource type="Script" uid="uid://bo6p514e8op0r" path="res://src/ui/components/dcl_line_edit.gd" id="13_2q7xc"]
+[ext_resource type="FontFile" uid="uid://c578syx7u7pdh" path="res://assets/themes/fonts/lato_family/Lato-Italic.ttf" id="15_3tlbd"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
 [ext_resource type="Texture2D" uid="uid://dpto8joivusog" path="res://assets/themes/dark_dcl_theme/icons/cancel-icon.svg" id="15_ypsmd"]
+[ext_resource type="LabelSettings" uid="uid://c8tjmk5hweyae" path="res://assets/themes/lobby_error.tres" id="16_ypsmd"]
 [ext_resource type="PackedScene" uid="uid://bi3eesytuc1tr" path="res://src/ui/components/auth/login.tscn" id="17_vcjym"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="18_2q7xc"]
 [ext_resource type="Texture2D" uid="uid://0562185xxlpt" path="res://assets/ui/sign-in/dice.svg" id="18_3tlbd"]
 [ext_resource type="LabelSettings" uid="uid://ipxcah14n2ng" path="res://assets/themes/lobby_title.tres" id="18_ypsmd"]
-[ext_resource type="FontFile" uid="uid://c578syx7u7pdh" path="res://assets/themes/fonts/lato_family/Lato-Italic.ttf" id="19_ypsmd"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="20_rqbts"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="21_ypsmd"]
 
 [sub_resource type="Gradient" id="Gradient_kt8ab"]
@@ -31,20 +34,40 @@ fill_to = Vector2(0, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8mib7"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ypsmd"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0, 0, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rqbts"]
 content_margin_left = 8.0
 content_margin_top = 8.0
 content_margin_right = 8.0
 content_margin_bottom = 8.0
 bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
 
-[sub_resource type="LabelSettings" id="LabelSettings_2q7xc"]
-font = ExtResource("19_ypsmd")
+[sub_resource type="LabelSettings" id="LabelSettings_rqbts"]
+font = ExtResource("15_3tlbd")
 font_size = 20
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ypsmd"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_vcjym"]
 font = ExtResource("18_2q7xc")
@@ -95,7 +118,7 @@ layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 10.0
+offset_left = 41.0
 offset_top = -28.0
 offset_right = 510.0
 offset_bottom = -10.0
@@ -322,20 +345,28 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="LineEdit_ChooseName" type="LineEdit" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
+[node name="PanelContainer_ErrorBorder" type="PanelContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_ypsmd")
+
+[node name="LineEdit_ChooseName" type="LineEdit" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/PanelContainer_ErrorBorder"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_font_sizes/font_size = 24
 placeholder_text = "Username"
-max_length = 15
 clear_button_enabled = true
+script = ExtResource("13_2q7xc")
 
 [node name="Button_RandomName" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
 texture_filter = 4
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
+size_flags_vertical = 4
 theme = ExtResource("9_ypsmd")
 theme_override_styles/normal = SubResource("StyleBoxFlat_rqbts")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_rqbts")
@@ -349,16 +380,50 @@ icon = ExtResource("18_3tlbd")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Label" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
 layout_mode = 2
+
+[node name="Label_Advise" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "*Avoid using your real name for safety"
+label_settings = SubResource("LabelSettings_rqbts")
+autowrap_mode = 2
+
+[node name="Label_Error" type="RichTextLabel" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(1, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_fonts/normal_font = ExtResource("20_rqbts")
+theme_override_font_sizes/normal_font_size = 20
+text = "Error"
+fit_content = true
+autowrap_mode = 2
+
+[node name="Label_Length" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("5_g62s5")
 theme_override_font_sizes/font_size = 20
-text = "*Avoid using your real name for safety"
-label_settings = SubResource("LabelSettings_2q7xc")
+text = "0/15"
+label_settings = ExtResource("16_ypsmd")
+horizontal_alignment = 2
+
+[node name="VSeparator" type="VSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 76
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ypsmd")
 
 [node name="RestoreNameHead" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -404,6 +469,7 @@ can_move = false
 
 [node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -427,6 +493,8 @@ horizontal_alignment = 1
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_constants/separation = 11
+alignment = 2
 
 [node name="Button_Next" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter"]
 unique_name_in_owner = true
@@ -609,7 +677,7 @@ expand_mode = 1
 [connection signal="pressed" from="Main/Start/MarginContainer/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
 [connection signal="pressed" from="Main/Start/MarginContainer/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
 [connection signal="pressed" from="Main/BackpackContainer/MarginContainer/VBoxContainer/Button_Continue" to="." method="_on_button_continue_pressed"]
-[connection signal="text_changed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/LineEdit_ChooseName" to="." method="_on_line_edit_choose_name_text_changed"]
+[connection signal="dcl_line_edit_changed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/PanelContainer_ErrorBorder/LineEdit_ChooseName" to="." method="_on_line_edit_choose_name_dcl_line_edit_changed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
 [connection signal="gui_input" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/Button_Next" to="." method="_on_button_next_pressed"]
