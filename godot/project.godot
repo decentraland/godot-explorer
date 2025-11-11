@@ -46,6 +46,10 @@ window/size/window_width_override=720
 window/size/window_height_override=1280
 window/handheld/orientation=6
 
+[editor]
+
+run/main_run_args="--skip-lobby"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/dcl-godot-android/plugin.cfg")

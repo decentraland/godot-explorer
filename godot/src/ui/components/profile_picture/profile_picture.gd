@@ -14,12 +14,16 @@ const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 
 var border_width: int
 var avatar: DclAvatar
+var connection_status_online = load("res://assets/ui/connection_status_online.svg")
+var connection_status_offline = load("res://assets/ui/connection_status_offline.svg")
 
 @onready var texture_rect_profile: TextureRect = %TextureRect_Profile
 @onready var panel_border: PanelContainer = %Panel_Border
+@onready var texture_rect_status: TextureRect = %TextureRect_Status
 
 
 func _ready() -> void:
+	hide_status()
 	_update_size()
 	if panel_border:
 		_update_border_style()
@@ -163,3 +167,15 @@ func _on_gui_input(event: InputEvent) -> void:
 					explorer.control_menu.show_own_profile()
 				else:
 					Global.open_profile.emit(avatar)
+
+
+func set_online() -> void:
+	texture_rect_status.show()
+	texture_rect_status.texture = connection_status_online
+	
+func set_offline() -> void:
+	texture_rect_status.show()
+	texture_rect_status.texture = connection_status_offline
+	
+func hide_status() -> void:
+	texture_rect_status.hide()

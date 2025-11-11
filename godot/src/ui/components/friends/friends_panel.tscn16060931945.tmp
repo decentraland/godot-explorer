@@ -1,11 +1,10 @@
-[gd_scene load_steps=15 format=3 uid="uid://dd2w2ysk3akdj"]
+[gd_scene load_steps=14 format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
 [ext_resource type="StyleBox" uid="uid://c1jov5bbl6rpn" path="res://src/ui/components/friends/friends_separator.tres" id="2_ifioe"]
 [ext_resource type="Script" uid="uid://cjlqmhcfpgaed" path="res://src/ui/components/social/social_list.gd" id="2_l4o08"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_wese4"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="2_x48bx"]
-[ext_resource type="Texture2D" uid="uid://diaawk0cbxw0j" path="res://assets/ui/up_arrow.svg" id="5_h1uhn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wese4"]
 bg_color = Color(0, 0, 0, 0.8)
@@ -174,7 +173,6 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="VBoxContainer_Request" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList"]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request"]
@@ -185,7 +183,6 @@ theme_override_styles/separator = ExtResource("2_ifioe")
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
-focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -205,13 +202,9 @@ expand_icon = true
 layout_mode = 2
 
 [node name="RequestList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request"]
-unique_name_in_owner = true
 layout_mode = 2
-script = ExtResource("2_l4o08")
-player_list_type = 2
 
 [node name="VBoxContainer_Online" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList"]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
@@ -221,7 +214,6 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
-focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -232,7 +224,7 @@ theme_override_font_sizes/font_size = 12
 toggle_mode = true
 button_pressed = true
 text = "ONLINE (0)"
-icon = ExtResource("5_h1uhn")
+icon = ExtResource("2_x48bx")
 flat = true
 alignment = 0
 icon_alignment = 2
@@ -241,13 +233,10 @@ expand_icon = true
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
 layout_mode = 2
 
-[node name="OnlineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
-unique_name_in_owner = true
+[node name="RequestList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
 layout_mode = 2
-script = ExtResource("2_l4o08")
 
 [node name="VBoxContainer_Offline" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList"]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
@@ -257,7 +246,6 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
-focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -276,11 +264,8 @@ expand_icon = true
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
 layout_mode = 2
 
-[node name="OfflineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
-unique_name_in_owner = true
+[node name="RequestList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
 layout_mode = 2
-script = ExtResource("2_l4o08")
-player_list_type = 1
 
 [node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
@@ -328,17 +313,32 @@ offset_bottom = 64.0
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_x48bx")
 
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
+visible = false
+layout_mode = 0
+offset_right = 448.0
+offset_bottom = 245.0
+size_flags_vertical = 3
+
+[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "Friends System 
+is not implemented yet"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
 [node name="FadeOverlayBottom" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
 self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 64)
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -75.0
-grow_horizontal = 2
-grow_vertical = 0
+layout_mode = 0
+offset_top = 174.0
+offset_right = 448.0
+offset_bottom = 249.0
 size_flags_vertical = 8
 mouse_filter = 2
 theme_override_constants/separation = -1
@@ -353,20 +353,6 @@ texture = SubResource("GradientTexture2D_fade")
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
-
-[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer"]
-unique_name_in_owner = true
-layout_mode = 0
-offset_right = 448.0
-offset_bottom = 245.0
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/font_size = 14
-text = "Friends System 
-is not implemented yet"
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
 
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]

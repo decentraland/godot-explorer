@@ -32,7 +32,7 @@ anchors_preset = 0
 offset_right = 389.0
 offset_bottom = 53.0
 size_flags_horizontal = 3
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("1_qmekl")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -76,8 +76,8 @@ theme_override_constants/separation = 9
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
-size_flags_horizontal = 4
 size_flags_vertical = 4
+mouse_default_cursor_shape = 2
 picture_size = 1
 
 [node name="Nickname" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
@@ -118,14 +118,15 @@ mouse_filter = 2
 [node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
+mouse_filter = 1
+mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("5_iy8au")
 theme_override_font_sizes/font_size = 18
-text = "X"
+text = "Xasd"
 
 [node name="Hash" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
 unique_name_in_owner = true
@@ -211,7 +212,6 @@ expand_icon = true
 
 [node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -250,14 +250,13 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
-theme_override_constants/icon_max_width = 25
+theme_override_constants/icon_max_width = 20
 theme_override_font_sizes/font_size = 15
 text = "ADD FRIEND"
 icon = ExtResource("13_5r2pa")
 
 [node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -273,6 +272,7 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 20
 theme_override_styles/pressed = ExtResource("12_lm8sy")
 theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
 theme_override_styles/hover = ExtResource("12_lm8sy")
@@ -295,13 +295,12 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
-theme_override_constants/icon_max_width = 24
+theme_override_constants/icon_max_width = 20
 text = "ACCEPT"
 icon = ExtResource("15_0guw6")
 
 [node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -321,6 +320,6 @@ text = "UNBLOCK"
 icon_alignment = 1
 expand_icon = true
 
-[connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_panel_nearby_player_item_gui_input"]
 [connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
+[connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/Nickname" to="." method="_tap_to_open_profile"]

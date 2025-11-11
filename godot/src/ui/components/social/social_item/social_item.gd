@@ -1,9 +1,10 @@
 extends Control
 
-const MUTE = preload("res://assets/ui/audio_off.svg")
-const UNMUTE = preload("res://assets/ui/audio_on.svg")
-const BLOCK = preload("res://assets/ui/block.svg")
-const UNBLOCK = preload("res://assets/ui/unblock.svg")
+var mute_icon = load("res://assets/ui/audio_off.svg")
+var unmute_icon = load("res://assets/ui/audio_on.svg")
+var block_icon = load("res://assets/ui/block.svg")
+var unblock_icon = load("res://assets/ui/unblock.svg")
+
 
 @export var item_type: SocialType
 
@@ -26,6 +27,7 @@ var avatar: DclAvatar = null
 #@onready var button_mute_user: Button = %Button_MuteUser
 @onready var v_box_container_nickname: VBoxContainer = %VBoxContainer_Nickname
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
+@onready var texture_rect_status: TextureRect = %TextureRect_Status
 
 
 func _ready():
@@ -127,7 +129,7 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		call_deferred("_update_buttons")
 
 
-func _on_panel_nearby_player_item_gui_input(event: InputEvent) -> void:
+func _tap_to_open_profile(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if avatar != null and is_instance_valid(avatar):
@@ -149,18 +151,21 @@ func _update_elements_visibility() -> void:
 			h_box_container_nearby.show()
 		SocialType.ONLINE:
 			h_box_container_online.show()
+			profile_picture.set_online()
 		SocialType.REQUEST:
 			h_box_container_request.show()
 		SocialType.BLOCKED:
 			h_box_container_blocked.show()
 		_:
-			pass
+			profile_picture.set_offline()
+		
 
 func _hide_all_buttons() -> void:
 	h_box_container_online.hide()
 	h_box_container_nearby.hide()
 	h_box_container_request.hide()
 	h_box_container_blocked.hide()
+	profile_picture.hide_status()
 	
 func set_type(type:SocialType) -> void:
 	item_type = type
