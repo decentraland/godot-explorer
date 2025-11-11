@@ -484,8 +484,16 @@ func _process(_delta: float) -> void:
 
 
 func check_deep_link_teleport_to():
-	if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
-		var deep_link_url: String = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+	if Global.is_mobile():
+		var deep_link_url: String = ""
+		if DclGodotAndroidPlugin.is_available():
+			deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+		elif DclIosPlugin.is_available():
+			deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
+
+		if deep_link_url.is_empty():
+			return
+
 		Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
 		if Global.deep_link_obj.is_location_defined():
@@ -502,8 +510,14 @@ func check_deep_link_teleport_to():
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
-			var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
-			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+		if Global.is_mobile():
+			var deep_link_url: String = ""
+			if DclGodotAndroidPlugin.is_available():
+				deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			elif DclIosPlugin.is_available():
+				deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
+
+			if not deep_link_url.is_empty():
+				deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
 			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)

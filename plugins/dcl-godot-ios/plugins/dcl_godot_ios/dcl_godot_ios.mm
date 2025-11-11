@@ -135,6 +135,8 @@ String DclGodotiOS::receivedUrl = "";
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
+    ClassDB::bind_method(D_METHOD("open_webview_url", "url"), &DclGodotiOS::open_webview_url);
+    ClassDB::bind_method(D_METHOD("get_deeplink_url"), &DclGodotiOS::get_deeplink_url);
     ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
     ClassDB::bind_method(D_METHOD("get_mobile_metrics"), &DclGodotiOS::get_mobile_metrics);
     ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
@@ -198,6 +200,13 @@ void DclGodotiOS::open_webview_url(String url) {
         [rootVC presentViewController:safariVC animated:YES completion:nil];
     });
     #endif
+}
+
+String DclGodotiOS::get_deeplink_url() {
+    String url = receivedUrl;
+    // Clear the received URL after reading it (consume-once pattern)
+    receivedUrl = "";
+    return url;
 }
 
 Dictionary DclGodotiOS::get_mobile_device_info() {
