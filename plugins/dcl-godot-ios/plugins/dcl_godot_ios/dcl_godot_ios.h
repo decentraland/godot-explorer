@@ -26,6 +26,8 @@ class DclGodotiOS : public Object {
     CalendarEventDelegate *calendarDelegate;
 
 public:
+	static String receivedUrl;
+    
     void print_version();
     void open_auth_url(String url);
     void open_webview_url(String url);

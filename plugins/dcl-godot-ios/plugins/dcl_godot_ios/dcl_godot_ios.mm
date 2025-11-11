@@ -130,6 +130,7 @@ const char* DCLGODOTIOS_VERSION = "1.0";
 @end
 
 DclGodotiOS *DclGodotiOS::instance = NULL;
+String DclGodotiOS::receivedUrl = "";
 
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
