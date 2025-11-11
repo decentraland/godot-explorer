@@ -6,6 +6,7 @@ var block_icon = load("res://assets/ui/block.svg")
 var unblock_icon = load("res://assets/ui/unblock.svg")
 
 
+
 @export var item_type: SocialType
 
 enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
@@ -16,18 +17,15 @@ var avatar: DclAvatar = null
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
 @onready var h_box_container_request: HBoxContainer = %HBoxContainer_Request
 @onready var h_box_container_blocked: HBoxContainer = %HBoxContainer_Blocked
-
 @onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
 @onready var mic_enabled: MarginContainer = %MicEnabled
 @onready var nickname: Label = %Nickname
-@onready var hash_container: HBoxContainer = %Hash
-@onready var tag: Label = %Tag
+@onready var label_place: Label = %Label_Place
 @onready var profile_picture: ProfilePicture = %ProfilePicture
-#@onready var button_block_user: Button = %Button_BlockUser
-#@onready var button_mute_user: Button = %Button_MuteUser
 @onready var v_box_container_nickname: VBoxContainer = %VBoxContainer_Nickname
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
-@onready var texture_rect_status: TextureRect = %TextureRect_Status
+@onready var button_add_friend: Button = %Button_AddFriend
+@onready var button_mute: Button = %Button_Mute
 
 
 func _ready():
@@ -58,13 +56,15 @@ func async_set_data(avatar_param = null):
 		var avatar_name = avatar.get_avatar_name()
 		var tag_position = avatar_name.find("#")
 		if tag_position != -1:
-			nickname.text = avatar_name.left(tag_position)
+			avatar_name = avatar_name.left(tag_position)
 			texture_rect_claimed_checkmark.hide()
 		else:
-			nickname.text = avatar_name
 			texture_rect_claimed_checkmark.show()
+			
+		if avatar_name.length() > 15:
+			avatar_name = avatar_name.left(15) + "..."
+		nickname.text = avatar_name
 
-		tag.text = avatar.avatar_id.right(4)
 		_update_buttons()
 
 		var nickname_color = avatar.get_nickname_color(avatar_name)
@@ -151,6 +151,7 @@ func _update_elements_visibility() -> void:
 			h_box_container_nearby.show()
 		SocialType.ONLINE:
 			h_box_container_online.show()
+			label_place.show()
 			profile_picture.set_online()
 		SocialType.REQUEST:
 			h_box_container_request.show()
@@ -166,7 +167,13 @@ func _hide_all_buttons() -> void:
 	h_box_container_request.hide()
 	h_box_container_blocked.hide()
 	profile_picture.hide_status()
+	label_place.hide()
 	
 func set_type(type:SocialType) -> void:
 	item_type = type
 	_update_elements_visibility()
+
+
+func _on_button_add_friend_pressed() -> void:
+	print("TODO: Emit signal to friends manager to send friend request to the avatar: ", avatar)
+	button_add_friend.hide()

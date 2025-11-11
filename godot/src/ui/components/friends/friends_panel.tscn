@@ -311,7 +311,6 @@ script = ExtResource("2_l4o08")
 player_list_type = 4
 
 [node name="FadeOverlayTop" type="Control" parent="VBoxContainer/MarginContainer"]
-visible = false
 self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 1
@@ -356,6 +355,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
 
 [node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 0
 offset_right = 448.0
 offset_bottom = 245.0

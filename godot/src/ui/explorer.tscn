@@ -400,7 +400,7 @@ theme_override_constants/margin_bottom = 16
 metadata/_edit_lock_ = true
 
 [node name="VBoxContainer_RightPanels" type="VBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer"]
-custom_minimum_size = Vector2(450, 0)
+custom_minimum_size = Vector2(370, 0)
 layout_mode = 2
 mouse_filter = 2
 

@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_8x3v3"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_iy8au"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="6_b8cqn"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="7_m2rwh"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_2kre2"]
 [ext_resource type="Texture2D" uid="uid://ceh3pvhtpwjhp" path="res://assets/ui/audio_off.svg" id="12_l8lpo"]
 [ext_resource type="StyleBox" uid="uid://p7xigefabmi8" path="res://assets/themes/seconday_pressed_hover_little.tres" id="12_lm8sy"]
@@ -23,13 +24,11 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_io7c4"]
-
 [node name="SocialItem" type="Control"]
-custom_minimum_size = Vector2(360, 53)
+custom_minimum_size = Vector2(280, 53)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 389.0
+offset_right = 280.0
 offset_bottom = 53.0
 size_flags_horizontal = 3
 mouse_filter = 1
@@ -126,37 +125,9 @@ theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("5_iy8au")
 theme_override_font_sizes/font_size = 18
-text = "Xasd"
+text = "NickWith15Chars"
 
-[node name="Hash" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="HashTag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 14
-text = "#"
-
-[node name="Tag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 14
-text = "X"
-
-[node name="VSeparator" type="VSeparator" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_io7c4")
-
-[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
@@ -166,8 +137,22 @@ texture = ExtResource("6_b8cqn")
 expand_mode = 2
 stretch_mode = 4
 
+[node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 1
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_constants/shadow_outline_size = 1
+theme_override_fonts/font = ExtResource("7_m2rwh")
+theme_override_font_sizes/font_size = 16
+text = "Genesis Plaza"
+
 [node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -175,6 +160,7 @@ theme_override_constants/separation = 10
 alignment = 1
 
 [node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -198,7 +184,8 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
-custom_minimum_size = Vector2(40, 40)
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 40)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -206,19 +193,21 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
+text = "JUMP"
 icon = ExtResource("14_pm4ta")
-icon_alignment = 1
 expand_icon = true
 
 [node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+[node name="Button_Mute" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -237,11 +226,13 @@ theme_override_styles/hover_pressed_mirrored = ExtResource("12_lm8sy")
 theme_override_styles/disabled = ExtResource("13_pm4ta")
 theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
 theme_override_styles/focus = ExtResource("12_lm8sy")
+toggle_mode = true
 icon = ExtResource("12_l8lpo")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+[node name="Button_AddFriend" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -252,6 +243,7 @@ theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
 theme_override_constants/icon_max_width = 20
 theme_override_font_sizes/font_size = 15
+toggle_mode = true
 text = "ADD FRIEND"
 icon = ExtResource("13_5r2pa")
 
@@ -264,6 +256,7 @@ theme_override_constants/separation = 10
 alignment = 1
 
 [node name="Button_Reject" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Request"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -287,6 +280,7 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="Button_Accept" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Request"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -301,6 +295,7 @@ icon = ExtResource("15_0guw6")
 
 [node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -323,3 +318,5 @@ expand_icon = true
 [connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
 [connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/Nickname" to="." method="_tap_to_open_profile"]
+[connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Label_Place" to="." method="_tap_to_open_profile"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_AddFriend" to="." method="_on_button_add_friend_pressed"]
