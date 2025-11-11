@@ -19,6 +19,7 @@ corner_radius_bottom_left = 8
 
 [node name="NotificationToast" type="Control"]
 custom_minimum_size = Vector2(383.64, 90.86)
+layout_mode = 3
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
@@ -67,12 +68,13 @@ theme_override_constants/separation = 2
 
 [node name="LabelTitle" parent="Panel/MarginContainer/NotificationContent/VBoxContainer" index="0"]
 size_flags_vertical = 4
-theme_override_font_sizes/bold_italics_font_size = 14
-theme_override_font_sizes/italics_font_size = 14
 theme_override_font_sizes/normal_font_size = 14
 theme_override_font_sizes/bold_font_size = 14
+theme_override_font_sizes/bold_italics_font_size = 14
+theme_override_font_sizes/italics_font_size = 14
 
 [node name="LabelDescription" parent="Panel/MarginContainer/NotificationContent/VBoxContainer" index="1"]
+custom_minimum_size = Vector2(0, 36)
 size_flags_vertical = 4
 
 [editable path="Panel/MarginContainer/NotificationContent"]

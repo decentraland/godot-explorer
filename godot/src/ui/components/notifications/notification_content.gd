@@ -37,7 +37,8 @@ func _update_ui() -> void:
 	# Wrap title in [b] tags for bold
 	var title_text = NotificationTextHelper.get_notification_header(notif_type, metadata)
 	label_title.text = "[b]" + title_text + "[/b]"
-	label_description.text = NotificationTextHelper.get_notification_title(notif_type, metadata)
+	var description: String = NotificationTextHelper.get_notification_title(notif_type, metadata)
+	label_description.text = description
 
 	# Apply profile-style background for friend notifications first (before loading images)
 	_apply_friend_notification_styling(notif_type, metadata)
