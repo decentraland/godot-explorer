@@ -49,12 +49,23 @@ var _notification_queue: Array = []  # Queue for new unread notifications to sho
 var _debug_timer: Timer = null  # Timer for debug random notifications
 var _queue_paused: bool = false  # Whether the notification queue is paused
 
-# Local notifications
-var _android_plugin = null
-var _ios_plugin = null
-var _local_notification_channel_id = "dcl_local_notifications"
-var _local_notification_channel_name = "Decentraland Notifications"
-var _local_notification_channel_description = "Local notifications for Decentraland events"
+# Local notifications wrapper
+var _os_wrapper: NotificationOSWrapper = null
+
+# DEPRECATED: Keep these for backward compatibility with tests
+var _ios_plugin = null:
+	set(value):
+		_ios_plugin = value
+		if not _os_wrapper:
+			_os_wrapper = NotificationOSWrapper.new()
+		_os_wrapper.set_mock_plugin(value, false)
+var _android_plugin = null:
+	set(value):
+		_android_plugin = value
+		if not _os_wrapper:
+			_os_wrapper = NotificationOSWrapper.new()
+		_os_wrapper.set_mock_plugin(value, true)
+
 
 func _ready() -> void:
 	# Create polling timer
@@ -71,19 +82,30 @@ func _ready() -> void:
 		add_child(_debug_timer)
 		_start_debug_timer()
 
-	# Initialize platform-specific plugins
-	_initialize_local_notifications()
+	# Initialize OS notification wrapper (if not already created by tests)
+	if not _os_wrapper:
+		_os_wrapper = NotificationOSWrapper.new()
+		_os_wrapper.initialize()
+
+	# Connect wrapper signals
+	if not _os_wrapper.permission_changed.is_connected(_on_permission_changed):
+		_os_wrapper.permission_changed.connect(_on_permission_changed)
+	if not _os_wrapper.notification_scheduled.is_connected(_on_notification_scheduled):
+		_os_wrapper.notification_scheduled.connect(_on_notification_scheduled)
+	if not _os_wrapper.notification_cancelled.is_connected(_on_notification_cancelled):
+		_os_wrapper.notification_cancelled.connect(_on_notification_cancelled)
 
 	# Clear any badge from previous notifications
-	clear_badge_and_delivered_notifications()
+	_os_wrapper.clear_badge()
 
 	# Initial queue sync on app launch (relaunch)
 	_sync_notification_queue()
 
+
 ## Start polling for new notifications
 func start_polling() -> void:
 	# Don't poll for guests
-	if not _is_user_authenticated():
+	if not NotificationUtils.is_user_authenticated():
 		return
 
 	if not _is_polling:
@@ -91,6 +113,7 @@ func start_polling() -> void:
 		_poll_timer.start()
 		# Fetch immediately
 		fetch_notifications(-1, 50, false)
+
 
 ## Stop polling for notifications
 func stop_polling() -> void:
@@ -181,7 +204,7 @@ func fetch_notifications(
 	var promise := Promise.new()
 
 	# Don't fetch for guests
-	if not _is_user_authenticated():
+	if not NotificationUtils.is_user_authenticated():
 		promise.reject("User not authenticated")
 		return promise
 
@@ -331,6 +354,19 @@ func _on_poll_timeout() -> void:
 		fetch_notifications(-1, 50, true)
 
 
+## OS wrapper signal handlers
+func _on_permission_changed(granted: bool) -> void:
+	local_notification_permission_changed.emit(granted)
+
+
+func _on_notification_scheduled(notification_id: String) -> void:
+	local_notification_scheduled.emit(notification_id)
+
+
+func _on_notification_cancelled(notification_id: String) -> void:
+	local_notification_cancelled.emit(notification_id)
+
+
 ## Get the next notification from the queue
 func get_next_queued_notification() -> Dictionary:
 	if _notification_queue.size() > 0:
@@ -377,14 +413,6 @@ func resume_queue(emit_next: bool = false) -> void:
 		notification_queued.emit(_notification_queue[0])
 
 
-## Check if user is authenticated (not a guest)
-func _is_user_authenticated() -> bool:
-	if not Global.player_identity:
-		return false
-	var address = Global.player_identity.get_address_str()
-	return not address.is_empty()
-
-
 ## DEBUG: Start the debug timer with a random interval between 7-10 seconds
 func _start_debug_timer() -> void:
 	if _debug_timer:
@@ -415,176 +443,53 @@ func _on_debug_timer_timeout() -> void:
 # =============================================================================
 
 
-## Initialize platform-specific local notification plugins
-func _initialize_local_notifications() -> void:
-	if OS.get_name() == "Android":
-		_android_plugin = Engine.get_singleton("dcl-godot-android")
-		if _android_plugin:
-			# Create notification channel (Android 8.0+)
-			_android_plugin.createNotificationChannel(
-				_local_notification_channel_id,
-				_local_notification_channel_name,
-				_local_notification_channel_description
-			)
-		else:
-			push_warning("Local notifications: Android plugin not found")
-	elif OS.get_name() == "iOS":
-		_ios_plugin = Engine.get_singleton("DclGodotiOS")
-		if not _ios_plugin:
-			push_warning("Local notifications: iOS plugin not found")
-
-
 ## Request permission to show local notifications
-## This must be called before scheduling any notifications
-## On Android 13+, this will show a permission dialog
-## On iOS, this will show a permission dialog on first call
 func request_local_notification_permission() -> void:
-	if OS.get_name() == "Android" and _android_plugin:
-		var granted = _android_plugin.requestNotificationPermission()
-		local_notification_permission_changed.emit(granted)
-	elif OS.get_name() == "iOS" and _ios_plugin:
-		_ios_plugin.request_notification_permission()
-		# Permission result is async on iOS, we can check it later with has_local_notification_permission()
+	if _os_wrapper:
+		_os_wrapper.request_permission()
 
 
 ## Check if local notification permission is granted
-## Returns true if permission is granted, false otherwise
 func has_local_notification_permission() -> bool:
-	if OS.get_name() == "Android" and _android_plugin:
-		return _android_plugin.hasNotificationPermission()
-	if OS.get_name() == "iOS" and _ios_plugin:
-		return _ios_plugin.has_notification_permission()
+	if _os_wrapper:
+		return _os_wrapper.has_permission()
 	return false
 
 
 ## Schedule a local notification
-##
-## @param notification_id: Unique ID for this notification (for cancellation)
-## @param title: Notification title
-## @param body: Notification body text
-## @param delay_seconds: Delay in seconds before showing the notification
-## @return: true if scheduled successfully, false otherwise
 func schedule_local_notification(
 	notification_id: String, title: String, body: String, delay_seconds: int
 ) -> bool:
-	if notification_id.is_empty():
-		push_error("Local notification: notification_id cannot be empty")
-		return false
-
-	if delay_seconds < 0:
-		push_error("Local notification: delay_seconds must be >= 0")
-		return false
-
-	var success = false
-
-	if OS.get_name() == "Android" and _android_plugin:
-		success = _android_plugin.scheduleLocalNotification(
-			notification_id, title, body, delay_seconds
-		)
-	elif OS.get_name() == "iOS" and _ios_plugin:
-		success = _ios_plugin.schedule_local_notification(
-			notification_id, title, body, delay_seconds
-		)
-	else:
-		push_warning("Local notifications not supported on this platform")
-		return false
-
-	if success:
-		local_notification_scheduled.emit(notification_id)
-		print(
-			(
-				"Local notification scheduled: id=%s, title=%s, delay=%ds"
-				% [notification_id, title, delay_seconds]
-			)
-		)
-
-	return success
+	if _os_wrapper:
+		return _os_wrapper.schedule(notification_id, title, body, delay_seconds)
+	return false
 
 
 ## Cancel a scheduled local notification
-##
-## @param notification_id: The ID of the notification to cancel
-## @return: true if cancelled successfully, false otherwise
 func cancel_local_notification(notification_id: String) -> bool:
-	if notification_id.is_empty():
-		push_error("Local notification: notification_id cannot be empty")
-		return false
-
-	var success = false
-
-	if OS.get_name() == "Android" and _android_plugin:
-		success = _android_plugin.cancelLocalNotification(notification_id)
-	elif OS.get_name() == "iOS" and _ios_plugin:
-		success = _ios_plugin.cancel_local_notification(notification_id)
-	else:
-		push_warning("Local notifications not supported on this platform")
-		return false
-
-	if success:
-		local_notification_cancelled.emit(notification_id)
-
-	return success
+	if _os_wrapper:
+		return _os_wrapper.cancel(notification_id)
+	return false
 
 
 ## Cancel all scheduled local notifications
-##
-## @return: true if cancelled successfully, false otherwise
 func cancel_all_local_notifications() -> bool:
-	var success = false
-
-	if OS.get_name() == "Android" and _android_plugin:
-		success = _android_plugin.cancelAllLocalNotifications()
-	elif OS.get_name() == "iOS" and _ios_plugin:
-		success = _ios_plugin.cancel_all_local_notifications()
-	else:
-		push_warning("Local notifications not supported on this platform")
-		return false
-
-	return success
+	if _os_wrapper:
+		return _os_wrapper.cancel_all()
+	return false
 
 
 ## Clear the app badge number and remove delivered notifications
-## This should be called when the app launches to clear any badge
-## from notifications that were shown while the app was closed
 func clear_badge_and_delivered_notifications() -> void:
-	if OS.get_name() == "iOS" and _ios_plugin:
-		_ios_plugin.clear_badge_number()
-		print("Badge cleared on iOS")
-	# Android doesn't have a standard badge system, so nothing to do
+	if _os_wrapper:
+		_os_wrapper.clear_badge()
 
 
 ## Generate random notification text for event reminders
 ## Returns a dictionary with "title" and "body" keys
 ## Each call returns a random combination from the available pools
 func generate_event_notification_text(event_name: String) -> Dictionary:
-	# Title templates (5 options)
-	var title_templates = [
-		"{EventName} is Live!",
-		"{EventName} Started!",
-		"{EventName} is Starting!",
-		"{EventName} is ON!",
-		"{EventName} Begins!"
-	]
-
-	# Description options (7 options)
-	var descriptions = [
-		"Dress up and be the soul of the party",
-		"Your gang awaits, jump in and party on!",
-		"Join and meet your people",
-		"Don't miss out on the action!",
-		"Gather your crew and make your mark!",
-		"Join your friends and meet people!",
-		"Hop in and don't miss a beat!"
-	]
-
-	# Select random title and description
-	var random_title_template = title_templates[randi() % title_templates.size()]
-	var random_description = descriptions[randi() % descriptions.size()]
-
-	# Substitute event name in title
-	var title = random_title_template.replace("{EventName}", event_name)
-
-	return {"title": title, "body": random_description}
+	return NotificationUtils.generate_event_notification_text(event_name)
 
 
 # =============================================================================
@@ -840,20 +745,10 @@ func _sync_notification_queue() -> void:
 				plugin.db_mark_scheduled(notif_id, true)
 
 
-## Get the appropriate plugin for the current platform
+## Get the appropriate plugin for the current platform (used by queue management)
 func _get_plugin():
-	if OS.get_name() == "Android":
-		return _android_plugin
-	if OS.get_name() == "iOS":
-		return _ios_plugin
-
-	# For testing on macOS/other platforms: use iOS plugin if available
-	# This allows tests to inject a mock plugin and have it work on any platform
-	if _ios_plugin != null:
-		return _ios_plugin
-	if _android_plugin != null:
-		return _android_plugin
-
+	if _os_wrapper:
+		return _os_wrapper.get_plugin()
 	return null
 
 
@@ -861,24 +756,16 @@ func _get_plugin():
 func _os_schedule_notification(
 	notification_id: String, title: String, body: String, delay_seconds: int
 ) -> bool:
-	var plugin = _get_plugin()
-	if not plugin:
-		return false
-
-	if OS.get_name() == "Android":
-		return plugin.osScheduleNotification(notification_id, title, body, delay_seconds)
-	return plugin.os_schedule_notification(notification_id, title, body, delay_seconds)
+	if _os_wrapper:
+		return _os_wrapper.schedule(notification_id, title, body, delay_seconds)
+	return false
 
 
 ## Wrapper for os_cancel_notification that works on both platforms
 func _os_cancel_notification(notification_id: String) -> bool:
-	var plugin = _get_plugin()
-	if not plugin:
-		return false
-
-	if OS.get_name() == "Android":
-		return plugin.osCancelNotification(notification_id)
-	return plugin.os_cancel_notification(notification_id)
+	if _os_wrapper:
+		return _os_wrapper.cancel(notification_id)
+	return false
 
 
 ## Wrapper for os_get_scheduled_ids that works on both platforms
@@ -955,7 +842,7 @@ func _download_image_as_base64(image_url: String) -> String:
 		return ""
 
 	# Use Global.content_provider to download the image
-	var url_hash = _get_hash_from_url(image_url)
+	var url_hash = NotificationUtils.get_hash_from_url(image_url)
 	var promise = Global.content_provider.fetch_texture_by_url(url_hash, image_url)
 	var result = await PromiseUtils.async_awaiter(promise)
 
@@ -983,18 +870,3 @@ func _download_image_as_base64(image_url: String) -> String:
 	# Convert to base64
 	var base64_string = Marshalls.raw_to_base64(png_buffer)
 	return base64_string
-
-
-## Get hash from URL for content provider
-func _get_hash_from_url(url: String) -> String:
-	if url.contains("/content/contents/"):
-		var parts = url.split("/")
-		return parts[parts.size() - 1]
-
-	var context := HashingContext.new()
-	if context.start(HashingContext.HASH_SHA256) == OK:
-		context.update(url.to_utf8_buffer())
-		var url_hash: PackedByteArray = context.finish()
-		return url_hash.hex_encode()
-
-	return "temp-file"
