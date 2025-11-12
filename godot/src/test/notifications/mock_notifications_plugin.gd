@@ -17,10 +17,10 @@ var schedule_calls: Array[Dictionary] = []
 var cancel_calls: Array[String] = []
 var insert_calls: Array[Dictionary] = []
 
-
 # =============================================================================
 # PERMISSION API
 # =============================================================================
+
 
 func request_notification_permission() -> void:
 	_has_permission = true
@@ -42,6 +42,7 @@ func hasNotificationPermission() -> bool:
 # =============================================================================
 # DATABASE API - iOS style (snake_case)
 # =============================================================================
+
 
 func db_insert_notification(
 	id: String,
@@ -67,13 +68,15 @@ func db_insert_notification(
 	if not image_base64.is_empty():
 		_image_blobs[id] = image_base64
 
-	insert_calls.append({
-		"id": id,
-		"title": title,
-		"body": body,
-		"trigger_timestamp": trigger_timestamp,
-		"is_scheduled": is_scheduled
-	})
+	insert_calls.append(
+		{
+			"id": id,
+			"title": title,
+			"body": body,
+			"trigger_timestamp": trigger_timestamp,
+			"is_scheduled": is_scheduled
+		}
+	)
 
 	return true
 
@@ -98,7 +101,9 @@ func db_delete_notification(id: String) -> bool:
 	return true
 
 
-func db_query_notifications(where_clause: String, order_by: String, limit: int) -> Array[Dictionary]:
+func db_query_notifications(
+	where_clause: String, order_by: String, limit: int
+) -> Array[Dictionary]:
 	var results: Array[Dictionary] = []
 
 	# Get all notifications
@@ -175,6 +180,7 @@ func db_get_notification_image_blob(id: String) -> String:
 # DATABASE API - Android style (camelCase)
 # =============================================================================
 
+
 func dbInsertNotification(
 	id: String,
 	title: String,
@@ -184,7 +190,9 @@ func dbInsertNotification(
 	data: String,
 	image_base64: String
 ) -> bool:
-	return db_insert_notification(id, title, body, trigger_timestamp, is_scheduled, data, image_base64)
+	return db_insert_notification(
+		id, title, body, trigger_timestamp, is_scheduled, data, image_base64
+	)
 
 
 func dbUpdateNotification(id: String, updates: Dictionary) -> bool:
@@ -227,11 +235,9 @@ func dbGetNotificationImageBlob(id: String) -> String:
 # OS NOTIFICATION API
 # =============================================================================
 
+
 func os_schedule_notification(
-	notification_id: String,
-	title: String,
-	body: String,
-	delay_seconds: int
+	notification_id: String, title: String, body: String, delay_seconds: int
 ) -> bool:
 	if notification_id.is_empty():
 		return false
@@ -243,12 +249,9 @@ func os_schedule_notification(
 	# Mark as scheduled in database
 	db_mark_scheduled(notification_id, true)
 
-	schedule_calls.append({
-		"id": notification_id,
-		"title": title,
-		"body": body,
-		"delay_seconds": delay_seconds
-	})
+	schedule_calls.append(
+		{"id": notification_id, "title": title, "body": body, "delay_seconds": delay_seconds}
+	)
 
 	return true
 
@@ -269,10 +272,7 @@ func os_get_scheduled_ids() -> PackedStringArray:
 
 
 func osScheduleNotification(
-	notification_id: String,
-	title: String,
-	body: String,
-	delay_seconds: int
+	notification_id: String, title: String, body: String, delay_seconds: int
 ) -> bool:
 	return os_schedule_notification(notification_id, title, body, delay_seconds)
 
@@ -288,6 +288,7 @@ func osGetScheduledIds() -> PackedStringArray:
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 func _matches_where_clause(notif: Dictionary, where_clause: String) -> bool:
 	if where_clause.is_empty():
@@ -376,6 +377,7 @@ func _sort_notifications(notifications: Array[Dictionary], order_by: String) -> 
 # =============================================================================
 # TEST UTILITIES
 # =============================================================================
+
 
 func reset() -> void:
 	"""Reset the mock to initial state"""
