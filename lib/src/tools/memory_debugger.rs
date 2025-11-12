@@ -14,10 +14,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 // Tracking Allocator - Live Rust Heap Memory Monitoring
 // ============================================================================
 
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
-static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
+pub static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
+pub static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub struct TrackingAllocator;
 

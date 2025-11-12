@@ -81,6 +81,11 @@ func _ready():
 	# Leave it, because we can open a browser with the Magic Wallet
 	button_magic_wallet.visible = false
 
+	# Benchmark collection for menu
+	if Global.cli.benchmark_report and !is_in_game:
+		print("✓ Menu: Starting benchmark collection...")
+		_collect_benchmark()
+
 
 func _unhandled_input(event):
 	if event is InputEventKey and visible:
@@ -340,3 +345,38 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		Global.check_deep_link_teleport_to()
+
+
+func _collect_benchmark():
+	# Wait for scene to stabilize
+	await get_tree().create_timer(2.0).timeout
+
+	var benchmark_report = Global.benchmark_report
+	if not benchmark_report:
+		push_warning("BenchmarkReport not found in Global")
+		return
+
+	var resource_data = {
+		"total_meshes": 0,
+		"total_materials": 0,
+		"mesh_rid_count": 0,
+		"material_rid_count": 0,
+		"mesh_hash_count": 0,
+		"potential_dedup_count": 0,
+		"mesh_savings_percent": 0.0
+	}
+
+	benchmark_report.collect_and_store_metrics(
+		"3_Menu",
+		"UI Scene",
+		"",
+		resource_data
+	)
+	benchmark_report.generate_individual_report()
+
+	print("✓ Menu benchmark collected")
+
+	# Auto-proceed to Explorer for benchmark flow
+	print("✓ Auto-proceeding to Explorer for benchmark flow...")
+	await get_tree().create_timer(1.0).timeout
+	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")

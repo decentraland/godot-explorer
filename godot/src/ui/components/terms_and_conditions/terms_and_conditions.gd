@@ -9,6 +9,53 @@ signal accepted
 @onready var spinner: TextureProgressBar = %Spinner
 
 
+func _ready():
+	if Global.cli.benchmark_report:
+		print("✓ Terms and Conditions: Starting benchmark collection...")
+		_collect_benchmark()
+
+
+func _collect_benchmark():
+	# Wait for scene to stabilize
+	await get_tree().create_timer(2.0).timeout
+
+	var benchmark_report = Global.benchmark_report
+	if not benchmark_report:
+		push_warning("BenchmarkReport not found in Global")
+		# Auto-proceed anyway
+		_auto_accept_for_benchmark()
+		return
+
+	var resource_data = {
+		"total_meshes": 0,
+		"total_materials": 0,
+		"mesh_rid_count": 0,
+		"material_rid_count": 0,
+		"mesh_hash_count": 0,
+		"potential_dedup_count": 0,
+		"mesh_savings_percent": 0.0
+	}
+
+	benchmark_report.collect_and_store_metrics(
+		"1_Terms_and_Conditions",
+		"UI Scene",
+		"",
+		resource_data
+	)
+	benchmark_report.generate_individual_report()
+
+	print("✓ Terms and Conditions benchmark collected")
+
+	# Auto-proceed to Lobby
+	await get_tree().create_timer(1.0).timeout
+	_auto_accept_for_benchmark()
+
+
+func _auto_accept_for_benchmark():
+	print("✓ Auto-accepting Terms and Conditions for benchmark flow...")
+	_on_button_accept_pressed()
+
+
 func _on_check_box_terms_and_privacy_toggled(toggled_on: bool) -> void:
 	%Button_Accept.disabled = !toggled_on
 

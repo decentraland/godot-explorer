@@ -177,6 +177,11 @@ func _ready():
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
+	# Initialize BenchmarkReport singleton if benchmarking is enabled
+	if cli.benchmark_report:
+		print("✓ BenchmarkReport initialized for full flow benchmarking")
+		get_tree().root.add_child.call_deferred(self.benchmark_report)
+
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
