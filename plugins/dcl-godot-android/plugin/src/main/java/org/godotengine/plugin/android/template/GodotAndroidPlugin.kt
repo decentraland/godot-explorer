@@ -711,12 +711,19 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Convert string ID to integer hash for Android
             val intId = notificationId.hashCode()
 
+            // Fetch image blob from database if available
+            val imageBlob = notificationDatabase?.getNotificationImageBlob(notificationId)
+
             // Create intent for NotificationReceiver
             val intent = Intent(ctx, NotificationReceiver::class.java).apply {
                 action = NotificationReceiver.NOTIFICATION_ACTION
                 putExtra(NotificationReceiver.EXTRA_NOTIFICATION_ID, intId)
+                putExtra(NotificationReceiver.EXTRA_NOTIFICATION_STRING_ID, notificationId)
                 putExtra(NotificationReceiver.EXTRA_TITLE, title)
                 putExtra(NotificationReceiver.EXTRA_BODY, body)
+                if (imageBlob != null) {
+                    putExtra(NotificationReceiver.EXTRA_IMAGE_BLOB, imageBlob)
+                }
             }
 
             val pendingIntent = PendingIntent.getBroadcast(
@@ -745,7 +752,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 )
             }
 
-            Log.d(pluginName, "Local notification scheduled: id=$notificationId (hash=$intId), delay=${delaySeconds}s")
+            Log.d(pluginName, "Local notification scheduled: id=$notificationId (hash=$intId), delay=${delaySeconds}s, hasImage=${imageBlob != null}")
             return true
         } catch (e: Exception) {
             Log.e(pluginName, "Error scheduling local notification: ${e.message}")
@@ -840,11 +847,24 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         body: String,
         triggerTimestamp: Long,
         isScheduled: Int = 0,
-        data: String = ""
+        data: String = "",
+        imageBase64: String = ""
     ): Boolean {
         val db = notificationDatabase ?: run {
             Log.e(pluginName, "Database not initialized")
             return false
+        }
+
+        // Convert base64 string to ByteArray if provided
+        val imageBlob = if (imageBase64.isNotEmpty()) {
+            try {
+                android.util.Base64.decode(imageBase64, android.util.Base64.DEFAULT)
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error decoding image base64: ${e.message}")
+                null
+            }
+        } else {
+            null
         }
 
         return db.insertNotification(
@@ -853,7 +873,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             body,
             triggerTimestamp,
             isScheduled,
-            if (data.isEmpty()) null else data
+            if (data.isEmpty()) null else data,
+            imageBlob
         )
     }
 
@@ -1005,6 +1026,30 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     fun osCancelNotification(notificationId: String): Boolean {
         // This is the same as the existing cancelLocalNotification
         return cancelLocalNotification(notificationId)
+    }
+
+    /**
+     * Get the image blob for a specific notification (as base64 string).
+     * This is separate from queryNotifications() for performance.
+     *
+     * @param id Notification ID
+     * @return Base64 encoded image data, or empty string if no image
+     */
+    @UsedByGodot
+    fun dbGetNotificationImageBlob(id: String): String {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return ""
+        }
+
+        val imageBlob = db.getNotificationImageBlob(id) ?: return ""
+
+        return try {
+            android.util.Base64.encodeToString(imageBlob, android.util.Base64.DEFAULT)
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error encoding image blob to base64: ${e.message}")
+            ""
+        }
     }
 
     /**

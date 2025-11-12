@@ -18,7 +18,7 @@ class NotificationDatabase(context: Context) :
     companion object {
         private const val TAG = "NotificationDatabase"
         private const val DATABASE_NAME = "dcl_notifications.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2  // Bumped to 2 for image_blob column
 
         // Table and column names
         private const val TABLE_NOTIFICATIONS = "notifications"
@@ -29,6 +29,7 @@ class NotificationDatabase(context: Context) :
         private const val COL_CREATED_TIMESTAMP = "created_timestamp"
         private const val COL_IS_SCHEDULED = "is_scheduled"
         private const val COL_DATA = "data"
+        private const val COL_IMAGE_BLOB = "image_blob"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -41,7 +42,8 @@ class NotificationDatabase(context: Context) :
                 $COL_TRIGGER_TIMESTAMP INTEGER NOT NULL,
                 $COL_CREATED_TIMESTAMP INTEGER NOT NULL,
                 $COL_IS_SCHEDULED INTEGER DEFAULT 0,
-                $COL_DATA TEXT
+                $COL_DATA TEXT,
+                $COL_IMAGE_BLOB BLOB
             )
         """.trimIndent()
 
@@ -55,8 +57,7 @@ class NotificationDatabase(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // For now, just drop and recreate
-        // In production, you might want to migrate data
+        // Drop and recreate for now (we're still in development)
         db.execSQL("DROP TABLE IF EXISTS $TABLE_NOTIFICATIONS")
         onCreate(db)
         Log.d(TAG, "Database upgraded from v$oldVersion to v$newVersion")
@@ -71,6 +72,7 @@ class NotificationDatabase(context: Context) :
      * @param triggerTimestamp Unix timestamp (seconds) when notification should fire
      * @param isScheduled Whether notification is currently scheduled with OS (0 or 1)
      * @param data Optional JSON string for extra metadata
+     * @param imageBlob Optional image data as byte array
      * @return true if successful
      */
     fun insertNotification(
@@ -79,7 +81,8 @@ class NotificationDatabase(context: Context) :
         body: String,
         triggerTimestamp: Long,
         isScheduled: Int = 0,
-        data: String? = null
+        data: String? = null,
+        imageBlob: ByteArray? = null
     ): Boolean {
         return try {
             val db = writableDatabase
@@ -91,6 +94,7 @@ class NotificationDatabase(context: Context) :
                 put(COL_CREATED_TIMESTAMP, System.currentTimeMillis() / 1000)
                 put(COL_IS_SCHEDULED, isScheduled)
                 put(COL_DATA, data)
+                put(COL_IMAGE_BLOB, imageBlob)
             }
 
             val result = db.insertWithOnConflict(
@@ -100,7 +104,7 @@ class NotificationDatabase(context: Context) :
                 SQLiteDatabase.CONFLICT_REPLACE
             )
 
-            Log.d(TAG, "Notification inserted: id=$id, result=$result")
+            Log.d(TAG, "Notification inserted: id=$id, hasImage=${imageBlob != null}, result=$result")
             result != -1L
         } catch (e: Exception) {
             Log.e(TAG, "Error inserting notification: ${e.message}")
@@ -172,6 +176,7 @@ class NotificationDatabase(context: Context) :
 
     /**
      * Query notifications with SQL-like filters.
+     * NOTE: Excludes image_blob column for performance - use getNotificationImageBlob() separately.
      *
      * @param whereClause SQL WHERE clause (without "WHERE" keyword), e.g. "is_scheduled = 0"
      * @param orderBy SQL ORDER BY clause (without "ORDER BY" keyword), e.g. "trigger_timestamp ASC"
@@ -185,9 +190,20 @@ class NotificationDatabase(context: Context) :
             val db = readableDatabase
             val limitStr = if (limit > 0) limit.toString() else null
 
+            // Explicitly select columns excluding image_blob for performance
+            val columns = arrayOf(
+                COL_ID,
+                COL_TITLE,
+                COL_BODY,
+                COL_TRIGGER_TIMESTAMP,
+                COL_CREATED_TIMESTAMP,
+                COL_IS_SCHEDULED,
+                COL_DATA
+            )
+
             val cursor = db.query(
                 TABLE_NOTIFICATIONS,
-                null, // All columns
+                columns, // Exclude image_blob
                 whereClause.ifEmpty { null },
                 null,
                 null,
@@ -341,7 +357,47 @@ class NotificationDatabase(context: Context) :
     }
 
     /**
+     * Get the image blob for a specific notification.
+     * This is separate from queryNotifications() to avoid loading images into memory unnecessarily.
+     *
+     * @param id Notification ID
+     * @return ByteArray with image data, or null if no image or not found
+     */
+    fun getNotificationImageBlob(id: String): ByteArray? {
+        return try {
+            val db = readableDatabase
+            val cursor = db.query(
+                TABLE_NOTIFICATIONS,
+                arrayOf(COL_IMAGE_BLOB),
+                "$COL_ID = ?",
+                arrayOf(id),
+                null,
+                null,
+                null,
+                "1"
+            )
+
+            cursor.use {
+                if (it.moveToFirst()) {
+                    val blobIdx = it.getColumnIndexOrThrow(COL_IMAGE_BLOB)
+                    if (!it.isNull(blobIdx)) {
+                        it.getBlob(blobIdx)
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting notification image blob: ${e.message}")
+            null
+        }
+    }
+
+    /**
      * Convert a cursor row to a Godot Dictionary.
+     * NOTE: Does not include image_blob - use getNotificationImageBlob() separately.
      */
     private fun cursorToDict(cursor: Cursor): Dictionary {
         val dict = Dictionary()

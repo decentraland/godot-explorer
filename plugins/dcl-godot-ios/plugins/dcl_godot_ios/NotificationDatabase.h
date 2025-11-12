@@ -21,6 +21,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param triggerTimestamp Unix timestamp (seconds) when notification should fire
  * @param isScheduled Whether notification is currently scheduled with OS (0 or 1)
  * @param data Optional JSON string for extra metadata (can be nil)
+ * @param imageBlob Optional image data as NSData (can be nil)
  * @return YES if successful
  */
 - (BOOL)insertNotificationWithId:(NSString *)notificationId
@@ -28,7 +29,8 @@ NS_ASSUME_NONNULL_BEGIN
                             body:(NSString *)body
                  triggerTimestamp:(long long)triggerTimestamp
                      isScheduled:(int)isScheduled
-                            data:(NSString * _Nullable)data;
+                            data:(NSString * _Nullable)data
+                       imageBlob:(NSData * _Nullable)imageBlob;
 
 /**
  * Update notification fields.
@@ -100,6 +102,15 @@ NS_ASSUME_NONNULL_BEGIN
  * @return Number of deleted notifications
  */
 - (int)clearAll;
+
+/**
+ * Get the image blob for a specific notification.
+ * This is separate from queryNotifications() to avoid loading images into memory unnecessarily.
+ *
+ * @param notificationId Notification ID
+ * @return NSData with image data, or nil if no image or not found
+ */
+- (NSData * _Nullable)getNotificationImageBlobWithId:(NSString *)notificationId;
 
 @end
 

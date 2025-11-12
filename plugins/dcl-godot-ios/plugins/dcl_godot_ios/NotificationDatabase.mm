@@ -41,19 +41,26 @@
 - (void)createTables {
     if (!_database) return;
 
-    // Create notifications table
+    char *errorMsg;
+
+    // Drop existing table to force recreation with new schema
+    const char *dropTableSQL = "DROP TABLE IF EXISTS notifications;";
+    sqlite3_exec(_database, dropTableSQL, NULL, NULL, &errorMsg);
+    printf("Dropped existing notifications table for schema recreation\n");
+
+    // Create notifications table with image_blob column
     const char *createTableSQL =
-        "CREATE TABLE IF NOT EXISTS notifications ("
+        "CREATE TABLE notifications ("
         "id TEXT PRIMARY KEY,"
         "title TEXT NOT NULL,"
         "body TEXT NOT NULL,"
         "trigger_timestamp INTEGER NOT NULL,"
         "created_timestamp INTEGER NOT NULL,"
         "is_scheduled INTEGER DEFAULT 0,"
-        "data TEXT"
+        "data TEXT,"
+        "image_blob BLOB"
         ");";
 
-    char *errorMsg;
     int result = sqlite3_exec(_database, createTableSQL, NULL, NULL, &errorMsg);
     if (result != SQLITE_OK) {
         NSLog(@"Error creating table: %s", errorMsg);
@@ -62,20 +69,21 @@
     }
 
     // Create indexes
-    const char *createIndex1SQL = "CREATE INDEX IF NOT EXISTS idx_trigger_time ON notifications(trigger_timestamp);";
+    const char *createIndex1SQL = "CREATE INDEX idx_trigger_time ON notifications(trigger_timestamp);";
     result = sqlite3_exec(_database, createIndex1SQL, NULL, NULL, &errorMsg);
     if (result != SQLITE_OK) {
         NSLog(@"Error creating index 1: %s", errorMsg);
         sqlite3_free(errorMsg);
     }
 
-    const char *createIndex2SQL = "CREATE INDEX IF NOT EXISTS idx_scheduled_time ON notifications(is_scheduled, trigger_timestamp);";
+    const char *createIndex2SQL = "CREATE INDEX idx_scheduled_time ON notifications(is_scheduled, trigger_timestamp);";
     result = sqlite3_exec(_database, createIndex2SQL, NULL, NULL, &errorMsg);
     if (result != SQLITE_OK) {
         NSLog(@"Error creating index 2: %s", errorMsg);
         sqlite3_free(errorMsg);
     }
 
+    printf("Notification database recreated successfully with image_blob column\n");
     NSLog(@"Notification database tables created successfully");
 }
 
@@ -84,13 +92,20 @@
                             body:(NSString *)body
                  triggerTimestamp:(long long)triggerTimestamp
                      isScheduled:(int)isScheduled
-                            data:(NSString *)data {
-    if (!_database) return NO;
+                            data:(NSString *)data
+                       imageBlob:(NSData *)imageBlob {
+    printf("NotificationDatabase: insertNotification called for id=%s\n", [notificationId UTF8String]);
 
-    const char *sql = "INSERT OR REPLACE INTO notifications (id, title, body, trigger_timestamp, created_timestamp, is_scheduled, data) VALUES (?, ?, ?, ?, ?, ?, ?);";
+    if (!_database) {
+        printf("NotificationDatabase ERROR: Database is NULL\n");
+        return NO;
+    }
+
+    const char *sql = "INSERT OR REPLACE INTO notifications (id, title, body, trigger_timestamp, created_timestamp, is_scheduled, data, image_blob) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
 
     sqlite3_stmt *statement;
     if (sqlite3_prepare_v2(_database, sql, -1, &statement, NULL) != SQLITE_OK) {
+        printf("NotificationDatabase ERROR: Failed to prepare statement: %s\n", sqlite3_errmsg(_database));
         NSLog(@"Error preparing insert statement: %s", sqlite3_errmsg(_database));
         return NO;
     }
@@ -110,15 +125,27 @@
         sqlite3_bind_null(statement, 7);
     }
 
+    if (imageBlob && imageBlob.length > 0) {
+        printf("NotificationDatabase: Binding image blob (%lu bytes)\n", (unsigned long)imageBlob.length);
+        sqlite3_bind_blob(statement, 8, [imageBlob bytes], (int)[imageBlob length], SQLITE_TRANSIENT);
+    } else {
+        printf("NotificationDatabase: No image blob to bind\n");
+        sqlite3_bind_null(statement, 8);
+    }
+
+    printf("NotificationDatabase: Executing INSERT statement...\n");
     int result = sqlite3_step(statement);
     sqlite3_finalize(statement);
 
     if (result != SQLITE_DONE) {
+        printf("NotificationDatabase ERROR: Insert failed with result code %d: %s\n", result, sqlite3_errmsg(_database));
         NSLog(@"Error inserting notification: %s", sqlite3_errmsg(_database));
         return NO;
     }
 
-    NSLog(@"Notification inserted: id=%@", notificationId);
+    printf("NotificationDatabase SUCCESS: Notification inserted successfully (id=%s, hasImage=%d)\n",
+           [notificationId UTF8String], (imageBlob != nil && imageBlob.length > 0));
+    NSLog(@"Notification inserted: id=%@, hasImage=%d", notificationId, (imageBlob != nil && imageBlob.length > 0));
     return YES;
 }
 
@@ -210,7 +237,8 @@
                                                    limit:(int)limit {
     if (!_database) return @[];
 
-    NSMutableString *sql = [NSMutableString stringWithString:@"SELECT * FROM notifications"];
+    // Explicitly select columns excluding image_blob for performance
+    NSMutableString *sql = [NSMutableString stringWithString:@"SELECT id, title, body, trigger_timestamp, created_timestamp, is_scheduled, data FROM notifications"];
 
     if (whereClause && whereClause.length > 0) {
         [sql appendFormat:@" WHERE %@", whereClause];
@@ -404,6 +432,35 @@
     }
 
     return rowsDeleted;
+}
+
+- (NSData *)getNotificationImageBlobWithId:(NSString *)notificationId {
+    if (!_database || !notificationId) return nil;
+
+    const char *sql = "SELECT image_blob FROM notifications WHERE id = ? LIMIT 1;";
+
+    sqlite3_stmt *statement;
+    if (sqlite3_prepare_v2(_database, sql, -1, &statement, NULL) != SQLITE_OK) {
+        NSLog(@"Error preparing image blob query: %s", sqlite3_errmsg(_database));
+        return nil;
+    }
+
+    sqlite3_bind_text(statement, 1, [notificationId UTF8String], -1, SQLITE_TRANSIENT);
+
+    NSData *imageBlob = nil;
+    if (sqlite3_step(statement) == SQLITE_ROW) {
+        if (sqlite3_column_type(statement, 0) != SQLITE_NULL) {
+            const void *blobData = sqlite3_column_blob(statement, 0);
+            int blobSize = sqlite3_column_bytes(statement, 0);
+            if (blobData && blobSize > 0) {
+                imageBlob = [NSData dataWithBytes:blobData length:blobSize];
+            }
+        }
+    }
+
+    sqlite3_finalize(statement);
+
+    return imageBlob;
 }
 
 @end

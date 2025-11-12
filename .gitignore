@@ -1,5 +1,6 @@
 exports/
 /.bin/
+godot/.bin/
 snapshots/
 !tests/snapshots
 

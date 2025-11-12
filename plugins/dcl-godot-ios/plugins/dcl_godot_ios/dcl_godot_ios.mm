@@ -151,7 +151,7 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("clear_badge_number"), &DclGodotiOS::clear_badge_number);
 
     // Database API - Phase 3
-    ClassDB::bind_method(D_METHOD("db_insert_notification", "id", "title", "body", "trigger_timestamp", "is_scheduled", "data"), &DclGodotiOS::db_insert_notification);
+    ClassDB::bind_method(D_METHOD("db_insert_notification", "id", "title", "body", "trigger_timestamp", "is_scheduled", "data", "image_base64"), &DclGodotiOS::db_insert_notification);
     ClassDB::bind_method(D_METHOD("db_update_notification", "id", "updates"), &DclGodotiOS::db_update_notification);
     ClassDB::bind_method(D_METHOD("db_delete_notification", "id"), &DclGodotiOS::db_delete_notification);
     ClassDB::bind_method(D_METHOD("db_query_notifications", "where_clause", "order_by", "limit"), &DclGodotiOS::db_query_notifications);
@@ -160,6 +160,7 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("db_mark_scheduled", "id", "is_scheduled"), &DclGodotiOS::db_mark_scheduled);
     ClassDB::bind_method(D_METHOD("db_get_notification", "id"), &DclGodotiOS::db_get_notification);
     ClassDB::bind_method(D_METHOD("db_clear_all"), &DclGodotiOS::db_clear_all);
+    ClassDB::bind_method(D_METHOD("db_get_notification_image_blob", "id"), &DclGodotiOS::db_get_notification_image_blob);
 
     // OS Notification API - Phase 3
     ClassDB::bind_method(D_METHOD("os_schedule_notification", "notification_id", "title", "body", "delay_seconds"), &DclGodotiOS::os_schedule_notification);
@@ -586,9 +587,14 @@ bool DclGodotiOS::has_notification_permission() {
 
 bool DclGodotiOS::schedule_local_notification(String notification_id, String title, String body, int delay_seconds) {
     #if TARGET_OS_IOS
-    NSString *ns_id = [NSString stringWithUTF8String:notification_id.utf8().get_data()];
-    NSString *ns_title = [NSString stringWithUTF8String:title.utf8().get_data()];
-    NSString *ns_body = [NSString stringWithUTF8String:body.utf8().get_data()];
+    // Use safer UTF8 conversion to preserve emoji
+    CharString id_utf8 = notification_id.utf8();
+    CharString title_utf8 = title.utf8();
+    CharString body_utf8 = body.utf8();
+
+    NSString *ns_id = [[NSString alloc] initWithBytes:id_utf8.get_data() length:id_utf8.length() encoding:NSUTF8StringEncoding];
+    NSString *ns_title = [[NSString alloc] initWithBytes:title_utf8.get_data() length:title_utf8.length() encoding:NSUTF8StringEncoding];
+    NSString *ns_body = [[NSString alloc] initWithBytes:body_utf8.get_data() length:body_utf8.length() encoding:NSUTF8StringEncoding];
 
     // Create notification content
     UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
@@ -596,6 +602,46 @@ bool DclGodotiOS::schedule_local_notification(String notification_id, String tit
     content.body = ns_body;
     content.sound = [UNNotificationSound defaultSound];
     content.badge = @(1);
+
+    // Fetch image blob from database if available
+    NSData *imageBlob = nil;
+    if (notificationDatabase) {
+        imageBlob = [notificationDatabase getNotificationImageBlobWithId:ns_id];
+    }
+
+    // Add image attachment if available
+    if (imageBlob && imageBlob.length > 0) {
+        // Save image to temporary file
+        NSString *tempDir = NSTemporaryDirectory();
+        NSString *imagePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.jpg", ns_id]];
+        NSError *writeError = nil;
+
+        if ([imageBlob writeToFile:imagePath options:NSDataWritingAtomic error:&writeError]) {
+            NSURL *imageURL = [NSURL fileURLWithPath:imagePath];
+            NSError *attachmentError = nil;
+
+            // Options to show thumbnail in collapsed notification
+            NSDictionary *options = @{
+                UNNotificationAttachmentOptionsThumbnailHiddenKey: @NO,
+                UNNotificationAttachmentOptionsThumbnailClippingRectKey: [NSValue valueWithCGRect:CGRectMake(0.0, 0.0, 1.0, 1.0)]
+            };
+
+            UNNotificationAttachment *attachment = [UNNotificationAttachment
+                attachmentWithIdentifier:@"image"
+                URL:imageURL
+                options:options
+                error:&attachmentError];
+
+            if (attachment && !attachmentError) {
+                content.attachments = @[attachment];
+                printf("Image attachment added to notification: %s\n", notification_id.utf8().get_data());
+            } else if (attachmentError) {
+                printf("Error creating attachment: %s\n", attachmentError.localizedDescription.UTF8String);
+            }
+        } else if (writeError) {
+            printf("Error writing image to temp file: %s\n", writeError.localizedDescription.UTF8String);
+        }
+    }
 
     // Create trigger (fire after delay_seconds)
     UNTimeIntervalNotificationTrigger *trigger = [UNTimeIntervalNotificationTrigger
@@ -614,8 +660,8 @@ bool DclGodotiOS::schedule_local_notification(String notification_id, String tit
         if (error) {
             printf("Error scheduling local notification: %s\n", error.localizedDescription.UTF8String);
         } else {
-            printf("Local notification scheduled: id=%s, delay=%ds\n",
-                   notification_id.utf8().get_data(), delay_seconds);
+            printf("Local notification scheduled: id=%s, delay=%ds, hasImage=%d\n",
+                   notification_id.utf8().get_data(), delay_seconds, (imageBlob != nil && imageBlob.length > 0));
         }
     }];
 
@@ -680,24 +726,57 @@ void DclGodotiOS::clear_badge_number() {
 // DATABASE API - Unified notification queue management (Phase 3)
 // =============================================================================
 
-bool DclGodotiOS::db_insert_notification(String id, String title, String body, int64_t trigger_timestamp, int is_scheduled, String data) {
+bool DclGodotiOS::db_insert_notification(String id, String title, String body, int64_t trigger_timestamp, int is_scheduled, String data, String image_base64) {
     #if TARGET_OS_IOS
+    CharString id_utf8 = id.utf8();
+    CharString title_utf8 = title.utf8();
+    printf("iOS db_insert_notification called: id=%s, title=%s, trigger_ts=%lld, has_image=%d\n",
+           id_utf8.get_data(), title_utf8.get_data(), trigger_timestamp, !image_base64.is_empty());
+
     if (!notificationDatabase) {
-        printf("Notification database not initialized\n");
+        printf("ERROR: Notification database not initialized\n");
         return false;
     }
+    printf("Notification database is initialized\n");
 
-    NSString *ns_id = [NSString stringWithUTF8String:id.utf8().get_data()];
-    NSString *ns_title = [NSString stringWithUTF8String:title.utf8().get_data()];
-    NSString *ns_body = [NSString stringWithUTF8String:body.utf8().get_data()];
-    NSString *ns_data = data.is_empty() ? nil : [NSString stringWithUTF8String:data.utf8().get_data()];
+    // Use safer UTF8 conversion to preserve emoji
+    CharString body_utf8 = body.utf8();
 
-    return [notificationDatabase insertNotificationWithId:ns_id
-                                                    title:ns_title
-                                                     body:ns_body
-                                          triggerTimestamp:trigger_timestamp
-                                              isScheduled:is_scheduled
-                                                     data:ns_data];
+    NSString *ns_id = [[NSString alloc] initWithBytes:id_utf8.get_data() length:id_utf8.length() encoding:NSUTF8StringEncoding];
+    NSString *ns_title = [[NSString alloc] initWithBytes:title_utf8.get_data() length:title_utf8.length() encoding:NSUTF8StringEncoding];
+    NSString *ns_body = [[NSString alloc] initWithBytes:body_utf8.get_data() length:body_utf8.length() encoding:NSUTF8StringEncoding];
+
+    NSString *ns_data = nil;
+    if (!data.is_empty()) {
+        CharString data_utf8 = data.utf8();
+        ns_data = [[NSString alloc] initWithBytes:data_utf8.get_data() length:data_utf8.length() encoding:NSUTF8StringEncoding];
+    }
+
+    // Decode base64 image if provided
+    NSData *imageBlob = nil;
+    if (!image_base64.is_empty()) {
+        printf("Decoding base64 image (length: %d)...\n", (int)image_base64.length());
+        CharString image_utf8 = image_base64.utf8();
+        NSString *ns_image_base64 = [[NSString alloc] initWithBytes:image_utf8.get_data() length:image_utf8.length() encoding:NSUTF8StringEncoding];
+        imageBlob = [[NSData alloc] initWithBase64EncodedString:ns_image_base64 options:0];
+        if (!imageBlob) {
+            printf("ERROR: Failed to decode base64 image data\n");
+        } else {
+            printf("Image decoded successfully: %lu bytes\n", (unsigned long)[imageBlob length]);
+        }
+    }
+
+    printf("Calling insertNotificationWithId on database...\n");
+    BOOL result = [notificationDatabase insertNotificationWithId:ns_id
+                                                           title:ns_title
+                                                            body:ns_body
+                                                 triggerTimestamp:trigger_timestamp
+                                                     isScheduled:is_scheduled
+                                                            data:ns_data
+                                                       imageBlob:imageBlob];
+
+    printf("Database insert result: %s\n", result ? "SUCCESS" : "FAILURE");
+    return result;
     #else
     return false;
     #endif
@@ -877,6 +956,28 @@ int DclGodotiOS::db_clear_all() {
     return [notificationDatabase clearAll];
     #else
     return 0;
+    #endif
+}
+
+String DclGodotiOS::db_get_notification_image_blob(String id) {
+    #if TARGET_OS_IOS
+    if (!notificationDatabase) {
+        printf("Notification database not initialized\n");
+        return "";
+    }
+
+    NSString *ns_id = [NSString stringWithUTF8String:id.utf8().get_data()];
+    NSData *imageBlob = [notificationDatabase getNotificationImageBlobWithId:ns_id];
+
+    if (!imageBlob || imageBlob.length == 0) {
+        return "";
+    }
+
+    // Convert NSData to base64 string
+    NSString *base64String = [imageBlob base64EncodedStringWithOptions:0];
+    return String([base64String UTF8String]);
+    #else
+    return "";
     #endif
 }
 

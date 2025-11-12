@@ -50,7 +50,7 @@ public:
     void clear_badge_number();
 
     // Database API - Phase 3 unified queue management
-    bool db_insert_notification(String id, String title, String body, int64_t trigger_timestamp, int is_scheduled, String data);
+    bool db_insert_notification(String id, String title, String body, int64_t trigger_timestamp, int is_scheduled, String data, String image_base64);
     bool db_update_notification(String id, Dictionary updates);
     bool db_delete_notification(String id);
     TypedArray<Dictionary> db_query_notifications(String where_clause, String order_by, int limit);
@@ -59,6 +59,7 @@ public:
     bool db_mark_scheduled(String id, bool is_scheduled);
     Dictionary db_get_notification(String id);
     int db_clear_all();
+    String db_get_notification_image_blob(String id);
 
     // OS Notification API - Phase 3 renamed for clarity
     bool os_schedule_notification(String notification_id, String title, String body, int delay_seconds);
