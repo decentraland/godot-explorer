@@ -29,8 +29,8 @@ fractal_type = 2
 width = 64
 height = 64
 generate_mipmaps = false
-color_ramp = SubResource("Gradient_5s28x")
 noise = SubResource("FastNoiseLite_ljc2v")
+color_ramp = SubResource("Gradient_5s28x")
 
 [sub_resource type="Gradient" id="Gradient_fb67a"]
 offsets = PackedFloat32Array(0, 0.158845, 0.483755, 0.870036, 1)
