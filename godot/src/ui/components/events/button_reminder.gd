@@ -59,7 +59,7 @@ func _async_on_toggled(toggled_on: bool) -> void:
 
 		# Handle local notification scheduling/cancellation
 		if toggled_on:
-			_schedule_local_notification()
+			_schedule_local_notification_async()
 		else:
 			_cancel_local_notification()
 	else:
@@ -106,7 +106,7 @@ func update_styles(toggled_on):
 			texture_rect_remove.hide()
 
 
-func _schedule_local_notification() -> void:
+func _schedule_local_notification_async() -> void:
 	# Validate event data
 	if event_id_value.is_empty():
 		printerr("Cannot schedule notification: event_id is empty")
@@ -165,7 +165,7 @@ func _schedule_local_notification() -> void:
 	var notification_body = notification_text["body"]
 
 	# Queue the notification with image
-	var success = await NotificationsManager.queue_local_notification(
+	var success = await NotificationsManager.queue_local_notification_async(
 		notification_id,
 		notification_title,
 		notification_body,
