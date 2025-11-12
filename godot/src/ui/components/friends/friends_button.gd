@@ -1,4 +1,4 @@
-extends BaseAnimatedButton
+extends AnimatedButton
 
 signal friends_clicked
 

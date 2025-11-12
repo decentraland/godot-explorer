@@ -1,4 +1,4 @@
-@abstract class_name BaseAnimatedButton
+@abstract class_name AnimatedButton
 extends Button
 
 @export var sprite_frames_source: SpriteFrames
