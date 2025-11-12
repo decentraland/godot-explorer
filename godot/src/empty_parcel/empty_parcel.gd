@@ -3,6 +3,9 @@ extends Node3D
 
 const PARCEL_SIZE: float = 16.0
 const PARCEL_HALF_SIZE: float = 8.0
+const PARCEL_HEIGHT_BOUND: float = 100.0
+const PARCEL_FULL_HEIGHT: float = 200.0
+const OBSTACLE_COLLISION_LAYER: int = 2
 const FALLOFF_DISTANCE: float = 8.0
 const GRID_SIZE: int = 32
 const CELL_SIZE: float = 0.5
