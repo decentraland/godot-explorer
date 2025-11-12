@@ -25,6 +25,7 @@ pub mod http_request;
 pub mod profile;
 pub mod realm;
 pub mod scene_runner;
+pub mod social;
 pub mod test_runner;
 pub mod tools;
 pub mod utils;
