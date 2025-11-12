@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://cf8j7k2x3p4hl"]
+
+[node name="SkyLights" type="Node3D"]
+
+[node name="MainLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.00710599, -0.978071, 0.20815, 0.00639971, 0.208107, 0.978085, -0.999954, 0.00828236, 0.00478057, 0, 0, 0)
+light_color = Color(1, 0.988235, 0.768627, 1)
+light_energy = 1.0
+light_bake_mode = 0
+shadow_enabled = true
+shadow_opacity = 0.7

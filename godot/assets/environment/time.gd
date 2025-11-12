@@ -7,6 +7,7 @@ var config: DclConfig
 var last_value: float
 
 var normalized_time := 0.0
+var debug_mode_active := false  # Flag to disable normal time updates when in debug mode
 
 
 func _ready():
@@ -18,6 +19,13 @@ func get_normalized_time():
 
 
 func _process(_delta: float) -> void:
+	# Skip normal time updates if debug mode is active
+	if debug_mode_active:
+		if last_value != normalized_time:
+			RenderingServer.global_shader_parameter_set("day_night_cycle", normalized_time)
+			last_value = normalized_time
+		return
+
 	if Global.get_fixed_skybox_time():
 		normalized_time = 0.625  # 3pm
 	else:
