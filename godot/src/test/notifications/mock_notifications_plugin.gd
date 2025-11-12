@@ -1,4 +1,5 @@
 extends RefCounted
+# gdlint: disable=function-name,class-definitions-order
 
 # Mock implementation of iOS/Android notification plugins for testing
 # Simulates both DclGodotiOS and GodotAndroidPlugin interfaces

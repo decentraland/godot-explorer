@@ -56,7 +56,6 @@ var _local_notification_channel_id = "dcl_local_notifications"
 var _local_notification_channel_name = "Decentraland Notifications"
 var _local_notification_channel_description = "Local notifications for Decentraland events"
 
-
 func _ready() -> void:
 	# Create polling timer
 	_poll_timer = Timer.new()
@@ -81,7 +80,6 @@ func _ready() -> void:
 	# Initial queue sync on app launch (relaunch)
 	_sync_notification_queue()
 
-
 ## Start polling for new notifications
 func start_polling() -> void:
 	# Don't poll for guests
@@ -93,7 +91,6 @@ func start_polling() -> void:
 		_poll_timer.start()
 		# Fetch immediately
 		fetch_notifications(-1, 50, false)
-
 
 ## Stop polling for notifications
 func stop_polling() -> void:
@@ -843,7 +840,6 @@ func _sync_notification_queue() -> void:
 				plugin.db_mark_scheduled(notif_id, true)
 
 
-
 ## Get the appropriate plugin for the current platform
 func _get_plugin():
 	if OS.get_name() == "Android":
@@ -905,7 +901,9 @@ func _print_queue_state(current_time: int, scheduled_count: int, pending_count: 
 
 	# Get total count
 	var total_count = (
-		plugin.dbCountNotifications("") if OS.get_name() == "Android" else plugin.db_count_notifications("")
+		plugin.dbCountNotifications("")
+		if OS.get_name() == "Android"
+		else plugin.db_count_notifications("")
 	)
 
 	# Get next few scheduled notifications
