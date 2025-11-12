@@ -18,7 +18,7 @@ class NotificationDatabase(context: Context) :
     companion object {
         private const val TAG = "NotificationDatabase"
         private const val DATABASE_NAME = "dcl_notifications.db"
-        private const val DATABASE_VERSION = 2  // Bumped to 2 for image_blob column
+        private const val DATABASE_VERSION = 1
 
         // Table and column names
         private const val TABLE_NOTIFICATIONS = "notifications"
@@ -57,10 +57,21 @@ class NotificationDatabase(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Drop and recreate for now (we're still in development)
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NOTIFICATIONS")
-        onCreate(db)
-        Log.d(TAG, "Database upgraded from v$oldVersion to v$newVersion")
+        Log.d(TAG, "Upgrading database from v$oldVersion to v$newVersion")
+
+        // Apply migrations step by step
+        var currentVersion = oldVersion
+
+        // Future migrations would go here as additional if blocks
+        // Example:
+        // if (currentVersion == 1 && newVersion >= 2) {
+        //     // Migration from v1 to v2
+        //     Log.d(TAG, "Applying migration v1 -> v2: ...")
+        //     db.execSQL("ALTER TABLE $TABLE_NOTIFICATIONS ADD COLUMN new_column TEXT")
+        //     currentVersion = 2
+        // }
+
+        Log.d(TAG, "Database migration completed successfully to v$newVersion")
     }
 
     /**

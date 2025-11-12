@@ -38,53 +38,114 @@
     }
 }
 
+- (int)getDatabaseVersion {
+    if (!_database) return 0;
+
+    sqlite3_stmt *statement;
+    const char *sql = "PRAGMA user_version;";
+
+    if (sqlite3_prepare_v2(_database, sql, -1, &statement, NULL) != SQLITE_OK) {
+        NSLog(@"Error getting database version: %s", sqlite3_errmsg(_database));
+        return 0;
+    }
+
+    int version = 0;
+    if (sqlite3_step(statement) == SQLITE_ROW) {
+        version = sqlite3_column_int(statement, 0);
+    }
+
+    sqlite3_finalize(statement);
+    return version;
+}
+
+- (void)setDatabaseVersion:(int)version {
+    if (!_database) return;
+
+    char *errorMsg;
+    NSString *sql = [NSString stringWithFormat:@"PRAGMA user_version = %d;", version];
+
+    int result = sqlite3_exec(_database, [sql UTF8String], NULL, NULL, &errorMsg);
+    if (result != SQLITE_OK) {
+        NSLog(@"Error setting database version: %s", errorMsg);
+        sqlite3_free(errorMsg);
+    } else {
+        NSLog(@"Database version set to: %d", version);
+    }
+}
+
 - (void)createTables {
     if (!_database) return;
 
     char *errorMsg;
+    int currentVersion = [self getDatabaseVersion];
+    const int TARGET_VERSION = 1;
 
-    // Drop existing table to force recreation with new schema
-    const char *dropTableSQL = "DROP TABLE IF EXISTS notifications;";
-    sqlite3_exec(_database, dropTableSQL, NULL, NULL, &errorMsg);
-    printf("Dropped existing notifications table for schema recreation\n");
+    NSLog(@"Database current version: %d, target version: %d", currentVersion, TARGET_VERSION);
 
-    // Create notifications table with image_blob column
-    const char *createTableSQL =
-        "CREATE TABLE notifications ("
-        "id TEXT PRIMARY KEY,"
-        "title TEXT NOT NULL,"
-        "body TEXT NOT NULL,"
-        "trigger_timestamp INTEGER NOT NULL,"
-        "created_timestamp INTEGER NOT NULL,"
-        "is_scheduled INTEGER DEFAULT 0,"
-        "data TEXT,"
-        "image_blob BLOB"
-        ");";
+    if (currentVersion == 0) {
+        // Fresh database - create schema from scratch
+        NSLog(@"Creating fresh database schema...");
 
-    int result = sqlite3_exec(_database, createTableSQL, NULL, NULL, &errorMsg);
-    if (result != SQLITE_OK) {
-        NSLog(@"Error creating table: %s", errorMsg);
-        sqlite3_free(errorMsg);
-        return;
+        const char *createTableSQL =
+            "CREATE TABLE IF NOT EXISTS notifications ("
+            "id TEXT PRIMARY KEY,"
+            "title TEXT NOT NULL,"
+            "body TEXT NOT NULL,"
+            "trigger_timestamp INTEGER NOT NULL,"
+            "created_timestamp INTEGER NOT NULL,"
+            "is_scheduled INTEGER DEFAULT 0,"
+            "data TEXT,"
+            "image_blob BLOB"
+            ");";
+
+        int result = sqlite3_exec(_database, createTableSQL, NULL, NULL, &errorMsg);
+        if (result != SQLITE_OK) {
+            NSLog(@"Error creating table: %s", errorMsg);
+            sqlite3_free(errorMsg);
+            return;
+        }
+
+        // Create indexes
+        const char *createIndex1SQL = "CREATE INDEX IF NOT EXISTS idx_trigger_time ON notifications(trigger_timestamp);";
+        result = sqlite3_exec(_database, createIndex1SQL, NULL, NULL, &errorMsg);
+        if (result != SQLITE_OK) {
+            NSLog(@"Error creating index 1: %s", errorMsg);
+            sqlite3_free(errorMsg);
+        }
+
+        const char *createIndex2SQL = "CREATE INDEX IF NOT EXISTS idx_scheduled_time ON notifications(is_scheduled, trigger_timestamp);";
+        result = sqlite3_exec(_database, createIndex2SQL, NULL, NULL, &errorMsg);
+        if (result != SQLITE_OK) {
+            NSLog(@"Error creating index 2: %s", errorMsg);
+            sqlite3_free(errorMsg);
+        }
+
+        [self setDatabaseVersion:TARGET_VERSION];
+        NSLog(@"Fresh database created successfully with version %d", TARGET_VERSION);
+    } else if (currentVersion < TARGET_VERSION) {
+        // Perform migrations
+        NSLog(@"Migrating database from version %d to %d...", currentVersion, TARGET_VERSION);
+
+        // Future migrations would go here
+        // Example:
+        // if (currentVersion == 1) {
+        //     // Migration from v1 to v2
+        //     NSLog(@"Applying migration v1 -> v2: ...");
+        //     const char *migrationSQL = "ALTER TABLE notifications ADD COLUMN new_column TEXT;";
+        //     int result = sqlite3_exec(_database, migrationSQL, NULL, NULL, &errorMsg);
+        //     if (result != SQLITE_OK) {
+        //         NSLog(@"Error in migration: %s", errorMsg);
+        //         sqlite3_free(errorMsg);
+        //         return;
+        //     }
+        //     NSLog(@"Migration v1 -> v2 completed successfully");
+        // }
+
+        [self setDatabaseVersion:TARGET_VERSION];
+        NSLog(@"Database migration completed. Now at version %d", TARGET_VERSION);
+    } else {
+        NSLog(@"Database already at current version %d", currentVersion);
     }
-
-    // Create indexes
-    const char *createIndex1SQL = "CREATE INDEX idx_trigger_time ON notifications(trigger_timestamp);";
-    result = sqlite3_exec(_database, createIndex1SQL, NULL, NULL, &errorMsg);
-    if (result != SQLITE_OK) {
-        NSLog(@"Error creating index 1: %s", errorMsg);
-        sqlite3_free(errorMsg);
-    }
-
-    const char *createIndex2SQL = "CREATE INDEX idx_scheduled_time ON notifications(is_scheduled, trigger_timestamp);";
-    result = sqlite3_exec(_database, createIndex2SQL, NULL, NULL, &errorMsg);
-    if (result != SQLITE_OK) {
-        NSLog(@"Error creating index 2: %s", errorMsg);
-        sqlite3_free(errorMsg);
-    }
-
-    printf("Notification database recreated successfully with image_blob column\n");
-    NSLog(@"Notification database tables created successfully");
 }
 
 - (BOOL)insertNotificationWithId:(NSString *)notificationId
