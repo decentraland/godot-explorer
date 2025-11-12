@@ -6,11 +6,11 @@ signal bell_clicked
 func _get_unread_count() -> int:
 	var notifications = NotificationsManager.get_notifications()
 	var count = 0
-	
+
 	for notif in notifications:
 		if not notif.get("read", false):
 			count += 1
-	
+
 	return count
 
 

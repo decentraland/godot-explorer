@@ -2,9 +2,8 @@ extends Control
 
 signal size_changed
 
-@export var player_list_type: SocialType
-
 enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
+@export var player_list_type: SocialType
 
 var list_size: int = 0
 

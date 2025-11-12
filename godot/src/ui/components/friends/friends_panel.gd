@@ -4,16 +4,12 @@ signal panel_closed
 
 const NO_FRIENDS_MSG: String = "You don’t have any friends or pending requests.\nGo make some friends!"
 
-
 var down_arrow_icon: CompressedTexture2D = load("res://assets/ui/down_arrow.svg")
 var up_arrow_icon: CompressedTexture2D = load("res://assets/ui/up_arrow.svg")
-
-
 
 var online_friends: int = 1
 var offline_friends: int = 2
 var pending_request: int = 3
-
 
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
@@ -36,6 +32,7 @@ var pending_request: int = 3
 
 @onready var label_empty_state: Label = %LabelEmptyState
 
+
 func _ready() -> void:
 	_update_dropdown_visibility()
 	request_list.hide()
@@ -44,6 +41,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
 	_on_button_friends_toggled(true)
+
 
 func _input(event: InputEvent) -> void:
 	# Only handle input when panel is visible in tree
@@ -82,6 +80,7 @@ func _hide_all() -> void:
 	scroll_container_nearby.hide()
 	scroll_container_friends.hide()
 	scroll_container_blocked.hide()
+
 
 func _on_button_friends_toggled(toggled_on: bool) -> void:
 	if toggled_on:
@@ -137,19 +136,19 @@ func _update_dropdown_visibility() -> void:
 	else:
 		v_box_container_request.show()
 		request_button.text = "REQUESTS (" + str(pending_request) + ")"
-		
+
 	if online_friends == 0:
 		v_box_container_online.hide()
 	else:
 		v_box_container_online.show()
 		online_button.text = "ONLINE (" + str(online_friends) + ")"
-		
+
 	if offline_friends == 0:
 		v_box_container_offline.hide()
 	else:
 		v_box_container_offline.show()
 		offline_button.text = "OFFLINE (" + str(offline_friends) + ")"
-		
+
 	if online_friends == 0 and offline_friends == 0 and pending_request == 0:
 		label_empty_state.text = NO_FRIENDS_MSG
 	else:

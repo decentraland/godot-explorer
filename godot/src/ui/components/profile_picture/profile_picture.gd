@@ -172,10 +172,12 @@ func _on_gui_input(event: InputEvent) -> void:
 func set_online() -> void:
 	texture_rect_status.show()
 	texture_rect_status.texture = connection_status_online
-	
+
+
 func set_offline() -> void:
 	texture_rect_status.show()
 	texture_rect_status.texture = connection_status_offline
-	
+
+
 func hide_status() -> void:
 	texture_rect_status.hide()

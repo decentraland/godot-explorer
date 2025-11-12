@@ -7,11 +7,11 @@ func _get_unread_count() -> int:
 	#NEED TO SET FROM FRIENDS MANAGER
 	var notifications = NotificationsManager.get_notifications()
 	var count = 0
-	
+
 	for notif in notifications:
 		if not notif.get("read", false):
 			count += 1
-	
+
 	return count
 
 

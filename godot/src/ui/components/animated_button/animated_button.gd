@@ -2,12 +2,12 @@
 extends Button
 
 @export var sprite_frames_source: SpriteFrames
-@export var sprite_frames_scale: Vector2 = Vector2(0.7,0.7)
+@export var sprite_frames_scale: Vector2 = Vector2(0.7, 0.7)
 
+var animated_sprite: AnimatedSprite2D
 var _unread_count: int = 0
 var _is_panel_open: bool = false
 var _animation_tween: Tween
-var animated_sprite: AnimatedSprite2D
 
 @onready var label_badge: Label = %Label_Badge
 @onready var badge_container: PanelContainer = %Badge_Container
@@ -19,7 +19,7 @@ func _ready() -> void:
 	instantiate_animatd_sprite()
 	# Las clases hijas deben implementar este método para conectar sus señales
 	_connect_update_signals()
-	
+
 	# Initial update
 	_update_badge()
 	_update_button_state()
@@ -34,7 +34,7 @@ func _on_pressed() -> void:
 	var metric_name = _get_button_metric_name()
 	if metric_name != "":
 		Global.metrics.track_click_button(metric_name, "HUD", "")
-	
+
 	# Las clases hijas deben implementar este método para emitir su señal específica
 	_on_button_clicked()
 
@@ -44,7 +44,7 @@ func instantiate_animatd_sprite():
 	add_child(animated_sprite)
 	move_child(animated_sprite, 0)
 	animated_sprite.sprite_frames = sprite_frames_source
-	var sprite_position = Vector2(size.x, size.y)/2
+	var sprite_position = Vector2(size.x, size.y) / 2
 	print(sprite_position)
 	animated_sprite.position = sprite_position
 	animated_sprite.scale = sprite_frames_scale
@@ -58,11 +58,11 @@ func set_panel_open(is_open: bool) -> void:
 func _update_button_state() -> void:
 	if animated_sprite == null:
 		return
-	
+
 	# Cancel any existing tween
 	if _animation_tween:
 		_animation_tween.kill()
-	
+
 	if _is_panel_open:
 		# Play animation forward with ease-in (stronger curve for faster start)
 		animated_sprite.play("toggle")
@@ -86,7 +86,7 @@ func _on_notifications_updated(_notifications: Array = []) -> void:
 func _update_badge() -> void:
 	# Las clases hijas deben implementar este método para obtener su conteo específico
 	_unread_count = _get_unread_count()
-	
+
 	if _unread_count > 0:
 		badge_container.visible = true
 		if _unread_count > 99:

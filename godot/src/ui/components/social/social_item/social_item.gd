@@ -1,16 +1,13 @@
 extends Control
 
+enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
+
+@export var item_type: SocialType
+
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
 var block_icon = load("res://assets/ui/block.svg")
 var unblock_icon = load("res://assets/ui/unblock.svg")
-
-
-
-@export var item_type: SocialType
-
-enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
-
 var avatar: DclAvatar = null
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
@@ -60,7 +57,7 @@ func async_set_data(avatar_param = null):
 			texture_rect_claimed_checkmark.hide()
 		else:
 			texture_rect_claimed_checkmark.show()
-			
+
 		if avatar_name.length() > 15:
 			avatar_name = avatar_name.left(15) + "..."
 		nickname.text = avatar_name
@@ -93,20 +90,22 @@ func _update_buttons() -> void:
 	#var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
 	#button_block_user.set_pressed_no_signal(is_blocked)
 	#if is_blocked:
-		#button_block_user.icon = null
-		#button_block_user.text = "UNBLOCK"
-		#button_mute_user.hide()
+	#button_block_user.icon = null
+	#button_block_user.text = "UNBLOCK"
+	#button_mute_user.hide()
 	#else:
-		#button_block_user.icon = BLOCK
-		#button_block_user.text = ""
-		#button_mute_user.show()
+	#button_block_user.icon = BLOCK
+	#button_block_user.text = ""
+	#button_mute_user.show()
+
+
 #
-	#var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
-	#button_mute_user.set_pressed_no_signal(is_muted)
-	#if is_muted:
-		#button_mute_user.icon = MUTE
-	#else:
-		#button_mute_user.icon = UNMUTE
+#var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
+#button_mute_user.set_pressed_no_signal(is_muted)
+#if is_muted:
+#button_mute_user.icon = MUTE
+#else:
+#button_mute_user.icon = UNMUTE
 
 
 func _on_button_block_user_pressed() -> void:
@@ -159,7 +158,7 @@ func _update_elements_visibility() -> void:
 			h_box_container_blocked.show()
 		_:
 			profile_picture.set_offline()
-		
+
 
 func _hide_all_buttons() -> void:
 	h_box_container_online.hide()
@@ -168,8 +167,9 @@ func _hide_all_buttons() -> void:
 	h_box_container_blocked.hide()
 	profile_picture.hide_status()
 	label_place.hide()
-	
-func set_type(type:SocialType) -> void:
+
+
+func set_type(type: SocialType) -> void:
 	item_type = type
 	_update_elements_visibility()
 
