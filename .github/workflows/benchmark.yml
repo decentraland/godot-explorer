@@ -58,7 +58,7 @@ jobs:
         run: |
           export DISPLAY=:99
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
-          cargo run -- run --no-default-features --features use_deno,use_memory_debugger -- --benchmark-report
+          cargo run -- run --no-default-features --features use_deno,use_memory_debugger -- --benchmark-report 2>&1 | tee benchmark_run.log
 
       - name: Collect Benchmark Results
         if: always()
@@ -94,6 +94,14 @@ jobs:
             echo "⚠️ benchmark_logs.log not found"
           fi
 
+          # Copy the full benchmark run logs
+          if [ -f "benchmark_run.log" ]; then
+            cp benchmark_run.log benchmark-results/
+            echo "✓ Copied benchmark_run.log"
+          else
+            echo "⚠️ benchmark_run.log not found"
+          fi
+
           # List what we collected
           echo "=== Benchmark Results ==="
           ls -lh benchmark-results/
@@ -106,6 +114,7 @@ jobs:
           path: |
             benchmark-results/benchmark_report.md
             benchmark-results/benchmark_logs.log
+            benchmark-results/benchmark_run.log
           if-no-files-found: error
           retention-days: 90
 
@@ -130,21 +139,24 @@ jobs:
             echo "<details>"
             echo "<summary>Click to expand full benchmark report</summary>"
             echo ""
-            echo '```markdown'
             if [ -f "benchmark-results/benchmark_report.md" ]; then
               cat benchmark-results/benchmark_report.md
             else
               echo "⚠️ Benchmark report not generated"
             fi
-            echo '```'
             echo ""
             echo "</details>"
             echo ""
             echo "---"
             echo ""
-            echo "📋 **Full Logs**: [View workflow run logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo "### 📋 Logs & Artifacts"
             echo ""
-            echo "📦 **Artifacts**: Download \`benchmark-report\` artifact from the workflow run above"
+            echo "- 📄 **Benchmark Logs**: [benchmark_logs.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Flow controller logs"
+            echo "- 🔧 **Full Run Logs**: [benchmark_run.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Complete CI run output"
+            echo "- 🌐 **Workflow Run**: [View full logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo "- 📦 **Download All**: Get the \`benchmark-report\` artifact from the workflow run"
+            echo ""
+            echo "---"
             echo ""
             echo "🔄 **Updated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           } > pr-comment.md
