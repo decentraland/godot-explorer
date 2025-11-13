@@ -72,9 +72,9 @@ use std::io::Write as IoWrite;
 use std::path::PathBuf;
 
 #[cfg(feature = "use_memory_debugger")]
-use std::sync::atomic::Ordering;
+use crate::tools::memory_debugger::{ALLOCATED, ALLOCATION_COUNT, DEALLOCATED, DEALLOCATION_COUNT};
 #[cfg(feature = "use_memory_debugger")]
-use crate::tools::memory_debugger::{ALLOCATED, DEALLOCATED, ALLOCATION_COUNT, DEALLOCATION_COUNT};
+use std::sync::atomic::Ordering;
 
 /// Benchmark metrics collected for a single test
 #[derive(Debug, Clone)]
@@ -191,11 +191,16 @@ impl BenchmarkReport {
         let performance = Performance::singleton();
 
         // Memory metrics (in MiB)
-        let godot_static_memory_mb = performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
-        let godot_static_memory_peak_mb = performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0;
-        let gpu_video_ram_mb = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
-        let gpu_texture_memory_mb = performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
-        let gpu_buffer_memory_mb = performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+        let godot_static_memory_mb =
+            performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
+        let godot_static_memory_peak_mb =
+            performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0;
+        let gpu_video_ram_mb =
+            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
+        let gpu_texture_memory_mb =
+            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
+        let gpu_buffer_memory_mb =
+            performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
 
         // Rust heap memory
         #[cfg(feature = "use_memory_debugger")]
@@ -203,13 +208,17 @@ impl BenchmarkReport {
             let allocated = ALLOCATED.load(Ordering::Relaxed);
             let deallocated = DEALLOCATED.load(Ordering::Relaxed);
             let current_usage = allocated.saturating_sub(deallocated);
-            (current_usage as f64 / 1_048_576.0, allocated as f64 / 1_048_576.0)
+            (
+                current_usage as f64 / 1_048_576.0,
+                allocated as f64 / 1_048_576.0,
+            )
         };
         #[cfg(not(feature = "use_memory_debugger"))]
         let (rust_heap_usage_mb, rust_total_allocated_mb) = (0.0, 0.0);
 
         // Deno memory
-        let (deno_total_memory_mb, deno_scene_count, deno_average_memory_mb) = self.get_deno_metrics();
+        let (deno_total_memory_mb, deno_scene_count, deno_average_memory_mb) =
+            self.get_deno_metrics();
 
         // Object counts
         let total_objects = performance.get_monitor(Monitor::OBJECT_COUNT) as i64;
@@ -220,8 +229,10 @@ impl BenchmarkReport {
         // Rendering
         let fps = performance.get_monitor(Monitor::TIME_FPS) as f64;
         let draw_calls = performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64;
-        let primitives_in_frame = performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64;
-        let objects_in_frame = performance.get_monitor(Monitor::RENDER_TOTAL_OBJECTS_IN_FRAME) as i64;
+        let primitives_in_frame =
+            performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64;
+        let objects_in_frame =
+            performance.get_monitor(Monitor::RENDER_TOTAL_OBJECTS_IN_FRAME) as i64;
 
         // Mobile metrics
         let (mobile_memory_usage_mb, mobile_temperature_celsius, mobile_battery_percent) =
@@ -234,16 +245,28 @@ impl BenchmarkReport {
         dict.set("location", location.to_variant());
         dict.set("realm", realm.to_variant());
 
-        dict.set("godot_static_memory_mb", godot_static_memory_mb.to_variant());
-        dict.set("godot_static_memory_peak_mb", godot_static_memory_peak_mb.to_variant());
+        dict.set(
+            "godot_static_memory_mb",
+            godot_static_memory_mb.to_variant(),
+        );
+        dict.set(
+            "godot_static_memory_peak_mb",
+            godot_static_memory_peak_mb.to_variant(),
+        );
         dict.set("gpu_video_ram_mb", gpu_video_ram_mb.to_variant());
         dict.set("gpu_texture_memory_mb", gpu_texture_memory_mb.to_variant());
         dict.set("gpu_buffer_memory_mb", gpu_buffer_memory_mb.to_variant());
         dict.set("rust_heap_usage_mb", rust_heap_usage_mb.to_variant());
-        dict.set("rust_total_allocated_mb", rust_total_allocated_mb.to_variant());
+        dict.set(
+            "rust_total_allocated_mb",
+            rust_total_allocated_mb.to_variant(),
+        );
         dict.set("deno_total_memory_mb", deno_total_memory_mb.to_variant());
         dict.set("deno_scene_count", deno_scene_count.to_variant());
-        dict.set("deno_average_memory_mb", deno_average_memory_mb.to_variant());
+        dict.set(
+            "deno_average_memory_mb",
+            deno_average_memory_mb.to_variant(),
+        );
 
         dict.set("total_objects", total_objects.to_variant());
         dict.set("resource_count", resource_count.to_variant());
@@ -286,11 +309,16 @@ impl BenchmarkReport {
             realm: realm.to_string(),
 
             // Memory metrics
-            godot_static_memory_mb: performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0,
-            godot_static_memory_peak_mb: performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0,
-            gpu_video_ram_mb: performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0,
-            gpu_texture_memory_mb: performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0,
-            gpu_buffer_memory_mb: performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0,
+            godot_static_memory_mb: performance.get_monitor(Monitor::MEMORY_STATIC) as f64
+                / 1_048_576.0,
+            godot_static_memory_peak_mb: performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64
+                / 1_048_576.0,
+            gpu_video_ram_mb: performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64
+                / 1_048_576.0,
+            gpu_texture_memory_mb: performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64
+                / 1_048_576.0,
+            gpu_buffer_memory_mb: performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64
+                / 1_048_576.0,
 
             #[cfg(feature = "use_memory_debugger")]
             rust_heap_usage_mb: {
@@ -319,17 +347,40 @@ impl BenchmarkReport {
             // Rendering
             fps: performance.get_monitor(Monitor::TIME_FPS) as f64,
             draw_calls: performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64,
-            primitives_in_frame: performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64,
-            objects_in_frame: performance.get_monitor(Monitor::RENDER_TOTAL_OBJECTS_IN_FRAME) as i64,
+            primitives_in_frame: performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME)
+                as i64,
+            objects_in_frame: performance.get_monitor(Monitor::RENDER_TOTAL_OBJECTS_IN_FRAME)
+                as i64,
 
             // Resource analysis from GDScript
-            total_meshes: resource_data.get("total_meshes").map(|v| v.to::<i32>()).unwrap_or(0),
-            total_materials: resource_data.get("total_materials").map(|v| v.to::<i32>()).unwrap_or(0),
-            mesh_rid_count: resource_data.get("mesh_rid_count").map(|v| v.to::<i32>()).unwrap_or(0),
-            material_rid_count: resource_data.get("material_rid_count").map(|v| v.to::<i32>()).unwrap_or(0),
-            mesh_hash_count: resource_data.get("mesh_hash_count").map(|v| v.to::<i32>()).unwrap_or(0),
-            potential_dedup_count: resource_data.get("potential_dedup_count").map(|v| v.to::<i32>()).unwrap_or(0),
-            mesh_savings_percent: resource_data.get("mesh_savings_percent").map(|v| v.to::<f64>()).unwrap_or(0.0),
+            total_meshes: resource_data
+                .get("total_meshes")
+                .map(|v| v.to::<i32>())
+                .unwrap_or(0),
+            total_materials: resource_data
+                .get("total_materials")
+                .map(|v| v.to::<i32>())
+                .unwrap_or(0),
+            mesh_rid_count: resource_data
+                .get("mesh_rid_count")
+                .map(|v| v.to::<i32>())
+                .unwrap_or(0),
+            material_rid_count: resource_data
+                .get("material_rid_count")
+                .map(|v| v.to::<i32>())
+                .unwrap_or(0),
+            mesh_hash_count: resource_data
+                .get("mesh_hash_count")
+                .map(|v| v.to::<i32>())
+                .unwrap_or(0),
+            potential_dedup_count: resource_data
+                .get("potential_dedup_count")
+                .map(|v| v.to::<i32>())
+                .unwrap_or(0),
+            mesh_savings_percent: resource_data
+                .get("mesh_savings_percent")
+                .map(|v| v.to::<f64>())
+                .unwrap_or(0.0),
 
             // Mobile metrics
             mobile_memory_usage_mb: self.get_mobile_metrics().0,
@@ -473,17 +524,47 @@ impl BenchmarkReport {
         report.push_str("## Memory Metrics\n\n");
         report.push_str("| Metric | Value |\n");
         report.push_str("|--------|-------|\n");
-        report.push_str(&format!("| Godot Static Memory | {:.2} MiB |\n", metrics.godot_static_memory_mb));
-        report.push_str(&format!("| Godot Peak Memory | {:.2} MiB |\n", metrics.godot_static_memory_peak_mb));
-        report.push_str(&format!("| GPU Video RAM | {:.2} MiB |\n", metrics.gpu_video_ram_mb));
-        report.push_str(&format!("| GPU Texture Memory | {:.2} MiB |\n", metrics.gpu_texture_memory_mb));
-        report.push_str(&format!("| GPU Buffer Memory | {:.2} MiB |\n", metrics.gpu_buffer_memory_mb));
-        report.push_str(&format!("| Rust Heap Usage | {:.2} MiB |\n", metrics.rust_heap_usage_mb));
-        report.push_str(&format!("| Rust Total Allocated | {:.2} MiB |\n", metrics.rust_total_allocated_mb));
+        report.push_str(&format!(
+            "| Godot Static Memory | {:.2} MiB |\n",
+            metrics.godot_static_memory_mb
+        ));
+        report.push_str(&format!(
+            "| Godot Peak Memory | {:.2} MiB |\n",
+            metrics.godot_static_memory_peak_mb
+        ));
+        report.push_str(&format!(
+            "| GPU Video RAM | {:.2} MiB |\n",
+            metrics.gpu_video_ram_mb
+        ));
+        report.push_str(&format!(
+            "| GPU Texture Memory | {:.2} MiB |\n",
+            metrics.gpu_texture_memory_mb
+        ));
+        report.push_str(&format!(
+            "| GPU Buffer Memory | {:.2} MiB |\n",
+            metrics.gpu_buffer_memory_mb
+        ));
+        report.push_str(&format!(
+            "| Rust Heap Usage | {:.2} MiB |\n",
+            metrics.rust_heap_usage_mb
+        ));
+        report.push_str(&format!(
+            "| Rust Total Allocated | {:.2} MiB |\n",
+            metrics.rust_total_allocated_mb
+        ));
         if metrics.deno_scene_count > 0 {
-            report.push_str(&format!("| Deno/V8 Total Memory | {:.2} MiB |\n", metrics.deno_total_memory_mb));
-            report.push_str(&format!("| Deno Active Scenes | {} |\n", metrics.deno_scene_count));
-            report.push_str(&format!("| Deno Avg per Scene | {:.2} MiB |\n", metrics.deno_average_memory_mb));
+            report.push_str(&format!(
+                "| Deno/V8 Total Memory | {:.2} MiB |\n",
+                metrics.deno_total_memory_mb
+            ));
+            report.push_str(&format!(
+                "| Deno Active Scenes | {} |\n",
+                metrics.deno_scene_count
+            ));
+            report.push_str(&format!(
+                "| Deno Avg per Scene | {:.2} MiB |\n",
+                metrics.deno_average_memory_mb
+            ));
         }
         report.push_str("\n");
 
@@ -494,7 +575,10 @@ impl BenchmarkReport {
         report.push_str(&format!("| Total Objects | {} |\n", metrics.total_objects));
         report.push_str(&format!("| Resources | {} |\n", metrics.resource_count));
         report.push_str(&format!("| Nodes | {} |\n", metrics.node_count));
-        report.push_str(&format!("| Orphan Nodes | {} |\n", metrics.orphan_node_count));
+        report.push_str(&format!(
+            "| Orphan Nodes | {} |\n",
+            metrics.orphan_node_count
+        ));
         report.push_str("\n");
 
         // Rendering
@@ -502,9 +586,18 @@ impl BenchmarkReport {
         report.push_str("| Metric | Value |\n");
         report.push_str("|--------|-------|\n");
         report.push_str(&format!("| FPS | {:.1} |\n", metrics.fps));
-        report.push_str(&format!("| Draw Calls per Frame | {} |\n", metrics.draw_calls));
-        report.push_str(&format!("| Primitives per Frame | {} |\n", metrics.primitives_in_frame));
-        report.push_str(&format!("| Objects per Frame | {} |\n", metrics.objects_in_frame));
+        report.push_str(&format!(
+            "| Draw Calls per Frame | {} |\n",
+            metrics.draw_calls
+        ));
+        report.push_str(&format!(
+            "| Primitives per Frame | {} |\n",
+            metrics.primitives_in_frame
+        ));
+        report.push_str(&format!(
+            "| Objects per Frame | {} |\n",
+            metrics.objects_in_frame
+        ));
         report.push_str("\n");
 
         // Resource Analysis
@@ -512,13 +605,30 @@ impl BenchmarkReport {
             report.push_str("## Resource Analysis\n\n");
             report.push_str("| Metric | Value |\n");
             report.push_str("|--------|-------|\n");
-            report.push_str(&format!("| Total Mesh References | {} |\n", metrics.total_meshes));
-            report.push_str(&format!("| Total Material References | {} |\n", metrics.total_materials));
-            report.push_str(&format!("| Unique Mesh RIDs | {} |\n", metrics.mesh_rid_count));
-            report.push_str(&format!("| Unique Material RIDs | {} |\n", metrics.material_rid_count));
-            report.push_str(&format!("| Hashed Mesh Count | {} |\n", metrics.mesh_hash_count));
-            report.push_str(&format!("| Potential Deduplication | {} ({:.1}% savings) |\n",
-                metrics.potential_dedup_count, metrics.mesh_savings_percent));
+            report.push_str(&format!(
+                "| Total Mesh References | {} |\n",
+                metrics.total_meshes
+            ));
+            report.push_str(&format!(
+                "| Total Material References | {} |\n",
+                metrics.total_materials
+            ));
+            report.push_str(&format!(
+                "| Unique Mesh RIDs | {} |\n",
+                metrics.mesh_rid_count
+            ));
+            report.push_str(&format!(
+                "| Unique Material RIDs | {} |\n",
+                metrics.material_rid_count
+            ));
+            report.push_str(&format!(
+                "| Hashed Mesh Count | {} |\n",
+                metrics.mesh_hash_count
+            ));
+            report.push_str(&format!(
+                "| Potential Deduplication | {} ({:.1}% savings) |\n",
+                metrics.potential_dedup_count, metrics.mesh_savings_percent
+            ));
             report.push_str("\n");
         }
 
@@ -547,13 +657,20 @@ impl BenchmarkReport {
 
         report.push_str("# Benchmark Summary Report\n\n");
         report.push_str(&format!("**Generated**: {}\n\n", self.get_timestamp()));
-        report.push_str(&format!("**Total Tests**: {}\n\n", self.metrics_history.len()));
+        report.push_str(&format!(
+            "**Total Tests**: {}\n\n",
+            self.metrics_history.len()
+        ));
         report.push_str("---\n\n");
 
         // Memory comparison table
         report.push_str("## Memory Usage Comparison\n\n");
-        report.push_str("| Test | Godot (MiB) | GPU (MiB) | Rust (MiB) | Deno (MiB) | Total (MiB) |\n");
-        report.push_str("|------|-------------|-----------|------------|------------|-------------|\n");
+        report.push_str(
+            "| Test | Godot (MiB) | GPU (MiB) | Rust (MiB) | Deno (MiB) | Total (MiB) |\n",
+        );
+        report.push_str(
+            "|------|-------------|-----------|------------|------------|-------------|\n",
+        );
         for metrics in &self.metrics_history {
             let total = metrics.godot_static_memory_mb
                 + metrics.gpu_video_ram_mb
@@ -640,14 +757,27 @@ impl BenchmarkReport {
 
         report.push_str("# Decentraland Godot Explorer - Benchmark Report\n\n");
         report.push_str(&format!("**Generated**: {}\n\n", self.get_timestamp()));
-        report.push_str(&format!("**Total Tests**: {}\n\n", self.metrics_history.len()));
+        report.push_str(&format!(
+            "**Total Tests**: {}\n\n",
+            self.metrics_history.len()
+        ));
 
         report.push_str("---\n\n");
 
         // Table of Contents
         report.push_str("## Table of Contents\n\n");
         for (i, metrics) in self.metrics_history.iter().enumerate() {
-            report.push_str(&format!("{}. [{}](#test-{}-{})\n", i + 1, metrics.test_name, i + 1, metrics.test_name.to_lowercase().replace(' ', "-").replace('_', "-")));
+            report.push_str(&format!(
+                "{}. [{}](#test-{}-{})\n",
+                i + 1,
+                metrics.test_name,
+                i + 1,
+                metrics
+                    .test_name
+                    .to_lowercase()
+                    .replace(' ', "-")
+                    .replace('_', "-")
+            ));
         }
         report.push_str("\n---\n\n");
 
@@ -656,8 +786,12 @@ impl BenchmarkReport {
 
         // Memory Summary
         report.push_str("### Memory Metrics\n\n");
-        report.push_str("| Test | Godot Static (MiB) | GPU VRAM (MiB) | Rust Heap (MiB) | Deno Total (MiB) |\n");
-        report.push_str("|------|-------------------|----------------|-----------------|------------------|\n");
+        report.push_str(
+            "| Test | Godot Static (MiB) | GPU VRAM (MiB) | Rust Heap (MiB) | Deno Total (MiB) |\n",
+        );
+        report.push_str(
+            "|------|-------------------|----------------|-----------------|------------------|\n",
+        );
         for metrics in &self.metrics_history {
             report.push_str(&format!(
                 "| {} | {:.2} | {:.2} | {:.2} | {:.2} |\n",
@@ -704,8 +838,12 @@ impl BenchmarkReport {
 
         // Resource Analysis Summary
         report.push_str("### Resource Analysis\n\n");
-        report.push_str("| Test | Meshes | Materials | Mesh RIDs | Material RIDs | Dedup Potential |\n");
-        report.push_str("|------|--------|-----------|-----------|---------------|------------------|\n");
+        report.push_str(
+            "| Test | Meshes | Materials | Mesh RIDs | Material RIDs | Dedup Potential |\n",
+        );
+        report.push_str(
+            "|------|--------|-----------|-----------|---------------|------------------|\n",
+        );
         for metrics in &self.metrics_history {
             report.push_str(&format!(
                 "| {} | {} | {} | {} | {} | {} |\n",

@@ -187,7 +187,9 @@ func _ready():
 		benchmark_flow_controller.set_name("BenchmarkFlowController")
 		get_tree().root.add_child.call_deferred(benchmark_flow_controller)
 	elif cli.benchmark_report:
-		push_error("BenchmarkReport requires --features use_memory_debugger to be enabled during build")
+		push_error(
+			"BenchmarkReport requires --features use_memory_debugger to be enabled during build"
+		)
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)

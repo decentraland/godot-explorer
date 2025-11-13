@@ -73,7 +73,10 @@ func _start():
 			Global.get_config().terms_and_conditions_version
 		)
 		# Force show Terms when benchmarking (even if already accepted)
-		if Global.cli.benchmark_report or current_terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION:
+		if (
+			Global.cli.benchmark_report
+			or current_terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION
+		):
 			if Global.cli.benchmark_report:
 				print("✓ Forcing Terms and Conditions for benchmark flow")
 			get_tree().change_scene_to_file(

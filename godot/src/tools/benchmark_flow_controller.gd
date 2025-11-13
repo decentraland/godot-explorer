@@ -9,8 +9,16 @@ extends Node
 
 # Benchmark configuration
 var benchmark_locations = [
-	{"name": "Goerli Plaza", "pos": Vector2i(72, -10), "realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"},
-	{"name": "Genesis Plaza", "pos": Vector2i(0, 0), "realm": "https://realm-provider-ea.decentraland.org/main"},
+	{
+		"name": "Goerli Plaza",
+		"pos": Vector2i(72, -10),
+		"realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+	},
+	{
+		"name": "Genesis Plaza",
+		"pos": Vector2i(0, 0),
+		"realm": "https://realm-provider-ea.decentraland.org/main"
+	},
 	#{"name": "Goerli Plaza (Cleanup Test)", "pos": Vector2i(72, -10), "realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"}
 ]
 
@@ -21,6 +29,7 @@ var is_handling_scene = false  # Prevent re-entry
 
 # References
 var benchmark_report = null
+
 
 func _ready():
 	if not Global.cli.benchmark_report:
@@ -50,6 +59,7 @@ func _ready():
 	# No initial check needed - the Timer will handle it on the first tick
 
 
+# gdlint:ignore = async-function-name
 func _check_current_scene():
 	# Prevent re-entry
 	if is_handling_scene:
@@ -108,6 +118,7 @@ func _on_scene_changed():
 
 
 ## Terms and Conditions Scene
+# gdlint:ignore = async-function-name
 func handle_terms_scene(scene):
 	log_message("✓ Terms and Conditions: Starting benchmark collection...")
 	await get_tree().create_timer(2.0).timeout
@@ -125,6 +136,7 @@ func handle_terms_scene(scene):
 
 
 ## Lobby Scene
+# gdlint:ignore = async-function-name
 func handle_lobby_scene(scene):
 	log_message("✓ Lobby: Starting benchmark collection...")
 	await get_tree().create_timer(2.0).timeout
@@ -138,8 +150,7 @@ func handle_lobby_scene(scene):
 
 	# Update metrics identity
 	Global.metrics.update_identity(
-		Global.player_identity.get_address_str(),
-		Global.player_identity.is_guest
+		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
 	# Mark stage as complete
@@ -152,7 +163,8 @@ func handle_lobby_scene(scene):
 
 
 ## Menu Scene
-func handle_menu_scene(scene):
+# gdlint:ignore = async-function-name, unused-argument
+func handle_menu_scene(_scene):
 	log_message("✓ Menu: Starting benchmark collection...")
 	await get_tree().create_timer(2.0).timeout
 
@@ -174,7 +186,8 @@ func handle_menu_scene(scene):
 
 
 ## Explorer Scene
-func handle_explorer_scene(scene):
+# gdlint:ignore = async-function-name, unused-argument
+func handle_explorer_scene(_scene):
 	# Wait for loading to complete
 	log_message("✓ Waiting for Explorer to finish loading...")
 	await Global.loading_finished
@@ -186,11 +199,15 @@ func handle_explorer_scene(scene):
 	var current_pos = Global.get_explorer().parcel_position
 	var location_name = benchmark_locations[current_location_index].name
 
-	log_message("✓ Explorer: Collecting benchmark at " + str(current_pos) + " (" + location_name + ")...")
+	log_message(
+		"✓ Explorer: Collecting benchmark at " + str(current_pos) + " (" + location_name + ")..."
+	)
 
 	await collect_explorer_metrics(current_pos, location_name)
 
-	log_message("✓ Explorer benchmark collected at " + str(current_pos) + " (" + location_name + ")")
+	log_message(
+		"✓ Explorer benchmark collected at " + str(current_pos) + " (" + location_name + ")"
+	)
 
 	# Mark stage as complete
 	current_stage = "explorer"
@@ -230,7 +247,9 @@ func collect_ui_scene_metrics(test_name: String, location: String):
 ## Collect metrics for Explorer scenes
 func collect_explorer_metrics(current_pos: Vector2i, location_name: String):
 	# Count resources
-	var counter = load("res://addons/dcl_dev_tools/dev_tools/resource_counter/resource_counter.gd").new()
+	var counter = (
+		load("res://addons/dcl_dev_tools/dev_tools/resource_counter/resource_counter.gd").new()
+	)
 	add_child(counter)
 	counter.count(get_tree().get_root().get_node("scene_runner"))
 
@@ -271,6 +290,7 @@ func collect_explorer_metrics(current_pos: Vector2i, location_name: String):
 
 
 ## Finalize benchmark and generate reports
+# gdlint:ignore = async-function-name
 func finalize_benchmark():
 	log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	log_message("✓ All benchmark locations completed!")
