@@ -1,10 +1,6 @@
 name: 📊 Benchmark Report
 on:
-  workflow_dispatch:  # Allow manual trigger
-  pull_request:       # Run on PRs (can be limited with labels if needed)
-    types: [opened, synchronize, reopened]
-  schedule:
-    - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight UTC
+  workflow_call:  # Called from runner.yml
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-benchmark
@@ -109,6 +105,41 @@ jobs:
             echo "⚠️ No CSV file to convert"
           fi
 
+      - name: Configure AWS credentials
+        if: always()
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
+          aws-region: auto
+
+      - name: Upload CSV to S3
+        if: always()
+        run: |
+          if [ -f "benchmark-results/benchmark_report.csv" ]; then
+            # Get branch name and commit hash
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              BRANCH_NAME="${{ github.head_ref }}"
+            else
+              BRANCH_NAME="${{ github.ref_name }}"
+            fi
+            COMMIT_HASH="${{ github.sha }}"
+
+            # Sanitize branch name (replace / with -)
+            BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+
+            # S3 path: {branch_name}/{hash}/benchmark_report.csv
+            S3_PATH="s3://${{ secrets.BENCHMARK_AWS_S3_BUCKET }}/${BRANCH_NAME}/${COMMIT_HASH}/benchmark_report.csv"
+
+            echo "📤 Uploading to: ${S3_PATH}"
+            aws s3 cp benchmark-results/benchmark_report.csv "${S3_PATH}" \
+              --endpoint-url "${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}" \
+              --content-type "text/csv"
+            echo "✓ Uploaded benchmark CSV to S3"
+          else
+            echo "⚠️ No CSV file to upload"
+          fi
+
       - name: Upload Benchmark Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -136,6 +167,14 @@ jobs:
       - name: Prepare PR Comment
         if: github.event_name == 'pull_request' && always()
         run: |
+          # Get branch name and commit hash for S3 URL
+          BRANCH_NAME="${{ github.head_ref }}"
+          COMMIT_HASH="${{ github.sha }}"
+          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+          S3_BUCKET="${{ secrets.BENCHMARK_AWS_S3_BUCKET }}"
+          # Cloudflare R2 public URL format
+          S3_URL="https://pub-$(echo '${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}' | cut -d'/' -f3 | cut -d'.' -f1).r2.dev/${S3_BUCKET}/${BRANCH_NAME}/${COMMIT_HASH}/benchmark_report.csv"
+
           {
             echo "## 📊 Benchmark Report"
             echo ""
@@ -154,6 +193,7 @@ jobs:
             echo ""
             echo "### 📋 Logs & Artifacts"
             echo ""
+            echo "- 📊 **CSV Data**: [benchmark_report.csv](${S3_URL}) - Raw benchmark data in S3"
             echo "- 🔧 **Full Logs**: [benchmark_run.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Complete benchmark run output (build + execution)"
             echo "- 🌐 **Workflow Run**: [View full logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- 📦 **Download All**: Get the \`benchmark-report\` artifact from the workflow run"

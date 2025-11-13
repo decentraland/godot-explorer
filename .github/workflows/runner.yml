@@ -68,3 +68,8 @@ jobs:
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+
+  benchmark:
+    name: 📊 Benchmark Report
+    needs: static-checks
+    uses: ./.github/workflows/benchmark.yml
