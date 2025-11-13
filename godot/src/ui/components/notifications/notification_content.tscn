@@ -22,8 +22,8 @@ script = ExtResource("1_content")
 [node name="ImageContainerWrapper" type="Control" parent="."]
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
-mouse_filter = 2
 size_flags_vertical = 4
+mouse_filter = 2
 
 [node name="ImageContainer" type="Panel" parent="ImageContainerWrapper"]
 unique_name_in_owner = true
@@ -71,9 +71,9 @@ stretch_mode = 5
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
-mouse_filter = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_constants/separation = 0
 alignment = 1
 
@@ -81,13 +81,13 @@ alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
-mouse_filter = 2
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/bold_italics_font_size = 16
-theme_override_font_sizes/italics_font_size = 16
 theme_override_font_sizes/normal_font_size = 16
 theme_override_font_sizes/bold_font_size = 16
+theme_override_font_sizes/bold_italics_font_size = 16
+theme_override_font_sizes/italics_font_size = 16
 bbcode_enabled = true
 text = "[b]New Notification[/b]"
 scroll_active = false
@@ -96,13 +96,13 @@ scroll_active = false
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
-mouse_filter = 2
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/bold_italics_font_size = 14
-theme_override_font_sizes/italics_font_size = 14
 theme_override_font_sizes/normal_font_size = 14
 theme_override_font_sizes/bold_font_size = 14
+theme_override_font_sizes/bold_italics_font_size = 14
+theme_override_font_sizes/italics_font_size = 14
 bbcode_enabled = true
 text = "You have a new notification"
 scroll_active = false

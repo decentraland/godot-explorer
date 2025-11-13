@@ -652,7 +652,7 @@ func schedule_event() -> void:
 			DclGodotAndroidPlugin.add_calendar_event(
 				event_name, details, start_time_millis, end_time_millis, event_location
 			)
-		elif DclGodotAndroidPlugin.is_available():
+		elif DclIosPlugin.is_available():
 			DclIosPlugin.add_calendar_event(
 				event_name, details, start_time_millis, end_time_millis, event_location
 			)
