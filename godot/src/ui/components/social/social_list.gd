@@ -27,6 +27,12 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 			_update_nearby_list()
 		SocialType.BLOCKED:
 			await async_update_blocked_list()
+		SocialType.ONLINE:
+			await async_update_blocked_list()
+		SocialType.OFFLINE:
+			await async_update_blocked_list()
+		SocialType.REQUEST:
+			await async_update_blocked_list()
 		_:
 			pass
 
