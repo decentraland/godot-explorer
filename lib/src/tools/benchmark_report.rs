@@ -72,7 +72,7 @@ use std::io::Write as IoWrite;
 use std::path::PathBuf;
 
 #[cfg(feature = "use_memory_debugger")]
-use crate::tools::memory_debugger::{ALLOCATED, ALLOCATION_COUNT, DEALLOCATED, DEALLOCATION_COUNT};
+use crate::tools::memory_debugger::{ALLOCATED, DEALLOCATED};
 #[cfg(feature = "use_memory_debugger")]
 use std::sync::atomic::Ordering;
 
@@ -121,6 +121,9 @@ pub struct BenchmarkMetrics {
     pub mobile_memory_usage_mb: Option<i32>,
     pub mobile_temperature_celsius: Option<f32>,
     pub mobile_battery_percent: Option<i32>,
+
+    // System info
+    pub system_total_ram_mb: f64,
 }
 
 #[derive(GodotClass)]
@@ -288,6 +291,10 @@ impl BenchmarkReport {
             dict.set("mobile_battery_percent", battery.to_variant());
         }
 
+        // System info
+        let system_total_ram_mb = self.get_system_total_ram_mb();
+        dict.set("system_total_ram_mb", system_total_ram_mb.to_variant());
+
         dict
     }
 
@@ -386,6 +393,9 @@ impl BenchmarkReport {
             mobile_memory_usage_mb: self.get_mobile_metrics().0,
             mobile_temperature_celsius: self.get_mobile_metrics().1,
             mobile_battery_percent: self.get_mobile_metrics().2,
+
+            // System info
+            system_total_ram_mb: self.get_system_total_ram_mb(),
         };
 
         self.metrics_history.push(metrics);
@@ -508,6 +518,34 @@ impl BenchmarkReport {
         }
     }
 
+    fn get_system_total_ram_mb(&self) -> f64 {
+        // Try Linux /proc/meminfo first (most accurate on Linux)
+        #[cfg(target_os = "linux")]
+        {
+            if let Ok(meminfo) = std::fs::read_to_string("/proc/meminfo") {
+                for line in meminfo.lines() {
+                    if line.starts_with("MemTotal:") {
+                        // MemTotal:       16384000 kB
+                        if let Some(value_str) = line.split_whitespace().nth(1) {
+                            if let Ok(kb) = value_str.parse::<f64>() {
+                                return kb / 1024.0; // Convert kB to MiB
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback to Godot OS API (works on all platforms)
+        let memory_info = Os::singleton().get_memory_info();
+        if let Some(physical) = memory_info.get("physical") {
+            // Godot returns in bytes
+            physical.to::<f64>() / 1_048_576.0
+        } else {
+            0.0
+        }
+    }
+
     fn format_individual_report(&self, metrics: &BenchmarkMetrics) -> String {
         let mut report = String::new();
 
@@ -524,6 +562,11 @@ impl BenchmarkReport {
         report.push_str("## Memory Metrics\n\n");
         report.push_str("| Metric | Value |\n");
         report.push_str("|--------|-------|\n");
+        report.push_str(&format!(
+            "| **System Total RAM** | **{:.2} MiB ({:.2} GiB)** |\n",
+            metrics.system_total_ram_mb,
+            metrics.system_total_ram_mb / 1024.0
+        ));
         report.push_str(&format!(
             "| Godot Static Memory | {:.2} MiB |\n",
             metrics.godot_static_memory_mb
@@ -761,6 +804,15 @@ impl BenchmarkReport {
             "**Total Tests**: {}\n\n",
             self.metrics_history.len()
         ));
+
+        // Add system info
+        if let Some(first_metric) = self.metrics_history.first() {
+            report.push_str(&format!(
+                "**System Total RAM**: {:.2} MiB ({:.2} GiB)\n\n",
+                first_metric.system_total_ram_mb,
+                first_metric.system_total_ram_mb / 1024.0
+            ));
+        }
 
         report.push_str("---\n\n");
 
