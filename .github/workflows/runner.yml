@@ -37,10 +37,12 @@ jobs:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      
+
   ios-build:
     name: 🍏 iOS
     needs: static-checks
+    # Skip iOS build if PR has 'without-ios' label
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'without-ios') }}
     uses: ./.github/workflows/ios_builds.yml
     secrets:
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}

@@ -144,16 +144,12 @@ jobs:
             echo "⚠️ No CSV file to convert"
           fi
 
-      - name: Configure AWS credentials
-        if: always()
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
-          aws-region: auto
-
       - name: Upload CSV to S3
         if: always()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
         run: |
           if [ -f "benchmark-results/benchmark_report.csv" ]; then
             # Get branch name and commit hash
@@ -171,8 +167,9 @@ jobs:
             S3_PATH="s3://${{ secrets.BENCHMARK_AWS_S3_BUCKET }}/${BRANCH_NAME}/${COMMIT_HASH}/benchmark_report.csv"
 
             echo "📤 Uploading to: ${S3_PATH}"
+            echo "📤 Endpoint: ${AWS_ENDPOINT_URL}"
             aws s3 cp benchmark-results/benchmark_report.csv "${S3_PATH}" \
-              --endpoint-url "${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}" \
+              --endpoint-url "${AWS_ENDPOINT_URL}" \
               --content-type "text/csv"
             echo "✓ Uploaded benchmark CSV to S3"
           else
