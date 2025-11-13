@@ -302,7 +302,7 @@ func finalize_benchmark():
 	log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	log_message("✅ BENCHMARK COMPLETE!")
 	log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	log_message("Report saved to: " + user_dir + "/output/benchmark_report.md")
+	log_message("CSV report saved to: " + user_dir + "/output/benchmark_report.csv")
 	log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	await get_tree().create_timer(3.0).timeout

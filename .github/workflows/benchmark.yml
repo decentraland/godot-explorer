@@ -80,11 +80,11 @@ jobs:
 
           # Copy benchmark results to workspace
           mkdir -p benchmark-results
-          if [ -f "$USER_DATA_DIR/output/benchmark_report.md" ]; then
-            cp "$USER_DATA_DIR/output/benchmark_report.md" benchmark-results/
-            echo "✓ Copied benchmark_report.md"
+          if [ -f "$USER_DATA_DIR/output/benchmark_report.csv" ]; then
+            cp "$USER_DATA_DIR/output/benchmark_report.csv" benchmark-results/
+            echo "✓ Copied benchmark_report.csv"
           else
-            echo "⚠️ benchmark_report.md not found"
+            echo "⚠️ benchmark_report.csv not found"
           fi
 
           # Copy the full benchmark run logs (captured by tee in Run Benchmark step)
@@ -99,12 +99,23 @@ jobs:
           echo "=== Benchmark Results ==="
           ls -lh benchmark-results/
 
+      - name: Convert CSV to Markdown
+        if: always()
+        run: |
+          if [ -f "benchmark-results/benchmark_report.csv" ]; then
+            python3 tests/convert_benchmark_csv_to_md.py benchmark-results/benchmark_report.csv benchmark-results/benchmark_report.md
+            echo "✓ Converted CSV to Markdown"
+          else
+            echo "⚠️ No CSV file to convert"
+          fi
+
       - name: Upload Benchmark Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-report
           path: |
+            benchmark-results/benchmark_report.csv
             benchmark-results/benchmark_report.md
             benchmark-results/benchmark_run.log
           if-no-files-found: error
