@@ -82,8 +82,13 @@ class NotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Get app icon resource ID
-        val iconResId = context.applicationInfo.icon
+        // Get custom notification icon (falls back to app icon if not found)
+        val notificationIconResId = context.resources.getIdentifier(
+            "ic_notification",
+            "drawable",
+            context.packageName
+        )
+        val iconResId = if (notificationIconResId != 0) notificationIconResId else context.applicationInfo.icon
 
         // Build notification with BigPictureStyle if image is available
         val builder = NotificationCompat.Builder(context, DEFAULT_CHANNEL_ID)
