@@ -73,3 +73,8 @@ jobs:
     name: 📊 Benchmark Report
     needs: static-checks
     uses: ./.github/workflows/benchmark.yml
+    secrets:
+      BENCHMARK_AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
+      BENCHMARK_AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
+      BENCHMARK_AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
+      BENCHMARK_AWS_S3_BUCKET: ${{ secrets.BENCHMARK_AWS_S3_BUCKET }}
