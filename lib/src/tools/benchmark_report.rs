@@ -122,8 +122,8 @@ pub struct BenchmarkMetrics {
     pub mobile_temperature_celsius: Option<f32>,
     pub mobile_battery_percent: Option<i32>,
 
-    // System info
-    pub system_total_ram_mb: f64,
+    // Process info
+    pub process_memory_usage_mb: f64,
 }
 
 #[derive(GodotClass)]
@@ -291,9 +291,12 @@ impl BenchmarkReport {
             dict.set("mobile_battery_percent", battery.to_variant());
         }
 
-        // System info
-        let system_total_ram_mb = self.get_system_total_ram_mb();
-        dict.set("system_total_ram_mb", system_total_ram_mb.to_variant());
+        // Process info
+        let process_memory_usage_mb = self.get_process_memory_usage_mb();
+        dict.set(
+            "process_memory_usage_mb",
+            process_memory_usage_mb.to_variant(),
+        );
 
         dict
     }
@@ -394,8 +397,8 @@ impl BenchmarkReport {
             mobile_temperature_celsius: self.get_mobile_metrics().1,
             mobile_battery_percent: self.get_mobile_metrics().2,
 
-            // System info
-            system_total_ram_mb: self.get_system_total_ram_mb(),
+            // Process info
+            process_memory_usage_mb: self.get_process_memory_usage_mb(),
         };
 
         self.metrics_history.push(metrics);
@@ -518,14 +521,14 @@ impl BenchmarkReport {
         }
     }
 
-    fn get_system_total_ram_mb(&self) -> f64 {
-        // Try Linux /proc/meminfo first (most accurate on Linux)
+    fn get_process_memory_usage_mb(&self) -> f64 {
+        // Get process memory from Linux /proc/self/status
         #[cfg(target_os = "linux")]
         {
-            if let Ok(meminfo) = std::fs::read_to_string("/proc/meminfo") {
-                for line in meminfo.lines() {
-                    if line.starts_with("MemTotal:") {
-                        // MemTotal:       16384000 kB
+            if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+                for line in status.lines() {
+                    if line.starts_with("VmRSS:") {
+                        // VmRSS:    1234567 kB (Resident Set Size - actual physical memory used)
                         if let Some(value_str) = line.split_whitespace().nth(1) {
                             if let Ok(kb) = value_str.parse::<f64>() {
                                 return kb / 1024.0; // Convert kB to MiB
@@ -536,14 +539,8 @@ impl BenchmarkReport {
             }
         }
 
-        // Fallback to Godot OS API (works on all platforms)
-        let memory_info = Os::singleton().get_memory_info();
-        if let Some(physical) = memory_info.get("physical") {
-            // Godot returns in bytes
-            physical.to::<f64>() / 1_048_576.0
-        } else {
-            0.0
-        }
+        // Return 0.0 if not available
+        0.0
     }
 
     fn format_individual_report(&self, metrics: &BenchmarkMetrics) -> String {
@@ -563,9 +560,9 @@ impl BenchmarkReport {
         report.push_str("| Metric | Value |\n");
         report.push_str("|--------|-------|\n");
         report.push_str(&format!(
-            "| **System Total RAM** | **{:.2} MiB ({:.2} GiB)** |\n",
-            metrics.system_total_ram_mb,
-            metrics.system_total_ram_mb / 1024.0
+            "| **Process Memory Usage (RSS)** | **{:.2} MiB ({:.2} GiB)** |\n",
+            metrics.process_memory_usage_mb,
+            metrics.process_memory_usage_mb / 1024.0
         ));
         report.push_str(&format!(
             "| Godot Static Memory | {:.2} MiB |\n",
@@ -805,12 +802,12 @@ impl BenchmarkReport {
             self.metrics_history.len()
         ));
 
-        // Add system info
+        // Add process info
         if let Some(first_metric) = self.metrics_history.first() {
             report.push_str(&format!(
-                "**System Total RAM**: {:.2} MiB ({:.2} GiB)\n\n",
-                first_metric.system_total_ram_mb,
-                first_metric.system_total_ram_mb / 1024.0
+                "**Process Memory Usage (RSS)**: {:.2} MiB ({:.2} GiB)\n\n",
+                first_metric.process_memory_usage_mb,
+                first_metric.process_memory_usage_mb / 1024.0
             ));
         }
 
