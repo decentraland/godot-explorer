@@ -95,11 +95,41 @@ jobs:
           echo "=== Benchmark Results ==="
           ls -lh benchmark-results/
 
+      - name: Fetch Baseline from Main Branch
+        if: always()
+        run: |
+          # TODO: Change back to 'origin/main' after merging to main
+          # Temporarily using feat/benchmark-ci for testing
+          BASELINE_BRANCH="feat/benchmark-ci"
+          MAIN_SHA=$(git rev-parse origin/${BASELINE_BRANCH} 2>/dev/null || echo "")
+
+          if [ -n "$MAIN_SHA" ]; then
+            # Use branch name with / replaced by - for S3 path
+            BRANCH_PATH=$(echo "${BASELINE_BRANCH}" | sed 's/\//-/g')
+            BASELINE_URL="https://benchmark-reports.dcl.explorer.com/${BRANCH_PATH}/${MAIN_SHA}/benchmark_report.csv"
+            echo "BASELINE_URL=${BASELINE_URL}" >> $GITHUB_ENV
+            echo "📊 Baseline URL: ${BASELINE_URL}"
+            echo "📊 Baseline Branch: ${BASELINE_BRANCH}"
+          else
+            echo "⚠️ Could not determine baseline branch SHA"
+            echo "BASELINE_URL=" >> $GITHUB_ENV
+          fi
+
       - name: Convert CSV to Markdown
         if: always()
         run: |
           if [ -f "benchmark-results/benchmark_report.csv" ]; then
-            python3 tests/convert_benchmark_csv_to_md.py benchmark-results/benchmark_report.csv benchmark-results/benchmark_report.md
+            # Convert with baseline comparison if URL is available
+            if [ -n "$BASELINE_URL" ]; then
+              python3 tests/convert_benchmark_csv_to_md.py \
+                benchmark-results/benchmark_report.csv \
+                benchmark-results/benchmark_report.md \
+                --baseline-url "$BASELINE_URL"
+            else
+              python3 tests/convert_benchmark_csv_to_md.py \
+                benchmark-results/benchmark_report.csv \
+                benchmark-results/benchmark_report.md
+            fi
             echo "✓ Converted CSV to Markdown"
           else
             echo "⚠️ No CSV file to convert"
