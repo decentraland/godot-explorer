@@ -25,7 +25,8 @@ mod local_notification_queue_tests {
     /// Helper to load the mock plugin
     fn load_mock_plugin() -> Gd<godot::engine::RefCounted> {
         let mut resource_loader = godot::engine::ResourceLoader::singleton();
-        let mock_script_path = GString::from("res://src/test/notifications/mock_notifications_plugin.gd");
+        let mock_script_path =
+            GString::from("res://src/test/notifications/mock_notifications_plugin.gd");
 
         let mock_script = resource_loader
             .load_ex(mock_script_path.clone())
@@ -41,11 +42,16 @@ mod local_notification_queue_tests {
     }
 
     /// Helper to create and register NotificationsManager singleton with mock plugin
-    fn setup_notifications_manager_with_mock(mock: &Gd<godot::engine::RefCounted>) -> Gd<godot::engine::Node> {
+    fn setup_notifications_manager_with_mock(
+        mock: &Gd<godot::engine::RefCounted>,
+    ) -> Gd<godot::engine::Node> {
         let mut engine = godot::engine::Engine::singleton();
 
         // Check if already registered (from previous test)
-        if engine.get_singleton("NotificationsManager".into()).is_some() {
+        if engine
+            .get_singleton("NotificationsManager".into())
+            .is_some()
+        {
             engine.unregister_singleton("NotificationsManager".into());
         }
 
@@ -86,27 +92,47 @@ mod local_notification_queue_tests {
 
     /// Helper to inspect mock state - total notifications in database
     fn get_total_notifications(mock: &mut Gd<godot::engine::RefCounted>) -> i64 {
-        let state = mock.call("get_database_state".into(), &[]).to::<Dictionary>();
-        state.get("total_notifications").unwrap_or(Variant::from(0)).to::<i64>()
+        let state = mock
+            .call("get_database_state".into(), &[])
+            .to::<Dictionary>();
+        state
+            .get("total_notifications")
+            .unwrap_or(Variant::from(0))
+            .to::<i64>()
     }
 
     /// Helper to inspect mock state - how many scheduled with OS
     fn get_os_scheduled_count(mock: &mut Gd<godot::engine::RefCounted>) -> i64 {
-        let state = mock.call("get_database_state".into(), &[]).to::<Dictionary>();
-        state.get("os_scheduled_count").unwrap_or(Variant::from(0)).to::<i64>()
+        let state = mock
+            .call("get_database_state".into(), &[])
+            .to::<Dictionary>();
+        state
+            .get("os_scheduled_count")
+            .unwrap_or(Variant::from(0))
+            .to::<i64>()
     }
 
     /// Helper to inspect if specific notification is scheduled
     fn is_notification_scheduled(mock: &mut Gd<godot::engine::RefCounted>, notif_id: &str) -> bool {
         let where_clause = format!("id = '{}' AND is_scheduled = 1", notif_id);
-        let count: i64 = mock.call("db_count_notifications".into(), &[Variant::from(where_clause)]).to::<i64>();
+        let count: i64 = mock
+            .call(
+                "db_count_notifications".into(),
+                &[Variant::from(where_clause)],
+            )
+            .to::<i64>();
         count > 0
     }
 
     /// Helper to inspect if specific notification exists in database
     fn notification_exists(mock: &mut Gd<godot::engine::RefCounted>, notif_id: &str) -> bool {
         let where_clause = format!("id = '{}'", notif_id);
-        let count: i64 = mock.call("db_count_notifications".into(), &[Variant::from(where_clause)]).to::<i64>();
+        let count: i64 = mock
+            .call(
+                "db_count_notifications".into(),
+                &[Variant::from(where_clause)],
+            )
+            .to::<i64>();
         count > 0
     }
 
@@ -139,16 +165,31 @@ mod local_notification_queue_tests {
         );
 
         // Verify it was inserted but not yet scheduled
-        assert_eq!(get_total_notifications(&mut mock), 1, "Should have 1 notification in database");
-        assert_eq!(get_os_scheduled_count(&mut mock), 0, "Should have 0 scheduled initially");
+        assert_eq!(
+            get_total_notifications(&mut mock),
+            1,
+            "Should have 1 notification in database"
+        );
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            0,
+            "Should have 0 scheduled initially"
+        );
 
         // ACTION: Call the synchronous _sync_notification_queue() method
         // This tests the core queue management logic
         manager.call("_sync_notification_queue".into(), &[]);
 
         // VERIFY: The notification should now be scheduled with OS
-        assert_eq!(get_os_scheduled_count(&mut mock), 1, "Should have 1 scheduled after sync");
-        assert!(is_notification_scheduled(&mut mock, "test_notif_1"), "Notification should be marked as scheduled");
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            1,
+            "Should have 1 scheduled after sync"
+        );
+        assert!(
+            is_notification_scheduled(&mut mock, "test_notif_1"),
+            "Notification should be marked as scheduled"
+        );
     }
 
     /// Test 2: Verify cancel_queued_local_notification removes from DB and OS
@@ -188,21 +229,41 @@ mod local_notification_queue_tests {
         );
 
         // Verify setup
-        assert!(notification_exists(&mut mock, "test_cancel"), "Notification should exist after setup");
-        assert_eq!(get_os_scheduled_count(&mut mock), 1, "Should have 1 OS scheduled");
+        assert!(
+            notification_exists(&mut mock, "test_cancel"),
+            "Notification should exist after setup"
+        );
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            1,
+            "Should have 1 OS scheduled"
+        );
 
         // ACTION: Call cancel_queued_local_notification (synchronous)
-        let success: bool = manager.call(
-            "cancel_queued_local_notification".into(),
-            &[Variant::from("test_cancel")],
-        ).to::<bool>();
+        let success: bool = manager
+            .call(
+                "cancel_queued_local_notification".into(),
+                &[Variant::from("test_cancel")],
+            )
+            .to::<bool>();
 
         assert!(success, "Cancel should succeed");
 
         // VERIFY: Notification should be removed from both DB and OS
-        assert!(!notification_exists(&mut mock, "test_cancel"), "Notification should be deleted from DB");
-        assert_eq!(get_total_notifications(&mut mock), 0, "Should have 0 notifications in DB");
-        assert_eq!(get_os_scheduled_count(&mut mock), 0, "Should have 0 OS scheduled");
+        assert!(
+            !notification_exists(&mut mock, "test_cancel"),
+            "Notification should be deleted from DB"
+        );
+        assert_eq!(
+            get_total_notifications(&mut mock),
+            0,
+            "Should have 0 notifications in DB"
+        );
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            0,
+            "Should have 0 OS scheduled"
+        );
     }
 
     /// Test 3: End-to-end sync algorithm validation
@@ -306,29 +367,45 @@ mod local_notification_queue_tests {
 
         // 1. All expired notifications should be removed
         let where_clause = format!("trigger_timestamp <= {}", current_time);
-        let expired_count: i64 = mock.call(
-            "db_count_notifications".into(),
-            &[Variant::from(where_clause)]
-        ).to::<i64>();
+        let expired_count: i64 = mock
+            .call(
+                "db_count_notifications".into(),
+                &[Variant::from(where_clause)],
+            )
+            .to::<i64>();
 
-        assert_eq!(expired_count, 0, "All expired notifications should be removed");
+        assert_eq!(
+            expired_count, 0,
+            "All expired notifications should be removed"
+        );
 
         // 2. Exactly 24 notifications should be scheduled with OS
         let os_scheduled_count = get_os_scheduled_count(&mut mock);
-        assert_eq!(os_scheduled_count, 24, "Should have exactly 24 notifications scheduled with OS");
+        assert_eq!(
+            os_scheduled_count, 24,
+            "Should have exactly 24 notifications scheduled with OS"
+        );
 
         // 3. DB and OS counts should match
-        let db_scheduled_count: i64 = mock.call(
-            "db_count_notifications".into(),
-            &[Variant::from("is_scheduled = 1")]
-        ).to::<i64>();
-        assert_eq!(db_scheduled_count, os_scheduled_count, "DB scheduled count should match OS count");
+        let db_scheduled_count: i64 = mock
+            .call(
+                "db_count_notifications".into(),
+                &[Variant::from("is_scheduled = 1")],
+            )
+            .to::<i64>();
+        assert_eq!(
+            db_scheduled_count, os_scheduled_count,
+            "DB scheduled count should match OS count"
+        );
 
         // 4. The orphan should be cleaned up (cancelled from OS)
         let os_ids_variant = mock.call("os_get_scheduled_ids".into(), &[]);
         let os_ids = os_ids_variant.to::<PackedStringArray>();
         let os_ids_vec: Vec<String> = os_ids.to_vec().iter().map(|s| s.to_string()).collect();
-        assert!(!os_ids_vec.contains(&orphan_id.to_string()), "Orphan notification should be removed from OS");
+        assert!(
+            !os_ids_vec.contains(&orphan_id.to_string()),
+            "Orphan notification should be removed from OS"
+        );
 
         // 5. Verify next 24 are the earliest by timestamp
         let where_clause = format!("trigger_timestamp > {}", current_time);
@@ -337,8 +414,8 @@ mod local_notification_queue_tests {
             &[
                 Variant::from(where_clause),
                 Variant::from("trigger_timestamp ASC"),
-                Variant::from(24)
-            ]
+                Variant::from(24),
+            ],
         );
 
         // Simplified verification - just check that we got results
@@ -349,7 +426,10 @@ mod local_notification_queue_tests {
         let final_total = get_total_notifications(&mut mock);
         let final_scheduled = get_os_scheduled_count(&mut mock);
 
-        assert_eq!(final_total, 30, "Should have 30 total after removing 5 expired");
+        assert_eq!(
+            final_total, 30,
+            "Should have 30 total after removing 5 expired"
+        );
         assert_eq!(final_scheduled, 24, "Should have 24 scheduled with OS");
     }
 
@@ -393,7 +473,10 @@ mod local_notification_queue_tests {
         let total_count = get_total_notifications(&mut mock);
 
         assert_eq!(total_count, 5, "Should have 5 total notifications");
-        assert_eq!(os_scheduled_count, 5, "All 5 notifications with identical timestamps should be scheduled");
+        assert_eq!(
+            os_scheduled_count, 5,
+            "All 5 notifications with identical timestamps should be scheduled"
+        );
     }
 
     /// Test 5: Sync consistency validation (DB and OS states match)
@@ -433,11 +516,26 @@ mod local_notification_queue_tests {
 
         // VERIFY: Validate consistency
         let consistency = validate_db_os_consistency(&mut mock);
-        assert!(consistency.is_consistent, "DB and OS should be perfectly consistent after sync");
-        assert!(consistency.scheduled_count_matches, "Scheduled counts should match");
-        assert!(consistency.all_os_in_db, "All OS IDs should be in DB as scheduled");
-        assert!(consistency.all_db_in_os, "All DB scheduled IDs should be in OS");
-        assert!(consistency.within_limit, "Scheduled count should be within MAX limit");
+        assert!(
+            consistency.is_consistent,
+            "DB and OS should be perfectly consistent after sync"
+        );
+        assert!(
+            consistency.scheduled_count_matches,
+            "Scheduled counts should match"
+        );
+        assert!(
+            consistency.all_os_in_db,
+            "All OS IDs should be in DB as scheduled"
+        );
+        assert!(
+            consistency.all_db_in_os,
+            "All DB scheduled IDs should be in OS"
+        );
+        assert!(
+            consistency.within_limit,
+            "Scheduled count should be within MAX limit"
+        );
     }
 
     /// Test 6: Sync with mixed states (scheduled, pending, expired)
@@ -525,10 +623,12 @@ mod local_notification_queue_tests {
         // VERIFY
         // 1. No expired should remain
         let where_clause = format!("trigger_timestamp <= {}", current_time);
-        let expired_remaining: i64 = mock.call(
-            "db_count_notifications".into(),
-            &[Variant::from(where_clause)]
-        ).to::<i64>();
+        let expired_remaining: i64 = mock
+            .call(
+                "db_count_notifications".into(),
+                &[Variant::from(where_clause)],
+            )
+            .to::<i64>();
         assert_eq!(expired_remaining, 0, "All expired should be removed");
 
         // 2. Total should be 30 (20 scheduled + 10 pending, 3 expired removed)
@@ -537,7 +637,10 @@ mod local_notification_queue_tests {
 
         // 3. Exactly 24 should be scheduled with OS
         let os_scheduled_count = get_os_scheduled_count(&mut mock);
-        assert_eq!(os_scheduled_count, 24, "Should have exactly 24 scheduled with OS");
+        assert_eq!(
+            os_scheduled_count, 24,
+            "Should have exactly 24 scheduled with OS"
+        );
 
         // 4. First 4 pending should now be scheduled
         let mut all_pending_scheduled = true;
@@ -545,7 +648,7 @@ mod local_notification_queue_tests {
             let notif_id = format!("pending_{}", i);
             let notif_variant = mock.call(
                 "db_get_notification".into(),
-                &[Variant::from(notif_id.as_str())]
+                &[Variant::from(notif_id.as_str())],
             );
             let notif = notif_variant.to::<Dictionary>();
             if let Some(is_scheduled_variant) = notif.get("is_scheduled") {
@@ -573,14 +676,18 @@ mod local_notification_queue_tests {
 
     /// Validate that DB and OS states are consistent
     fn validate_db_os_consistency(mock: &mut Gd<godot::engine::RefCounted>) -> ConsistencyResult {
-        let state = mock.call("get_database_state".into(), &[]).to::<Dictionary>();
+        let state = mock
+            .call("get_database_state".into(), &[])
+            .to::<Dictionary>();
 
         // Get counts without detailed iteration to avoid type conversion panics
         let os_count = state.get("os_scheduled_count").unwrap().to::<i64>();
-        let db_scheduled_count: i64 = mock.call(
-            "db_count_notifications".into(),
-            &[Variant::from("is_scheduled = 1")]
-        ).to::<i64>();
+        let db_scheduled_count: i64 = mock
+            .call(
+                "db_count_notifications".into(),
+                &[Variant::from("is_scheduled = 1")],
+            )
+            .to::<i64>();
 
         // Validate counts
         let scheduled_count_matches = os_count == db_scheduled_count;
