@@ -69,12 +69,12 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 	for avatar in avatars_to_add:
 		var avatar_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 		self.add_child(avatar_item)
-		avatar_item.set_type(player_list_type)
-
+		
 		if avatar is Avatar:
 			if not avatar.avatar_loaded.is_connected(avatar_item.async_set_data):
 				avatar.avatar_loaded.connect(avatar_item.async_set_data)
 		await avatar_item.async_set_data(avatar)
+		avatar_item.set_type(player_list_type)
 
 	var children = self.get_children()
 	var valid_children = []

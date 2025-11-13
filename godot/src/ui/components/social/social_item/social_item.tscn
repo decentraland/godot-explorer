@@ -148,11 +148,10 @@ theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("7_m2rwh")
 theme_override_font_sizes/font_size = 16
-text = "Genesis Plaza"
+text = "Somewhere"
 
 [node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -199,7 +198,6 @@ expand_icon = true
 
 [node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -295,7 +293,6 @@ icon = ExtResource("15_0guw6")
 
 [node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -318,5 +315,7 @@ expand_icon = true
 [connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
 [connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/Nickname" to="." method="_tap_to_open_profile"]
-[connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Label_Place" to="." method="_tap_to_open_profile"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="toggled" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_Mute" to="." method="_on_button_mute_toggled"]
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_AddFriend" to="." method="_on_button_add_friend_pressed"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Blocked/Button_Unblock" to="." method="_on_button_unblock_pressed"]

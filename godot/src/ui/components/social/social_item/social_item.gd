@@ -6,8 +6,6 @@ enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
 
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
-var block_icon = load("res://assets/ui/block.svg")
-var unblock_icon = load("res://assets/ui/unblock.svg")
 var avatar: DclAvatar = null
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
@@ -28,12 +26,15 @@ var avatar: DclAvatar = null
 func _ready():
 	add_to_group("blacklist_ui_sync")
 	_update_elements_visibility()
+	
 
 
 func async_set_data(avatar_param = null):
 	if avatar_param != null:
 		avatar = avatar_param
-
+		avatar.change_parcel_position.connect(self.update_location)
+		print(avatar)
+		
 	elif avatar == null:
 		return
 
@@ -66,7 +67,7 @@ func async_set_data(avatar_param = null):
 
 		var nickname_color = avatar.get_nickname_color(avatar_name)
 		nickname.add_theme_color_override("font_color", nickname_color)
-
+		update_location()
 
 func _on_mouse_entered() -> void:
 	panel_nearby_player_item.self_modulate = "#ffffff"
@@ -76,7 +77,7 @@ func _on_mouse_exited() -> void:
 	panel_nearby_player_item.self_modulate = "#ffffff00"
 
 
-func _on_button_mute_user_toggled(toggled_on: bool) -> void:
+func _on_button_mute_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Global.social_blacklist.add_muted(avatar.avatar_id)
 	else:
@@ -86,26 +87,12 @@ func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 
 
 func _update_buttons() -> void:
-	pass
-	#var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
-	#button_block_user.set_pressed_no_signal(is_blocked)
-	#if is_blocked:
-	#button_block_user.icon = null
-	#button_block_user.text = "UNBLOCK"
-	#button_mute_user.hide()
-	#else:
-	#button_block_user.icon = BLOCK
-	#button_block_user.text = ""
-	#button_mute_user.show()
-
-
-#
-#var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
-#button_mute_user.set_pressed_no_signal(is_muted)
-#if is_muted:
-#button_mute_user.icon = MUTE
-#else:
-#button_mute_user.icon = UNMUTE
+	var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
+	button_mute.set_pressed_no_signal(is_muted)
+	if is_muted:
+		button_mute.icon = mute_icon
+	else:
+		button_mute.icon = unmute_icon
 
 
 func _on_button_block_user_pressed() -> void:
@@ -177,3 +164,33 @@ func set_type(type: SocialType) -> void:
 func _on_button_add_friend_pressed() -> void:
 	print("TODO: Emit signal to friends manager to send friend request to the avatar: ", avatar)
 	button_add_friend.hide()
+
+
+func _on_button_jump_in_pressed() -> void:
+	Global.teleport_to(avatar.get_current_parcel_position(), Realm.MAIN_REALM)
+
+func update_location() -> void:
+	var pos = avatar.get_current_parcel_position()
+	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	url += "&positions=%d,%d" % [pos.x, pos.y]
+
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_GET, "", headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("Error request places jump in", result.get_error())
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+
+	if json.data.is_empty():
+		label_place.text = "Unknown place"
+	else:
+		label_place.text = json.data[0].get("title", "Unknown place")
+
+
+func _on_button_unblock_pressed() -> void:
+	Global.social_blacklist.remove_blocked(avatar.avatar_id)
