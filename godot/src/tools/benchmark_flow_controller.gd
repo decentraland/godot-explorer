@@ -24,7 +24,6 @@ var benchmark_locations = [
 
 var current_location_index = 0
 var current_stage = ""
-var log_buffer = []
 var is_handling_scene = false  # Prevent re-entry
 
 # References
@@ -299,16 +298,11 @@ func finalize_benchmark():
 	log_message("Generating consolidated benchmark report...")
 	benchmark_report.generate_consolidated_report()
 
-	log_message("Saving benchmark logs...")
-	save_logs()
-
 	var user_dir = OS.get_user_data_dir()
 	log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	log_message("✅ BENCHMARK COMPLETE!")
 	log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	log_message("Reports saved to: " + user_dir + "/output/")
-	log_message("  - benchmark_report.md")
-	log_message("  - benchmark_logs.log")
+	log_message("Report saved to: " + user_dir + "/output/benchmark_report.md")
 	log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	await get_tree().create_timer(3.0).timeout
@@ -318,21 +312,3 @@ func finalize_benchmark():
 ## Logging helper
 func log_message(message: String):
 	print(message)
-	log_buffer.append("[%s] %s" % [Time.get_datetime_string_from_system(), message])
-
-
-## Save logs to file
-func save_logs():
-	var user_dir = OS.get_user_data_dir()
-	var output_dir = user_dir + "/output"
-	DirAccess.make_dir_recursive_absolute(output_dir)
-
-	var log_file_path = output_dir + "/benchmark_logs.log"
-	var file = FileAccess.open(log_file_path, FileAccess.WRITE)
-	if file:
-		for line in log_buffer:
-			file.store_line(line)
-		file.close()
-		log_message("✓ Logs saved to: " + log_file_path)
-	else:
-		push_error("Failed to save logs to: " + log_file_path)

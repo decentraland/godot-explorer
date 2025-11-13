@@ -87,14 +87,7 @@ jobs:
             echo "⚠️ benchmark_report.md not found"
           fi
 
-          if [ -f "$USER_DATA_DIR/output/benchmark_logs.log" ]; then
-            cp "$USER_DATA_DIR/output/benchmark_logs.log" benchmark-results/
-            echo "✓ Copied benchmark_logs.log"
-          else
-            echo "⚠️ benchmark_logs.log not found"
-          fi
-
-          # Copy the full benchmark run logs
+          # Copy the full benchmark run logs (captured by tee in Run Benchmark step)
           if [ -f "benchmark_run.log" ]; then
             cp benchmark_run.log benchmark-results/
             echo "✓ Copied benchmark_run.log"
@@ -113,7 +106,6 @@ jobs:
           name: benchmark-report
           path: |
             benchmark-results/benchmark_report.md
-            benchmark-results/benchmark_logs.log
             benchmark-results/benchmark_run.log
           if-no-files-found: error
           retention-days: 90
@@ -151,8 +143,7 @@ jobs:
             echo ""
             echo "### 📋 Logs & Artifacts"
             echo ""
-            echo "- 📄 **Benchmark Logs**: [benchmark_logs.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Flow controller logs"
-            echo "- 🔧 **Full Run Logs**: [benchmark_run.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Complete CI run output"
+            echo "- 🔧 **Full Logs**: [benchmark_run.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Complete benchmark run output (build + execution)"
             echo "- 🌐 **Workflow Run**: [View full logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- 📦 **Download All**: Get the \`benchmark-report\` artifact from the workflow run"
             echo ""
