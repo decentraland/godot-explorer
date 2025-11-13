@@ -505,7 +505,7 @@ func generate_event_notification_text(event_name: String) -> Dictionary:
 ## @param trigger_timestamp: Unix timestamp (seconds) when notification should fire
 ## @param image_url: Optional image URL to download and attach
 ## @return: true if added to queue successfully
-func queue_local_notification_async(
+func async_queue_local_notification(
 	notification_id: String,
 	title: String,
 	body: String,
@@ -531,7 +531,7 @@ func queue_local_notification_async(
 	# Download and convert image to base64 if URL provided
 	var image_base64 = ""
 	if not image_url.is_empty():
-		image_base64 = await _download_image_as_base64_async(image_url)
+		image_base64 = await _async_download_image_as_base64(image_url)
 
 	# Insert into database (is_scheduled = 0 initially)
 	var success = (
@@ -837,7 +837,7 @@ func _print_queue_state(current_time: int, scheduled_count: int, pending_count: 
 ## Download an image from URL and convert to base64 string
 ## @param image_url: URL of the image to download
 ## @return: Base64 encoded string of the image, or empty string if failed
-func _download_image_as_base64_async(image_url: String) -> String:
+func _async_download_image_as_base64(image_url: String) -> String:
 	if image_url.is_empty():
 		return ""
 
