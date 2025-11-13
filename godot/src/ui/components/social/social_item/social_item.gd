@@ -33,8 +33,6 @@ func async_set_data(avatar_param = null):
 	if avatar_param != null:
 		avatar = avatar_param
 		avatar.change_parcel_position.connect(self.update_location)
-		print(avatar)
-		
 	elif avatar == null:
 		return
 
@@ -95,16 +93,6 @@ func _update_buttons() -> void:
 		button_mute.icon = unmute_icon
 
 
-func _on_button_block_user_pressed() -> void:
-	var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
-	if is_blocked:
-		Global.social_blacklist.remove_blocked(avatar.avatar_id)
-	else:
-		Global.social_blacklist.add_blocked(avatar.avatar_id)
-	_update_buttons()
-	_notify_other_components_of_change()
-
-
 func _notify_other_components_of_change() -> void:
 	if avatar != null:
 		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", avatar.avatar_id)
@@ -124,10 +112,6 @@ func _tap_to_open_profile(event: InputEvent) -> void:
 					explorer.control_menu.show_own_profile()
 				else:
 					Global.open_profile.emit(avatar)
-
-
-func _on_button_report_pressed() -> void:
-	pass  # Replace with function body.
 
 
 func _update_elements_visibility() -> void:
@@ -194,3 +178,8 @@ func update_location() -> void:
 
 func _on_button_unblock_pressed() -> void:
 	Global.social_blacklist.remove_blocked(avatar.avatar_id)
+	# Actualizar la lista contenedora
+	var parent_list = get_parent()
+	if parent_list != null and parent_list.has_method("async_update_list"):
+		parent_list.async_update_list()
+	_notify_other_components_of_change()

@@ -18,7 +18,6 @@ var pending_request: int = 3
 @onready var scroll_container_nearby: ScrollContainer = %ScrollContainer_Nearby
 @onready var scroll_container_blocked: ScrollContainer = %ScrollContainer_Blocked
 
-@onready var texture_rect_request_indicator: TextureRect = %TextureRect_RequestIndicator
 @onready var request_button: Button = %RequestButton
 @onready var online_button: Button = %OnlineButton
 @onready var offline_button: Button = %OfflineButton
@@ -97,6 +96,7 @@ func _on_button_nearby_toggled(toggled_on: bool) -> void:
 
 
 func _on_button_blocked_toggled(toggled_on: bool) -> void:
+	print(Global.social_blacklist.get_blocked_list())
 	if toggled_on:
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE

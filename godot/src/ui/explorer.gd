@@ -692,11 +692,10 @@ func _on_friends_clicked() -> void:
 	if friends_panel.visible:
 		friends_panel.hide_panel()
 		hud_button_friends.set_panel_open(false)
-		# On desktop, grab focus back to enable camera controls
-		# On mobile, also capture mouse
+		# Grab focus back to enable camera controls
 		Global.explorer_grab_focus()
-		if Global.is_mobile():
-			capture_mouse()
+		# Capture mouse to restore camera control
+		capture_mouse()
 	else:
 		friends_panel.show_panel()
 		hud_button_friends.set_panel_open(true)
@@ -717,8 +716,8 @@ func _on_friends_panel_closed() -> void:
 	hud_button_friends.set_panel_open(false)
 	# Grab focus back to enable camera controls
 	Global.explorer_grab_focus()
-	if Global.is_mobile():
-		capture_mouse()
+	# Capture mouse to restore camera control
+	capture_mouse()
 
 
 func _on_notification_bell_clicked() -> void:
@@ -726,11 +725,10 @@ func _on_notification_bell_clicked() -> void:
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
 		hud_button_notifications.set_panel_open(false)
-		# On desktop, grab focus back to enable camera controls
-		# On mobile, also capture mouse
+		# Grab focus back to enable camera controls
 		Global.explorer_grab_focus()
-		if Global.is_mobile():
-			capture_mouse()
+		# Capture mouse to restore camera control
+		capture_mouse()
 	else:
 		notifications_panel.show_panel()
 		hud_button_notifications.set_panel_open(true)
@@ -751,8 +749,8 @@ func _on_notifications_panel_closed() -> void:
 	hud_button_notifications.set_panel_open(false)
 	# Grab focus back to enable camera controls
 	Global.explorer_grab_focus()
-	if Global.is_mobile():
-		capture_mouse()
+	# Capture mouse to restore camera control
+	capture_mouse()
 
 
 func _on_notification_queued(notification: Dictionary) -> void:
