@@ -66,6 +66,8 @@ pub struct DclCli {
     #[var(get)]
     pub dcl_benchmark: bool,
     #[var(get)]
+    pub benchmark_report: bool,
+    #[var(get)]
     pub fixed_skybox_time: bool,
     #[var(get)]
     pub developer_mode: bool,
@@ -239,6 +241,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Performance".to_string(),
             },
+            ArgDefinition {
+                name: "--benchmark-report".to_string(),
+                description: "Run benchmarks and generate markdown reports".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
             // Maintenance
             ArgDefinition {
                 name: "--clear-cache-startup".to_string(),
@@ -357,6 +365,7 @@ impl INode for DclCli {
         let test_camera_tune = args_map.contains_key("--test-camera-tune");
         let measure_perf = args_map.contains_key("--measure-perf");
         let dcl_benchmark = args_map.contains_key("--dcl-benchmark");
+        let benchmark_report = args_map.contains_key("--benchmark-report");
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
 
@@ -410,6 +419,7 @@ impl INode for DclCli {
             test_camera_tune,
             measure_perf,
             dcl_benchmark,
+            benchmark_report,
             fixed_skybox_time,
             developer_mode,
             help_requested,

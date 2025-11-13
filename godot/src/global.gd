@@ -177,6 +177,20 @@ func _ready():
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
+	# Initialize BenchmarkReport singleton if benchmarking is enabled (requires use_memory_debugger feature)
+	if cli.benchmark_report and "benchmark_report" in self:
+		print("✓ BenchmarkReport initialized for full flow benchmarking")
+		get_tree().root.add_child.call_deferred(self.benchmark_report)
+
+		# Add benchmark flow controller to orchestrate the full benchmark flow
+		var benchmark_flow_controller = load("res://src/tools/benchmark_flow_controller.gd").new()
+		benchmark_flow_controller.set_name("BenchmarkFlowController")
+		get_tree().root.add_child.call_deferred(benchmark_flow_controller)
+	elif cli.benchmark_report:
+		push_error(
+			"BenchmarkReport requires --features use_memory_debugger to be enabled during build"
+		)
+
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 

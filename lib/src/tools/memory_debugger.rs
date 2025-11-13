@@ -14,10 +14,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 // Tracking Allocator - Live Rust Heap Memory Monitoring
 // ============================================================================
 
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
-static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
+pub static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
+pub static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub struct TrackingAllocator;
 
@@ -143,7 +143,7 @@ impl MemoryDebugger {
 
     fn print_all_metrics(&self) {
         godot_print!("╔══════════════════════════════════════════════════════════════╗");
-        godot_print!("║                      MEMORY DEBUGGER 3                       ║");
+        godot_print!("║                      MEMORY DEBUGGER                         ║");
         godot_print!("╚══════════════════════════════════════════════════════════════╝");
 
         self.print_godot_memory_metrics();
