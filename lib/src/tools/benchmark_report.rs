@@ -376,6 +376,23 @@ impl BenchmarkReport {
         GString::from(markdown)
     }
 
+    /// Generate single consolidated report with all test results
+    #[func]
+    pub fn generate_consolidated_report(&self) -> GString {
+        if self.metrics_history.is_empty() {
+            return GString::from("No metrics collected yet");
+        }
+
+        let markdown = self.format_consolidated_report();
+
+        // Save to file with fixed name (no timestamp)
+        if let Err(e) = self.save_consolidated_report("benchmark_report", &markdown) {
+            tracing::error!("Failed to save consolidated report: {:?}", e);
+        }
+
+        GString::from(markdown)
+    }
+
     /// Clear all stored metrics
     #[func]
     pub fn clear_metrics(&mut self) {
@@ -618,6 +635,101 @@ impl BenchmarkReport {
         report
     }
 
+    fn format_consolidated_report(&self) -> String {
+        let mut report = String::new();
+
+        report.push_str("# Decentraland Godot Explorer - Benchmark Report\n\n");
+        report.push_str(&format!("**Generated**: {}\n\n", self.get_timestamp()));
+        report.push_str(&format!("**Total Tests**: {}\n\n", self.metrics_history.len()));
+
+        report.push_str("---\n\n");
+
+        // Table of Contents
+        report.push_str("## Table of Contents\n\n");
+        for (i, metrics) in self.metrics_history.iter().enumerate() {
+            report.push_str(&format!("{}. [{}](#test-{}-{})\n", i + 1, metrics.test_name, i + 1, metrics.test_name.to_lowercase().replace(' ', "-").replace('_', "-")));
+        }
+        report.push_str("\n---\n\n");
+
+        // Summary Tables
+        report.push_str("## Summary Overview\n\n");
+
+        // Memory Summary
+        report.push_str("### Memory Metrics\n\n");
+        report.push_str("| Test | Godot Static (MiB) | GPU VRAM (MiB) | Rust Heap (MiB) | Deno Total (MiB) |\n");
+        report.push_str("|------|-------------------|----------------|-----------------|------------------|\n");
+        for metrics in &self.metrics_history {
+            report.push_str(&format!(
+                "| {} | {:.2} | {:.2} | {:.2} | {:.2} |\n",
+                metrics.test_name,
+                metrics.godot_static_memory_mb,
+                metrics.gpu_video_ram_mb,
+                metrics.rust_heap_usage_mb,
+                metrics.deno_total_memory_mb
+            ));
+        }
+        report.push_str("\n");
+
+        // Objects Summary
+        report.push_str("### Object Counts\n\n");
+        report.push_str("| Test | Total Objects | Nodes | Resources | Orphan Nodes |\n");
+        report.push_str("|------|---------------|-------|-----------|---------------|\n");
+        for metrics in &self.metrics_history {
+            report.push_str(&format!(
+                "| {} | {} | {} | {} | {} |\n",
+                metrics.test_name,
+                metrics.total_objects,
+                metrics.node_count,
+                metrics.resource_count,
+                metrics.orphan_node_count
+            ));
+        }
+        report.push_str("\n");
+
+        // Rendering Summary
+        report.push_str("### Rendering Metrics\n\n");
+        report.push_str("| Test | FPS | Draw Calls | Primitives | Objects in Frame |\n");
+        report.push_str("|------|-----|------------|------------|------------------|\n");
+        for metrics in &self.metrics_history {
+            report.push_str(&format!(
+                "| {} | {:.1} | {} | {} | {} |\n",
+                metrics.test_name,
+                metrics.fps,
+                metrics.draw_calls,
+                metrics.primitives_in_frame,
+                metrics.objects_in_frame
+            ));
+        }
+        report.push_str("\n");
+
+        // Resource Analysis Summary
+        report.push_str("### Resource Analysis\n\n");
+        report.push_str("| Test | Meshes | Materials | Mesh RIDs | Material RIDs | Dedup Potential |\n");
+        report.push_str("|------|--------|-----------|-----------|---------------|------------------|\n");
+        for metrics in &self.metrics_history {
+            report.push_str(&format!(
+                "| {} | {} | {} | {} | {} | {} |\n",
+                metrics.test_name,
+                metrics.total_meshes,
+                metrics.total_materials,
+                metrics.mesh_rid_count,
+                metrics.material_rid_count,
+                metrics.potential_dedup_count
+            ));
+        }
+        report.push_str("\n---\n\n");
+
+        // Detailed Results for Each Test
+        report.push_str("## Detailed Test Results\n\n");
+        for (i, metrics) in self.metrics_history.iter().enumerate() {
+            report.push_str(&format!("### Test {}: {}\n\n", i + 1, metrics.test_name));
+            report.push_str(&self.format_individual_report(metrics));
+            report.push_str("\n---\n\n");
+        }
+
+        report
+    }
+
     fn save_report(&self, test_name: &str, timestamp: &str, content: &str) -> std::io::Result<()> {
         // Get the user data directory from Godot
         let user_dir = Os::singleton().get_user_data_dir().to_string();
@@ -636,6 +748,28 @@ impl BenchmarkReport {
 
         tracing::info!("Saved report to: {:?}", filepath);
         godot_print!("✓ Benchmark report saved: {:?}", filepath);
+
+        Ok(())
+    }
+
+    fn save_consolidated_report(&self, filename: &str, content: &str) -> std::io::Result<()> {
+        // Get the user data directory from Godot
+        let user_dir = Os::singleton().get_user_data_dir().to_string();
+        let output_dir = PathBuf::from(user_dir).join("output");
+
+        // Create directory if it doesn't exist
+        fs::create_dir_all(&output_dir)?;
+
+        // Create filename without timestamp
+        let filename = format!("{}.md", filename);
+        let filepath = output_dir.join(filename);
+
+        // Write file
+        let mut file = File::create(&filepath)?;
+        file.write_all(content.as_bytes())?;
+
+        tracing::info!("Saved consolidated report to: {:?}", filepath);
+        godot_print!("✓ Consolidated benchmark report saved: {:?}", filepath);
 
         Ok(())
     }

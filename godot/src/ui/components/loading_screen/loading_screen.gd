@@ -20,15 +20,6 @@ var last_hide_click := 0.0
 
 var loaded_resources_offset := 0
 
-# Benchmark locations for multi-location testing
-var benchmark_locations = [
-	{"name": "Goerli Plaza", "pos": Vector2i(72, -10), "realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"},
-	{"name": "Genesis Plaza", "pos": Vector2i(0, 0), "realm": "https://realm-provider-ea.decentraland.org/main"},
-	#{"name": "Goerli Plaza (Cleanup Test)", "pos": Vector2i(72, -10), "realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"}
-]
-var current_benchmark_index = 0
-var benchmark_locations_tested = false
-
 @onready var loading_progress = %ColorRect_LoadingProgress
 @onready var loading_progress_label = %Label_LoadingProgress
 @onready var label_loading_state = %Label_LoadingState
@@ -84,71 +75,6 @@ func async_hide_loading_screen_effect():
 		add_child(counter)
 		await get_tree().create_timer(5).timeout
 		counter.log_active_counts()
-
-	if Global.cli.benchmark_report:
-		# Wait 5 seconds for scene to fully load
-		await get_tree().create_timer(5).timeout
-
-		# Collect resource data from GDScript
-		var counter = (
-			load("res://addons/dcl_dev_tools/dev_tools/resource_counter/resource_counter.gd").new()
-		)
-		add_child(counter)
-		counter.count(get_tree().get_root().get_node("scene_runner"))
-
-		# Prepare resource data dictionary
-		var resource_data = {
-			"total_meshes": counter.meshes.size(),
-			"total_materials": counter.materials.size(),
-			"mesh_rid_count": 0,
-			"material_rid_count": 0,
-			"mesh_hash_count": 0,
-			"potential_dedup_count": 0,
-			"mesh_savings_percent": 0.0
-		}
-
-		# Calculate RID counts and deduplication metrics (simplified)
-		var mesh_rid_map = {}
-		for mesh in counter.meshes:
-			if mesh:
-				var mesh_rid = mesh.get_rid()
-				mesh_rid_map[mesh_rid] = true
-		resource_data["mesh_rid_count"] = mesh_rid_map.size()
-
-		var material_rid_map = {}
-		for material in counter.materials:
-			if material:
-				var material_rid = material.get_rid()
-				material_rid_map[material_rid] = true
-		resource_data["material_rid_count"] = material_rid_map.size()
-
-		# Get benchmark reporter from Global
-		var benchmark_report = Global.benchmark_report
-		if not benchmark_report:
-			# BenchmarkReport should be created as a singleton in Global
-			print("Warning: BenchmarkReport not found in Global")
-			counter.queue_free()
-			return
-
-		# Get current location info
-		var current_pos = Global.get_explorer().parcel_position
-		var location_name = benchmark_locations[current_benchmark_index].name
-
-		# Collect metrics with resource data (numbered prefix for sorting)
-		var test_name = "4_Explorer_" + str(current_pos) + "_" + location_name.replace(" ", "_")
-		var location = str(current_pos)
-		var realm = Global.realm.get_realm_string()
-
-		benchmark_report.collect_and_store_metrics(test_name, location, realm, resource_data)
-		benchmark_report.generate_individual_report()
-
-		print("✓ Explorer benchmark collected at " + str(current_pos) + " (" + location_name + ")")
-
-		# Clean up
-		counter.queue_free()
-
-		# Check if we need to test more locations
-		_check_next_benchmark_location()
 
 
 func _on_texture_rect_right_arrow_gui_input(event):
@@ -279,57 +205,3 @@ func _on_color_rect_header_gui_input(event):
 			if elapsed_time <= 500:
 				loading_screen_progress_logic.hide_loading_screen()
 			last_hide_click = Time.get_ticks_msec()
-
-
-# Benchmark helper functions
-func _update_benchmark_location_index(current_pos: Vector2i):
-	# Find which location we're currently at
-	for i in range(benchmark_locations.size()):
-		if benchmark_locations[i].pos == current_pos:
-			current_benchmark_index = i
-			return
-
-
-func _check_next_benchmark_location():
-	if not Global.cli.benchmark_report:
-		return
-
-	current_benchmark_index += 1
-
-	if current_benchmark_index < benchmark_locations.size():
-		# More locations to test
-		var next_loc = benchmark_locations[current_benchmark_index]
-		print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		print("✓ Moving to next benchmark location: %s at %s (realm: %s)" % [next_loc.name, next_loc.pos, next_loc.realm])
-		print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		await get_tree().create_timer(2.0).timeout
-		Global.teleport_to(next_loc.pos, next_loc.realm)
-	else:
-		# All locations tested - generate summary and quit
-		print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		print("✓ All benchmark locations completed!")
-		print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		_finalize_benchmark()
-
-
-func _finalize_benchmark():
-	var benchmark_report = Global.benchmark_report
-	if not benchmark_report:
-		print("⚠ BenchmarkReport not found, cannot generate summary")
-		await get_tree().create_timer(2.0).timeout
-		get_tree().quit()
-		return
-
-	print("Generating comprehensive summary report...")
-	benchmark_report.generate_summary_report()
-
-	print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	print("✅ BENCHMARK COMPLETE!")
-	print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	print("Reports saved to user data directory:")
-	print("  - Individual reports for each stage")
-	print("  - Comprehensive summary report")
-	print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-	await get_tree().create_timer(3.0).timeout
-	get_tree().quit()

@@ -143,7 +143,7 @@ impl MemoryDebugger {
 
     fn print_all_metrics(&self) {
         godot_print!("╔══════════════════════════════════════════════════════════════╗");
-        godot_print!("║                      MEMORY DEBUGGER 3                       ║");
+        godot_print!("║                      MEMORY DEBUGGER                         ║");
         godot_print!("╚══════════════════════════════════════════════════════════════╝");
 
         self.print_godot_memory_metrics();

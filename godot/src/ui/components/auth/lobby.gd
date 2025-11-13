@@ -178,11 +178,6 @@ func _ready():
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
 
-	# Benchmark collection for lobby
-	if Global.cli.benchmark_report:
-		print("✓ Lobby: Starting benchmark collection...")
-		_collect_benchmark()
-
 	var session_account: Dictionary = Global.get_config().session_account
 
 	if Global.cli.guest_profile:
@@ -417,44 +412,3 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 
 func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
 	_check_button_finish()
-
-
-func _collect_benchmark():
-	# Wait for scene to stabilize
-	await get_tree().create_timer(2.0).timeout
-
-	var benchmark_report = Global.benchmark_report
-	if not benchmark_report:
-		push_warning("BenchmarkReport not found in Global")
-		return
-
-	var resource_data = {
-		"total_meshes": 0,
-		"total_materials": 0,
-		"mesh_rid_count": 0,
-		"material_rid_count": 0,
-		"mesh_hash_count": 0,
-		"potential_dedup_count": 0,
-		"mesh_savings_percent": 0.0
-	}
-
-	benchmark_report.collect_and_store_metrics(
-		"2_Lobby",
-		"UI Scene",
-		"",
-		resource_data
-	)
-	benchmark_report.generate_individual_report()
-
-	print("✓ Lobby benchmark collected")
-
-	# Auto-proceed to Explorer for benchmark flow
-	print("✓ Auto-proceeding to Explorer for benchmark flow...")
-	await get_tree().create_timer(1.0).timeout
-	create_guest_account_if_needed()
-
-	# Set realm and location for Goerli Plaza (first benchmark location)
-	Global.deep_link_obj.location = Vector2i(72, -10)
-	Global.deep_link_obj.realm = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
-
-	await async_close_sign_in(false)
