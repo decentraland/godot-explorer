@@ -27,6 +27,7 @@ excluded_directories: !!set
   .godot: null
   android: null
   addons: null
+  src/test: null
 expression-not-assigned: null
 function-argument-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
 function-arguments-number: 10

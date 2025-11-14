@@ -3,6 +3,10 @@ package org.decentraland.godotexplorer
 import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
+import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -25,6 +29,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.browser.customtabs.CustomTabsService
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import org.decentraland.godotexplorer.NotificationReceiver
 import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
@@ -38,6 +43,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private var isWebViewOpen: Boolean = false
     private var overlayLayout: FrameLayout? = null
 
+    // Notification database instance
+    private var notificationDatabase: NotificationDatabase? = null
+
     private val customPackageNames = arrayOf(
         "com.android.chrome",        // Google Chrome
         "org.mozilla.firefox",       // Mozilla Firefox
@@ -47,6 +55,15 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         "com.opera.mini.native",     // Opera Mini
         "com.sec.android.app.sbrowser" // Samsung Internet
     )
+
+    override fun onGodotSetupCompleted() {
+        super.onGodotSetupCompleted()
+        // Initialize notification database
+        activity?.let {
+            notificationDatabase = NotificationDatabase(it.applicationContext)
+            Log.d(pluginName, "Notification database initialized")
+        }
+    }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
 
@@ -572,8 +589,491 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
+    // =============================================================================
+    // LOCAL NOTIFICATIONS
+    // =============================================================================
+
+    /**
+     * Request notification permission for Android 13+ (API 33+).
+     * For older versions, returns true immediately as no runtime permission is needed.
+     */
+    @UsedByGodot
+    fun requestNotificationPermission(): Boolean {
+        val act = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot request notification permission")
+            return false
+        }
+
+        // Android 13+ requires POST_NOTIFICATIONS runtime permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                act,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!hasPermission) {
+                ActivityCompat.requestPermissions(
+                    act,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+                Log.d(pluginName, "Requesting POST_NOTIFICATIONS permission")
+                return false
+            }
+            return true
+        }
+
+        // For Android 12 and below, permission is automatically granted
+        return true
+    }
+
+    /**
+     * Check if notification permission is granted.
+     */
+    @UsedByGodot
+    fun hasNotificationPermission(): Boolean {
+        val act = activity ?: return false
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                act,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Create a notification channel (required for Android 8.0+).
+     * This should be called before scheduling any notifications.
+     */
+    @UsedByGodot
+    fun createNotificationChannel(
+        channelId: String,
+        channelName: String,
+        channelDescription: String
+    ): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot create notification channel")
+            return false
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+                val channel = NotificationChannel(
+                    channelId,
+                    channelName,
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = channelDescription
+                    enableVibration(true)
+                    enableLights(true)
+                }
+
+                notificationManager.createNotificationChannel(channel)
+                Log.d(pluginName, "Notification channel created: $channelId")
+                return true
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error creating notification channel: ${e.message}")
+                return false
+            }
+        }
+
+        // For Android 7.1 and below, channels are not needed
+        return true
+    }
+
+    /**
+     * Schedule a local notification to be displayed after a delay.
+     *
+     * @param notificationId Unique ID for this notification (used for cancellation)
+     * @param title Notification title
+     * @param body Notification body text
+     * @param delaySeconds Delay in seconds before showing the notification
+     * @return true if scheduled successfully, false otherwise
+     */
+    @UsedByGodot
+    fun scheduleLocalNotification(
+        notificationId: String,
+        title: String,
+        body: String,
+        delaySeconds: Int
+    ): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot schedule notification")
+            return false
+        }
+
+        try {
+            // Convert string ID to integer hash for Android
+            val intId = notificationId.hashCode()
+
+            // Fetch image blob from database if available
+            val imageBlob = notificationDatabase?.getNotificationImageBlob(notificationId)
+
+            // Create intent for NotificationReceiver
+            val intent = Intent(ctx, NotificationReceiver::class.java).apply {
+                action = NotificationReceiver.NOTIFICATION_ACTION
+                putExtra(NotificationReceiver.EXTRA_NOTIFICATION_ID, intId)
+                putExtra(NotificationReceiver.EXTRA_NOTIFICATION_STRING_ID, notificationId)
+                putExtra(NotificationReceiver.EXTRA_TITLE, title)
+                putExtra(NotificationReceiver.EXTRA_BODY, body)
+                if (imageBlob != null) {
+                    putExtra(NotificationReceiver.EXTRA_IMAGE_BLOB, imageBlob)
+                }
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                ctx,
+                intId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            // Schedule with AlarmManager
+            val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val triggerTimeMillis = System.currentTimeMillis() + (delaySeconds * 1000L)
+
+            // Use setExactAndAllowWhileIdle for precise timing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTimeMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTimeMillis,
+                    pendingIntent
+                )
+            }
+
+            Log.d(pluginName, "Local notification scheduled: id=$notificationId (hash=$intId), delay=${delaySeconds}s, hasImage=${imageBlob != null}")
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error scheduling local notification: ${e.message}")
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    /**
+     * Cancel a scheduled local notification.
+     *
+     * @param notificationId The ID of the notification to cancel
+     * @return true if cancelled successfully, false otherwise
+     */
+    @UsedByGodot
+    fun cancelLocalNotification(notificationId: String): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot cancel notification")
+            return false
+        }
+
+        try {
+            val intId = notificationId.hashCode()
+
+            // Cancel the pending alarm
+            val intent = Intent(ctx, NotificationReceiver::class.java).apply {
+                action = NotificationReceiver.NOTIFICATION_ACTION
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                ctx,
+                intId,
+                intent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            if (pendingIntent != null) {
+                val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(pendingIntent)
+                pendingIntent.cancel()
+                Log.d(pluginName, "Local notification cancelled: id=$notificationId (hash=$intId)")
+            } else {
+                Log.w(pluginName, "No pending notification found with id=$notificationId")
+            }
+
+            // Also remove from notification tray if already displayed
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(intId)
+
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error cancelling local notification: ${e.message}")
+            return false
+        }
+    }
+
+    /**
+     * Cancel all scheduled local notifications.
+     */
+    @UsedByGodot
+    fun cancelAllLocalNotifications(): Boolean {
+        val ctx = activity ?: run {
+            Log.e(pluginName, "Activity is null, cannot cancel all notifications")
+            return false
+        }
+
+        try {
+            // Clear all notifications from the notification tray
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancelAll()
+
+            Log.d(pluginName, "All local notifications cancelled")
+            return true
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error cancelling all local notifications: ${e.message}")
+            return false
+        }
+    }
+
+    // =============================================================================
+    // DATABASE API - Unified notification queue management
+    // =============================================================================
+
+    /**
+     * Insert or replace a notification in the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbInsertNotification(
+        id: String,
+        title: String,
+        body: String,
+        triggerTimestamp: Long,
+        isScheduled: Int = 0,
+        data: String = "",
+        imageBase64: String = ""
+    ): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        // Convert base64 string to ByteArray if provided
+        val imageBlob = if (imageBase64.isNotEmpty()) {
+            try {
+                android.util.Base64.decode(imageBase64, android.util.Base64.DEFAULT)
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error decoding image base64: ${e.message}")
+                null
+            }
+        } else {
+            null
+        }
+
+        return db.insertNotification(
+            id,
+            title,
+            body,
+            triggerTimestamp,
+            isScheduled,
+            if (data.isEmpty()) null else data,
+            imageBlob
+        )
+    }
+
+    /**
+     * Update notification fields in the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbUpdateNotification(id: String, updates: Dictionary): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        return db.updateNotification(id, updates)
+    }
+
+    /**
+     * Delete a notification from the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbDeleteNotification(id: String): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        return db.deleteNotification(id)
+    }
+
+    /**
+     * Query notifications from the database with filters.
+     * Part of the unified database API (Phase 3).
+     *
+     * @param whereClause SQL WHERE clause, e.g. "is_scheduled = 0 AND trigger_timestamp > 1699564800"
+     * @param orderBy SQL ORDER BY clause, e.g. "trigger_timestamp ASC"
+     * @param limit Maximum results, or -1 for no limit
+     */
+    @UsedByGodot
+    fun dbQueryNotifications(whereClause: String = "", orderBy: String = "", limit: Int = -1): Array<Dictionary> {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return emptyArray()
+        }
+
+        return db.queryNotifications(whereClause, orderBy, limit)
+    }
+
+    /**
+     * Get count of notifications matching filter.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbCountNotifications(whereClause: String = ""): Int {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return 0
+        }
+
+        return db.countNotifications(whereClause)
+    }
+
+    /**
+     * Clear expired notifications from the database.
+     * Part of the unified database API (Phase 3).
+     *
+     * @param currentTimestamp Current Unix timestamp (seconds)
+     * @return Number of deleted notifications
+     */
+    @UsedByGodot
+    fun dbClearExpired(currentTimestamp: Long): Int {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return 0
+        }
+
+        return db.clearExpired(currentTimestamp)
+    }
+
+    /**
+     * Mark a notification as scheduled/unscheduled in the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbMarkScheduled(id: String, isScheduled: Boolean): Boolean {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return false
+        }
+
+        return db.markScheduled(id, isScheduled)
+    }
+
+    /**
+     * Get a single notification by ID from the database.
+     * Part of the unified database API (Phase 3).
+     */
+    @UsedByGodot
+    fun dbGetNotification(id: String): Dictionary {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return Dictionary()
+        }
+
+        return db.getNotification(id)
+    }
+
+    /**
+     * Clear all notifications from the database.
+     * Part of the unified database API (Phase 3).
+     *
+     * @return Number of deleted notifications
+     */
+    @UsedByGodot
+    fun dbClearAll(): Int {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return 0
+        }
+
+        return db.clearAll()
+    }
+
+    // =============================================================================
+    // OS NOTIFICATION API - Renamed methods for clarity
+    // =============================================================================
+
+    /**
+     * Schedule a notification with the OS (AlarmManager).
+     * This is the low-level OS API (Phase 3).
+     */
+    @UsedByGodot
+    fun osScheduleNotification(
+        notificationId: String,
+        title: String,
+        body: String,
+        delaySeconds: Int
+    ): Boolean {
+        // This is the same as the existing scheduleLocalNotification
+        return scheduleLocalNotification(notificationId, title, body, delaySeconds)
+    }
+
+    /**
+     * Cancel a notification from the OS (AlarmManager).
+     * This is the low-level OS API (Phase 3).
+     */
+    @UsedByGodot
+    fun osCancelNotification(notificationId: String): Boolean {
+        // This is the same as the existing cancelLocalNotification
+        return cancelLocalNotification(notificationId)
+    }
+
+    /**
+     * Get the image blob for a specific notification (as base64 string).
+     * This is separate from queryNotifications() for performance.
+     *
+     * @param id Notification ID
+     * @return Base64 encoded image data, or empty string if no image
+     */
+    @UsedByGodot
+    fun dbGetNotificationImageBlob(id: String): String {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return ""
+        }
+
+        val imageBlob = db.getNotificationImageBlob(id) ?: return ""
+
+        return try {
+            android.util.Base64.encodeToString(imageBlob, android.util.Base64.DEFAULT)
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error encoding image blob to base64: ${e.message}")
+            ""
+        }
+    }
+
+    /**
+     * Get IDs of notifications currently scheduled with the OS.
+     * Part of the unified OS API (Phase 3).
+     *
+     * Note: Android doesn't provide a direct way to query AlarmManager,
+     * so we maintain a registry in the database via is_scheduled flag.
+     */
+    @UsedByGodot
+    fun osGetScheduledIds(): Array<String> {
+        val db = notificationDatabase ?: run {
+            Log.e(pluginName, "Database not initialized")
+            return emptyArray()
+        }
+
+        // Query notifications marked as scheduled
+        val scheduled = db.queryNotifications("is_scheduled = 1", "", -1)
+        return scheduled.map { it["id"].toString() }.toTypedArray()
+    }
+
     companion object {
         private const val CALENDAR_PERMISSION_REQUEST_CODE = 1001
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
     }
 
 }

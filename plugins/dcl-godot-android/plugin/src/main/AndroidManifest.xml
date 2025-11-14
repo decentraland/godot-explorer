@@ -5,6 +5,11 @@
     <!-- Permissions to allow the app to read and write calendar events -->
     <uses-permission android:name="android.permission.READ_CALENDAR"/>
     <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
+    <!-- Permission to post notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Permission to schedule exact alarms -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
 
     <application>
         <!--
@@ -21,6 +26,16 @@
         <meta-data
             android:name="org.godotengine.plugin.v2.${godotPluginName}"
             android:value="${godotPluginPackageName}.GodotAndroidPlugin"/>
+
+        <!-- BroadcastReceiver for handling scheduled notifications -->
+        <receiver
+            android:name="${godotPluginPackageName}.NotificationReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="${godotPluginPackageName}.NOTIFICATION_ACTION"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
