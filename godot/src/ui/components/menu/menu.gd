@@ -81,6 +81,8 @@ func _ready():
 	# Leave it, because we can open a browser with the Magic Wallet
 	button_magic_wallet.visible = false
 
+	Global.deep_link_received.connect(_on_deep_link_received)
+
 
 func _unhandled_input(event):
 	if event is InputEventKey and visible:
@@ -337,6 +339,5 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 		show_backpack()
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		Global.check_deep_link_teleport_to()
+func _on_deep_link_received() -> void:
+	Global.check_deep_link_teleport_to()

@@ -128,6 +128,27 @@ impl DclIosPlugin {
         true
     }
 
+    /// Get deeplink arguments (URL received from deeplink)
+    /// Returns a Dictionary with "data" key containing the deeplink URL, or empty if no deeplink
+    #[func]
+    pub fn get_deeplink_args() -> Dictionary {
+        let mut dict = Dictionary::new();
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            dict.set("error", "No singleton returned");
+            return dict;
+        };
+
+        let url_variant = singleton.call(StringName::from("get_deeplink_url"), &[]);
+        let url = url_variant
+            .try_to::<GString>()
+            .ok()
+            .unwrap_or_else(|| GString::from(""));
+
+        // Return dictionary with "data" key to match Android API
+        dict.set("data", url);
+        dict
+    }
+
     /// Check if the iOS plugin is available
     #[func]
     pub fn is_available() -> bool {

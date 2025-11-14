@@ -9,6 +9,7 @@ var current_profile: DclUserProfile
 var guest_account_created: bool = false
 
 var waiting_for_new_wallet: bool = false
+var ready_for_redirect_by_deep_link: bool = false
 
 var loading_first_profile: bool = false
 var current_screen_name: String = ""
@@ -163,6 +164,9 @@ func _ready():
 
 	var login = %Login
 
+	ready_for_redirect_by_deep_link = false
+	Global.deep_link_received.connect(_on_deep_link_received)
+
 	login.set_lobby(self)
 	login.show()
 
@@ -238,6 +242,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		waiting_for_new_wallet = false
 		await async_close_sign_in()
 	else:
+		ready_for_redirect_by_deep_link = true
 		if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty():
 			go_to_explorer()
 			return
@@ -412,3 +417,8 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 
 func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
 	_check_button_finish()
+
+
+func _on_deep_link_received():
+	if ready_for_redirect_by_deep_link:
+		go_to_explorer.call_deferred()
