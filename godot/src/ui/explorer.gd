@@ -758,7 +758,3 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
-
-
-func _on_deep_link_received(_what: int) -> void:
-	Global.check_deep_link_teleport_to()
