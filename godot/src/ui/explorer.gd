@@ -760,6 +760,5 @@ func _on_loading_finished() -> void:
 		_pending_notification_toast = {}
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		Global.check_deep_link_teleport_to()
+func _on_deep_link_received(what: int) -> void:
+	Global.check_deep_link_teleport_to()

@@ -142,6 +142,9 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
     ClassDB::bind_method(D_METHOD("share_text", "text"), &DclGodotiOS::share_text);
     ClassDB::bind_method(D_METHOD("share_text_with_image", "text", "image"), &DclGodotiOS::share_text_with_image);
+
+    // Signal emitted when a deeplink URL is received
+    ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
 }
 
 void DclGodotiOS::print_version() {
@@ -204,9 +207,32 @@ void DclGodotiOS::open_webview_url(String url) {
 
 String DclGodotiOS::get_deeplink_url() {
     String url = receivedUrl;
-    // Clear the received URL after reading it (consume-once pattern)
-    receivedUrl = "";
+    NSLog(@"[DEEPLINK] get_deeplink_url called, returning: %s", url.utf8().get_data());
+    // Only clear the URL if we're actually returning something
+    // This prevents race conditions where get_deeplink_url() is called
+    // before openURL/continueUserActivity has been invoked
+    if (!url.is_empty()) {
+        receivedUrl = "";
+    }
     return url;
+}
+
+void DclGodotiOS::emit_deeplink_received(String url) {
+    NSLog(@"[DEEPLINK] emit_deeplink_received called with URL: %s", url.utf8().get_data());
+
+    // Always store the URL in the static variable as a fallback
+    // This ensures it's available even if the singleton isn't initialized yet
+    receivedUrl = url;
+    NSLog(@"[DEEPLINK] URL stored in static receivedUrl");
+
+    // Try to emit signal if singleton is available
+    DclGodotiOS *singleton = get_singleton();
+    if (singleton) {
+        singleton->emit_signal("deeplink_received", url);
+        NSLog(@"[DEEPLINK] Signal emitted successfully");
+    } else {
+        NSLog(@"[DEEPLINK] WARNING: Singleton not available yet, URL stored in static variable only");
+    }
 }
 
 Dictionary DclGodotiOS::get_mobile_device_info() {

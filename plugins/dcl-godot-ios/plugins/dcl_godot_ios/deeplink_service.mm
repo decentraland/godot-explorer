@@ -31,6 +31,7 @@ void force_deeplink_service_initialization() {
 
 - (instancetype) init {
 	self = [super init];
+	NSLog(@"[DEEPLINK] DeeplinkService initialized!");
 	return self;
 }
 
@@ -44,16 +45,20 @@ void force_deeplink_service_initialization() {
 }
 
 - (BOOL) application:(UIApplication*) app openURL:(NSURL*) url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id>*) options {
+	NSLog(@"[DEEPLINK] openURL called with URL: %@", url.absoluteString);
+	NSLog(@"[DEEPLINK] Application state: %ld", (long)app.applicationState);
 	if (url) {
-		DclGodotiOS::receivedUrl = String(url.absoluteString.UTF8String);
+		DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 	}
 	return YES;
 }
 
 - (BOOL) application:(UIApplication*) app continueUserActivity:(NSUserActivity*) userActivity restorationHandler:(void (^)(NSArray<id<UIUserActivityRestoring>>* restorableObjects)) restorationHandler {
+	NSLog(@"[DEEPLINK] continueUserActivity called, activityType: %@", userActivity.activityType);
 	if ([userActivity.activityType isEqualToString: NSUserActivityTypeBrowsingWeb]) {
 		NSURL* url = userActivity.webpageURL;
-		DclGodotiOS::receivedUrl = String(url.absoluteString.UTF8String);
+		NSLog(@"[DEEPLINK] Universal Link URL: %@", url.absoluteString);
+		DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 	}
 
 	return YES;
@@ -65,19 +70,19 @@ void force_deeplink_service_initialization() {
 
 		NSURL *url = [launchOptions objectForKey:UIApplicationLaunchOptionsURLKey];
 		if (url) {
-			DclGodotiOS::receivedUrl = String(url.absoluteString.UTF8String);
+			DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 		} else {
 			NSDictionary* userActivityDict = [launchOptions objectForKey:UIApplicationLaunchOptionsUserActivityDictionaryKey];
 			if (userActivityDict) {
 				url = [userActivityDict objectForKey:UIApplicationLaunchOptionsURLKey];
 				if (url) {
-					DclGodotiOS::receivedUrl = String(url.absoluteString.UTF8String);
+					DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 				} else {
 					NSUserActivity* userActivity = [userActivityDict objectForKey:@"UIApplicationLaunchOptionsUserActivityKey"];
 					if (userActivity) {
 						if ([userActivity.activityType isEqualToString: NSUserActivityTypeBrowsingWeb]) {
 							url = userActivity.webpageURL;
-							DclGodotiOS::receivedUrl = String(url.absoluteString.UTF8String);
+							DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 						}
 					}
 				}

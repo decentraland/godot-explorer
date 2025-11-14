@@ -38,6 +38,9 @@ public:
     bool share_text(String text);
     bool share_text_with_image(String text, Ref<Image> image);
 
+    // Called from Objective-C when a deeplink is received
+    static void emit_deeplink_received(String url);
+
     static DclGodotiOS *get_singleton();
 
     DclGodotiOS();
