@@ -21,10 +21,22 @@ pub enum ConnectionState {
     Reconnecting,
 }
 
+use dcl_rpc::transports::web_sockets::tungstenite::TungsteniteWebSocket;
+
+type SocialTransport = WebSocketTransport<TungsteniteWebSocket, ()>;
+
+/// Holder for the RPC client and service module that must stay alive
+struct ServiceConnection {
+    #[allow(dead_code)]
+    rpc_client: RpcClient<SocialTransport>,
+    service: SocialServiceClient<SocialTransport>,
+}
+
 /// Internal state for the Social Service connection
 struct SocialServiceState {
     connection_state: ConnectionState,
     last_friendship_updates: Vec<FriendshipUpdate>,
+    connection: Option<ServiceConnection>,
 }
 
 impl SocialServiceState {
@@ -32,6 +44,7 @@ impl SocialServiceState {
         Self {
             connection_state: ConnectionState::Disconnected,
             last_friendship_updates: Vec::new(),
+            connection: None,
         }
     }
 }
@@ -43,64 +56,67 @@ pub struct SocialServiceManager {
     state: Arc<RwLock<SocialServiceState>>,
 }
 
-/// Helper macro to create a fresh Social Service client connection
+/// Helper function to create a fresh Social Service client connection
 /// This establishes a new WebSocket connection and authenticates
-macro_rules! create_client {
-    ($manager:expr) => {{
-        godot::prelude::godot_print!("[RUST/WS] Connecting to Social Service: {}", SOCIAL_SERVICE_URL);
-        // Establish WebSocket connection
-        let ws_connection = WebSocketClient::connect(SOCIAL_SERVICE_URL)
-            .await
-            .map_err(|e| {
-                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to connect: {:?}", e);
-                anyhow!("Failed to connect to Social Service: {:?}", e)
-            })?;
+/// Returns both the RpcClient (which must stay alive) and the service module
+async fn create_connection(wallet: &Arc<EphemeralAuthChain>) -> Result<ServiceConnection> {
+    tracing::info!("Connecting to Social Service: {}", SOCIAL_SERVICE_URL);
+    // Establish WebSocket connection
+    let ws_connection = WebSocketClient::connect(SOCIAL_SERVICE_URL)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to connect to Social Service: {:?}", e);
+            anyhow!("Failed to connect to Social Service: {:?}", e)
+        })?;
 
-        godot::prelude::godot_print!("[RUST/WS] ✅ WebSocket connected, creating transport...");
-        let transport = WebSocketTransport::new(ws_connection);
+    tracing::debug!("WebSocket connected, creating transport");
+    let transport = WebSocketTransport::new(ws_connection);
 
-        godot::prelude::godot_print!("[RUST/WS] Building auth chain...");
-        // Build and send auth chain
-        let auth_chain_message = build_auth_chain(&$manager.wallet).await?;
-        godot::prelude::godot_print!("[RUST/WS] Sending auth chain...");
-        transport
-            .send(auth_chain_message.as_bytes().to_vec())
-            .await
-            .map_err(|e| {
-                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to send auth chain: {:?}", e);
-                anyhow!("Failed to send auth chain: {:?}", e)
-            })?;
+    tracing::debug!("Building auth chain");
+    // Build and send auth chain
+    let auth_chain_message = build_auth_chain(wallet).await?;
+    tracing::debug!("Sending auth chain");
+    transport
+        .send(auth_chain_message.as_bytes().to_vec())
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to send auth chain: {:?}", e);
+            anyhow!("Failed to send auth chain: {:?}", e)
+        })?;
 
-        godot::prelude::godot_print!("[RUST/WS] ✅ Auth chain sent, creating RPC client...");
-        // Create RPC client
-        let mut rpc_client = RpcClient::new(transport)
-            .await
-            .map_err(|e| {
-                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to create RPC client: {:?}", e);
-                anyhow!("Failed to create RPC client: {:?}", e)
-            })?;
+    tracing::debug!("Auth chain sent, creating RPC client");
+    // Create RPC client
+    let mut rpc_client = RpcClient::new(transport)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create RPC client: {:?}", e);
+            anyhow!("Failed to create RPC client: {:?}", e)
+        })?;
 
-        godot::prelude::godot_print!("[RUST/WS] ✅ RPC client created, creating port...");
-        // Create port and load service module
-        let port = rpc_client
-            .create_port("SocialService")
-            .await
-            .map_err(|e| {
-                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to create port: {:?}", e);
-                anyhow!("Failed to create port: {:?}", e)
-            })?;
+    tracing::debug!("RPC client created, creating port");
+    // Create port and load service module
+    let port = rpc_client
+        .create_port("SocialService")
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create port: {:?}", e);
+            anyhow!("Failed to create port: {:?}", e)
+        })?;
 
-        godot::prelude::godot_print!("[RUST/WS] ✅ Port created, loading module...");
-        let client = port.load_module::<SocialServiceClient<_>>("SocialService")
-            .await
-            .map_err(|e| {
-                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to load module: {:?}", e);
-                anyhow!("Failed to load module: {:?}", e)
-            })?;
+    tracing::debug!("Port created, loading module");
+    let service = port.load_module::<SocialServiceClient<_>>("SocialService")
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to load module: {:?}", e);
+            anyhow!("Failed to load module: {:?}", e)
+        })?;
 
-        godot::prelude::godot_print!("[RUST/WS] ✅ Service client ready!");
-        client
-    }};
+    tracing::info!("Social Service client ready");
+
+    Ok(ServiceConnection {
+        rpc_client,
+        service,
+    })
 }
 
 impl SocialServiceManager {
@@ -117,25 +133,37 @@ impl SocialServiceManager {
         self.state.read().await.connection_state
     }
 
+    /// Get or create a connection, returning a reference to the service client
+    async fn ensure_connection<'a>(&'a self, state: &'a mut SocialServiceState) -> Result<&'a SocialServiceClient<SocialTransport>> {
+        if state.connection.is_none() {
+            tracing::debug!("No existing connection, creating new one");
+            let connection = create_connection(&self.wallet).await?;
+            state.connection = Some(connection);
+        }
+        Ok(&state.connection.as_ref().unwrap().service)
+    }
+
     /// Get the list of friends for the authenticated user
     pub async fn get_friends(
         &self,
         pagination: Option<Pagination>,
         status: Option<i32>,
     ) -> Result<PaginatedUsersResponse> {
-        godot::prelude::godot_print!("[RUST/API] get_friends called, creating client...");
-        let client = create_client!(self);
+        tracing::debug!("get_friends called, ensuring connection");
 
-        godot::prelude::godot_print!("[RUST/API] Client created, calling get_friends RPC...");
-        let response = client
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        tracing::debug!("Connection ready, calling get_friends RPC");
+        let response = service
             .get_friends(GetFriendsPayload { pagination, status })
             .await
             .map_err(|e| {
-                godot::prelude::godot_error!("[RUST/API] ❌ get_friends RPC failed: {:?}", e);
+                tracing::error!("get_friends RPC failed: {:?}", e);
                 anyhow!("Failed to get friends: {:?}", e)
             })?;
 
-        godot::prelude::godot_print!("[RUST/API] ✅ get_friends RPC succeeded!");
+        tracing::debug!("get_friends RPC succeeded");
         Ok(response)
     }
 
@@ -145,9 +173,10 @@ impl SocialServiceManager {
         user_address: String,
         pagination: Option<Pagination>,
     ) -> Result<PaginatedUsersResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .get_mutual_friends(GetMutualFriendsPayload {
                 user: Some(User {
                     address: user_address,
@@ -165,9 +194,10 @@ impl SocialServiceManager {
         &self,
         pagination: Option<Pagination>,
     ) -> Result<PaginatedFriendshipRequestsResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .get_pending_friendship_requests(GetFriendshipRequestsPayload { pagination })
             .await
             .map_err(|e| anyhow!("Failed to get pending requests: {:?}", e))?;
@@ -180,9 +210,10 @@ impl SocialServiceManager {
         &self,
         pagination: Option<Pagination>,
     ) -> Result<PaginatedFriendshipRequestsResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .get_sent_friendship_requests(GetFriendshipRequestsPayload { pagination })
             .await
             .map_err(|e| anyhow!("Failed to get sent requests: {:?}", e))?;
@@ -196,9 +227,10 @@ impl SocialServiceManager {
         user_address: String,
         message: Option<String>,
     ) -> Result<UpsertFriendshipResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .upsert_friendship(UpsertFriendshipPayload {
                 action: Some(upsert_friendship_payload::Action::Request(
                     upsert_friendship_payload::RequestPayload {
@@ -217,9 +249,10 @@ impl SocialServiceManager {
 
     /// Accept a friendship request from another user
     pub async fn accept_friend_request(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .upsert_friendship(UpsertFriendshipPayload {
                 action: Some(upsert_friendship_payload::Action::Accept(
                     upsert_friendship_payload::AcceptPayload {
@@ -237,9 +270,10 @@ impl SocialServiceManager {
 
     /// Reject a friendship request from another user
     pub async fn reject_friend_request(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .upsert_friendship(UpsertFriendshipPayload {
                 action: Some(upsert_friendship_payload::Action::Reject(
                     upsert_friendship_payload::RejectPayload {
@@ -257,9 +291,10 @@ impl SocialServiceManager {
 
     /// Cancel a sent friendship request
     pub async fn cancel_friend_request(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .upsert_friendship(UpsertFriendshipPayload {
                 action: Some(upsert_friendship_payload::Action::Cancel(
                     upsert_friendship_payload::CancelPayload {
@@ -277,9 +312,10 @@ impl SocialServiceManager {
 
     /// Delete an existing friendship
     pub async fn delete_friendship(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .upsert_friendship(UpsertFriendshipPayload {
                 action: Some(upsert_friendship_payload::Action::Delete(
                     upsert_friendship_payload::DeletePayload {
@@ -300,9 +336,10 @@ impl SocialServiceManager {
         &self,
         user_address: String,
     ) -> Result<GetFriendshipStatusResponse> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
-        let response = client
+        let response = service
             .get_friendship_status(GetFriendshipStatusPayload {
                 user: Some(User {
                     address: user_address,
@@ -320,10 +357,11 @@ impl SocialServiceManager {
     pub async fn subscribe_to_friendship_updates(
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<FriendshipUpdate>> {
-        let client = create_client!(self);
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
 
         // Subscribe to the stream
-        let mut stream = client
+        let mut stream = service
             .subscribe_to_friendship_updates()
             .await
             .map_err(|e| anyhow!("Failed to subscribe to friendship updates: {:?}", e))?;
