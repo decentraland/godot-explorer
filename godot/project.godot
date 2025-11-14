@@ -48,7 +48,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--skip-lobby --force-mobile --guest-profile"
+run/main_run_args="--force-mobile --skip-lobby"
 
 [editor_plugins]
 

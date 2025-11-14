@@ -101,7 +101,7 @@ func _input(event):
 		var selected = Global.get_selected_avatar()
 		if selected and selected == self and avatar_id:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-				Global.open_profile.emit(self)
+				Global.open_profile_by_avatar.emit(self)
 
 
 func try_show():

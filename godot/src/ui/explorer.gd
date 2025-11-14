@@ -242,7 +242,7 @@ func _ready():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	Global.open_profile.connect(_async_open_profile)
+	Global.open_profile_by_address.connect(_async_open_profile_by_address)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -694,7 +694,6 @@ func _on_friends_clicked() -> void:
 		# Grab focus back to enable camera controls
 		Global.explorer_grab_focus()
 		# Capture mouse to restore camera control
-		capture_mouse()
 	else:
 		friends_panel.show_panel()
 		hud_button_friends.set_panel_open(true)

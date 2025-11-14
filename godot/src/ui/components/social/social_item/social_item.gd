@@ -51,19 +51,15 @@ func set_data(data:SocialItemData) -> void:
 	profile_picture.async_update_profile_picture(data.name, data.profile_picture_url)
 
 
-func async_set_data_from_avatar(avatar_param = null):
-	if avatar_param == null:
-		return
-	
-	print(avatar_param.get_avatar_data().to_godot_dictionary(), " - AVATAR DATA")
+func set_data_from_avatar(avatar_param:DclAvatar):
 	
 	social_data = SocialItemData.new()
 	social_data.name = avatar_param.get_avatar_name()
-	social_data.address = avatar_param.avatar_id
-	
-	social_data.profile_picture_url = "https://example.com/profile.jpg"
+	social_data.address = avatar_param.avatar_id	
+	social_data.profile_picture_url = avatar_param.get_avatar_data().to_godot_dictionary()["snapshots"]["face256"]
 	social_data.has_claimed_name = false
 	set_data(social_data)
+	print(social_data.profile_picture_url, "FACE256")
 
 
 func _on_mouse_entered() -> void:
@@ -84,7 +80,7 @@ func _on_button_mute_toggled(toggled_on: bool) -> void:
 
 
 func _update_buttons() -> void:
-	var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
+	var is_muted = Global.social_blacklist.is_muted(social_data.address)
 	button_mute.set_pressed_no_signal(is_muted)
 	if is_muted:
 		button_mute.icon = mute_icon
@@ -93,24 +89,20 @@ func _update_buttons() -> void:
 
 
 func _notify_other_components_of_change() -> void:
-	if avatar != null:
-		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", avatar.avatar_id)
+	if social_data.address:
+		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", social_data.address)
 
 
 func _sync_blacklist_ui(changed_avatar_id: String) -> void:
-	if avatar != null and avatar.avatar_id == changed_avatar_id:
+	if social_data.address == changed_avatar_id:
 		call_deferred("_update_buttons")
 
 
 func _tap_to_open_profile(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
+		print(social_data)
 		if event.pressed:
-			if avatar != null and is_instance_valid(avatar):
-				var explorer = Global.get_explorer()
-				if avatar.avatar_id == Global.player_identity.get_address_str():
-					explorer.control_menu.show_own_profile()
-				else:
-					Global.open_profile.emit(avatar)
+			Global.open_profile_by_address.emit(social_data.address)
 
 
 func _update_elements_visibility() -> void:
@@ -145,39 +137,39 @@ func set_type(type: SocialType) -> void:
 
 
 func _on_button_add_friend_pressed() -> void:
-	print("TODO: Emit signal to friends manager to send friend request to the avatar: ", avatar)
+	print("TODO: Emit signal to friends manager to send friend request to the avatar: ", social_data.address)
 	button_add_friend.hide()
 
 
 func _on_button_jump_in_pressed() -> void:
-	Global.teleport_to(avatar.get_current_parcel_position(), Realm.MAIN_REALM)
-
+	#Global.teleport_to(avatar.get_current_parcel_position(), Realm.MAIN_REALM)
+	pass
 
 func update_location() -> void:
-	var pos = avatar.get_current_parcel_position()
-	var url: String = "https://places.decentraland.org/api/places?limit=1"
-	url += "&positions=%d,%d" % [pos.x, pos.y]
-
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_GET, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	if result is PromiseError:
-		printerr("Error request places jump in", result.get_error())
-		return
-
-	var json: Dictionary = result.get_string_response_as_json()
-
-	if json.data.is_empty():
-		label_place.text = "Unknown place"
-	else:
-		label_place.text = json.data[0].get("title", "Unknown place")
-
+	#var pos = avatar.get_current_parcel_position()
+	#var url: String = "https://places.decentraland.org/api/places?limit=1"
+	#url += "&positions=%d,%d" % [pos.x, pos.y]
+#
+	#var headers = {"Content-Type": "application/json"}
+	#var promise: Promise = Global.http_requester.request_json(
+		#url, HTTPClient.METHOD_GET, "", headers
+	#)
+	#var result = await PromiseUtils.async_awaiter(promise)
+#
+	#if result is PromiseError:
+		#printerr("Error request places jump in", result.get_error())
+		#return
+#
+	#var json: Dictionary = result.get_string_response_as_json()
+#
+	#if json.data.is_empty():
+		#label_place.text = "Unknown place"
+	#else:
+		#label_place.text = json.data[0].get("title", "Unknown place")
+	pass
 
 func _on_button_unblock_pressed() -> void:
-	Global.social_blacklist.remove_blocked(avatar.avatar_id)
+	Global.social_blacklist.remove_blocked(social_data.address)
 	# Actualizar la lista contenedora
 	var parent_list = get_parent()
 	if parent_list != null and parent_list.has_method("async_update_list"):
