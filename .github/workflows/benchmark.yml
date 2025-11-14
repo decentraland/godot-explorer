@@ -1,10 +1,15 @@
 name: 📊 Benchmark Report
 on:
-  workflow_dispatch:  # Allow manual trigger
-  pull_request:       # Run on PRs (can be limited with labels if needed)
-    types: [opened, synchronize, reopened]
-  schedule:
-    - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight UTC
+  workflow_call:  # Called from runner.yml
+    secrets:
+      BENCHMARK_AWS_ACCESS_KEY_ID:
+        required: true
+      BENCHMARK_AWS_SECRET_ACCESS_KEY:
+        required: true
+      BENCHMARK_AWS_ENDPOINT_URL:
+        required: true
+      BENCHMARK_AWS_S3_BUCKET:
+        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-benchmark
@@ -99,14 +104,76 @@ jobs:
           echo "=== Benchmark Results ==="
           ls -lh benchmark-results/
 
+      - name: Fetch Baseline from Main Branch
+        if: always()
+        run: |
+          # TODO: Change back to 'origin/main' after merging to main
+          # Temporarily using feat/benchmark-ci for testing
+          BASELINE_BRANCH="feat/benchmark-ci"
+          MAIN_SHA=$(git rev-parse origin/${BASELINE_BRANCH} 2>/dev/null || echo "")
+
+          if [ -n "$MAIN_SHA" ]; then
+            # Use branch name with / replaced by - for S3 path
+            BRANCH_PATH=$(echo "${BASELINE_BRANCH}" | sed 's/\//-/g')
+            BASELINE_URL="https://benchmark-reports.dcl.explorer.com/${BRANCH_PATH}/${MAIN_SHA}/benchmark_report.csv"
+            echo "BASELINE_URL=${BASELINE_URL}" >> $GITHUB_ENV
+            echo "📊 Baseline URL: ${BASELINE_URL}"
+            echo "📊 Baseline Branch: ${BASELINE_BRANCH}"
+          else
+            echo "⚠️ Could not determine baseline branch SHA"
+            echo "BASELINE_URL=" >> $GITHUB_ENV
+          fi
+
       - name: Convert CSV to Markdown
         if: always()
         run: |
           if [ -f "benchmark-results/benchmark_report.csv" ]; then
-            python3 tests/convert_benchmark_csv_to_md.py benchmark-results/benchmark_report.csv benchmark-results/benchmark_report.md
+            # Convert with baseline comparison if URL is available
+            if [ -n "$BASELINE_URL" ]; then
+              python3 tests/convert_benchmark_csv_to_md.py \
+                benchmark-results/benchmark_report.csv \
+                benchmark-results/benchmark_report.md \
+                --baseline-url "$BASELINE_URL"
+            else
+              python3 tests/convert_benchmark_csv_to_md.py \
+                benchmark-results/benchmark_report.csv \
+                benchmark-results/benchmark_report.md
+            fi
             echo "✓ Converted CSV to Markdown"
           else
             echo "⚠️ No CSV file to convert"
+          fi
+
+      - name: Upload CSV to S3
+        if: always()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
+        run: |
+          if [ -f "benchmark-results/benchmark_report.csv" ]; then
+            # Get branch name and commit hash
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              BRANCH_NAME="${{ github.head_ref }}"
+            else
+              BRANCH_NAME="${{ github.ref_name }}"
+            fi
+            COMMIT_HASH="${{ github.sha }}"
+
+            # Sanitize branch name (replace / with -)
+            BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+
+            # S3 path: {branch_name}/{hash}/benchmark_report.csv
+            S3_PATH="s3://${{ secrets.BENCHMARK_AWS_S3_BUCKET }}/${BRANCH_NAME}/${COMMIT_HASH}/benchmark_report.csv"
+
+            echo "📤 Uploading to: ${S3_PATH}"
+            echo "📤 Endpoint: ${AWS_ENDPOINT_URL}"
+            aws s3 cp benchmark-results/benchmark_report.csv "${S3_PATH}" \
+              --endpoint-url "${AWS_ENDPOINT_URL}" \
+              --content-type "text/csv"
+            echo "✓ Uploaded benchmark CSV to S3"
+          else
+            echo "⚠️ No CSV file to upload"
           fi
 
       - name: Upload Benchmark Report
@@ -136,6 +203,14 @@ jobs:
       - name: Prepare PR Comment
         if: github.event_name == 'pull_request' && always()
         run: |
+          # Get branch name and commit hash for S3 URL
+          BRANCH_NAME="${{ github.head_ref }}"
+          COMMIT_HASH="${{ github.sha }}"
+          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+          S3_BUCKET="${{ secrets.BENCHMARK_AWS_S3_BUCKET }}"
+          # Cloudflare R2 public URL format
+          S3_URL="https://pub-$(echo '${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}' | cut -d'/' -f3 | cut -d'.' -f1).r2.dev/${S3_BUCKET}/${BRANCH_NAME}/${COMMIT_HASH}/benchmark_report.csv"
+
           {
             echo "## 📊 Benchmark Report"
             echo ""
@@ -154,6 +229,7 @@ jobs:
             echo ""
             echo "### 📋 Logs & Artifacts"
             echo ""
+            echo "- 📊 **CSV Data**: [benchmark_report.csv](${S3_URL}) - Raw benchmark data in S3"
             echo "- 🔧 **Full Logs**: [benchmark_run.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Complete benchmark run output (build + execution)"
             echo "- 🌐 **Workflow Run**: [View full logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- 📦 **Download All**: Get the \`benchmark-report\` artifact from the workflow run"
