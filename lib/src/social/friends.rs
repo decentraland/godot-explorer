@@ -41,7 +41,7 @@ pub async fn build_auth_chain(wallet: &EphemeralAuthChain) -> anyhow::Result<Str
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dcl_rpc::{client::RpcClient, transports::web_sockets::WebSocketTransport};
+    use dcl_rpc::{client::RpcClient, transports::{Transport, web_sockets::WebSocketTransport}};
     use crate::dcl::components::proto_components::social_service::v2::*;
 
     const SOCIAL_URL: &str = "wss://rpc-social-service-ea.decentraland.org";
@@ -60,7 +60,7 @@ mod tests {
         // Build and send auth chain
         let auth_chain_message = build_auth_chain(wallet).await?;
         service_transport
-            .send(auth_chain_message.as_bytes())
+            .send(auth_chain_message.as_bytes().to_vec())
             .await
             .map_err(|e| anyhow::anyhow!("Failed to send auth chain: {:?}", e))?;
 
