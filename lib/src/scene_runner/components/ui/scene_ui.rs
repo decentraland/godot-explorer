@@ -61,6 +61,7 @@ const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
 
 enum ContextNode {
     UiText(bool, Gd<godot::engine::Label>),
+    UiRichText(bool, Gd<godot::engine::RichTextLabel>),
 }
 
 fn update_layout(
@@ -144,6 +145,25 @@ fn update_layout(
                 );
             }
 
+            if let Some(ui_text_control) = ui_node
+                .base_control
+                .try_get_node_as::<godot::engine::RichTextLabel>("text")
+            {
+                let text_wrapping = if let Some(ui_text) = ui_text_components
+                    .get(entity)
+                    .and_then(|v| v.value.as_ref())
+                {
+                    ui_text.text_wrap_compat() == TextWrap::TwWrap
+                } else {
+                    false
+                };
+
+                let _ = taffy.set_node_context(
+                    child,
+                    Some(ContextNode::UiRichText(text_wrapping, ui_text_control)),
+                );
+            }
+
             let _ = taffy.add_child(parent.0, child);
             processed_nodes.insert(*entity, (child, 0));
             processed_nodes_sorted.push((*entity, child));
@@ -197,6 +217,56 @@ fn update_layout(
                         font.get_string_size_ex(text_node.get_text())
                             .width(line_width)
                             .alignment(text_node.get_horizontal_alignment())
+                            .justification_flags(JustificationFlag::NONE)
+                            .font_size(font_size)
+                            .done()
+                    };
+
+                    let width = match size.width {
+                        Some(value) => value,
+                        None => match available.width {
+                            taffy::AvailableSpace::Definite(v) => v.clamp(0.0, font_rect.x),
+                            taffy::AvailableSpace::MinContent => 1.0,
+                            taffy::AvailableSpace::MaxContent => font_rect.x,
+                        },
+                    };
+
+                    let height = match size.height {
+                        Some(value) => value,
+                        None => match available.height {
+                            taffy::AvailableSpace::Definite(v) => v.clamp(0.0, font_rect.y),
+                            taffy::AvailableSpace::MinContent => 1.0,
+                            taffy::AvailableSpace::MaxContent => font_rect.y,
+                        },
+                    };
+
+                    taffy::Size { width, height }
+                }
+                Some(ContextNode::UiRichText(wrapping, rich_text_node)) => {
+                    let Some(font) = rich_text_node.get_theme_font("normal_font".into()) else {
+                        return taffy::Size::ZERO;
+                    };
+                    let line_width = match size.width {
+                        Some(value) => value,
+                        None => match available.width {
+                            taffy::AvailableSpace::Definite(v) => v,
+                            taffy::AvailableSpace::MinContent => 1.0,
+                            taffy::AvailableSpace::MaxContent => -1.0,
+                        },
+                    };
+
+                    let font_size = rich_text_node.get_theme_font_size("normal_font_size".into());
+                    let font_rect = if *wrapping {
+                        font.get_multiline_string_size_ex(rich_text_node.get_text())
+                            .max_lines(-1)
+                            .width(line_width)
+                            .font_size(font_size)
+                            .justification_flags(JustificationFlag::NONE)
+                            .brk_flags(LineBreakFlag::WORD_BOUND | LineBreakFlag::MANDATORY)
+                            .done()
+                    } else {
+                        font.get_string_size_ex(rich_text_node.get_text())
+                            .width(line_width)
                             .justification_flags(JustificationFlag::NONE)
                             .font_size(font_size)
                             .done()

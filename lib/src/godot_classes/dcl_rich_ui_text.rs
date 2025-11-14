@@ -43,6 +43,22 @@ impl IRichTextLabel for DclRichUiText {
             font.get_font_bold_italic_resource(),
         );
         self.base_mut().set_use_bbcode(true);
+
+        // Configure to behave like Label in terms of layout:
+        // - Disable scrolling (Label doesn't have scroll)
+        self.base_mut().set_scroll_active(false);
+        self.base_mut().set_scroll_follow(false);
+
+        // - Disable text selection (Label doesn't support selection)
+        self.base_mut().set_selection_enabled(false);
+
+        // - Enable fit_content for auto-sizing similar to Label
+        //   This makes RichTextLabel auto-size to its content like Label does
+        self.base_mut().set_fit_content(true);
+
+        // - Disable clip_contents to allow theme effects (outline/shadow) to extend beyond bounds
+        //   This matches Label behavior which doesn't clip theme effects
+        self.base_mut().set_clip_contents(false);
     }
 }
 
