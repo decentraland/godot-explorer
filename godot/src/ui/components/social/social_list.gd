@@ -155,23 +155,23 @@ func remove_avatars(avatars_list) -> void:
 			if child.avatar.unique_id == avatar_to_remove.unique_id:
 				if (
 					child.avatar is Avatar
-					and child.avatar.avatar_loaded.is_connected(child.async_set_data)
+					and child.avatar.avatar_loaded.is_connected(child.async_set_data_from_avatar)
 				):
-					child.avatar.avatar_loaded.disconnect(child.async_set_data)
+					child.avatar.avatar_loaded.disconnect(child.async_set_data_from_avatar)
 				child.queue_free()
 				break
 				
 
 func add_avatars(avatars_list) -> void:
 	for avatar in get_avatars_to_add(avatars_list):
-		var avatar_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
-		self.add_child(avatar_item)
+		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+		self.add_child(social_item)
 		
 		if avatar is Avatar:
-			if not avatar.avatar_loaded.is_connected(avatar_item.async_set_data):
-				avatar.avatar_loaded.connect(avatar_item.async_set_data)
-		await avatar_item.async_set_data(avatar)
-		avatar_item.set_type(player_list_type)
+			if not avatar.avatar_loaded.is_connected(social_item.async_set_data_from_avatar):
+				avatar.avatar_loaded.connect(social_item.async_set_data_from_avatar)
+		await social_item.async_set_data_from_avatar(avatar)
+		social_item.set_type(player_list_type)
 
 	var children = self.get_children()
 	var valid_children = []

@@ -629,12 +629,12 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 		button_load_scenes.hide()
 
 
-func _async_open_profile(avatar: DclAvatar):
+func _open_profile(dcl_user_profile: DclUserProfile):
 	panel_chat.exit_chat()
-	if avatar == null or not is_instance_valid(avatar):
-		return
+	profile_container.open(dcl_user_profile)
+	release_mouse()
 
-	var user_address = avatar.avatar_id
+func _async_open_profile_by_address(user_address: String):
 	var promise = Global.content_provider.fetch_profile(user_address)
 	var result = await PromiseUtils.async_awaiter(promise)
 
@@ -642,9 +642,8 @@ func _async_open_profile(avatar: DclAvatar):
 		printerr("Error getting player profile: ", result.get_error())
 		return
 
-	if result != null:
-		profile_container.open(result)
-	release_mouse()
+	if result != null and result is DclUserProfile:
+		_open_profile(result)
 
 
 func _on_control_menu_open_profile() -> void:

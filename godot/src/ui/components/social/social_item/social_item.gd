@@ -2,11 +2,12 @@ extends Control
 
 enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
 
+
 @export var item_type: SocialType
 
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
-var avatar: DclAvatar = null
+var social_data: SocialItemData
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
@@ -28,44 +29,42 @@ func _ready():
 	_update_elements_visibility()
 	
 
-
-func async_set_data(avatar_param = null):
-	if avatar_param != null:
-		avatar = avatar_param
-		avatar.change_parcel_position.connect(self.update_location)
-	elif avatar == null:
-		return
-
-	if not is_instance_valid(avatar):
-		return
-
-	var avatar_data = avatar.get_avatar_data()
-	if avatar_data != null:
-		profile_picture.async_update_profile_picture(avatar)
+func set_data(data:SocialItemData) -> void:
+	social_data = data
+	var tag_position = data.name.find("#")
+	if tag_position != -1:
+		data.name = data.name.left(tag_position)
+		texture_rect_claimed_checkmark.hide()
 	else:
-		printerr("NO AVATAR DATA")
+		texture_rect_claimed_checkmark.show()
 
-	if !avatar.finish_loading:
-		hide()
-	else:
-		show()
-		var avatar_name = avatar.get_avatar_name()
-		var tag_position = avatar_name.find("#")
-		if tag_position != -1:
-			avatar_name = avatar_name.left(tag_position)
-			texture_rect_claimed_checkmark.hide()
-		else:
-			texture_rect_claimed_checkmark.show()
+	if data.name.length() > 15:
+		data.name = data.name.left(15) + "..."
+	nickname.text = data.name
+	
+	#var nickname_color = avatar.get_nickname_color(data.name)
+	#nickname.add_theme_color_override("font_color", nickname_color)
+	#if data.has_claimed_name:
+		#texture_rect_claimed_checkmark.show()
+	#else:
+		#texture_rect_claimed_checkmark.hide()
+	profile_picture.async_update_profile_picture(data.name, data.profile_picture_url)
 
-		if avatar_name.length() > 15:
-			avatar_name = avatar_name.left(15) + "..."
-		nickname.text = avatar_name
 
-		_update_buttons()
+func async_set_data_from_avatar(avatar_param = null):
+	if avatar_param == null:
+		return
+	
+	print(avatar_param.get_avatar_data().to_godot_dictionary(), " - AVATAR DATA")
+	
+	social_data = SocialItemData.new()
+	social_data.name = avatar_param.get_avatar_name()
+	social_data.address = avatar_param.avatar_id
+	
+	social_data.profile_picture_url = "https://example.com/profile.jpg"
+	social_data.has_claimed_name = false
+	set_data(social_data)
 
-		var nickname_color = avatar.get_nickname_color(avatar_name)
-		nickname.add_theme_color_override("font_color", nickname_color)
-		update_location()
 
 func _on_mouse_entered() -> void:
 	panel_nearby_player_item.self_modulate = "#ffffff"
@@ -77,9 +76,9 @@ func _on_mouse_exited() -> void:
 
 func _on_button_mute_toggled(toggled_on: bool) -> void:
 	if toggled_on:
-		Global.social_blacklist.add_muted(avatar.avatar_id)
+		Global.social_blacklist.add_muted(social_data.address)
 	else:
-		Global.social_blacklist.remove_muted(avatar.avatar_id)
+		Global.social_blacklist.remove_muted(social_data.address)
 	_update_buttons()
 	_notify_other_components_of_change()
 
@@ -152,6 +151,7 @@ func _on_button_add_friend_pressed() -> void:
 
 func _on_button_jump_in_pressed() -> void:
 	Global.teleport_to(avatar.get_current_parcel_position(), Realm.MAIN_REALM)
+
 
 func update_location() -> void:
 	var pos = avatar.get_current_parcel_position()

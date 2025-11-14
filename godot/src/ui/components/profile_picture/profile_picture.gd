@@ -89,10 +89,9 @@ func _update_border_style() -> void:
 	panel_border.add_theme_stylebox_override("panel", stylebox_border_panel)
 
 
-func async_update_profile_picture(avatar_ifo: DclAvatar):
-	avatar = avatar_ifo
-	var avatar_name = avatar_ifo.get_avatar_name()
-	var nickname_color = avatar_ifo.get_nickname_color(avatar_name)
+func async_update_profile_picture(avatar_name: String, profile_picture_url: String):
+	#var nickname_color = DclAvatar.get_nickname_color(avatar_name)
+	var nickname_color = Color.RED
 
 	var background_color = nickname_color
 	apply_style(background_color)
@@ -101,21 +100,13 @@ func async_update_profile_picture(avatar_ifo: DclAvatar):
 	if Engine.is_editor_hint():
 		return
 
-	var avatar_data = avatar_ifo.get_avatar_data()
-	if avatar_data == null:
-		printerr("Profile picture: avatar_data is null")
-		return
-
-	var face256_value = avatar_data.to_godot_dictionary()["snapshots"]["face256"]
 	var hash = ""
 	var url = ""
-	if face256_value.begins_with("http"):
-		var parts = face256_value.split("/")
-		hash = parts[4]
-		url = face256_value
-	else:
-		hash = face256_value
-		url = "https://profile-images.decentraland.org/entities/%s/face.png" % hash
+	if profile_picture_url.begins_with("http"):
+		print(profile_picture_url, "PROFILE PICTURE")
+		#var parts = profile_picture_url.split("/")
+		#hash = parts[4]
+		url = profile_picture_url
 
 	if hash.is_empty() or url.is_empty():
 		printerr("Profile picture: missing face256 data")
