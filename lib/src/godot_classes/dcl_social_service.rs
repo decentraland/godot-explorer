@@ -50,42 +50,56 @@ impl DclSocialService {
     /// Initialize the service with DclPlayerIdentity
     #[func]
     pub fn initialize_from_player_identity(&mut self, player_identity: Gd<crate::auth::dcl_player_identity::DclPlayerIdentity>) {
+        godot_print!("[RUST] initialize_from_player_identity called");
         let wallet_option = player_identity.bind().try_get_ephemeral_auth_chain();
 
         let Some(wallet) = wallet_option else {
-            tracing::error!("DclSocialService: Player identity has no wallet - cannot initialize");
+            godot_error!("DclSocialService: Player identity has no wallet - cannot initialize");
             return;
         };
 
+        godot_print!("[RUST] Wallet obtained, creating manager");
         let manager = Arc::new(SocialServiceManager::new(Arc::new(wallet)));
-        let manager_clone = self.manager.clone();
 
-        TokioRuntime::spawn(async move {
-            *manager_clone.write().await = Some(manager);
-            tracing::info!("DclSocialService initialized successfully");
-        });
+        // Set the manager synchronously to avoid race conditions
+        // Note: We use blocking_lock here since we're in a sync context
+        if let Ok(mut guard) = self.manager.try_write() {
+            *guard = Some(manager);
+            godot_print!("[RUST] ✅ DclSocialService initialized successfully");
+        } else {
+            godot_error!("[RUST] ❌ DclSocialService: Failed to acquire write lock during initialization");
+        }
     }
 
     /// Initialize with a direct wallet reference (for internal use)
     pub fn initialize_with_wallet(&mut self, wallet: Arc<EphemeralAuthChain>) {
         let manager = Arc::new(SocialServiceManager::new(wallet));
-        let manager_clone = self.manager.clone();
-        TokioRuntime::spawn(async move {
-            *manager_clone.write().await = Some(manager);
-        });
+
+        // Set the manager synchronously to avoid race conditions
+        if let Ok(mut guard) = self.manager.try_write() {
+            *guard = Some(manager);
+            tracing::info!("DclSocialService initialized with wallet");
+        } else {
+            tracing::error!("DclSocialService: Failed to acquire write lock during wallet initialization");
+        }
     }
 
     /// Get the list of friends
     #[func]
     pub fn get_friends(&mut self, limit: i32, offset: i32, status: i32) -> Gd<Promise> {
+        godot_print!("[RUST] get_friends called with limit={}, offset={}, status={}", limit, offset, status);
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
 
+        godot_print!("[RUST] Spawning async task for get_friends");
         TokioRuntime::spawn(async move {
+            godot_print!("[RUST] Async task started for get_friends");
             let result = Self::async_get_friends(manager, limit, offset, status).await;
+            godot_print!("[RUST] async_get_friends completed, resolving promise");
             Self::resolve_friends_promise(get_promise, result);
         });
 
+        godot_print!("[RUST] Returning promise from get_friends");
         promise
     }
 
@@ -247,20 +261,30 @@ impl DclSocialService {
         offset: i32,
         status: i32,
     ) -> Result<Vec<String>, String> {
+        godot_print!("[RUST] async_get_friends: Acquiring manager lock...");
         let manager_guard = manager.read().await;
-        let mgr = manager_guard.as_ref().ok_or("Social service not initialized")?;
+        let mgr = manager_guard.as_ref().ok_or_else(|| {
+            godot_error!("[RUST] async_get_friends: Social service not initialized!");
+            "Social service not initialized".to_string()
+        })?;
 
+        godot_print!("[RUST] async_get_friends: Manager lock acquired, calling API...");
         let pagination = if limit > 0 { Some(Pagination { limit, offset }) } else { None };
         let status_filter = if status >= 0 { Some(status) } else { None };
 
         let response = mgr.get_friends(pagination, status_filter)
             .await
-            .map_err(|e| format!("Failed to get friends: {}", e))?;
+            .map_err(|e| {
+                let error_msg = format!("Failed to get friends: {}", e);
+                godot_error!("[RUST] async_get_friends: {}", error_msg);
+                error_msg
+            })?;
 
         let friends: Vec<String> = response.users.into_iter()
             .map(|user| user.address)
             .collect();
 
+        godot_print!("[RUST] async_get_friends: ✅ Successfully fetched {} friends", friends.len());
         Ok(friends)
     }
 
@@ -291,16 +315,26 @@ impl DclSocialService {
         limit: i32,
         offset: i32,
     ) -> Result<Vec<(String, String, i64)>, String> {
+        tracing::debug!("async_get_pending_requests: Acquiring manager lock...");
         let manager_guard = manager.read().await;
-        let mgr = manager_guard.as_ref().ok_or("Social service not initialized")?;
+        let mgr = manager_guard.as_ref().ok_or_else(|| {
+            tracing::error!("async_get_pending_requests: Social service not initialized");
+            "Social service not initialized".to_string()
+        })?;
 
+        tracing::debug!("async_get_pending_requests: Calling API...");
         let pagination = if limit > 0 { Some(Pagination { limit, offset }) } else { None };
 
         let response = mgr.get_pending_friendship_requests(pagination)
             .await
-            .map_err(|e| format!("Failed to get pending requests: {}", e))?;
+            .map_err(|e| {
+                let error_msg = format!("Failed to get pending requests: {}", e);
+                tracing::error!("async_get_pending_requests: {}", error_msg);
+                error_msg
+            })?;
 
         let requests = Self::extract_friendship_requests(response);
+        tracing::info!("async_get_pending_requests: Successfully fetched {} requests", requests.len());
         Ok(requests)
     }
 
@@ -412,13 +446,23 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
     ) -> Result<(), String> {
+        tracing::debug!("async_subscribe_to_updates: Acquiring manager lock...");
         let manager_guard = manager.read().await;
-        let mgr = manager_guard.as_ref().ok_or("Social service not initialized")?;
+        let mgr = manager_guard.as_ref().ok_or_else(|| {
+            tracing::error!("async_subscribe_to_updates: Social service not initialized");
+            "Social service not initialized".to_string()
+        })?;
 
+        tracing::debug!("async_subscribe_to_updates: Subscribing to friendship updates...");
         let mut rx = mgr.subscribe_to_friendship_updates()
             .await
-            .map_err(|e| format!("Failed to subscribe to updates: {}", e))?;
+            .map_err(|e| {
+                let error_msg = format!("Failed to subscribe to updates: {}", e);
+                tracing::error!("async_subscribe_to_updates: {}", error_msg);
+                error_msg
+            })?;
 
+        tracing::info!("async_subscribe_to_updates: Successfully subscribed, spawning listener task");
         // Spawn update listener task
         tokio::spawn(async move {
             Self::handle_friendship_updates(&mut rx, instance_id).await;
@@ -504,17 +548,25 @@ impl DclSocialService {
         get_promise: impl Fn() -> Option<Gd<Promise>>,
         result: Result<Vec<String>, String>,
     ) {
-        let Some(mut promise) = get_promise() else { return };
+        godot_print!("[RUST] resolve_friends_promise: Getting promise...");
+        let Some(mut promise) = get_promise() else {
+            godot_warn!("[RUST] resolve_friends_promise: Promise was dropped before resolution");
+            return;
+        };
 
         match result {
             Ok(friends) => {
+                godot_print!("[RUST] resolve_friends_promise: Resolving with {} friends", friends.len());
                 let mut array = Array::new();
-                for friend in friends {
+                for friend in &friends {
                     array.push(friend.to_variant());
                 }
+                godot_print!("[RUST] resolve_friends_promise: Calling resolve_with_data");
                 promise.bind_mut().resolve_with_data(array.to_variant());
+                godot_print!("[RUST] resolve_friends_promise: ✅ Promise resolved!");
             }
             Err(e) => {
+                godot_error!("[RUST] resolve_friends_promise: ❌ Rejecting with error: {}", e);
                 promise.bind_mut().reject(e.into());
             }
         }
@@ -524,10 +576,14 @@ impl DclSocialService {
         get_promise: impl Fn() -> Option<Gd<Promise>>,
         result: Result<Vec<(String, String, i64)>, String>,
     ) {
-        let Some(mut promise) = get_promise() else { return };
+        let Some(mut promise) = get_promise() else {
+            tracing::warn!("resolve_requests_promise: Promise was dropped before resolution");
+            return;
+        };
 
         match result {
             Ok(requests) => {
+                tracing::debug!("resolve_requests_promise: Resolving with {} requests", requests.len());
                 let mut array = Array::new();
                 for (address, message, created_at) in requests {
                     let mut dict = Dictionary::new();
@@ -539,6 +595,7 @@ impl DclSocialService {
                 promise.bind_mut().resolve_with_data(array.to_variant());
             }
             Err(e) => {
+                tracing::error!("resolve_requests_promise: Rejecting with error: {}", e);
                 promise.bind_mut().reject(e.into());
             }
         }
@@ -567,11 +624,20 @@ impl DclSocialService {
         get_promise: impl Fn() -> Option<Gd<Promise>>,
         result: Result<(), String>,
     ) {
-        let Some(mut promise) = get_promise() else { return };
+        let Some(mut promise) = get_promise() else {
+            tracing::warn!("resolve_simple_promise: Promise was dropped before resolution");
+            return;
+        };
 
         match result {
-            Ok(()) => promise.bind_mut().resolve(),
-            Err(e) => promise.bind_mut().reject(e.into()),
+            Ok(()) => {
+                tracing::debug!("resolve_simple_promise: Resolving successfully");
+                promise.bind_mut().resolve();
+            }
+            Err(e) => {
+                tracing::error!("resolve_simple_promise: Rejecting with error: {}", e);
+                promise.bind_mut().reject(e.into());
+            }
         }
     }
 }

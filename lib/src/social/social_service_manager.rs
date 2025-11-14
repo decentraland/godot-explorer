@@ -47,34 +47,59 @@ pub struct SocialServiceManager {
 /// This establishes a new WebSocket connection and authenticates
 macro_rules! create_client {
     ($manager:expr) => {{
+        godot::prelude::godot_print!("[RUST/WS] Connecting to Social Service: {}", SOCIAL_SERVICE_URL);
         // Establish WebSocket connection
         let ws_connection = WebSocketClient::connect(SOCIAL_SERVICE_URL)
             .await
-            .map_err(|e| anyhow!("Failed to connect to Social Service: {:?}", e))?;
+            .map_err(|e| {
+                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to connect: {:?}", e);
+                anyhow!("Failed to connect to Social Service: {:?}", e)
+            })?;
 
+        godot::prelude::godot_print!("[RUST/WS] ✅ WebSocket connected, creating transport...");
         let transport = WebSocketTransport::new(ws_connection);
 
+        godot::prelude::godot_print!("[RUST/WS] Building auth chain...");
         // Build and send auth chain
         let auth_chain_message = build_auth_chain(&$manager.wallet).await?;
+        godot::prelude::godot_print!("[RUST/WS] Sending auth chain...");
         transport
             .send(auth_chain_message.as_bytes().to_vec())
             .await
-            .map_err(|e| anyhow!("Failed to send auth chain: {:?}", e))?;
+            .map_err(|e| {
+                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to send auth chain: {:?}", e);
+                anyhow!("Failed to send auth chain: {:?}", e)
+            })?;
 
+        godot::prelude::godot_print!("[RUST/WS] ✅ Auth chain sent, creating RPC client...");
         // Create RPC client
         let mut rpc_client = RpcClient::new(transport)
             .await
-            .map_err(|e| anyhow!("Failed to create RPC client: {:?}", e))?;
+            .map_err(|e| {
+                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to create RPC client: {:?}", e);
+                anyhow!("Failed to create RPC client: {:?}", e)
+            })?;
 
+        godot::prelude::godot_print!("[RUST/WS] ✅ RPC client created, creating port...");
         // Create port and load service module
         let port = rpc_client
             .create_port("SocialService")
             .await
-            .map_err(|e| anyhow!("Failed to create port: {:?}", e))?;
+            .map_err(|e| {
+                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to create port: {:?}", e);
+                anyhow!("Failed to create port: {:?}", e)
+            })?;
 
-        port.load_module::<SocialServiceClient<_>>("SocialService")
+        godot::prelude::godot_print!("[RUST/WS] ✅ Port created, loading module...");
+        let client = port.load_module::<SocialServiceClient<_>>("SocialService")
             .await
-            .map_err(|e| anyhow!("Failed to load module: {:?}", e))?
+            .map_err(|e| {
+                godot::prelude::godot_error!("[RUST/WS] ❌ Failed to load module: {:?}", e);
+                anyhow!("Failed to load module: {:?}", e)
+            })?;
+
+        godot::prelude::godot_print!("[RUST/WS] ✅ Service client ready!");
+        client
     }};
 }
 
@@ -98,13 +123,19 @@ impl SocialServiceManager {
         pagination: Option<Pagination>,
         status: Option<i32>,
     ) -> Result<PaginatedUsersResponse> {
+        godot::prelude::godot_print!("[RUST/API] get_friends called, creating client...");
         let client = create_client!(self);
 
+        godot::prelude::godot_print!("[RUST/API] Client created, calling get_friends RPC...");
         let response = client
             .get_friends(GetFriendsPayload { pagination, status })
             .await
-            .map_err(|e| anyhow!("Failed to get friends: {:?}", e))?;
+            .map_err(|e| {
+                godot::prelude::godot_error!("[RUST/API] ❌ get_friends RPC failed: {:?}", e);
+                anyhow!("Failed to get friends: {:?}", e)
+            })?;
 
+        godot::prelude::godot_print!("[RUST/API] ✅ get_friends RPC succeeded!");
         Ok(response)
     }
 

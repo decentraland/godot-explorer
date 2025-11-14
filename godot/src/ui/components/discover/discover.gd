@@ -167,12 +167,22 @@ func _async_handle_event_notification(event_id: String) -> void:
 func _init_social_service() -> void:
 	print("[Discover] Initializing Social Service...")
 
+	# Check if player_identity exists
+	if Global.player_identity == null:
+		printerr("[Discover] ERROR: Global.player_identity is null!")
+		return
+
+	print("[Discover] Player identity found: ", Global.player_identity)
+
 	# Create DclSocialService node
 	var social_service = DclSocialService.new()
 	add_child(social_service)
 
+	print("[Discover] DclSocialService node created")
+
 	# Initialize with player identity wallet
 	social_service.initialize_from_player_identity(Global.player_identity)
+	print("[Discover] Initialization called")
 
 	# Connect to friendship update signals
 	social_service.friendship_request_received.connect(_on_friend_request_received)
@@ -199,13 +209,16 @@ func _fetch_friends(social_service: DclSocialService) -> void:
 
 	# Get friends (limit: 50, offset: 0, status: -1 for ALL)
 	var promise = social_service.get_friends(50, 0, -1)
+	print("[Discover] Promise created: ", promise)
 
 	# Wait for promise to resolve
+	print("[Discover] Waiting for promise to resolve...")
 	await promise.on_resolved
+	print("[Discover] Promise resolved!")
 
 	if promise.is_rejected():
 		var error = promise.get_data()
-		printerr("[Discover] Failed to get friends: ", error.get_error())
+		printerr("[Discover] ❌ Failed to get friends: ", error.get_error())
 		return
 
 	var friends = promise.get_data()
