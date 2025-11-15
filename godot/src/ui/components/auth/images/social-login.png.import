@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bygd71illytq5"
-path="res://.godot/imported/social-login.png-cad7c65b1067e9d832ae0c019c64c7c7.ctex"
+path.s3tc="res://.godot/imported/social-login.png-cad7c65b1067e9d832ae0c019c64c7c7.s3tc.ctex"
+path.etc2="res://.godot/imported/social-login.png-cad7c65b1067e9d832ae0c019c64c7c7.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://src/ui/components/auth/images/social-login.png"
-dest_files=["res://.godot/imported/social-login.png-cad7c65b1067e9d832ae0c019c64c7c7.ctex"]
+dest_files=["res://.godot/imported/social-login.png-cad7c65b1067e9d832ae0c019c64c7c7.s3tc.ctex", "res://.godot/imported/social-login.png-cad7c65b1067e9d832ae0c019c64c7c7.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

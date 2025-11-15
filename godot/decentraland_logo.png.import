@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dpippmiepkyeb"
-path="res://.godot/imported/decentraland_logo.png-d7d9de9a4dc33fd936910b4adc3ba560.ctex"
+path.s3tc="res://.godot/imported/decentraland_logo.png-d7d9de9a4dc33fd936910b4adc3ba560.s3tc.ctex"
+path.etc2="res://.godot/imported/decentraland_logo.png-d7d9de9a4dc33fd936910b4adc3ba560.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://decentraland_logo.png"
-dest_files=["res://.godot/imported/decentraland_logo.png-d7d9de9a4dc33fd936910b4adc3ba560.ctex"]
+dest_files=["res://.godot/imported/decentraland_logo.png-d7d9de9a4dc33fd936910b4adc3ba560.s3tc.ctex", "res://.godot/imported/decentraland_logo.png-d7d9de9a4dc33fd936910b4adc3ba560.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

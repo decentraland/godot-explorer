@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=44 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -27,12 +27,14 @@
 [ext_resource type="Texture2D" uid="uid://dnma2mndpeupv" path="res://assets/ui/wearable_categories/tiara-icon.svg" id="13_jd3w1"]
 [ext_resource type="Texture2D" uid="uid://bn6wp7yfox0cu" path="res://assets/ui/wearable_categories/lower_body-icon.svg" id="14_5xqio"]
 [ext_resource type="Texture2D" uid="uid://csxpe7al0f1ql" path="res://assets/ui/wearable_categories/helmet-icon.svg" id="14_nbor4"]
+[ext_resource type="Texture2D" uid="uid://b2kifoj66rvad" path="res://assets/ui/wearable_categories/hair-icon.svg" id="15_18vfg"]
 [ext_resource type="Texture2D" uid="uid://bavm4qx6mvfcs" path="res://assets/ui/wearable_categories/feet-icon.svg" id="15_147vw"]
 [ext_resource type="Texture2D" uid="uid://du26rhhe8qfin" path="res://assets/ui/wearable_categories/eyewear-icon.svg" id="17_073bg"]
 [ext_resource type="Texture2D" uid="uid://8mwi1tvyxm5f" path="res://assets/ui/wearable_categories/top_head-icon.svg" id="21_rmg80"]
 [ext_resource type="Texture2D" uid="uid://bmoy7cmuucooq" path="res://assets/ui/wearable_categories/skin-icon.svg" id="25_cd16j"]
 [ext_resource type="Texture2D" uid="uid://10ljw6k05g33" path="res://assets/ui/backpack/no-items-in-category.svg" id="27_kffkw"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/emote_editor/emote_editor.tscn" id="30_vfwc7"]
+[ext_resource type="Texture2D" uid="uid://bd7q2ux12a72q" path="res://assets/ui/ColorPalette.svg" id="32_cb3xs"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="33_18vfg"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_no6vh"]
@@ -310,6 +312,7 @@ theme_override_constants/icon_max_width = 30
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
 text = "Head"
+icon = ExtResource("15_18vfg")
 filter_category = 2
 
 [node name="wearable_button_upper_body" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer/ScrollContainer/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
@@ -389,6 +392,7 @@ theme_type_variation = &"SecondaryButton"
 theme_override_constants/icon_max_width = 30
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
+icon = ExtResource("15_18vfg")
 filter_category = 2
 
 [node name="wearable_button3" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer2/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
@@ -614,6 +618,7 @@ theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SecondaryButton"
 theme_override_constants/icon_max_width = 60
 toggle_mode = true
+icon = ExtResource("32_cb3xs")
 
 [node name="ScrollContainer_Items" type="ScrollContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
 layout_mode = 2
