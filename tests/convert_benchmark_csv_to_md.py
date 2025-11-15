@@ -253,7 +253,7 @@ def format_individual_report(metrics: BenchmarkMetrics, baseline: Optional[Bench
     return ''.join(report)
 
 
-def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_list: Optional[List[BenchmarkMetrics]] = None) -> str:
+def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_list: Optional[List[BenchmarkMetrics]] = None, baseline_failed: bool = False) -> str:
     """Format consolidated report with all tests."""
     report = []
 
@@ -266,6 +266,8 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
         report.append("- 🟢 = Improvement (better performance)\n")
         report.append("- 🔴 = Regression (worse performance)\n")
         report.append("- ⚪ = No significant change (<0.5%)\n")
+    elif baseline_failed:
+        report.append("\n> ⚠️ **No Baseline Available**: Baseline benchmark not found. This is likely the first run for this branch, or the baseline branch hasn't been benchmarked yet. Showing absolute values only.\n")
 
     report.append("\n---\n")
 
@@ -393,17 +395,21 @@ def main():
 
     # Load baseline if provided
     baseline_list = None
+    baseline_failed = False
     if args.baseline:
         try:
             baseline_list = load_csv(args.baseline)
             print(f"✓ Loaded {len(baseline_list)} baseline test(s) from file")
         except Exception as e:
             print(f"⚠️ Could not load baseline file: {e}")
+            baseline_failed = True
     elif args.baseline_url:
         baseline_list = load_csv_from_url(args.baseline_url)
+        if baseline_list is None:
+            baseline_failed = True
 
     # Generate markdown
-    markdown = format_consolidated_report(metrics_list, baseline_list)
+    markdown = format_consolidated_report(metrics_list, baseline_list, baseline_failed)
 
     # Write markdown
     try:
