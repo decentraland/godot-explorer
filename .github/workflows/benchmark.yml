@@ -107,21 +107,27 @@ jobs:
       - name: Fetch Baseline from Main Branch
         if: always()
         run: |
-          # TODO: Change back to 'origin/main' after merging to main
+          # TODO: Change back to 'main' after merging to main
           # Temporarily using feat/benchmark-ci for testing
           BASELINE_BRANCH="feat/benchmark-ci"
-          MAIN_SHA=$(git rev-parse origin/${BASELINE_BRANCH} 2>/dev/null || echo "")
 
-          if [ -n "$MAIN_SHA" ]; then
+          # Get the SHA of the baseline branch
+          git fetch origin ${BASELINE_BRANCH} --depth=1 2>/dev/null || true
+          MAIN_SHA=$(git rev-parse refs/remotes/origin/${BASELINE_BRANCH} 2>/dev/null || echo "")
+
+          if [ -n "$MAIN_SHA" ] && [ "$MAIN_SHA" != "refs/remotes/origin/${BASELINE_BRANCH}" ]; then
             # Use branch name with / replaced by - for S3 path
             BRANCH_PATH=$(echo "${BASELINE_BRANCH}" | sed 's/\//-/g')
-            BASELINE_URL="https://benchmark-reports.dcl.explorer.com/${BRANCH_PATH}/${MAIN_SHA}/benchmark_report.csv"
+            BASELINE_URL="https://benchmark-reports.dclexplorer.com/${BRANCH_PATH}/${MAIN_SHA}/benchmark_report.csv"
             echo "BASELINE_URL=${BASELINE_URL}" >> $GITHUB_ENV
+            echo "BASELINE_FOUND=true" >> $GITHUB_ENV
             echo "📊 Baseline URL: ${BASELINE_URL}"
             echo "📊 Baseline Branch: ${BASELINE_BRANCH}"
+            echo "📊 Baseline SHA: ${MAIN_SHA}"
           else
             echo "⚠️ Could not determine baseline branch SHA"
             echo "BASELINE_URL=" >> $GITHUB_ENV
+            echo "BASELINE_FOUND=false" >> $GITHUB_ENV
           fi
 
       - name: Convert CSV to Markdown
@@ -214,6 +220,13 @@ jobs:
           {
             echo "## 📊 Benchmark Report"
             echo ""
+
+            # Show baseline status
+            if [ "${{ env.BASELINE_FOUND }}" = "false" ]; then
+              echo "> ⚠️ **Note**: No baseline found for comparison. This report shows absolute values only."
+              echo ""
+            fi
+
             echo "<details>"
             echo "<summary>Click to expand full benchmark report</summary>"
             echo ""
