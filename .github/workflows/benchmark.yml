@@ -225,7 +225,7 @@ jobs:
           BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
           S3_BUCKET="${{ secrets.BENCHMARK_AWS_S3_BUCKET }}"
           # Cloudflare R2 public URL format
-          S3_URL="https://pub-$(echo '${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}' | cut -d'/' -f3 | cut -d'.' -f1).r2.dev/${S3_BUCKET}/${BRANCH_NAME}/${COMMIT_HASH}/benchmark_report.csv"
+          S3_URL="https://benchmark-reports.dclexplorer.com/${BRANCH_NAME}/${COMMIT_HASH}/benchmark_report.csv"
 
           {
             echo "## 📊 Benchmark Report"
