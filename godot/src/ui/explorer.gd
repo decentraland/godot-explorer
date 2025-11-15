@@ -243,6 +243,7 @@ func _ready():
 	)
 
 	Global.open_profile_by_address.connect(_async_open_profile_by_address)
+	Global.open_profile_by_avatar.connect(_async_open_profile_by_avatar)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -644,6 +645,27 @@ func _async_open_profile_by_address(user_address: String):
 
 	if result != null and result is DclUserProfile:
 		_open_profile(result)
+
+
+func _async_open_profile_by_avatar(avatar: DclAvatar):
+	# Check if it's an Avatar (GDScript class) to access avatar_id
+	if avatar is Avatar:
+		var avatar_instance = avatar as Avatar
+		var avatar_id = avatar_instance.avatar_id
+		if not avatar_id.is_empty():
+			await _async_open_profile_by_address(avatar_id)
+		else:
+			printerr("_async_open_profile_by_avatar: avatar_id is empty for avatar: ", avatar_instance.name)
+	else:
+		# Try to get avatar_id from metadata if available (fallback)
+		if avatar.has_method("get") and avatar.get("avatar_id") != null:
+			var avatar_id = avatar.get("avatar_id")
+			if avatar_id is String and not avatar_id.is_empty():
+				await _async_open_profile_by_address(avatar_id)
+			else:
+				printerr("_async_open_profile_by_avatar: avatar is not an Avatar instance and avatar_id is not available")
+		else:
+			printerr("_async_open_profile_by_avatar: avatar is not an Avatar instance: ", avatar.get_class())
 
 
 func _on_control_menu_open_profile() -> void:

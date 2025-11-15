@@ -157,7 +157,7 @@ func _on_gui_input(event: InputEvent) -> void:
 				if avatar.avatar_id == Global.player_identity.get_address_str():
 					explorer.control_menu.show_own_profile()
 				else:
-					Global.open_profile.emit(avatar)
+					Global.open_profile_by_avatar.emit(avatar)
 
 
 func set_online() -> void:

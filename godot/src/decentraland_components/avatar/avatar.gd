@@ -103,7 +103,6 @@ func _input(event):
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				Global.open_profile_by_avatar.emit(self)
 
-
 func try_show():
 	avatar_modifier_area_detector.check_areas()
 

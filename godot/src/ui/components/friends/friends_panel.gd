@@ -28,6 +28,8 @@ var pending_request: int = 3
 @onready var request_list: VBoxContainer = %RequestList
 @onready var online_list: VBoxContainer = %OnlineList
 @onready var offline_list: VBoxContainer = %OfflineList
+@onready var nearby_list: SocialList = %NearbyList
+@onready var blocked_list: SocialList = %BlockedList
 
 @onready var label_empty_state: Label = %LabelEmptyState
 
@@ -66,11 +68,12 @@ func _input(event: InputEvent) -> void:
 
 func show_panel() -> void:
 	show()
-
+	update_all_lists()
+	
 
 func hide_panel() -> void:
 	hide()
-
+	update_all_lists()
 
 func _hide_all() -> void:
 	color_rect_friends.self_modulate = Color.TRANSPARENT
@@ -153,3 +156,10 @@ func _update_dropdown_visibility() -> void:
 		label_empty_state.text = NO_FRIENDS_MSG
 	else:
 		label_empty_state.hide()
+
+func update_all_lists():
+	request_list.update_list()
+	online_list.update_list()
+	offline_list.update_list()
+	nearby_list.update_list()
+	blocked_list.update_list()

@@ -291,6 +291,7 @@ horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
 [node name="NearbyList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("2_l4o08")
@@ -305,6 +306,7 @@ horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
 [node name="BlockedList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("2_l4o08")

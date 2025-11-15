@@ -1,3 +1,4 @@
+class_name SocialList
 extends Control
 
 signal size_changed
@@ -10,14 +11,15 @@ var list_size: int = 0
 const BLOCKED_AVATAR_ALIAS_BASE: int = 20000
 
 func _ready():
-	async_update_list()
+	update_list()
 	# Connect to avatar scene changed signal instead of using timer
-	Global.avatars.avatar_scene_changed.connect(self.async_update_list)
-	Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
-	#Global.get_explorer().hud_button_friends.friends_clicked.connect(self.async_update_list)
+	Global.avatars.avatar_scene_changed.connect(self.update_list)
+	Global.social_blacklist.blacklist_changed.connect(self.update_list)
+	#Global.get_explorer().hud_button_friends.friends_clicked.connect(self.update_list)
 
 
-func async_update_list(_remote_avatars: Array = []) -> void:
+func update_list(_remote_avatars: Array = []) -> void:
+	remove_items()
 	match player_list_type:
 		SocialType.NEARBY:
 			_reload_nearby_list()
@@ -44,12 +46,12 @@ func _reload_blocked_list() -> void:
 		social_item_data.profile_picture_url = address
 		blocked_social_items.append(social_item_data)
 		
-	remove_items()
+	
 	add_items_by_social_item_data(blocked_social_items)
 	
 
 func _reload_nearby_list() -> void:
-	remove_items()
+	
 	var all_avatars = Global.avatars.get_avatars()
 	var avatars = []
 	var seen_addresses = {}  # Diccionario para rastrear direcciones ya agregadas

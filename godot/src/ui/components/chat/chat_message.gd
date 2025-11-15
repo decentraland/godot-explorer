@@ -150,7 +150,7 @@ func set_avatar(avatar: DclAvatar) -> void:
 
 	# Update both profile pictures (extended and compact)
 	#profile_picture.async_update_profile_picture(avatar)
-	#profile_picture_compact.async_update_profile_picture(avatar)
+		#profile_picture_compact.async_update_profile_picture(avatar)
 
 
 func set_system_avatar() -> void:
