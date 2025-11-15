@@ -145,11 +145,11 @@ jobs:
         run: |
           if [ -f "benchmark-results/benchmark_report.csv" ]; then
             # Convert with baseline comparison if URL is available
-            if [ -n "$BASELINE_URL" ]; then
+            if [ -n "${{ env.BASELINE_URL }}" ]; then
               python3 tests/convert_benchmark_csv_to_md.py \
                 benchmark-results/benchmark_report.csv \
                 benchmark-results/benchmark_report.md \
-                --baseline-url "$BASELINE_URL"
+                --baseline-url "${{ env.BASELINE_URL }}"
             else
               python3 tests/convert_benchmark_csv_to_md.py \
                 benchmark-results/benchmark_report.csv \
