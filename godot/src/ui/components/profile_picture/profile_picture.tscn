@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://c6jl46ahx31ud"]
+[gd_scene load_steps=6 format=3 uid="uid://c6jl46ahx31ud"]
 
 [ext_resource type="Script" uid="uid://05w073ui6sec" path="res://src/ui/components/profile_picture/profile_picture.gd" id="1_xkyte"]
 [ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="2_q0svu"]
+[ext_resource type="Texture2D" uid="uid://vn0xo8onamxy" path="res://assets/ui/connection_status_online.svg" id="3_q0svu"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h41qx"]
 border_color = Color(0.0879645, 0.422489, 9.62615e-08, 1)
@@ -10,7 +11,7 @@ corner_radius_top_right = 500
 corner_radius_bottom_right = 500
 corner_radius_bottom_left = 500
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xkyte"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q0svu"]
 draw_center = false
 border_width_left = 2
 border_width_top = 2
@@ -27,16 +28,27 @@ expand_margin_top = 1.0
 expand_margin_right = 1.0
 expand_margin_bottom = 1.0
 
-[node name="ProfilePicture" type="PanelContainer"]
-clip_children = 2
+[node name="Control" type="Control"]
 custom_minimum_size = Vector2(32, 32)
+layout_mode = 3
+anchors_preset = 0
 offset_right = 32.0
 offset_bottom = 32.0
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_h41qx")
 script = ExtResource("1_xkyte")
 
-[node name="TextureRect_Profile" type="TextureRect" parent="."]
+[node name="ProfilePicture" type="PanelContainer" parent="."]
+clip_children = 2
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_h41qx")
+
+[node name="TextureRect_Profile" type="TextureRect" parent="ProfilePicture"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -44,11 +56,25 @@ texture = ExtResource("2_q0svu")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Panel_Border" type="PanelContainer" parent="."]
+[node name="Panel_Border" type="PanelContainer" parent="ProfilePicture"]
 unique_name_in_owner = true
-clip_children = 2
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_xkyte")
+theme_override_styles/panel = SubResource("StyleBoxFlat_q0svu")
+
+[node name="TextureRect_Status" type="TextureRect" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(13, 13)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -10.0
+offset_bottom = 10.0
+grow_horizontal = 0
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture = ExtResource("3_q0svu")
+expand_mode = 3
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

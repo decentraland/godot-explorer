@@ -5,7 +5,8 @@ signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
-signal open_profile(avatar: DclAvatar)
+signal open_profile_by_avatar(avatar: DclAvatar)
+signal open_profile_by_address(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
