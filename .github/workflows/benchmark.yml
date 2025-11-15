@@ -119,15 +119,25 @@ jobs:
             # Use branch name with / replaced by - for S3 path
             BRANCH_PATH=$(echo "${BASELINE_BRANCH}" | sed 's/\//-/g')
             BASELINE_URL="https://benchmark-reports.dclexplorer.com/${BRANCH_PATH}/${MAIN_SHA}/benchmark_report.csv"
+            BASELINE_SHA_SHORT=$(echo "${MAIN_SHA}" | cut -c1-7)
+
+            # Store all baseline info in env
             echo "BASELINE_URL=${BASELINE_URL}" >> $GITHUB_ENV
             echo "BASELINE_FOUND=true" >> $GITHUB_ENV
+            echo "BASELINE_BRANCH=${BASELINE_BRANCH}" >> $GITHUB_ENV
+            echo "BASELINE_SHA=${MAIN_SHA}" >> $GITHUB_ENV
+            echo "BASELINE_SHA_SHORT=${BASELINE_SHA_SHORT}" >> $GITHUB_ENV
+
             echo "📊 Baseline URL: ${BASELINE_URL}"
             echo "📊 Baseline Branch: ${BASELINE_BRANCH}"
-            echo "📊 Baseline SHA: ${MAIN_SHA}"
+            echo "📊 Baseline SHA: ${MAIN_SHA} (${BASELINE_SHA_SHORT})"
           else
             echo "⚠️ Could not determine baseline branch SHA"
             echo "BASELINE_URL=" >> $GITHUB_ENV
             echo "BASELINE_FOUND=false" >> $GITHUB_ENV
+            echo "BASELINE_BRANCH=" >> $GITHUB_ENV
+            echo "BASELINE_SHA=" >> $GITHUB_ENV
+            echo "BASELINE_SHA_SHORT=" >> $GITHUB_ENV
           fi
 
       - name: Convert CSV to Markdown
@@ -221,8 +231,11 @@ jobs:
             echo "## 📊 Benchmark Report"
             echo ""
 
-            # Show baseline status
-            if [ "${{ env.BASELINE_FOUND }}" = "false" ]; then
+            # Show baseline status (using env variables from previous step)
+            if [ "${{ env.BASELINE_FOUND }}" = "true" ]; then
+              echo "> 📊 **Baseline**: Comparing against \`${{ env.BASELINE_BRANCH }}\` branch at commit [\`${{ env.BASELINE_SHA_SHORT }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ env.BASELINE_SHA }})"
+              echo ""
+            elif [ "${{ env.BASELINE_FOUND }}" = "false" ]; then
               echo "> ⚠️ **Note**: No baseline found for comparison. This report shows absolute values only."
               echo ""
             fi
