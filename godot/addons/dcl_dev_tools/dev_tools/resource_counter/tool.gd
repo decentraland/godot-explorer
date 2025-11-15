@@ -4,23 +4,25 @@ const SINGLETON_NAME = "ResourceCounter"
 
 var places = {
 	"Genesis Plaza": Vector2i(0, 0),
-	"Soul Magic": Vector2i(96, -110),
-	"Tower of Hanoi": Vector2i(61, -22),
-	"Meta gamimall": Vector2i(1, 95),
-	"Wondermine": Vector2i(-29, 55),
-	"Exodus": Vector2i(125, 41),
-	"BitCinema": Vector2i(-109, -93),
-	"DAO HQ": Vector2i(65, 13),
-	"Casa Roustan": Vector2i(37, -114),
-	"Fashion Week Scene": Vector2i(142, -78),
-	"Game Night": Vector2i(1, 81)
+	"Goerli Plaza": Vector2i(-9, -9),
+	# Commented out for now - can be re-enabled for comprehensive testing
+	#"Soul Magic": Vector2i(96, -110),
+	#"Tower of Hanoi": Vector2i(61, -22),
+	#"Meta gamimall": Vector2i(1, 95),
+	#"Wondermine": Vector2i(-29, 55),
+	#"Exodus": Vector2i(125, 41),
+	#"BitCinema": Vector2i(-109, -93),
+	#"DAO HQ": Vector2i(65, 13),
+	#"Casa Roustan": Vector2i(37, -114),
+	#"Fashion Week Scene": Vector2i(142, -78),
+	#"Game Night": Vector2i(1, 81)
 }
 
 
 func populate_menu(menu: PopupMenu, id: int):
 	menu.add_item("Run Benchmark", id)
 
-	if Global.cli.dcl_benchmark:
+	if Global.cli.dcl_benchmark or Global.cli.benchmark_report:
 		print("Running Benchmark...")
 		await execute()
 		plugin.get_editor_interface().get_editor_main_screen().get_tree().quit()
