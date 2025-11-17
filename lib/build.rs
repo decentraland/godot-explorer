@@ -284,7 +284,10 @@ fn generate_social_service() -> io::Result<()> {
     let mut conf = prost_build::Config::new();
     conf.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
     conf.compile_protos(
-        &["src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto"],
+        &[
+            "src/dcl/components/proto/decentraland/social_service/errors.proto",
+            "src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto"
+        ],
         &["src/dcl/components/proto"],
     )?;
     Ok(())
@@ -376,7 +379,8 @@ fn main() -> io::Result<()> {
         println!("cargo:rerun-if-changed={value}");
     }
 
-    // Also watch the social service proto file
+    // Also watch the social service proto files
+    println!("cargo:rerun-if-changed=src/dcl/components/proto/decentraland/social_service/errors.proto");
     println!("cargo:rerun-if-changed=src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto");
 
     set_godot_explorer_version();

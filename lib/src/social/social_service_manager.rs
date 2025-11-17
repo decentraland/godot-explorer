@@ -147,8 +147,8 @@ impl SocialServiceManager {
     pub async fn get_friends(
         &self,
         pagination: Option<Pagination>,
-        status: Option<i32>,
-    ) -> Result<PaginatedUsersResponse> {
+        _status: Option<i32>,
+    ) -> Result<PaginatedFriendsProfilesResponse> {
         tracing::debug!("get_friends called, ensuring connection");
 
         let mut state = self.state.write().await;
@@ -156,7 +156,7 @@ impl SocialServiceManager {
 
         tracing::debug!("Connection ready, calling get_friends RPC");
         let response = service
-            .get_friends(GetFriendsPayload { pagination, status })
+            .get_friends(GetFriendsPayload { pagination })
             .await
             .map_err(|e| {
                 tracing::error!("get_friends RPC failed: {:?}", e);
@@ -172,7 +172,7 @@ impl SocialServiceManager {
         &self,
         user_address: String,
         pagination: Option<Pagination>,
-    ) -> Result<PaginatedUsersResponse> {
+    ) -> Result<PaginatedFriendsProfilesResponse> {
         let mut state = self.state.write().await;
         let service = self.ensure_connection(&mut state).await?;
 

@@ -278,8 +278,8 @@ impl DclSocialService {
                 error_msg
             })?;
 
-        let friends: Vec<String> = response.users.into_iter()
-            .map(|user| user.address)
+        let friends: Vec<String> = response.friends.into_iter()
+            .map(|friend| friend.address)
             .collect();
 
         tracing::info!("async_get_friends: successfully fetched {} friends", friends.len());
@@ -301,8 +301,8 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to get mutual friends: {}", e))?;
 
-        let friends: Vec<String> = response.users.into_iter()
-            .map(|user| user.address)
+        let friends: Vec<String> = response.friends.into_iter()
+            .map(|friend| friend.address)
             .collect();
 
         Ok(friends)
@@ -474,6 +474,8 @@ impl DclSocialService {
         instance_id: InstanceId,
     ) {
         while let Some(update) = rx.recv().await {
+            tracing::info!("📨 Received friendship update from stream: {:?}", update);
+
             let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok() else {
                 tracing::warn!("DclSocialService node dropped, stopping update listener");
                 break;
@@ -481,40 +483,71 @@ impl DclSocialService {
 
             Self::emit_friendship_update_signal(&mut node, update);
         }
+        tracing::info!("Friendship updates listener task ended");
     }
 
     fn emit_friendship_update_signal(node: &mut Gd<DclSocialService>, update: FriendshipUpdate) {
         match update.update {
             Some(friendship_update::Update::Request(req)) => {
-                if let Some(user) = req.user {
-                    let message = req.message.unwrap_or_default();
-                    node.emit_signal(
-                        "friendship_request_received".into(),
-                        &[user.address.to_variant(), message.to_variant()],
-                    );
+                if let Some(friend) = req.friend {
+                    let message = req.message.clone().unwrap_or_default();
+                    tracing::info!("🔔 Emitting signal: friendship_request_received from {} with message: '{}'",
+                        friend.address, message);
+                    let address = friend.address.clone();
+                    let msg = message.clone();
+                    node.call_deferred("emit_signal".into(), &[
+                        "friendship_request_received".to_variant(),
+                        address.to_variant(),
+                        msg.to_variant(),
+                    ]);
                 }
             }
             Some(friendship_update::Update::Accept(accept)) => {
                 if let Some(user) = accept.user {
-                    node.emit_signal("friendship_request_accepted".into(), &[user.address.to_variant()]);
+                    tracing::info!("🔔 Emitting signal: friendship_request_accepted from {}", user.address);
+                    let address = user.address.clone();
+                    node.call_deferred("emit_signal".into(), &[
+                        "friendship_request_accepted".to_variant(),
+                        address.to_variant(),
+                    ]);
                 }
             }
             Some(friendship_update::Update::Reject(reject)) => {
                 if let Some(user) = reject.user {
-                    node.emit_signal("friendship_request_rejected".into(), &[user.address.to_variant()]);
+                    tracing::info!("🔔 Emitting signal: friendship_request_rejected from {}", user.address);
+                    let address = user.address.clone();
+                    node.call_deferred("emit_signal".into(), &[
+                        "friendship_request_rejected".to_variant(),
+                        address.to_variant(),
+                    ]);
                 }
             }
             Some(friendship_update::Update::Delete(delete)) => {
                 if let Some(user) = delete.user {
-                    node.emit_signal("friendship_deleted".into(), &[user.address.to_variant()]);
+                    tracing::info!("🔔 Emitting signal: friendship_deleted from {}", user.address);
+                    let address = user.address.clone();
+                    node.call_deferred("emit_signal".into(), &[
+                        "friendship_deleted".to_variant(),
+                        address.to_variant(),
+                    ]);
                 }
             }
             Some(friendship_update::Update::Cancel(cancel)) => {
                 if let Some(user) = cancel.user {
-                    node.emit_signal("friendship_request_cancelled".into(), &[user.address.to_variant()]);
+                    tracing::info!("🔔 Emitting signal: friendship_request_cancelled from {}", user.address);
+                    let address = user.address.clone();
+                    node.call_deferred("emit_signal".into(), &[
+                        "friendship_request_cancelled".to_variant(),
+                        address.to_variant(),
+                    ]);
                 }
             }
-            None => {}
+            Some(friendship_update::Update::Block(_block)) => {
+                tracing::info!("🔔 Received block update - not emitting signal (blocking not implemented in friends UI)");
+            }
+            None => {
+                tracing::warn!("Received friendship update with no data");
+            }
         }
     }
 
@@ -525,7 +558,7 @@ impl DclSocialService {
 
         requests.requests.into_iter()
             .filter_map(|req| {
-                let address = req.user?.address;
+                let address = req.friend?.address;
                 let message = req.message.unwrap_or_default();
                 let created_at = req.created_at;
                 Some((address, message, created_at))
