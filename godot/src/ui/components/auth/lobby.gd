@@ -3,6 +3,9 @@ extends Control
 
 signal change_scene(new_scene_path: String)
 
+# Debug flag for social service testing
+const DEBUG_SOCIAL_SERVICE: bool = false
+
 var is_creating_account: bool = false
 
 var current_profile: DclUserProfile
@@ -256,6 +259,10 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 	Global.get_config().save_to_settings_file()
 
+	# Initialize social service for non-guest accounts only
+	if not _is_guest:
+		_initialize_social_service()
+
 
 func _on_button_different_account_pressed():
 	Global.metrics.update_identity("unauthenticated", false)
@@ -412,3 +419,23 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 
 func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
 	_check_button_finish()
+
+
+func _initialize_social_service() -> void:
+	print("[Lobby] Initializing Social Service for authenticated user")
+	Global.social_service.initialize_from_player_identity(Global.player_identity)
+
+	var promise = Global.social_service.subscribe_to_updates()
+	await promise.on_resolved
+
+	if promise.is_rejected():
+		var error = promise.get_data()
+		push_error("[Lobby] Failed to initialize Social Service: " + str(error.get_error()))
+		return
+
+	print("[Lobby] Social Service initialized successfully")
+
+	# Run debug tests if enabled
+	if DEBUG_SOCIAL_SERVICE:
+		var SocialServiceDebug = preload("res://src/ui/components/auth/social_service_debug.gd")
+		await SocialServiceDebug.debug_social_service()
