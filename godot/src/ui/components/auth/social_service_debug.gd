@@ -80,6 +80,7 @@ static func _test_fetch_pending_requests() -> void:
 # Signal Handlers
 # ============================================================================
 
+
 static func _on_friend_request_received(address: String, message: String) -> void:
 	print("[SocialDebug] 🔔 New friend request from: ", address)
 	if message:

@@ -223,7 +223,6 @@ pub mod kernel {
 
 pub mod social_service {
     // Include the error types from the social_service package
-    #[allow(clippy::all)]
     include!(concat!(env!("OUT_DIR"), "/decentraland.social_service.rs"));
 
     #[allow(clippy::all)]

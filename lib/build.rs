@@ -286,7 +286,7 @@ fn generate_social_service() -> io::Result<()> {
     conf.compile_protos(
         &[
             "src/dcl/components/proto/decentraland/social_service/errors.proto",
-            "src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto"
+            "src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto",
         ],
         &["src/dcl/components/proto"],
     )?;
@@ -380,7 +380,9 @@ fn main() -> io::Result<()> {
     }
 
     // Also watch the social service proto files
-    println!("cargo:rerun-if-changed=src/dcl/components/proto/decentraland/social_service/errors.proto");
+    println!(
+        "cargo:rerun-if-changed=src/dcl/components/proto/decentraland/social_service/errors.proto"
+    );
     println!("cargo:rerun-if-changed=src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto");
 
     set_godot_explorer_version();

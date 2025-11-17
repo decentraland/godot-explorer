@@ -169,7 +169,7 @@ func _load_friends():
     var promise = Global.social_service.get_friends(100, 0, 3)
     await promise.on_resolved
 
-    if not promise.is_error():
+    if not promise.is_rejected():
         friends = promise.get_data()
         _update_ui()
 
@@ -177,7 +177,7 @@ func _on_unfriend_button(address: String):
     var promise = Global.social_service.delete_friendship(address)
     await promise.on_resolved
 
-    if not promise.is_error():
+    if not promise.is_rejected():
         show_success("Friend removed")
 
 func _refresh_friends(_address: String = ""):
@@ -187,40 +187,3 @@ func _update_ui():
     # Update your UI with friends array
     pass
 ```
-
-## Implementation Files
-
-- **Rust Core**: `lib/src/social/social_service_manager.rs`
-- **GDScript Bindings**: `lib/src/godot_classes/dcl_social_service.rs`
-- **Global Integration**: `lib/src/godot_classes/dcl_global.rs:111`
-- **Initialization**: `godot/src/ui/components/auth/lobby.gd:421-431`
-
-## Architecture
-
-1. **DclGlobal** (Rust) has `social_service: Gd<DclSocialService>` property
-2. **Global** (GDScript) extends DclGlobal and exposes it
-3. Accessed via `Global.social_service` throughout the app
-4. Initialized once on login, used everywhere
-
-## Best Practices
-
-1. **Use Global.social_service** - Don't create new instances
-2. **Use signals** - Connect to real-time updates instead of polling
-3. **Handle errors** - Always check `promise.is_error()`
-4. **Guest accounts** - Service won't be initialized for guests
-5. **Pagination** - Use limit/offset for large lists
-
-## Troubleshooting
-
-**Service not responding:**
-- User must be logged in (not guest)
-- Check network connectivity
-- Check lobby.gd initialization logs
-
-**Signals not firing:**
-- Ensure `subscribe_to_updates()` completed
-- Connect signals before events occur
-
-**"Service not initialized" errors:**
-- User is likely a guest account
-- Only initialized for authenticated users

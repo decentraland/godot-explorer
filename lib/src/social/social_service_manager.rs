@@ -1,8 +1,11 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use anyhow::{anyhow, Result};
 use dcl_rpc::client::RpcClient;
-use dcl_rpc::transports::{Transport, web_sockets::{tungstenite::WebSocketClient, WebSocketTransport}};
+use dcl_rpc::transports::{
+    web_sockets::{tungstenite::WebSocketClient, WebSocketTransport},
+    Transport,
+};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[allow(unused_imports)]
 use futures_util::StreamExt;
@@ -86,25 +89,21 @@ async fn create_connection(wallet: &Arc<EphemeralAuthChain>) -> Result<ServiceCo
 
     tracing::debug!("Auth chain sent, creating RPC client");
     // Create RPC client
-    let mut rpc_client = RpcClient::new(transport)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to create RPC client: {:?}", e);
-            anyhow!("Failed to create RPC client: {:?}", e)
-        })?;
+    let mut rpc_client = RpcClient::new(transport).await.map_err(|e| {
+        tracing::error!("Failed to create RPC client: {:?}", e);
+        anyhow!("Failed to create RPC client: {:?}", e)
+    })?;
 
     tracing::debug!("RPC client created, creating port");
     // Create port and load service module
-    let port = rpc_client
-        .create_port("SocialService")
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to create port: {:?}", e);
-            anyhow!("Failed to create port: {:?}", e)
-        })?;
+    let port = rpc_client.create_port("SocialService").await.map_err(|e| {
+        tracing::error!("Failed to create port: {:?}", e);
+        anyhow!("Failed to create port: {:?}", e)
+    })?;
 
     tracing::debug!("Port created, loading module");
-    let service = port.load_module::<SocialServiceClient<_>>("SocialService")
+    let service = port
+        .load_module::<SocialServiceClient<_>>("SocialService")
         .await
         .map_err(|e| {
             tracing::error!("Failed to load module: {:?}", e);
@@ -134,7 +133,10 @@ impl SocialServiceManager {
     }
 
     /// Get or create a connection, returning a reference to the service client
-    async fn ensure_connection<'a>(&'a self, state: &'a mut SocialServiceState) -> Result<&'a SocialServiceClient<SocialTransport>> {
+    async fn ensure_connection<'a>(
+        &'a self,
+        state: &'a mut SocialServiceState,
+    ) -> Result<&'a SocialServiceClient<SocialTransport>> {
         if state.connection.is_none() {
             tracing::debug!("No existing connection, creating new one");
             let connection = create_connection(&self.wallet).await?;
@@ -248,7 +250,10 @@ impl SocialServiceManager {
     }
 
     /// Accept a friendship request from another user
-    pub async fn accept_friend_request(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
+    pub async fn accept_friend_request(
+        &self,
+        user_address: String,
+    ) -> Result<UpsertFriendshipResponse> {
         let mut state = self.state.write().await;
         let service = self.ensure_connection(&mut state).await?;
 
@@ -269,7 +274,10 @@ impl SocialServiceManager {
     }
 
     /// Reject a friendship request from another user
-    pub async fn reject_friend_request(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
+    pub async fn reject_friend_request(
+        &self,
+        user_address: String,
+    ) -> Result<UpsertFriendshipResponse> {
         let mut state = self.state.write().await;
         let service = self.ensure_connection(&mut state).await?;
 
@@ -290,7 +298,10 @@ impl SocialServiceManager {
     }
 
     /// Cancel a sent friendship request
-    pub async fn cancel_friend_request(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
+    pub async fn cancel_friend_request(
+        &self,
+        user_address: String,
+    ) -> Result<UpsertFriendshipResponse> {
         let mut state = self.state.write().await;
         let service = self.ensure_connection(&mut state).await?;
 
@@ -311,7 +322,10 @@ impl SocialServiceManager {
     }
 
     /// Delete an existing friendship
-    pub async fn delete_friendship(&self, user_address: String) -> Result<UpsertFriendshipResponse> {
+    pub async fn delete_friendship(
+        &self,
+        user_address: String,
+    ) -> Result<UpsertFriendshipResponse> {
         let mut state = self.state.write().await;
         let service = self.ensure_connection(&mut state).await?;
 

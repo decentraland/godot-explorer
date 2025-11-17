@@ -41,8 +41,11 @@ pub async fn build_auth_chain(wallet: &EphemeralAuthChain) -> anyhow::Result<Str
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dcl_rpc::{client::RpcClient, transports::{Transport, web_sockets::WebSocketTransport}};
     use crate::dcl::components::proto_components::social_service::v2::*;
+    use dcl_rpc::{
+        client::RpcClient,
+        transports::{web_sockets::WebSocketTransport, Transport},
+    };
 
     const SOCIAL_URL: &str = "wss://rpc-social-service-ea.decentraland.org";
 
