@@ -261,7 +261,7 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 	# Initialize social service for non-guest accounts only
 	if not _is_guest:
-		_initialize_social_service()
+		_async_initialize_social_service()
 
 
 func _on_button_different_account_pressed():
@@ -421,7 +421,7 @@ func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
 	_check_button_finish()
 
 
-func _initialize_social_service() -> void:
+func _async_initialize_social_service() -> void:
 	print("[Lobby] Initializing Social Service for authenticated user")
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
@@ -438,4 +438,4 @@ func _initialize_social_service() -> void:
 	# Run debug tests if enabled
 	if DEBUG_SOCIAL_SERVICE:
 		var SocialServiceDebug = preload("res://src/ui/components/auth/social_service_debug.gd")
-		await SocialServiceDebug.debug_social_service()
+		await SocialServiceDebug.async_debug_social_service()

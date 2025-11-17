@@ -7,14 +7,14 @@ extends RefCounted
 
 
 ## Initialize debugging - connect signals and run tests
-static func debug_social_service() -> void:
+static func async_debug_social_service() -> void:
 	print("[SocialDebug] Starting social service debug tests...")
 
 	# Connect signals
 	_connect_signals()
 
 	# Run tests
-	await _run_tests()
+	await _async_run_tests()
 
 	print("[SocialDebug] Debug tests complete")
 
@@ -33,13 +33,13 @@ static func _connect_signals() -> void:
 
 
 ## Run debug tests - fetch friends and pending requests
-static func _run_tests() -> void:
-	await _test_fetch_friends()
-	await _test_fetch_pending_requests()
+static func _async_run_tests() -> void:
+	await _async_test_fetch_friends()
+	await _async_test_fetch_pending_requests()
 
 
 ## Test: Fetch friends list
-static func _test_fetch_friends() -> void:
+static func _async_test_fetch_friends() -> void:
 	print("[SocialDebug] Fetching friends list...")
 
 	var promise = Global.social_service.get_friends(50, 0, 3)
@@ -56,7 +56,7 @@ static func _test_fetch_friends() -> void:
 
 
 ## Test: Fetch pending friend requests
-static func _test_fetch_pending_requests() -> void:
+static func _async_test_fetch_pending_requests() -> void:
 	print("[SocialDebug] Fetching pending friend requests...")
 
 	var promise = Global.social_service.get_pending_requests(50, 0)
