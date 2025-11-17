@@ -2,6 +2,7 @@ extends Control
 
 enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
 
+
 @export var item_type: SocialType
 
 var mute_icon = load("res://assets/ui/audio_off.svg")
@@ -21,19 +22,14 @@ var social_data: SocialItemData
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 @onready var button_add_friend: Button = %Button_AddFriend
 @onready var button_mute: Button = %Button_Mute
-@onready var button_accept: Button = %Button_Accept
-@onready var button_reject: Button = %Button_Reject
 
 
 func _ready():
 	add_to_group("blacklist_ui_sync")
 	_update_elements_visibility()
-	# Connect accept/reject buttons for friend requests
-	button_accept.pressed.connect(_async_on_button_accept_pressed)
-	button_reject.pressed.connect(_async_on_button_reject_pressed)
+	
 
-
-func set_data(data: SocialItemData) -> void:
+func set_data(data:SocialItemData) -> void:
 	social_data = data
 	var tag_position = data.name.find("#")
 	if tag_position != -1:
@@ -45,24 +41,19 @@ func set_data(data: SocialItemData) -> void:
 	if data.name.length() > 15:
 		data.name = data.name.left(15) + "..."
 	nickname.text = data.name
-
-	#var nickname_color = DclAvatar.get_nickname_color(data.name)
-	#nickname.add_theme_color_override("font_color", nickname_color)
+	
+	var nickname_color = DclAvatar.get_nickname_color(data.name)
+	nickname.add_theme_color_override("font_color", nickname_color)
 	#if data.has_claimed_name:
-	#texture_rect_claimed_checkmark.show()
+		#texture_rect_claimed_checkmark.show()
 	#else:
-	#texture_rect_claimed_checkmark.hide()
-	profile_picture.async_update_profile_picture(data.name, data.profile_picture_url, data.address)
+		#texture_rect_claimed_checkmark.hide()
+	profile_picture.async_update_profile_picture(data)
 
 
-func set_data_from_avatar(avatar_param: DclAvatar):
-	social_data = SocialItemData.new()
-	social_data.name = avatar_param.get_avatar_name()
-	social_data.address = avatar_param.avatar_id
-	social_data.profile_picture_url = avatar_param.get_avatar_data().get_snapshots_face_url()
-	social_data.has_claimed_name = false
+func set_data_from_avatar(avatar_param:DclAvatar):
+	social_data = SocialHelper.social_data_from_avatar(avatar_param)
 	set_data(social_data)
-
 
 func _on_mouse_entered() -> void:
 	panel_nearby_player_item.self_modulate = "#ffffff"
@@ -114,18 +105,14 @@ func _update_elements_visibility() -> void:
 			h_box_container_nearby.show()
 		SocialType.ONLINE:
 			h_box_container_online.show()
-			# TODO: Show online status when connectivity updates are implemented
-			# For now, hide status since we don't have real connectivity data
-			profile_picture.hide_status()
-		SocialType.OFFLINE:
-			h_box_container_online.show()
-			profile_picture.set_offline()
+			label_place.show()
+			profile_picture.set_online()
 		SocialType.REQUEST:
 			h_box_container_request.show()
 		SocialType.BLOCKED:
 			h_box_container_blocked.show()
 		_:
-			profile_picture.hide_status()
+			profile_picture.set_offline()
 
 
 func _hide_all_buttons() -> void:
@@ -143,74 +130,13 @@ func set_type(type: SocialType) -> void:
 
 
 func _on_button_add_friend_pressed() -> void:
-	_async_on_button_add_friend_pressed()
-
-
-func _async_on_button_add_friend_pressed() -> void:
-	button_add_friend.disabled = true
-	var promise = Global.social_service.send_friend_request(social_data.address, "")
-	await PromiseUtils.async_awaiter(promise)
-
-	if promise.is_rejected():
-		printerr("Failed to send friend request: ", promise.get_data().get_error())
-		button_add_friend.disabled = false
-		return
-
+	print("TODO: Emit signal to friends manager to send friend request to the avatar: ", social_data.address)
 	button_add_friend.hide()
 
 
-func _async_on_button_accept_pressed() -> void:
-	button_accept.disabled = true
-	button_reject.disabled = true
-	var promise = Global.social_service.accept_friend_request(social_data.address)
-	await PromiseUtils.async_awaiter(promise)
-
-	if promise.is_rejected():
-		printerr("Failed to accept friend request: ", promise.get_data().get_error())
-		button_accept.disabled = false
-		button_reject.disabled = false
-		return
-
-	# Refresh the parent list
-	var parent_list = get_parent()
-	if parent_list and parent_list.has_method("async_update_list"):
-		parent_list.async_update_list()
-
-	# Refresh the friends button pending count
-	_refresh_friends_button_count()
-
-
-func _async_on_button_reject_pressed() -> void:
-	button_accept.disabled = true
-	button_reject.disabled = true
-	var promise = Global.social_service.reject_friend_request(social_data.address)
-	await PromiseUtils.async_awaiter(promise)
-
-	if promise.is_rejected():
-		printerr("Failed to reject friend request: ", promise.get_data().get_error())
-		button_accept.disabled = false
-		button_reject.disabled = false
-		return
-
-	# Refresh the parent list
-	var parent_list = get_parent()
-	if parent_list and parent_list.has_method("async_update_list"):
-		parent_list.async_update_list()
-
-	# Refresh the friends button pending count
-	_refresh_friends_button_count()
-
-
-func _refresh_friends_button_count() -> void:
-	var explorer = Global.get_explorer()
-	if explorer and explorer.hud_button_friends:
-		explorer.hud_button_friends.refresh_pending_count()
-
-
 func _on_button_jump_in_pressed() -> void:
-	# TODO: Implement teleport to friend location
+	#Global.teleport_to(avatar.get_current_parcel_position(), Realm.MAIN_REALM)
 	pass
-
 
 func update_location() -> void:
 	#var pos = avatar.get_current_parcel_position()
@@ -219,22 +145,21 @@ func update_location() -> void:
 #
 	#var headers = {"Content-Type": "application/json"}
 	#var promise: Promise = Global.http_requester.request_json(
-	#url, HTTPClient.METHOD_GET, "", headers
+		#url, HTTPClient.METHOD_GET, "", headers
 	#)
 	#var result = await PromiseUtils.async_awaiter(promise)
 #
 	#if result is PromiseError:
-	#printerr("Error request places jump in", result.get_error())
-	#return
+		#printerr("Error request places jump in", result.get_error())
+		#return
 #
 	#var json: Dictionary = result.get_string_response_as_json()
 #
 	#if json.data.is_empty():
-	#label_place.text = "Unknown place"
+		#label_place.text = "Unknown place"
 	#else:
-	#label_place.text = json.data[0].get("title", "Unknown place")
+		#label_place.text = json.data[0].get("title", "Unknown place")
 	pass
-
 
 func _on_button_unblock_pressed() -> void:
 	Global.social_blacklist.remove_blocked(social_data.address)
