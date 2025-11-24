@@ -18,7 +18,7 @@ static func _get_avatar_color_hex(username: String) -> String:
 		return "FFFFFF"  # Default white if no player avatar
 
 	# Use player's avatar instance to calculate the color
-	var color = player_avatar.get_nickname_color(username)
+	var color = DclAvatar.get_nickname_color(username)
 	# Return as hex string without #
 	return color.to_html(false)
 

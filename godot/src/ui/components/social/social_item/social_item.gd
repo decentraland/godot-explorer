@@ -41,7 +41,7 @@ func set_data(data: SocialItemData) -> void:
 		data.name = data.name.left(15) + "..."
 	nickname.text = data.name
 
-	#var nickname_color = avatar.get_nickname_color(data.name)
+	#var nickname_color = DclAvatar.get_nickname_color(data.name)
 	#nickname.add_theme_color_override("font_color", nickname_color)
 	#if data.has_claimed_name:
 	#texture_rect_claimed_checkmark.show()

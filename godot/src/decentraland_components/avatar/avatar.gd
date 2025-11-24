@@ -169,7 +169,7 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 		nickname_ui.nickname = new_avatar_name
 		nickname_ui.tag = ""
 
-	nickname_ui.nickname_color = get_nickname_color(new_avatar_name)
+	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
 	if hide_name:

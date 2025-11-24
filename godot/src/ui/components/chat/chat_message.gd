@@ -129,7 +129,7 @@ func set_avatar(avatar: DclAvatar) -> void:
 	if avatar == null or !is_instance_valid(avatar):
 		return
 	nickname = avatar.get_avatar_name()
-	var color = avatar.get_nickname_color(nickname)
+	var color = DclAvatar.get_nickname_color(nickname)
 	label_nickname.add_theme_color_override("font_color", color)
 	nickname_color_hex = color.to_html(false) if color != null else "ffffff"
 

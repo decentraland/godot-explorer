@@ -160,8 +160,8 @@ func _update_dropdown_visibility() -> void:
 
 
 func update_all_lists():
-	request_list.update_list()
-	online_list.update_list()
-	offline_list.update_list()
-	nearby_list.update_list()
-	blocked_list.update_list()
+	request_list.async_update_list()
+	online_list.async_update_list()
+	offline_list.async_update_list()
+	nearby_list.async_update_list()
+	blocked_list.async_update_list()
