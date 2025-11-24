@@ -28,7 +28,49 @@ mod ui;
 mod version;
 mod version_check;
 
+fn ensure_project_root() -> Result<(), anyhow::Error> {
+    let current_dir = std::env::current_dir()
+        .context("Failed to get current directory")?;
+
+    // Check for key markers that should exist in the project root
+    let markers = vec![
+        "Cargo.toml",
+        "godot",
+        "lib",
+        "src", // xtask source
+    ];
+
+    let mut missing_markers = Vec::new();
+
+    for marker in &markers {
+        let marker_path = current_dir.join(marker);
+        if !marker_path.exists() {
+            missing_markers.push(*marker);
+        }
+    }
+
+    if !missing_markers.is_empty() {
+        use ui::{print_message, MessageType};
+        print_message(
+            MessageType::Error,
+            &format!(
+                "This command must be run from the project root directory.\n\
+                Missing: {}\n\
+                Current directory: {}\n\
+                Please cd to the project root and try again.",
+                missing_markers.join(", "),
+                current_dir.display()
+            )
+        );
+        anyhow::bail!("Not in project root directory");
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), anyhow::Error> {
+    // Ensure we're running from the project root
+    ensure_project_root()?;
     let cli = Command::new("xtask")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
