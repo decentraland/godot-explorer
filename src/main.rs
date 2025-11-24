@@ -29,8 +29,7 @@ mod version;
 mod version_check;
 
 fn ensure_project_root() -> Result<(), anyhow::Error> {
-    let current_dir = std::env::current_dir()
-        .context("Failed to get current directory")?;
+    let current_dir = std::env::current_dir().context("Failed to get current directory")?;
 
     // Check for key markers that should exist in the project root
     let markers = vec![
@@ -60,7 +59,7 @@ fn ensure_project_root() -> Result<(), anyhow::Error> {
                 Please cd to the project root and try again.",
                 missing_markers.join(", "),
                 current_dir.display()
-            )
+            ),
         );
         anyhow::bail!("Not in project root directory");
     }
