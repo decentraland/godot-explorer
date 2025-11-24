@@ -23,6 +23,7 @@ pub mod dcl_parse_deep_link;
 pub mod dcl_realm;
 #[cfg(feature = "use_resource_tracking")]
 pub mod dcl_resource_tracker;
+pub mod dcl_rich_ui_text;
 pub mod dcl_scene_node;
 pub mod dcl_social_blacklist;
 pub mod dcl_social_service;

@@ -23,6 +23,9 @@ use crate::{
 #[cfg(feature = "use_memory_debugger")]
 use crate::tools::memory_debugger::MemoryDebugger;
 
+#[cfg(feature = "use_memory_debugger")]
+use crate::tools::benchmark_report::BenchmarkReport;
+
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig, dcl_realm::DclRealm,
     dcl_social_blacklist::DclSocialBlacklist, dcl_social_service::DclSocialService,
@@ -114,6 +117,10 @@ pub struct DclGlobal {
     #[var]
     pub memory_debugger: Gd<MemoryDebugger>,
 
+    #[cfg(feature = "use_memory_debugger")]
+    #[var]
+    pub benchmark_report: Gd<BenchmarkReport>,
+
     #[var(get)]
     pub profile_service: Gd<ProfileService>,
 
@@ -155,6 +162,9 @@ impl INode for DclGlobal {
         #[cfg(feature = "use_memory_debugger")]
         let mut memory_debugger: Gd<MemoryDebugger> = MemoryDebugger::new_alloc();
 
+        #[cfg(feature = "use_memory_debugger")]
+        let mut benchmark_report: Gd<BenchmarkReport> = BenchmarkReport::new_alloc();
+
         let mut metrics: Gd<Metrics> = Metrics::new_alloc();
         let mut cli: Gd<DclCli> = DclCli::new_alloc();
 
@@ -183,6 +193,9 @@ impl INode for DclGlobal {
 
         #[cfg(feature = "use_memory_debugger")]
         memory_debugger.set_name("memory_debugger".into());
+
+        #[cfg(feature = "use_memory_debugger")]
+        benchmark_report.set_name("benchmark_report".into());
 
         metrics.set_name("metrics".into());
         cli.set_name("cli".into());
@@ -238,6 +251,9 @@ impl INode for DclGlobal {
 
             #[cfg(feature = "use_memory_debugger")]
             memory_debugger,
+
+            #[cfg(feature = "use_memory_debugger")]
+            benchmark_report,
 
             profile_service: ProfileService::new_gd(),
 
