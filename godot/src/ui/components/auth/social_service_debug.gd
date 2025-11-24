@@ -43,7 +43,7 @@ static func _async_test_fetch_friends() -> void:
 	print("[SocialDebug] Fetching friends list...")
 
 	var promise = Global.social_service.get_friends(50, 0, 3)
-	await promise.on_resolved
+	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
 		var error = promise.get_data()
@@ -60,7 +60,7 @@ static func _async_test_fetch_pending_requests() -> void:
 	print("[SocialDebug] Fetching pending friend requests...")
 
 	var promise = Global.social_service.get_pending_requests(50, 0)
-	await promise.on_resolved
+	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
 		var error = promise.get_data()

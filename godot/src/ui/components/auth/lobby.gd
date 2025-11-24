@@ -4,7 +4,7 @@ extends Control
 signal change_scene(new_scene_path: String)
 
 # Debug flag for social service testing
-const DEBUG_SOCIAL_SERVICE: bool = false
+const DEBUG_SOCIAL_SERVICE: bool = true
 
 var is_creating_account: bool = false
 
@@ -426,7 +426,7 @@ func _async_initialize_social_service() -> void:
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 	var promise = Global.social_service.subscribe_to_updates()
-	await promise.on_resolved
+	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
 		var error = promise.get_data()

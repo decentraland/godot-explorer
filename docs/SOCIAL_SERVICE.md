@@ -8,7 +8,7 @@ The Social Service provides friend requests, friendships, and real-time updates.
 
 ```gdscript
 var promise = Global.social_service.get_friends(50, 0, 3)
-await promise.on_resolved
+await PromiseUtils.async_awaiter(promise)
 
 if not promise.is_error():
     var friends: Array = promise.get_data()  # Array of address strings
@@ -20,7 +20,7 @@ if not promise.is_error():
 
 ```gdscript
 var promise = Global.social_service.get_friendship_status("0x123...")
-await promise.on_resolved
+await PromiseUtils.async_awaiter(promise)
 
 var status_data = promise.get_data()  # {status: int, message: string}
 
@@ -37,7 +37,7 @@ match status_data.status:
 
 ```gdscript
 var promise = Global.social_service.send_friend_request("0x123...", "Hi!")
-await promise.on_resolved
+await PromiseUtils.async_awaiter(promise)
 
 if promise.is_error():
     print("Error: ", promise.get_error())
@@ -50,7 +50,7 @@ else:
 ```gdscript
 # Get pending requests
 var promise = Global.social_service.get_pending_requests(50, 0)
-await promise.on_resolved
+await PromiseUtils.async_awaiter(promise)
 var requests = promise.get_data()  # Array of {address, message, created_at}
 
 # Accept
@@ -167,7 +167,7 @@ func _ready():
 
 func _load_friends():
     var promise = Global.social_service.get_friends(100, 0, 3)
-    await promise.on_resolved
+    await PromiseUtils.async_awaiter(promise)
 
     if not promise.is_rejected():
         friends = promise.get_data()
@@ -175,7 +175,7 @@ func _load_friends():
 
 func _on_unfriend_button(address: String):
     var promise = Global.social_service.delete_friendship(address)
-    await promise.on_resolved
+    await PromiseUtils.async_awaiter(promise)
 
     if not promise.is_rejected():
         show_success("Friend removed")
