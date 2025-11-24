@@ -10,6 +10,7 @@ signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
+signal deep_link_received
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -54,6 +55,8 @@ var previous_height: int = -1
 var previous_height_2: int = -1
 
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
+var deep_link_url: String = ""
+
 var player_camera_node: DclCamera3D
 
 
@@ -93,6 +96,12 @@ func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
+
+	# Connect to iOS deeplink signal
+	if DclIosPlugin.is_available():
+		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
+		if dcl_ios_singleton:
+			dcl_ios_singleton.deeplink_received.connect(_on_deeplink_received)
 
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
@@ -498,9 +507,16 @@ func _process(_delta: float) -> void:
 
 
 func check_deep_link_teleport_to():
-	if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
-		var deep_link_url: String = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
-		Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+	if Global.is_mobile():
+		var new_deep_link_url: String = ""
+		if DclGodotAndroidPlugin.is_available():
+			new_deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+		elif DclIosPlugin.is_available():
+			new_deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
+
+		if new_deep_link_url.is_empty():
+			deep_link_url = new_deep_link_url
+			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
 		if Global.deep_link_obj.is_location_defined():
 			var realm = Global.deep_link_obj.realm
@@ -514,10 +530,24 @@ func check_deep_link_teleport_to():
 			print("Is event link")
 
 
+func _on_deeplink_received(url: String) -> void:
+	print("[DEEPLINK] Signal received in GDScript: ", url)
+	if not url.is_empty():
+		deep_link_url = url
+		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
+		deep_link_received.emit.call_deferred()
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile() and DclGodotAndroidPlugin.is_available():
-			var deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
-			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+		if Global.is_mobile():
+			if DclGodotAndroidPlugin.is_available():
+				deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			elif DclIosPlugin.is_available():
+				deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
+
+			if not deep_link_url.is_empty():
+				deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+				deep_link_received.emit.call_deferred()
 
 			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)
