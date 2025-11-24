@@ -90,8 +90,8 @@ func _update_border_style() -> void:
 
 
 func async_update_profile_picture(avatar_name: String, profile_picture_url: String):
-	#var nickname_color = DclAvatar.get_nickname_color(avatar_name)
-	var nickname_color = Color.RED
+	var nickname_color = DclAvatar.get_nickname_color(avatar_name)
+	#var nickname_color = Color.RED
 
 	var background_color = nickname_color
 	apply_style(background_color)

@@ -635,6 +635,7 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 	profile_container.open(dcl_user_profile)
 	release_mouse()
 
+
 func _async_open_profile_by_address(user_address: String):
 	var promise = Global.content_provider.fetch_profile(user_address)
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -655,7 +656,10 @@ func _async_open_profile_by_avatar(avatar: DclAvatar):
 		if not avatar_id.is_empty():
 			await _async_open_profile_by_address(avatar_id)
 		else:
-			printerr("_async_open_profile_by_avatar: avatar_id is empty for avatar: ", avatar_instance.name)
+			printerr(
+				"_async_open_profile_by_avatar: avatar_id is empty for avatar: ",
+				avatar_instance.name
+			)
 	else:
 		# Try to get avatar_id from metadata if available (fallback)
 		if avatar.has_method("get") and avatar.get("avatar_id") != null:
@@ -663,9 +667,14 @@ func _async_open_profile_by_avatar(avatar: DclAvatar):
 			if avatar_id is String and not avatar_id.is_empty():
 				await _async_open_profile_by_address(avatar_id)
 			else:
-				printerr("_async_open_profile_by_avatar: avatar is not an Avatar instance and avatar_id is not available")
+				printerr(
+					"_async_open_profile_by_avatar: avatar is not an Avatar instance and avatar_id is not available"
+				)
 		else:
-			printerr("_async_open_profile_by_avatar: avatar is not an Avatar instance: ", avatar.get_class())
+			printerr(
+				"_async_open_profile_by_avatar: avatar is not an Avatar instance: ",
+				avatar.get_class()
+			)
 
 
 func _on_control_menu_open_profile() -> void:

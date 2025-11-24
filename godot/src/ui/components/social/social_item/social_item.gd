@@ -2,7 +2,6 @@ extends Control
 
 enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
 
-
 @export var item_type: SocialType
 
 var mute_icon = load("res://assets/ui/audio_off.svg")
@@ -27,9 +26,9 @@ var social_data: SocialItemData
 func _ready():
 	add_to_group("blacklist_ui_sync")
 	_update_elements_visibility()
-	
 
-func set_data(data:SocialItemData) -> void:
+
+func set_data(data: SocialItemData) -> void:
 	social_data = data
 	var tag_position = data.name.find("#")
 	if tag_position != -1:
@@ -41,22 +40,23 @@ func set_data(data:SocialItemData) -> void:
 	if data.name.length() > 15:
 		data.name = data.name.left(15) + "..."
 	nickname.text = data.name
-	
+
 	#var nickname_color = avatar.get_nickname_color(data.name)
 	#nickname.add_theme_color_override("font_color", nickname_color)
 	#if data.has_claimed_name:
-		#texture_rect_claimed_checkmark.show()
+	#texture_rect_claimed_checkmark.show()
 	#else:
-		#texture_rect_claimed_checkmark.hide()
+	#texture_rect_claimed_checkmark.hide()
 	profile_picture.async_update_profile_picture(data.name, data.profile_picture_url)
 
 
-func set_data_from_avatar(avatar_param:DclAvatar):
-	
+func set_data_from_avatar(avatar_param: DclAvatar):
 	social_data = SocialItemData.new()
 	social_data.name = avatar_param.get_avatar_name()
-	social_data.address = avatar_param.avatar_id	
-	social_data.profile_picture_url = avatar_param.get_avatar_data().to_godot_dictionary()["snapshots"]["face256"]
+	social_data.address = avatar_param.avatar_id
+	social_data.profile_picture_url = (
+		avatar_param.get_avatar_data().to_godot_dictionary()["snapshots"]["face256"]
+	)
 	social_data.has_claimed_name = false
 	set_data(social_data)
 	print(social_data.profile_picture_url, "FACE256")
@@ -137,13 +137,17 @@ func set_type(type: SocialType) -> void:
 
 
 func _on_button_add_friend_pressed() -> void:
-	print("TODO: Emit signal to friends manager to send friend request to the avatar: ", social_data.address)
+	print(
+		"TODO: Emit signal to friends manager to send friend request to the avatar: ",
+		social_data.address
+	)
 	button_add_friend.hide()
 
 
 func _on_button_jump_in_pressed() -> void:
 	#Global.teleport_to(avatar.get_current_parcel_position(), Realm.MAIN_REALM)
 	pass
+
 
 func update_location() -> void:
 	#var pos = avatar.get_current_parcel_position()
@@ -152,21 +156,22 @@ func update_location() -> void:
 #
 	#var headers = {"Content-Type": "application/json"}
 	#var promise: Promise = Global.http_requester.request_json(
-		#url, HTTPClient.METHOD_GET, "", headers
+	#url, HTTPClient.METHOD_GET, "", headers
 	#)
 	#var result = await PromiseUtils.async_awaiter(promise)
 #
 	#if result is PromiseError:
-		#printerr("Error request places jump in", result.get_error())
-		#return
+	#printerr("Error request places jump in", result.get_error())
+	#return
 #
 	#var json: Dictionary = result.get_string_response_as_json()
 #
 	#if json.data.is_empty():
-		#label_place.text = "Unknown place"
+	#label_place.text = "Unknown place"
 	#else:
-		#label_place.text = json.data[0].get("title", "Unknown place")
+	#label_place.text = json.data[0].get("title", "Unknown place")
 	pass
+
 
 func _on_button_unblock_pressed() -> void:
 	Global.social_blacklist.remove_blocked(social_data.address)
