@@ -74,9 +74,9 @@ custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_font_sizes/font_size = 8
-theme_override_styles/hover = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 text = "READ ALL"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
@@ -99,7 +99,7 @@ mouse_filter = 2
 
 [node name="FadeOverlay" type="TextureRect" parent="MarginContainer/VBoxContainer/FadeOverlayContainer"]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 0
 offset_top = -64.0
 offset_right = 346.0
 grow_horizontal = 2

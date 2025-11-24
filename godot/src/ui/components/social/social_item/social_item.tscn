@@ -1,0 +1,321 @@
+[gd_scene load_steps=18 format=3 uid="uid://d30nejywxmhpn"]
+
+[ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/social/social_item/social_item.gd" id="1_qmekl"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_wvdds"]
+[ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="3_yus00"]
+[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_8x3v3"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_iy8au"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="6_b8cqn"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="7_m2rwh"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_2kre2"]
+[ext_resource type="Texture2D" uid="uid://ceh3pvhtpwjhp" path="res://assets/ui/audio_off.svg" id="12_l8lpo"]
+[ext_resource type="StyleBox" uid="uid://p7xigefabmi8" path="res://assets/themes/seconday_pressed_hover_little.tres" id="12_lm8sy"]
+[ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="13_5r2pa"]
+[ext_resource type="StyleBox" uid="uid://cjr732avt4ugw" path="res://assets/themes/secondary_disabled_little.tres" id="13_pm4ta"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="14_h2dbk"]
+[ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="14_lm8sy"]
+[ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="14_pm4ta"]
+[ext_resource type="Texture2D" uid="uid://b1f8bhb2dkbx3" path="res://assets/themes/icons/check.svg" id="15_0guw6"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66h5u"]
+bg_color = Color(1, 1, 1, 0.0823529)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="SocialItem" type="Control"]
+custom_minimum_size = Vector2(280, 53)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 280.0
+offset_bottom = 53.0
+size_flags_horizontal = 3
+mouse_filter = 1
+script = ExtResource("1_qmekl")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer"]
+unique_name_in_owner = true
+self_modulate = Color(1, 1, 1, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+theme = ExtResource("2_wvdds")
+theme_override_styles/panel = SubResource("StyleBoxFlat_66h5u")
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 9
+
+[node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer" instance=ExtResource("3_yus00")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_default_cursor_shape = 2
+picture_size = 1
+
+[node name="Nickname" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="MicEnabled" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 10
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/MicEnabled"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_8x3v3")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = -1
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 1
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_constants/shadow_outline_size = 1
+theme_override_fonts/font = ExtResource("5_iy8au")
+theme_override_font_sizes/font_size = 18
+text = "NickWith15Chars"
+
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(15, 15)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_b8cqn")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 1
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_constants/shadow_outline_size = 1
+theme_override_fonts/font = ExtResource("7_m2rwh")
+theme_override_font_sizes/font_size = 16
+text = "Somewhere"
+
+[node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("10_2kre2")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 30
+theme_override_styles/pressed = ExtResource("12_lm8sy")
+theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/hover = ExtResource("12_lm8sy")
+theme_override_styles/hover_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/hover_pressed = ExtResource("12_lm8sy")
+theme_override_styles/hover_pressed_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/disabled = ExtResource("13_pm4ta")
+theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
+theme_override_styles/focus = ExtResource("12_lm8sy")
+icon = ExtResource("14_lm8sy")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("10_2kre2")
+theme_type_variation = &"ButtonLittle"
+text = "JUMP"
+icon = ExtResource("14_pm4ta")
+expand_icon = true
+
+[node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Button_Mute" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("10_2kre2")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 30
+theme_override_styles/pressed = ExtResource("12_lm8sy")
+theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/hover = ExtResource("12_lm8sy")
+theme_override_styles/hover_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/hover_pressed = ExtResource("12_lm8sy")
+theme_override_styles/hover_pressed_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/disabled = ExtResource("13_pm4ta")
+theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
+theme_override_styles/focus = ExtResource("12_lm8sy")
+toggle_mode = true
+icon = ExtResource("12_l8lpo")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_AddFriend" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("10_2kre2")
+theme_type_variation = &"ButtonLittle"
+theme_override_constants/icon_max_width = 20
+theme_override_font_sizes/font_size = 15
+toggle_mode = true
+text = "ADD FRIEND"
+icon = ExtResource("13_5r2pa")
+
+[node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Button_Reject" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Request"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("10_2kre2")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 20
+theme_override_styles/pressed = ExtResource("12_lm8sy")
+theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/hover = ExtResource("12_lm8sy")
+theme_override_styles/hover_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/hover_pressed = ExtResource("12_lm8sy")
+theme_override_styles/hover_pressed_mirrored = ExtResource("12_lm8sy")
+theme_override_styles/disabled = ExtResource("13_pm4ta")
+theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
+theme_override_styles/focus = ExtResource("12_lm8sy")
+icon = ExtResource("14_h2dbk")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Accept" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Request"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("10_2kre2")
+theme_type_variation = &"ButtonLittle"
+theme_override_constants/icon_max_width = 20
+text = "ACCEPT"
+icon = ExtResource("15_0guw6")
+
+[node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Button_Unblock" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Blocked"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("10_2kre2")
+theme_type_variation = &"SecondaryLittle"
+text = "UNBLOCK"
+icon_alignment = 1
+expand_icon = true
+
+[connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
+[connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/Nickname" to="." method="_tap_to_open_profile"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="toggled" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_Mute" to="." method="_on_button_mute_toggled"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_AddFriend" to="." method="_on_button_add_friend_pressed"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Blocked/Button_Unblock" to="." method="_on_button_unblock_pressed"]
