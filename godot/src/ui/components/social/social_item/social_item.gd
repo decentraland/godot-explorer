@@ -7,6 +7,7 @@ enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
 var social_data: SocialItemData
+var current_friendship_status: int = -1  # -1 = unknown, 0 = REQUEST_SENT, 1 = REQUEST_RECEIVED, 3 = ACCEPTED
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
@@ -53,6 +54,10 @@ func set_data(data: SocialItemData) -> void:
 	else:
 		texture_rect_claimed_checkmark.hide()
 	profile_picture.async_update_profile_picture(data)
+	
+	# If type is NEARBY, check if already a friend
+	if item_type == SocialType.NEARBY and not data.address.is_empty():
+		_check_and_update_friend_status()
 
 
 func set_data_from_avatar(avatar_param: DclAvatar):
@@ -113,11 +118,12 @@ func _update_elements_visibility() -> void:
 	match item_type:
 		SocialType.NEARBY:
 			h_box_container_nearby.show()
+			# Check if already a friend and hide ADD FRIEND button if so
+			if social_data and not social_data.address.is_empty():
+				_check_and_update_friend_status()
 		SocialType.ONLINE:
 			h_box_container_online.show()
-			# TODO: Show online status when connectivity updates are implemented
-			# For now, hide status since we don't have real connectivity data
-			profile_picture.hide_status()
+			profile_picture.set_online()
 		SocialType.OFFLINE:
 			h_box_container_online.show()
 			profile_picture.set_offline()
@@ -144,7 +150,11 @@ func set_type(type: SocialType) -> void:
 
 
 func _on_button_add_friend_pressed() -> void:
-	_async_on_button_add_friend_pressed()
+	# If status is REQUEST_RECEIVED, accept the request instead of sending one
+	if current_friendship_status == 1:  # REQUEST_RECEIVED
+		_async_on_button_accept_pressed()
+	else:
+		_async_on_button_add_friend_pressed()
 
 
 func _async_on_button_add_friend_pressed() -> void:
@@ -161,16 +171,30 @@ func _async_on_button_add_friend_pressed() -> void:
 
 
 func _async_on_button_accept_pressed() -> void:
-	button_accept.disabled = true
-	button_reject.disabled = true
+	# Disable appropriate buttons based on which one was clicked
+	if item_type == SocialType.REQUEST:
+		button_accept.disabled = true
+		button_reject.disabled = true
+	else:
+		# Called from ADD FRIEND button when it says "ACCEPT FRIEND"
+		button_add_friend.disabled = true
+	
 	var promise = Global.social_service.accept_friend_request(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
 		printerr("Failed to accept friend request: ", promise.get_data().get_error())
-		button_accept.disabled = false
-		button_reject.disabled = false
+		if item_type == SocialType.REQUEST:
+			button_accept.disabled = false
+			button_reject.disabled = false
+		else:
+			button_add_friend.disabled = false
 		return
+
+	# Hide the button after successful acceptance
+	if item_type != SocialType.REQUEST:
+		button_add_friend.hide()
+		current_friendship_status = 3  # Update to ACCEPTED status
 
 	# Refresh the parent list
 	var parent_list = get_parent()
@@ -244,3 +268,38 @@ func _on_button_unblock_pressed() -> void:
 	if parent_list != null and parent_list.has_method("async_update_list"):
 		parent_list.async_update_list()
 	_notify_other_components_of_change()
+
+
+func _check_and_update_friend_status() -> void:
+	# Check if the address is already a friend
+	if not social_data or social_data.address.is_empty():
+		return
+	
+	_async_check_friend_status()
+
+
+func _async_check_friend_status() -> void:
+	var promise = Global.social_service.get_friendship_status(social_data.address)
+	await PromiseUtils.async_awaiter(promise)
+	
+	if promise.is_rejected():
+		# On error, show the button (default behavior)
+		current_friendship_status = -1
+		button_add_friend.show()
+		button_add_friend.text = "ADD FRIEND"
+		return
+	
+	var status_data = promise.get_data()
+	var status = status_data.get("status", -1)
+	current_friendship_status = status
+	
+	# Status 0 = REQUEST_SENT (we sent a friend request)
+	# Status 3 = ACCEPTED (already friends)
+	if status == 0 or status == 3:
+		button_add_friend.hide()
+	elif status == 1:  # REQUEST_RECEIVED (they sent us a request)
+		button_add_friend.show()
+		button_add_friend.text = "ACCEPT"
+	else:
+		button_add_friend.show()
+		button_add_friend.text = "ADD FRIEND"
