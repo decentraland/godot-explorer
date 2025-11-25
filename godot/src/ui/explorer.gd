@@ -757,7 +757,7 @@ func _on_notification_bell_clicked() -> void:
 		# Grab focus back to enable camera controls
 		Global.explorer_grab_focus()
 		# Capture mouse to restore camera control
-		capture_mouse()
+		#capture_mouse()
 	else:
 		notifications_panel.show_panel()
 		hud_button_notifications.set_panel_open(true)

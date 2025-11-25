@@ -17,9 +17,10 @@ var _update_request_id: int = 0
 
 func _ready():
 	async_update_list()
-	# Connect to avatar scene changed signal instead of using timer
-	Global.avatars.avatar_scene_changed.connect(self.async_update_list)
-	Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
+	if player_list_type == SocialType.NEARBY:
+		Global.avatars.avatar_scene_changed.connect(self.async_update_list)
+	if player_list_type == SocialType.BLOCKED:
+		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 	#Global.get_explorer().hud_button_friends.friends_clicked.connect(self.async_update_list)
 
 
@@ -48,12 +49,13 @@ func _async_reload_blocked_list(request_id: int) -> void:
 	var blocked_social_items = []
 	var blocked_addresses = Global.social_blacklist.get_blocked_list()
 
+	# Fetch profiles for each blocked address
 	for address in blocked_addresses:
-		var social_item_data = SocialItemData.new()
-		social_item_data.name = address
-		social_item_data.address = address
-		social_item_data.has_claimed_name = false
-		social_item_data.profile_picture_url = address
+		# Check if request is still valid before each fetch
+		if request_id != _update_request_id:
+			return
+
+		var social_item_data = await _async_fetch_profile_for_address(address)
 		blocked_social_items.append(social_item_data)
 
 	# Check if this request is still valid (no newer request started)
@@ -241,3 +243,25 @@ func add_items_by_social_item_data(item_list) -> void:
 		self.add_child(social_item)
 		social_item.set_type(player_list_type)
 		social_item.set_data(item as SocialItemData)
+
+func _async_fetch_profile_for_address(address: String) -> SocialItemData:
+	var social_item_data = SocialItemData.new()
+	social_item_data.address = address
+
+	var promise = Global.content_provider.fetch_profile(address)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		# Fallback to address if profile fetch fails
+		social_item_data.name = address
+		social_item_data.has_claimed_name = false
+		social_item_data.profile_picture_url = ""
+	else:
+		var profile = result as DclUserProfile
+		social_item_data.name = profile.get_name()
+		social_item_data.has_claimed_name = profile.has_claimed_name()
+		social_item_data.profile_picture_url = profile.get_avatar().get_snapshots_face_url()
+
+	return social_item_data
+
+	

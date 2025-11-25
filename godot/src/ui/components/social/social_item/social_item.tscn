@@ -318,4 +318,5 @@ expand_icon = true
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="toggled" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_Mute" to="." method="_on_button_mute_toggled"]
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_AddFriend" to="." method="_on_button_add_friend_pressed"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Request/Button_Accept" to="." method="_on_button_accept_pressed"]
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Blocked/Button_Unblock" to="." method="_on_button_unblock_pressed"]
