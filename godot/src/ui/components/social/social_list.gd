@@ -19,6 +19,8 @@ func _ready():
 	async_update_list()
 	if player_list_type == SocialType.NEARBY:
 		Global.avatars.avatar_scene_changed.connect(self.async_update_list)
+		# Also update when blacklist changes to remove blocked users from nearby list
+		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 	if player_list_type == SocialType.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 	#Global.get_explorer().hud_button_friends.friends_clicked.connect(self.async_update_list)
