@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://d30nejywxmhpn"]
+[gd_scene load_steps=19 format=3 uid="uid://d30nejywxmhpn"]
 
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/social/social_item/social_item.gd" id="1_qmekl"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_wvdds"]
@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="14_lm8sy"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="14_pm4ta"]
 [ext_resource type="Texture2D" uid="uid://b1f8bhb2dkbx3" path="res://assets/themes/icons/check.svg" id="15_0guw6"]
+[ext_resource type="LabelSettings" uid="uid://bjq083uusq2di" path="res://assets/themes/social_tab_label.tres" id="15_463mj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66h5u"]
 bg_color = Color(1, 1, 1, 0.0823529)
@@ -244,6 +245,12 @@ theme_override_font_sizes/font_size = 15
 toggle_mode = true
 text = "ADD FRIEND"
 icon = ExtResource("13_5r2pa")
+
+[node name="Label_PendingRequest" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "PENDING"
+label_settings = ExtResource("15_463mj")
 
 [node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true

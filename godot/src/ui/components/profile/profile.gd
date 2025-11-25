@@ -85,6 +85,7 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var button_mute_user: Button = %Button_MuteUser
 @onready var control_avatar: Control = %Control_Avatar
 @onready var button_close_profile: Button = %Button_CloseProfile
+@onready var label_pending_request: Label = %Label_PendingRequest
 
 
 func _ready() -> void:
@@ -801,6 +802,8 @@ func _on_button_block_user_pressed() -> void:
 		Global.social_blacklist.remove_blocked(current_avatar.avatar_id)
 	else:
 		Global.social_blacklist.add_blocked(current_avatar.avatar_id)
+		# When blocking, also delete friendship if it exists
+		_async_delete_friendship_if_exists(current_avatar.avatar_id)
 	_update_buttons()
 	_notify_other_components_of_change()
 
@@ -829,3 +832,83 @@ func _on_button_close_profile_button_up() -> void:
 func _on_visibility_changed() -> void:
 	if visible:
 		grab_focus()
+
+
+func _async_delete_friendship_if_exists(friend_address: String) -> void:
+	# Check if there's an active friendship or pending request
+	var promise = Global.social_service.get_friendship_status(friend_address)
+	await PromiseUtils.async_awaiter(promise)
+	
+	if promise.is_rejected():
+		# On error, skip deletion
+		return
+	
+	var status_data = promise.get_data()
+	var status = status_data.get("status", -1)
+	
+	var action_promise = null
+	
+	# Handle different relationship statuses
+	match status:
+		0:  # REQUEST_SENT - We sent a request, cancel it
+			action_promise = Global.social_service.cancel_friend_request(friend_address)
+		1:  # REQUEST_RECEIVED - They sent us a request, reject it
+			action_promise = Global.social_service.reject_friend_request(friend_address)
+		3:  # ACCEPTED - We are friends, delete friendship
+			action_promise = Global.social_service.delete_friendship(friend_address)
+		_:  # No relationship or other status, nothing to do
+			return
+	
+	if action_promise != null:
+		await PromiseUtils.async_awaiter(action_promise)
+		
+		if action_promise.is_rejected():
+			printerr("Failed to remove relationship when blocking: ", action_promise.get_data().get_error())
+		else:
+			# Wait a frame to ensure signals are processed and server state is updated
+			await get_tree().process_frame
+			# Small delay to ensure server has processed the change
+			await get_tree().create_timer(0.3).timeout
+			# Refresh friends lists after removing relationship
+			# Try to find friends panel first
+			var friends_panel = _get_friends_panel()
+			if friends_panel and friends_panel.has_method("update_all_lists"):
+				friends_panel.update_all_lists()
+			# Also force update as fallback to ensure lists are refreshed
+			_force_update_all_social_lists()
+
+
+func _get_friends_panel():
+	# Navigate up the tree to find the friends panel
+	var parent = get_parent()
+	while parent != null:
+		if parent.has_method("update_all_lists"):
+			return parent
+		parent = parent.get_parent()
+	return null
+
+
+func _force_update_all_social_lists() -> void:
+	# Force update all social lists by finding them in the scene tree
+	var scene_tree = get_tree()
+	if scene_tree == null:
+		return
+	
+	# Find all SocialList nodes and update REQUEST, ONLINE, and OFFLINE lists
+	_force_update_social_lists_recursive(scene_tree.root)
+
+
+func _force_update_social_lists_recursive(node: Node) -> void:
+	if node == null:
+		return
+	
+	# Check if this node is a SocialList (has the async_update_list method and player_list_type property)
+	if node.has_method("async_update_list") and "player_list_type" in node:
+		var list_type = node.get("player_list_type")
+		# Update REQUEST (2), ONLINE (0), and OFFLINE (1) lists
+		if list_type in [0, 1, 2]:
+			node.call_deferred("async_update_list")
+	
+	# Recursively check children
+	for child in node.get_children():
+		_force_update_social_lists_recursive(child)
