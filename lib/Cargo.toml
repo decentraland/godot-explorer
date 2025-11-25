@@ -53,6 +53,8 @@ http = "0.2.9"
 bytes = "1.4.0"
 url = "2.5"
 
+dcl-rpc = { version = "2.3.5", features=["client", "websockets", "codegen", "server", "tungstenite"] }
+
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"
 
@@ -93,6 +95,7 @@ enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", branch="0.6-h264-false-2", optional = true }
 prost-build = "0.11.8"
 chrono = "0.4.31"
+dcl-rpc = { version = "2.3.5", features=["client", "websockets", "codegen", "server", "tungstenite"] }
 
 [profile.release]
 opt-level = 3

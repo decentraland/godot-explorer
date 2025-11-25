@@ -129,7 +129,7 @@ func set_avatar(avatar: DclAvatar) -> void:
 	if avatar == null or !is_instance_valid(avatar):
 		return
 	nickname = avatar.get_avatar_name()
-	var color = avatar.get_nickname_color(nickname)
+	var color = DclAvatar.get_nickname_color(nickname)
 	label_nickname.add_theme_color_override("font_color", color)
 	nickname_color_hex = color.to_html(false) if color != null else "ffffff"
 
@@ -150,7 +150,7 @@ func set_avatar(avatar: DclAvatar) -> void:
 
 	# Update both profile pictures (extended and compact)
 	#profile_picture.async_update_profile_picture(avatar)
-		#profile_picture_compact.async_update_profile_picture(avatar)
+	#profile_picture_compact.async_update_profile_picture(avatar)
 
 
 func set_system_avatar() -> void:

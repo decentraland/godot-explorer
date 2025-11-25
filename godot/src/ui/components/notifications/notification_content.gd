@@ -212,4 +212,4 @@ func _get_avatar_color(username: String) -> Color:
 	if player_avatar == null:
 		return Color.WHITE
 
-	return player_avatar.get_nickname_color(username)
+	return DclAvatar.get_nickname_color(username)

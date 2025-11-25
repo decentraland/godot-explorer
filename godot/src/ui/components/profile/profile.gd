@@ -544,9 +544,7 @@ func _refresh_name_and_address() -> void:
 	label_address.text = Global.shorten_address(address)
 
 	label_nickname.text = current_profile.get_name()
-	var nickname_color = avatar_preview_landscape.avatar.get_nickname_color(
-		current_profile.get_name()
-	)
+	var nickname_color = DclAvatar.get_nickname_color(current_profile.get_name())
 	label_nickname.add_theme_color_override("font_color", nickname_color)
 
 
