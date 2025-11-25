@@ -40,3 +40,6 @@ jobs:
 
       - name: Version check
         run: cargo run -- version-check
+
+      - name: Check asset imports
+        run: python3 tests/check_asset_imports.py
