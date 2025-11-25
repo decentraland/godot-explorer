@@ -13,13 +13,61 @@ impl Font {
         }
     }
 
+    fn get_font_bold_path(self) -> &'static str {
+        match self {
+            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Bold.ttf",
+            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-Bold.ttf",
+            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSans-Bold.ttf",
+        }
+    }
+
+    fn get_font_italic_path(self) -> &'static str {
+        match self {
+            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Italic.ttf",
+            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-Italic.ttf",
+            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSans-Italic.ttf",
+        }
+    }
+
+    fn get_font_bold_italic_path(self) -> &'static str {
+        match self {
+            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-BoldItalic.ttf",
+            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-BoldItalic.ttf",
+            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSans-BoldItalic.ttf",
+        }
+    }
+
     pub fn try_get_font_resource(&self) -> Option<Gd<godot::engine::Font>> {
         godot::engine::try_load(self.get_font_path()).ok()
+    }
+
+    pub fn try_get_font_bold_resource(&self) -> Option<Gd<godot::engine::Font>> {
+        godot::engine::try_load(self.get_font_bold_path()).ok()
+    }
+
+    pub fn try_get_font_italic_resource(&self) -> Option<Gd<godot::engine::Font>> {
+        godot::engine::try_load(self.get_font_italic_path()).ok()
+    }
+
+    pub fn try_get_font_bold_italic_resource(&self) -> Option<Gd<godot::engine::Font>> {
+        godot::engine::try_load(self.get_font_bold_italic_path()).ok()
     }
 
     // TODO: Maybe the load can be cached and then return a duplicated one
     pub fn get_font_resource(&self) -> Gd<godot::engine::Font> {
         self.try_get_font_resource().expect("Failed to load font")
+    }
+    pub fn get_font_bold_resource(&self) -> Gd<godot::engine::Font> {
+        self.try_get_font_bold_resource()
+            .expect("Failed to load font")
+    }
+    pub fn get_font_italic_resource(&self) -> Gd<godot::engine::Font> {
+        self.try_get_font_italic_resource()
+            .expect("Failed to load font")
+    }
+    pub fn get_font_bold_italic_resource(&self) -> Gd<godot::engine::Font> {
+        self.try_get_font_bold_italic_resource()
+            .expect("Failed to load font")
     }
 }
 
