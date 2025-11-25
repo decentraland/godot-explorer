@@ -89,7 +89,9 @@ func _update_border_style() -> void:
 	panel_border.add_theme_stylebox_override("panel", stylebox_border_panel)
 
 
-func async_update_profile_picture(avatar_name: String, profile_picture_url: String, address: String = ""):
+func async_update_profile_picture(
+	avatar_name: String, profile_picture_url: String, address: String = ""
+):
 	var nickname_color = DclAvatar.get_nickname_color(avatar_name)
 
 	var background_color = nickname_color

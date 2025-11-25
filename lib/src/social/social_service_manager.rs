@@ -213,7 +213,10 @@ impl SocialServiceManager {
     async fn call_get_friends(
         &self,
         payload: GetFriendsPayload,
-    ) -> (Result<PaginatedFriendsProfilesResponse, ClientResultError>, u64) {
+    ) -> (
+        Result<PaginatedFriendsProfilesResponse, ClientResultError>,
+        u64,
+    ) {
         let mut state = self.state.write().await;
         let generation = state.connection_generation;
         let service = match self.ensure_connection(&mut state).await {
@@ -223,7 +226,7 @@ impl SocialServiceManager {
                 return (
                     Err(ClientResultError::Client(ClientError::TransportError)),
                     generation,
-                )
+                );
             }
         };
         let result = service.get_friends(payload).await;
@@ -285,7 +288,10 @@ impl SocialServiceManager {
     async fn call_get_pending_requests(
         &self,
         payload: GetFriendshipRequestsPayload,
-    ) -> (Result<PaginatedFriendshipRequestsResponse, ClientResultError>, u64) {
+    ) -> (
+        Result<PaginatedFriendshipRequestsResponse, ClientResultError>,
+        u64,
+    ) {
         let mut state = self.state.write().await;
         let generation = state.connection_generation;
         let service = match self.ensure_connection(&mut state).await {

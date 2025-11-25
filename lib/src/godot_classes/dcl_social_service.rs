@@ -686,7 +686,9 @@ impl DclSocialService {
         tracing::debug!("async_subscribe_to_connectivity_updates: acquiring manager lock");
         let manager_guard = manager.read().await;
         let mgr = manager_guard.as_ref().ok_or_else(|| {
-            tracing::error!("async_subscribe_to_connectivity_updates: social service not initialized");
+            tracing::error!(
+                "async_subscribe_to_connectivity_updates: social service not initialized"
+            );
             "Social service not initialized".to_string()
         })?;
 
