@@ -89,9 +89,8 @@ func _update_border_style() -> void:
 	panel_border.add_theme_stylebox_override("panel", stylebox_border_panel)
 
 
-func async_update_profile_picture(avatar_name: String, profile_picture_url: String):
+func async_update_profile_picture(avatar_name: String, profile_picture_url: String, address: String = ""):
 	var nickname_color = DclAvatar.get_nickname_color(avatar_name)
-	#var nickname_color = Color.RED
 
 	var background_color = nickname_color
 	apply_style(background_color)
@@ -100,19 +99,12 @@ func async_update_profile_picture(avatar_name: String, profile_picture_url: Stri
 	if Engine.is_editor_hint():
 		return
 
-	var hash = ""
-	var url = ""
-	if profile_picture_url.begins_with("http"):
-		print(profile_picture_url, "PROFILE PICTURE")
-		#var parts = profile_picture_url.split("/")
-		#hash = parts[4]
-		url = profile_picture_url
-
-	if hash.is_empty() or url.is_empty():
-		printerr("Profile picture: missing face256 data")
+	if profile_picture_url.is_empty():
 		return
 
-	var promise = Global.content_provider.fetch_texture_by_url(hash, url)
+	# Use address-based hash for caching, or fallback to avatar_name
+	var texture_hash = address + "_face" if not address.is_empty() else avatar_name + "_face"
+	var promise = Global.content_provider.fetch_texture_by_url(texture_hash, profile_picture_url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("profile_picture::_async_download_image promise error: ", result.get_error())

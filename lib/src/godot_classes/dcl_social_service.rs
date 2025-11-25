@@ -47,6 +47,10 @@ impl DclSocialService {
     #[signal]
     pub fn friendship_request_cancelled(address: GString);
 
+    /// Signal emitted when a friend's connectivity status changes (ONLINE=0, OFFLINE=1, AWAY=2)
+    #[signal]
+    pub fn friend_connectivity_updated(address: GString, status: i32);
+
     /// Initialize the service with DclPlayerIdentity
     #[func]
     pub fn initialize_from_player_identity(
@@ -268,16 +272,32 @@ impl DclSocialService {
 
         promise
     }
+
+    /// Subscribe to friend connectivity updates (ONLINE, OFFLINE, AWAY)
+    #[func]
+    pub fn subscribe_to_connectivity_updates(&mut self) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let manager = self.manager.clone();
+        let instance_id = self.base().instance_id();
+
+        TokioRuntime::spawn(async move {
+            let result = Self::async_subscribe_to_connectivity_updates(manager, instance_id).await;
+            Self::resolve_simple_promise(get_promise, result);
+        });
+
+        promise
+    }
 }
 
 // Private async helper methods
 impl DclSocialService {
+    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url)
     async fn async_get_friends(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         limit: i32,
         offset: i32,
         status: i32,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<Vec<(String, String, bool, String)>, String> {
         tracing::debug!("async_get_friends: acquiring manager lock");
         let manager_guard = manager.read().await;
         let mgr = manager_guard.as_ref().ok_or_else(|| {
@@ -302,10 +322,17 @@ impl DclSocialService {
                 error_msg
             })?;
 
-        let friends: Vec<String> = response
+        let friends: Vec<(String, String, bool, String)> = response
             .friends
             .into_iter()
-            .map(|friend| friend.address)
+            .map(|friend| {
+                (
+                    friend.address,
+                    friend.name,
+                    friend.has_claimed_name,
+                    friend.profile_picture_url,
+                )
+            })
             .collect();
 
         tracing::info!(
@@ -315,12 +342,13 @@ impl DclSocialService {
         Ok(friends)
     }
 
+    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url)
     async fn async_get_mutual_friends(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         user_address: String,
         limit: i32,
         offset: i32,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<Vec<(String, String, bool, String)>, String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
             .as_ref()
@@ -337,20 +365,28 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to get mutual friends: {}", e))?;
 
-        let friends: Vec<String> = response
+        let friends: Vec<(String, String, bool, String)> = response
             .friends
             .into_iter()
-            .map(|friend| friend.address)
+            .map(|friend| {
+                (
+                    friend.address,
+                    friend.name,
+                    friend.has_claimed_name,
+                    friend.profile_picture_url,
+                )
+            })
             .collect();
 
         Ok(friends)
     }
 
+    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, message, created_at)
     async fn async_get_pending_requests(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         limit: i32,
         offset: i32,
-    ) -> Result<Vec<(String, String, i64)>, String> {
+    ) -> Result<Vec<(String, String, bool, String, String, i64)>, String> {
         tracing::debug!("async_get_pending_requests: acquiring manager lock");
         let manager_guard = manager.read().await;
         let mgr = manager_guard.as_ref().ok_or_else(|| {
@@ -374,7 +410,7 @@ impl DclSocialService {
                 error_msg
             })?;
 
-        let requests = Self::extract_friendship_requests(response);
+        let requests = Self::extract_friendship_requests_with_profile(response);
         tracing::info!(
             "async_get_pending_requests: successfully fetched {} requests",
             requests.len()
@@ -382,11 +418,12 @@ impl DclSocialService {
         Ok(requests)
     }
 
+    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, message, created_at)
     async fn async_get_sent_requests(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         limit: i32,
         offset: i32,
-    ) -> Result<Vec<(String, String, i64)>, String> {
+    ) -> Result<Vec<(String, String, bool, String, String, i64)>, String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
             .as_ref()
@@ -403,7 +440,7 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to get sent requests: {}", e))?;
 
-        let requests = Self::extract_friendship_requests(response);
+        let requests = Self::extract_friendship_requests_with_profile(response);
         Ok(requests)
     }
 
@@ -642,9 +679,76 @@ impl DclSocialService {
         }
     }
 
-    fn extract_friendship_requests(
+    async fn async_subscribe_to_connectivity_updates(
+        manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
+        instance_id: InstanceId,
+    ) -> Result<(), String> {
+        tracing::debug!("async_subscribe_to_connectivity_updates: acquiring manager lock");
+        let manager_guard = manager.read().await;
+        let mgr = manager_guard.as_ref().ok_or_else(|| {
+            tracing::error!("async_subscribe_to_connectivity_updates: social service not initialized");
+            "Social service not initialized".to_string()
+        })?;
+
+        tracing::debug!("async_subscribe_to_connectivity_updates: subscribing");
+        let mut rx = mgr
+            .subscribe_to_friend_connectivity_updates()
+            .await
+            .map_err(|e| {
+                let error_msg = format!("Failed to subscribe to connectivity updates: {}", e);
+                tracing::error!("async_subscribe_to_connectivity_updates: {}", error_msg);
+                error_msg
+            })?;
+
+        tracing::info!(
+            "async_subscribe_to_connectivity_updates: successfully subscribed, spawning listener"
+        );
+        tokio::spawn(async move {
+            Self::handle_connectivity_updates(&mut rx, instance_id).await;
+        });
+
+        Ok(())
+    }
+
+    async fn handle_connectivity_updates(
+        rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>,
+        instance_id: InstanceId,
+    ) {
+        while let Some(update) = rx.recv().await {
+            tracing::info!("📶 Received connectivity update: {:?}", update);
+
+            let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
+            else {
+                tracing::warn!("DclSocialService node dropped, stopping connectivity listener");
+                break;
+            };
+
+            if let Some(friend) = update.friend {
+                let address = friend.address.clone();
+                let status = update.status;
+                tracing::info!(
+                    "🔔 Emitting signal: friend_connectivity_updated for {} status={}",
+                    address,
+                    status
+                );
+                node.call_deferred(
+                    "emit_signal".into(),
+                    &[
+                        "friend_connectivity_updated".to_variant(),
+                        address.to_variant(),
+                        status.to_variant(),
+                    ],
+                );
+            }
+        }
+        tracing::info!("Connectivity updates listener task ended");
+    }
+
+    /// Extract friendship requests with full profile data
+    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, message, created_at)
+    fn extract_friendship_requests_with_profile(
         response: PaginatedFriendshipRequestsResponse,
-    ) -> Vec<(String, String, i64)> {
+    ) -> Vec<(String, String, bool, String, String, i64)> {
         let Some(paginated_friendship_requests_response::Response::Requests(requests)) =
             response.response
         else {
@@ -655,10 +759,21 @@ impl DclSocialService {
             .requests
             .into_iter()
             .filter_map(|req| {
-                let address = req.friend?.address;
+                let friend = req.friend?;
+                let address = friend.address;
+                let name = friend.name;
+                let has_claimed_name = friend.has_claimed_name;
+                let profile_picture_url = friend.profile_picture_url;
                 let message = req.message.unwrap_or_default();
                 let created_at = req.created_at;
-                Some((address, message, created_at))
+                Some((
+                    address,
+                    name,
+                    has_claimed_name,
+                    profile_picture_url,
+                    message,
+                    created_at,
+                ))
             })
             .collect()
     }
@@ -672,9 +787,10 @@ impl DclSocialService {
         }
     }
 
+    /// Resolves promise with Array of Dictionaries containing friend profile data
     fn resolve_friends_promise(
         get_promise: impl Fn() -> Option<Gd<Promise>>,
-        result: Result<Vec<String>, String>,
+        result: Result<Vec<(String, String, bool, String)>, String>,
     ) {
         let Some(mut promise) = get_promise() else {
             tracing::warn!("resolve_friends_promise: promise was dropped before resolution");
@@ -688,8 +804,13 @@ impl DclSocialService {
                     friends.len()
                 );
                 let mut array = Array::new();
-                for friend in &friends {
-                    array.push(friend.to_variant());
+                for (address, name, has_claimed_name, profile_picture_url) in friends {
+                    let mut dict = Dictionary::new();
+                    dict.set("address", address);
+                    dict.set("name", name);
+                    dict.set("has_claimed_name", has_claimed_name);
+                    dict.set("profile_picture_url", profile_picture_url);
+                    array.push(dict.to_variant());
                 }
                 promise.bind_mut().resolve_with_data(array.to_variant());
                 tracing::debug!("resolve_friends_promise: promise resolved");
@@ -703,7 +824,7 @@ impl DclSocialService {
 
     fn resolve_requests_promise(
         get_promise: impl Fn() -> Option<Gd<Promise>>,
-        result: Result<Vec<(String, String, i64)>, String>,
+        result: Result<Vec<(String, String, bool, String, String, i64)>, String>,
     ) {
         let Some(mut promise) = get_promise() else {
             tracing::warn!("resolve_requests_promise: promise was dropped before resolution");
@@ -717,9 +838,14 @@ impl DclSocialService {
                     requests.len()
                 );
                 let mut array = Array::new();
-                for (address, message, created_at) in requests {
+                for (address, name, has_claimed_name, profile_picture_url, message, created_at) in
+                    requests
+                {
                     let mut dict = Dictionary::new();
                     dict.set("address", address);
+                    dict.set("name", name);
+                    dict.set("has_claimed_name", has_claimed_name);
+                    dict.set("profile_picture_url", profile_picture_url);
                     dict.set("message", message);
                     dict.set("created_at", created_at);
                     array.push(dict.to_variant());

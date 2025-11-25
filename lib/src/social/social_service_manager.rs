@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use dcl_rpc::client::RpcClient;
+use dcl_rpc::client::{ClientError, ClientResultError, RpcClient};
 use dcl_rpc::transports::{
     web_sockets::{tungstenite::WebSocketClient, WebSocketTransport},
     Transport,
@@ -40,6 +40,9 @@ struct SocialServiceState {
     connection_state: ConnectionState,
     last_friendship_updates: Vec<FriendshipUpdate>,
     connection: Option<ServiceConnection>,
+    /// Generation counter - incremented each time connection is cleared
+    /// Used to prevent multiple concurrent reconnection attempts
+    connection_generation: u64,
 }
 
 impl SocialServiceState {
@@ -48,6 +51,7 @@ impl SocialServiceState {
             connection_state: ConnectionState::Disconnected,
             last_friendship_updates: Vec::new(),
             connection: None,
+            connection_generation: 0,
         }
     }
 }
@@ -145,28 +149,85 @@ impl SocialServiceManager {
         Ok(&state.connection.as_ref().unwrap().service)
     }
 
+    /// Try to clear connection only if generation matches (prevents duplicate clears)
+    /// Returns true if connection was cleared, false if already cleared by another caller
+    fn try_clear_connection(state: &mut SocialServiceState, expected_generation: u64) -> bool {
+        if state.connection_generation == expected_generation && state.connection.is_some() {
+            tracing::info!(
+                "Clearing stale social service connection (gen {})",
+                expected_generation
+            );
+            state.connection = None;
+            state.connection_generation += 1;
+            true
+        } else {
+            tracing::debug!(
+                "Connection already cleared by another caller (expected gen {}, current gen {})",
+                expected_generation,
+                state.connection_generation
+            );
+            false
+        }
+    }
+
     /// Get the list of friends for the authenticated user
     pub async fn get_friends(
         &self,
         pagination: Option<Pagination>,
         _status: Option<i32>,
     ) -> Result<PaginatedFriendsProfilesResponse> {
-        tracing::debug!("get_friends called, ensuring connection");
+        tracing::debug!("get_friends called");
 
+        let payload = GetFriendsPayload {
+            pagination: pagination.clone(),
+        };
+
+        // First attempt - capture generation before call
+        let (result, generation) = self.call_get_friends(payload.clone()).await;
+
+        match result {
+            Ok(response) => {
+                tracing::debug!("get_friends RPC succeeded");
+                Ok(response)
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "get_friends RPC failed (gen {}), will retry: {:?}",
+                    generation,
+                    e
+                );
+                // Try to clear connection - only if we're the first to detect failure
+                {
+                    let mut state = self.state.write().await;
+                    Self::try_clear_connection(&mut state, generation);
+                }
+                // Retry with fresh connection (ensure_connection will create new one)
+                let (retry_result, _) = self.call_get_friends(payload).await;
+                retry_result.map_err(|e| anyhow!("Failed to get friends: {:?}", e))
+            }
+        }
+    }
+
+    /// Internal helper to make the get_friends RPC call
+    /// Returns (result, connection_generation) so caller can do generation-aware retry
+    async fn call_get_friends(
+        &self,
+        payload: GetFriendsPayload,
+    ) -> (Result<PaginatedFriendsProfilesResponse, ClientResultError>, u64) {
         let mut state = self.state.write().await;
-        let service = self.ensure_connection(&mut state).await?;
-
-        tracing::debug!("Connection ready, calling get_friends RPC");
-        let response = service
-            .get_friends(GetFriendsPayload { pagination })
-            .await
-            .map_err(|e| {
-                tracing::error!("get_friends RPC failed: {:?}", e);
-                anyhow!("Failed to get friends: {:?}", e)
-            })?;
-
-        tracing::debug!("get_friends RPC succeeded");
-        Ok(response)
+        let generation = state.connection_generation;
+        let service = match self.ensure_connection(&mut state).await {
+            Ok(s) => s,
+            Err(_) => {
+                // Return a transport error when connection fails
+                return (
+                    Err(ClientResultError::Client(ClientError::TransportError)),
+                    generation,
+                )
+            }
+        };
+        let result = service.get_friends(payload).await;
+        (result, generation)
     }
 
     /// Get the list of mutual friends between the authenticated user and another user
@@ -196,15 +257,48 @@ impl SocialServiceManager {
         &self,
         pagination: Option<Pagination>,
     ) -> Result<PaginatedFriendshipRequestsResponse> {
+        let payload = GetFriendshipRequestsPayload {
+            pagination: pagination.clone(),
+        };
+
+        // First attempt
+        let (result, generation) = self.call_get_pending_requests(payload.clone()).await;
+
+        match result {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                tracing::warn!(
+                    "get_pending_friendship_requests RPC failed (gen {}), will retry: {:?}",
+                    generation,
+                    e
+                );
+                {
+                    let mut state = self.state.write().await;
+                    Self::try_clear_connection(&mut state, generation);
+                }
+                let (retry_result, _) = self.call_get_pending_requests(payload).await;
+                retry_result.map_err(|e| anyhow!("Failed to get pending requests: {:?}", e))
+            }
+        }
+    }
+
+    async fn call_get_pending_requests(
+        &self,
+        payload: GetFriendshipRequestsPayload,
+    ) -> (Result<PaginatedFriendshipRequestsResponse, ClientResultError>, u64) {
         let mut state = self.state.write().await;
-        let service = self.ensure_connection(&mut state).await?;
-
-        let response = service
-            .get_pending_friendship_requests(GetFriendshipRequestsPayload { pagination })
-            .await
-            .map_err(|e| anyhow!("Failed to get pending requests: {:?}", e))?;
-
-        Ok(response)
+        let generation = state.connection_generation;
+        let service = match self.ensure_connection(&mut state).await {
+            Ok(s) => s,
+            Err(_) => {
+                return (
+                    Err(ClientResultError::Client(ClientError::TransportError)),
+                    generation,
+                )
+            }
+        };
+        let result = service.get_pending_friendship_requests(payload).await;
+        (result, generation)
     }
 
     /// Get the sent friendship requests for the authenticated user
@@ -229,24 +323,35 @@ impl SocialServiceManager {
         user_address: String,
         message: Option<String>,
     ) -> Result<UpsertFriendshipResponse> {
-        let mut state = self.state.write().await;
-        let service = self.ensure_connection(&mut state).await?;
+        let payload = UpsertFriendshipPayload {
+            action: Some(upsert_friendship_payload::Action::Request(
+                upsert_friendship_payload::RequestPayload {
+                    user: Some(User {
+                        address: user_address.clone(),
+                    }),
+                    message: message.clone(),
+                },
+            )),
+        };
 
-        let response = service
-            .upsert_friendship(UpsertFriendshipPayload {
-                action: Some(upsert_friendship_payload::Action::Request(
-                    upsert_friendship_payload::RequestPayload {
-                        user: Some(User {
-                            address: user_address,
-                        }),
-                        message,
-                    },
-                )),
-            })
-            .await
-            .map_err(|e| anyhow!("Failed to send friend request: {:?}", e))?;
+        let (result, generation) = self.call_upsert_friendship(payload.clone()).await;
 
-        Ok(response)
+        match result {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                tracing::warn!(
+                    "send_friend_request RPC failed (gen {}), will retry: {:?}",
+                    generation,
+                    e
+                );
+                {
+                    let mut state = self.state.write().await;
+                    Self::try_clear_connection(&mut state, generation);
+                }
+                let (retry_result, _) = self.call_upsert_friendship(payload).await;
+                retry_result.map_err(|e| anyhow!("Failed to send friend request: {:?}", e))
+            }
+        }
     }
 
     /// Accept a friendship request from another user
@@ -254,23 +359,34 @@ impl SocialServiceManager {
         &self,
         user_address: String,
     ) -> Result<UpsertFriendshipResponse> {
-        let mut state = self.state.write().await;
-        let service = self.ensure_connection(&mut state).await?;
+        let payload = UpsertFriendshipPayload {
+            action: Some(upsert_friendship_payload::Action::Accept(
+                upsert_friendship_payload::AcceptPayload {
+                    user: Some(User {
+                        address: user_address.clone(),
+                    }),
+                },
+            )),
+        };
 
-        let response = service
-            .upsert_friendship(UpsertFriendshipPayload {
-                action: Some(upsert_friendship_payload::Action::Accept(
-                    upsert_friendship_payload::AcceptPayload {
-                        user: Some(User {
-                            address: user_address,
-                        }),
-                    },
-                )),
-            })
-            .await
-            .map_err(|e| anyhow!("Failed to accept friend request: {:?}", e))?;
+        let (result, generation) = self.call_upsert_friendship(payload.clone()).await;
 
-        Ok(response)
+        match result {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                tracing::warn!(
+                    "accept_friend_request RPC failed (gen {}), will retry: {:?}",
+                    generation,
+                    e
+                );
+                {
+                    let mut state = self.state.write().await;
+                    Self::try_clear_connection(&mut state, generation);
+                }
+                let (retry_result, _) = self.call_upsert_friendship(payload).await;
+                retry_result.map_err(|e| anyhow!("Failed to accept friend request: {:?}", e))
+            }
+        }
     }
 
     /// Reject a friendship request from another user
@@ -278,23 +394,54 @@ impl SocialServiceManager {
         &self,
         user_address: String,
     ) -> Result<UpsertFriendshipResponse> {
+        let payload = UpsertFriendshipPayload {
+            action: Some(upsert_friendship_payload::Action::Reject(
+                upsert_friendship_payload::RejectPayload {
+                    user: Some(User {
+                        address: user_address.clone(),
+                    }),
+                },
+            )),
+        };
+
+        let (result, generation) = self.call_upsert_friendship(payload.clone()).await;
+
+        match result {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                tracing::warn!(
+                    "reject_friend_request RPC failed (gen {}), will retry: {:?}",
+                    generation,
+                    e
+                );
+                {
+                    let mut state = self.state.write().await;
+                    Self::try_clear_connection(&mut state, generation);
+                }
+                let (retry_result, _) = self.call_upsert_friendship(payload).await;
+                retry_result.map_err(|e| anyhow!("Failed to reject friend request: {:?}", e))
+            }
+        }
+    }
+
+    /// Internal helper for upsert_friendship RPC calls
+    async fn call_upsert_friendship(
+        &self,
+        payload: UpsertFriendshipPayload,
+    ) -> (Result<UpsertFriendshipResponse, ClientResultError>, u64) {
         let mut state = self.state.write().await;
-        let service = self.ensure_connection(&mut state).await?;
-
-        let response = service
-            .upsert_friendship(UpsertFriendshipPayload {
-                action: Some(upsert_friendship_payload::Action::Reject(
-                    upsert_friendship_payload::RejectPayload {
-                        user: Some(User {
-                            address: user_address,
-                        }),
-                    },
-                )),
-            })
-            .await
-            .map_err(|e| anyhow!("Failed to reject friend request: {:?}", e))?;
-
-        Ok(response)
+        let generation = state.connection_generation;
+        let service = match self.ensure_connection(&mut state).await {
+            Ok(s) => s,
+            Err(_) => {
+                return (
+                    Err(ClientResultError::Client(ClientError::TransportError)),
+                    generation,
+                )
+            }
+        };
+        let result = service.upsert_friendship(payload).await;
+        (result, generation)
     }
 
     /// Cancel a sent friendship request
@@ -401,6 +548,38 @@ impl SocialServiceManager {
     /// Get the last received friendship updates from internal cache
     pub async fn get_cached_friendship_updates(&self) -> Vec<FriendshipUpdate> {
         self.state.read().await.last_friendship_updates.clone()
+    }
+
+    /// Subscribe to friend connectivity updates stream (ONLINE, OFFLINE, AWAY)
+    /// Returns a channel receiver for consuming updates
+    pub async fn subscribe_to_friend_connectivity_updates(
+        &self,
+    ) -> Result<tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        // Subscribe to the stream
+        let mut stream = service
+            .subscribe_to_friend_connectivity_updates()
+            .await
+            .map_err(|e| anyhow!("Failed to subscribe to connectivity updates: {:?}", e))?;
+
+        // Create a channel to forward updates
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        // Spawn a task to consume the stream and forward updates
+        tokio::spawn(async move {
+            while let Some(update) = stream.next().await {
+                tracing::debug!("Received connectivity update: {:?}", update);
+                if tx.send(update).is_err() {
+                    tracing::warn!("Failed to send connectivity update, receiver dropped");
+                    break;
+                }
+            }
+            tracing::info!("Connectivity updates stream ended");
+        });
+
+        Ok(rx)
     }
 }
 
