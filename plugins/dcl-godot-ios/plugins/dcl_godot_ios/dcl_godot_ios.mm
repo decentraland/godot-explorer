@@ -132,10 +132,13 @@ const char* DCLGODOTIOS_VERSION = "1.0";
 @end
 
 DclGodotiOS *DclGodotiOS::instance = NULL;
+String DclGodotiOS::receivedUrl = "";
 
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
+    ClassDB::bind_method(D_METHOD("open_webview_url", "url"), &DclGodotiOS::open_webview_url);
+    ClassDB::bind_method(D_METHOD("get_deeplink_url"), &DclGodotiOS::get_deeplink_url);
     ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
     ClassDB::bind_method(D_METHOD("get_mobile_metrics"), &DclGodotiOS::get_mobile_metrics);
     ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
@@ -166,6 +169,9 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("os_schedule_notification", "notification_id", "title", "body", "delay_seconds"), &DclGodotiOS::os_schedule_notification);
     ClassDB::bind_method(D_METHOD("os_cancel_notification", "notification_id"), &DclGodotiOS::os_cancel_notification);
     ClassDB::bind_method(D_METHOD("os_get_scheduled_ids"), &DclGodotiOS::os_get_scheduled_ids);
+
+    // Signal emitted when a deeplink URL is received
+    ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
 }
 
 void DclGodotiOS::print_version() {
@@ -224,6 +230,36 @@ void DclGodotiOS::open_webview_url(String url) {
         [rootVC presentViewController:safariVC animated:YES completion:nil];
     });
     #endif
+}
+
+String DclGodotiOS::get_deeplink_url() {
+    String url = receivedUrl;
+    NSLog(@"[DEEPLINK] get_deeplink_url called, returning: %s", url.utf8().get_data());
+    // Only clear the URL if we're actually returning something
+    // This prevents race conditions where get_deeplink_url() is called
+    // before openURL/continueUserActivity has been invoked
+    if (!url.is_empty()) {
+        receivedUrl = "";
+    }
+    return url;
+}
+
+void DclGodotiOS::emit_deeplink_received(String url) {
+    NSLog(@"[DEEPLINK] emit_deeplink_received called with URL: %s", url.utf8().get_data());
+
+    // Always store the URL in the static variable as a fallback
+    // This ensures it's available even if the singleton isn't initialized yet
+    receivedUrl = url;
+    NSLog(@"[DEEPLINK] URL stored in static receivedUrl");
+
+    // Try to emit signal if singleton is available
+    DclGodotiOS *singleton = get_singleton();
+    if (singleton) {
+        singleton->emit_signal("deeplink_received", url);
+        NSLog(@"[DEEPLINK] Signal emitted successfully");
+    } else {
+        NSLog(@"[DEEPLINK] WARNING: Singleton not available yet, URL stored in static variable only");
+    }
 }
 
 Dictionary DclGodotiOS::get_mobile_device_info() {
