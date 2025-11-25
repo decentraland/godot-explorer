@@ -599,7 +599,7 @@ func _on_panel_profile_open_profile():
 
 
 func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
-	button_mic.visible = false  #voice_chat_enabled
+	button_mic.visible = false  # voice_chat_enabled
 
 
 func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
@@ -829,8 +829,3 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
-
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		Global.check_deep_link_teleport_to()

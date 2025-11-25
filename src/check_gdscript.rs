@@ -28,7 +28,10 @@ pub fn check_gdscript() -> Result<()> {
     .run()?;
 
     if output.status.success() {
-        print_message(MessageType::Success, "All GDScript files validated successfully!");
+        print_message(
+            MessageType::Success,
+            "All GDScript files validated successfully!",
+        );
         Ok(())
     } else {
         print_message(
