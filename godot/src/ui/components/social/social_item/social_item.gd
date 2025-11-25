@@ -144,17 +144,24 @@ func _hide_all_buttons() -> void:
 	label_place.hide()
 
 
+func _get_friends_panel():
+	# Navigate up the tree to find the friends panel
+	var parent = get_parent()
+	while parent != null:
+		if parent.has_method("update_all_lists"):
+			return parent
+		parent = parent.get_parent()
+	return null
+
+
 func set_type(type: SocialType) -> void:
 	item_type = type
 	_update_elements_visibility()
 
 
 func _on_button_add_friend_pressed() -> void:
-	# If status is REQUEST_RECEIVED, accept the request instead of sending one
-	if current_friendship_status == 1:  # REQUEST_RECEIVED
-		_async_on_button_accept_pressed()
-	else:
-		_async_on_button_add_friend_pressed()
+	# Check current status before deciding what to do
+	_async_check_status_and_handle_add_friend()
 
 
 func _async_on_button_add_friend_pressed() -> void:
@@ -196,10 +203,15 @@ func _async_on_button_accept_pressed() -> void:
 		button_add_friend.hide()
 		current_friendship_status = 3  # Update to ACCEPTED status
 
-	# Refresh the parent list
-	var parent_list = get_parent()
-	if parent_list and parent_list.has_method("async_update_list"):
-		parent_list.async_update_list()
+	# Find and update all social lists (especially REQUEST list to remove accepted request)
+	var friends_panel = _get_friends_panel()
+	if friends_panel and friends_panel.has_method("update_all_lists"):
+		friends_panel.update_all_lists()
+	else:
+		# Fallback: refresh the parent list if friends_panel not found
+		var parent_list = get_parent()
+		if parent_list and parent_list.has_method("async_update_list"):
+			parent_list.async_update_list()
 
 	# Refresh the friends button pending count
 	_refresh_friends_button_count()
@@ -286,7 +298,6 @@ func _async_check_friend_status() -> void:
 		# On error, show the button (default behavior)
 		current_friendship_status = -1
 		button_add_friend.show()
-		button_add_friend.text = "ADD FRIEND"
 		return
 	
 	var status_data = promise.get_data()
@@ -299,7 +310,32 @@ func _async_check_friend_status() -> void:
 		button_add_friend.hide()
 	elif status == 1:  # REQUEST_RECEIVED (they sent us a request)
 		button_add_friend.show()
-		button_add_friend.text = "ACCEPT"
 	else:
 		button_add_friend.show()
-		button_add_friend.text = "ADD FRIEND"
+
+
+func _async_check_status_and_handle_add_friend() -> void:
+	# Disable button while checking
+	button_add_friend.disabled = true
+	
+	# Check current friendship status
+	var promise = Global.social_service.get_friendship_status(social_data.address)
+	await PromiseUtils.async_awaiter(promise)
+	
+	if promise.is_rejected():
+		# On error, try to send friend request
+		button_add_friend.disabled = false
+		_async_on_button_add_friend_pressed()
+		return
+	
+	var status_data = promise.get_data()
+	var status = status_data.get("status", -1)
+	current_friendship_status = status
+	
+	# If status is REQUEST_RECEIVED (1), accept the request instead of sending one
+	if status == 1:  # REQUEST_RECEIVED
+		_async_on_button_accept_pressed()
+	else:
+		# Otherwise, send a new friend request
+		button_add_friend.disabled = false
+		_async_on_button_add_friend_pressed()
