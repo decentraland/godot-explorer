@@ -55,6 +55,7 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 
 	parent_parcel.spawn_locations.clear()
 
+	# First, generate the main grid
 	for z in range(grid_size):
 		for x in range(grid_size):
 			var x_pos = start_pos + x * cell_size
@@ -160,6 +161,9 @@ func _generate_floor_grid(surface_tool: SurfaceTool):
 			var spawn_loc2 = EmptyParcel.SpawnLocation.new(point2, normal2, falloff2)
 			parent_parcel.spawn_locations.append(spawn_loc2)
 
+	# Generate edge strips along loaded parcel boundaries
+	_generate_loaded_parcel_edges(surface_tool, grid_size, cell_size, start_pos)
+
 
 func _get_random_point_in_triangle(v1: Vector3, v2: Vector3, v3: Vector3) -> Vector3:
 	var r1 = randf()
@@ -255,6 +259,108 @@ func _create_displaced_vertex(
 	var displacement = base_displacement * falloff_multiplier
 
 	return Vector3(local_x, displacement, local_z)
+
+
+func _generate_loaded_parcel_edges(
+	surface_tool: SurfaceTool, grid_size: int, cell_size: float, start_pos: float
+):
+	var corner_config = parent_parcel.corner_config
+	var base_floor_height = -0.05
+	var terrain_top_height = 0.0
+
+	if corner_config.north == CornerConfiguration.ParcelState.LOADED:
+		var z_pos = start_pos
+		var x_start = start_pos
+		var x_end = start_pos + grid_size * cell_size
+
+		var base_bottom_left = Vector3(x_start, base_floor_height, z_pos)
+		var base_bottom_right = Vector3(x_end, base_floor_height, z_pos)
+		var terrain_top_right = Vector3(x_end, terrain_top_height, z_pos)
+		var terrain_top_left = Vector3(x_start, terrain_top_height, z_pos)
+
+		_add_quad_to_surface(
+			surface_tool, base_bottom_left, base_bottom_right, terrain_top_right, terrain_top_left
+		)
+
+	if corner_config.south == CornerConfiguration.ParcelState.LOADED:
+		var z_pos = start_pos + grid_size * cell_size
+		var x_start = start_pos
+		var x_end = start_pos + grid_size * cell_size
+
+		var base_bottom_left = Vector3(x_start, base_floor_height, z_pos)
+		var base_bottom_right = Vector3(x_end, base_floor_height, z_pos)
+		var terrain_top_right = Vector3(x_end, terrain_top_height, z_pos)
+		var terrain_top_left = Vector3(x_start, terrain_top_height, z_pos)
+
+		_add_quad_to_surface(
+			surface_tool, terrain_top_left, terrain_top_right, base_bottom_right, base_bottom_left
+		)
+
+	if corner_config.east == CornerConfiguration.ParcelState.LOADED:
+		var x_pos = start_pos + grid_size * cell_size
+		var z_start = start_pos
+		var z_end = start_pos + grid_size * cell_size
+
+		var base_bottom_near = Vector3(x_pos, base_floor_height, z_start)
+		var base_bottom_far = Vector3(x_pos, base_floor_height, z_end)
+		var terrain_top_far = Vector3(x_pos, terrain_top_height, z_end)
+		var terrain_top_near = Vector3(x_pos, terrain_top_height, z_start)
+
+		_add_quad_to_surface(
+			surface_tool, base_bottom_near, base_bottom_far, terrain_top_far, terrain_top_near
+		)
+
+	if corner_config.west == CornerConfiguration.ParcelState.LOADED:
+		var x_pos = start_pos
+		var z_start = start_pos
+		var z_end = start_pos + grid_size * cell_size
+
+		var base_bottom_near = Vector3(x_pos, base_floor_height, z_start)
+		var base_bottom_far = Vector3(x_pos, base_floor_height, z_end)
+		var terrain_top_far = Vector3(x_pos, terrain_top_height, z_end)
+		var terrain_top_near = Vector3(x_pos, terrain_top_height, z_start)
+
+		_add_quad_to_surface(
+			surface_tool, terrain_top_near, terrain_top_far, base_bottom_far, base_bottom_near
+		)
+
+
+func _add_quad_to_surface(
+	surface_tool: SurfaceTool, v1: Vector3, v2: Vector3, v3: Vector3, v4: Vector3
+):
+	var normal1 = (v2 - v1).cross(v3 - v1).normalized()
+	var normal2 = (v3 - v1).cross(v4 - v1).normalized()
+
+	var uv1 = Vector2((v1.x + 8.0) / 16.0, (v1.z + 8.0) / 16.0)
+	var uv2 = Vector2((v2.x + 8.0) / 16.0, (v2.z + 8.0) / 16.0)
+	var uv3 = Vector2((v3.x + 8.0) / 16.0, (v3.z + 8.0) / 16.0)
+	var uv4 = Vector2((v4.x + 8.0) / 16.0, (v4.z + 8.0) / 16.0)
+
+	# First triangle (v1, v2, v3)
+	surface_tool.set_normal(normal1)
+	surface_tool.set_uv(uv1)
+	surface_tool.add_vertex(v1)
+
+	surface_tool.set_normal(normal1)
+	surface_tool.set_uv(uv2)
+	surface_tool.add_vertex(v2)
+
+	surface_tool.set_normal(normal1)
+	surface_tool.set_uv(uv3)
+	surface_tool.add_vertex(v3)
+
+	# Second triangle (v1, v3, v4)
+	surface_tool.set_normal(normal2)
+	surface_tool.set_uv(uv1)
+	surface_tool.add_vertex(v1)
+
+	surface_tool.set_normal(normal2)
+	surface_tool.set_uv(uv3)
+	surface_tool.add_vertex(v3)
+
+	surface_tool.set_normal(normal2)
+	surface_tool.set_uv(uv4)
+	surface_tool.add_vertex(v4)
 
 
 func _generate_floor_collision():

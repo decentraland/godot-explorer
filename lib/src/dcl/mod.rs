@@ -5,6 +5,7 @@ pub mod crdt;
 pub mod js;
 pub mod scene_apis;
 pub mod serialization;
+pub mod ui_text_tags;
 
 use ethers_core::types::H160;
 use godot::builtin::{Vector2, Vector3};
