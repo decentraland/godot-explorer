@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=45 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
@@ -20,6 +20,7 @@
 [ext_resource type="Texture2D" uid="uid://bknni14p0d2of" path="res://assets/ui/profile/language.svg" id="12_6ld5p"]
 [ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="12_8iwyo"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_dja5r"]
+[ext_resource type="Texture2D" uid="uid://bk8rmfac3ul7j" path="res://assets/ui/friends.svg" id="12_jcjsg"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_oyuqo"]
 [ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="13_ood4l"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="13_quy3q"]
@@ -63,15 +64,16 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_quy3q"]
-bg_color = Color(0, 0, 0, 0.8)
-corner_radius_top_left = 9
-corner_radius_top_right = 9
-corner_radius_bottom_right = 9
-corner_radius_bottom_left = 9
-shadow_color = Color(0, 0, 0, 0.356863)
-shadow_size = 2
-shadow_offset = Vector2(2, 2)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jcjsg"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8pwo8"]
 bg_color = Color(0, 0, 0, 0.352941)
@@ -81,6 +83,16 @@ corner_radius_bottom_right = 15
 corner_radius_bottom_left = 15
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_uj2xw"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_quy3q"]
+bg_color = Color(0, 0, 0, 0.8)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+shadow_color = Color(0, 0, 0, 0.356863)
+shadow_size = 2
+shadow_offset = Vector2(2, 2)
 
 [node name="Profile" type="PanelContainer"]
 show_behind_parent = true
@@ -252,23 +264,34 @@ theme = ExtResource("12_dja5r")
 theme_type_variation = &"SecondaryLittle"
 theme_override_constants/icon_max_width = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ur8se")
 text = "CANCEL REQUEST"
 icon = ExtResource("14_ur8se")
 
 [node name="Button_Friend" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(90, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 focus_mode = 0
+mouse_filter = 2
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 21
+theme_override_constants/icon_max_width = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_jcjsg")
 toggle_mode = true
 text = "FRIEND"
-icon_alignment = 1
+icon = ExtResource("12_jcjsg")
 
 [node name="Button_MuteUser" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
 unique_name_in_owner = true
@@ -296,57 +319,6 @@ theme_override_constants/icon_max_width = 6
 toggle_mode = true
 icon = ExtResource("11_8iwyo")
 icon_alignment = 1
-
-[node name="PanelContainer_Menu" type="PanelContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_Menu"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -146.0
-offset_top = 50.0
-offset_bottom = 162.0
-grow_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_quy3q")
-
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_Menu/PanelContainer_Menu"]
-layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 10
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_Menu/PanelContainer_Menu/MarginContainer"]
-z_index = 10
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Button_BlockUser" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(15, 38)
-layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("12_dja5r")
-theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_ur8se")
-text = "BLOCK"
-icon = ExtResource("13_quy3q")
-
-[node name="Button_Unfriend" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2/Button_Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(15, 38)
-layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("12_dja5r")
-theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_ur8se")
-text = "UNFRIEND"
-icon = ExtResource("14_ur8se")
 
 [node name="Button_CloseProfile" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer_NameAndAddress/HBoxContainer3/HBoxContainer2"]
 unique_name_in_owner = true
@@ -475,6 +447,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About"]
 layout_mode = 2
 size_flags_vertical = 0
+mouse_filter = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 40
@@ -851,6 +824,86 @@ alignment = 1
 [node name="TextureProgressBar_AvatarLoading" parent="MarginContainer/PanelContainer_GettingData/MarginContainer/VBoxContainer/HBoxContainer2" instance=ExtResource("4_4hw2j")]
 layout_mode = 2
 
+[node name="Menu" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+color = Color(1, 1, 1, 0)
+metadata/_edit_lock_ = true
+
+[node name="PanelContainer_Menu" type="PanelContainer" parent="Menu"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -218.0
+offset_top = 64.0
+offset_right = -72.0
+offset_bottom = 122.0
+grow_horizontal = 0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_quy3q")
+
+[node name="MarginContainer" type="MarginContainer" parent="Menu/PanelContainer_Menu"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu/PanelContainer_Menu/MarginContainer"]
+z_index = 10
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 16
+
+[node name="Button_BlockUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(15, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ur8se")
+text = "BLOCK"
+icon = ExtResource("13_quy3q")
+
+[node name="Button_Unfriend" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(15, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ur8se")
+text = "UNFRIEND"
+icon = ExtResource("14_ur8se")
+
 [node name="ChangeNickPopup" parent="." instance=ExtResource("30_8t4r5")]
 unique_name_in_owner = true
 visible = false
@@ -884,5 +937,6 @@ layout_mode = 2
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer/HFlowContainer_Links/Button_AddLink" to="." method="_on_button_add_link_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksCancel" to="." method="_on_button_links_cancel_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksSave" to="." method="_async_on_button_links_save_pressed"]
+[connection signal="gui_input" from="Menu" to="." method="_on_menu_gui_input"]
 [connection signal="update_name_on_profile" from="ChangeNickPopup" to="." method="_on_change_nick_popup_update_name_on_profile"]
 [connection signal="add_link" from="ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]

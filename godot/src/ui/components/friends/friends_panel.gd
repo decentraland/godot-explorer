@@ -49,12 +49,30 @@ func _ready() -> void:
 	_on_button_friends_toggled(true)
 
 	# Connect to social service signals for real-time updates
-	Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
+	# Check if already connected to avoid duplicate connections
+	if not Global.social_service.friendship_request_received.is_connected(_on_friendship_request_received):
+		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
+	
+	# Always reconnect to ensure signals are connected (in case of re-initialization)
+	if Global.social_service.friendship_request_accepted.is_connected(_on_friendship_changed):
+		Global.social_service.friendship_request_accepted.disconnect(_on_friendship_changed)
 	Global.social_service.friendship_request_accepted.connect(_on_friendship_changed)
+	print("FriendsPanel: Connected to friendship_request_accepted signal")
+	
+	if Global.social_service.friendship_request_rejected.is_connected(_on_friendship_changed):
+		Global.social_service.friendship_request_rejected.disconnect(_on_friendship_changed)
 	Global.social_service.friendship_request_rejected.connect(_on_friendship_changed)
+	
+	if Global.social_service.friendship_deleted.is_connected(_on_friendship_changed):
+		Global.social_service.friendship_deleted.disconnect(_on_friendship_changed)
 	Global.social_service.friendship_deleted.connect(_on_friendship_changed)
+	
+	if Global.social_service.friendship_request_cancelled.is_connected(_on_friendship_changed):
+		Global.social_service.friendship_request_cancelled.disconnect(_on_friendship_changed)
 	Global.social_service.friendship_request_cancelled.connect(_on_friendship_changed)
-	Global.social_service.friend_connectivity_updated.connect(_on_friend_connectivity_updated)
+	
+	if not Global.social_service.friend_connectivity_updated.is_connected(_on_friend_connectivity_updated):
+		Global.social_service.friend_connectivity_updated.connect(_on_friend_connectivity_updated)
 
 	# Subscribe to connectivity updates stream
 	Global.social_service.subscribe_to_connectivity_updates()
@@ -63,6 +81,9 @@ func _ready() -> void:
 	request_list.size_changed.connect(_update_dropdown_visibility)
 	online_list.size_changed.connect(_update_dropdown_visibility)
 	offline_list.size_changed.connect(_update_dropdown_visibility)
+	
+	# Also connect to friendship_changed to ensure request list updates when requests are accepted/rejected
+	# This is already connected above, but we want to make sure request list updates
 
 	# Connect to error signals
 	request_list.load_error.connect(_on_load_error)
@@ -205,11 +226,35 @@ func _on_load_error(_error_message: String) -> void:
 func _on_friendship_request_received(_address: String, _message: String) -> void:
 	# Refresh request list when new request arrives
 	request_list.async_update_list()
+	# Update dropdown visibility to show new request count
+	_update_dropdown_visibility()
 
 
-func _on_friendship_changed(_address: String) -> void:
+func _on_friendship_changed(address: String) -> void:
+	# Debug: verify signal is received
+	print("FriendsPanel: _on_friendship_changed called for address: ", address)
+	
+	# When a friendship is deleted, remove from online tracking
+	if address != "" and _online_friends.has(address):
+		print("FriendsPanel: Removing ", address, " from online friends tracking")
+		_online_friends.erase(address)
+	
+	# When a friendship is accepted, check if the friend is online
+	# This handles the case where we accept a request from someone who is already online
+	if address != "":
+		await _async_check_friend_connectivity(address)
+	
 	# Refresh all friend lists when friendship status changes
+	# The signal is emitted after the server has processed the change
+	# Force update to ensure lists reflect the new friendship status
+	print("FriendsPanel: Updating all lists...")
 	update_all_lists()
+	
+	# Also update dropdown visibility to reflect new counts
+	# Wait a moment for lists to update before checking visibility
+	await get_tree().process_frame
+	_update_dropdown_visibility()
+	print("FriendsPanel: Lists updated and visibility refreshed")
 
 
 func _on_friend_connectivity_updated(address: String, status: int) -> void:
@@ -228,9 +273,27 @@ func is_friend_online(address: String) -> bool:
 	return _online_friends.has(address)
 
 
+func _async_check_friend_connectivity(address: String) -> void:
+	# Check if a friend is currently online by checking if they're in the nearby avatars
+	# This is a fallback for when connectivity updates haven't arrived yet
+	var avatars = Global.avatars.get_avatars()
+	for avatar in avatars:
+		if avatar != null and avatar is Avatar:
+			if avatar.avatar_id == address:
+				# Friend is nearby, mark as online
+				_online_friends[address] = true
+				return
+	
+	# If friend is not nearby, they might still be online but in a different location
+	# The connectivity update signal will handle this when it arrives
+	# For now, don't mark as online if not nearby
+
+
 func update_all_lists():
+	print("FriendsPanel: update_all_lists called")
 	request_list.async_update_list()
 	online_list.async_update_list()
 	offline_list.async_update_list()
 	nearby_list.async_update_list()
 	blocked_list.async_update_list()
+	print("FriendsPanel: All lists update calls initiated")

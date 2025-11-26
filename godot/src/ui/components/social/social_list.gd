@@ -27,6 +27,7 @@ func _ready():
 		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_rejected.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_changed)
+		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
 	if player_list_type == SocialType.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 	#Global.get_explorer().hud_button_friends.friends_clicked.connect(self.async_update_list)
@@ -40,17 +41,9 @@ func _on_blacklist_changed_deferred() -> void:
 
 
 func _on_friendship_request_changed(address: String) -> void:
-	# When a friendship request changes, update the status of nearby items for that address
 	if player_list_type != SocialType.NEARBY:
 		return
-	
-	# Wait a frame to ensure the server has processed the change
-	await get_tree().process_frame
-	# Small delay to ensure server state is updated
-	await get_tree().create_timer(0.1).timeout
-	
-	# Update the status of any nearby items matching this address
-	_update_nearby_item_status(address)
+	async_update_list()
 
 
 func async_update_list(_remote_avatars: Array = []) -> void:
@@ -328,6 +321,7 @@ func _update_nearby_item_status(address: String) -> void:
 		return
 	
 	# Find all social items in this list
+	var found_item = false
 	for child in self.get_children():
 		# Check if this child is a SocialItem (has social_data property)
 		if child.has("social_data"):
@@ -336,7 +330,12 @@ func _update_nearby_item_status(address: String) -> void:
 			if social_data != null and social_data.has("address"):
 				if social_data.address == address:
 					# Found matching item, update its status
+					found_item = true
 					_async_update_item_status(social_item, address)
+	
+	# If no item was found, the user might have left, so reload the list
+	if not found_item:
+		async_update_list()
 
 
 func _async_update_item_status(social_item: Node, address: String) -> void:
@@ -352,7 +351,14 @@ func _async_update_item_status(social_item: Node, address: String) -> void:
 	
 	# Update the item's status and UI
 	if social_item.has("current_friendship_status"):
+		var old_status = social_item.current_friendship_status
 		social_item.current_friendship_status = status
+		
+		# If status changed to ACCEPTED, reload the entire list to ensure consistency
+		if status == 3 and old_status != 3:
+			async_update_list()
+			return
+		
 		if social_item.has_method("_update_button_visibility_from_status"):
 			social_item._update_button_visibility_from_status()
 
