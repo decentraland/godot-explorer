@@ -86,12 +86,18 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var control_avatar: Control = %Control_Avatar
 @onready var button_close_profile: Button = %Button_CloseProfile
 @onready var label_pending_request: Label = %Label_PendingRequest
+@onready var button_menu: Button = %Button_Menu
+@onready var panel_container_menu: PanelContainer = %PanelContainer_Menu
+@onready var button_cancel_request: Button = %Button_CancelRequest
+@onready var button_friend: Button = %Button_Friend
 
 
 func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
+	button_menu.button_pressed = false
+	panel_container_menu.hide()
 
 	if rounded:
 		var current_style = get_theme_stylebox("panel")
@@ -259,6 +265,10 @@ func _update_elements_visibility() -> void:
 	if is_own_passport:
 		button_block_user.hide()
 		button_mute_user.hide()
+		button_cancel_request.hide()
+		button_friend.hide()
+		button_menu.hide()
+		button_add_friend.hide()
 		button_edit_about.show()
 		button_edit_links.show()
 		button_edit_nick.show()
@@ -274,6 +284,7 @@ func _update_elements_visibility() -> void:
 		button_edit_links.hide()
 		button_edit_nick.hide()
 		button_claim_name.hide()
+		button_menu.show()
 	if current_profile != null:
 		if current_profile.has_claimed_name():
 			texture_rect_claimed_checkmark.show()
@@ -912,3 +923,10 @@ func _force_update_social_lists_recursive(node: Node) -> void:
 	# Recursively check children
 	for child in node.get_children():
 		_force_update_social_lists_recursive(child)
+
+
+func _on_button_menu_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		panel_container_menu.show()
+	else:
+		panel_container_menu.hide()

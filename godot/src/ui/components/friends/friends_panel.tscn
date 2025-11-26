@@ -357,7 +357,6 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
 
 [node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 0
 offset_right = 448.0
 offset_bottom = 245.0
