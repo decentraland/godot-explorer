@@ -1,0 +1,297 @@
+[gd_scene load_steps=19 format=3 uid="uid://dh0kw2o6annh1"]
+
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="1_m4ace"]
+[ext_resource type="Script" uid="uid://ck6b8wd58nfgs" path="res://src/ui/components/profile/profile_header.gd" id="1_x6gr2"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="2_x6gr2"]
+[ext_resource type="Texture2D" uid="uid://cqwsvinsujxri" path="res://src/ui/components/debug_panel/icons/ActionCopy.svg" id="3_ndq8q"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_snkxe"]
+[ext_resource type="Texture2D" uid="uid://b6t3f0hltrjov" path="res://assets/ui/edit_icon.svg" id="5_3blel"]
+[ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="6_y3s72"]
+[ext_resource type="Texture2D" uid="uid://bxi281gjgk05i" path="res://assets/ui/unfriend.svg" id="7_i2qdv"]
+[ext_resource type="Texture2D" uid="uid://bk8rmfac3ul7j" path="res://assets/ui/friends.svg" id="8_iaddb"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_gtvq5"]
+[ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="10_iq67a"]
+[ext_resource type="Texture2D" uid="uid://dju11x2qyib75" path="res://assets/ui/menu_icon.svg" id="11_nmgbg"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_bmhc0"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="13_vgup3"]
+[ext_resource type="PackedScene" uid="uid://7u7y8c3bnf1i" path="res://src/ui/components/social/mutual_friends.tscn" id="14_ttgcf"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ur8se"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0, 0, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jcjsg"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_61jmm"]
+font = ExtResource("9_gtvq5")
+font_size = 15
+
+[node name="ProfileHeader" type="VBoxContainer"]
+theme_override_constants/separation = -5
+script = ExtResource("1_x6gr2")
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer3/HBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Label_Nickname" type="Label" parent="HBoxContainer3/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("1_m4ace")
+theme_override_font_sizes/font_size = 21
+text = "NickName"
+
+[node name="Label_Tag" type="Label" parent="HBoxContainer3/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.625597, 0.625597, 0.625597, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("1_m4ace")
+theme_override_font_sizes/font_size = 21
+text = "#Tag"
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer3/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="HBoxContainer3/HBoxContainer/HBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(15, 15)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("2_x6gr2")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="Button_CopyNick" type="Button" parent="HBoxContainer3/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"FlatButton"
+theme_override_constants/icon_max_width = 30
+icon = ExtResource("3_ndq8q")
+flat = true
+expand_icon = true
+
+[node name="Button_EditNick" type="Button" parent="HBoxContainer3/HBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 12
+icon = ExtResource("5_3blel")
+icon_alignment = 1
+
+[node name="Button_ClaimName" type="Button" parent="HBoxContainer3/HBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(15, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"ButtonLittle"
+theme_override_constants/icon_max_width = 12
+text = "CLAIM NAME"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer3"]
+custom_minimum_size = Vector2(84, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="Button_AddFriend" type="Button" parent="HBoxContainer3/HBoxContainer2"]
+unique_name_in_owner = true
+visible = false
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(15, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"ButtonLittle"
+theme_override_constants/icon_max_width = 18
+text = "ADD FRIEND"
+icon = ExtResource("6_y3s72")
+
+[node name="Button_CancelRequest" type="Button" parent="HBoxContainer3/HBoxContainer2"]
+unique_name_in_owner = true
+visible = false
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(15, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_ur8se")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ur8se")
+text = "CANCEL REQUEST"
+icon = ExtResource("7_i2qdv")
+
+[node name="Button_Friend" type="Button" parent="HBoxContainer3/HBoxContainer2"]
+unique_name_in_owner = true
+visible = false
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+clip_contents = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+mouse_filter = 2
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_jcjsg")
+toggle_mode = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer3/HBoxContainer2/Button_Friend"]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -9.5
+offset_bottom = 9.5
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer3/HBoxContainer2/Button_Friend/HBoxContainer"]
+layout_mode = 2
+texture = ExtResource("8_iaddb")
+expand_mode = 3
+
+[node name="Label" type="Label" parent="HBoxContainer3/HBoxContainer2/Button_Friend/HBoxContainer"]
+layout_mode = 2
+text = "FRIEND"
+label_settings = SubResource("LabelSettings_61jmm")
+
+[node name="Button_MuteUser" type="Button" parent="HBoxContainer3/HBoxContainer2"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 21
+toggle_mode = true
+icon = ExtResource("10_iq67a")
+icon_alignment = 1
+
+[node name="Button_Menu" type="Button" parent="HBoxContainer3/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 6
+toggle_mode = true
+icon = ExtResource("11_nmgbg")
+icon_alignment = 1
+
+[node name="Button_CloseProfile" type="Button" parent="HBoxContainer3/HBoxContainer2"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("4_snkxe")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 12
+icon = ExtResource("12_bmhc0")
+icon_alignment = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer2"]
+layout_mode = 2
+
+[node name="Label_Address" type="Label" parent="HBoxContainer2/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("13_vgup3")
+theme_override_font_sizes/font_size = 14
+text = "0x1...a92"
+
+[node name="Button_CopyAddress" type="Button" parent="HBoxContainer2/HBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"FlatButton"
+icon = ExtResource("3_ndq8q")
+flat = true
+expand_icon = true
+
+[node name="MutualFriends" parent="." instance=ExtResource("14_ttgcf")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2

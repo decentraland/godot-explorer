@@ -2,7 +2,6 @@ extends PanelContainer
 
 signal panel_closed
 
-
 # ConnectivityStatus enum values from proto
 const CONNECTIVITY_ONLINE: int = 0
 const CONNECTIVITY_OFFLINE: int = 1
@@ -35,8 +34,10 @@ var _online_friends: Dictionary = {}
 @onready var blocked_list: SocialList = %BlockedList
 
 @onready var label_empty_state: Label = %LabelEmptyState
-@onready var v_box_container_no_service: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService
-@onready var v_box_container_no_friends: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends
+@onready
+var v_box_container_no_service: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService
+@onready
+var v_box_container_no_friends: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends
 
 
 func _ready() -> void:
@@ -50,28 +51,34 @@ func _ready() -> void:
 
 	# Connect to social service signals for real-time updates
 	# Check if already connected to avoid duplicate connections
-	if not Global.social_service.friendship_request_received.is_connected(_on_friendship_request_received):
+	if not Global.social_service.friendship_request_received.is_connected(
+		_on_friendship_request_received
+	):
 		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
-	
+
 	# Always reconnect to ensure signals are connected (in case of re-initialization)
-	if Global.social_service.friendship_request_accepted.is_connected(_on_friendship_changed):
-		Global.social_service.friendship_request_accepted.disconnect(_on_friendship_changed)
-	Global.social_service.friendship_request_accepted.connect(_on_friendship_changed)
+	if Global.social_service.friendship_request_accepted.is_connected(_async_on_friendship_changed):
+		Global.social_service.friendship_request_accepted.disconnect(_async_on_friendship_changed)
+	Global.social_service.friendship_request_accepted.connect(_async_on_friendship_changed)
 	print("FriendsPanel: Connected to friendship_request_accepted signal")
-	
-	if Global.social_service.friendship_request_rejected.is_connected(_on_friendship_changed):
-		Global.social_service.friendship_request_rejected.disconnect(_on_friendship_changed)
-	Global.social_service.friendship_request_rejected.connect(_on_friendship_changed)
-	
-	if Global.social_service.friendship_deleted.is_connected(_on_friendship_changed):
-		Global.social_service.friendship_deleted.disconnect(_on_friendship_changed)
-	Global.social_service.friendship_deleted.connect(_on_friendship_changed)
-	
-	if Global.social_service.friendship_request_cancelled.is_connected(_on_friendship_changed):
-		Global.social_service.friendship_request_cancelled.disconnect(_on_friendship_changed)
-	Global.social_service.friendship_request_cancelled.connect(_on_friendship_changed)
-	
-	if not Global.social_service.friend_connectivity_updated.is_connected(_on_friend_connectivity_updated):
+
+	if Global.social_service.friendship_request_rejected.is_connected(_async_on_friendship_changed):
+		Global.social_service.friendship_request_rejected.disconnect(_async_on_friendship_changed)
+	Global.social_service.friendship_request_rejected.connect(_async_on_friendship_changed)
+
+	if Global.social_service.friendship_deleted.is_connected(_async_on_friendship_changed):
+		Global.social_service.friendship_deleted.disconnect(_async_on_friendship_changed)
+	Global.social_service.friendship_deleted.connect(_async_on_friendship_changed)
+
+	if Global.social_service.friendship_request_cancelled.is_connected(
+		_async_on_friendship_changed
+	):
+		Global.social_service.friendship_request_cancelled.disconnect(_async_on_friendship_changed)
+	Global.social_service.friendship_request_cancelled.connect(_async_on_friendship_changed)
+
+	if not Global.social_service.friend_connectivity_updated.is_connected(
+		_on_friend_connectivity_updated
+	):
 		Global.social_service.friend_connectivity_updated.connect(_on_friend_connectivity_updated)
 
 	# Subscribe to connectivity updates stream
@@ -81,7 +88,7 @@ func _ready() -> void:
 	request_list.size_changed.connect(_update_dropdown_visibility)
 	online_list.size_changed.connect(_update_dropdown_visibility)
 	offline_list.size_changed.connect(_update_dropdown_visibility)
-	
+
 	# Also connect to friendship_changed to ensure request list updates when requests are accepted/rejected
 	# This is already connected above, but we want to make sure request list updates
 
@@ -187,7 +194,7 @@ func _update_dropdown_visibility() -> void:
 	var pending_count = request_list.list_size
 	var online_count = online_list.list_size
 	var offline_count = offline_list.list_size
-	var total_friends = online_count + offline_count 
+	var total_friends = online_count + offline_count
 
 	if pending_count == 0:
 		v_box_container_request.hide()
@@ -229,26 +236,26 @@ func _on_friendship_request_received(_address: String, _message: String) -> void
 	_update_dropdown_visibility()
 
 
-func _on_friendship_changed(address: String) -> void:
+func _async_on_friendship_changed(address: String) -> void:
 	# Debug: verify signal is received
-	print("FriendsPanel: _on_friendship_changed called for address: ", address)
-	
+	print("FriendsPanel: _async_on_friendship_changed called for address: ", address)
+
 	# When a friendship is deleted, remove from online tracking
 	if address != "" and _online_friends.has(address):
 		print("FriendsPanel: Removing ", address, " from online friends tracking")
 		_online_friends.erase(address)
-	
+
 	# When a friendship is accepted, check if the friend is online
 	# This handles the case where we accept a request from someone who is already online
 	if address != "":
 		await _async_check_friend_connectivity(address)
-	
+
 	# Refresh all friend lists when friendship status changes
 	# The signal is emitted after the server has processed the change
 	# Force update to ensure lists reflect the new friendship status
 	print("FriendsPanel: Updating all lists...")
 	update_all_lists()
-	
+
 	# Also update dropdown visibility to reflect new counts
 	# Wait a moment for lists to update before checking visibility
 	await get_tree().process_frame
@@ -282,7 +289,7 @@ func _async_check_friend_connectivity(address: String) -> void:
 				# Friend is nearby, mark as online
 				_online_friends[address] = true
 				return
-	
+
 	# If friend is not nearby, they might still be online but in a different location
 	# The connectivity update signal will handle this when it arrives
 	# For now, don't mark as online if not nearby

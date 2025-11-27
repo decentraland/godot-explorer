@@ -21,7 +21,7 @@ func _ready():
 		Global.avatars.avatar_scene_changed.connect(self.async_update_list)
 		# Also update when blacklist changes to remove blocked users from nearby list
 		# Use call_deferred to ensure the blacklist change is fully processed
-		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_deferred)
+		Global.social_blacklist.blacklist_changed.connect(_async_on_blacklist_changed_deferred)
 		# Update nearby items when friendship requests change
 		Global.social_service.friendship_request_received.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_changed)
@@ -33,14 +33,14 @@ func _ready():
 	#Global.get_explorer().hud_button_friends.friends_clicked.connect(self.async_update_list)
 
 
-func _on_blacklist_changed_deferred() -> void:
+func _async_on_blacklist_changed_deferred() -> void:
 	# Use call_deferred to ensure the blacklist change is fully processed before updating
 	# This ensures that when unblocking, the avatar visibility is updated before we refresh the list
 	await get_tree().process_frame
 	async_update_list()
 
 
-func _on_friendship_request_changed(address: String) -> void:
+func _on_friendship_request_changed(_unused_address: String) -> void:
 	if player_list_type != SocialType.NEARBY:
 		return
 	async_update_list()
@@ -252,7 +252,7 @@ func _async_reload_nearby_list(request_id: int) -> void:
 		# Check if request is still valid
 		if request_id != _update_request_id:
 			return
-		
+
 		if avatar != null and avatar is Avatar:
 			var avatar_address = avatar.avatar_id
 			if (
@@ -262,25 +262,24 @@ func _async_reload_nearby_list(request_id: int) -> void:
 				# Verificar si ya agregamos este avatar_id para evitar duplicados
 				if not seen_addresses.has(avatar_address):
 					seen_addresses[avatar_address] = true
-					
+
 					# Check friendship status before adding
 					var promise = Global.social_service.get_friendship_status(avatar_address)
 					await PromiseUtils.async_awaiter(promise)
-					
+
 					# Check if request is still valid after async operation
 					if request_id != _update_request_id:
 						return
-					
+
 					var friendship_status = -1
 					if not promise.is_rejected():
 						var status_data = promise.get_data()
 						friendship_status = status_data.get("status", -1)
-					
+
 					# Store avatar with its friendship status
-					avatars_with_status.append({
-						"avatar": avatar,
-						"friendship_status": friendship_status
-					})
+					avatars_with_status.append(
+						{"avatar": avatar, "friendship_status": friendship_status}
+					)
 
 	# Check if this request is still valid (no newer request started)
 	if request_id != _update_request_id:
@@ -293,11 +292,11 @@ func _async_reload_nearby_list(request_id: int) -> void:
 		self.add_child(social_item)
 		social_item.set_type(player_list_type)
 		social_item.set_data_from_avatar(avatar as Avatar)
-		
+
 		# Set friendship status directly to avoid flickering
 		var friendship_status = item_data["friendship_status"]
 		social_item.current_friendship_status = friendship_status
-		
+
 		# Update button and label visibility based on pre-checked status
 		social_item._update_button_visibility_from_status()
 
@@ -319,7 +318,7 @@ func _update_nearby_item_status(address: String) -> void:
 	# This is called when friendship requests change to update the UI without reloading the entire list
 	if player_list_type != SocialType.NEARBY:
 		return
-	
+
 	# Find all social items in this list
 	var found_item = false
 	for child in self.get_children():
@@ -332,7 +331,7 @@ func _update_nearby_item_status(address: String) -> void:
 					# Found matching item, update its status
 					found_item = true
 					_async_update_item_status(social_item, address)
-	
+
 	# If no item was found, the user might have left, so reload the list
 	if not found_item:
 		async_update_list()
@@ -342,23 +341,23 @@ func _async_update_item_status(social_item: Node, address: String) -> void:
 	# Asynchronously update the friendship status of a specific social item
 	var promise = Global.social_service.get_friendship_status(address)
 	await PromiseUtils.async_awaiter(promise)
-	
+
 	if promise.is_rejected():
 		return
-	
+
 	var status_data = promise.get_data()
 	var status = status_data.get("status", -1)
-	
+
 	# Update the item's status and UI
 	if social_item.has("current_friendship_status"):
 		var old_status = social_item.current_friendship_status
 		social_item.current_friendship_status = status
-		
+
 		# If status changed to ACCEPTED, reload the entire list to ensure consistency
 		if status == 3 and old_status != 3:
 			async_update_list()
 			return
-		
+
 		if social_item.has_method("_update_button_visibility_from_status"):
 			social_item._update_button_visibility_from_status()
 
@@ -377,6 +376,7 @@ func add_items_by_social_item_data(item_list) -> void:
 		self.add_child(social_item)
 		social_item.set_type(player_list_type)
 		social_item.set_data(item as SocialItemData)
+
 
 func _async_fetch_profile_for_address(address: String) -> SocialItemData:
 	var social_item_data = SocialItemData.new()
@@ -397,5 +397,3 @@ func _async_fetch_profile_for_address(address: String) -> SocialItemData:
 		social_item_data.profile_picture_url = profile.get_avatar().get_snapshots_face_url()
 
 	return social_item_data
-
-	

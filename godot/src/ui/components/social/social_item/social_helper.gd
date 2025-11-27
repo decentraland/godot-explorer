@@ -1,14 +1,18 @@
 class_name SocialHelper
 
-static func social_data_from_avatar(avatar_param:DclAvatar) -> SocialItemData:
+
+static func social_data_from_avatar(avatar_param: DclAvatar) -> SocialItemData:
 	var social_data := SocialItemData.new()
 	social_data.name = avatar_param.get_avatar_name()
 	social_data.address = avatar_param.avatar_id
-	social_data.profile_picture_url = avatar_param.get_avatar_data().to_godot_dictionary()["snapshots"]["face256"]
+	social_data.profile_picture_url = (
+		avatar_param.get_avatar_data().to_godot_dictionary()["snapshots"]["face256"]
+	)
 	social_data.has_claimed_name = false
 	return social_data
 
-static func social_data_from_user_profile(user_profile:DclUserProfile) -> SocialItemData:
+
+static func social_data_from_user_profile(user_profile: DclUserProfile) -> SocialItemData:
 	var social_data := SocialItemData.new()
 	social_data.name = user_profile.get_name()
 	social_data.address = user_profile.get_ethereum_address()

@@ -55,7 +55,7 @@ func set_data(data: SocialItemData) -> void:
 	else:
 		texture_rect_claimed_checkmark.hide()
 	profile_picture.async_update_profile_picture(data)
-	
+
 	# If type is NEARBY, check if already a friend
 	if item_type == SocialType.NEARBY and not data.address.is_empty():
 		_check_and_update_friend_status()
@@ -66,7 +66,7 @@ func set_data_from_avatar(avatar_param: DclAvatar):
 	social_data.name = avatar_param.get_avatar_name()
 	social_data.address = avatar_param.avatar_id
 	social_data.profile_picture_url = avatar_param.get_avatar_data().get_snapshots_face_url()
-	
+
 	social_data.has_claimed_name = false if social_data.name.contains("#") else true
 	set_data(social_data)
 
@@ -187,7 +187,7 @@ func _async_on_button_add_friend_pressed() -> void:
 	current_friendship_status = 0  # REQUEST_SENT
 	button_add_friend.hide()
 	label_pending_request.show()
-	
+
 	# Refresh friends lists
 	var friends_panel = _get_friends_panel()
 	if friends_panel and friends_panel.has_method("update_all_lists"):
@@ -199,7 +199,7 @@ func _async_on_button_accept_pressed() -> void:
 	if item_type == SocialType.REQUEST:
 		button_accept.disabled = true
 		button_reject.disabled = true
-	
+
 	var promise = Global.social_service.accept_friend_request(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
 
@@ -246,18 +246,18 @@ func _async_on_button_reject_pressed() -> void:
 	# Wait a frame and small delay to ensure server has processed the rejection
 	await get_tree().process_frame
 	await get_tree().create_timer(0.2).timeout
-	
+
 	# Update status after rejecting - should be NONE (7) or similar
 	# Check the actual status to update UI correctly
 	var status_promise = Global.social_service.get_friendship_status(social_data.address)
 	await PromiseUtils.async_awaiter(status_promise)
-	
+
 	if not status_promise.is_rejected():
 		var status_data = status_promise.get_data()
 		var status = status_data.get("status", -1)
 		current_friendship_status = status
 		_update_button_visibility_from_status()
-	
+
 	# Also update nearby list if this item is in REQUEST list
 	# Find and update nearby items for this address
 	var friends_panel = _get_friends_panel()
@@ -301,7 +301,7 @@ func _check_and_update_friend_status() -> void:
 	# Check if the address is already a friend
 	if not social_data or social_data.address.is_empty():
 		return
-	
+
 	_async_check_friend_status()
 
 
@@ -330,17 +330,17 @@ func _update_button_visibility_from_status() -> void:
 func _async_check_friend_status() -> void:
 	var promise = Global.social_service.get_friendship_status(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
-	
+
 	if promise.is_rejected():
 		# On error, show the button (default behavior)
 		current_friendship_status = -1
 		button_add_friend.show()
 		label_pending_request.hide()
 		return
-	
+
 	var status_data = promise.get_data()
 	var status = status_data.get("status", -1)
 	current_friendship_status = status
-	
+
 	# Update UI based on status
 	_update_button_visibility_from_status()
