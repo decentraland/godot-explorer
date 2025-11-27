@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cj4xqne10w3ka"
-path="res://.godot/imported/genesis_banner.png-0b23557e61dbd6450eba9cae2479b5cf.ctex"
+path.s3tc="res://.godot/imported/genesis_banner.png-0b23557e61dbd6450eba9cae2479b5cf.s3tc.ctex"
+path.etc2="res://.godot/imported/genesis_banner.png-0b23557e61dbd6450eba9cae2479b5cf.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/ui/discover/genesis_banner.png"
-dest_files=["res://.godot/imported/genesis_banner.png-0b23557e61dbd6450eba9cae2479b5cf.ctex"]
+dest_files=["res://.godot/imported/genesis_banner.png-0b23557e61dbd6450eba9cae2479b5cf.s3tc.ctex", "res://.godot/imported/genesis_banner.png-0b23557e61dbd6450eba9cae2479b5cf.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
