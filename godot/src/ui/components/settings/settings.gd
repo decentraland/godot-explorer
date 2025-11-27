@@ -224,6 +224,7 @@ func _process(_delta):
 			_preview_connect_to_url = ""
 			_dirty_connected = true
 
+
 func _on_button_connect_preview_pressed():
 	set_preview_url(line_edit_preview_url.text)
 

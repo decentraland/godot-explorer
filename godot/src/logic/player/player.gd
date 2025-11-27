@@ -143,6 +143,7 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 		current_profile_version = new_version
 		avatar.async_update_avatar_from_profile(new_profile)
 
+
 func clamp_camera_rotation():
 	# Maybe mobile wants a requires values
 	if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
