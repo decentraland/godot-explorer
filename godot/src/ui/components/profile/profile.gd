@@ -1,5 +1,4 @@
 extends Control
-# gdlint:ignore = max-file-lines
 
 signal close_profile
 
@@ -1211,14 +1210,6 @@ func _async_update_buttons_and_lists():
 		friends_panel.update_all_lists()
 	else:
 		_force_update_all_social_lists()
-
-
-func _on_menu_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton or event is InputEventScreenTouch:
-		if event.pressed:
-			# Close menu by toggling the button off
-			if button_menu.button_pressed:
-				button_menu.button_pressed = false
 
 
 func _hide_all_social_buttons() -> void:
