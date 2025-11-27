@@ -285,26 +285,6 @@ func _on_button_jump_in_pressed() -> void:
 
 
 func update_location() -> void:
-	#var pos = avatar.get_current_parcel_position()
-	#var url: String = "https://places.decentraland.org/api/places?limit=1"
-	#url += "&positions=%d,%d" % [pos.x, pos.y]
-#
-	#var headers = {"Content-Type": "application/json"}
-	#var promise: Promise = Global.http_requester.request_json(
-	#url, HTTPClient.METHOD_GET, "", headers
-	#)
-	#var result = await PromiseUtils.async_awaiter(promise)
-#
-	#if result is PromiseError:
-	#printerr("Error request places jump in", result.get_error())
-	#return
-#
-	#var json: Dictionary = result.get_string_response_as_json()
-#
-	#if json.data.is_empty():
-	#label_place.text = "Unknown place"
-	#else:
-	#label_place.text = json.data[0].get("title", "Unknown place")
 	pass
 
 
@@ -332,12 +312,8 @@ func _update_button_visibility_from_status() -> void:
 	# Status 3 = ACCEPTED (already friends)
 	# Status 7 = NONE (no relationship)
 	# Status 2 = CANCELED, 4 = REJECTED, 5 = DELETED
-	if current_friendship_status == 0:
+	if current_friendship_status == 0 or current_friendship_status == 1:
 		# REQUEST_SENT - Show pending label, hide button
-		button_add_friend.hide()
-		label_pending_request.show()
-	elif current_friendship_status == 1:
-		# REQUEST_RECEIVED - Show pending label, hide button
 		button_add_friend.hide()
 		label_pending_request.show()
 	elif current_friendship_status == 3:

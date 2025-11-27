@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://dd2w2ysk3akdj"]
+[gd_scene load_steps=19 format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
 [ext_resource type="StyleBox" uid="uid://c1jov5bbl6rpn" path="res://src/ui/components/friends/friends_separator.tres" id="2_ifioe"]
@@ -6,6 +6,8 @@
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_wese4"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="2_x48bx"]
 [ext_resource type="Texture2D" uid="uid://diaawk0cbxw0j" path="res://assets/ui/up_arrow.svg" id="5_h1uhn"]
+[ext_resource type="Texture2D" uid="uid://bogcegqbgujx4" path="res://assets/ui/warning-color.svg" id="7_wenh7"]
+[ext_resource type="Texture2D" uid="uid://dkp2m2ov71fv5" path="res://assets/ui/friends-color.svg" id="8_nlw6c"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wese4"]
 bg_color = Color(0, 0, 0, 0.8)
@@ -28,6 +30,22 @@ shadow_size = 2
 shadow_offset = Vector2(2, 2)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_v2dsn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nlw6c"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_2vk4g"]
+font = ExtResource("2_wese4")
+font_size = 14
 
 [sub_resource type="Gradient" id="Gradient_l4o08"]
 colors = PackedColorArray(0.086275, 0.0823529, 0.0941176, 0, 0.086275, 0.0823529, 0.0941176, 1)
@@ -81,6 +99,27 @@ theme_override_constants/margin_bottom = 0
 layout_mode = 2
 theme_override_constants/separation = 0
 
+[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "NEARBY"
+flat = true
+
+[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
 [node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -98,27 +137,6 @@ text = "FRIENDS"
 flat = true
 
 [node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 3)
-layout_mode = 2
-color = Color(1, 0.1764706, 0.33333334, 1)
-
-[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 0
-alignment = 1
-
-[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
-custom_minimum_size = Vector2(0, 46)
-layout_mode = 2
-focus_mode = 0
-toggle_mode = true
-button_group = SubResource("ButtonGroup_v2dsn")
-text = "NEARBY"
-flat = true
-
-[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
@@ -282,6 +300,95 @@ layout_mode = 2
 script = ExtResource("2_l4o08")
 player_list_type = 1
 
+[node name="VBoxContainer_NoService" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService/PanelContainer/MarginContainer"]
+layout_mode = 2
+texture = ExtResource("7_wenh7")
+expand_mode = 4
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService"]
+layout_mode = 2
+text = "Whoops..Friends System is Down!"
+label_settings = SubResource("LabelSettings_2vk4g")
+horizontal_alignment = 1
+
+[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "Something went wrong and we couldn’t
+ retrieve your friends."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="VBoxContainer_NoFriends" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends/PanelContainer/MarginContainer"]
+layout_mode = 2
+texture = ExtResource("8_nlw6c")
+expand_mode = 4
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends"]
+layout_mode = 2
+text = "Time to make some friends!"
+label_settings = SubResource("LabelSettings_2vk4g")
+horizontal_alignment = 1
+
+[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "View someone's Profile or tap on  
+'Add Friend' button in the nearby list."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
 [node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
 visible = false
@@ -313,6 +420,7 @@ script = ExtResource("2_l4o08")
 player_list_type = 4
 
 [node name="FadeOverlayTop" type="Control" parent="VBoxContainer/MarginContainer"]
+visible = false
 self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 1
@@ -330,6 +438,7 @@ mouse_filter = 2
 texture = SubResource("GradientTexture2D_x48bx")
 
 [node name="FadeOverlayBottom" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
+visible = false
 self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 1
@@ -355,22 +464,8 @@ custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
 
-[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer"]
-unique_name_in_owner = true
-layout_mode = 0
-offset_right = 448.0
-offset_bottom = 245.0
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/font_size = 14
-text = "Friends System 
-is not implemented yet"
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestButton" to="." method="_on_request_button_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineButton" to="." method="_on_online_button_toggled"]

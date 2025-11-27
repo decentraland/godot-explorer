@@ -161,6 +161,7 @@ alignment = 1
 
 [node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -185,6 +186,7 @@ expand_icon = true
 
 [node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(90, 40)
 layout_mode = 2
 size_flags_horizontal = 4

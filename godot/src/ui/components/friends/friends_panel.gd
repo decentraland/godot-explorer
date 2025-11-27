@@ -2,8 +2,6 @@ extends PanelContainer
 
 signal panel_closed
 
-const NO_FRIENDS_MSG: String = "You don't have any friends or pending requests.\nGo make some friends!"
-const SERVICE_DOWN_MSG: String = "Friends service is temporarily unavailable.\nPlease try again later."
 
 # ConnectivityStatus enum values from proto
 const CONNECTIVITY_ONLINE: int = 0
@@ -37,6 +35,8 @@ var _online_friends: Dictionary = {}
 @onready var blocked_list: SocialList = %BlockedList
 
 @onready var label_empty_state: Label = %LabelEmptyState
+@onready var v_box_container_no_service: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService
+@onready var v_box_container_no_friends: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends
 
 
 func _ready() -> void:
@@ -46,7 +46,7 @@ func _ready() -> void:
 	# Ensure the panel blocks touch/mouse events from passing through when visible
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
-	_on_button_friends_toggled(true)
+	_on_button_nearby_toggled(true)
 
 	# Connect to social service signals for real-time updates
 	# Check if already connected to avoid duplicate connections
@@ -187,7 +187,7 @@ func _update_dropdown_visibility() -> void:
 	var pending_count = request_list.list_size
 	var online_count = online_list.list_size
 	var offline_count = offline_list.list_size
-	var total_friends = online_count + offline_count
+	var total_friends = online_count + offline_count 
 
 	if pending_count == 0:
 		v_box_container_request.hide()
@@ -209,13 +209,12 @@ func _update_dropdown_visibility() -> void:
 
 	# Show error message if service is down
 	if has_service_error:
-		label_empty_state.text = SERVICE_DOWN_MSG
-		label_empty_state.show()
+		v_box_container_no_service.show()
 	elif total_friends == 0 and pending_count == 0:
-		label_empty_state.text = NO_FRIENDS_MSG
-		label_empty_state.show()
+		v_box_container_no_friends.show()
 	else:
-		label_empty_state.hide()
+		v_box_container_no_service.hide()
+		v_box_container_no_friends.hide()
 
 
 func _on_load_error(_error_message: String) -> void:

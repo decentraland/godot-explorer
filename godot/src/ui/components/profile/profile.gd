@@ -1089,6 +1089,7 @@ func _async_unfriend(friend_address: String) -> void:
 	# But also update immediately to ensure UI is responsive
 	_async_update_buttons_and_lists()
 
+
 func _on_button_add_friend_pressed() -> void:
 	if is_own_passport:
 		return
@@ -1126,6 +1127,7 @@ func _async_send_friend_request(friend_address: String) -> void:
 	button_add_friend.disabled = false
 	
 	_async_update_buttons_and_lists()
+
 
 func _async_accept_friend_request(friend_address: String) -> void:
 	button_add_friend.disabled = true
@@ -1225,6 +1227,7 @@ func _is_social_service_available() -> bool:
 	# Try to verify if the service is actually available by checking if it has the required methods
 	# If get_friendship_status fails, we'll know the service is not available
 	return true
+
 
 func _async_update_buttons_and_lists():
 	_async_check_friendship_status()
