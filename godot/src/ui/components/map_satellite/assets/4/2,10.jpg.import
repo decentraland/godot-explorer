@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c1n8x6xvtbi81"
-path="res://.godot/imported/2,10.jpg-b958da60ec561550a7923cc8d8f331dd.ctex"
+path.s3tc="res://.godot/imported/2,10.jpg-b958da60ec561550a7923cc8d8f331dd.s3tc.ctex"
+path.etc2="res://.godot/imported/2,10.jpg-b958da60ec561550a7923cc8d8f331dd.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://src/ui/components/map_satellite/assets/4/2,10.jpg"
-dest_files=["res://.godot/imported/2,10.jpg-b958da60ec561550a7923cc8d8f331dd.ctex"]
+dest_files=["res://.godot/imported/2,10.jpg-b958da60ec561550a7923cc8d8f331dd.s3tc.ctex", "res://.godot/imported/2,10.jpg-b958da60ec561550a7923cc8d8f331dd.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -37,4 +39,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

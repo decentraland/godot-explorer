@@ -333,6 +333,11 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").into()
     }
 
+    #[func]
+    pub fn is_production() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-prod")
+    }
+
     pub fn has_singleton() -> bool {
         let Some(main_loop) = Engine::singleton().get_main_loop() else {
             return false;

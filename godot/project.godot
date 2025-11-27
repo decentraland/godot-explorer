@@ -63,6 +63,24 @@ import/blender/enabled=false
 theme/custom="res://assets/themes/theme.tres"
 theme/custom_font="res://assets/themes/fonts/inter/Inter-Regular.ttf"
 
+[importer_defaults]
+
+texture={
+&"compress/mode": 2
+}
+2d_array_texture={
+&"compress/mode": 2
+}
+3d_texture={
+&"compress/mode": 2
+}
+svg={
+"base_scale": 1.0,
+"color_map": {},
+"compress": true,
+"saturation": 1.0
+}
+
 [input]
 
 ia_left={

@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://4own7iwl8uss"
-path="res://.godot/imported/female_icon.png-8a72c9dc96ff197a2cf13b389125c65e.ctex"
+path.s3tc="res://.godot/imported/female_icon.png-8a72c9dc96ff197a2cf13b389125c65e.s3tc.ctex"
+path.etc2="res://.godot/imported/female_icon.png-8a72c9dc96ff197a2cf13b389125c65e.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/ui/wearable_categories/female_icon.png"
-dest_files=["res://.godot/imported/female_icon.png-8a72c9dc96ff197a2cf13b389125c65e.ctex"]
+dest_files=["res://.godot/imported/female_icon.png-8a72c9dc96ff197a2cf13b389125c65e.s3tc.ctex", "res://.godot/imported/female_icon.png-8a72c9dc96ff197a2cf13b389125c65e.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -37,4 +39,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0
