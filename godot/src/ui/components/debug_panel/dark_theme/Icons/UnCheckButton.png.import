@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://codbrfyyuo3bp"
-path="res://.godot/imported/UnCheckButton.png-0c55c352e2d0a1e44c5e14942c46d5cc.ctex"
+path.s3tc="res://.godot/imported/UnCheckButton.png-0c55c352e2d0a1e44c5e14942c46d5cc.s3tc.ctex"
+path.etc2="res://.godot/imported/UnCheckButton.png-0c55c352e2d0a1e44c5e14942c46d5cc.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://src/ui/components/debug_panel/dark_theme/Icons/UnCheckButton.png"
-dest_files=["res://.godot/imported/UnCheckButton.png-0c55c352e2d0a1e44c5e14942c46d5cc.ctex"]
+dest_files=["res://.godot/imported/UnCheckButton.png-0c55c352e2d0a1e44c5e14942c46d5cc.s3tc.ctex", "res://.godot/imported/UnCheckButton.png-0c55c352e2d0a1e44c5e14942c46d5cc.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

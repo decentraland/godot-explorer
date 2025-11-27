@@ -189,5 +189,5 @@ func _on_button_down() -> void:
 func _on_button_up() -> void:
 	var release_time = Time.get_ticks_msec()
 	var duration = release_time - press_time
-	if duration <= 300:
+	if duration <= 50:
 		button_pressed = !button_pressed
