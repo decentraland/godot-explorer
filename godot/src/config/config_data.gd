@@ -16,10 +16,6 @@ enum ConfigParams {
 	WINDOW_MODE,
 	UI_ZOOM,
 	RESOLUTION_3D_SCALE,
-	GRAVITY,
-	JUMP_VELOCITY,
-	WALK_VELOCITY,
-	RUN_VELOCITY,
 	PROCESS_TICK_QUOTA_MS,
 	SHOW_FPS,
 	LIMIT_FPS,
@@ -46,11 +42,6 @@ var max_cache_size: int = 1:
 	set(value):
 		max_cache_size = value
 
-var gravity: float = 55.0:
-	set(value):
-		gravity = value
-		param_changed.emit(ConfigParams.GRAVITY)
-
 # 0: Windowed, 1: Borderless, 2: Full Screen
 var window_mode: int = 0:
 	set(value):
@@ -66,21 +57,6 @@ var resolution_3d_scale: float = 1.0:
 	set(value):
 		resolution_3d_scale = value
 		param_changed.emit(ConfigParams.RESOLUTION_3D_SCALE)
-
-var jump_velocity: float = 12.0:
-	set(value):
-		jump_velocity = value
-		param_changed.emit(ConfigParams.JUMP_VELOCITY)
-
-var walk_velocity: float = 2.0:
-	set(value):
-		walk_velocity = value
-		param_changed.emit(ConfigParams.WALK_VELOCITY)
-
-var run_velocity: float = 6.0:
-	set(value):
-		run_velocity = value
-		param_changed.emit(ConfigParams.RUN_VELOCITY)
 
 var process_tick_quota_ms: int = 10:
 	set(value):
@@ -224,11 +200,6 @@ func add_place_to_last_places(position: Vector2i, realm: String):
 
 
 func load_from_default():
-	self.gravity = 55.0
-	self.jump_velocity = 12.0
-	self.walk_velocity = 2.0
-	self.run_velocity = 6.0
-
 	self.process_tick_quota_ms = 10
 	self.limit_fps = FpsLimitMode.FPS_30
 
@@ -262,14 +233,6 @@ func load_from_settings_file():
 	var data_default := ConfigData.new()
 	data_default.load_from_default()
 
-	self.gravity = settings_file.get_value("config", "gravity", data_default.gravity)
-	self.jump_velocity = settings_file.get_value(
-		"config", "jump_velocity", data_default.jump_velocity
-	)
-	self.walk_velocity = settings_file.get_value(
-		"config", "walk_velocity", data_default.walk_velocity
-	)
-	self.run_velocity = settings_file.get_value("config", "run_velocity", data_default.run_velocity)
 	self.process_tick_quota_ms = settings_file.get_value(
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
@@ -364,10 +327,6 @@ func save_to_settings_file():
 		return
 
 	var new_settings_file: ConfigFile = ConfigFile.new()
-	new_settings_file.set_value("config", "gravity", self.gravity)
-	new_settings_file.set_value("config", "jump_velocity", self.jump_velocity)
-	new_settings_file.set_value("config", "walk_velocity", self.walk_velocity)
-	new_settings_file.set_value("config", "run_velocity", self.run_velocity)
 	new_settings_file.set_value("config", "process_tick_quota_ms", self.process_tick_quota_ms)
 	new_settings_file.set_value("config", "fps_limit", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)

@@ -172,6 +172,7 @@ size_flags_horizontal = 3
 
 [node name="Container_General" type="MarginContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
@@ -268,7 +269,7 @@ stretch = true
 handle_input_locally = false
 size = Vector2i(500, 150)
 render_target_clear_mode = 2
-render_target_update_mode = 4
+render_target_update_mode = 0
 
 [node name="PreviewCamera3D" type="Camera3D" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
@@ -591,7 +592,6 @@ value = 100.0
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
@@ -753,95 +753,6 @@ horizontal_alignment = 1
 layout_mode = 2
 mouse_filter = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_stretch_ratio = 0.0
-mouse_filter = 2
-
-[node name="HBoxContainer_Gravity" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer"]
-custom_minimum_size = Vector2(250, 0)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 10
-
-[node name="Label_Gravity" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-theme = SubResource("Theme_nuccv")
-text = "Gravity
-"
-
-[node name="SpinBox_Gravity" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 1
-value = 100.0
-
-[node name="HBoxContainer_JumpVelocity" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer"]
-custom_minimum_size = Vector2(250, 0)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 10
-
-[node name="Label_JumpVelocity" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-theme = SubResource("Theme_nuccv")
-text = "Jump Velocity
-"
-
-[node name="SpinBox_JumpVelocity" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 1
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-size_flags_stretch_ratio = 0.0
-mouse_filter = 2
-
-[node name="HBoxContainer_RunSpeed" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2"]
-custom_minimum_size = Vector2(250, 0)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 10
-
-[node name="Label_RunSpeed" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-theme = SubResource("Theme_nuccv")
-text = "Run Speed
-"
-
-[node name="SpinBox_RunSpeed" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 1
-
-[node name="HBoxContainer_WalkSpeed" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2"]
-custom_minimum_size = Vector2(250, 0)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 10
-
-[node name="Label_WalkSpeed" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed"]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 2
-theme = SubResource("Theme_nuccv")
-text = "Walk Speed"
-
-[node name="SpinBox_WalkSpeed" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 1
-
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_General" to="." method="_on_button_general_pressed"]
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
@@ -876,7 +787,3 @@ focus_mode = 1
 [connection signal="item_selected" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity" to="." method="_on_spin_box_gravity_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity" to="." method="_on_spin_box_jump_velocity_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed" to="." method="_on_spin_box_run_speed_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed" to="." method="_on_spin_box_walk_speed_value_changed"]
