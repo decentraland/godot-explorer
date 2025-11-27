@@ -12,7 +12,7 @@ var walk_speed = 1.5
 var jog_speed = 8.0
 var run_speed = 11.0
 var gravity := 10.0
-var jump_height := 1.0
+var jump_height := 1.8
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
 var jump_time := 0.0
@@ -142,16 +142,6 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 	if new_version != current_profile_version:
 		current_profile_version = new_version
 		avatar.async_update_avatar_from_profile(new_profile)
-
-
-func _on_param_changed(_param):
-	# Disabled for now
-	# TODO: make the panel to change these values
-	# walk_speed = Global.get_config().walk_velocity
-	# run_speed = Global.get_config().run_velocity
-	# gravity = Global.get_config().gravity
-	# jump_velocity_0 = Global.get_config().jump_velocity
-	pass
 
 
 func clamp_camera_rotation():

@@ -4,7 +4,6 @@ extends CustomTouchButton
 signal equip
 signal unequip
 
-const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
