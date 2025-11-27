@@ -65,10 +65,6 @@ var _dirty_connected: bool = false
 @onready var h_slider_process_tick_quota = %HSlider_ProcessTickQuota
 @onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
 
-@onready var spin_box_gravity = %SpinBox_Gravity
-@onready var spin_box_jump_velocity = %SpinBox_JumpVelocity
-@onready var spin_box_run_speed = %SpinBox_RunSpeed
-@onready var spin_box_walk_speed = %SpinBox_WalkSpeed
 @onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
 
 @onready var button_general: Button = %Button_General
@@ -78,6 +74,7 @@ var _dirty_connected: bool = false
 
 
 func _ready():
+	button_developer.visible = !Global.is_production()
 	button_general.set_pressed_no_signal(true)
 	_on_button_general_pressed()
 
@@ -154,10 +151,6 @@ func _on_checkbox_fps_toggled(button_pressed):
 
 
 func refresh_values():
-	spin_box_gravity.value = Global.get_config().gravity
-	spin_box_walk_speed.value = Global.get_config().walk_velocity
-	spin_box_run_speed.value = Global.get_config().run_velocity
-	spin_box_jump_velocity.value = Global.get_config().jump_velocity
 	h_slider_process_tick_quota.set_value_no_signal(Global.get_config().process_tick_quota_ms)
 	label_process_tick_quota_value.text = str(Global.get_config().process_tick_quota_ms)
 
@@ -230,27 +223,6 @@ func _process(_delta):
 			print("preview-ws > connecting to ", _preview_connect_to_url)
 			_preview_connect_to_url = ""
 			_dirty_connected = true
-
-
-func _on_spin_box_walk_speed_value_changed(value):
-	Global.get_config().walk_velocity = value
-	Global.get_config().save_to_settings_file()
-
-
-func _on_spin_box_run_speed_value_changed(value):
-	Global.get_config().run_velocity = value
-	Global.get_config().save_to_settings_file()
-
-
-func _on_spin_box_jump_velocity_value_changed(value):
-	Global.get_config().jump_velocity = value
-	Global.get_config().save_to_settings_file()
-
-
-func _on_spin_box_gravity_value_changed(value):
-	Global.get_config().gravity = value
-	Global.get_config().save_to_settings_file()
-
 
 func _on_button_connect_preview_pressed():
 	set_preview_url(line_edit_preview_url.text)
