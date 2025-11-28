@@ -698,12 +698,22 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     }
 
     println!("=== test build without default features ===");
-    cmd!("cargo", "build", "--no-default-features")
+    let mut no_default_cmd = cmd!("cargo", "build", "--no-default-features")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .dir(RUST_LIB_PROJECT_FOLDER)
-        .run()?;
+        .dir(RUST_LIB_PROJECT_FOLDER);
+
+    // Set PROTOC environment variable to use locally installed protoc
+    let protoc_path = helpers::BinPaths::protoc_bin();
+    if protoc_path.exists() {
+        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
+            no_default_cmd =
+                no_default_cmd.env("PROTOC", canonical_path.to_string_lossy().to_string());
+        }
+    }
+
+    no_default_cmd.run()?;
 
     Ok(())
 }

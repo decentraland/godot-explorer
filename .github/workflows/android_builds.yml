@@ -42,9 +42,6 @@ jobs:
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
-      - name: Install OpenSSL development libraries
-        run: |
-          apt-get update && apt-get install -y libssl-dev pkg-config
       - name: Cargo install
         run: cargo run -- install --targets android linux
 
