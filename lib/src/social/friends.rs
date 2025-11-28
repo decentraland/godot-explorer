@@ -81,10 +81,7 @@ mod tests {
 
         // gather and send initial data
         let _friends_response = service_module
-            .get_friends(GetFriendsPayload {
-                pagination: None,
-                status: None,
-            })
+            .get_friends(GetFriendsPayload { pagination: None })
             .await
             .map_err(|e| anyhow::anyhow!("Failed to get friends: {:?}", e))?;
 

@@ -8,6 +8,9 @@ use crate::godot_classes::promise::Promise;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 use crate::social::social_service_manager::SocialServiceManager;
 
+/// Friendship request data: (address, name, has_claimed_name, profile_picture_url, message, created_at)
+type FriendshipRequestData = (String, String, bool, String, String, i64);
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclSocialService {
@@ -386,7 +389,7 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         limit: i32,
         offset: i32,
-    ) -> Result<Vec<(String, String, bool, String, String, i64)>, String> {
+    ) -> Result<Vec<FriendshipRequestData>, String> {
         tracing::debug!("async_get_pending_requests: acquiring manager lock");
         let manager_guard = manager.read().await;
         let mgr = manager_guard.as_ref().ok_or_else(|| {
@@ -423,7 +426,7 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         limit: i32,
         offset: i32,
-    ) -> Result<Vec<(String, String, bool, String, String, i64)>, String> {
+    ) -> Result<Vec<FriendshipRequestData>, String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
             .as_ref()
@@ -750,7 +753,7 @@ impl DclSocialService {
     /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, message, created_at)
     fn extract_friendship_requests_with_profile(
         response: PaginatedFriendshipRequestsResponse,
-    ) -> Vec<(String, String, bool, String, String, i64)> {
+    ) -> Vec<FriendshipRequestData> {
         let Some(paginated_friendship_requests_response::Response::Requests(requests)) =
             response.response
         else {
@@ -826,7 +829,7 @@ impl DclSocialService {
 
     fn resolve_requests_promise(
         get_promise: impl Fn() -> Option<Gd<Promise>>,
-        result: Result<Vec<(String, String, bool, String, String, i64)>, String>,
+        result: Result<Vec<FriendshipRequestData>, String>,
     ) {
         let Some(mut promise) = get_promise() else {
             tracing::warn!("resolve_requests_promise: promise was dropped before resolution");
