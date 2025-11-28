@@ -467,7 +467,7 @@ impl DclCli {
     #[func]
     pub fn get_location_vector(&self) -> Vector2i {
         if self.location.is_empty() {
-            return Vector2i::ZERO;
+            return Vector2i::MAX;
         }
 
         let loc_str = self.location.to_string();
@@ -477,7 +477,7 @@ impl DclCli {
                 return Vector2i::new(x, y);
             }
         }
-        Vector2i::ZERO
+        Vector2i::MAX
     }
 
     #[func]

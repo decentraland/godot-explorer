@@ -84,7 +84,7 @@ func _process(_dt):
 func get_params_from_cmd():
 	var realm_string = Global.cli.realm if not Global.cli.realm.is_empty() else null
 	var location_vector = Global.cli.get_location_vector()
-	if location_vector == Vector2i.ZERO:
+	if location_vector == Vector2i.MAX:
 		location_vector = null
 	var preview_mode = Global.cli.preview_mode
 	var spawn_avatars = Global.cli.spawn_avatars
