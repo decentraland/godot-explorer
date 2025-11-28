@@ -242,7 +242,7 @@ async fn op_fetch_custom(
             let status_code: u16 = status.as_u16();
 
             let js_response = FetchResponse {
-                ok: status_code >= 200 && status_code < 300,
+                ok: (200..300).contains(&status_code),
                 _internal_req_id: req_id,
                 headers,
                 redirected: status.is_redirection(),
