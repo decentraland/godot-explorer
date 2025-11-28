@@ -8,6 +8,8 @@ var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
 var social_data: SocialItemData
 var current_friendship_status: int = -1  # -1 = unknown, 0 = REQUEST_SENT, 1 = REQUEST_RECEIVED, 3 = ACCEPTED
+var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
+var _is_loading: bool = false
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
@@ -61,14 +63,53 @@ func set_data(data: SocialItemData) -> void:
 		_check_and_update_friend_status()
 
 
-func set_data_from_avatar(avatar_param: DclAvatar):
+func set_data_from_avatar(avatar_param: Avatar) -> void:
+	_avatar_ref = weakref(avatar_param)
+
+	# Hide self initially while loading
+	visible = false
+	_is_loading = true
+
+	# If avatar is not ready, wait for it
+	if not avatar_param.avatar_ready:
+		avatar_param.avatar_loaded.connect(_on_avatar_loaded, CONNECT_ONE_SHOT)
+		return
+
+	# Avatar is ready, load data immediately
+	_load_data_from_avatar(avatar_param)
+
+
+func _on_avatar_loaded() -> void:
+	var avatar = _avatar_ref.get_ref() as Avatar if _avatar_ref else null
+	if avatar == null or not is_instance_valid(avatar):
+		# Avatar was freed, remove self
+		queue_free()
+		return
+
+	_load_data_from_avatar(avatar)
+
+
+func _load_data_from_avatar(avatar_param: Avatar) -> void:
+	# Check if avatar_id is set (it should be after avatar_ready)
+	if avatar_param.avatar_id.is_empty():
+		# Still no avatar_id, remove self
+		queue_free()
+		return
+
 	social_data = SocialItemData.new()
 	social_data.name = avatar_param.get_avatar_name()
 	social_data.address = avatar_param.avatar_id
 	social_data.profile_picture_url = avatar_param.get_avatar_data().get_snapshots_face_url()
 
 	social_data.has_claimed_name = false if social_data.name.contains("#") else true
+
+	# Now show self and set data
+	_is_loading = false
+	visible = true
 	set_data(social_data)
+
+	# Notify parent that we're ready (for list size updates)
+	_notify_parent_size_changed()
 
 
 func _on_mouse_entered() -> void:
@@ -161,6 +202,12 @@ func _get_friends_panel():
 			return parent
 		parent = parent.get_parent()
 	return null
+
+
+func _notify_parent_size_changed() -> void:
+	var parent = get_parent()
+	if parent and parent.has_signal("size_changed"):
+		parent.size_changed.emit()
 
 
 func set_type(type: SocialType) -> void:
@@ -336,6 +383,7 @@ func _async_check_friend_status() -> void:
 		current_friendship_status = -1
 		button_add_friend.show()
 		label_pending_request.hide()
+		_notify_parent_reorder()
 		return
 
 	var status_data = promise.get_data()
@@ -344,3 +392,17 @@ func _async_check_friend_status() -> void:
 
 	# Update UI based on status
 	_update_button_visibility_from_status()
+
+	# Notify parent to reorder items based on friendship status
+	_notify_parent_reorder()
+
+
+func is_friend() -> bool:
+	# Status 3 = ACCEPTED (is a friend)
+	return current_friendship_status == 3
+
+
+func _notify_parent_reorder() -> void:
+	var parent = get_parent()
+	if parent and parent.has_method("_request_reorder"):
+		parent._request_reorder()

@@ -16,6 +16,7 @@ const WEARABLE_NAME_PREFIX = "__"
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
+var avatar_ready: bool = false
 
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
@@ -144,6 +145,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	avatar_id = profile.get_ethereum_address()
+	prints("Async update avatar from profile", avatar_id)
 
 	# Update metadata with the new avatar_id
 	if click_area:
@@ -437,6 +439,7 @@ func async_load_wearables():
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
+	avatar_ready = true
 	avatar_loaded.emit()
 
 

@@ -18,10 +18,11 @@ var _update_request_id: int = 0
 func _ready():
 	async_update_list()
 	if player_list_type == SocialType.NEARBY:
-		Global.avatars.avatar_scene_changed.connect(self.async_update_list)
+		# Use individual avatar signals instead of refreshing the whole list
+		Global.avatars.avatar_added.connect(_on_avatar_added)
+		Global.avatars.avatar_removed.connect(_on_avatar_removed)
 		# Also update when blacklist changes to remove blocked users from nearby list
-		# Use call_deferred to ensure the blacklist change is fully processed
-		Global.social_blacklist.blacklist_changed.connect(_async_on_blacklist_changed_deferred)
+		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
 		# Update nearby items when friendship requests change
 		Global.social_service.friendship_request_received.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_changed)
@@ -30,20 +31,120 @@ func _ready():
 		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
 	if player_list_type == SocialType.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
-	#Global.get_explorer().hud_button_friends.friends_clicked.connect(self.async_update_list)
 
 
-func _async_on_blacklist_changed_deferred() -> void:
-	# Use call_deferred to ensure the blacklist change is fully processed before updating
-	# This ensures that when unblocking, the avatar visibility is updated before we refresh the list
-	await get_tree().process_frame
-	async_update_list()
+func _on_avatar_added(avatar: Avatar) -> void:
+	if player_list_type != SocialType.NEARBY:
+		return
+
+	# Check if avatar is blocked (if avatar_id is already set)
+	if not avatar.avatar_id.is_empty():
+		if Global.social_blacklist.is_blocked(avatar.avatar_id):
+			return
+
+	# Create a new social item for this avatar
+	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+	self.add_child(social_item)
+	social_item.set_type(player_list_type)
+	social_item.set_data_from_avatar(avatar)
+
+
+func _on_avatar_removed(address: String) -> void:
+	if player_list_type != SocialType.NEARBY:
+		return
+
+	# Find and remove the social item for this address
+	for child in get_children():
+		if child.has_method("get") and child.get("social_data") != null:
+			var social_data = child.social_data
+			if social_data != null and social_data.address == address:
+				child.queue_free()
+				_update_list_size()
+				return
+
+
+func _on_blacklist_changed() -> void:
+	if player_list_type != SocialType.NEARBY:
+		return
+
+	# Check each child and remove if blocked
+	for child in get_children():
+		if child.has_method("get") and child.get("social_data") != null:
+			var social_data = child.social_data
+			if social_data != null and Global.social_blacklist.is_blocked(social_data.address):
+				child.queue_free()
+
+	_update_list_size()
 
 
 func _on_friendship_request_changed(_unused_address: String) -> void:
 	if player_list_type != SocialType.NEARBY:
 		return
-	async_update_list()
+	# Update friendship status on existing items instead of reloading
+	for child in get_children():
+		if child.has_method("_check_and_update_friend_status"):
+			child._check_and_update_friend_status()
+
+
+func _update_list_size() -> void:
+	var visible_count = 0
+	for child in get_children():
+		if child.visible:
+			visible_count += 1
+	list_size = visible_count
+	size_changed.emit()
+
+
+func _request_reorder() -> void:
+	# Called by social_item when friendship status is determined
+	# Debounce reordering to avoid multiple reorders in quick succession
+	if player_list_type != SocialType.NEARBY:
+		return
+
+	# Use call_deferred to batch multiple reorder requests
+	call_deferred("_reorder_items")
+
+
+func _reorder_items() -> void:
+	# Sort children: friends first, then non-friends, alphabetically within each group
+	var children = get_children()
+	if children.is_empty():
+		return
+
+	# Separate into friends and non-friends
+	var friends = []
+	var non_friends = []
+
+	for child in children:
+		if not is_instance_valid(child):
+			continue
+		if child.has_method("is_friend") and child.is_friend():
+			friends.append(child)
+		else:
+			non_friends.append(child)
+
+	# Sort each group alphabetically by name
+	friends.sort_custom(_compare_by_name)
+	non_friends.sort_custom(_compare_by_name)
+
+	# Reorder children: friends first, then non-friends
+	var index = 0
+	for child in friends:
+		move_child(child, index)
+		index += 1
+	for child in non_friends:
+		move_child(child, index)
+		index += 1
+
+
+func _compare_by_name(a, b) -> bool:
+	var name_a = ""
+	var name_b = ""
+	if a.has("social_data") and a.social_data != null:
+		name_a = a.social_data.name.to_lower()
+	if b.has("social_data") and b.social_data != null:
+		name_b = b.social_data.name.to_lower()
+	return name_a < name_b
 
 
 func async_update_list(_remote_avatars: Array = []) -> void:
@@ -54,7 +155,9 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 	remove_items()
 	match player_list_type:
 		SocialType.NEARBY:
-			await _async_reload_nearby_list(current_request_id)
+			# For NEARBY, load existing avatars on initial call
+			# After that, new avatars are added via avatar_added signal
+			_load_existing_nearby_avatars()
 		SocialType.BLOCKED:
 			await _async_reload_blocked_list(current_request_id)
 		SocialType.ONLINE:
@@ -220,154 +323,29 @@ func _async_fetch_all_friends():
 	return friend_items
 
 
-func _reload_nearby_list() -> void:
+func _load_existing_nearby_avatars() -> void:
+	# Load any avatars that already exist when the list is first shown
 	var all_avatars = Global.avatars.get_avatars()
-	var avatars = []
-	var seen_addresses = {}  # Diccionario para rastrear direcciones ya agregadas
 
 	for avatar in all_avatars:
 		if avatar != null and avatar is Avatar:
-			var avatar_address = avatar.avatar_id
-			if (
-				not avatar_address.is_empty()
-				and not Global.social_blacklist.is_blocked(avatar_address)
-			):
-				# Verificar si ya agregamos este avatar_id para evitar duplicados
-				if not seen_addresses.has(avatar_address):
-					seen_addresses[avatar_address] = true
-					avatars.append(avatar)
+			# Skip blocked avatars (check by avatar_id if available)
+			if not avatar.avatar_id.is_empty():
+				if Global.social_blacklist.is_blocked(avatar.avatar_id):
+					continue
 
-	list_size = avatars.size()
-	size_changed.emit()
-	add_items_by_avatar(avatars)
+			# Create item - it will handle its own loading and visibility
+			var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+			self.add_child(social_item)
+			social_item.set_type(player_list_type)
+			social_item.set_data_from_avatar(avatar)
 
-
-func _async_reload_nearby_list(request_id: int) -> void:
-	var all_avatars = Global.avatars.get_avatars()
-	var avatars_with_status = []  # Array of {avatar, friendship_status}
-	var seen_addresses = {}  # Diccionario para rastrear direcciones ya agregadas
-
-	# First, collect all avatars and check their friendship status
-	for avatar in all_avatars:
-		# Check if request is still valid
-		if request_id != _update_request_id:
-			return
-
-		if avatar != null and avatar is Avatar:
-			var avatar_address = avatar.avatar_id
-			if (
-				not avatar_address.is_empty()
-				and not Global.social_blacklist.is_blocked(avatar_address)
-			):
-				# Verificar si ya agregamos este avatar_id para evitar duplicados
-				if not seen_addresses.has(avatar_address):
-					seen_addresses[avatar_address] = true
-
-					# Check friendship status before adding
-					var promise = Global.social_service.get_friendship_status(avatar_address)
-					await PromiseUtils.async_awaiter(promise)
-
-					# Check if request is still valid after async operation
-					if request_id != _update_request_id:
-						return
-
-					var friendship_status = -1
-					if not promise.is_rejected():
-						var status_data = promise.get_data()
-						friendship_status = status_data.get("status", -1)
-
-					# Store avatar with its friendship status
-					avatars_with_status.append(
-						{"avatar": avatar, "friendship_status": friendship_status}
-					)
-
-	# Check if this request is still valid (no newer request started)
-	if request_id != _update_request_id:
-		return
-
-	# Now add items with pre-checked friendship status
-	for item_data in avatars_with_status:
-		var avatar = item_data["avatar"]
-		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
-		self.add_child(social_item)
-		social_item.set_type(player_list_type)
-		social_item.set_data_from_avatar(avatar as Avatar)
-
-		# Set friendship status directly to avoid flickering
-		var friendship_status = item_data["friendship_status"]
-		social_item.current_friendship_status = friendship_status
-
-		# Update button and label visibility based on pre-checked status
-		social_item._update_button_visibility_from_status()
-
-	list_size = avatars_with_status.size()
-	size_changed.emit()
-
-
-func _compare_names(a, b):
-	return a.social_data.name < b.social_data.name
+	_update_list_size()
 
 
 func remove_items() -> void:
 	for child in self.get_children():
 		child.queue_free()
-
-
-func _update_nearby_item_status(address: String) -> void:
-	# Find and update the status of nearby items matching the given address
-	# This is called when friendship requests change to update the UI without reloading the entire list
-	if player_list_type != SocialType.NEARBY:
-		return
-
-	# Find all social items in this list
-	var found_item = false
-	for child in self.get_children():
-		# Check if this child is a SocialItem (has social_data property)
-		if child.has("social_data"):
-			var social_item = child
-			var social_data = social_item.social_data
-			if social_data != null and social_data.has("address"):
-				if social_data.address == address:
-					# Found matching item, update its status
-					found_item = true
-					_async_update_item_status(social_item, address)
-
-	# If no item was found, the user might have left, so reload the list
-	if not found_item:
-		async_update_list()
-
-
-func _async_update_item_status(social_item: Node, address: String) -> void:
-	# Asynchronously update the friendship status of a specific social item
-	var promise = Global.social_service.get_friendship_status(address)
-	await PromiseUtils.async_awaiter(promise)
-
-	if promise.is_rejected():
-		return
-
-	var status_data = promise.get_data()
-	var status = status_data.get("status", -1)
-
-	# Update the item's status and UI
-	if social_item.has("current_friendship_status"):
-		var old_status = social_item.current_friendship_status
-		social_item.current_friendship_status = status
-
-		# If status changed to ACCEPTED, reload the entire list to ensure consistency
-		if status == 3 and old_status != 3:
-			async_update_list()
-			return
-
-		if social_item.has_method("_update_button_visibility_from_status"):
-			social_item._update_button_visibility_from_status()
-
-
-func add_items_by_avatar(avatar_list) -> void:
-	for avatar in avatar_list:
-		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
-		self.add_child(social_item)
-		social_item.set_type(player_list_type)
-		social_item.set_data_from_avatar(avatar as Avatar)
 
 
 func add_items_by_social_item_data(item_list) -> void:
