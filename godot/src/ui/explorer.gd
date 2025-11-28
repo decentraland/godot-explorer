@@ -154,8 +154,8 @@ func _ready():
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --preview
-	if cmd_preview_mode:
+	# --debug-panel (automatically enabled with --preview)
+	if Global.cli.debug_panel:
 		_on_control_menu_request_debug_panel(true)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
