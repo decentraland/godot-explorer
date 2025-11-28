@@ -113,6 +113,17 @@ fn prepare_build_args_envs(
 
     build_args.extend(extra_build_args);
 
+    // Set PROTOC environment variable to use locally installed protoc
+    let protoc_path = BinPaths::protoc_bin();
+    if protoc_path.exists() {
+        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
+            with_build_envs.insert(
+                "PROTOC".to_string(),
+                canonical_path.to_string_lossy().to_string(),
+            );
+        }
+    }
+
     // On Windows, try to auto-set LIBCLANG_PATH if not already set
     #[cfg(windows)]
     {
@@ -361,6 +372,18 @@ fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyh
 
     // Setup environment similar to android-build.sh
     let mut envs = HashMap::new();
+
+    // Set PROTOC environment variable to use locally installed protoc
+    let protoc_path = BinPaths::protoc_bin();
+    if protoc_path.exists() {
+        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
+            envs.insert(
+                "PROTOC".to_string(),
+                canonical_path.to_string_lossy().to_string(),
+            );
+        }
+    }
+
     setup_v8_bindings(&mut envs, &"android".to_string())?;
 
     // Use AndroidBuildEnv struct to configure environment
