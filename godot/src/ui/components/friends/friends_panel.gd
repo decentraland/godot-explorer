@@ -7,8 +7,8 @@ const CONNECTIVITY_ONLINE: int = 0
 const CONNECTIVITY_OFFLINE: int = 1
 const CONNECTIVITY_AWAY: int = 2
 
-var down_arrow_icon: CompressedTexture2D = load("res://assets/ui/down_arrow.svg")
-var up_arrow_icon: CompressedTexture2D = load("res://assets/ui/up_arrow.svg")
+var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
+var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
 
 # Track which friends are online (address -> true if online)
 var _online_friends: Dictionary = {}
