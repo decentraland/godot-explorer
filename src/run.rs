@@ -96,7 +96,7 @@ pub fn build(
         run_cargo_build(&build_cwd, &build_args, &with_build_envs)?;
     }
 
-    copy_library(&target, profile == "dev")?;
+    copy_library(&target, profile)?;
 
     print_build_status(&target, "success");
 
