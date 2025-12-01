@@ -56,7 +56,16 @@ pub fn update_video_player(
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let video_player_component = SceneCrdtStateProtoComponents::get_video_player(crdt_state);
 
+    // Collect livekit video player registrations to process after the main loop
+    let mut livekit_registrations = Vec::new();
+
     if let Some(video_player_dirty) = dirty_lww_components.get(&SceneComponentId::VIDEO_PLAYER) {
+        tracing::debug!(
+            "Video player component has {} dirty entities in scene {}",
+            video_player_dirty.len(),
+            scene.scene_id.0
+        );
+
         for entity in video_player_dirty {
             let exist_current_node = godot_dcl_scene.get_godot_entity_node(entity).is_some();
 
@@ -67,6 +76,10 @@ pub fn update_video_player(
             };
 
             if let Some(next_value) = next_value {
+                // TODO: For now hardcode the target source, in the future use next_value.src
+                let target_src = "livekit-video://current-stream".to_string();
+                // let target_src = next_value.src.clone();
+
                 let muted_by_current_scene = if let SceneType::Parcel = scene.scene_type {
                     scene.scene_id != *current_parcel_scene_id
                 } else {
@@ -80,7 +93,7 @@ pub fn update_video_player(
                 let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
                 let update_mode =
                     if let Some(video_player_data) = godot_entity_node.video_player_data.as_ref() {
-                        if next_value.src != video_player_data.video_sink.source {
+                        if target_src != video_player_data.video_sink.source {
                             VideoUpdateMode::ChangeVideo
                         } else {
                             VideoUpdateMode::OnlyChangeValues
@@ -125,6 +138,13 @@ pub fn update_video_player(
                             .try_send(AVCommand::Repeat(next_value.r#loop.unwrap_or(false)));
                     }
                     VideoUpdateMode::ChangeVideo => {
+                        tracing::debug!(
+                            "Video player changing video for entity {}: {} -> {}",
+                            entity,
+                            godot_entity_node.video_player_data.as_ref().map(|d| d.video_sink.source.as_str()).unwrap_or("none"),
+                            target_src
+                        );
+
                         if let Some(video_player_data) =
                             godot_entity_node.video_player_data.as_ref()
                         {
@@ -132,6 +152,59 @@ pub fn update_video_player(
                                 .video_sink
                                 .command_sender
                                 .try_send(AVCommand::Dispose);
+                        }
+
+                        // Check if this is a livekit-video:// URL
+                        if target_src.starts_with("livekit-video://") {
+                            tracing::debug!(
+                                "Video player activated (LiveKit) for entity {}: {}",
+                                entity,
+                                target_src
+                            );
+
+                            // Create placeholder texture if needed
+                            let texture = if let Some(video_player_data) = &godot_entity_node.video_player_data {
+                                video_player_data.video_sink.texture.clone()
+                            } else {
+                                let image = Image::create(8, 8, false, Format::RGBA8)
+                                    .expect("couldn't create video image");
+                                ImageTexture::create_from_image(image)
+                                    .expect("couldn't create video texture")
+                            };
+
+                            // Create minimal VideoSink (no stream processor needed)
+                            let (command_sender, _) = tokio::sync::mpsc::channel(10);
+                            let (_, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
+
+                            use crate::av::backend::{AudioSink, VideoSink};
+
+                            let video_sink = VideoSink {
+                                source: target_src.clone(),
+                                command_sender: command_sender.clone(),
+                                texture,
+                                size: (0, 0),
+                                current_time: 0.0,
+                                length: None,
+                                rate: None,
+                                stream_data_state_receiver,
+                            };
+
+                            let audio_sink = AudioSink {
+                                command_sender,
+                            };
+
+                            godot_entity_node.video_player_data = Some(VideoPlayerData {
+                                video_sink,
+                                audio_sink,
+                                timestamp: 0,
+                                length: -1.0,
+                            });
+
+                            // Register this entity as a livekit video player
+                            livekit_registrations.push(*entity);
+
+                            // Skip the normal video player setup
+                            continue;
                         }
 
                         let mut video_player_node = node_3d.get_node_or_null("VideoPlayer".into()).expect(
@@ -150,7 +223,7 @@ pub fn update_video_player(
 
                         let (wait_for_resource_sender, wait_for_resource_receiver, file_hash) =
                             if let Some(local_scene_resource) =
-                                get_local_file_hash_future(&scene.content_mapping, &next_value.src)
+                                get_local_file_hash_future(&scene.content_mapping, &target_src)
                             {
                                 (
                                     Some(local_scene_resource.0),
@@ -165,7 +238,7 @@ pub fn update_video_player(
                             wait_for_resource_sender;
 
                         let (video_sink, audio_sink) = av_sinks(
-                            next_value.src.clone(),
+                            target_src.clone(),
                             Some(texture.clone()),
                             video_player_node.clone().upcast::<AudioStreamPlayer>(),
                             playing,
@@ -193,6 +266,61 @@ pub fn update_video_player(
                         }
                     }
                     VideoUpdateMode::FirstSpawnVideo => {
+                        // Check if this is a livekit-video:// URL
+                        if target_src.starts_with("livekit-video://") {
+                            tracing::debug!(
+                                "Video player activated (LiveKit, first spawn) for entity {}: {}",
+                                entity,
+                                target_src
+                            );
+
+                            // Create placeholder texture
+                            let image = Image::create(8, 8, false, Format::RGBA8)
+                                .expect("couldn't create video image");
+                            let texture = ImageTexture::create_from_image(image)
+                                .expect("couldn't create video texture");
+
+                            // Create minimal VideoSink (no stream processor needed)
+                            let (command_sender, _) = tokio::sync::mpsc::channel(10);
+                            let (_, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
+
+                            use crate::av::backend::{AudioSink, VideoSink};
+
+                            let video_sink = VideoSink {
+                                source: target_src.clone(),
+                                command_sender: command_sender.clone(),
+                                texture: texture.clone(),
+                                size: (0, 0),
+                                current_time: 0.0,
+                                length: None,
+                                rate: None,
+                                stream_data_state_receiver,
+                            };
+
+                            let audio_sink = AudioSink {
+                                command_sender,
+                            };
+
+                            godot_entity_node.video_player_data = Some(VideoPlayerData {
+                                video_sink,
+                                audio_sink,
+                                timestamp: 0,
+                                length: -1.0,
+                            });
+
+                            // Register this entity as a livekit video player
+                            livekit_registrations.push(*entity);
+
+                            // Skip the normal video player setup
+                            continue;
+                        }
+
+                        tracing::debug!(
+                            "Video player activated (first spawn) for entity {}: {}",
+                            entity,
+                            target_src
+                        );
+
                         let image = Image::create(8, 8, false, Format::RGBA8)
                             .expect("couldn't create an video image");
                         let texture = ImageTexture::create_from_image(image)
@@ -207,7 +335,7 @@ pub fn update_video_player(
 
                         let (wait_for_resource_sender, wait_for_resource_receiver, file_hash) =
                             if let Some(local_scene_resource) =
-                                get_local_file_hash_future(&scene.content_mapping, &next_value.src)
+                                get_local_file_hash_future(&scene.content_mapping, &target_src)
                             {
                                 (
                                     Some(local_scene_resource.0),
@@ -242,7 +370,7 @@ pub fn update_video_player(
                             .set_muted(muted_by_current_scene);
 
                         let (video_sink, audio_sink) = av_sinks(
-                            next_value.src.clone(),
+                            target_src.clone(),
                             Some(texture),
                             video_player_node.clone().upcast::<AudioStreamPlayer>(),
                             playing,
@@ -279,6 +407,12 @@ pub fn update_video_player(
                 };
 
                 if let Some(video_player_data) = node.video_player_data.as_ref() {
+                    tracing::debug!(
+                        "Video player deactivated for entity {}: {}",
+                        entity,
+                        video_player_data.video_sink.source
+                    );
+
                     let _ = video_player_data
                         .video_sink
                         .command_sender
@@ -372,5 +506,51 @@ pub fn update_video_player(
                 }
             }
         }
+    }
+
+    // Register livekit video players (done after the main loop to avoid borrow conflicts)
+    for entity in livekit_registrations {
+        scene.register_livekit_video_player(entity);
+    }
+}
+
+pub fn update_video_texture_from_livekit(
+    video_sink: &mut crate::av::backend::VideoSink,
+    width: u32,
+    height: u32,
+    data: &[u8],
+) {
+    use godot::engine::image::Format;
+    use godot::engine::Image;
+    use crate::content::packed_array::PackedByteArrayFromVec;
+    use godot::prelude::PackedByteArray;
+
+    let data_arr = PackedByteArray::from_vec(data);
+
+    // Check if resize needed
+    let current_size = video_sink.texture.get_size();
+    if current_size.x != width as f32 || current_size.y != height as f32 {
+        // Create new image with new dimensions
+        let image = Image::create_from_data(
+            width as i32,
+            height as i32,
+            false,
+            Format::RGBA8,
+            data_arr,
+        ).unwrap();
+        video_sink.texture.set_image(image.clone());
+        video_sink.texture.update(image);
+        video_sink.size = (width, height);
+    } else {
+        // Update existing texture in-place
+        let mut image = video_sink.texture.get_image().unwrap();
+        image.set_data(
+            width as i32,
+            height as i32,
+            false,
+            Format::RGBA8,
+            data_arr,
+        );
+        video_sink.texture.update(image);
     }
 }

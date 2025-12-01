@@ -23,7 +23,10 @@ use crate::{
 
 use super::{
     adapter_trait::Adapter,
-    message_processor::{IncomingMessage, MessageType, Rfc4Message, VoiceFrameData, VoiceInitData},
+    message_processor::{
+        IncomingMessage, MessageType, Rfc4Message, VideoFrameData, VideoInitData, VoiceFrameData,
+        VoiceInitData,
+    },
 };
 
 // Constants
@@ -283,6 +286,36 @@ fn spawn_livekit_task(
                     };
 
                     match incoming {
+                        livekit::RoomEvent::Connected { participants_with_tracks } => {
+                            tracing::info!("Connected to LiveKit room with {} participants", participants_with_tracks.len());
+
+                            // Subscribe to video tracks from streamers already in the room
+                            for (participant, publications) in participants_with_tracks {
+                                let identity = participant.identity();
+                                let identity_str = identity.0.as_str();
+
+                                // Check if this is a streamer (identity ends with "-streamer")
+                                if identity_str.ends_with("-streamer") {
+                                    tracing::info!("Found streamer {} with {} publications", identity_str, publications.len());
+                                    for publication in publications {
+                                        tracing::info!("Subscribing to streamer publication: {:?} (kind: {:?})",
+                                            publication.sid(), publication.kind());
+                                        publication.set_subscribed(true);
+                                    }
+                                }
+                            }
+                        }
+                        livekit::RoomEvent::TrackPublished { publication, participant } => {
+                            let identity = participant.identity();
+                            let identity_str = identity.0.as_str();
+
+                            // Auto-subscribe to video tracks from streamers
+                            if identity_str.ends_with("-streamer") {
+                                tracing::info!("Streamer {} published track: {:?} (kind: {:?})",
+                                    identity_str, publication.sid(), publication.kind());
+                                publication.set_subscribed(true);
+                            }
+                        }
                         livekit::RoomEvent::DataReceived { payload, participant, .. } => {
                             if participant.is_none() {
                                 return;
@@ -315,15 +348,22 @@ fn spawn_livekit_task(
                             }
                         },
                         livekit::RoomEvent::TrackSubscribed { track, publication: _, participant } => {
-                            if let Some(address) = participant.identity().0.as_str().as_h160() {
-                                match track {
-                                    livekit::track::RemoteTrack::Audio(audio) => {
+                            let identity = participant.identity();
+                            let identity_str = identity.0.as_str();
+                            let address = identity_str.as_h160();
+                            let is_streamer = identity_str.ends_with("-streamer");
+
+                            match track {
+                                livekit::track::RemoteTrack::Audio(audio) => {
+                                    // Audio tracks require ethereum address (voice chat)
+                                    if let Some(address) = address {
                                         let sender = sender.clone();
                                         let room_id_clone = room_id.clone();
+                                        let identity_owned = identity_str.to_string();
                                         rt2.spawn(async move {
                                             let mut x = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
 
-                                            tracing::debug!("remove track from {:?}", participant.identity().0.as_str());
+                                            tracing::debug!("audio track from {:?}", identity_owned);
 
                                             // get first frame to set sample rate
                                             let Some(frame) = x.next().await else {
@@ -362,11 +402,132 @@ fn spawn_livekit_task(
                                                 }
                                             }
 
-                                            tracing::warn!("track ended, exiting task");
+                                            tracing::warn!("audio track ended, exiting task");
                                         });
-                                    },
-                                    _ => tracing::warn!("not processing video tracks"),
-                                }
+                                    }
+                                },
+                                livekit::track::RemoteTrack::Video(video) => {
+                                    // Video tracks: accept from streamers (no address needed) or participants with addresses
+                                    if is_streamer || address.is_some() {
+                                        let sender = sender.clone();
+                                        let room_id_clone = room_id.clone();
+                                        // Use zero address for streamers without ethereum identity
+                                        let address = address.unwrap_or_default();
+                                        let identity_owned = identity_str.to_string();
+
+                                        rt2.spawn(async move {
+                                            use livekit::webrtc::video_stream::native::NativeVideoStream;
+                                            use livekit::webrtc::video_frame::VideoBuffer;
+                                            use livekit::webrtc::native::yuv_helper;
+
+                                            let mut stream = NativeVideoStream::new(video.rtc_track());
+
+                                            tracing::info!("video track subscribed from {:?}", identity_owned);
+
+                                            // Get first frame for initialization
+                                            let Some(frame) = stream.next().await else {
+                                                tracing::warn!("dropped video track without frames");
+                                                return;
+                                            };
+
+                                            // Get buffer dimensions
+                                            let buffer = &frame.buffer;
+                                            let width = buffer.width();
+                                            let height = buffer.height();
+
+                                            tracing::info!("Received first video frame: {}x{}, type: {:?}", width, height, buffer.buffer_type());
+
+                                            // Send init message
+                                            if let Err(e) = sender.send(IncomingMessage {
+                                                message: MessageType::InitVideo(VideoInitData {
+                                                    width,
+                                                    height,
+                                                }),
+                                                address,
+                                                room_id: room_id_clone.clone(),
+                                            }).await {
+                                                tracing::warn!("Failed to send InitVideo: {}", e);
+                                                return;
+                                            }
+
+                                            // Helper function to convert video buffer to RGBA
+                                            fn convert_to_rgba(buffer: &dyn VideoBuffer) -> Option<Vec<u8>> {
+                                                let width = buffer.width();
+                                                let height = buffer.height();
+                                                let stride_rgba = width * 4;
+                                                let mut rgba_data = vec![0u8; (width * height * 4) as usize];
+
+                                                // Convert to I420 first (common format)
+                                                let i420 = buffer.to_i420();
+
+                                                let (stride_y, stride_u, stride_v) = i420.strides();
+                                                let (data_y, data_u, data_v) = i420.data();
+
+                                                // Use yuv_helper to convert I420 to ABGR (which is RGBA in little-endian memory)
+                                                yuv_helper::i420_to_abgr(
+                                                    data_y,
+                                                    stride_y,
+                                                    data_u,
+                                                    stride_u,
+                                                    data_v,
+                                                    stride_v,
+                                                    &mut rgba_data,
+                                                    stride_rgba,
+                                                    width as i32,
+                                                    height as i32,
+                                                );
+
+                                                Some(rgba_data)
+                                            }
+
+                                            // Convert and send the first frame
+                                            if let Some(rgba_data) = convert_to_rgba(buffer.as_ref()) {
+                                                if let Err(e) = sender.try_send(IncomingMessage {
+                                                    message: MessageType::VideoFrame(VideoFrameData {
+                                                        data: rgba_data,
+                                                        width,
+                                                        height,
+                                                    }),
+                                                    address,
+                                                    room_id: room_id_clone.clone(),
+                                                }) {
+                                                    tracing::warn!("Failed to send first video frame: {:?}", e);
+                                                }
+                                            }
+
+                                            // Process subsequent frames
+                                            while let Some(frame) = stream.next().await {
+                                                let buffer = &frame.buffer;
+                                                let width = buffer.width();
+                                                let height = buffer.height();
+
+                                                if let Some(rgba_data) = convert_to_rgba(buffer.as_ref()) {
+                                                    match sender.try_send(IncomingMessage {
+                                                        message: MessageType::VideoFrame(VideoFrameData {
+                                                            data: rgba_data,
+                                                            width,
+                                                            height,
+                                                        }),
+                                                        address,
+                                                        room_id: room_id_clone.clone(),
+                                                    }) {
+                                                        Ok(()) => (),
+                                                        Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                                            tracing::warn!("Dropping frame due to full channel");
+                                                            // Drop frame if channel is full (backpressure)
+                                                        },
+                                                        Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
+                                                            tracing::warn!("Video receiver dropped, exiting task");
+                                                            return;
+                                                        },
+                                                    }
+                                                }
+                                            }
+
+                                            tracing::warn!("video track ended, exiting task");
+                                        });
+                                    }
+                                },
                             }
                         }
                         livekit::RoomEvent::ParticipantConnected(participant) => {

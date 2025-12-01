@@ -7,12 +7,7 @@ use godot::prelude::{AudioStreamPlayer, Gd, PackedVector2Array, ToGodot, Vector2
 use thiserror::Error;
 use tracing::{debug, error};
 
-use super::stream_processor::AVCommand;
 use super::stream_processor::FfmpegContext;
-
-pub struct AudioSink {
-    pub command_sender: tokio::sync::mpsc::Sender<AVCommand>,
-}
 
 trait SampleFormatHelper {
     fn is_planar(&self) -> bool;

@@ -88,9 +88,7 @@ pub enum SceneUpdateState {
     Raycasts,
     AvatarAttach,
     SceneUi,
-    #[cfg(feature = "use_ffmpeg")]
     VideoPlayer,
-    #[cfg(feature = "use_ffmpeg")]
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
@@ -123,14 +121,9 @@ impl SceneUpdateState {
             &Self::Animator => Self::AvatarShape,
             &Self::AvatarShape => Self::AvatarShapeEmoteCommand,
             &Self::AvatarShapeEmoteCommand => Self::Raycasts,
-            #[cfg(feature = "use_ffmpeg")]
             &Self::Raycasts => Self::VideoPlayer,
-            #[cfg(feature = "use_ffmpeg")]
             &Self::VideoPlayer => Self::AudioStream,
-            #[cfg(feature = "use_ffmpeg")]
             &Self::AudioStream => Self::AvatarModifierArea,
-            #[cfg(not(feature = "use_ffmpeg"))]
-            &Self::Raycasts => Self::AvatarModifierArea,
             &Self::AvatarModifierArea => Self::CameraModeArea,
             &Self::CameraModeArea => Self::VirtualCameras,
             &Self::VirtualCameras => Self::AudioSource,
@@ -202,6 +195,9 @@ pub struct Scene {
     // Used by VideoPlayer and AudioStream
     pub audio_streams: HashMap<SceneEntityId, Gd<DclAudioStream>>,
     pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
+
+    // Tracks entities with livekit video players
+    pub livekit_video_player_entities: HashSet<SceneEntityId>,
 
     pub avatar_scene_updates: SceneAvatarUpdates,
     pub scene_tests: HashMap<String, Option<SceneTestResult>>,
@@ -308,6 +304,7 @@ impl Scene {
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
+            livekit_video_player_entities: HashSet::new(),
             scene_type,
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
@@ -372,6 +369,7 @@ impl Scene {
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
+            livekit_video_player_entities: HashSet::new(),
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
@@ -380,6 +378,26 @@ impl Scene {
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
+        }
+    }
+
+    pub fn register_livekit_video_player(&mut self, entity_id: SceneEntityId) {
+        self.livekit_video_player_entities.insert(entity_id);
+        tracing::info!(
+            "Registered livekit video player entity {}",
+            entity_id.as_i32()
+        );
+    }
+
+    pub fn process_livekit_video_frame(&mut self, width: u32, height: u32, data: &[u8]) {
+        // Send video frames to all registered livekit video players
+        for entity_id in &self.livekit_video_player_entities {
+            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(entity_id) {
+                if let Some(vp_data) = &mut node.video_player_data {
+                    use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
+                    update_video_texture_from_livekit(&mut vp_data.video_sink, width, height, data);
+                }
+            }
         }
     }
 }

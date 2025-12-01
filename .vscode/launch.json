@@ -137,13 +137,15 @@
         "--path",
         "${workspaceFolder}/godot",
         "--realm",
-        "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest/",
-        "--preview",
-        "--skip-lobby"
+        "boedo.dcl.eth",
+        "--debug-panel",
+        "--skip-lobby",
+        "--location",
+        "0,0"
       ],
       "cwd": "${workspaceRoot}/godot",
       "env": {
-        "RUST_LOG": "dclgodot::scene_runner=debug"
+        "RUST_LOG": "dclgodot=debug,dclgodot::comms=debug,dclgodot::analytics=error"
       },
       "preLaunchTask": "Build GDExtension Lib",
       "terminal": "integrated"
