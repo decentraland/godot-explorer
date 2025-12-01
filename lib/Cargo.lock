@@ -809,8 +809,8 @@ dependencies = [
 
 [[package]]
 name = "dcl-rpc"
-version = "2.3.5"
-source = "git+https://github.com/decentraland/rpc-rust?branch=main#d3d2fb281b11ba4896a2e96c56d8f8a5ac17b70a"
+version = "2.3.7"
+source = "git+https://github.com/decentraland/rpc-rust?branch=main#aa2302d6918e2d1c7f2e298aa972d8a6bba6c389"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -822,6 +822,7 @@ dependencies = [
  "prost 0.11.9",
  "prost-build 0.11.9",
  "quote",
+ "rustls 0.23.35",
  "tokio",
  "tokio-tungstenite 0.24.0",
  "tokio-util",
@@ -2311,7 +2312,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -3717,6 +3718,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "533f54bc6a7d4f647e46ad909549eda97bf5afc1585190ef692b4286b198bd8f"
 dependencies = [
  "once_cell",
+ "ring 0.17.8",
  "rustls-pki-types",
  "rustls-webpki 0.103.8",
  "subtle",
@@ -5121,7 +5123,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

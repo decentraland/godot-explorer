@@ -378,6 +378,8 @@ fn main() -> Result<(), anyhow::Error> {
             if should_deploy {
                 let platform = target.unwrap();
 
+                let is_prod = sm.is_present("prod");
+
                 if is_only_lib && platform == "android" {
                     // Hotreload mode: build and push .so file only
                     print_message(
@@ -388,6 +390,7 @@ fn main() -> Result<(), anyhow::Error> {
                     // Build for Android
                     run::build(
                         sm.is_present("release"),
+                        is_prod,
                         build_args.clone(),
                         None,
                         Some(platform),
@@ -411,11 +414,12 @@ fn main() -> Result<(), anyhow::Error> {
                     );
 
                     // 1. Build for host OS first
-                    run::build(sm.is_present("release"), build_args.clone(), None, None)?;
+                    run::build(sm.is_present("release"), is_prod, build_args.clone(), None, None)?;
 
                     // 2. Build for the platform
                     run::build(
                         sm.is_present("release"),
+                        is_prod,
                         build_args.clone(),
                         None,
                         Some(platform),
@@ -434,7 +438,7 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             } else {
                 // Normal build (either host OS or just build for target without deploying)
-                run::build(sm.is_present("release"), build_args, None, target)?;
+                run::build(sm.is_present("release"), sm.is_present("prod"), build_args, None, target)?;
             }
 
             // Now run
@@ -484,7 +488,7 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            let result = run::build(sm.is_present("release"), build_args, None, target);
+            let result = run::build(sm.is_present("release"), sm.is_present("prod"), build_args, None, target);
 
             if result.is_ok() {
                 dependencies::suggest_next_steps("build", target);
@@ -513,7 +517,7 @@ fn main() -> Result<(), anyhow::Error> {
             dependencies::check_command_dependencies("import-assets", None)?;
 
             // Build for host OS first (import-assets needs the library)
-            run::build(false, vec![], None, None)?;
+            run::build(false, false, vec![], None, None)?;
 
             let status = import_assets();
             if !status.success() {
@@ -590,7 +594,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|(k, v)| (k.to_string(), v.to_string()))
     .collect();
 
-    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 
     run::run(false, true, vec![], false, false)?;
 
@@ -627,7 +631,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 
     run::run(false, false, extra_args, true, false)?;
 
@@ -640,7 +644,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
     run::run(false, false, client_extra_args, false, true)?;
 
     let err = glob::glob("./godot/*.profraw")?

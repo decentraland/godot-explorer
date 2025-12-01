@@ -83,6 +83,8 @@ async fn create_connection(wallet: &Arc<EphemeralAuthChain>) -> Result<ServiceCo
     );
 
     // Establish WebSocket connection with timeout
+    godot_print!("[SocialServiceManager] create_connection: Starting WebSocket connect...");
+    let ws_connect_start = std::time::Instant::now();
     let ws_connection = tokio::time::timeout(
         Duration::from_secs(CONNECTION_TIMEOUT_SECS),
         WebSocketClient::connect(SOCIAL_SERVICE_URL),
@@ -90,8 +92,9 @@ async fn create_connection(wallet: &Arc<EphemeralAuthChain>) -> Result<ServiceCo
     .await
     .map_err(|_| {
         godot_error!(
-            "[SocialServiceManager] create_connection: Timeout after {}s",
-            CONNECTION_TIMEOUT_SECS
+            "[SocialServiceManager] create_connection: WebSocket timeout after {}s (elapsed: {:?})",
+            CONNECTION_TIMEOUT_SECS,
+            ws_connect_start.elapsed()
         );
         anyhow!(
             "Timeout connecting to Social Service after {}s",
@@ -100,13 +103,17 @@ async fn create_connection(wallet: &Arc<EphemeralAuthChain>) -> Result<ServiceCo
     })?
     .map_err(|e| {
         godot_error!(
-            "[SocialServiceManager] create_connection: WebSocket failed: {:?}",
+            "[SocialServiceManager] create_connection: WebSocket connect failed after {:?}: {:?}",
+            ws_connect_start.elapsed(),
             e
         );
         anyhow!("Failed to connect to Social Service: {:?}", e)
     })?;
 
-    godot_print!("[SocialServiceManager] create_connection: WebSocket connected, creating transport");
+    godot_print!(
+        "[SocialServiceManager] create_connection: WebSocket connected in {:?}, creating transport",
+        ws_connect_start.elapsed()
+    );
     let transport = WebSocketTransport::new(ws_connection);
 
     godot_print!("[SocialServiceManager] create_connection: Building auth chain");
@@ -194,23 +201,38 @@ impl SocialServiceManager {
                 return Ok(());
             }
             if state.connecting {
-                // Another task is already connecting, wait a bit and retry
+                // Another task is already connecting, wait for it to complete
                 godot_print!("[SocialServiceManager] ensure_connected: Connection in progress, waiting...");
                 drop(state);
                 // Wait for the other connection attempt to complete
-                for _ in 0..50 {
-                    // 5 seconds max
+                // Use CONNECTION_TIMEOUT_SECS + 5 to allow for the full connection attempt plus margin
+                let max_wait_iterations = ((CONNECTION_TIMEOUT_SECS + 5) * 10) as usize;
+                for i in 0..max_wait_iterations {
                     tokio::time::sleep(Duration::from_millis(100)).await;
                     let state = self.state.read().await;
                     if state.connection.is_some() {
+                        godot_print!("[SocialServiceManager] ensure_connected: Connection ready after waiting");
                         return Ok(());
                     }
                     if !state.connecting {
                         // Connection attempt finished but failed
                         if let Some(ref err) = state.last_error {
+                            godot_print!(
+                                "[SocialServiceManager] ensure_connected: Connection failed while waiting: {}",
+                                err
+                            );
                             return Err(anyhow!("Connection failed: {}", err));
                         }
-                        break; // Try again
+                        // No error means we can try to connect ourselves
+                        godot_print!("[SocialServiceManager] ensure_connected: Previous connection attempt ended, will try ourselves");
+                        break;
+                    }
+                    // Log every 2 seconds
+                    if i > 0 && i % 20 == 0 {
+                        godot_print!(
+                            "[SocialServiceManager] ensure_connected: Still waiting for connection... ({:.1}s)",
+                            (i as f32) / 10.0
+                        );
                     }
                 }
             }
@@ -223,7 +245,8 @@ impl SocialServiceManager {
                 return Ok(());
             }
             if state.connecting {
-                // Lost the race, another task started connecting
+                // Lost the race, another task started connecting - wait for it
+                godot_print!("[SocialServiceManager] ensure_connected: Another task started connecting, returning error");
                 return Err(anyhow!("Connection already in progress"));
             }
             state.connecting = true;
