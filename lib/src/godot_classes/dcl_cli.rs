@@ -58,6 +58,8 @@ pub struct DclCli {
     #[var(get)]
     pub debug_minimap: bool,
     #[var(get)]
+    pub debug_panel: bool,
+    #[var(get)]
     pub use_test_input: bool,
     #[var(get)]
     pub test_camera_tune: bool,
@@ -228,6 +230,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
+            ArgDefinition {
+                name: "--debug-panel".to_string(),
+                description: "Show the debug panel UI".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
             // Performance
             ArgDefinition {
                 name: "--measure-perf".to_string(),
@@ -361,6 +369,7 @@ impl INode for DclCli {
         let network_debugger = args_map.contains_key("--network-debugger");
         let spawn_avatars = args_map.contains_key("--spawn-avatars");
         let debug_minimap = args_map.contains_key("--debug-minimap");
+        let debug_panel = args_map.contains_key("--debug-panel") || preview_mode;
         let use_test_input = args_map.contains_key("--use-test-input");
         let test_camera_tune = args_map.contains_key("--test-camera-tune");
         let measure_perf = args_map.contains_key("--measure-perf");
@@ -415,6 +424,7 @@ impl INode for DclCli {
             network_debugger,
             spawn_avatars,
             debug_minimap,
+            debug_panel,
             use_test_input,
             test_camera_tune,
             measure_perf,
@@ -467,7 +477,7 @@ impl DclCli {
     #[func]
     pub fn get_location_vector(&self) -> Vector2i {
         if self.location.is_empty() {
-            return Vector2i::ZERO;
+            return Vector2i::MAX;
         }
 
         let loc_str = self.location.to_string();
@@ -477,7 +487,7 @@ impl DclCli {
                 return Vector2i::new(x, y);
             }
         }
-        Vector2i::ZERO
+        Vector2i::MAX
     }
 
     #[func]
