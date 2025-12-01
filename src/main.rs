@@ -414,7 +414,13 @@ fn main() -> Result<(), anyhow::Error> {
                     );
 
                     // 1. Build for host OS first
-                    run::build(sm.is_present("release"), is_prod, build_args.clone(), None, None)?;
+                    run::build(
+                        sm.is_present("release"),
+                        is_prod,
+                        build_args.clone(),
+                        None,
+                        None,
+                    )?;
 
                     // 2. Build for the platform
                     run::build(
@@ -438,7 +444,13 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             } else {
                 // Normal build (either host OS or just build for target without deploying)
-                run::build(sm.is_present("release"), sm.is_present("prod"), build_args, None, target)?;
+                run::build(
+                    sm.is_present("release"),
+                    sm.is_present("prod"),
+                    build_args,
+                    None,
+                    target,
+                )?;
             }
 
             // Now run
@@ -488,7 +500,13 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            let result = run::build(sm.is_present("release"), sm.is_present("prod"), build_args, None, target);
+            let result = run::build(
+                sm.is_present("release"),
+                sm.is_present("prod"),
+                build_args,
+                None,
+                target,
+            );
 
             if result.is_ok() {
                 dependencies::suggest_next_steps("build", target);

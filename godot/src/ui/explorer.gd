@@ -290,18 +290,30 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 
 
 func _async_initialize_social_service() -> void:
-	print("[Explorer] Initializing Social Service for authenticated user")
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
+	# Subscribe to friendship updates (request/accept/reject/etc)
 	var promise = Global.social_service.subscribe_to_updates()
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
 		var error = promise.get_data()
-		push_error("[Explorer] Failed to initialize Social Service: " + str(error.get_error()))
+		push_error(
+			"[Explorer] Failed to subscribe to friendship updates: " + str(error.get_error())
+		)
 		return
 
-	print("[Explorer] Social Service initialized successfully")
+	# Subscribe to connectivity updates (online/offline/away)
+	# This subscription also sends initial status of all friends
+	var connectivity_promise = Global.social_service.subscribe_to_connectivity_updates()
+	await PromiseUtils.async_awaiter(connectivity_promise)
+
+	if connectivity_promise.is_rejected():
+		var error = connectivity_promise.get_data()
+		push_error(
+			"[Explorer] Failed to subscribe to connectivity updates: " + str(error.get_error())
+		)
+		# Don't return - connectivity is nice-to-have, friendship updates are more critical
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:

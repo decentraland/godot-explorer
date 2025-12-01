@@ -371,6 +371,46 @@ func remove_items() -> void:
 		child.queue_free()
 
 
+func remove_item_by_address(address: String) -> bool:
+	# Remove a specific item by address without reloading the list
+	# Returns true if item was found and removed
+	for child in get_children():
+		if "social_data" in child and child.social_data != null:
+			if child.social_data.address == address:
+				child.queue_free()
+				# Update list size after removal (deferred to allow queue_free to process)
+				_update_list_size.call_deferred()
+				return true
+	return false
+
+
+func has_item_with_address(address: String) -> bool:
+	# Check if an item with the given address exists in the list
+	for child in get_children():
+		if "social_data" in child and child.social_data != null:
+			if child.social_data.address == address:
+				return true
+	return false
+
+
+func get_item_data_by_address(address: String) -> SocialItemData:
+	# Get the SocialItemData for an item by address (returns null if not found)
+	for child in get_children():
+		if "social_data" in child and child.social_data != null:
+			if child.social_data.address == address:
+				return child.social_data
+	return null
+
+
+func add_item_by_social_item_data(item: SocialItemData) -> void:
+	# Add a single item to the list without clearing existing items
+	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+	self.add_child(social_item)
+	social_item.set_type(player_list_type)
+	social_item.set_data(item)
+	_update_list_size()
+
+
 func add_items_by_social_item_data(item_list) -> void:
 	for item in item_list:
 		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()

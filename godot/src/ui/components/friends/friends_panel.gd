@@ -83,8 +83,8 @@ func _ready() -> void:
 	):
 		Global.social_service.friend_connectivity_updated.connect(_on_friend_connectivity_updated)
 
-	# Subscribe to connectivity updates stream
-	Global.social_service.subscribe_to_connectivity_updates()
+	# Note: Connectivity updates subscription is done in explorer.gd during social service init
+	# This ensures the subscription is established before the panel loads
 
 	# Connect to list size changes to update counts
 	request_list.size_changed.connect(_update_dropdown_visibility)
@@ -247,14 +247,29 @@ func _async_on_friendship_changed(address: String) -> void:
 
 func _on_friend_connectivity_updated(address: String, status: int) -> void:
 	# Update our tracking of online friends
-	if status == CONNECTIVITY_ONLINE:
+	var was_online = _online_friends.has(address)
+	var is_now_online = status == CONNECTIVITY_ONLINE
+
+	if is_now_online:
 		_online_friends[address] = true
 	else:
 		_online_friends.erase(address)
 
-	# Refresh the friend lists to show updated online/offline status
-	online_list.async_update_list()
-	offline_list.async_update_list()
+	# Move the friend between online/offline lists without full reload
+	if was_online and not is_now_online:
+		# Friend went offline - move from online to offline list
+		var item_data = online_list.get_item_data_by_address(address)
+		if item_data != null:
+			online_list.remove_item_by_address(address)
+			offline_list.add_item_by_social_item_data(item_data)
+	elif not was_online and is_now_online:
+		# Friend came online - move from offline to online list
+		var item_data = offline_list.get_item_data_by_address(address)
+		if item_data != null:
+			offline_list.remove_item_by_address(address)
+			online_list.add_item_by_social_item_data(item_data)
+
+	_update_dropdown_visibility()
 
 
 func is_friend_online(address: String) -> bool:

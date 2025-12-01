@@ -99,22 +99,11 @@ impl DclSocialService {
     /// Get the list of friends
     #[func]
     pub fn get_friends(&mut self, limit: i32, offset: i32, status: i32) -> Gd<Promise> {
-        godot_print!(
-            "[DclSocialService] get_friends called with limit={}, offset={}, status={}",
-            limit,
-            offset,
-            status
-        );
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
 
         TokioRuntime::spawn(async move {
-            godot_print!("[DclSocialService] get_friends: async task started");
             let result = Self::async_get_friends(manager, limit, offset, status).await;
-            godot_print!(
-                "[DclSocialService] get_friends: async task completed, result={:?}",
-                result.as_ref().map(|v| v.len())
-            );
             Self::resolve_friends_promise(get_promise, result);
         });
 
@@ -267,14 +256,11 @@ impl DclSocialService {
     /// Subscribe to friendship updates (real-time streaming)
     #[func]
     pub fn subscribe_to_updates(&mut self) -> Gd<Promise> {
-        godot_print!("[DclSocialService] subscribe_to_updates called");
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
         let instance_id = self.base().instance_id();
 
         TokioRuntime::spawn(async move {
-            godot_print!("[DclSocialService] subscribe_to_updates: async task started");
-
             // Add timeout to prevent hanging forever
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(15),
@@ -284,14 +270,10 @@ impl DclSocialService {
 
             match result {
                 Ok(inner_result) => {
-                    godot_print!(
-                        "[DclSocialService] subscribe_to_updates: completed, success={}",
-                        inner_result.is_ok()
-                    );
                     Self::resolve_simple_promise(get_promise, inner_result);
                 }
                 Err(_) => {
-                    godot_error!("[DclSocialService] subscribe_to_updates: timeout after 15s");
+                    tracing::error!("subscribe_to_updates: timeout after 15s");
                     Self::resolve_simple_promise(
                         get_promise,
                         Err("Timeout subscribing to updates".to_string()),
@@ -357,14 +339,11 @@ impl DclSocialService {
         offset: i32,
         status: i32,
     ) -> Result<Vec<(String, String, bool, String)>, String> {
-        godot_print!("[DclSocialService] async_get_friends: acquiring manager lock");
         let manager_guard = manager.read().await;
-        let mgr = manager_guard.as_ref().ok_or_else(|| {
-            godot_error!("[DclSocialService] async_get_friends: social service not initialized");
-            "Social service not initialized".to_string()
-        })?;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
 
-        godot_print!("[DclSocialService] async_get_friends: calling API");
         let pagination = if limit > 0 {
             Some(Pagination { limit, offset })
         } else {
@@ -375,11 +354,7 @@ impl DclSocialService {
         let response = mgr
             .get_friends(pagination, status_filter)
             .await
-            .map_err(|e| {
-                let error_msg = format!("Failed to get friends: {}", e);
-                godot_error!("[DclSocialService] async_get_friends: {}", error_msg);
-                error_msg
-            })?;
+            .map_err(|e| format!("Failed to get friends: {}", e))?;
 
         let friends: Vec<(String, String, bool, String)> = response
             .friends
@@ -394,10 +369,6 @@ impl DclSocialService {
             })
             .collect();
 
-        godot_print!(
-            "[DclSocialService] async_get_friends: successfully fetched {} friends",
-            friends.len()
-        );
         Ok(friends)
     }
 
@@ -606,30 +577,16 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
     ) -> Result<(), String> {
-        godot_print!("[DclSocialService] async_subscribe_to_updates: acquiring manager lock");
         let manager_guard = manager.read().await;
-        let mgr = manager_guard.as_ref().ok_or_else(|| {
-            godot_error!(
-                "[DclSocialService] async_subscribe_to_updates: social service not initialized"
-            );
-            "Social service not initialized".to_string()
-        })?;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
 
-        godot_print!(
-            "[DclSocialService] async_subscribe_to_updates: subscribing to friendship updates"
-        );
-        let mut rx = mgr.subscribe_to_friendship_updates().await.map_err(|e| {
-            let error_msg = format!("Failed to subscribe to updates: {}", e);
-            godot_error!(
-                "[DclSocialService] async_subscribe_to_updates: {}",
-                error_msg
-            );
-            error_msg
-        })?;
+        let mut rx = mgr
+            .subscribe_to_friendship_updates()
+            .await
+            .map_err(|e| format!("Failed to subscribe to updates: {}", e))?;
 
-        godot_print!(
-            "[DclSocialService] async_subscribe_to_updates: successfully subscribed, spawning listener task"
-        );
         // Spawn update listener task
         tokio::spawn(async move {
             Self::handle_friendship_updates(&mut rx, instance_id).await;
@@ -782,8 +739,9 @@ impl DclSocialService {
         rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>,
         instance_id: InstanceId,
     ) {
+        let mut update_count = 0;
         while let Some(update) = rx.recv().await {
-            tracing::info!("📶 Received connectivity update: {:?}", update);
+            update_count += 1;
 
             let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
             else {
@@ -794,11 +752,15 @@ impl DclSocialService {
             if let Some(friend) = update.friend {
                 let address = friend.address.clone();
                 let status = update.status;
-                tracing::info!(
-                    "🔔 Emitting signal: friend_connectivity_updated for {} status={}",
-                    address,
-                    status
-                );
+                // Log initial batch vs subsequent updates
+                if update_count <= 10 {
+                    tracing::info!(
+                        "📶 Connectivity update #{}: {} is {:?}",
+                        update_count,
+                        address,
+                        status
+                    );
+                }
                 node.call_deferred(
                     "emit_signal".into(),
                     &[
@@ -809,7 +771,10 @@ impl DclSocialService {
                 );
             }
         }
-        tracing::info!("Connectivity updates listener task ended");
+        tracing::info!(
+            "Connectivity updates listener task ended (received {} total updates)",
+            update_count
+        );
     }
 
     /// Extract friendship requests with full profile data
