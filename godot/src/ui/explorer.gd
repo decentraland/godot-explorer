@@ -758,3 +758,14 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# Clear badge when app comes to foreground
+		NotificationsManager.clear_badge_and_delivered_notifications()
+
+		# Resync notification queue to clean up fired notifications and reschedule next batch
+		NotificationsManager.force_queue_sync()
+
+		Global.check_deep_link_teleport_to()
