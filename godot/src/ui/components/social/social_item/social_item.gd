@@ -1,4 +1,4 @@
-extends Control
+extends Button
 
 enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
 
@@ -10,8 +10,7 @@ var social_data: SocialItemData
 var current_friendship_status: int = -1  # -1 = unknown, 0 = REQUEST_SENT, 1 = REQUEST_RECEIVED, 3 = ACCEPTED
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
-var _last_tap_time: float = 0.0
-var _double_tap_timeout: float = 0.4
+
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
@@ -151,18 +150,6 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		call_deferred("_update_buttons")
 
 
-func _tap_to_open_profile(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			var current_time = Time.get_ticks_msec() / 1000.0
-			var time_since_last_tap = current_time - _last_tap_time
-			if time_since_last_tap > 0.0 and time_since_last_tap < _double_tap_timeout:
-				Global.open_profile_by_address.emit(social_data.address)
-				_last_tap_time = 0.0  
-			else:
-				_last_tap_time = current_time
-				
-				
 func _update_elements_visibility() -> void:
 	_hide_all_buttons()
 	match item_type:
@@ -416,3 +403,7 @@ func _notify_parent_reorder() -> void:
 	var parent = get_parent()
 	if parent and parent.has_method("_request_reorder"):
 		parent._request_reorder()
+
+
+func _on_pressed() -> void:
+	Global.open_profile_by_address.emit(social_data.address)
