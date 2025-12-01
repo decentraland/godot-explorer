@@ -609,14 +609,21 @@ impl DclSocialService {
         godot_print!("[DclSocialService] async_subscribe_to_updates: acquiring manager lock");
         let manager_guard = manager.read().await;
         let mgr = manager_guard.as_ref().ok_or_else(|| {
-            godot_error!("[DclSocialService] async_subscribe_to_updates: social service not initialized");
+            godot_error!(
+                "[DclSocialService] async_subscribe_to_updates: social service not initialized"
+            );
             "Social service not initialized".to_string()
         })?;
 
-        godot_print!("[DclSocialService] async_subscribe_to_updates: subscribing to friendship updates");
+        godot_print!(
+            "[DclSocialService] async_subscribe_to_updates: subscribing to friendship updates"
+        );
         let mut rx = mgr.subscribe_to_friendship_updates().await.map_err(|e| {
             let error_msg = format!("Failed to subscribe to updates: {}", e);
-            godot_error!("[DclSocialService] async_subscribe_to_updates: {}", error_msg);
+            godot_error!(
+                "[DclSocialService] async_subscribe_to_updates: {}",
+                error_msg
+            );
             error_msg
         })?;
 

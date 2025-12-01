@@ -208,7 +208,8 @@ impl AvatarScene {
         new_avatar.connect("emote_triggered".into(), emote_triggered_callable);
 
         self.base_mut().add_child(new_avatar.clone().upcast());
-        self.avatar_godot_scene.insert(entity_id, new_avatar.clone());
+        self.avatar_godot_scene
+            .insert(entity_id, new_avatar.clone());
 
         // Emit signal for the new avatar
         self.base_mut()
