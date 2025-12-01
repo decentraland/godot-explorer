@@ -39,9 +39,13 @@ var v_box_container_no_service: VBoxContainer = $VBoxContainer/MarginContainer/M
 @onready
 var v_box_container_no_friends: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends
 
+@onready var request_container: PanelContainer = %RequestContainer
+@onready var online_container: PanelContainer = %OnlineContainer
+@onready var offline_container: PanelContainer = %OfflineContainer
 
 func _ready() -> void:
 	_update_dropdown_visibility()
+	_hide_all_drowpdown_highlights()
 	request_list.hide()
 	offline_list.hide()
 	# Ensure the panel blocks touch/mouse events from passing through when visible
@@ -121,6 +125,7 @@ func _input(event: InputEvent) -> void:
 func show_panel() -> void:
 	show()
 	update_all_lists()
+	_hide_all_drowpdown_highlights()
 
 
 func hide_panel() -> void:
@@ -155,25 +160,7 @@ func _on_button_blocked_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE
-		scroll_container_blocked.show()
-
-
-func _on_request_button_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		request_button.icon = up_arrow_icon
-		request_list.show()
-	else:
-		request_button.icon = down_arrow_icon
-		request_list.hide()
-
-
-func _on_online_button_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		online_button.icon = up_arrow_icon
-		online_list.show()
-	else:
-		online_button.icon = down_arrow_icon
-		online_list.hide()
+		scroll_container_blocked.show()	
 
 
 func _on_offline_button_toggled(toggled_on: bool) -> void:
@@ -296,3 +283,61 @@ func update_all_lists():
 	offline_list.async_update_list()
 	nearby_list.async_update_list()
 	blocked_list.async_update_list()
+
+
+func _on_request_button_pressed() -> void:
+	if request_list.visible:
+		request_button.icon = down_arrow_icon
+		request_list.hide()
+	else:
+		request_button.icon = up_arrow_icon
+		request_list.show()
+
+
+func _on_online_button_pressed() -> void:
+	if online_list.visible:
+		online_button.icon = down_arrow_icon
+		online_list.hide()
+	else:
+		online_button.icon = up_arrow_icon
+		online_list.show()
+
+
+func _on_offline_button_pressed() -> void:
+	if offline_list.visible:
+		offline_button.icon = down_arrow_icon
+		offline_list.hide()
+	else:
+		offline_button.icon = up_arrow_icon
+		offline_list.show()
+
+
+
+func _hide_all_drowpdown_highlights() ->  void:
+	request_container.self_modulate = "ffffff00"
+	online_container.self_modulate = "ffffff00"
+	offline_container.self_modulate = "ffffff00"
+
+
+func _on_offline_button_mouse_entered() -> void:
+	offline_container.self_modulate = "#ffffff"
+
+
+func _on_offline_button_mouse_exited() -> void:
+	offline_container.self_modulate = "#ffffff00"
+
+
+func _on_online_button_mouse_entered() -> void:
+	online_container.self_modulate = "#ffffff"
+
+
+func _on_online_button_mouse_exited() -> void:
+	online_container.self_modulate = "#ffffff00"
+
+
+func _on_request_button_mouse_entered() -> void:
+	request_container.self_modulate = "#ffffff"
+
+
+func _on_request_button_mouse_exited() -> void:
+	request_container.self_modulate = "#ffffff00"

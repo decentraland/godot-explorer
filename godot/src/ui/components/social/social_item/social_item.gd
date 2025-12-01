@@ -10,6 +10,8 @@ var social_data: SocialItemData
 var current_friendship_status: int = -1  # -1 = unknown, 0 = REQUEST_SENT, 1 = REQUEST_RECEIVED, 3 = ACCEPTED
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
+var _last_tap_time: float = 0.0
+var _double_tap_timeout: float = 0.4
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
@@ -60,6 +62,7 @@ func set_data(data: SocialItemData) -> void:
 
 	# If type is NEARBY, check if already a friend
 	if item_type == SocialType.NEARBY and not data.address.is_empty():
+		_update_buttons()
 		_check_and_update_friend_status()
 
 
@@ -144,17 +147,22 @@ func _notify_other_components_of_change() -> void:
 
 
 func _sync_blacklist_ui(changed_avatar_id: String) -> void:
-	if social_data.address == changed_avatar_id:
+	if social_data and social_data.address == changed_avatar_id:
 		call_deferred("_update_buttons")
 
 
 func _tap_to_open_profile(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
-		print(social_data)
 		if event.pressed:
-			Global.open_profile_by_address.emit(social_data.address)
-
-
+			var current_time = Time.get_ticks_msec() / 1000.0
+			var time_since_last_tap = current_time - _last_tap_time
+			if time_since_last_tap > 0.0 and time_since_last_tap < _double_tap_timeout:
+				Global.open_profile_by_address.emit(social_data.address)
+				_last_tap_time = 0.0  
+			else:
+				_last_tap_time = current_time
+				
+				
 func _update_elements_visibility() -> void:
 	_hide_all_buttons()
 	match item_type:
@@ -162,6 +170,7 @@ func _update_elements_visibility() -> void:
 			h_box_container_nearby.show()
 			# Check if already a friend and hide/show ADD FRIEND button accordingly
 			if social_data and not social_data.address.is_empty():
+				_update_buttons()
 				# If status is already known (pre-checked), use it directly
 				if current_friendship_status != -1:
 					_update_button_visibility_from_status()
@@ -367,6 +376,7 @@ func _update_button_visibility_from_status() -> void:
 		# ACCEPTED - Hide both button and label
 		button_add_friend.hide()
 		label_pending_request.hide()
+		profile_picture.set_friend()
 	else:
 		# Status 7 (NONE), 2 (CANCELED), 4 (REJECTED), 5 (DELETED), or unknown
 		# Show button, hide label (can send new request)

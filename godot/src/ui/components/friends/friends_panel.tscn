@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://dd2w2ysk3akdj"]
+[gd_scene load_steps=20 format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
 [ext_resource type="StyleBox" uid="uid://c1jov5bbl6rpn" path="res://src/ui/components/friends/friends_separator.tres" id="2_ifioe"]
@@ -30,6 +30,9 @@ shadow_size = 2
 shadow_offset = Vector2(2, 2)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_v2dsn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2vk4g"]
+bg_color = Color(1, 1, 1, 0.09803922)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nlw6c"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -181,7 +184,6 @@ theme_override_constants/margin_bottom = 12
 
 [node name="ScrollContainer_Friends" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
@@ -196,11 +198,21 @@ size_flags_vertical = 3
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request"]
+[node name="RequestContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_styles/separator = ExtResource("2_ifioe")
 
-[node name="RequestButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request"]
+[node name="RequestButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
@@ -212,15 +224,13 @@ theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353,
 theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("2_wese4")
 theme_override_font_sizes/font_size = 12
-toggle_mode = true
 text = "REQUESTS (0)"
 icon = ExtResource("2_x48bx")
 flat = true
 alignment = 0
-icon_alignment = 2
 expand_icon = true
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
 layout_mode = 2
 
 [node name="RequestList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request"]
@@ -233,10 +243,20 @@ player_list_type = 2
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
+[node name="OnlineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="OnlineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
+[node name="OnlineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
@@ -248,16 +268,13 @@ theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353,
 theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("2_wese4")
 theme_override_font_sizes/font_size = 12
-toggle_mode = true
-button_pressed = true
 text = "ONLINE (0)"
 icon = ExtResource("5_h1uhn")
 flat = true
 alignment = 0
-icon_alignment = 2
 expand_icon = true
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
 layout_mode = 2
 
 [node name="OnlineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online"]
@@ -269,10 +286,20 @@ script = ExtResource("2_l4o08")
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
+[node name="OfflineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="OfflineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
+[node name="OfflineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
@@ -284,15 +311,13 @@ theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353,
 theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("2_wese4")
 theme_override_font_sizes/font_size = 12
-toggle_mode = true
 text = "OFFLINE (0)"
 icon = ExtResource("2_x48bx")
 flat = true
 alignment = 0
-icon_alignment = 2
 expand_icon = true
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
 layout_mode = 2
 
 [node name="OfflineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline"]
@@ -392,6 +417,7 @@ autowrap_mode = 3
 
 [node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
@@ -468,6 +494,12 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestButton" to="." method="_on_request_button_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineButton" to="." method="_on_online_button_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineButton" to="." method="_on_offline_button_toggled"]
+[connection signal="mouse_entered" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_mouse_entered"]
+[connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_mouse_exited"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_pressed"]
+[connection signal="mouse_entered" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer/OnlineButton" to="." method="_on_online_button_mouse_entered"]
+[connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer/OnlineButton" to="." method="_on_online_button_mouse_exited"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer/OnlineButton" to="." method="_on_online_button_pressed"]
+[connection signal="mouse_entered" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_mouse_entered"]
+[connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_mouse_exited"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_pressed"]

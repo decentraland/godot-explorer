@@ -3,15 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://daykm1kr2u274"
-path="res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.ctex"
+path.s3tc="res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.s3tc.ctex"
+path.etc2="res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://src/ui/components/friends/friends_animation_spritesheet.png"
-dest_files=["res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.ctex"]
+dest_files=["res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.s3tc.ctex", "res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.etc2.ctex"]
 
 [params]
 

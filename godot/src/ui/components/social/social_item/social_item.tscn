@@ -8,9 +8,9 @@
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="6_b8cqn"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="7_m2rwh"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_2kre2"]
-[ext_resource type="Texture2D" uid="uid://ceh3pvhtpwjhp" path="res://assets/ui/audio_off.svg" id="12_l8lpo"]
 [ext_resource type="StyleBox" uid="uid://p7xigefabmi8" path="res://assets/themes/seconday_pressed_hover_little.tres" id="12_lm8sy"]
 [ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="13_5r2pa"]
+[ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="13_463mj"]
 [ext_resource type="StyleBox" uid="uid://cjr732avt4ugw" path="res://assets/themes/secondary_disabled_little.tres" id="13_pm4ta"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="14_h2dbk"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="14_lm8sy"]
@@ -76,7 +76,6 @@ theme_override_constants/separation = 9
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
-size_flags_vertical = 4
 mouse_default_cursor_shape = 2
 picture_size = 1
 
@@ -228,7 +227,7 @@ theme_override_styles/disabled = ExtResource("13_pm4ta")
 theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
 theme_override_styles/focus = ExtResource("12_lm8sy")
 toggle_mode = true
-icon = ExtResource("12_l8lpo")
+icon = ExtResource("13_463mj")
 icon_alignment = 1
 expand_icon = true
 
@@ -321,9 +320,9 @@ text = "UNBLOCK"
 icon_alignment = 1
 expand_icon = true
 
+[connection signal="gui_input" from="." to="." method="_tap_to_open_profile"]
 [connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
-[connection signal="gui_input" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/HBoxContainer/Nickname" to="." method="_tap_to_open_profile"]
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="toggled" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_Mute" to="." method="_on_button_mute_toggled"]
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_AddFriend" to="." method="_on_button_add_friend_pressed"]

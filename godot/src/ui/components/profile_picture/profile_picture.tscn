@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://c6jl46ahx31ud"]
+[gd_scene load_steps=7 format=3 uid="uid://c6jl46ahx31ud"]
 
 [ext_resource type="Script" uid="uid://05w073ui6sec" path="res://src/ui/components/profile_picture/profile_picture.gd" id="1_xkyte"]
 [ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="2_q0svu"]
 [ext_resource type="Texture2D" uid="uid://vn0xo8onamxy" path="res://assets/ui/connection_status_online.svg" id="3_q0svu"]
+[ext_resource type="Texture2D" uid="uid://dq3skqqbudygj" path="res://assets/ui/heart.svg" id="4_h41qx"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h41qx"]
 border_color = Color(0.0879645, 0.422489, 9.62615e-08, 1)
@@ -73,11 +74,32 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -10.0
-offset_bottom = 10.0
+offset_top = -2.0
+offset_right = 3.0
+offset_bottom = 11.0
 grow_horizontal = 0
 size_flags_horizontal = 8
 size_flags_vertical = 0
 texture = ExtResource("3_q0svu")
-expand_mode = 3
+expand_mode = 2
+
+[node name="TextureRect_Friendship" type="TextureRect" parent="."]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 0, 0, 1)
+custom_minimum_size = Vector2(13, 13)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -10.0
+offset_top = 28.0
+offset_right = 3.0
+offset_bottom = 41.0
+grow_horizontal = 0
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture = ExtResource("4_h41qx")
+expand_mode = 2
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

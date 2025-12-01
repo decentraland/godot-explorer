@@ -38,6 +38,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
 script = ExtResource("1_notifications_panel")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
+custom_minimum_size = Vector2(450, 0)
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12

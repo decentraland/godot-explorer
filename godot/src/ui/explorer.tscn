@@ -395,7 +395,7 @@ grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 120
+theme_override_constants/margin_right = 117
 theme_override_constants/margin_bottom = 16
 metadata/_edit_lock_ = true
 
