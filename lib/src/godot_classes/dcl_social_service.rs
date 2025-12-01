@@ -99,8 +99,8 @@ impl DclSocialService {
     /// Get the list of friends
     #[func]
     pub fn get_friends(&mut self, limit: i32, offset: i32, status: i32) -> Gd<Promise> {
-        tracing::debug!(
-            "get_friends called with limit={}, offset={}, status={}",
+        godot_print!(
+            "[DclSocialService] get_friends called with limit={}, offset={}, status={}",
             limit,
             offset,
             status
@@ -109,9 +109,12 @@ impl DclSocialService {
         let manager = self.manager.clone();
 
         TokioRuntime::spawn(async move {
-            tracing::debug!("get_friends: async task started");
+            godot_print!("[DclSocialService] get_friends: async task started");
             let result = Self::async_get_friends(manager, limit, offset, status).await;
-            tracing::debug!("get_friends: async task completed, resolving promise");
+            godot_print!(
+                "[DclSocialService] get_friends: async task completed, result={:?}",
+                result.as_ref().map(|v| v.len())
+            );
             Self::resolve_friends_promise(get_promise, result);
         });
 
@@ -264,16 +267,69 @@ impl DclSocialService {
     /// Subscribe to friendship updates (real-time streaming)
     #[func]
     pub fn subscribe_to_updates(&mut self) -> Gd<Promise> {
+        godot_print!("[DclSocialService] subscribe_to_updates called");
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
         let instance_id = self.base().instance_id();
 
         TokioRuntime::spawn(async move {
-            let result = Self::async_subscribe_to_updates(manager, instance_id).await;
-            Self::resolve_simple_promise(get_promise, result);
+            godot_print!("[DclSocialService] subscribe_to_updates: async task started");
+
+            // Add timeout to prevent hanging forever
+            let result = tokio::time::timeout(
+                std::time::Duration::from_secs(15),
+                Self::async_subscribe_to_updates(manager, instance_id),
+            )
+            .await;
+
+            match result {
+                Ok(inner_result) => {
+                    godot_print!(
+                        "[DclSocialService] subscribe_to_updates: completed, success={}",
+                        inner_result.is_ok()
+                    );
+                    Self::resolve_simple_promise(get_promise, inner_result);
+                }
+                Err(_) => {
+                    godot_error!("[DclSocialService] subscribe_to_updates: timeout after 15s");
+                    Self::resolve_simple_promise(
+                        get_promise,
+                        Err("Timeout subscribing to updates".to_string()),
+                    );
+                }
+            }
         });
 
         promise
+    }
+
+    /// Check if the social service is connected
+    /// Returns: 0 = Disconnected, 1 = Connecting, 2 = Connected, 3 = Reconnecting
+    #[func]
+    pub fn get_connection_state(&self) -> i32 {
+        // Try to get the connection state synchronously
+        // If we can't get the lock, assume disconnected
+        let manager_guard = match self.manager.try_read() {
+            Ok(guard) => guard,
+            Err(_) => return 0, // Disconnected
+        };
+
+        let Some(mgr) = manager_guard.as_ref() else {
+            return 0; // Not initialized = Disconnected
+        };
+
+        // Try to read the state - if we can't, assume disconnected
+        // We need to use try_read since we're in a sync context
+        match mgr.try_get_connection_state() {
+            Some(state) => state as i32,
+            None => 0, // Can't get state = assume Disconnected
+        }
+    }
+
+    /// Check if the social service is connected (convenience method)
+    #[func]
+    pub fn is_connected(&self) -> bool {
+        self.get_connection_state() == 2 // ConnectionState::Connected
     }
 
     /// Subscribe to friend connectivity updates (ONLINE, OFFLINE, AWAY)
@@ -301,14 +357,14 @@ impl DclSocialService {
         offset: i32,
         status: i32,
     ) -> Result<Vec<(String, String, bool, String)>, String> {
-        tracing::debug!("async_get_friends: acquiring manager lock");
+        godot_print!("[DclSocialService] async_get_friends: acquiring manager lock");
         let manager_guard = manager.read().await;
         let mgr = manager_guard.as_ref().ok_or_else(|| {
-            tracing::error!("async_get_friends: social service not initialized");
+            godot_error!("[DclSocialService] async_get_friends: social service not initialized");
             "Social service not initialized".to_string()
         })?;
 
-        tracing::debug!("async_get_friends: calling API");
+        godot_print!("[DclSocialService] async_get_friends: calling API");
         let pagination = if limit > 0 {
             Some(Pagination { limit, offset })
         } else {
@@ -321,7 +377,7 @@ impl DclSocialService {
             .await
             .map_err(|e| {
                 let error_msg = format!("Failed to get friends: {}", e);
-                tracing::error!("async_get_friends: {}", error_msg);
+                godot_error!("[DclSocialService] async_get_friends: {}", error_msg);
                 error_msg
             })?;
 
@@ -338,8 +394,8 @@ impl DclSocialService {
             })
             .collect();
 
-        tracing::info!(
-            "async_get_friends: successfully fetched {} friends",
+        godot_print!(
+            "[DclSocialService] async_get_friends: successfully fetched {} friends",
             friends.len()
         );
         Ok(friends)
@@ -550,22 +606,22 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
     ) -> Result<(), String> {
-        tracing::debug!("async_subscribe_to_updates: acquiring manager lock");
+        godot_print!("[DclSocialService] async_subscribe_to_updates: acquiring manager lock");
         let manager_guard = manager.read().await;
         let mgr = manager_guard.as_ref().ok_or_else(|| {
-            tracing::error!("async_subscribe_to_updates: social service not initialized");
+            godot_error!("[DclSocialService] async_subscribe_to_updates: social service not initialized");
             "Social service not initialized".to_string()
         })?;
 
-        tracing::debug!("async_subscribe_to_updates: subscribing to friendship updates");
+        godot_print!("[DclSocialService] async_subscribe_to_updates: subscribing to friendship updates");
         let mut rx = mgr.subscribe_to_friendship_updates().await.map_err(|e| {
             let error_msg = format!("Failed to subscribe to updates: {}", e);
-            tracing::error!("async_subscribe_to_updates: {}", error_msg);
+            godot_error!("[DclSocialService] async_subscribe_to_updates: {}", error_msg);
             error_msg
         })?;
 
-        tracing::info!(
-            "async_subscribe_to_updates: successfully subscribed, spawning listener task"
+        godot_print!(
+            "[DclSocialService] async_subscribe_to_updates: successfully subscribed, spawning listener task"
         );
         // Spawn update listener task
         tokio::spawn(async move {

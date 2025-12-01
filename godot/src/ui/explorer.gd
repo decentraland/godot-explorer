@@ -228,6 +228,10 @@ func _ready():
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
+	# Initialize social service for non-guest accounts
+	if not Global.player_identity.is_guest:
+		_async_initialize_social_service()
+
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
@@ -283,6 +287,21 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 	# Start notifications polling when authenticated
 	print("[Explorer] Player profile changed - starting notifications polling")
 	NotificationsManager.start_polling()
+
+
+func _async_initialize_social_service() -> void:
+	print("[Explorer] Initializing Social Service for authenticated user")
+	Global.social_service.initialize_from_player_identity(Global.player_identity)
+
+	var promise = Global.social_service.subscribe_to_updates()
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		var error = promise.get_data()
+		push_error("[Explorer] Failed to initialize Social Service: " + str(error.get_error()))
+		return
+
+	print("[Explorer] Social Service initialized successfully")
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:

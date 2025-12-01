@@ -4,7 +4,9 @@ use dcl_rpc::transports::{
     web_sockets::{tungstenite::WebSocketClient, WebSocketTransport},
     Transport,
 };
+use godot::prelude::*;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::RwLock;
 
 #[allow(unused_imports)]
@@ -15,6 +17,8 @@ use crate::dcl::components::proto_components::social_service::v2::*;
 use crate::social::friends::build_auth_chain;
 
 const SOCIAL_SERVICE_URL: &str = "wss://rpc-social-service-ea.decentraland.org";
+const CONNECTION_TIMEOUT_SECS: u64 = 10;
+const RPC_TIMEOUT_SECS: u64 = 15;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionState {
@@ -43,6 +47,10 @@ struct SocialServiceState {
     /// Generation counter - incremented each time connection is cleared
     /// Used to prevent multiple concurrent reconnection attempts
     connection_generation: u64,
+    /// Flag to indicate a connection attempt is in progress
+    connecting: bool,
+    /// Last connection error message (if any)
+    last_error: Option<String>,
 }
 
 impl SocialServiceState {
@@ -52,6 +60,8 @@ impl SocialServiceState {
             last_friendship_updates: Vec::new(),
             connection: None,
             connection_generation: 0,
+            connecting: false,
+            last_error: None,
         }
     }
 }
@@ -67,54 +77,86 @@ pub struct SocialServiceManager {
 /// This establishes a new WebSocket connection and authenticates
 /// Returns both the RpcClient (which must stay alive) and the service module
 async fn create_connection(wallet: &Arc<EphemeralAuthChain>) -> Result<ServiceConnection> {
-    tracing::info!("Connecting to Social Service: {}", SOCIAL_SERVICE_URL);
-    // Establish WebSocket connection
-    let ws_connection = WebSocketClient::connect(SOCIAL_SERVICE_URL)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to connect to Social Service: {:?}", e);
-            anyhow!("Failed to connect to Social Service: {:?}", e)
-        })?;
+    godot_print!(
+        "[SocialServiceManager] create_connection: Connecting to {}",
+        SOCIAL_SERVICE_URL
+    );
 
-    tracing::debug!("WebSocket connected, creating transport");
+    // Establish WebSocket connection with timeout
+    let ws_connection = tokio::time::timeout(
+        Duration::from_secs(CONNECTION_TIMEOUT_SECS),
+        WebSocketClient::connect(SOCIAL_SERVICE_URL),
+    )
+    .await
+    .map_err(|_| {
+        godot_error!(
+            "[SocialServiceManager] create_connection: Timeout after {}s",
+            CONNECTION_TIMEOUT_SECS
+        );
+        anyhow!(
+            "Timeout connecting to Social Service after {}s",
+            CONNECTION_TIMEOUT_SECS
+        )
+    })?
+    .map_err(|e| {
+        godot_error!(
+            "[SocialServiceManager] create_connection: WebSocket failed: {:?}",
+            e
+        );
+        anyhow!("Failed to connect to Social Service: {:?}", e)
+    })?;
+
+    godot_print!("[SocialServiceManager] create_connection: WebSocket connected, creating transport");
     let transport = WebSocketTransport::new(ws_connection);
 
-    tracing::debug!("Building auth chain");
+    godot_print!("[SocialServiceManager] create_connection: Building auth chain");
     // Build and send auth chain
     let auth_chain_message = build_auth_chain(wallet).await?;
-    tracing::debug!("Sending auth chain");
+    godot_print!("[SocialServiceManager] create_connection: Sending auth chain");
     transport
         .send(auth_chain_message.as_bytes().to_vec())
         .await
         .map_err(|e| {
-            tracing::error!("Failed to send auth chain: {:?}", e);
+            godot_error!(
+                "[SocialServiceManager] create_connection: Failed to send auth chain: {:?}",
+                e
+            );
             anyhow!("Failed to send auth chain: {:?}", e)
         })?;
 
-    tracing::debug!("Auth chain sent, creating RPC client");
+    godot_print!("[SocialServiceManager] create_connection: Auth chain sent, creating RPC client");
     // Create RPC client
     let mut rpc_client = RpcClient::new(transport).await.map_err(|e| {
-        tracing::error!("Failed to create RPC client: {:?}", e);
+        godot_error!(
+            "[SocialServiceManager] create_connection: Failed to create RPC client: {:?}",
+            e
+        );
         anyhow!("Failed to create RPC client: {:?}", e)
     })?;
 
-    tracing::debug!("RPC client created, creating port");
+    godot_print!("[SocialServiceManager] create_connection: RPC client created, creating port");
     // Create port and load service module
     let port = rpc_client.create_port("SocialService").await.map_err(|e| {
-        tracing::error!("Failed to create port: {:?}", e);
+        godot_error!(
+            "[SocialServiceManager] create_connection: Failed to create port: {:?}",
+            e
+        );
         anyhow!("Failed to create port: {:?}", e)
     })?;
 
-    tracing::debug!("Port created, loading module");
+    godot_print!("[SocialServiceManager] create_connection: Port created, loading module");
     let service = port
         .load_module::<SocialServiceClient<_>>("SocialService")
         .await
         .map_err(|e| {
-            tracing::error!("Failed to load module: {:?}", e);
+            godot_error!(
+                "[SocialServiceManager] create_connection: Failed to load module: {:?}",
+                e
+            );
             anyhow!("Failed to load module: {:?}", e)
         })?;
 
-    tracing::info!("Social Service client ready");
+    godot_print!("[SocialServiceManager] create_connection: Social Service client ready!");
 
     Ok(ServiceConnection {
         rpc_client,
@@ -131,20 +173,124 @@ impl SocialServiceManager {
         }
     }
 
-    /// Get the current connection state
+    /// Get the current connection state (async)
     pub async fn connection_state(&self) -> ConnectionState {
         self.state.read().await.connection_state
     }
 
+    /// Try to get the current connection state synchronously (non-blocking)
+    /// Returns None if the lock couldn't be acquired
+    pub fn try_get_connection_state(&self) -> Option<ConnectionState> {
+        self.state.try_read().ok().map(|s| s.connection_state)
+    }
+
+    /// Ensure we have a connection, creating one if needed
+    /// This method handles the connection lifecycle properly to avoid multiple concurrent attempts
+    async fn ensure_connected(&self) -> Result<()> {
+        // First check if we already have a connection or if one is in progress
+        {
+            let state = self.state.read().await;
+            if state.connection.is_some() {
+                return Ok(());
+            }
+            if state.connecting {
+                // Another task is already connecting, wait a bit and retry
+                godot_print!("[SocialServiceManager] ensure_connected: Connection in progress, waiting...");
+                drop(state);
+                // Wait for the other connection attempt to complete
+                for _ in 0..50 {
+                    // 5 seconds max
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    let state = self.state.read().await;
+                    if state.connection.is_some() {
+                        return Ok(());
+                    }
+                    if !state.connecting {
+                        // Connection attempt finished but failed
+                        if let Some(ref err) = state.last_error {
+                            return Err(anyhow!("Connection failed: {}", err));
+                        }
+                        break; // Try again
+                    }
+                }
+            }
+        }
+
+        // Try to acquire the connecting flag
+        {
+            let mut state = self.state.write().await;
+            if state.connection.is_some() {
+                return Ok(());
+            }
+            if state.connecting {
+                // Lost the race, another task started connecting
+                return Err(anyhow!("Connection already in progress"));
+            }
+            state.connecting = true;
+            state.connection_state = ConnectionState::Connecting;
+            state.last_error = None;
+        }
+
+        // Now we have exclusive rights to connect (connecting = true)
+        godot_print!("[SocialServiceManager] ensure_connected: Creating new connection...");
+        let result = create_connection(&self.wallet).await;
+
+        // Store the result
+        let mut state = self.state.write().await;
+        state.connecting = false;
+
+        match result {
+            Ok(connection) => {
+                godot_print!("[SocialServiceManager] ensure_connected: Connection created successfully");
+                state.connection = Some(connection);
+                state.connection_state = ConnectionState::Connected;
+                Ok(())
+            }
+            Err(e) => {
+                let error_msg = format!("{}", e);
+                godot_error!(
+                    "[SocialServiceManager] ensure_connected: Connection failed: {}",
+                    error_msg
+                );
+                state.last_error = Some(error_msg.clone());
+                state.connection_state = ConnectionState::Disconnected;
+                Err(e)
+            }
+        }
+    }
+
     /// Get or create a connection, returning a reference to the service client
+    /// NOTE: Prefer calling ensure_connected() first, then use get_service_from_state()
+    /// This method is kept for backward compatibility with methods that hold mutable state
     async fn ensure_connection<'a>(
         &'a self,
         state: &'a mut SocialServiceState,
     ) -> Result<&'a SocialServiceClient<SocialTransport>> {
-        if state.connection.is_none() {
-            tracing::debug!("No existing connection, creating new one");
-            let connection = create_connection(&self.wallet).await?;
-            state.connection = Some(connection);
+        if state.connection.is_some() {
+            godot_print!("[SocialServiceManager] ensure_connection: Using existing connection");
+        } else if state.connecting {
+            // Another task is connecting - drop the lock and use ensure_connected instead
+            godot_print!("[SocialServiceManager] ensure_connection: Connection in progress, will wait");
+            // We can't wait while holding the mutable borrow, so just return an error
+            // The caller should retry after the connection is established
+            return Err(anyhow!("Connection in progress, please retry"));
+        } else {
+            // No connection and not connecting - create one
+            // This path is used by methods that don't call ensure_connected first
+            state.connecting = true;
+            godot_print!("[SocialServiceManager] ensure_connection: No existing connection, creating new one");
+            match create_connection(&self.wallet).await {
+                Ok(connection) => {
+                    godot_print!("[SocialServiceManager] ensure_connection: Connection created successfully");
+                    state.connection = Some(connection);
+                    state.connecting = false;
+                }
+                Err(e) => {
+                    state.connecting = false;
+                    state.last_error = Some(format!("{}", e));
+                    return Err(e);
+                }
+            }
         }
         Ok(&state.connection.as_ref().unwrap().service)
     }
@@ -176,23 +322,27 @@ impl SocialServiceManager {
         pagination: Option<Pagination>,
         _status: Option<i32>,
     ) -> Result<PaginatedFriendsProfilesResponse> {
-        tracing::debug!("get_friends called");
+        godot_print!("[SocialServiceManager] get_friends called");
 
         let payload = GetFriendsPayload {
             pagination: pagination.clone(),
         };
 
         // First attempt - capture generation before call
+        godot_print!("[SocialServiceManager] get_friends: calling RPC (attempt 1)");
         let (result, generation) = self.call_get_friends(payload.clone()).await;
 
         match result {
             Ok(response) => {
-                tracing::debug!("get_friends RPC succeeded");
+                godot_print!(
+                    "[SocialServiceManager] get_friends: RPC succeeded, {} friends",
+                    response.friends.len()
+                );
                 Ok(response)
             }
             Err(e) => {
-                tracing::warn!(
-                    "get_friends RPC failed (gen {}), will retry: {:?}",
+                godot_print!(
+                    "[SocialServiceManager] get_friends: RPC failed (gen {}), will retry: {:?}",
                     generation,
                     e
                 );
@@ -202,6 +352,7 @@ impl SocialServiceManager {
                     Self::try_clear_connection(&mut state, generation);
                 }
                 // Retry with fresh connection (ensure_connection will create new one)
+                godot_print!("[SocialServiceManager] get_friends: calling RPC (attempt 2)");
                 let (retry_result, _) = self.call_get_friends(payload).await;
                 retry_result.map_err(|e| anyhow!("Failed to get friends: {:?}", e))
             }
@@ -217,20 +368,60 @@ impl SocialServiceManager {
         Result<PaginatedFriendsProfilesResponse, ClientResultError>,
         u64,
     ) {
-        let mut state = self.state.write().await;
+        // First ensure we have a connection (this handles concurrent connection attempts)
+        if let Err(e) = self.ensure_connected().await {
+            godot_error!(
+                "[SocialServiceManager] call_get_friends: ensure_connected failed: {:?}",
+                e
+            );
+            return (
+                Err(ClientResultError::Client(ClientError::TransportError)),
+                0,
+            );
+        }
+
+        godot_print!("[SocialServiceManager] call_get_friends: acquiring state lock");
+        let state = self.state.read().await;
         let generation = state.connection_generation;
-        let service = match self.ensure_connection(&mut state).await {
-            Ok(s) => s,
-            Err(_) => {
-                // Return a transport error when connection fails
+
+        let service = match state.connection.as_ref() {
+            Some(conn) => &conn.service,
+            None => {
+                godot_error!("[SocialServiceManager] call_get_friends: no connection after ensure_connected");
                 return (
                     Err(ClientResultError::Client(ClientError::TransportError)),
                     generation,
                 );
             }
         };
-        let result = service.get_friends(payload).await;
-        (result, generation)
+
+        godot_print!("[SocialServiceManager] call_get_friends: calling RPC with {}s timeout", RPC_TIMEOUT_SECS);
+        // Add timeout to RPC call to prevent hanging
+        let result = tokio::time::timeout(
+            Duration::from_secs(RPC_TIMEOUT_SECS),
+            service.get_friends(payload),
+        )
+        .await;
+
+        match result {
+            Ok(rpc_result) => {
+                godot_print!(
+                    "[SocialServiceManager] call_get_friends: RPC completed, success={}",
+                    rpc_result.is_ok()
+                );
+                (rpc_result, generation)
+            }
+            Err(_) => {
+                godot_error!(
+                    "[SocialServiceManager] call_get_friends: RPC timeout after {}s",
+                    RPC_TIMEOUT_SECS
+                );
+                (
+                    Err(ClientResultError::Client(ClientError::TransportError)),
+                    generation,
+                )
+            }
+        }
     }
 
     /// Get the list of mutual friends between the authenticated user and another user
@@ -296,15 +487,34 @@ impl SocialServiceManager {
         let generation = state.connection_generation;
         let service = match self.ensure_connection(&mut state).await {
             Ok(s) => s,
-            Err(_) => {
+            Err(e) => {
+                tracing::error!("call_get_pending_requests: connection failed: {:?}", e);
                 return (
+                    Err(ClientResultError::Client(ClientError::TransportError)),
+                    generation,
+                );
+            }
+        };
+
+        let result = tokio::time::timeout(
+            Duration::from_secs(RPC_TIMEOUT_SECS),
+            service.get_pending_friendship_requests(payload),
+        )
+        .await;
+
+        match result {
+            Ok(rpc_result) => (rpc_result, generation),
+            Err(_) => {
+                tracing::error!(
+                    "call_get_pending_requests: RPC timeout after {}s",
+                    RPC_TIMEOUT_SECS
+                );
+                (
                     Err(ClientResultError::Client(ClientError::TransportError)),
                     generation,
                 )
             }
-        };
-        let result = service.get_pending_friendship_requests(payload).await;
-        (result, generation)
+        }
     }
 
     /// Get the sent friendship requests for the authenticated user
@@ -439,15 +649,34 @@ impl SocialServiceManager {
         let generation = state.connection_generation;
         let service = match self.ensure_connection(&mut state).await {
             Ok(s) => s,
-            Err(_) => {
+            Err(e) => {
+                tracing::error!("call_upsert_friendship: connection failed: {:?}", e);
                 return (
+                    Err(ClientResultError::Client(ClientError::TransportError)),
+                    generation,
+                );
+            }
+        };
+
+        let result = tokio::time::timeout(
+            Duration::from_secs(RPC_TIMEOUT_SECS),
+            service.upsert_friendship(payload),
+        )
+        .await;
+
+        match result {
+            Ok(rpc_result) => (rpc_result, generation),
+            Err(_) => {
+                tracing::error!(
+                    "call_upsert_friendship: RPC timeout after {}s",
+                    RPC_TIMEOUT_SECS
+                );
+                (
                     Err(ClientResultError::Client(ClientError::TransportError)),
                     generation,
                 )
             }
-        };
-        let result = service.upsert_friendship(payload).await;
-        (result, generation)
+        }
     }
 
     /// Cancel a sent friendship request
@@ -524,15 +753,28 @@ impl SocialServiceManager {
     pub async fn subscribe_to_friendship_updates(
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<FriendshipUpdate>> {
+        godot_print!("[SocialServiceManager] subscribe_to_friendship_updates: ensuring connection");
+        // First ensure we have a connection (this handles concurrent connection attempts)
+        self.ensure_connected().await?;
+
+        godot_print!("[SocialServiceManager] subscribe_to_friendship_updates: acquiring state lock");
         let mut state = self.state.write().await;
         let service = self.ensure_connection(&mut state).await?;
 
+        godot_print!("[SocialServiceManager] subscribe_to_friendship_updates: calling RPC subscribe");
         // Subscribe to the stream
         let mut stream = service
             .subscribe_to_friendship_updates()
             .await
-            .map_err(|e| anyhow!("Failed to subscribe to friendship updates: {:?}", e))?;
+            .map_err(|e| {
+                godot_error!(
+                    "[SocialServiceManager] subscribe_to_friendship_updates: RPC failed: {:?}",
+                    e
+                );
+                anyhow!("Failed to subscribe to friendship updates: {:?}", e)
+            })?;
 
+        godot_print!("[SocialServiceManager] subscribe_to_friendship_updates: stream created, spawning listener");
         // Create a channel to forward updates
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 

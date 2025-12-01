@@ -188,8 +188,16 @@ func _on_offline_button_toggled(toggled_on: bool) -> void:
 
 
 func _update_dropdown_visibility() -> void:
-	# Check for service errors first
-	var has_service_error = request_list.has_error or online_list.has_error
+	# Check if user is a guest - guests don't have access to friends service
+	var is_guest = Global.player_identity.is_guest
+
+	# Check connection status from Rust directly
+	var is_service_connected = Global.social_service.is_connected()
+
+	# Check for service errors or connection issues (only for non-guests)
+	var has_service_error = (
+		not is_guest and (not is_service_connected or request_list.has_error or online_list.has_error)
+	)
 
 	var pending_count = request_list.list_size
 	var online_count = online_list.list_size
@@ -214,10 +222,12 @@ func _update_dropdown_visibility() -> void:
 		v_box_container_offline.show()
 		offline_button.text = "OFFLINE (" + str(offline_count) + ")"
 
-	# Show error message if service is down
+	# Show error message if service is down (only for non-guests)
 	if has_service_error:
 		v_box_container_no_service.show()
+		v_box_container_no_friends.hide()
 	elif total_friends == 0 and pending_count == 0:
+		v_box_container_no_service.hide()
 		v_box_container_no_friends.show()
 	else:
 		v_box_container_no_service.hide()
