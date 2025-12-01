@@ -76,9 +76,17 @@ pub fn update_video_player(
             };
 
             if let Some(next_value) = next_value {
-                // TODO: For now hardcode the target source, in the future use next_value.src
-                let target_src = "livekit-video://current-stream".to_string();
-                // let target_src = next_value.src.clone();
+                let target_src = next_value.src.clone();
+
+                tracing::debug!(
+                    "Video player update for entity {}: original_src={}, target_src={}, volume={:?}, playing={:?}, loop={:?}",
+                    entity,
+                    next_value.src,
+                    target_src,
+                    next_value.volume,
+                    next_value.playing,
+                    next_value.r#loop
+                );
 
                 let muted_by_current_scene = if let SceneType::Parcel = scene.scene_type {
                     scene.scene_id != *current_parcel_scene_id
@@ -141,7 +149,11 @@ pub fn update_video_player(
                         tracing::debug!(
                             "Video player changing video for entity {}: {} -> {}",
                             entity,
-                            godot_entity_node.video_player_data.as_ref().map(|d| d.video_sink.source.as_str()).unwrap_or("none"),
+                            godot_entity_node
+                                .video_player_data
+                                .as_ref()
+                                .map(|d| d.video_sink.source.as_str())
+                                .unwrap_or("none"),
                             target_src
                         );
 
@@ -163,7 +175,9 @@ pub fn update_video_player(
                             );
 
                             // Create placeholder texture if needed
-                            let texture = if let Some(video_player_data) = &godot_entity_node.video_player_data {
+                            let texture = if let Some(video_player_data) =
+                                &godot_entity_node.video_player_data
+                            {
                                 video_player_data.video_sink.texture.clone()
                             } else {
                                 let image = Image::create(8, 8, false, Format::RGBA8)
@@ -189,9 +203,7 @@ pub fn update_video_player(
                                 stream_data_state_receiver,
                             };
 
-                            let audio_sink = AudioSink {
-                                command_sender,
-                            };
+                            let audio_sink = AudioSink { command_sender };
 
                             godot_entity_node.video_player_data = Some(VideoPlayerData {
                                 video_sink,
@@ -325,9 +337,7 @@ pub fn update_video_player(
                                 stream_data_state_receiver,
                             };
 
-                            let audio_sink = AudioSink {
-                                command_sender,
-                            };
+                            let audio_sink = AudioSink { command_sender };
 
                             godot_entity_node.video_player_data = Some(VideoPlayerData {
                                 video_sink,
@@ -553,9 +563,9 @@ pub fn update_video_texture_from_livekit(
     height: u32,
     data: &[u8],
 ) {
+    use crate::content::packed_array::PackedByteArrayFromVec;
     use godot::engine::image::Format;
     use godot::engine::Image;
-    use crate::content::packed_array::PackedByteArrayFromVec;
     use godot::prelude::PackedByteArray;
 
     let data_arr = PackedByteArray::from_vec(data);
@@ -564,26 +574,16 @@ pub fn update_video_texture_from_livekit(
     let current_size = video_sink.texture.get_size();
     if current_size.x != width as f32 || current_size.y != height as f32 {
         // Create new image with new dimensions
-        let image = Image::create_from_data(
-            width as i32,
-            height as i32,
-            false,
-            Format::RGBA8,
-            data_arr,
-        ).unwrap();
+        let image =
+            Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, data_arr)
+                .unwrap();
         video_sink.texture.set_image(image.clone());
         video_sink.texture.update(image);
         video_sink.size = (width, height);
     } else {
         // Update existing texture in-place
         let mut image = video_sink.texture.get_image().unwrap();
-        image.set_data(
-            width as i32,
-            height as i32,
-            false,
-            Format::RGBA8,
-            data_arr,
-        );
+        image.set_data(width as i32, height as i32, false, Format::RGBA8, data_arr);
         video_sink.texture.update(image);
     }
 }

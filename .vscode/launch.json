@@ -145,7 +145,7 @@
       ],
       "cwd": "${workspaceRoot}/godot",
       "env": {
-        "RUST_LOG": "dclgodot=debug,dclgodot::comms=debug,dclgodot::analytics=error"
+        "RUST_LOG": "dclgodot=debug,dclgodot::comms=error,dclgodot::analytics=error"
       },
       "preLaunchTask": "Build GDExtension Lib",
       "terminal": "integrated"
