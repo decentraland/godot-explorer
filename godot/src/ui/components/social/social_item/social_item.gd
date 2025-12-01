@@ -11,7 +11,6 @@ var current_friendship_status: int = -1  # -1 = unknown, 0 = REQUEST_SENT, 1 = R
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
 
-
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
 @onready var h_box_container_request: HBoxContainer = %HBoxContainer_Request

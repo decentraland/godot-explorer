@@ -39,6 +39,9 @@ var _online_friends: Dictionary = {}
 @onready var request_container: PanelContainer = %RequestContainer
 @onready var online_container: PanelContainer = %OnlineContainer
 @onready var offline_container: PanelContainer = %OfflineContainer
+@onready var v_box_container_no_blockeds: VBoxContainer = %VBoxContainer_NoBlockeds
+
+
 
 func _ready() -> void:
 	_update_dropdown_visibility()
@@ -157,7 +160,7 @@ func _on_button_blocked_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE
-		scroll_container_blocked.show()	
+		scroll_container_blocked.show()
 		_check_blocked_list_size()
 
 
@@ -310,8 +313,7 @@ func _on_offline_button_pressed() -> void:
 		offline_list.show()
 
 
-
-func _hide_all_drowpdown_highlights() ->  void:
+func _hide_all_drowpdown_highlights() -> void:
 	request_container.self_modulate = "ffffff00"
 	online_container.self_modulate = "ffffff00"
 	offline_container.self_modulate = "ffffff00"
@@ -339,8 +341,7 @@ func _on_request_button_mouse_entered() -> void:
 
 func _on_request_button_mouse_exited() -> void:
 	request_container.self_modulate = "#ffffff00"
-	
-@onready var v_box_container_no_blockeds: VBoxContainer = %VBoxContainer_NoBlockeds
+
 
 func _check_blocked_list_size() -> void:
 	if blocked_list.list_size > 0:
