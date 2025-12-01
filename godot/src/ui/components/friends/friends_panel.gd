@@ -34,11 +34,8 @@ var _online_friends: Dictionary = {}
 @onready var blocked_list: SocialList = %BlockedList
 
 @onready var label_empty_state: Label = %LabelEmptyState
-@onready
-var v_box_container_no_service: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoService
-@onready
-var v_box_container_no_friends: VBoxContainer = $VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer_NoFriends
-
+@onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
+@onready var v_box_container_no_friends: VBoxContainer = %VBoxContainer_NoFriends
 @onready var request_container: PanelContainer = %RequestContainer
 @onready var online_container: PanelContainer = %OnlineContainer
 @onready var offline_container: PanelContainer = %OfflineContainer
@@ -161,6 +158,7 @@ func _on_button_blocked_toggled(toggled_on: bool) -> void:
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE
 		scroll_container_blocked.show()	
+		_check_blocked_list_size()
 
 
 func _on_offline_button_toggled(toggled_on: bool) -> void:
@@ -341,3 +339,15 @@ func _on_request_button_mouse_entered() -> void:
 
 func _on_request_button_mouse_exited() -> void:
 	request_container.self_modulate = "#ffffff00"
+	
+@onready var v_box_container_no_blockeds: VBoxContainer = %VBoxContainer_NoBlockeds
+
+func _check_blocked_list_size() -> void:
+	if blocked_list.list_size > 0:
+		v_box_container_no_blockeds.hide()
+	else:
+		v_box_container_no_blockeds.show()
+
+
+func _on_blocked_list_size_changed() -> void:
+	_check_blocked_list_size()
