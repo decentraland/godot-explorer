@@ -24,8 +24,8 @@ use crate::{
 use super::{
     adapter_trait::Adapter,
     message_processor::{
-        IncomingMessage, MessageType, Rfc4Message, VideoFrameData, VideoInitData, VoiceFrameData,
-        VoiceInitData,
+        IncomingMessage, MessageType, Rfc4Message, StreamerAudioFrameData, StreamerAudioInitData,
+        VideoFrameData, VideoInitData, VoiceFrameData, VoiceInitData,
     },
 };
 
@@ -355,15 +355,67 @@ fn spawn_livekit_task(
 
                             match track {
                                 livekit::track::RemoteTrack::Audio(audio) => {
-                                    // Audio tracks require ethereum address (voice chat)
-                                    if let Some(address) = address {
+                                    if is_streamer {
+                                        // Streamer audio -> video player audio
+                                        let sender = sender.clone();
+                                        let room_id_clone = room_id.clone();
+                                        let identity_owned = identity_str.to_string();
+                                        // Use zero address for streamers
+                                        let address = address.unwrap_or_default();
+
+                                        rt2.spawn(async move {
+                                            let mut stream = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
+
+                                            tracing::info!("streamer audio track from {:?}", identity_owned);
+
+                                            // get first frame to set sample rate
+                                            let Some(frame) = stream.next().await else {
+                                                tracing::warn!("dropped streamer audio track without samples");
+                                                return;
+                                            };
+
+                                            if let Err(e) = sender.send(IncomingMessage {
+                                                message: MessageType::InitStreamerAudio(StreamerAudioInitData {
+                                                    sample_rate: frame.sample_rate,
+                                                    num_channels: frame.num_channels,
+                                                    samples_per_channel: frame.samples_per_channel,
+                                                }),
+                                                address,
+                                                room_id: room_id_clone.clone(),
+                                            }).await {
+                                                tracing::warn!("Failed to send InitStreamerAudio message: {}", e);
+                                                return;
+                                            }
+
+                                            while let Some(frame) = stream.next().await {
+                                                let frame: livekit::webrtc::prelude::AudioFrame = frame;
+                                                match sender.try_send(IncomingMessage {
+                                                    message: MessageType::StreamerAudioFrame(StreamerAudioFrameData {
+                                                        data: frame.data.to_vec(),
+                                                    }),
+                                                    address,
+                                                    room_id: room_id_clone.clone(),
+                                                }) {
+                                                    Ok(()) => (),
+                                                    Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => (),
+                                                    Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
+                                                        tracing::warn!("streamer audio receiver dropped, exiting task");
+                                                        return;
+                                                    },
+                                                }
+                                            }
+
+                                            tracing::warn!("streamer audio track ended, exiting task");
+                                        });
+                                    } else if let Some(address) = address {
+                                        // Regular participant audio -> voice chat
                                         let sender = sender.clone();
                                         let room_id_clone = room_id.clone();
                                         let identity_owned = identity_str.to_string();
                                         rt2.spawn(async move {
                                             let mut x = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
 
-                                            tracing::debug!("audio track from {:?}", identity_owned);
+                                            tracing::debug!("voice chat audio track from {:?}", identity_owned);
 
                                             // get first frame to set sample rate
                                             let Some(frame) = x.next().await else {

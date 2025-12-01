@@ -43,6 +43,8 @@ pub enum MessageType {
     VoiceFrame(VoiceFrameData),
     InitVideo(VideoInitData),
     VideoFrame(VideoFrameData),
+    InitStreamerAudio(StreamerAudioInitData),
+    StreamerAudioFrame(StreamerAudioFrameData),
     PeerJoined, // Peer joined a room
     PeerLeft,   // Peer left a room
 }
@@ -76,6 +78,19 @@ pub struct VideoFrameData {
     pub data: Vec<u8>,
     pub width: u32,
     pub height: u32,
+}
+
+// Streamer audio data (separate from voice chat - for video player audio)
+#[derive(Debug, Clone)]
+pub struct StreamerAudioInitData {
+    pub sample_rate: u32,
+    pub num_channels: u32,
+    pub samples_per_channel: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct StreamerAudioFrameData {
+    pub data: Vec<i16>,
 }
 
 /// Represents an outgoing message to be sent to communication rooms
@@ -681,6 +696,45 @@ impl MessageProcessor {
                         "VideoFrame from {:#x} without InitVideo",
                         message.address
                     );
+                }
+            }
+            MessageType::InitStreamerAudio(audio_init) => {
+                tracing::info!(
+                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
+                    audio_init.sample_rate,
+                    audio_init.num_channels,
+                    audio_init.samples_per_channel
+                );
+
+                // Forward to all scenes to initialize their video player audio
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.init_livekit_audio(
+                        audio_init.sample_rate,
+                        audio_init.num_channels,
+                        audio_init.samples_per_channel,
+                    );
+                }
+            }
+            MessageType::StreamerAudioFrame(audio_frame) => {
+                // Convert i16 audio data to PackedVector2Array (same as voice chat)
+                let frame = godot::prelude::PackedVector2Array::from_iter(
+                    audio_frame.data.iter().map(|c| {
+                        let val = (*c as f32) / (i16::MAX as f32);
+                        godot::prelude::Vector2 { x: val, y: val }
+                    }),
+                );
+
+                // Forward to all scenes
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.process_livekit_audio_frame(frame.clone());
                 }
             }
             MessageType::Rfc4(rfc4_msg) => {

@@ -280,6 +280,34 @@ pub fn update_video_player(
                             let texture = ImageTexture::create_from_image(image)
                                 .expect("couldn't create video texture");
 
+                            // Create DclVideoPlayer node for audio playback
+                            let mut video_player_node = godot::engine::load::<PackedScene>(
+                                "res://src/decentraland_components/video_player.tscn",
+                            )
+                            .instantiate()
+                            .unwrap()
+                            .cast::<DclVideoPlayer>();
+
+                            video_player_node
+                                .bind_mut()
+                                .set_dcl_scene_id(scene.scene_id.0);
+                            video_player_node.set_name("VideoPlayer".into());
+                            video_player_node
+                                .bind_mut()
+                                .set_dcl_texture(Some(texture.clone()));
+
+                            // Setup audio stream generator for livekit audio
+                            let audio_stream_generator = AudioStreamGenerator::new_gd();
+                            video_player_node.set_stream(audio_stream_generator.upcast());
+
+                            node_3d.add_child(video_player_node.clone().upcast());
+                            video_player_node.play();
+
+                            video_player_node.bind_mut().set_dcl_volume(dcl_volume);
+                            video_player_node
+                                .bind_mut()
+                                .set_muted(muted_by_current_scene);
+
                             // Create minimal VideoSink (no stream processor needed)
                             let (command_sender, _) = tokio::sync::mpsc::channel(10);
                             let (_, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
@@ -307,6 +335,11 @@ pub fn update_video_player(
                                 timestamp: 0,
                                 length: -1.0,
                             });
+
+                            // Store video player reference for audio routing
+                            scene
+                                .video_players
+                                .insert(*entity, video_player_node.clone());
 
                             // Register this entity as a livekit video player
                             livekit_registrations.push(*entity);

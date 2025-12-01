@@ -1,6 +1,14 @@
 extends DclVideoPlayer
 
 
+func init_livekit_audio(sample_rate: int, _num_channels: int, _samples_per_channel: int):
+	# Configure the AudioStreamGenerator with the correct sample rate
+	var stream = self.get_stream() as AudioStreamGenerator
+	if stream:
+		stream.mix_rate = sample_rate
+		print("VideoPlayer: initialized livekit audio with sample_rate=", sample_rate)
+
+
 func stream_buffer(data: PackedVector2Array):
 	if not self.playing:
 		self.play()

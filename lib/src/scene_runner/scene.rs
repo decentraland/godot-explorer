@@ -4,7 +4,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::NewAlloc, prelude::Gd};
+use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -397,6 +397,44 @@ impl Scene {
                     use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
                     update_video_texture_from_livekit(&mut vp_data.video_sink, width, height, data);
                 }
+            }
+        }
+    }
+
+    pub fn init_livekit_audio(
+        &mut self,
+        sample_rate: u32,
+        num_channels: u32,
+        samples_per_channel: u32,
+    ) {
+        tracing::info!(
+            "Livekit audio initialized: sample_rate={}, channels={}, samples_per_channel={}",
+            sample_rate,
+            num_channels,
+            samples_per_channel
+        );
+
+        // Configure the AudioStreamGenerator with the correct sample rate for all livekit video players
+        for entity_id in self.livekit_video_player_entities.clone() {
+            if let Some(video_player) = self.video_players.get_mut(&entity_id) {
+                video_player.call(
+                    "init_livekit_audio".into(),
+                    &[
+                        sample_rate.to_variant(),
+                        num_channels.to_variant(),
+                        samples_per_channel.to_variant(),
+                    ],
+                );
+            }
+        }
+    }
+
+    pub fn process_livekit_audio_frame(&mut self, frame: godot::prelude::PackedVector2Array) {
+        // Send audio frames to all registered livekit video players
+        for entity_id in self.livekit_video_player_entities.clone() {
+            if let Some(video_player) = self.video_players.get_mut(&entity_id) {
+                // Call the stream_buffer method on the video player (GDScript)
+                video_player.call("stream_buffer".into(), &[frame.to_variant()]);
             }
         }
     }
