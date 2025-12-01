@@ -42,7 +42,6 @@ var _online_friends: Dictionary = {}
 @onready var v_box_container_no_blockeds: VBoxContainer = %VBoxContainer_NoBlockeds
 
 
-
 func _ready() -> void:
 	_update_dropdown_visibility()
 	_hide_all_drowpdown_highlights()
