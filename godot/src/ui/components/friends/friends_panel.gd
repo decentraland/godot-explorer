@@ -60,7 +60,6 @@ func _ready() -> void:
 	if Global.social_service.friendship_request_accepted.is_connected(_async_on_friendship_changed):
 		Global.social_service.friendship_request_accepted.disconnect(_async_on_friendship_changed)
 	Global.social_service.friendship_request_accepted.connect(_async_on_friendship_changed)
-	print("FriendsPanel: Connected to friendship_request_accepted signal")
 
 	if Global.social_service.friendship_request_rejected.is_connected(_async_on_friendship_changed):
 		Global.social_service.friendship_request_rejected.disconnect(_async_on_friendship_changed)
@@ -153,7 +152,6 @@ func _on_button_nearby_toggled(toggled_on: bool) -> void:
 
 
 func _on_button_blocked_toggled(toggled_on: bool) -> void:
-	print(Global.social_blacklist.get_blocked_list())
 	if toggled_on:
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE
@@ -191,13 +189,9 @@ func _update_dropdown_visibility() -> void:
 	# Check if user is a guest - guests don't have access to friends service
 	var is_guest = Global.player_identity.is_guest
 
-	# Check connection status from Rust directly
-	var is_service_connected = Global.social_service.is_connected()
-
-	# Check for service errors or connection issues (only for non-guests)
-	var has_service_error = (
-		not is_guest and (not is_service_connected or request_list.has_error or online_list.has_error)
-	)
+	# Only show service error if we explicitly got an error from the lists
+	# Don't show error just because connection is still being established
+	var has_service_error = not is_guest and (request_list.has_error or online_list.has_error)
 
 	var pending_count = request_list.list_size
 	var online_count = online_list.list_size
@@ -222,11 +216,11 @@ func _update_dropdown_visibility() -> void:
 		v_box_container_offline.show()
 		offline_button.text = "OFFLINE (" + str(offline_count) + ")"
 
-	# Show error message if service is down (only for non-guests)
+	# Show error message only if we got explicit errors from the lists
 	if has_service_error:
 		v_box_container_no_service.show()
 		v_box_container_no_friends.hide()
-	elif total_friends == 0 and pending_count == 0:
+	elif total_friends == 0 and pending_count == 0 and not is_guest:
 		v_box_container_no_service.hide()
 		v_box_container_no_friends.show()
 	else:
@@ -247,12 +241,8 @@ func _on_friendship_request_received(_address: String, _message: String) -> void
 
 
 func _async_on_friendship_changed(address: String) -> void:
-	# Debug: verify signal is received
-	print("FriendsPanel: _async_on_friendship_changed called for address: ", address)
-
 	# When a friendship is deleted, remove from online tracking
 	if address != "" and _online_friends.has(address):
-		print("FriendsPanel: Removing ", address, " from online friends tracking")
 		_online_friends.erase(address)
 
 	# When a friendship is accepted, check if the friend is online
@@ -261,16 +251,11 @@ func _async_on_friendship_changed(address: String) -> void:
 		await _async_check_friend_connectivity(address)
 
 	# Refresh all friend lists when friendship status changes
-	# The signal is emitted after the server has processed the change
-	# Force update to ensure lists reflect the new friendship status
-	print("FriendsPanel: Updating all lists...")
 	update_all_lists()
 
 	# Also update dropdown visibility to reflect new counts
-	# Wait a moment for lists to update before checking visibility
 	await get_tree().process_frame
 	_update_dropdown_visibility()
-	print("FriendsPanel: Lists updated and visibility refreshed")
 
 
 func _on_friend_connectivity_updated(address: String, status: int) -> void:
@@ -306,10 +291,8 @@ func _async_check_friend_connectivity(address: String) -> void:
 
 
 func update_all_lists():
-	print("FriendsPanel: update_all_lists called")
 	request_list.async_update_list()
 	online_list.async_update_list()
 	offline_list.async_update_list()
 	nearby_list.async_update_list()
 	blocked_list.async_update_list()
-	print("FriendsPanel: All lists update calls initiated")

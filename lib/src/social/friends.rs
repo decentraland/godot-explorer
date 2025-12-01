@@ -1,5 +1,4 @@
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
-use godot::prelude::*;
 use std::collections::HashMap;
 
 /// Builds the auth chain message for Social Service RPC connection
@@ -12,20 +11,12 @@ pub async fn build_auth_chain(wallet: &EphemeralAuthChain) -> anyhow::Result<Str
     let metadata = "{}";
     let payload = format!("get:/:{}:{}", unix_time, metadata);
 
-    godot_print!(
-        "[build_auth_chain] Signing payload: {} (timestamp: {})",
-        payload,
-        unix_time
-    );
-
     // Sign the payload with the ephemeral wallet
     let signature = wallet
         .ephemeral_wallet()
         .sign_message(&payload)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to sign message: {:?}", e))?;
-
-    godot_print!("[build_auth_chain] Signature obtained");
 
     // Build the auth chain
     let mut auth_chain = wallet.auth_chain().clone();
@@ -35,27 +26,16 @@ pub async fn build_auth_chain(wallet: &EphemeralAuthChain) -> anyhow::Result<Str
     let mut auth_chain_buffer = HashMap::new();
 
     // Add auth chain links
-    let mut chain_count = 0;
     for (key, value) in auth_chain.headers() {
-        godot_print!("[build_auth_chain] Adding header: {} = {}", key, value);
         auth_chain_buffer.insert(key, value);
-        chain_count += 1;
     }
 
     // Add timestamp and metadata
     auth_chain_buffer.insert("x-identity-timestamp".to_string(), format!("{}", unix_time));
     auth_chain_buffer.insert("x-identity-metadata".to_string(), metadata.to_string());
 
-    godot_print!(
-        "[build_auth_chain] Built auth chain with {} links + timestamp + metadata",
-        chain_count
-    );
-
     // Serialize to JSON
-    let json = serde_json::to_string(&auth_chain_buffer)?;
-    godot_print!("[build_auth_chain] Final JSON length: {} bytes", json.len());
-
-    Ok(json)
+    Ok(serde_json::to_string(&auth_chain_buffer)?)
 }
 
 #[cfg(test)]

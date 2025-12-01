@@ -153,8 +153,6 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 	_update_request_id += 1
 	var current_request_id = _update_request_id
 
-	print("[SocialList] async_update_list called for type: ", SocialType.keys()[player_list_type])
-
 	remove_items()
 	match player_list_type:
 		SocialType.NEARBY:
@@ -169,8 +167,6 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 			await _async_reload_offline_list(current_request_id)
 		SocialType.REQUEST:
 			await _async_reload_request_list(current_request_id)
-		_:
-			print("[SocialList] Unknown list type: ", player_list_type)
 
 
 func _async_reload_blocked_list(request_id: int) -> void:
@@ -196,17 +192,14 @@ func _async_reload_blocked_list(request_id: int) -> void:
 
 
 func _async_reload_online_list(request_id: int) -> void:
-	print("[SocialList] Loading ONLINE friends list...")
 	var all_friends = await _async_fetch_all_friends()
 
 	# Check if this request is still valid (no newer request started)
 	if request_id != _update_request_id:
-		print("[SocialList] ONLINE list request invalidated")
 		return
 
 	if all_friends == null:
 		# null means error occurred
-		print("[SocialList] ONLINE list: friends fetch returned null (error)")
 		has_error = true
 		list_size = 0
 		load_error.emit("Friends service unavailable")
@@ -218,14 +211,10 @@ func _async_reload_online_list(request_id: int) -> void:
 	# Filter to only show friends that are ONLINE
 	var online_friends = []
 	var friends_panel = _get_friends_panel()
-	print("[SocialList] ONLINE list: friends_panel = ", friends_panel)
 	for friend in all_friends:
 		var is_online = friends_panel and friends_panel.is_friend_online(friend.address)
-		print("[SocialList] Friend ", friend.name, " (", friend.address, ") online=", is_online)
 		if is_online:
 			online_friends.append(friend)
-
-	print("[SocialList] ONLINE list: ", online_friends.size(), " online friends out of ", all_friends.size())
 
 	if online_friends.is_empty():
 		list_size = 0
@@ -313,25 +302,17 @@ func _async_reload_request_list(request_id: int) -> void:
 func _async_fetch_all_friends():
 	# Fetch all friends (status=-1 for all)
 	# Returns null on error, empty array if no friends, array of items otherwise
-	print("[SocialList] Fetching all friends...")
 	var promise = Global.social_service.get_friends(100, 0, -1)
-	print("[SocialList] Promise returned, is_resolved=", promise.is_resolved() if promise else "null")
 
 	# Use timeout to prevent hanging forever (10 seconds)
 	var timed_out = await _async_await_with_timeout(promise, 10.0)
 	if timed_out:
-		printerr("[SocialList] Timed out waiting for friends response")
 		return null
 
-	print("[SocialList] Promise awaited, is_rejected=", promise.is_rejected() if promise else "null")
-
 	if promise.is_rejected():
-		var error_data = promise.get_data()
-		printerr("[SocialList] Failed to load friends: ", error_data)
 		return null
 
 	var friends = promise.get_data()
-	print("[SocialList] Got friends response: ", friends)
 	var friend_items = []
 
 	for friend_data in friends:
@@ -342,7 +323,6 @@ func _async_fetch_all_friends():
 		item.profile_picture_url = friend_data["profile_picture_url"]
 		friend_items.append(item)
 
-	print("[SocialList] Parsed ", friend_items.size(), " friends")
 	return friend_items
 
 
