@@ -12,46 +12,66 @@ pub(crate) struct InternalPendingBinaryMessages {
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_comms_send_string(), op_comms_send_binary()]
+    vec![
+        op_comms_send_string(),
+        op_comms_send_binary(),
+        op_comms_send_binary_single(),
+        op_comms_recv_binary(),
+    ]
 }
 
 pub(crate) const COMMS_MSG_TYPE_STRING: u8 = 1;
 pub(crate) const COMMS_MSG_TYPE_BINARY: u8 = 2;
+
+/// Helper function to parse an address string (with or without 0x prefix) to H160
+fn parse_address(address: &str) -> Option<H160> {
+    let addr = if let Some(stripped) = address.strip_prefix("0x") {
+        stripped
+    } else {
+        address
+    };
+
+    let hex_bytes = ethers_core::utils::hex::decode(addr).ok()?;
+    if hex_bytes.len() != H160::len_bytes() {
+        return None;
+    }
+
+    Some(H160::from_slice(hex_bytes.as_slice()))
+}
 
 #[op2(async)]
 async fn op_comms_send_string(
     state: Rc<RefCell<OpState>>,
     #[string] message: String,
 ) -> Result<(), anyhow::Error> {
-    let mut message = message.into_bytes();
-    message.insert(0, COMMS_MSG_TYPE_STRING);
-    comms_send(state, vec![message]).await?;
-    Ok(())
+    let mut data = vec![COMMS_MSG_TYPE_STRING];
+    data.extend(message.into_bytes());
+    comms_send_single(state, data, None).await
 }
 
+/// Send a single binary message with optional recipient address
+/// This is the new-style operation that supports targeted messaging
 #[op2(async)]
-#[serde]
-async fn op_comms_send_binary(
+async fn op_comms_send_binary_single(
     state: Rc<RefCell<OpState>>,
-    #[serde] messages: Vec<JsBuffer>,
-) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    let messages = messages
-        .iter()
-        .map(|m| {
-            let mut m = m.as_ref().to_vec();
-            m.insert(0, COMMS_MSG_TYPE_BINARY);
-            m
-        })
-        .collect();
+    #[buffer] message: JsBuffer,
+    #[string] recipient: Option<String>,
+) -> Result<(), anyhow::Error> {
+    let mut data = vec![COMMS_MSG_TYPE_BINARY];
+    data.extend(message.as_ref());
 
-    comms_send(state.clone(), messages).await?;
+    let recipient = recipient.and_then(|r| parse_address(&r));
 
-    // Get pending Binary messages
+    comms_send_single(state, data, recipient).await
+}
+
+/// Internal helper to receive pending binary messages
+fn recv_binary_internal(state: Rc<RefCell<OpState>>) -> Vec<Vec<u8>> {
     if let Some(pending_messages) = state
         .borrow_mut()
         .try_take::<InternalPendingBinaryMessages>()
     {
-        let messages = pending_messages
+        pending_messages
             .messages
             .into_iter()
             .map(|(sender_address, mut data)| {
@@ -78,21 +98,52 @@ async fn op_comms_send_binary(
 
                 data
             })
-            .collect();
-        Ok(messages)
+            .collect()
     } else {
-        Ok(vec![])
+        vec![]
     }
 }
 
-async fn comms_send(
+/// Receive pending binary messages from other peers
+/// Returns messages with sender address prepended
+#[op2(async)]
+#[serde]
+async fn op_comms_recv_binary(
     state: Rc<RefCell<OpState>>,
-    message: Vec<Vec<u8>>,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    Ok(recv_binary_internal(state))
+}
+
+/// Legacy operation for backwards compatibility
+/// Sends multiple binary messages (old-style, broadcasts to all)
+/// and returns pending received messages
+#[op2(async)]
+#[serde]
+async fn op_comms_send_binary(
+    state: Rc<RefCell<OpState>>,
+    #[serde] messages: Vec<JsBuffer>,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    // Send all messages (old style - broadcast to all)
+    for message in messages.iter() {
+        let mut data = vec![COMMS_MSG_TYPE_BINARY];
+        data.extend(message.as_ref());
+        comms_send_single(state.clone(), data, None).await?;
+    }
+
+    // Return pending messages
+    Ok(recv_binary_internal(state))
+}
+
+/// Internal helper to send a single message with optional recipient
+async fn comms_send_single(
+    state: Rc<RefCell<OpState>>,
+    body: Vec<u8>,
+    recipient: Option<H160>,
 ) -> Result<(), anyhow::Error> {
     state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::SendCommsMessage { body: message });
+        .push(RpcCall::SendCommsMessage { body, recipient });
 
     Ok(())
 }
