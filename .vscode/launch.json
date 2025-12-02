@@ -19,7 +19,7 @@
       "environment": [
         {
           "name": "RUST_LOG",
-          "value": "dclgodot=debug"
+          "value": "dclgodot=info"
         }
       ],
       "externalConsole": true,

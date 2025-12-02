@@ -397,6 +397,14 @@ fn spawn_livekit_task(
                                                 return;
                                             };
 
+                                            tracing::info!(
+                                                "Streamer audio first frame: sample_rate={}, num_channels={}, samples_per_channel={}, data_len={}",
+                                                frame.sample_rate,
+                                                frame.num_channels,
+                                                frame.samples_per_channel,
+                                                frame.data.len()
+                                            );
+
                                             if let Err(e) = sender.send(IncomingMessage {
                                                 message: MessageType::InitStreamerAudio(StreamerAudioInitData {
                                                     sample_rate: frame.sample_rate,
@@ -420,7 +428,9 @@ fn spawn_livekit_task(
                                                     room_id: room_id_clone.clone(),
                                                 }) {
                                                     Ok(()) => (),
-                                                    Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => (),
+                                                    Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                                        tracing::warn!("Streamer audio frame dropped: channel full");
+                                                    }
                                                     Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
                                                         tracing::warn!("streamer audio receiver dropped, exiting task");
                                                         return;

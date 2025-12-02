@@ -169,7 +169,7 @@ pub fn update_video_player(
                         // Check if this is a livekit-video:// URL
                         if target_src.starts_with("livekit-video://") {
                             tracing::debug!(
-                                "Video player activated (LiveKit) for entity {}: {}",
+                                "Video player activated (LiveKit, change video) for entity {}: {}",
                                 entity,
                                 target_src
                             );
@@ -185,6 +185,47 @@ pub fn update_video_player(
                                 ImageTexture::create_from_image(image)
                                     .expect("couldn't create video texture")
                             };
+
+                            // Get existing VideoPlayer node or create one
+                            let mut video_player_node = if let Some(existing) =
+                                node_3d.get_node_or_null("VideoPlayer".into())
+                            {
+                                existing.try_cast::<DclVideoPlayer>().expect(
+                                    "the expected VideoPlayer wasn't a DclVideoPlayer",
+                                )
+                            } else {
+                                // Create new video player node
+                                let node = godot::engine::load::<PackedScene>(
+                                    "res://src/decentraland_components/video_player.tscn",
+                                )
+                                .instantiate()
+                                .unwrap()
+                                .cast::<DclVideoPlayer>();
+                                node_3d.add_child(node.clone().upcast());
+                                node
+                            };
+
+                            video_player_node
+                                .bind_mut()
+                                .set_dcl_scene_id(scene.scene_id.0);
+                            video_player_node.set_name("VideoPlayer".into());
+                            video_player_node
+                                .bind_mut()
+                                .set_dcl_texture(Some(texture.clone()));
+
+                            // Setup audio stream generator for livekit audio
+                            // Default to 48kHz as LiveKit typically uses this sample rate
+                            let mut audio_stream_generator = AudioStreamGenerator::new_gd();
+                            audio_stream_generator.set_mix_rate(48000.0);
+                            // Increase buffer to handle network jitter (default 0.5s is too small)
+                            audio_stream_generator.set_buffer_length(1.5);
+                            video_player_node.set_stream(audio_stream_generator.upcast());
+                            video_player_node.play();
+
+                            video_player_node.bind_mut().set_dcl_volume(dcl_volume);
+                            video_player_node
+                                .bind_mut()
+                                .set_muted(muted_by_current_scene);
 
                             // Create minimal VideoSink (no stream processor needed)
                             let (command_sender, _) = tokio::sync::mpsc::channel(10);
@@ -211,6 +252,11 @@ pub fn update_video_player(
                                 timestamp: 0,
                                 length: -1.0,
                             });
+
+                            // Store video player reference for audio routing
+                            scene
+                                .video_players
+                                .insert(*entity, video_player_node.clone());
 
                             // Register this entity as a livekit video player
                             livekit_registrations.push(*entity);
@@ -309,7 +355,11 @@ pub fn update_video_player(
                                 .set_dcl_texture(Some(texture.clone()));
 
                             // Setup audio stream generator for livekit audio
-                            let audio_stream_generator = AudioStreamGenerator::new_gd();
+                            // Default to 48kHz as LiveKit typically uses this sample rate
+                            let mut audio_stream_generator = AudioStreamGenerator::new_gd();
+                            audio_stream_generator.set_mix_rate(48000.0);
+                            // Increase buffer to handle network jitter (default 0.5s is too small)
+                            audio_stream_generator.set_buffer_length(1.5);
                             video_player_node.set_stream(audio_stream_generator.upcast());
 
                             node_3d.add_child(video_player_node.clone().upcast());
