@@ -30,7 +30,8 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 	"events_started",  # Events: Event has started
 	"reward_assignment",  # Rewards: Reward assigned/received
 	"reward_in_progress",  # Rewards: Reward being processed
-	"friend_request_received",  # Friends: Friend request received (local notification)
+	"local_friend_request_received",  # Friends: Friend request received (local notification)
+	"local_friend_request_accepted",  # Friends: Friend request accepted (local notification)
 ]
 
 var _notifications: Array = []
@@ -380,7 +381,7 @@ func queue_friend_request_notification(
 
 	var notification = {
 		"id": notification_id,
-		"type": "friend_request_received",
+		"type": "local_friend_request_received",
 		"address": from_address,
 		"timestamp": timestamp,
 		"read": false,
@@ -391,6 +392,42 @@ func queue_friend_request_notification(
 			"link": "",
 			"sender_address": from_address,
 			"sender_name": from_name,
+		}
+	}
+
+	# Add to notifications list
+	_notifications.append(notification)
+
+	# Queue for toast display
+	_notification_queue.append(notification)
+
+	# Emit signal to show toast (only if queue was empty before this)
+	if _notification_queue.size() == 1:
+		notification_queued.emit(notification)
+
+
+## Create and queue a friend request accepted notification (called from social service)
+## @param friend_address: The address of the user who accepted the friend request
+## @param friend_name: The display name of the user who accepted
+func queue_friend_accepted_notification(friend_address: String, friend_name: String) -> void:
+	var timestamp = int(Time.get_unix_time_from_system() * 1000)
+	var notification_id = "friend_accepted_" + friend_address + "_" + str(timestamp)
+
+	var description = friend_name + " accepted your friend request"
+
+	var notification = {
+		"id": notification_id,
+		"type": "local_friend_request_accepted",
+		"address": friend_address,
+		"timestamp": timestamp,
+		"read": false,
+		"metadata":
+		{
+			"title": "Friend Request Accepted",
+			"description": description,
+			"link": "",
+			"friend_address": friend_address,
+			"friend_name": friend_name,
 		}
 	}
 

@@ -340,7 +340,6 @@ expand_icon = true
 
 [node name="Notifications" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide" instance=ExtResource("15_ky6fv")]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
 

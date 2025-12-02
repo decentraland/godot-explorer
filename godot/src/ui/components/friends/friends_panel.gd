@@ -263,6 +263,10 @@ func _async_queue_friend_request_notification(address: String, message: String) 
 
 
 func _async_on_friendship_request_accepted(address: String) -> void:
+	# Check if this was someone accepting OUR request (they were not in our request list)
+	# vs us accepting THEIR request (they were in our request list)
+	var was_incoming_request = request_list.has_item_with_address(address)
+
 	# Remove from request list
 	request_list.remove_item_by_address(address)
 
@@ -276,6 +280,10 @@ func _async_on_friendship_request_accepted(address: String) -> void:
 			online_list.add_item_by_social_item_data(item_data, should_load)
 		else:
 			offline_list.add_item_by_social_item_data(item_data, should_load)
+
+		# Only show notification if they accepted OUR request (not us accepting theirs)
+		if not was_incoming_request:
+			NotificationsManager.queue_friend_accepted_notification(address, item_data.name)
 
 
 func _on_friendship_request_rejected(address: String) -> void:
@@ -348,8 +356,19 @@ func _on_friend_connectivity_updated(address: String, status: int) -> void:
 		if item_data != null:
 			offline_list.remove_item_by_address(address)
 			online_list.add_item_by_social_item_data(item_data)
+			# Send chat notification that friend came online
+			_send_friend_online_chat_message(item_data.name)
 
 	_update_dropdown_visibility()
+
+
+func _send_friend_online_chat_message(friend_name: String) -> void:
+	var nickname_color = DclAvatar.get_nickname_color(friend_name)
+	var color_hex = nickname_color.to_html(false)
+	var message = (
+		"[color=#%s]%s[/color] [color=#8f8]is now online[/color]" % [color_hex, friend_name]
+	)
+	Global.on_chat_message.emit("system", message, Time.get_unix_time_from_system())
 
 
 func is_friend_online(address: String) -> bool:
