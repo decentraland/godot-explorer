@@ -143,12 +143,6 @@ func _input(event: InputEvent) -> void:
 			Global.explorer_release_focus()
 
 
-func show_panel() -> void:
-	show()
-	_load_unloaded_items()
-	_hide_all_drowpdown_highlights()
-
-
 func show_panel_on_friends_tab() -> void:
 	show()
 	_load_unloaded_items()

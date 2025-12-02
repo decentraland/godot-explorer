@@ -5,7 +5,7 @@ enum LoadState { UNLOADED, LOADING, LOADED }
 
 @export var item_type: SocialType
 
-var trim_value = 25
+var trim_value = 20
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
 var social_data: SocialItemData

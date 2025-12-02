@@ -760,7 +760,7 @@ func _on_friends_clicked() -> void:
 		Global.explorer_grab_focus()
 		# Capture mouse to restore camera control
 	else:
-		friends_panel.show_panel()
+		friends_panel.show_panel_on_friends_tab()
 		hud_button_friends.set_panel_open(true)
 		if notifications_panel.visible:
 			notifications_panel.hide_panel()
