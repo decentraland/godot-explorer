@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+use ethers_core::types::H160;
 use godot::builtin::Vector2;
 use http::Uri;
 use serde::Serialize;
@@ -155,7 +156,8 @@ pub enum RpcCall {
         response: RpcResultSender<Result<serde_json::Value, String>>,
     },
     SendCommsMessage {
-        body: Vec<Vec<u8>>,
+        body: Vec<u8>,
+        recipient: Option<H160>,
     },
     GetTextureSize {
         src: String,
