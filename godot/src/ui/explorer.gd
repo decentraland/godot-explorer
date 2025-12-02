@@ -126,6 +126,9 @@ func _ready():
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
 
+	# Connect to notification clicks to handle friend request notifications
+	Global.notification_clicked.connect(_on_notification_clicked)
+
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
@@ -860,3 +863,22 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+
+
+func _on_notification_clicked(notification: Dictionary) -> void:
+	# Handle friend request notification clicks - open friends panel on friends tab
+	var notif_type = notification.get("type", "")
+
+	if notif_type == "friend_request_received":
+		# Open friends panel on friends tab
+		if not friends_panel.visible:
+			friends_panel.show_panel_on_friends_tab()
+			hud_button_friends.set_panel_open(true)
+			# Close notifications panel if open
+			if notifications_panel.visible:
+				notifications_panel.hide_panel()
+				hud_button_notifications.set_panel_open(false)
+			# Release focus to prevent camera rotation while panel is open
+			Global.explorer_release_focus()
+			if Global.is_mobile():
+				release_mouse()

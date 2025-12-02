@@ -40,6 +40,7 @@ var _online_friends: Dictionary = {}
 @onready var online_container: PanelContainer = %OnlineContainer
 @onready var offline_container: PanelContainer = %OfflineContainer
 @onready var v_box_container_no_blockeds: VBoxContainer = %VBoxContainer_NoBlockeds
+@onready var button_friends: Button = %Button_Friends
 
 
 func _ready() -> void:
@@ -60,23 +61,33 @@ func _ready() -> void:
 		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
 
 	# Always reconnect to ensure signals are connected (in case of re-initialization)
-	if Global.social_service.friendship_request_accepted.is_connected(_async_on_friendship_changed):
-		Global.social_service.friendship_request_accepted.disconnect(_async_on_friendship_changed)
-	Global.social_service.friendship_request_accepted.connect(_async_on_friendship_changed)
+	if Global.social_service.friendship_request_accepted.is_connected(
+		_async_on_friendship_request_accepted
+	):
+		Global.social_service.friendship_request_accepted.disconnect(
+			_async_on_friendship_request_accepted
+		)
+	Global.social_service.friendship_request_accepted.connect(_async_on_friendship_request_accepted)
 
-	if Global.social_service.friendship_request_rejected.is_connected(_async_on_friendship_changed):
-		Global.social_service.friendship_request_rejected.disconnect(_async_on_friendship_changed)
-	Global.social_service.friendship_request_rejected.connect(_async_on_friendship_changed)
+	if Global.social_service.friendship_request_rejected.is_connected(
+		_on_friendship_request_rejected
+	):
+		Global.social_service.friendship_request_rejected.disconnect(
+			_on_friendship_request_rejected
+		)
+	Global.social_service.friendship_request_rejected.connect(_on_friendship_request_rejected)
 
-	if Global.social_service.friendship_deleted.is_connected(_async_on_friendship_changed):
-		Global.social_service.friendship_deleted.disconnect(_async_on_friendship_changed)
-	Global.social_service.friendship_deleted.connect(_async_on_friendship_changed)
+	if Global.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
+		Global.social_service.friendship_deleted.disconnect(_on_friendship_deleted)
+	Global.social_service.friendship_deleted.connect(_on_friendship_deleted)
 
 	if Global.social_service.friendship_request_cancelled.is_connected(
-		_async_on_friendship_changed
+		_on_friendship_request_cancelled
 	):
-		Global.social_service.friendship_request_cancelled.disconnect(_async_on_friendship_changed)
-	Global.social_service.friendship_request_cancelled.connect(_async_on_friendship_changed)
+		Global.social_service.friendship_request_cancelled.disconnect(
+			_on_friendship_request_cancelled
+		)
+	Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_cancelled)
 
 	if not Global.social_service.friend_connectivity_updated.is_connected(
 		_on_friend_connectivity_updated
@@ -125,6 +136,14 @@ func show_panel() -> void:
 	show()
 	update_all_lists()
 	_hide_all_drowpdown_highlights()
+
+
+func show_panel_on_friends_tab() -> void:
+	show()
+	update_all_lists()
+	_hide_all_drowpdown_highlights()
+	# Switch to friends tab by setting the button pressed (triggers _on_button_friends_toggled)
+	button_friends.button_pressed = true
 
 
 func hide_panel() -> void:
@@ -220,29 +239,95 @@ func _on_load_error(_error_message: String) -> void:
 	_update_dropdown_visibility()
 
 
-func _on_friendship_request_received(_address: String, _message: String) -> void:
-	# Refresh request list when new request arrives
-	request_list.async_update_list()
+func _on_friendship_request_received(address: String, message: String) -> void:
+	# Add the new request to the list without full refresh
+	request_list.async_add_request_by_address(address)
 	# Update dropdown visibility to show new request count
 	_update_dropdown_visibility()
+	# Queue a notification for the friend request
+	_async_queue_friend_request_notification(address, message)
 
 
-func _async_on_friendship_changed(address: String) -> void:
-	# When a friendship is deleted, remove from online tracking
-	if address != "" and _online_friends.has(address):
+func _async_queue_friend_request_notification(address: String, message: String) -> void:
+	# Fetch the sender's profile to get their display name
+	var promise = Global.content_provider.fetch_profile(address)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	var sender_name = address  # Fallback to address if profile fetch fails
+	if not (result is PromiseError):
+		var profile = result as DclUserProfile
+		if profile != null:
+			sender_name = profile.get_name()
+
+	# Queue the notification
+	NotificationsManager.queue_friend_request_notification(address, sender_name, message)
+
+
+func _async_on_friendship_request_accepted(address: String) -> void:
+	# Remove from request list
+	request_list.remove_item_by_address(address)
+
+	# Fetch profile and add to online/offline list
+	var item_data = await _async_fetch_friend_profile(address)
+	if item_data != null:
+		# Check if friend is online and add to appropriate list
+		await _async_check_friend_connectivity(address)
+		if is_friend_online(address):
+			online_list.add_item_by_social_item_data(item_data)
+		else:
+			offline_list.add_item_by_social_item_data(item_data)
+
+	_update_dropdown_visibility()
+
+
+func _on_friendship_request_rejected(address: String) -> void:
+	# Remove from request list (we rejected their request)
+	request_list.remove_item_by_address(address)
+	_update_dropdown_visibility()
+
+
+func _on_friendship_deleted(address: String) -> void:
+	# Remove from online tracking
+	if _online_friends.has(address):
 		_online_friends.erase(address)
 
-	# When a friendship is accepted, check if the friend is online
-	# This handles the case where we accept a request from someone who is already online
-	if address != "":
-		await _async_check_friend_connectivity(address)
-
-	# Refresh all friend lists when friendship status changes
-	update_all_lists()
-
-	# Also update dropdown visibility to reflect new counts
-	await get_tree().process_frame
+	# Remove from online/offline lists
+	online_list.remove_item_by_address(address)
+	offline_list.remove_item_by_address(address)
 	_update_dropdown_visibility()
+
+
+func _on_friendship_request_cancelled(address: String) -> void:
+	# Remove from request list (they cancelled their request to us)
+	request_list.remove_item_by_address(address)
+	_update_dropdown_visibility()
+
+
+func _async_fetch_friend_profile(address: String) -> SocialItemData:
+	# Fetch profile for a friend to create SocialItemData
+	var promise = Global.content_provider.fetch_profile(address)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	var item = SocialItemData.new()
+	item.address = address
+
+	if result is PromiseError:
+		# Fallback to address if profile fetch fails
+		item.name = address
+		item.has_claimed_name = false
+		item.profile_picture_url = ""
+	else:
+		var profile = result as DclUserProfile
+		if profile != null:
+			item.name = profile.get_name()
+			item.has_claimed_name = profile.has_claimed_name()
+			item.profile_picture_url = profile.get_avatar().get_snapshots_face_url()
+		else:
+			item.name = address
+			item.has_claimed_name = false
+			item.profile_picture_url = ""
+
+	return item
 
 
 func _on_friend_connectivity_updated(address: String, status: int) -> void:

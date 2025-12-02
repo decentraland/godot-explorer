@@ -60,7 +60,6 @@ impl DclSocialService {
         &mut self,
         player_identity: Gd<crate::auth::dcl_player_identity::DclPlayerIdentity>,
     ) {
-        tracing::debug!("initialize_from_player_identity called");
         let wallet_option = player_identity.bind().try_get_ephemeral_auth_chain();
 
         let Some(wallet) = wallet_option else {
@@ -68,14 +67,11 @@ impl DclSocialService {
             return;
         };
 
-        tracing::debug!("Wallet obtained, creating manager");
         let manager = Arc::new(SocialServiceManager::new(Arc::new(wallet)));
 
         // Set the manager synchronously to avoid race conditions
-        // Note: We use blocking_lock here since we're in a sync context
         if let Ok(mut guard) = self.manager.try_write() {
             *guard = Some(manager);
-            tracing::info!("DclSocialService initialized successfully");
         } else {
             tracing::error!("DclSocialService: Failed to acquire write lock during initialization");
         }
@@ -88,7 +84,6 @@ impl DclSocialService {
         // Set the manager synchronously to avoid race conditions
         if let Ok(mut guard) = self.manager.try_write() {
             *guard = Some(manager);
-            tracing::info!("DclSocialService initialized with wallet");
         } else {
             tracing::error!(
                 "DclSocialService: Failed to acquire write lock during wallet initialization"
@@ -417,14 +412,11 @@ impl DclSocialService {
         limit: i32,
         offset: i32,
     ) -> Result<Vec<FriendshipRequestData>, String> {
-        tracing::debug!("async_get_pending_requests: acquiring manager lock");
         let manager_guard = manager.read().await;
-        let mgr = manager_guard.as_ref().ok_or_else(|| {
-            tracing::error!("async_get_pending_requests: social service not initialized");
-            "Social service not initialized".to_string()
-        })?;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
 
-        tracing::debug!("async_get_pending_requests: calling API");
         let pagination = if limit > 0 {
             Some(Pagination { limit, offset })
         } else {
@@ -434,17 +426,9 @@ impl DclSocialService {
         let response = mgr
             .get_pending_friendship_requests(pagination)
             .await
-            .map_err(|e| {
-                let error_msg = format!("Failed to get pending requests: {}", e);
-                tracing::error!("async_get_pending_requests: {}", error_msg);
-                error_msg
-            })?;
+            .map_err(|e| format!("Failed to get pending requests: {}", e))?;
 
         let requests = Self::extract_friendship_requests_with_profile(response);
-        tracing::info!(
-            "async_get_pending_requests: successfully fetched {} requests",
-            requests.len()
-        );
         Ok(requests)
     }
 
@@ -600,28 +584,21 @@ impl DclSocialService {
         instance_id: InstanceId,
     ) {
         while let Some(update) = rx.recv().await {
-            tracing::info!("📨 Received friendship update from stream: {:?}", update);
-
             let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
             else {
-                tracing::warn!("DclSocialService node dropped, stopping update listener");
                 break;
             };
 
             Self::emit_friendship_update_signal(&mut node, update);
         }
-        tracing::info!("Friendship updates listener task ended");
     }
 
     fn emit_friendship_update_signal(node: &mut Gd<DclSocialService>, update: FriendshipUpdate) {
         match update.update {
             Some(friendship_update::Update::Request(req)) => {
                 if let Some(friend) = req.friend {
-                    let message = req.message.clone().unwrap_or_default();
-                    tracing::info!("🔔 Emitting signal: friendship_request_received from {} with message: '{}'",
-                        friend.address, message);
                     let address = friend.address.clone();
-                    let msg = message.clone();
+                    let msg = req.message.clone().unwrap_or_default();
                     node.call_deferred(
                         "emit_signal".into(),
                         &[
@@ -634,10 +611,6 @@ impl DclSocialService {
             }
             Some(friendship_update::Update::Accept(accept)) => {
                 if let Some(user) = accept.user {
-                    tracing::info!(
-                        "🔔 Emitting signal: friendship_request_accepted from {}",
-                        user.address
-                    );
                     let address = user.address.clone();
                     node.call_deferred(
                         "emit_signal".into(),
@@ -650,10 +623,6 @@ impl DclSocialService {
             }
             Some(friendship_update::Update::Reject(reject)) => {
                 if let Some(user) = reject.user {
-                    tracing::info!(
-                        "🔔 Emitting signal: friendship_request_rejected from {}",
-                        user.address
-                    );
                     let address = user.address.clone();
                     node.call_deferred(
                         "emit_signal".into(),
@@ -666,10 +635,6 @@ impl DclSocialService {
             }
             Some(friendship_update::Update::Delete(delete)) => {
                 if let Some(user) = delete.user {
-                    tracing::info!(
-                        "🔔 Emitting signal: friendship_deleted from {}",
-                        user.address
-                    );
                     let address = user.address.clone();
                     node.call_deferred(
                         "emit_signal".into(),
@@ -679,10 +644,6 @@ impl DclSocialService {
             }
             Some(friendship_update::Update::Cancel(cancel)) => {
                 if let Some(user) = cancel.user {
-                    tracing::info!(
-                        "🔔 Emitting signal: friendship_request_cancelled from {}",
-                        user.address
-                    );
                     let address = user.address.clone();
                     node.call_deferred(
                         "emit_signal".into(),
@@ -693,12 +654,8 @@ impl DclSocialService {
                     );
                 }
             }
-            Some(friendship_update::Update::Block(_block)) => {
-                tracing::info!("🔔 Received block update - not emitting signal (blocking not implemented in friends UI)");
-            }
-            None => {
-                tracing::warn!("Received friendship update with no data");
-            }
+            Some(friendship_update::Update::Block(_)) => {}
+            None => {}
         }
     }
 
@@ -706,28 +663,16 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
     ) -> Result<(), String> {
-        tracing::debug!("async_subscribe_to_connectivity_updates: acquiring manager lock");
         let manager_guard = manager.read().await;
-        let mgr = manager_guard.as_ref().ok_or_else(|| {
-            tracing::error!(
-                "async_subscribe_to_connectivity_updates: social service not initialized"
-            );
-            "Social service not initialized".to_string()
-        })?;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
 
-        tracing::debug!("async_subscribe_to_connectivity_updates: subscribing");
         let mut rx = mgr
             .subscribe_to_friend_connectivity_updates()
             .await
-            .map_err(|e| {
-                let error_msg = format!("Failed to subscribe to connectivity updates: {}", e);
-                tracing::error!("async_subscribe_to_connectivity_updates: {}", error_msg);
-                error_msg
-            })?;
+            .map_err(|e| format!("Failed to subscribe to connectivity updates: {}", e))?;
 
-        tracing::info!(
-            "async_subscribe_to_connectivity_updates: successfully subscribed, spawning listener"
-        );
         tokio::spawn(async move {
             Self::handle_connectivity_updates(&mut rx, instance_id).await;
         });
@@ -739,28 +684,15 @@ impl DclSocialService {
         rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>,
         instance_id: InstanceId,
     ) {
-        let mut update_count = 0;
         while let Some(update) = rx.recv().await {
-            update_count += 1;
-
             let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
             else {
-                tracing::warn!("DclSocialService node dropped, stopping connectivity listener");
                 break;
             };
 
             if let Some(friend) = update.friend {
                 let address = friend.address.clone();
                 let status = update.status;
-                // Log initial batch vs subsequent updates
-                if update_count <= 10 {
-                    tracing::info!(
-                        "📶 Connectivity update #{}: {} is {:?}",
-                        update_count,
-                        address,
-                        status
-                    );
-                }
                 node.call_deferred(
                     "emit_signal".into(),
                     &[
@@ -771,10 +703,6 @@ impl DclSocialService {
                 );
             }
         }
-        tracing::info!(
-            "Connectivity updates listener task ended (received {} total updates)",
-            update_count
-        );
     }
 
     /// Extract friendship requests with full profile data
@@ -826,16 +754,11 @@ impl DclSocialService {
         result: Result<Vec<(String, String, bool, String)>, String>,
     ) {
         let Some(mut promise) = get_promise() else {
-            tracing::warn!("resolve_friends_promise: promise was dropped before resolution");
             return;
         };
 
         match result {
             Ok(friends) => {
-                tracing::debug!(
-                    "resolve_friends_promise: resolving with {} friends",
-                    friends.len()
-                );
                 let mut array = Array::new();
                 for (address, name, has_claimed_name, profile_picture_url) in friends {
                     let mut dict = Dictionary::new();
@@ -846,10 +769,9 @@ impl DclSocialService {
                     array.push(dict.to_variant());
                 }
                 promise.bind_mut().resolve_with_data(array.to_variant());
-                tracing::debug!("resolve_friends_promise: promise resolved");
             }
             Err(e) => {
-                tracing::error!("resolve_friends_promise: rejecting with error: {}", e);
+                tracing::error!("get_friends failed: {}", e);
                 promise.bind_mut().reject(e.into());
             }
         }
@@ -860,16 +782,11 @@ impl DclSocialService {
         result: Result<Vec<FriendshipRequestData>, String>,
     ) {
         let Some(mut promise) = get_promise() else {
-            tracing::warn!("resolve_requests_promise: promise was dropped before resolution");
             return;
         };
 
         match result {
             Ok(requests) => {
-                tracing::debug!(
-                    "resolve_requests_promise: resolving with {} requests",
-                    requests.len()
-                );
                 let mut array = Array::new();
                 for (address, name, has_claimed_name, profile_picture_url, message, created_at) in
                     requests
@@ -886,7 +803,7 @@ impl DclSocialService {
                 promise.bind_mut().resolve_with_data(array.to_variant());
             }
             Err(e) => {
-                tracing::error!("resolve_requests_promise: rejecting with error: {}", e);
+                tracing::error!("get_requests failed: {}", e);
                 promise.bind_mut().reject(e.into());
             }
         }
@@ -918,17 +835,15 @@ impl DclSocialService {
         result: Result<(), String>,
     ) {
         let Some(mut promise) = get_promise() else {
-            tracing::warn!("resolve_simple_promise: Promise was dropped before resolution");
             return;
         };
 
         match result {
             Ok(()) => {
-                tracing::debug!("resolve_simple_promise: Resolving successfully");
                 promise.bind_mut().resolve();
             }
             Err(e) => {
-                tracing::error!("resolve_simple_promise: Rejecting with error: {}", e);
+                tracing::error!("Social service operation failed: {}", e);
                 promise.bind_mut().reject(e.into());
             }
         }

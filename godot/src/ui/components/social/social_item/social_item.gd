@@ -16,7 +16,6 @@ var _is_loading: bool = false
 @onready var h_box_container_request: HBoxContainer = %HBoxContainer_Request
 @onready var h_box_container_blocked: HBoxContainer = %HBoxContainer_Blocked
 @onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
-@onready var mic_enabled: MarginContainer = %MicEnabled
 @onready var nickname: Label = %Nickname
 @onready var label_place: Label = %Label_Place
 @onready var profile_picture: ProfilePicture = %ProfilePicture
@@ -189,16 +188,6 @@ func _hide_all_buttons() -> void:
 	label_pending_request.hide()
 
 
-func _get_friends_panel():
-	# Navigate up the tree to find the friends panel
-	var parent = get_parent()
-	while parent != null:
-		if parent.has_method("update_all_lists"):
-			return parent
-		parent = parent.get_parent()
-	return null
-
-
 func _notify_parent_size_changed() -> void:
 	var parent = get_parent()
 	if parent and parent.has_signal("size_changed"):
@@ -225,15 +214,9 @@ func _async_on_button_add_friend_pressed() -> void:
 		button_add_friend.disabled = false
 		return
 
-	# After sending request, update status and UI
 	current_friendship_status = 0  # REQUEST_SENT
 	button_add_friend.hide()
 	label_pending_request.show()
-
-	# Refresh friends lists
-	var friends_panel = _get_friends_panel()
-	if friends_panel and friends_panel.has_method("update_all_lists"):
-		friends_panel.update_all_lists()
 
 
 func _async_on_button_accept_pressed() -> void:
@@ -254,22 +237,9 @@ func _async_on_button_accept_pressed() -> void:
 			button_add_friend.disabled = false
 		return
 
-	# Update status and hide both button and label after successful acceptance
-	current_friendship_status = 3  # Update to ACCEPTED status
+	current_friendship_status = 3  # ACCEPTED
 	button_add_friend.hide()
 	label_pending_request.hide()
-
-	# Find and update all social lists (especially REQUEST list to remove accepted request)
-	var friends_panel = _get_friends_panel()
-	if friends_panel and friends_panel.has_method("update_all_lists"):
-		friends_panel.update_all_lists()
-	else:
-		# Fallback: refresh the parent list if friends_panel not found
-		var parent_list = get_parent()
-		if parent_list and parent_list.has_method("async_update_list"):
-			parent_list.async_update_list()
-
-	# Refresh the friends button pending count
 	_refresh_friends_button_count()
 
 
@@ -300,18 +270,6 @@ func _async_on_button_reject_pressed() -> void:
 		current_friendship_status = status
 		_update_button_visibility_from_status()
 
-	# Also update nearby list if this item is in REQUEST list
-	# Find and update nearby items for this address
-	var friends_panel = _get_friends_panel()
-	if friends_panel and friends_panel.has_method("update_all_lists"):
-		friends_panel.update_all_lists()
-	else:
-		# Fallback: refresh the parent list if friends_panel not found
-		var parent_list = get_parent()
-		if parent_list and parent_list.has_method("async_update_list"):
-			parent_list.async_update_list()
-
-	# Refresh the friends button pending count
 	_refresh_friends_button_count()
 
 

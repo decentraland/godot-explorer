@@ -411,6 +411,18 @@ func add_item_by_social_item_data(item: SocialItemData) -> void:
 	_update_list_size()
 
 
+func async_add_request_by_address(address: String) -> void:
+	# Add a friend request item by fetching the profile (for REQUEST list type)
+	# Skip if item already exists
+	if has_item_with_address(address):
+		return
+
+	var social_item_data = await _async_fetch_profile_for_address(address)
+	# Double-check it wasn't added while we were fetching
+	if not has_item_with_address(address):
+		add_item_by_social_item_data(social_item_data)
+
+
 func add_items_by_social_item_data(item_list) -> void:
 	for item in item_list:
 		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()

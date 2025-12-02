@@ -57,20 +57,20 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_item_image")
 
 [node name="LabelTitle" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="0"]
 custom_minimum_size = Vector2(0, 0)
-theme_override_font_sizes/bold_italics_font_size = 12
-theme_override_font_sizes/italics_font_size = 12
 theme_override_font_sizes/normal_font_size = 12
 theme_override_font_sizes/bold_font_size = 12
+theme_override_font_sizes/bold_italics_font_size = 12
+theme_override_font_sizes/italics_font_size = 12
 fit_content = true
 
 [node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="1"]
 clip_contents = false
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 2
-theme_override_font_sizes/bold_italics_font_size = 11
-theme_override_font_sizes/italics_font_size = 11
 theme_override_font_sizes/normal_font_size = 11
 theme_override_font_sizes/bold_font_size = 11
+theme_override_font_sizes/bold_italics_font_size = 11
+theme_override_font_sizes/italics_font_size = 11
 fit_content = true
 
 [node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2"]
@@ -78,10 +78,10 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/default_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/bold_italics_font_size = 10
-theme_override_font_sizes/italics_font_size = 10
 theme_override_font_sizes/normal_font_size = 10
 theme_override_font_sizes/bold_font_size = 10
+theme_override_font_sizes/bold_italics_font_size = 10
+theme_override_font_sizes/italics_font_size = 10
 bbcode_enabled = true
 text = "[b]5m ago[/b]"
 fit_content = true
@@ -89,16 +89,16 @@ scroll_active = false
 
 [node name="RightContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
-mouse_filter = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 5
 
 [node name="UnreadDot" type="Panel" parent="MarginContainer/HBoxContainer/RightContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2
-mouse_filter = 2
 size_flags_horizontal = 4
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_unread_dot")
 
 [editable path="MarginContainer/HBoxContainer/NotificationContent"]
