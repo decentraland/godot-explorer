@@ -70,6 +70,22 @@ impl MainRoom {
         }
     }
 
+    fn send_rfc4_targeted(
+        &mut self,
+        packet: rfc4::Packet,
+        unreliable: bool,
+        recipient: Option<H160>,
+    ) -> bool {
+        match self {
+            // WebSocket doesn't support targeted messages, fall back to broadcast
+            MainRoom::WebSocket(ws_room) => ws_room.send_rfc4(packet, unreliable),
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => {
+                livekit_room.send_rfc4_targeted(packet, unreliable, recipient)
+            }
+        }
+    }
+
     fn clean(&mut self) {
         match self {
             MainRoom::WebSocket(ws_room) => ws_room.clean(),
@@ -369,20 +385,24 @@ impl CommunicationManager {
         }
     }
 
-    pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>) {
+    pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>, recipient: Option<H160>) {
         let scene_message = rfc4::Packet {
-            message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
+            message: Some(rfc4::packet::Message::Scene(rfc4::Scene {
+                scene_id,
+                data: data.clone(),
+            })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
+
         // Send to main room if available
         if let Some(main_room) = &mut self.main_room {
-            main_room.send_rfc4(scene_message.clone(), true);
+            main_room.send_rfc4_targeted(scene_message.clone(), true, recipient);
         }
 
         // Also send to scene room if available
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
-            scene_room.send_rfc4(scene_message, true);
+            scene_room.send_rfc4_targeted(scene_message, true, recipient);
         }
     }
 

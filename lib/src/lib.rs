@@ -14,7 +14,6 @@ static GLOBAL: tools::memory_debugger::TrackingAllocator =
 
 pub mod analytics;
 pub mod auth;
-#[cfg(feature = "use_ffmpeg")]
 pub mod av;
 pub mod avatars;
 pub mod comms;
