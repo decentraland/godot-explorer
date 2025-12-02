@@ -59,66 +59,36 @@ func _ready() -> void:
 	_update_dropdown_visibility()
 	_hide_all_drowpdown_highlights()
 	_expand_all_friend_lists()
-	# Ensure the panel blocks touch/mouse events from passing through when visible
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
 	_on_button_nearby_toggled(true)
 
-	# Connect to social service signals for real-time updates
-	# Check if already connected to avoid duplicate connections
-	if not Global.social_service.friendship_request_received.is_connected(
-		_on_friendship_request_received
-	):
-		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
-
-	# Always reconnect to ensure signals are connected (in case of re-initialization)
-	if Global.social_service.friendship_request_accepted.is_connected(
-		_async_on_friendship_request_accepted
-	):
-		Global.social_service.friendship_request_accepted.disconnect(
-			_async_on_friendship_request_accepted
-		)
-	Global.social_service.friendship_request_accepted.connect(_async_on_friendship_request_accepted)
-
-	if Global.social_service.friendship_request_rejected.is_connected(
-		_on_friendship_request_rejected
-	):
-		Global.social_service.friendship_request_rejected.disconnect(
-			_on_friendship_request_rejected
-		)
-	Global.social_service.friendship_request_rejected.connect(_on_friendship_request_rejected)
-
-	if Global.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
-		Global.social_service.friendship_deleted.disconnect(_on_friendship_deleted)
-	Global.social_service.friendship_deleted.connect(_on_friendship_deleted)
-
-	if Global.social_service.friendship_request_cancelled.is_connected(
-		_on_friendship_request_cancelled
-	):
-		Global.social_service.friendship_request_cancelled.disconnect(
-			_on_friendship_request_cancelled
-		)
-	Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_cancelled)
-
-	if not Global.social_service.friend_connectivity_updated.is_connected(
-		_on_friend_connectivity_updated
-	):
-		Global.social_service.friend_connectivity_updated.connect(_on_friend_connectivity_updated)
-
-	# Note: Connectivity updates subscription is done in explorer.gd during social service init
-	# This ensures the subscription is established before the panel loads
+	_connect_social_service_signals()
 
 	# Connect to list size changes to update counts
 	request_list.size_changed.connect(_update_dropdown_visibility)
 	online_list.size_changed.connect(_update_dropdown_visibility)
 	offline_list.size_changed.connect(_update_dropdown_visibility)
 
-	# Also connect to friendship_changed to ensure request list updates when requests are accepted/rejected
-	# This is already connected above, but we want to make sure request list updates
-
 	# Connect to error signals
 	request_list.load_error.connect(_on_load_error)
 	online_list.load_error.connect(_on_load_error)
+
+
+func _connect_social_service_signals() -> void:
+	var social = Global.social_service
+	_safe_connect(social.friendship_request_received, _on_friendship_request_received)
+	_safe_connect(social.friendship_request_accepted, _async_on_friendship_request_accepted)
+	_safe_connect(social.friendship_request_rejected, _on_friendship_request_rejected)
+	_safe_connect(social.friendship_deleted, _on_friendship_deleted)
+	_safe_connect(social.friendship_request_cancelled, _on_friendship_request_cancelled)
+	_safe_connect(social.friend_connectivity_updated, _on_friend_connectivity_updated)
+
+
+func _safe_connect(sig: Signal, callback: Callable) -> void:
+	if sig.is_connected(callback):
+		sig.disconnect(callback)
+	sig.connect(callback)
 
 
 func _input(event: InputEvent) -> void:

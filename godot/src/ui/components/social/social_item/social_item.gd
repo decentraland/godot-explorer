@@ -1,9 +1,11 @@
 extends Button
 
-enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
 enum LoadState { UNLOADED, LOADING, LOADED }
 
-@export var item_type: SocialType
+const SOCIAL_TYPE = SocialItemData.SocialType
+const MAX_DISPLAY_NAME_LENGTH: int = 15
+
+@export var item_type: SocialItemData.SocialType
 
 var trim_value = 20
 var mute_icon = load("res://assets/ui/audio_off.svg")
@@ -54,7 +56,7 @@ func set_data(data: SocialItemData, should_load: bool = true) -> void:
 		load_state = LoadState.UNLOADED
 
 	# Update jump button visibility if type is ONLINE
-	if item_type == SocialType.ONLINE:
+	if item_type == SOCIAL_TYPE.ONLINE:
 		_update_jump_button_visibility()
 
 
@@ -70,8 +72,8 @@ func _apply_data_to_ui() -> void:
 	else:
 		texture_rect_claimed_checkmark.show()
 
-	if display_name.length() > 15:
-		display_name = display_name.left(15) + "..."
+	if display_name.length() > MAX_DISPLAY_NAME_LENGTH:
+		display_name = display_name.left(MAX_DISPLAY_NAME_LENGTH) + "..."
 	nickname.text = display_name
 
 	var nickname_color = DclAvatar.get_nickname_color(social_data.name)
@@ -89,11 +91,15 @@ func load_item() -> void:
 		return
 
 	load_state = LoadState.LOADING
-	profile_picture.async_update_profile_picture(social_data)
+	_async_load_item()
+
+
+func _async_load_item() -> void:
+	await profile_picture.async_update_profile_picture(social_data)
 	load_state = LoadState.LOADED
 
 	# If type is NEARBY, check if already a friend
-	if item_type == SocialType.NEARBY and not social_data.address.is_empty():
+	if item_type == SOCIAL_TYPE.NEARBY and not social_data.address.is_empty():
 		_update_buttons()
 		_check_and_update_friend_status()
 
@@ -186,7 +192,7 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 func _update_elements_visibility() -> void:
 	_hide_all_buttons()
 	match item_type:
-		SocialType.NEARBY:
+		SOCIAL_TYPE.NEARBY:
 			h_box_container_nearby.show()
 			# Check if already a friend and hide/show ADD FRIEND button accordingly
 			if social_data and not social_data.address.is_empty():
@@ -198,15 +204,15 @@ func _update_elements_visibility() -> void:
 					# Hide button initially to avoid flickering, will show/hide after checking status
 					button_add_friend.hide()
 					_check_and_update_friend_status()
-		SocialType.ONLINE:
+		SOCIAL_TYPE.ONLINE:
 			h_box_container_online.show()
 			profile_picture.set_online()
 			_update_jump_button_visibility()
-		SocialType.OFFLINE:
+		SOCIAL_TYPE.OFFLINE:
 			profile_picture.set_offline()
-		SocialType.REQUEST:
+		SOCIAL_TYPE.REQUEST:
 			h_box_container_request.show()
-		SocialType.BLOCKED:
+		SOCIAL_TYPE.BLOCKED:
 			h_box_container_blocked.show()
 		_:
 			profile_picture.hide_status()
@@ -245,7 +251,7 @@ func _async_on_button_add_friend_pressed() -> void:
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
-		printerr("Failed to send friend request: ", promise.get_data().get_error())
+		printerr("Failed to send friend request: ", PromiseUtils.get_error_message(promise))
 		button_add_friend.disabled = false
 		return
 
@@ -256,7 +262,7 @@ func _async_on_button_add_friend_pressed() -> void:
 
 func _async_on_button_accept_pressed() -> void:
 	# Disable appropriate buttons based on which one was clicked
-	if item_type == SocialType.REQUEST:
+	if item_type == SOCIAL_TYPE.REQUEST:
 		button_accept.disabled = true
 		button_reject.disabled = true
 
@@ -264,8 +270,8 @@ func _async_on_button_accept_pressed() -> void:
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
-		printerr("Failed to accept friend request: ", promise.get_data().get_error())
-		if item_type == SocialType.REQUEST:
+		printerr("Failed to accept friend request: ", PromiseUtils.get_error_message(promise))
+		if item_type == SOCIAL_TYPE.REQUEST:
 			button_accept.disabled = false
 			button_reject.disabled = false
 		else:
@@ -288,7 +294,7 @@ func _async_on_button_reject_pressed() -> void:
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
-		printerr("Failed to reject friend request: ", promise.get_data().get_error())
+		printerr("Failed to reject friend request: ", PromiseUtils.get_error_message(promise))
 		button_accept.disabled = false
 		button_reject.disabled = false
 		return
@@ -372,7 +378,7 @@ func update_location() -> void:
 
 func _on_button_unblock_pressed() -> void:
 	Global.social_blacklist.remove_blocked(social_data.address)
-	# Actualizar la lista contenedora
+	# Update the containing list
 	var parent_list = get_parent()
 	if parent_list != null and parent_list.has_method("async_update_list"):
 		parent_list.async_update_list()
@@ -384,6 +390,15 @@ func _check_and_update_friend_status() -> void:
 	if not social_data or social_data.address.is_empty():
 		return
 
+	# First check the cache for instant response
+	var cached = Global.social_service.get_cached_friendship_status(social_data.address)
+	if cached.get("cached", false):
+		current_friendship_status = cached.get("status", -1)
+		_update_button_visibility_from_status()
+		_notify_parent_reorder()
+		return
+
+	# Not cached, fetch from server
 	_async_check_friend_status()
 
 
@@ -446,12 +461,12 @@ func _on_pressed() -> void:
 
 
 func _on_in_genesis_city_changed(_players: Array) -> void:
-	if item_type == SocialType.ONLINE:
+	if item_type == SOCIAL_TYPE.ONLINE:
 		_update_jump_button_visibility()
 
 
 func _update_jump_button_visibility() -> void:
-	if item_type != SocialType.ONLINE or not social_data or social_data.address.is_empty():
+	if item_type != SOCIAL_TYPE.ONLINE or not social_data or social_data.address.is_empty():
 		button_jump.hide()
 		return
 

@@ -4,11 +4,10 @@ extends Control
 signal size_changed
 signal load_error(error_message: String)
 
-enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
-
+const SOCIAL_TYPE = SocialItemData.SocialType
 const BLOCKED_AVATAR_ALIAS_BASE: int = 20000
 
-@export var player_list_type: SocialType
+@export var player_list_type: SocialItemData.SocialType
 
 var list_size: int = 0
 var has_error: bool = false
@@ -18,7 +17,7 @@ var _update_request_id: int = 0
 func _ready():
 	# Don't auto-load on _ready() - lists will be loaded when show_panel() is called
 	# This avoids race conditions with social service initialization
-	if player_list_type == SocialType.NEARBY:
+	if player_list_type == SOCIAL_TYPE.NEARBY:
 		# Use individual avatar signals instead of refreshing the whole list
 		Global.avatars.avatar_added.connect(_on_avatar_added)
 		Global.avatars.avatar_removed.connect(_on_avatar_removed)
@@ -30,12 +29,12 @@ func _ready():
 		Global.social_service.friendship_request_rejected.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
-	if player_list_type == SocialType.BLOCKED:
+	if player_list_type == SOCIAL_TYPE.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 
 
 func _on_avatar_added(avatar: Avatar) -> void:
-	if player_list_type != SocialType.NEARBY:
+	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 
 	# Check if avatar is blocked (if avatar_id is already set)
@@ -51,7 +50,7 @@ func _on_avatar_added(avatar: Avatar) -> void:
 
 
 func _on_avatar_removed(address: String) -> void:
-	if player_list_type != SocialType.NEARBY:
+	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 
 	# Find and remove the social item for this address
@@ -65,7 +64,7 @@ func _on_avatar_removed(address: String) -> void:
 
 
 func _on_blacklist_changed() -> void:
-	if player_list_type != SocialType.NEARBY:
+	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 
 	# Check each child and remove if blocked
@@ -87,7 +86,7 @@ func _on_friendship_request_changed(_unused_address: String) -> void:
 
 
 func _update_nearby_friend_status() -> void:
-	if player_list_type != SocialType.NEARBY:
+	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 	# Update friendship status on existing items instead of reloading
 	for child in get_children():
@@ -107,7 +106,7 @@ func _update_list_size() -> void:
 func _request_reorder() -> void:
 	# Called by social_item when friendship status is determined
 	# Debounce reordering to avoid multiple reorders in quick succession
-	if player_list_type != SocialType.NEARBY:
+	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 
 	# Use call_deferred to batch multiple reorder requests
@@ -115,35 +114,48 @@ func _request_reorder() -> void:
 
 
 func _reorder_items() -> void:
-	# Sort children: friends first, then non-friends, alphabetically within each group
+	# Use insertion sort to maintain order: friends first, then non-friends, alphabetically
+	# This is more efficient than rebuilding the entire order for small changes
 	var children = get_children()
-	if children.is_empty():
+	if children.size() <= 1:
 		return
 
-	# Separate into friends and non-friends
-	var friends = []
-	var non_friends = []
-
-	for child in children:
-		if not is_instance_valid(child):
+	# Insertion sort: for each item, find its correct position and move it there
+	for i in range(1, children.size()):
+		var current = children[i]
+		if not is_instance_valid(current):
 			continue
-		if child.has_method("is_friend") and child.is_friend():
-			friends.append(child)
-		else:
-			non_friends.append(child)
 
-	# Sort each group alphabetically by name
-	friends.sort_custom(_compare_by_name)
-	non_friends.sort_custom(_compare_by_name)
+		var j = i - 1
+		# Find the correct position for current item
+		while j >= 0 and _should_come_before(current, children[j]):
+			j -= 1
 
-	# Reorder children: friends first, then non-friends
-	var index = 0
-	for child in friends:
-		move_child(child, index)
-		index += 1
-	for child in non_friends:
-		move_child(child, index)
-		index += 1
+		# Move current to position j + 1 if different from current position
+		var target_pos = j + 1
+		if target_pos != i:
+			move_child(current, target_pos)
+			# Update children array to reflect the move
+			children = get_children()
+
+
+func _should_come_before(a, b) -> bool:
+	# Returns true if 'a' should come before 'b' in the sorted order
+	# Order: friends first (alphabetically), then non-friends (alphabetically)
+	if not is_instance_valid(a) or not is_instance_valid(b):
+		return false
+
+	var a_is_friend = a.has_method("is_friend") and a.is_friend()
+	var b_is_friend = b.has_method("is_friend") and b.is_friend()
+
+	# Friends come before non-friends
+	if a_is_friend and not b_is_friend:
+		return true
+	if not a_is_friend and b_is_friend:
+		return false
+
+	# Same category: sort alphabetically by name
+	return _compare_by_name(a, b)
 
 
 func _compare_by_name(a, b) -> bool:
@@ -163,17 +175,17 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 
 	remove_items()
 	match player_list_type:
-		SocialType.NEARBY:
+		SOCIAL_TYPE.NEARBY:
 			# For NEARBY, load existing avatars on initial call
 			# After that, new avatars are added via avatar_added signal
 			_load_existing_nearby_avatars()
-		SocialType.BLOCKED:
+		SOCIAL_TYPE.BLOCKED:
 			await _async_reload_blocked_list(current_request_id)
-		SocialType.ONLINE:
+		SOCIAL_TYPE.ONLINE:
 			await _async_reload_online_list(current_request_id)
-		SocialType.OFFLINE:
+		SOCIAL_TYPE.OFFLINE:
 			await _async_reload_offline_list(current_request_id)
-		SocialType.REQUEST:
+		SOCIAL_TYPE.REQUEST:
 			await _async_reload_request_list(current_request_id)
 
 
@@ -286,7 +298,7 @@ func _async_reload_request_list(request_id: int) -> void:
 		return
 
 	if promise.is_rejected():
-		printerr("Failed to load pending requests: ", promise.get_data().get_error())
+		printerr("Failed to load pending requests: ", PromiseUtils.get_error_message(promise))
 		has_error = true
 		list_size = 0
 		load_error.emit("Friends service unavailable")
