@@ -103,27 +103,6 @@ theme_override_constants/margin_bottom = 0
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 0
-alignment = 1
-
-[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
-custom_minimum_size = Vector2(0, 46)
-layout_mode = 2
-focus_mode = 0
-toggle_mode = true
-button_group = SubResource("ButtonGroup_v2dsn")
-text = "NEARBY"
-flat = true
-
-[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 3)
-layout_mode = 2
-color = Color(1, 0.1764706, 0.33333334, 1)
-
 [node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -141,6 +120,27 @@ text = "FRIENDS"
 flat = true
 
 [node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
+[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "NEARBY"
+flat = true
+
+[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
@@ -555,8 +555,8 @@ unique_name_in_owner = true
 wait_time = 15.0
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]
 [connection signal="mouse_entered" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_mouse_entered"]
 [connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_mouse_exited"]
