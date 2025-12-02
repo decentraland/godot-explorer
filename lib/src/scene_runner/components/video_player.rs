@@ -190,9 +190,9 @@ pub fn update_video_player(
                             let mut video_player_node = if let Some(existing) =
                                 node_3d.get_node_or_null("VideoPlayer".into())
                             {
-                                existing.try_cast::<DclVideoPlayer>().expect(
-                                    "the expected VideoPlayer wasn't a DclVideoPlayer",
-                                )
+                                existing
+                                    .try_cast::<DclVideoPlayer>()
+                                    .expect("the expected VideoPlayer wasn't a DclVideoPlayer")
                             } else {
                                 // Create new video player node
                                 let node = godot::engine::load::<PackedScene>(

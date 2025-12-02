@@ -692,10 +692,7 @@ impl MessageProcessor {
                         );
                     }
                 } else {
-                    tracing::warn!(
-                        "VideoFrame from {:#x} without InitVideo",
-                        message.address
-                    );
+                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
                 }
             }
             MessageType::InitStreamerAudio(audio_init) => {
