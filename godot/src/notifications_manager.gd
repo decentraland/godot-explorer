@@ -4,11 +4,17 @@ extends Node
 ##
 ## Autoload script for managing Decentraland notifications.
 ## Handles fetching, marking as read, and polling for new notifications.
+## Also provides a unified API for local notifications on Android and iOS.
 
 signal new_notifications(notifications: Array)
 signal notifications_updated
 signal notification_error(error_message: String)
 signal notification_queued(notification: Dictionary)
+
+# Local notification signals
+signal local_notification_permission_changed(granted: bool)
+signal local_notification_scheduled(notification_id: String)
+signal local_notification_cancelled(notification_id: String)
 
 const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
@@ -34,6 +40,9 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 	"local_friend_request_accepted",  # Friends: Friend request accepted (local notification)
 ]
 
+# Queue management constants (Phase 3)
+const MAX_OS_SCHEDULED_NOTIFICATIONS = 24  # Maximum notifications scheduled with OS at once
+
 var _notifications: Array = []
 var _poll_timer: Timer = null
 var _is_polling: bool = false
@@ -41,6 +50,23 @@ var _previous_notification_ids: Array = []
 var _notification_queue: Array = []  # Queue for new unread notifications to show as toasts
 var _debug_timer: Timer = null  # Timer for debug random notifications
 var _queue_paused: bool = false  # Whether the notification queue is paused
+
+# Local notifications wrapper
+var _os_wrapper: NotificationOSWrapper = null
+
+# DEPRECATED: Keep these for backward compatibility with tests
+var _ios_plugin = null:
+	set(value):
+		_ios_plugin = value
+		if not _os_wrapper:
+			_os_wrapper = NotificationOSWrapper.new()
+		_os_wrapper.set_mock_plugin(value, false)
+var _android_plugin = null:
+	set(value):
+		_android_plugin = value
+		if not _os_wrapper:
+			_os_wrapper = NotificationOSWrapper.new()
+		_os_wrapper.set_mock_plugin(value, true)
 
 
 func _ready() -> void:
@@ -58,11 +84,30 @@ func _ready() -> void:
 		add_child(_debug_timer)
 		_start_debug_timer()
 
+	# Initialize OS notification wrapper (if not already created by tests)
+	if not _os_wrapper:
+		_os_wrapper = NotificationOSWrapper.new()
+		_os_wrapper.initialize()
+
+	# Connect wrapper signals
+	if not _os_wrapper.permission_changed.is_connected(_on_permission_changed):
+		_os_wrapper.permission_changed.connect(_on_permission_changed)
+	if not _os_wrapper.notification_scheduled.is_connected(_on_notification_scheduled):
+		_os_wrapper.notification_scheduled.connect(_on_notification_scheduled)
+	if not _os_wrapper.notification_cancelled.is_connected(_on_notification_cancelled):
+		_os_wrapper.notification_cancelled.connect(_on_notification_cancelled)
+
+	# Clear any badge from previous notifications
+	_os_wrapper.clear_badge()
+
+	# Initial queue sync on app launch (relaunch)
+	_sync_notification_queue()
+
 
 ## Start polling for new notifications
 func start_polling() -> void:
 	# Don't poll for guests
-	if not _is_user_authenticated():
+	if not NotificationUtils.is_user_authenticated():
 		return
 
 	if not _is_polling:
@@ -161,7 +206,7 @@ func fetch_notifications(
 	var promise := Promise.new()
 
 	# Don't fetch for guests
-	if not _is_user_authenticated():
+	if not NotificationUtils.is_user_authenticated():
 		promise.reject("User not authenticated")
 		return promise
 
@@ -309,6 +354,19 @@ func _async_mark_as_read(
 func _on_poll_timeout() -> void:
 	if _is_polling:
 		fetch_notifications(-1, 50, true)
+
+
+## OS wrapper signal handlers
+func _on_permission_changed(granted: bool) -> void:
+	local_notification_permission_changed.emit(granted)
+
+
+func _on_notification_scheduled(notification_id: String) -> void:
+	local_notification_scheduled.emit(notification_id)
+
+
+func _on_notification_cancelled(notification_id: String) -> void:
+	local_notification_cancelled.emit(notification_id)
 
 
 ## Get the next notification from the queue
@@ -465,3 +523,437 @@ func _on_debug_timer_timeout() -> void:
 
 	# Restart timer with new random interval
 	_start_debug_timer()
+
+
+# =============================================================================
+# LOCAL NOTIFICATIONS
+# =============================================================================
+
+
+## Request permission to show local notifications
+func request_local_notification_permission() -> void:
+	if _os_wrapper:
+		_os_wrapper.request_permission()
+
+
+## Check if local notification permission is granted
+func has_local_notification_permission() -> bool:
+	if _os_wrapper:
+		return _os_wrapper.has_permission()
+	return false
+
+
+## Schedule a local notification
+func schedule_local_notification(
+	notification_id: String, title: String, body: String, delay_seconds: int
+) -> bool:
+	if _os_wrapper:
+		return _os_wrapper.schedule(notification_id, title, body, delay_seconds)
+	return false
+
+
+## Cancel a scheduled local notification
+func cancel_local_notification(notification_id: String) -> bool:
+	if _os_wrapper:
+		return _os_wrapper.cancel(notification_id)
+	return false
+
+
+## Cancel all scheduled local notifications
+func cancel_all_local_notifications() -> bool:
+	if _os_wrapper:
+		return _os_wrapper.cancel_all()
+	return false
+
+
+## Clear the app badge number and remove delivered notifications
+func clear_badge_and_delivered_notifications() -> void:
+	if _os_wrapper:
+		_os_wrapper.clear_badge()
+
+
+## Generate random notification text for event reminders
+## Returns a dictionary with "title" and "body" keys
+## Each call returns a random combination from the available pools
+func generate_event_notification_text(event_name: String) -> Dictionary:
+	return NotificationUtils.generate_event_notification_text(event_name)
+
+
+# =============================================================================
+# QUEUE MANAGEMENT (Phase 3)
+# =============================================================================
+
+
+## Schedule a queued local notification (adds to database and schedules with OS if slots available)
+##
+## @param notification_id: Unique ID for this notification
+## @param title: Notification title
+## @param body: Notification body text
+## @param trigger_timestamp: Unix timestamp (seconds) when notification should fire
+## @param image_url: Optional image URL to download and attach
+## @return: true if added to queue successfully
+func async_queue_local_notification(
+	notification_id: String,
+	title: String,
+	body: String,
+	trigger_timestamp: int,
+	image_url: String = ""
+) -> bool:
+	if notification_id.is_empty():
+		push_error("Queue notification: notification_id cannot be empty")
+		return false
+
+	print(
+		(
+			"queue_local_notification called: id=%s, title=%s, trigger_ts=%d, has_image=%s"
+			% [notification_id, title, trigger_timestamp, !image_url.is_empty()]
+		)
+	)
+
+	var plugin = _get_plugin()
+	if not plugin:
+		push_error("Queue notification: Local notifications plugin not available on this platform")
+		return false
+
+	# Download and convert image to base64 if URL provided
+	var image_base64 = ""
+	if not image_url.is_empty():
+		image_base64 = await _async_download_image_as_base64(image_url)
+
+	# Insert into database (is_scheduled = 0 initially)
+	var success = (
+		plugin.dbInsertNotification(
+			notification_id, title, body, trigger_timestamp, 0, "", image_base64
+		)
+		if OS.get_name() == "Android"
+		else plugin.db_insert_notification(
+			notification_id, title, body, trigger_timestamp, 0, "", image_base64
+		)
+	)
+
+	if not success:
+		push_error("Failed to insert notification into database: id=%s" % notification_id)
+		return false
+
+	# Sync queue to schedule with OS if there are available slots
+	_sync_notification_queue()
+
+	return true
+
+
+## Cancel a queued local notification (removes from database and OS if scheduled)
+##
+## @param notification_id: The ID of the notification to cancel
+## @return: true if cancelled successfully
+func cancel_queued_local_notification(notification_id: String) -> bool:
+	if notification_id.is_empty():
+		push_error("Cancel queued notification: notification_id cannot be empty")
+		return false
+
+	var plugin = _get_plugin()
+	if not plugin:
+		push_warning("Local notifications not supported on this platform")
+		return false
+
+	# Cancel from OS (if scheduled)
+	_os_cancel_notification(notification_id)
+
+	# Delete from database
+	var success = (
+		plugin.dbDeleteNotification(notification_id)
+		if OS.get_name() == "Android"
+		else plugin.db_delete_notification(notification_id)
+	)
+
+	if success:
+		# Sync queue to potentially schedule another notification
+		_sync_notification_queue()
+
+	return success
+
+
+## Get all queued notifications (both pending and scheduled)
+##
+## @return: Array of notification dictionaries
+func get_queued_local_notifications() -> Array:
+	var plugin = _get_plugin()
+	if not plugin:
+		return []
+
+	var results = (
+		plugin.dbQueryNotifications("", "trigger_timestamp ASC", -1)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications("", "trigger_timestamp ASC", -1)
+	)
+
+	return results if results else []
+
+
+## Get count of queued notifications
+##
+## @return: Total count of queued notifications
+func get_queued_notification_count() -> int:
+	var plugin = _get_plugin()
+	if not plugin:
+		return 0
+
+	return (
+		plugin.dbCountNotifications("")
+		if OS.get_name() == "Android"
+		else plugin.db_count_notifications("")
+	)
+
+
+## Force a queue sync
+## Useful when app resumes from background to check for fired notifications
+func force_queue_sync() -> void:
+	_sync_notification_queue()
+
+
+## Sync notification queue - ensures next 24 notifications are scheduled with OS
+## This is called automatically, but can be called manually to force a sync
+func _sync_notification_queue() -> void:
+	var plugin = _get_plugin()
+	if not plugin:
+		return
+
+	var current_time = Time.get_unix_time_from_system()
+
+	# Step 1: Clear expired/triggered notifications from database
+	# This removes any notifications whose trigger time has already passed
+	if OS.get_name() == "Android":
+		plugin.dbClearExpired(current_time)
+	else:
+		plugin.db_clear_expired(current_time)
+
+	# Step 2: Get currently scheduled notification IDs from OS
+	var os_scheduled_ids = _os_get_scheduled_ids()
+
+	# Step 3: Get all scheduled notifications from database and check if they're still in OS
+	# Remove any that were scheduled but are no longer in OS and have passed their trigger time
+	var scheduled_in_db = (
+		plugin.dbQueryNotifications("is_scheduled = 1", "", -1)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications("is_scheduled = 1", "", -1)
+	)
+
+	for notif in scheduled_in_db:
+		var notif_id = notif.get("id", "")
+		var trigger_ts = notif.get("trigger_timestamp", 0)
+
+		# If notification was scheduled but is no longer in OS and has already triggered
+		if (
+			not notif_id.is_empty()
+			and trigger_ts < current_time
+			and notif_id not in os_scheduled_ids
+		):
+			# This notification has fired and should be removed
+			if OS.get_name() == "Android":
+				plugin.dbDeleteNotification(notif_id)
+			else:
+				plugin.db_delete_notification(notif_id)
+
+	# Step 4: Mark all remaining notifications as unscheduled in database first
+	var all_notifications = (
+		plugin.dbQueryNotifications("", "", -1)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications("", "", -1)
+	)
+	for notif in all_notifications:
+		if notif.has("id"):
+			if OS.get_name() == "Android":
+				plugin.dbMarkScheduled(notif["id"], false)
+			else:
+				plugin.db_mark_scheduled(notif["id"], false)
+
+	# Step 5: Mark notifications that are still in OS as scheduled in database
+	for notif_id in os_scheduled_ids:
+		if OS.get_name() == "Android":
+			plugin.dbMarkScheduled(notif_id, true)
+		else:
+			plugin.db_mark_scheduled(notif_id, true)
+
+	# Step 6: Ensure the next 24 notifications by timestamp are scheduled
+	# Get the next 24 future notifications that SHOULD be scheduled
+	var should_be_scheduled = (
+		plugin.dbQueryNotifications(
+			"trigger_timestamp > %d" % current_time,
+			"trigger_timestamp ASC",
+			MAX_OS_SCHEDULED_NOTIFICATIONS
+		)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications(
+			"trigger_timestamp > %d" % current_time,
+			"trigger_timestamp ASC",
+			MAX_OS_SCHEDULED_NOTIFICATIONS
+		)
+	)
+
+	# Step 6a: Cancel OS notifications that aren't in the top 24
+	for os_id in os_scheduled_ids:
+		var should_keep = false
+		for notif in should_be_scheduled:
+			if notif.get("id", "") == os_id:
+				should_keep = true
+				break
+
+		if not should_keep:
+			# This notification is scheduled but shouldn't be (not in top 24)
+			var cancel_success = _os_cancel_notification(os_id)
+			if cancel_success:
+				# Mark as unscheduled in database
+				if OS.get_name() == "Android":
+					plugin.dbMarkScheduled(os_id, false)
+				else:
+					plugin.db_mark_scheduled(os_id, false)
+
+	# Step 6b: Schedule notifications that should be in top 24 but aren't in OS
+	for notif in should_be_scheduled:
+		var notif_id = notif.get("id", "")
+		if notif_id.is_empty():
+			continue
+
+		# Check if already scheduled in OS
+		if notif_id in os_scheduled_ids:
+			continue
+
+		# Schedule it
+		var title = notif.get("title", "")
+		var body = notif.get("body", "")
+		var trigger_ts = notif.get("trigger_timestamp", 0)
+		var delay_seconds = maxi(1, trigger_ts - current_time)
+
+		var success = _os_schedule_notification(notif_id, title, body, delay_seconds)
+		if success:
+			# Mark as scheduled in database
+			if OS.get_name() == "Android":
+				plugin.dbMarkScheduled(notif_id, true)
+			else:
+				plugin.db_mark_scheduled(notif_id, true)
+
+
+## Get the appropriate plugin for the current platform (used by queue management)
+func _get_plugin():
+	if _os_wrapper:
+		return _os_wrapper.get_plugin()
+	return null
+
+
+## Wrapper for os_schedule_notification that works on both platforms
+func _os_schedule_notification(
+	notification_id: String, title: String, body: String, delay_seconds: int
+) -> bool:
+	if _os_wrapper:
+		return _os_wrapper.schedule(notification_id, title, body, delay_seconds)
+	return false
+
+
+## Wrapper for os_cancel_notification that works on both platforms
+func _os_cancel_notification(notification_id: String) -> bool:
+	if _os_wrapper:
+		return _os_wrapper.cancel(notification_id)
+	return false
+
+
+## Wrapper for os_get_scheduled_ids that works on both platforms
+func _os_get_scheduled_ids() -> Array:
+	var plugin = _get_plugin()
+	if not plugin:
+		return []
+
+	var result = (
+		plugin.osGetScheduledIds() if OS.get_name() == "Android" else plugin.os_get_scheduled_ids()
+	)
+	return Array(result) if result else []
+
+
+## Print notification queue state for debugging on app launch/refocus
+func _print_queue_state(current_time: int, scheduled_count: int, pending_count: int) -> void:
+	var plugin = _get_plugin()
+	if not plugin:
+		return
+
+	# Get total count
+	var total_count = (
+		plugin.dbCountNotifications("")
+		if OS.get_name() == "Android"
+		else plugin.db_count_notifications("")
+	)
+
+	# Get next few scheduled notifications
+	var scheduled_notifs = (
+		plugin.dbQueryNotifications("is_scheduled = 1", "trigger_timestamp ASC", 3)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications("is_scheduled = 1", "trigger_timestamp ASC", 3)
+	)
+
+	# Get next few pending notifications
+	var where_clause = "is_scheduled = 0 AND trigger_timestamp > %d" % current_time
+	var pending_notifs = (
+		plugin.dbQueryNotifications(where_clause, "trigger_timestamp ASC", 3)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications(where_clause, "trigger_timestamp ASC", 3)
+	)
+
+	print("\n=== Local Notification Queue State ===")
+	print("Total notifications in database: %d" % total_count)
+	print("Scheduled with OS: %d / %d" % [scheduled_count, MAX_OS_SCHEDULED_NOTIFICATIONS])
+	print("Pending (not yet scheduled): %d" % pending_count)
+
+	if scheduled_notifs.size() > 0:
+		print("\nNext scheduled notifications:")
+		for notif in scheduled_notifs:
+			var title = notif.get("title", "Unknown")
+			var trigger_ts = notif.get("trigger_timestamp", 0)
+			var time_until = trigger_ts - current_time
+			var mins_until = int(time_until / 60.0)
+			print("  - '%s' in %d minutes" % [title, mins_until])
+
+	if pending_notifs.size() > 0:
+		print("\nNext pending notifications:")
+		for notif in pending_notifs:
+			var title = notif.get("title", "Unknown")
+			var trigger_ts = notif.get("trigger_timestamp", 0)
+			var time_until = trigger_ts - current_time
+			var mins_until = int(time_until / 60.0)
+			print("  - '%s' in %d minutes" % [title, mins_until])
+
+	print("======================================\n")
+
+
+## Download an image from URL and convert to base64 string
+## @param image_url: URL of the image to download
+## @return: Base64 encoded string of the image, or empty string if failed
+func _async_download_image_as_base64(image_url: String) -> String:
+	if image_url.is_empty():
+		return ""
+
+	# Use Global.content_provider to download the image
+	var url_hash = NotificationUtils.get_hash_from_url(image_url)
+	var promise = Global.content_provider.fetch_texture_by_url(url_hash, image_url)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_error("Failed to download notification image: " + result.get_error())
+		return ""
+
+	# Get the Image from the texture
+	var texture: Texture2D = result.texture
+	if not texture:
+		push_error("Downloaded texture is null")
+		return ""
+
+	var image: Image = texture.get_image()
+	if not image:
+		push_error("Failed to get image from texture")
+		return ""
+
+	# Save to PNG buffer
+	var png_buffer = image.save_png_to_buffer()
+	if png_buffer.is_empty():
+		push_error("Failed to convert image to PNG")
+		return ""
+
+	# Convert to base64
+	var base64_string = Marshalls.raw_to_base64(png_buffer)
+	return base64_string

@@ -87,10 +87,8 @@ func _process(_dt):
 func get_params_from_cmd():
 	var realm_string = Global.cli.realm if not Global.cli.realm.is_empty() else null
 	var location_vector = Global.cli.get_location_vector()
-	if location_vector == Vector2i.ZERO:
+	if location_vector == Vector2i.MAX:
 		location_vector = null
-	var preview_mode = Global.cli.preview_mode
-	var spawn_avatars = Global.cli.spawn_avatars
 
 	if not Global.deep_link_obj.realm.is_empty() and realm_string == null:
 		realm_string = Global.deep_link_obj.realm
@@ -100,7 +98,7 @@ func get_params_from_cmd():
 		if realm_string == null:
 			realm_string = Realm.MAIN_REALM
 
-	return [realm_string, location_vector, preview_mode, spawn_avatars]
+	return [realm_string, location_vector]
 
 
 func _ready():
@@ -157,15 +155,14 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
-	var cmd_preview_mode = cmd_params[2]
 
 	# --spawn-avatars
-	if cmd_params[3]:
+	if Global.cli.spawn_avatars:
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --preview
-	if cmd_preview_mode:
+	# --debug-panel (automatically enabled with --preview)
+	if Global.cli.debug_panel:
 		_on_control_menu_request_debug_panel(true)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -885,3 +882,14 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 			Global.explorer_release_focus()
 			if Global.is_mobile():
 				release_mouse()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# Clear badge when app comes to foreground
+		NotificationsManager.clear_badge_and_delivered_notifications()
+
+		# Resync notification queue to clean up fired notifications and reschedule next batch
+		NotificationsManager.force_queue_sync()
+
+		Global.check_deep_link_teleport_to()
