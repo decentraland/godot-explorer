@@ -7,6 +7,11 @@ const CONNECTIVITY_ONLINE: int = 0
 const CONNECTIVITY_OFFLINE: int = 1
 const CONNECTIVITY_AWAY: int = 2
 
+const NO_SERVICE_MESSAGE: String = """Something went wrong and we couldn't retrieve your friends."""
+const NO_FRIENDS_MESSAGE: String = """View someone's Profile or tap on 'Add Friend' button in the nearby list."""
+const NO_BLOCKED_MESSAGE: String = """If you block someone, you will not be able to see each other in-world or exchange any messages in private or public chats.
+You can block another user by going to the tree (3) dots menu available in their Profile."""
+
 var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
 var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
 
@@ -41,9 +46,16 @@ var _online_friends: Dictionary = {}
 @onready var offline_container: PanelContainer = %OfflineContainer
 @onready var v_box_container_no_blockeds: VBoxContainer = %VBoxContainer_NoBlockeds
 @onready var button_friends: Button = %Button_Friends
+@onready var label_no_blockeds: Label = %Label_NoBlockeds
+@onready var label_no_friends: Label = %Label_NoFriends
+@onready var label_out_of_service: Label = %Label_OutOfService
+@onready var timer: Timer = %Timer
 
 
 func _ready() -> void:
+	label_no_blockeds.text = NO_BLOCKED_MESSAGE
+	label_no_friends.text = NO_FRIENDS_MESSAGE
+	label_out_of_service.text = NO_SERVICE_MESSAGE
 	_update_dropdown_visibility()
 	_hide_all_drowpdown_highlights()
 	_expand_all_friend_lists()
@@ -482,3 +494,19 @@ func _check_blocked_list_size() -> void:
 
 func _on_blocked_list_size_changed() -> void:
 	_check_blocked_list_size()
+
+
+func _on_timer_timeout() -> void:
+	if visible:
+		Global.locations.fetch_peers()
+	else:
+		timer.stop()
+
+
+func _on_visibility_changed() -> void:
+	Global.locations.fetch_peers()
+	if timer:
+		if visible:
+			timer.start(0)
+		else:
+			timer.stop()

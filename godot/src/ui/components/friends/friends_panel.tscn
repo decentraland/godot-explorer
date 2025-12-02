@@ -185,7 +185,6 @@ theme_override_constants/margin_bottom = 12
 
 [node name="ScrollContainer_Friends" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
@@ -368,21 +367,20 @@ text = "Whoops..Friends System is Down!"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+[node name="Label_OutOfService" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 0)
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
+size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "Something went wrong and we couldn’t
- retrieve your friends."
+text = "No Friends System Message"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
 [node name="VBoxContainer_NoFriends" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -414,13 +412,13 @@ text = "Time to Make Some Friends!"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+[node name="Label_NoFriends" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "View someone's Profile or tap on  
-'Add Friend' button in the nearby list."
+text = "No Friends Yet Message"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -443,6 +441,7 @@ player_list_type = 3
 
 [node name="ScrollContainer_Blocked" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
@@ -462,6 +461,7 @@ player_list_type = 4
 
 [node name="VBoxContainer_NoBlockeds" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -493,19 +493,14 @@ text = "No Blocked Accounts Yet"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="LabelEmptyState" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
-custom_minimum_size = Vector2(50, 0)
+[node name="Label_NoBlockeds" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
+size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "If you block someone, you will not be
-able to see each other in-world or
-exchange any messages in private or
-public chats.
-
-You can block another user by going
-to the tree (3) dots menu available
-in their Profile."
+text = "No Blocked Accounts Message"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -555,6 +550,11 @@ custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
 
+[node name="Timer" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 15.0
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]
@@ -568,3 +568,4 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
 [connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_mouse_exited"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_pressed"]
 [connection signal="size_changed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/BlockedList" to="." method="_on_blocked_list_size_changed"]
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

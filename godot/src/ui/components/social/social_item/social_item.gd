@@ -5,11 +5,13 @@ enum LoadState { UNLOADED, LOADING, LOADED }
 
 @export var item_type: SocialType
 
+var trim_value = 25
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
 var social_data: SocialItemData
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var load_state: LoadState = LoadState.UNLOADED
+var parcel: Array = []  # Parcel coordinates [x, y] when user is in genesis city
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
 
@@ -28,6 +30,7 @@ var _is_loading: bool = false
 @onready var button_accept: Button = %Button_Accept
 @onready var button_reject: Button = %Button_Reject
 @onready var label_pending_request: Label = %Label_PendingRequest
+@onready var button_jump: Button = %Button_JumpIn
 
 
 func _ready():
@@ -36,6 +39,9 @@ func _ready():
 	# Connect accept/reject buttons for friend requests
 	button_accept.pressed.connect(_async_on_button_accept_pressed)
 	button_reject.pressed.connect(_async_on_button_reject_pressed)
+	# Connect to locations signal to update jump button visibility
+	if Global.locations:
+		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
 
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
@@ -46,6 +52,10 @@ func set_data(data: SocialItemData, should_load: bool = true) -> void:
 		load_item()
 	else:
 		load_state = LoadState.UNLOADED
+
+	# Update jump button visibility if type is ONLINE
+	if item_type == SocialType.ONLINE:
+		_update_jump_button_visibility()
 
 
 func _apply_data_to_ui() -> void:
@@ -191,8 +201,8 @@ func _update_elements_visibility() -> void:
 		SocialType.ONLINE:
 			h_box_container_online.show()
 			profile_picture.set_online()
+			_update_jump_button_visibility()
 		SocialType.OFFLINE:
-			h_box_container_online.show()
 			profile_picture.set_offline()
 		SocialType.REQUEST:
 			h_box_container_request.show()
@@ -311,8 +321,49 @@ func _refresh_friends_button_count() -> void:
 
 
 func _on_button_jump_in_pressed() -> void:
-	# TODO: Implement teleport to friend location
-	pass
+	if parcel.size() >= 2:
+		var parcel_position = Vector2i(parcel[0], parcel[1])
+		Global.teleport_to(parcel_position, "")
+	else:
+		push_error("Invalid parcel coordinates")
+
+
+func _async_fetch_place_data() -> void:
+	if parcel.size() < 2:
+		return
+
+	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	url += "&positions=%d,%d" % [parcel[0], parcel[1]]
+
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_GET, "", headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("Error fetching place data: ", result.get_error())
+		label_place.text = "Unknown Location"
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+
+	if json.data.is_empty():
+		label_place.text = "Empty parcel"
+		# Add to known_locations even if empty to avoid refetching
+		var location_entry = {"coord": parcel.duplicate(), "title": "Empty parcel"}
+		Global.locations.known_locations.append(location_entry)
+	else:
+		var place_data = json.data[0]
+		var title = place_data.get("title", "interactive-text")
+		if title == "interactive-text":
+			title = "Unknown Place"
+
+		var location_entry = {
+			"coord": parcel.duplicate(), "title": shorten_tittle(title, trim_value)
+		}
+		# Add to known_locations for future reference
+		Global.locations.known_locations.append(location_entry)
 
 
 func update_location() -> void:
@@ -392,3 +443,58 @@ func _notify_parent_reorder() -> void:
 
 func _on_pressed() -> void:
 	Global.open_profile_by_address.emit(social_data.address)
+
+
+func _on_in_genesis_city_changed(_players: Array) -> void:
+	if item_type == SocialType.ONLINE:
+		_update_jump_button_visibility()
+
+
+func _update_jump_button_visibility() -> void:
+	if item_type != SocialType.ONLINE or not social_data or social_data.address.is_empty():
+		button_jump.hide()
+		return
+
+	if not Global.locations:
+		button_jump.hide()
+		return
+
+	label_place.show()
+	# Check if address exists in in_genesis_city array
+	var is_in_genesis_city = false
+	for player in Global.locations.in_genesis_city:
+		if player.has("address") and player["address"] == social_data.address:
+			is_in_genesis_city = true
+			# Store parcel coordinates
+			if player.has("parcel"):
+				parcel = player["parcel"].duplicate()
+			break
+
+	if is_in_genesis_city:
+		button_jump.show()
+		# Check if parcel exists in known_locations
+		var found_location = false
+		var title = ""
+		if parcel.size() >= 2:
+			for location in Global.locations.known_locations:
+				if location.has("coord") and location["coord"].size() >= 2:
+					if location["coord"][0] == parcel[0] and location["coord"][1] == parcel[1]:
+						if location.has("title"):
+							title = location["title"]
+							label_place.text = shorten_tittle(title, trim_value)
+							found_location = true
+							break
+
+		if not found_location:
+			label_place.text = "Loading..."
+			_async_fetch_place_data()
+	else:
+		label_place.text = "Somewhere"
+		button_jump.hide()
+		parcel.clear()
+
+
+func shorten_tittle(title: String, max_length: int) -> String:
+	if title.length() > max_length:
+		return title.left(max_length) + "..."
+	return title

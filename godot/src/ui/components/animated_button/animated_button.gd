@@ -29,7 +29,6 @@ func _on_pressed() -> void:
 	# Haptic feedback on mobile
 	if Global.is_mobile():
 		Input.vibrate_handheld(20)  # 20ms subtle vibration
-		print("vibra")
 	# Track metric: notification menu opened
 	var metric_name = _get_button_metric_name()
 	if metric_name != "":
@@ -45,7 +44,6 @@ func instantiate_animatd_sprite():
 	move_child(animated_sprite, 0)
 	animated_sprite.sprite_frames = sprite_frames_source
 	var sprite_position = Vector2(size.x, size.y) / 2
-	print(sprite_position)
 	animated_sprite.position = sprite_position
 	animated_sprite.scale = sprite_frames_scale
 

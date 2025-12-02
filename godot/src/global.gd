@@ -53,6 +53,8 @@ var music_player: MusicPlayer
 
 var preload_assets: PreloadAssets
 
+var locations: Node
+
 var standalone = false
 
 var network_inspector_window: Window = null
@@ -179,10 +181,14 @@ func _ready():
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
 
+	self.locations = load("res://src/helpers_components/locations.gd").new()
+	self.locations.set_name("locations")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
+	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
