@@ -19,7 +19,7 @@ var is_own_passport: bool = false
 var is_blocked_user: bool = false
 var is_muted_user: bool = false
 var current_profile: DclUserProfile = null
-var current_friendship_status: int = -1
+var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var address: String = ""
 var original_country_index: int = 0
 var original_language_index: int = 0
@@ -74,7 +74,6 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var button_edit_nick: Button = %Button_EditNick
 @onready var button_add_friend: Button = %Button_AddFriend
 @onready var button_block_user: Button = %Button_BlockUser
-@onready var button_send_dm: Button = %Button_SendDM
 @onready var label_no_intro: Label = %Label_NoIntro
 @onready var button_claim_name: Button = %Button_ClaimName
 @onready var url_popup: ColorRect = %UrlPopup
@@ -85,7 +84,6 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var button_mute_user: Button = %Button_MuteUser
 @onready var control_avatar: Control = %Control_Avatar
 @onready var button_close_profile: Button = %Button_CloseProfile
-@onready var label_pending_request: Label = %Label_PendingRequest
 @onready var button_menu: Button = %Button_Menu
 @onready var button_cancel_request: Button = %Button_CancelRequest
 @onready var button_friend: Button = %Button_Friend
@@ -380,7 +378,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_hide_all_social_buttons()
 	current_profile = profile
 	# Reset friendship status to ensure buttons don't show with old state
-	current_friendship_status = -1
+	current_friendship_status = Global.FriendshipStatus.UNKNOWN
 	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(current_profile)
 	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(current_profile)
 
@@ -862,8 +860,8 @@ func _update_buttons() -> void:
 		button_mute_user.icon = UNMUTE
 
 	# Update friendship buttons based on status (only if status has been checked)
-	# Don't update if status is still -1 and we haven't verified it yet
-	if current_friendship_status != -1 or is_own_passport:
+	# Don't update if status is still UNKNOWN and we haven't verified it yet
+	if current_friendship_status != Global.FriendshipStatus.UNKNOWN or is_own_passport:
 		_update_friendship_buttons()
 
 
@@ -923,11 +921,11 @@ func _async_delete_friendship_if_exists(friend_address: String) -> void:
 
 	# Handle different relationship statuses
 	match status:
-		0:  # REQUEST_SENT - We sent a request, cancel it
+		Global.FriendshipStatus.REQUEST_SENT:
 			action_promise = Global.social_service.cancel_friend_request(friend_address)
-		1:  # REQUEST_RECEIVED - They sent us a request, reject it
+		Global.FriendshipStatus.REQUEST_RECEIVED:
 			action_promise = Global.social_service.reject_friend_request(friend_address)
-		3:  # ACCEPTED - We are friends, delete friendship
+		Global.FriendshipStatus.ACCEPTED:
 			action_promise = Global.social_service.delete_friendship(friend_address)
 		_:  # No relationship or other status, nothing to do
 			return
@@ -1126,7 +1124,7 @@ func _on_button_add_friend_pressed() -> void:
 	if is_own_passport or current_profile == null:
 		return
 	var friend_address = current_profile.get_ethereum_address()
-	if current_friendship_status == 1:
+	if current_friendship_status == Global.FriendshipStatus.REQUEST_RECEIVED:
 		_async_accept_friend_request(friend_address)
 	else:
 		_async_send_friend_request(friend_address)
@@ -1160,7 +1158,7 @@ func _async_check_friendship_status() -> void:
 
 	# Check if social service is available before making the call
 	if not _is_social_service_available():
-		current_friendship_status = -1
+		current_friendship_status = Global.FriendshipStatus.UNKNOWN
 		_update_friendship_buttons()
 		return
 
@@ -1171,12 +1169,12 @@ func _async_check_friendship_status() -> void:
 	if promise.is_rejected():
 		# On error, service might not be available or there was an error
 		# Hide all friendship buttons
-		current_friendship_status = -1
+		current_friendship_status = Global.FriendshipStatus.UNKNOWN
 		_update_friendship_buttons()
 		return
 
 	var status_data = promise.get_data()
-	current_friendship_status = status_data.get("status", -1)
+	current_friendship_status = status_data.get("status", Global.FriendshipStatus.UNKNOWN)
 	_update_friendship_buttons()
 
 
@@ -1185,16 +1183,16 @@ func _update_friendship_buttons() -> void:
 		return
 	_hide_friendship_buttons()
 	match current_friendship_status:
-		3:  # ACCEPTED
+		Global.FriendshipStatus.ACCEPTED:
 			button_friend.show()
 			button_friend.button_pressed = true
 			button_unfriend.show()
-		0:  # REQUEST_SENT
+		Global.FriendshipStatus.REQUEST_SENT:
 			button_cancel_request.show()
-		1:  # REQUEST_RECEIVED
+		Global.FriendshipStatus.REQUEST_RECEIVED:
 			button_add_friend.show()
 			button_add_friend.text = "ACCEPT"
-		_:  # NONE, unknown, or other statuses
+		_:  # NONE, UNKNOWN, or other statuses
 			button_add_friend.show()
 			button_add_friend.text = "ADD FRIEND"
 

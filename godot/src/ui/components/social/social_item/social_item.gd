@@ -8,7 +8,7 @@ enum LoadState { UNLOADED, LOADING, LOADED }
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
 var social_data: SocialItemData
-var current_friendship_status: int = -1  # -1 = unknown, 0 = REQUEST_SENT, 1 = REQUEST_RECEIVED, 3 = ACCEPTED
+var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var load_state: LoadState = LoadState.UNLOADED
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
@@ -182,7 +182,7 @@ func _update_elements_visibility() -> void:
 			if social_data and not social_data.address.is_empty():
 				_update_buttons()
 				# If status is already known (pre-checked), use it directly
-				if current_friendship_status != -1:
+				if current_friendship_status != Global.FriendshipStatus.UNKNOWN:
 					_update_button_visibility_from_status()
 				else:
 					# Hide button initially to avoid flickering, will show/hide after checking status
@@ -239,7 +239,7 @@ func _async_on_button_add_friend_pressed() -> void:
 		button_add_friend.disabled = false
 		return
 
-	current_friendship_status = 0  # REQUEST_SENT
+	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
 	label_pending_request.show()
 
@@ -262,7 +262,7 @@ func _async_on_button_accept_pressed() -> void:
 			button_add_friend.disabled = false
 		return
 
-	current_friendship_status = 3  # ACCEPTED
+	current_friendship_status = Global.FriendshipStatus.ACCEPTED
 	button_add_friend.hide()
 	label_pending_request.hide()
 	_refresh_friends_button_count()
@@ -338,22 +338,20 @@ func _check_and_update_friend_status() -> void:
 
 func _update_button_visibility_from_status() -> void:
 	# Update button and label visibility based on pre-checked friendship status
-	# Status 0 = REQUEST_SENT (we sent a friend request)
-	# Status 1 = REQUEST_RECEIVED (they sent us a request)
-	# Status 3 = ACCEPTED (already friends)
-	# Status 7 = NONE (no relationship)
-	# Status 2 = CANCELED, 4 = REJECTED, 5 = DELETED
-	if current_friendship_status == 0 or current_friendship_status == 1:
-		# REQUEST_SENT - Show pending label, hide button
+	if (
+		current_friendship_status == Global.FriendshipStatus.REQUEST_SENT
+		or current_friendship_status == Global.FriendshipStatus.REQUEST_RECEIVED
+	):
+		# REQUEST_SENT or REQUEST_RECEIVED - Show pending label, hide button
 		button_add_friend.hide()
 		label_pending_request.show()
-	elif current_friendship_status == 3:
+	elif current_friendship_status == Global.FriendshipStatus.ACCEPTED:
 		# ACCEPTED - Hide both button and label
 		button_add_friend.hide()
 		label_pending_request.hide()
 		profile_picture.set_friend()
 	else:
-		# Status 7 (NONE), 2 (CANCELED), 4 (REJECTED), 5 (DELETED), or unknown
+		# NONE, CANCELED, REJECTED, DELETED, or UNKNOWN
 		# Show button, hide label (can send new request)
 		button_add_friend.show()
 		label_pending_request.hide()
@@ -365,7 +363,7 @@ func _async_check_friend_status() -> void:
 
 	if promise.is_rejected():
 		# On error, show the button (default behavior)
-		current_friendship_status = -1
+		current_friendship_status = Global.FriendshipStatus.UNKNOWN
 		button_add_friend.show()
 		label_pending_request.hide()
 		_notify_parent_reorder()
@@ -383,8 +381,7 @@ func _async_check_friend_status() -> void:
 
 
 func is_friend() -> bool:
-	# Status 3 = ACCEPTED (is a friend)
-	return current_friendship_status == 3
+	return current_friendship_status == Global.FriendshipStatus.ACCEPTED
 
 
 func _notify_parent_reorder() -> void:

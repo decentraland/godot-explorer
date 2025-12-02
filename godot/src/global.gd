@@ -19,6 +19,17 @@ enum CameraMode {
 	CINEMATIC = 2,
 }
 
+enum FriendshipStatus {
+	UNKNOWN = -1,
+	REQUEST_SENT = 0,
+	REQUEST_RECEIVED = 1,
+	CANCELED = 2,
+	ACCEPTED = 3,
+	REJECTED = 4,
+	DELETED = 5,
+	NONE = 7
+}
+
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
 const FORCE_TEST = false
 const FORCE_TEST_ARG = "[[52,-52],[52,-54],[52,-56],[52,-58],[52,-60],[52,-62],[52,-64],[52,-66],[52,-68],[54,-52],[54,-54],[54,-56],[54,-58],[54,-60]]"
