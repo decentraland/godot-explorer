@@ -385,12 +385,7 @@ impl CommunicationManager {
         }
     }
 
-    pub fn send_scene_message(
-        &mut self,
-        scene_id: String,
-        data: Vec<u8>,
-        recipient: Option<H160>,
-    ) {
+    pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>, recipient: Option<H160>) {
         let scene_message = rfc4::Packet {
             message: Some(rfc4::packet::Message::Scene(rfc4::Scene {
                 scene_id,

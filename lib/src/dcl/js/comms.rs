@@ -108,9 +108,7 @@ fn recv_binary_internal(state: Rc<RefCell<OpState>>) -> Vec<Vec<u8>> {
 /// Returns messages with sender address prepended
 #[op2(async)]
 #[serde]
-async fn op_comms_recv_binary(
-    state: Rc<RefCell<OpState>>,
-) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+async fn op_comms_recv_binary(state: Rc<RefCell<OpState>>) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     Ok(recv_binary_internal(state))
 }
 
