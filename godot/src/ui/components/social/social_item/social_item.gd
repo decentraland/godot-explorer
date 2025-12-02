@@ -1,6 +1,7 @@
 extends Button
 
 enum SocialType { ONLINE, OFFLINE, REQUEST, NEARBY, BLOCKED }
+enum LoadState { UNLOADED, LOADING, LOADED }
 
 @export var item_type: SocialType
 
@@ -8,6 +9,7 @@ var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
 var social_data: SocialItemData
 var current_friendship_status: int = -1  # -1 = unknown, 0 = REQUEST_SENT, 1 = REQUEST_RECEIVED, 3 = ACCEPTED
+var load_state: LoadState = LoadState.UNLOADED
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
 
@@ -36,29 +38,52 @@ func _ready():
 	button_reject.pressed.connect(_async_on_button_reject_pressed)
 
 
-func set_data(data: SocialItemData) -> void:
+func set_data(data: SocialItemData, should_load: bool = true) -> void:
 	social_data = data
-	var tag_position = data.name.find("#")
+	_apply_data_to_ui()
+
+	if should_load:
+		load_item()
+	else:
+		load_state = LoadState.UNLOADED
+
+
+func _apply_data_to_ui() -> void:
+	if social_data == null:
+		return
+
+	var display_name = social_data.name
+	var tag_position = display_name.find("#")
 	if tag_position != -1:
-		data.name = data.name.left(tag_position)
+		display_name = display_name.left(tag_position)
 		texture_rect_claimed_checkmark.hide()
 	else:
 		texture_rect_claimed_checkmark.show()
 
-	if data.name.length() > 15:
-		data.name = data.name.left(15) + "..."
-	nickname.text = data.name
+	if display_name.length() > 15:
+		display_name = display_name.left(15) + "..."
+	nickname.text = display_name
 
-	var nickname_color = DclAvatar.get_nickname_color(data.name)
+	var nickname_color = DclAvatar.get_nickname_color(social_data.name)
 	nickname.add_theme_color_override("font_color", nickname_color)
-	if data.has_claimed_name:
+	if social_data.has_claimed_name:
 		texture_rect_claimed_checkmark.show()
 	else:
 		texture_rect_claimed_checkmark.hide()
-	profile_picture.async_update_profile_picture(data)
+
+
+func load_item() -> void:
+	if load_state == LoadState.LOADED or load_state == LoadState.LOADING:
+		return
+	if social_data == null:
+		return
+
+	load_state = LoadState.LOADING
+	profile_picture.async_update_profile_picture(social_data)
+	load_state = LoadState.LOADED
 
 	# If type is NEARBY, check if already a friend
-	if item_type == SocialType.NEARBY and not data.address.is_empty():
+	if item_type == SocialType.NEARBY and not social_data.address.is_empty():
 		_update_buttons()
 		_check_and_update_friend_status()
 
@@ -242,6 +267,9 @@ func _async_on_button_accept_pressed() -> void:
 	label_pending_request.hide()
 	_refresh_friends_button_count()
 
+	# Emit signal locally since the service doesn't stream back our own actions
+	Global.social_service.friendship_request_accepted.emit(social_data.address)
+
 
 func _async_on_button_reject_pressed() -> void:
 	button_accept.disabled = true
@@ -271,6 +299,9 @@ func _async_on_button_reject_pressed() -> void:
 		_update_button_visibility_from_status()
 
 	_refresh_friends_button_count()
+
+	# Emit signal locally since the service doesn't stream back our own actions
+	Global.social_service.friendship_request_rejected.emit(social_data.address)
 
 
 func _refresh_friends_button_count() -> void:

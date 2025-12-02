@@ -318,6 +318,9 @@ func _async_initialize_social_service() -> void:
 		)
 		# Don't return - connectivity is nice-to-have, friendship updates are more critical
 
+	# Populate friends lists after social service is ready
+	friends_panel.update_all_lists()
+
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	_scene_console_message.call_deferred(scene_id, level, timestamp, text)

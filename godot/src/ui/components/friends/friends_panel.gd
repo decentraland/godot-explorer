@@ -46,8 +46,7 @@ var _online_friends: Dictionary = {}
 func _ready() -> void:
 	_update_dropdown_visibility()
 	_hide_all_drowpdown_highlights()
-	request_list.hide()
-	offline_list.hide()
+	_expand_all_friend_lists()
 	# Ensure the panel blocks touch/mouse events from passing through when visible
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
@@ -134,13 +133,13 @@ func _input(event: InputEvent) -> void:
 
 func show_panel() -> void:
 	show()
-	update_all_lists()
+	_load_unloaded_items()
 	_hide_all_drowpdown_highlights()
 
 
 func show_panel_on_friends_tab() -> void:
 	show()
-	update_all_lists()
+	_load_unloaded_items()
 	_hide_all_drowpdown_highlights()
 	# Switch to friends tab by setting the button pressed (triggers _on_button_friends_toggled)
 	button_friends.button_pressed = true
@@ -148,7 +147,6 @@ func show_panel_on_friends_tab() -> void:
 
 func hide_panel() -> void:
 	hide()
-	update_all_lists()
 
 
 func _hide_all() -> void:
@@ -165,6 +163,7 @@ func _on_button_friends_toggled(toggled_on: bool) -> void:
 		_hide_all()
 		color_rect_friends.self_modulate = Color.WHITE
 		scroll_container_friends.show()
+		_expand_all_friend_lists()
 
 
 func _on_button_nearby_toggled(toggled_on: bool) -> void:
@@ -272,18 +271,16 @@ func _async_on_friendship_request_accepted(address: String) -> void:
 	if item_data != null:
 		# Check if friend is online and add to appropriate list
 		await _async_check_friend_connectivity(address)
+		var should_load = visible
 		if is_friend_online(address):
-			online_list.add_item_by_social_item_data(item_data)
+			online_list.add_item_by_social_item_data(item_data, should_load)
 		else:
-			offline_list.add_item_by_social_item_data(item_data)
-
-	_update_dropdown_visibility()
+			offline_list.add_item_by_social_item_data(item_data, should_load)
 
 
 func _on_friendship_request_rejected(address: String) -> void:
 	# Remove from request list (we rejected their request)
 	request_list.remove_item_by_address(address)
-	_update_dropdown_visibility()
 
 
 func _on_friendship_deleted(address: String) -> void:
@@ -294,13 +291,11 @@ func _on_friendship_deleted(address: String) -> void:
 	# Remove from online/offline lists
 	online_list.remove_item_by_address(address)
 	offline_list.remove_item_by_address(address)
-	_update_dropdown_visibility()
 
 
 func _on_friendship_request_cancelled(address: String) -> void:
 	# Remove from request list (they cancelled their request to us)
 	request_list.remove_item_by_address(address)
-	_update_dropdown_visibility()
 
 
 func _async_fetch_friend_profile(address: String) -> SocialItemData:
@@ -385,6 +380,14 @@ func update_all_lists():
 	blocked_list.async_update_list()
 
 
+func _load_unloaded_items() -> void:
+	request_list.load_unloaded_items()
+	online_list.load_unloaded_items()
+	offline_list.load_unloaded_items()
+	nearby_list.load_unloaded_items()
+	blocked_list.load_unloaded_items()
+
+
 func _on_request_button_pressed() -> void:
 	if request_list.visible:
 		request_button.icon = down_arrow_icon
@@ -416,6 +419,15 @@ func _hide_all_drowpdown_highlights() -> void:
 	request_container.self_modulate = "ffffff00"
 	online_container.self_modulate = "ffffff00"
 	offline_container.self_modulate = "ffffff00"
+
+
+func _expand_all_friend_lists() -> void:
+	request_list.show()
+	request_button.icon = up_arrow_icon
+	online_list.show()
+	online_button.icon = up_arrow_icon
+	offline_list.show()
+	offline_button.icon = up_arrow_icon
 
 
 func _on_offline_button_mouse_entered() -> void:

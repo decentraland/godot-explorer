@@ -25,7 +25,7 @@ func _ready():
 		# Also update when blacklist changes to remove blocked users from nearby list
 		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
 		# Update nearby items when friendship requests change
-		Global.social_service.friendship_request_received.connect(_on_friendship_request_changed)
+		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
 		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_rejected.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_changed)
@@ -78,7 +78,15 @@ func _on_blacklist_changed() -> void:
 	_update_list_size()
 
 
+func _on_friendship_request_received(_unused_address: String, _unused_message: String) -> void:
+	_update_nearby_friend_status()
+
+
 func _on_friendship_request_changed(_unused_address: String) -> void:
+	_update_nearby_friend_status()
+
+
+func _update_nearby_friend_status() -> void:
 	if player_list_type != SocialType.NEARBY:
 		return
 	# Update friendship status on existing items instead of reloading
@@ -186,7 +194,8 @@ func _async_reload_blocked_list(request_id: int) -> void:
 	if request_id != _update_request_id:
 		return
 
-	add_items_by_social_item_data(blocked_social_items)
+	var should_load = _is_panel_visible()
+	add_items_by_social_item_data(blocked_social_items, should_load)
 	list_size = blocked_social_items.size()
 	size_changed.emit()
 
@@ -221,7 +230,8 @@ func _async_reload_online_list(request_id: int) -> void:
 		size_changed.emit()
 		return
 
-	add_items_by_social_item_data(online_friends)
+	var should_load = _is_panel_visible()
+	add_items_by_social_item_data(online_friends, should_load)
 	list_size = online_friends.size()
 	size_changed.emit()
 
@@ -251,7 +261,8 @@ func _async_reload_offline_list(request_id: int) -> void:
 		size_changed.emit()
 		return
 
-	add_items_by_social_item_data(offline_friends)
+	var should_load = _is_panel_visible()
+	add_items_by_social_item_data(offline_friends, should_load)
 	list_size = offline_friends.size()
 	size_changed.emit()
 
@@ -294,7 +305,8 @@ func _async_reload_request_list(request_id: int) -> void:
 		item.profile_picture_url = req["profile_picture_url"]
 		request_items.append(item)
 
-	add_items_by_social_item_data(request_items)
+	var should_load = _is_panel_visible()
+	add_items_by_social_item_data(request_items, should_load)
 	list_size = request_items.size()
 	size_changed.emit()
 
@@ -378,8 +390,9 @@ func remove_item_by_address(address: String) -> bool:
 		if "social_data" in child and child.social_data != null:
 			if child.social_data.address == address:
 				child.queue_free()
-				# Update list size after removal (deferred to allow queue_free to process)
-				_update_list_size.call_deferred()
+				# Update list size immediately (decrement since queue_free is deferred)
+				list_size = maxi(0, list_size - 1)
+				size_changed.emit()
 				return true
 	return false
 
@@ -402,12 +415,12 @@ func get_item_data_by_address(address: String) -> SocialItemData:
 	return null
 
 
-func add_item_by_social_item_data(item: SocialItemData) -> void:
+func add_item_by_social_item_data(item: SocialItemData, should_load: bool = true) -> void:
 	# Add a single item to the list without clearing existing items
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 	self.add_child(social_item)
 	social_item.set_type(player_list_type)
-	social_item.set_data(item)
+	social_item.set_data(item, should_load)
 	_update_list_size()
 
 
@@ -420,15 +433,28 @@ func async_add_request_by_address(address: String) -> void:
 	var social_item_data = await _async_fetch_profile_for_address(address)
 	# Double-check it wasn't added while we were fetching
 	if not has_item_with_address(address):
-		add_item_by_social_item_data(social_item_data)
+		var should_load = _is_panel_visible()
+		add_item_by_social_item_data(social_item_data, should_load)
 
 
-func add_items_by_social_item_data(item_list) -> void:
+func add_items_by_social_item_data(item_list, should_load: bool = true) -> void:
 	for item in item_list:
 		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 		self.add_child(social_item)
 		social_item.set_type(player_list_type)
-		social_item.set_data(item as SocialItemData)
+		social_item.set_data(item as SocialItemData, should_load)
+
+
+func load_unloaded_items() -> void:
+	for child in get_children():
+		if child.has_method("load_item") and "load_state" in child:
+			if child.load_state == child.LoadState.UNLOADED:
+				child.load_item()
+
+
+func _is_panel_visible() -> bool:
+	var friends_panel = _get_friends_panel()
+	return friends_panel != null and friends_panel.visible
 
 
 func _async_fetch_profile_for_address(address: String) -> SocialItemData:
