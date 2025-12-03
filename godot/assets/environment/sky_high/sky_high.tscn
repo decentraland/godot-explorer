@@ -6,7 +6,6 @@
 
 [node name="SkyHigh_WIP" type="Node"]
 script = ExtResource("1_0y4pc")
-debug_time_rotation = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = ExtResource("2_d58k0")
