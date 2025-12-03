@@ -31,6 +31,9 @@ func _ready():
 		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
 	if player_list_type == SOCIAL_TYPE.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
+	if player_list_type == SOCIAL_TYPE.REQUEST:
+		# Reload request list when blacklist changes to pick up previously hidden requests
+		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 
 
 func _on_avatar_added(avatar: Avatar) -> void:
@@ -65,11 +68,13 @@ func _on_avatar_removed(address: String) -> void:
 
 
 func _on_blacklist_changed() -> void:
-	if player_list_type != SOCIAL_TYPE.NEARBY:
+	# Handle blacklist changes for NEARBY and REQUEST lists
+	if player_list_type != SOCIAL_TYPE.NEARBY and player_list_type != SOCIAL_TYPE.REQUEST:
 		return
 
 	# Items will handle their own visibility via blacklist_changed signal
-	# Just update the list size after items have updated themselves
+	# Wait a frame for items to update their visibility, then update list size
+	await get_tree().process_frame
 	_update_list_size()
 
 
@@ -204,8 +209,7 @@ func _async_reload_blocked_list(request_id: int) -> void:
 
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(blocked_social_items, should_load)
-	list_size = blocked_social_items.size()
-	size_changed.emit()
+	_update_list_size()
 
 
 func _async_reload_online_list(request_id: int) -> void:
@@ -240,8 +244,7 @@ func _async_reload_online_list(request_id: int) -> void:
 
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(online_friends, should_load)
-	list_size = online_friends.size()
-	size_changed.emit()
+	_update_list_size()
 
 
 func _async_reload_offline_list(request_id: int) -> void:
@@ -271,8 +274,7 @@ func _async_reload_offline_list(request_id: int) -> void:
 
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(offline_friends, should_load)
-	list_size = offline_friends.size()
-	size_changed.emit()
+	_update_list_size()
 
 
 func _get_friends_panel():
@@ -315,8 +317,9 @@ func _async_reload_request_list(request_id: int) -> void:
 
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(request_items, should_load)
-	list_size = request_items.size()
-	size_changed.emit()
+	# Wait a frame for items to check their blocked status and update visibility
+	await get_tree().process_frame
+	_update_list_size()
 
 
 func _async_fetch_all_friends():

@@ -59,9 +59,8 @@ func set_data(data: SocialItemData, should_load: bool = true) -> void:
 	if item_type == SOCIAL_TYPE.ONLINE:
 		_update_jump_button_visibility()
 
-	# Check blocked visibility for NEARBY items
-	if item_type == SOCIAL_TYPE.NEARBY:
-		_update_blocked_visibility()
+	# Check blocked visibility for NEARBY and REQUEST items
+	_update_blocked_visibility_for_type()
 
 
 func _apply_data_to_ui() -> void:
@@ -235,19 +234,21 @@ func _hide_all_buttons() -> void:
 
 func _notify_parent_size_changed() -> void:
 	var parent = get_parent()
-	if parent and parent.has_signal("size_changed"):
-		parent.size_changed.emit()
+	if parent and parent.has_method("_update_list_size"):
+		parent._update_list_size()
 
 
 func set_type(type: SocialItemData.SocialType) -> void:
 	item_type = type
 	_update_elements_visibility()
-	# Subscribe to blacklist changes for NEARBY items to hide/show themselves
+	# Subscribe to blacklist changes for NEARBY and REQUEST items to hide/show themselves
 	if (
-		item_type == SOCIAL_TYPE.NEARBY
+		(item_type == SOCIAL_TYPE.NEARBY or item_type == SOCIAL_TYPE.REQUEST)
 		and not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed)
 	):
 		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
+	# Update visibility based on blocked status after setting type
+	_update_blocked_visibility_for_type()
 
 
 func _on_button_add_friend_pressed() -> void:
@@ -518,14 +519,13 @@ func shorten_tittle(title: String, max_length: int) -> String:
 
 
 func _on_blacklist_changed() -> void:
-	# Only handle blacklist changes for NEARBY items
-	if item_type == SOCIAL_TYPE.NEARBY:
-		_update_blocked_visibility()
+	# Handle blacklist changes for NEARBY and REQUEST items
+	_update_blocked_visibility_for_type()
 
 
-func _update_blocked_visibility() -> void:
-	# Only applies to NEARBY items
-	if item_type != SOCIAL_TYPE.NEARBY:
+func _update_blocked_visibility_for_type() -> void:
+	# Only applies to NEARBY and REQUEST items
+	if item_type != SOCIAL_TYPE.NEARBY and item_type != SOCIAL_TYPE.REQUEST:
 		return
 
 	# Need social_data and address to check

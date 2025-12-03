@@ -1186,6 +1186,17 @@ func _update_friendship_buttons() -> void:
 	if is_own_passport or not _is_social_service_available():
 		return
 	_hide_friendship_buttons()
+	
+	# Check if user is blocked - if blocked, don't show any friendship buttons
+	var current_avatar = avatar_preview_landscape.avatar
+	var is_user_blocked = false
+	if current_avatar != null and not current_avatar.avatar_id.is_empty():
+		is_user_blocked = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+	
+	# If user is blocked, hide all friendship buttons
+	if is_user_blocked:
+		return
+	
 	match current_friendship_status:
 		Global.FriendshipStatus.ACCEPTED:
 			button_friend.show()
