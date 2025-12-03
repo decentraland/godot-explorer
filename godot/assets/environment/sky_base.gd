@@ -9,11 +9,7 @@ const MOON_ORIGIN = 0.82  # ~7:40 PM
 @export var moon_horizon_color := Color("#ff7534")  # Orange
 @export var sun_horizon_color := Color("#8f0025")  # Deep red
 
-# Debug mode - set to true to make a full day/night cycle every 10 seconds
-@export var debug_time_rotation: bool = false
-
 var last_time := 0.0
-var debug_time_accumulator: float = 0.0
 
 # Moon properties (night time) - hardcoded since we only have one physical light
 var initial_moon_energy: float = 0.3
@@ -38,9 +34,6 @@ var night_fog_color = sky_material.get_shader_parameter("clouds_gradient_night")
 func _ready():
 	# Calculate moon transform (opposite side of sky from sun)
 	initial_moon_transform = initial_sun_transform.rotated(Vector3(0.0, 1.0, 0.0), PI)
-
-	# Enable/disable debug mode in global time
-	Global.skybox_time.debug_mode_active = debug_time_rotation
 
 	if Global.is_xr():
 		Global.loading_started.connect(self._on_loading_started)
@@ -111,12 +104,6 @@ func get_transition_fade(normalized_time: float) -> float:
 
 
 func _process(_delta: float) -> void:
-	if debug_time_rotation:
-		# Debug mode: full cycle every 10 seconds - update global time
-		debug_time_accumulator += _delta
-		var debug_time = fmod(debug_time_accumulator / 10.0, 1.0)
-		Global.skybox_time.normalized_time = debug_time
-
 	var skybox_time = Global.skybox_time.get_normalized_time()
 
 	# Calculate angular positions (0 = horizon rise, 0.5 = zenith, 1.0 = horizon set)
@@ -205,8 +192,8 @@ func _process(_delta: float) -> void:
 	main_light.light_color = lerp(current_horizon_color, current_color, t)
 
 	# Dynamic ambient light - boost when it's night OR near horizon
-	# Base: 0.05
-	var base_ambient = 0.05
+	# Base: 0.6 (increased from 0.05 for brighter appearance)
+	var base_ambient = 0.6
 
 	# Calculate horizon factor (0.0 = zenith, 1.0 = horizon)
 	var horizon_factor = 0.0
@@ -221,7 +208,7 @@ func _process(_delta: float) -> void:
 	var night_factor = sun_to_moon_blend  # 0.0 = day, 1.0 = night
 	var boost_factor = max(night_factor, horizon_factor)  # OR: take whichever is higher
 
-	var ambient_boost = boost_factor * 0.15  # Up to 0.15 extra
+	var ambient_boost = boost_factor * 0.4  # Up to 0.4 extra (increased from 0.15)
 	var ambient_energy = base_ambient + ambient_boost
 	world_environment.environment.ambient_light_energy = ambient_energy
 

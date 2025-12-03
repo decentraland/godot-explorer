@@ -47,10 +47,15 @@ func set_shadow(shadow_quality: int):
 	match shadow_quality:
 		0:  # no shadow
 			sky.main_light.shadow_enabled = false
+			# Increase light energy when shadows are off to compensate
+			sky.main_light.light_energy = 1.0
 		1:  # low res shadow
 			sky.main_light.shadow_enabled = true
+			# Use base light energy when shadows are on
+			sky.main_light.light_energy = 0.7
 		2:  # high res shadow
 			sky.main_light.shadow_enabled = true
+			sky.main_light.light_energy = 0.7
 			quality = RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM
 
 	RenderingServer.directional_soft_shadow_filter_set_quality(quality)
