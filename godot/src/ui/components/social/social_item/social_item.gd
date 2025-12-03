@@ -106,7 +106,6 @@ func _async_load_item() -> void:
 
 	# If type is NEARBY, check if already a friend
 	if item_type == SOCIAL_TYPE.NEARBY and not social_data.address.is_empty():
-		
 		# CHECKING IF IT IS A GUEST - FIND A BETTER SOLUTION
 		var promise = Global.content_provider.fetch_profile(social_data.address)
 		var result = await PromiseUtils.async_awaiter(promise)
@@ -423,7 +422,6 @@ func _check_and_update_friend_status() -> void:
 
 
 func _update_button_visibility_from_status() -> void:
-	
 	profile_picture.unset_friend()
 	if Global.player_identity.is_guest or is_guest:
 		return
