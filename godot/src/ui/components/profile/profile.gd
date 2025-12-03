@@ -1164,18 +1164,21 @@ func _async_check_friendship_status() -> void:
 		return
 
 	var friend_address = current_profile.get_ethereum_address()
+	print("Profile: Checking friendship status for address: ", friend_address)
 	var promise = Global.social_service.get_friendship_status(friend_address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
 		# On error, service might not be available or there was an error
 		# Hide all friendship buttons
+		print("Profile: Friendship status check failed: ", promise.get_data().get_error())
 		current_friendship_status = Global.FriendshipStatus.UNKNOWN
 		_update_friendship_buttons()
 		return
 
 	var status_data = promise.get_data()
 	current_friendship_status = status_data.get("status", Global.FriendshipStatus.UNKNOWN)
+	print("Profile: Friendship status result: ", current_friendship_status)
 	_update_friendship_buttons()
 
 
@@ -1204,7 +1207,7 @@ func _is_social_service_available() -> bool:
 
 
 func _async_update_buttons_and_lists():
-	_async_check_friendship_status()
+	await _async_check_friendship_status()
 	var friends_panel = _get_friends_panel()
 	if friends_panel != null and friends_panel.has_method("update_all_lists"):
 		friends_panel.update_all_lists()

@@ -292,13 +292,15 @@ func _on_friendship_request_rejected(address: String) -> void:
 
 
 func _on_friendship_deleted(address: String) -> void:
+	print("FriendsPanel: _on_friendship_deleted called for address: ", address)
 	# Remove from online tracking
 	if _online_friends.has(address):
 		_online_friends.erase(address)
 
 	# Remove from online/offline lists
-	online_list.remove_item_by_address(address)
-	offline_list.remove_item_by_address(address)
+	var removed_online = online_list.remove_item_by_address(address)
+	var removed_offline = offline_list.remove_item_by_address(address)
+	print("FriendsPanel: Removed from online: ", removed_online, ", offline: ", removed_offline)
 
 
 func _on_friendship_request_cancelled(address: String) -> void:

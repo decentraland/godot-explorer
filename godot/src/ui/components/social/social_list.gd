@@ -41,6 +41,9 @@ func _on_avatar_added(avatar: Avatar) -> void:
 	if not avatar.avatar_id.is_empty():
 		if Global.social_blacklist.is_blocked(avatar.avatar_id):
 			return
+		# Check if item with this address already exists to prevent duplicates
+		if has_item_with_address(avatar.avatar_id):
+			return
 
 	# Create a new social item for this avatar
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
@@ -379,6 +382,9 @@ func _load_existing_nearby_avatars() -> void:
 			# Skip blocked avatars (check by avatar_id if available)
 			if not avatar.avatar_id.is_empty():
 				if Global.social_blacklist.is_blocked(avatar.avatar_id):
+					continue
+				# Skip if item with this address already exists to prevent duplicates
+				if has_item_with_address(avatar.avatar_id):
 					continue
 
 			# Create item - it will handle its own loading and visibility

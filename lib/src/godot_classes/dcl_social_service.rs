@@ -1,5 +1,4 @@
 use godot::prelude::*;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -12,19 +11,10 @@ use crate::social::social_service_manager::SocialServiceManager;
 /// Friendship request data: (address, name, has_claimed_name, profile_picture_url, message, created_at)
 type FriendshipRequestData = (String, String, bool, String, String, i64);
 
-/// Cache entry for friendship status
-#[derive(Clone)]
-struct FriendshipStatusCache {
-    status: i32,
-    message: String,
-}
-
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclSocialService {
     manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
-    /// Cache of friendship statuses (address -> status)
-    friendship_cache: Arc<RwLock<HashMap<String, FriendshipStatusCache>>>,
     base: Base<Node>,
 }
 
@@ -33,7 +23,6 @@ impl INode for DclSocialService {
     fn init(base: Base<Node>) -> Self {
         Self {
             manager: Arc::new(RwLock::new(None)),
-            friendship_cache: Arc::new(RwLock::new(HashMap::new())),
             base,
         }
     }
@@ -249,47 +238,14 @@ impl DclSocialService {
     pub fn get_friendship_status(&mut self, address: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
-        let cache = self.friendship_cache.clone();
         let address = address.to_string();
 
         TokioRuntime::spawn(async move {
-            let result = Self::async_get_friendship_status_cached(manager, cache, address).await;
+            let result = Self::async_get_friendship_status(manager, address).await;
             Self::resolve_status_promise(get_promise, result);
         });
 
         promise
-    }
-
-    /// Get friendship status with a user (cached, no server request)
-    /// Returns immediately from cache. If not cached, returns UNKNOWN status.
-    #[func]
-    pub fn get_cached_friendship_status(&self, address: GString) -> Dictionary {
-        let address = address.to_string();
-        let mut dict = Dictionary::new();
-
-        // Try to get from cache synchronously
-        if let Ok(cache) = self.friendship_cache.try_read() {
-            if let Some(cached) = cache.get(&address) {
-                dict.set("status", cached.status);
-                dict.set("message", cached.message.clone());
-                dict.set("cached", true);
-                return dict;
-            }
-        }
-
-        // Not in cache - return unknown status
-        dict.set("status", -1); // UNKNOWN
-        dict.set("message", "Not cached".to_string());
-        dict.set("cached", false);
-        dict
-    }
-
-    /// Clear the friendship status cache
-    #[func]
-    pub fn clear_friendship_cache(&mut self) {
-        if let Ok(mut cache) = self.friendship_cache.try_write() {
-            cache.clear();
-        }
     }
 
     /// Subscribe to friendship updates (real-time streaming)
@@ -297,14 +253,13 @@ impl DclSocialService {
     pub fn subscribe_to_updates(&mut self) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
-        let cache = self.friendship_cache.clone();
         let instance_id = self.base().instance_id();
 
         TokioRuntime::spawn(async move {
             // Add timeout to prevent hanging forever
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(15),
-                Self::async_subscribe_to_updates(manager, cache, instance_id),
+                Self::async_subscribe_to_updates(manager, instance_id),
             )
             .await;
 
@@ -584,50 +539,26 @@ impl DclSocialService {
         Ok(())
     }
 
-    async fn async_get_friendship_status_cached(
+    async fn async_get_friendship_status(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
-        cache: Arc<RwLock<HashMap<String, FriendshipStatusCache>>>,
         address: String,
     ) -> Result<(i32, String), String> {
-        // Check cache first
-        {
-            let cache_guard = cache.read().await;
-            if let Some(cached) = cache_guard.get(&address) {
-                return Ok((cached.status, cached.message.clone()));
-            }
-        }
-
-        // Not in cache, fetch from server
         let manager_guard = manager.read().await;
         let mgr = manager_guard
             .as_ref()
             .ok_or("Social service not initialized")?;
 
         let response = mgr
-            .get_friendship_status(address.clone())
+            .get_friendship_status(address)
             .await
             .map_err(|e| format!("Failed to get friendship status: {}", e))?;
 
         let (status, message) = Self::extract_friendship_status(response);
-
-        // Update cache
-        {
-            let mut cache_guard = cache.write().await;
-            cache_guard.insert(
-                address,
-                FriendshipStatusCache {
-                    status,
-                    message: message.clone(),
-                },
-            );
-        }
-
         Ok((status, message))
     }
 
     async fn async_subscribe_to_updates(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
-        cache: Arc<RwLock<HashMap<String, FriendshipStatusCache>>>,
         instance_id: InstanceId,
     ) -> Result<(), String> {
         let manager_guard = manager.read().await;
@@ -642,7 +573,7 @@ impl DclSocialService {
 
         // Spawn update listener task
         tokio::spawn(async move {
-            Self::handle_friendship_updates(&mut rx, cache, instance_id).await;
+            Self::handle_friendship_updates(&mut rx, instance_id).await;
         });
 
         Ok(())
@@ -650,72 +581,9 @@ impl DclSocialService {
 
     async fn handle_friendship_updates(
         rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendshipUpdate>,
-        cache: Arc<RwLock<HashMap<String, FriendshipStatusCache>>>,
         instance_id: InstanceId,
     ) {
-        // FriendshipStatus enum values from proto
-        const STATUS_ACCEPTED: i32 = 3;
-        const STATUS_REQUEST_RECEIVED: i32 = 2;
-        const STATUS_NONE: i32 = 7;
-
         while let Some(update) = rx.recv().await {
-            // Update cache based on the update type (before getting the node to avoid Send issues)
-            let cache_update: Option<(String, FriendshipStatusCache)> = match &update.update {
-                Some(friendship_update::Update::Request(req)) => req.friend.as_ref().map(|f| {
-                    (
-                        f.address.clone(),
-                        FriendshipStatusCache {
-                            status: STATUS_REQUEST_RECEIVED,
-                            message: req.message.clone().unwrap_or_default(),
-                        },
-                    )
-                }),
-                Some(friendship_update::Update::Accept(accept)) => accept.user.as_ref().map(|u| {
-                    (
-                        u.address.clone(),
-                        FriendshipStatusCache {
-                            status: STATUS_ACCEPTED,
-                            message: String::new(),
-                        },
-                    )
-                }),
-                Some(friendship_update::Update::Reject(reject)) => reject.user.as_ref().map(|u| {
-                    (
-                        u.address.clone(),
-                        FriendshipStatusCache {
-                            status: STATUS_NONE,
-                            message: String::new(),
-                        },
-                    )
-                }),
-                Some(friendship_update::Update::Delete(delete)) => delete.user.as_ref().map(|u| {
-                    (
-                        u.address.clone(),
-                        FriendshipStatusCache {
-                            status: STATUS_NONE,
-                            message: String::new(),
-                        },
-                    )
-                }),
-                Some(friendship_update::Update::Cancel(cancel)) => cancel.user.as_ref().map(|u| {
-                    (
-                        u.address.clone(),
-                        FriendshipStatusCache {
-                            status: STATUS_NONE,
-                            message: String::new(),
-                        },
-                    )
-                }),
-                _ => None,
-            };
-
-            // Update cache if we have an update
-            if let Some((address, status)) = cache_update {
-                let mut cache_guard = cache.write().await;
-                cache_guard.insert(address, status);
-            }
-
-            // Now get the node and emit signal (no awaits after this)
             let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
             else {
                 break;

@@ -390,15 +390,7 @@ func _check_and_update_friend_status() -> void:
 	if not social_data or social_data.address.is_empty():
 		return
 
-	# First check the cache for instant response
-	var cached = Global.social_service.get_cached_friendship_status(social_data.address)
-	if cached.get("cached", false):
-		current_friendship_status = cached.get("status", -1)
-		_update_button_visibility_from_status()
-		_notify_parent_reorder()
-		return
-
-	# Not cached, fetch from server
+	# Fetch from server
 	_async_check_friend_status()
 
 
