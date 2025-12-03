@@ -7,6 +7,7 @@ const MAX_DISPLAY_NAME_LENGTH: int = 15
 
 @export var item_type: SocialItemData.SocialType
 
+var is_guest = false
 var trim_value = 20
 var mute_icon = load("res://assets/ui/audio_off.svg")
 var unmute_icon = load("res://assets/ui/audio_on.svg")
@@ -105,6 +106,12 @@ func _async_load_item() -> void:
 
 	# If type is NEARBY, check if already a friend
 	if item_type == SOCIAL_TYPE.NEARBY and not social_data.address.is_empty():
+		
+		# CHECKING IF IT IS A GUEST - FIND A BETTER SOLUTION
+		var promise = Global.content_provider.fetch_profile(social_data.address)
+		var result = await PromiseUtils.async_awaiter(promise)
+		if result is PromiseError:
+			is_guest = true
 		_update_buttons()
 		_check_and_update_friend_status()
 
@@ -199,7 +206,7 @@ func _update_elements_visibility() -> void:
 	match item_type:
 		SOCIAL_TYPE.NEARBY:
 			h_box_container_nearby.show()
-			if Global.player_identity.is_guest:
+			if Global.player_identity.is_guest or is_guest:
 				button_add_friend.hide()
 				return
 			# Guest users cannot add friends
@@ -222,7 +229,7 @@ func _update_elements_visibility() -> void:
 		SOCIAL_TYPE.REQUEST:
 			h_box_container_request.show()
 			# Guest users cannot accept/reject friend requests
-			if Global.player_identity.is_guest:
+			if Global.player_identity.is_guest or is_guest:
 				button_accept.hide()
 				button_reject.hide()
 		SOCIAL_TYPE.BLOCKED:
@@ -418,7 +425,7 @@ func _check_and_update_friend_status() -> void:
 func _update_button_visibility_from_status() -> void:
 	
 	profile_picture.unset_friend()
-	if Global.player_identity.is_guest:
+	if Global.player_identity.is_guest or is_guest:
 		return
 	# Update button and label visibility based on pre-checked friendship status
 	if (
@@ -442,7 +449,7 @@ func _update_button_visibility_from_status() -> void:
 
 
 func _async_check_friend_status() -> void:
-	if Global.player_identity.is_guest:
+	if Global.player_identity.is_guest or is_guest:
 		return
 	var promise = Global.social_service.get_friendship_status(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
