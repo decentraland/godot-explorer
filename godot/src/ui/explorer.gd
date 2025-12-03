@@ -316,9 +316,9 @@ func _async_initialize_social_service() -> void:
 		)
 		# Connectivity failure alone doesn't mark streaming as failed
 
-	# Notify friends panel if streaming subscription failed (will show error and retry on open)
-	if streaming_failed:
-		friends_panel.set_streaming_subscription_failed(true)
+	# Notify friends panel about streaming subscription status
+	# This will hide the "no service" message if subscription succeeded
+	friends_panel.set_streaming_subscription_failed(streaming_failed)
 
 	# Populate friends lists even if streaming failed (one-time fetch still works)
 	friends_panel.update_all_lists()
