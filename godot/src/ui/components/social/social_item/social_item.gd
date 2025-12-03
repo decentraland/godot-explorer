@@ -58,6 +58,10 @@ func set_data(data: SocialItemData, should_load: bool = true) -> void:
 	# Update jump button visibility if type is ONLINE
 	if item_type == SOCIAL_TYPE.ONLINE:
 		_update_jump_button_visibility()
+	
+	# Check blocked visibility for NEARBY items
+	if item_type == SOCIAL_TYPE.NEARBY:
+		_update_blocked_visibility()
 
 
 func _apply_data_to_ui() -> void:
@@ -145,8 +149,8 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 	social_data.has_claimed_name = false if social_data.name.contains("#") else true
 
 	# Now show self and set data
+	# set_data() will handle visibility for NEARBY items via _update_blocked_visibility()
 	_is_loading = false
-	visible = true
 	set_data(social_data)
 
 	# Notify parent that we're ready (for list size updates)
@@ -238,6 +242,9 @@ func _notify_parent_size_changed() -> void:
 func set_type(type: SocialItemData.SocialType) -> void:
 	item_type = type
 	_update_elements_visibility()
+	# Subscribe to blacklist changes for NEARBY items to hide/show themselves
+	if item_type == SOCIAL_TYPE.NEARBY and not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed):
+		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
 
 
 func _on_button_add_friend_pressed() -> void:
@@ -505,3 +512,28 @@ func shorten_tittle(title: String, max_length: int) -> String:
 	if title.length() > max_length:
 		return title.left(max_length) + "..."
 	return title
+
+
+func _on_blacklist_changed() -> void:
+	# Only handle blacklist changes for NEARBY items
+	if item_type == SOCIAL_TYPE.NEARBY:
+		_update_blocked_visibility()
+
+
+func _update_blocked_visibility() -> void:
+	# Only applies to NEARBY items
+	if item_type != SOCIAL_TYPE.NEARBY:
+		return
+	
+	# Need social_data and address to check
+	if not social_data or social_data.address.is_empty():
+		return
+	
+	# Hide if blocked, show if not blocked
+	if Global.social_blacklist.is_blocked(social_data.address):
+		visible = false
+	else:
+		visible = true
+	
+	# Notify parent to update list size
+	_notify_parent_size_changed()

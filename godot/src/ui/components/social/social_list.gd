@@ -37,15 +37,13 @@ func _on_avatar_added(avatar: Avatar) -> void:
 	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 
-	# Check if avatar is blocked (if avatar_id is already set)
+	# Check if item with this address already exists to prevent duplicates
 	if not avatar.avatar_id.is_empty():
-		if Global.social_blacklist.is_blocked(avatar.avatar_id):
-			return
-		# Check if item with this address already exists to prevent duplicates
 		if has_item_with_address(avatar.avatar_id):
 			return
 
 	# Create a new social item for this avatar
+	# The item will handle its own visibility based on blocked status
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 	self.add_child(social_item)
 	social_item.set_type(player_list_type)
@@ -70,13 +68,8 @@ func _on_blacklist_changed() -> void:
 	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 
-	# Check each child and remove if blocked
-	for child in get_children():
-		if child.has_method("get") and child.get("social_data") != null:
-			var social_data = child.social_data
-			if social_data != null and Global.social_blacklist.is_blocked(social_data.address):
-				child.queue_free()
-
+	# Items will handle their own visibility via blacklist_changed signal
+	# Just update the list size after items have updated themselves
 	_update_list_size()
 
 
@@ -379,15 +372,13 @@ func _load_existing_nearby_avatars() -> void:
 
 	for avatar in all_avatars:
 		if avatar != null and avatar is Avatar:
-			# Skip blocked avatars (check by avatar_id if available)
+			# Skip if item with this address already exists to prevent duplicates
 			if not avatar.avatar_id.is_empty():
-				if Global.social_blacklist.is_blocked(avatar.avatar_id):
-					continue
-				# Skip if item with this address already exists to prevent duplicates
 				if has_item_with_address(avatar.avatar_id):
 					continue
 
 			# Create item - it will handle its own loading and visibility
+			# Items will hide themselves if blocked via _update_blocked_visibility()
 			var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 			self.add_child(social_item)
 			social_item.set_type(player_list_type)

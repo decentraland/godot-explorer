@@ -54,6 +54,7 @@ var _streaming_subscription_failed: bool = true
 @onready var label_no_friends: Label = %Label_NoFriends
 @onready var label_out_of_service: Label = %Label_OutOfService
 @onready var timer: Timer = %Timer
+@onready var friends_list: VBoxContainer = %FriendsList
 
 
 func _ready() -> void:
@@ -82,6 +83,7 @@ func _ready() -> void:
 	v_box_container_online.hide()
 	v_box_container_offline.hide()
 	v_box_container_no_friends.hide()
+	friends_list.hide()
 	v_box_container_no_service.show()
 
 
@@ -240,12 +242,15 @@ func _update_dropdown_visibility() -> void:
 	if has_service_error:
 		v_box_container_no_service.show()
 		v_box_container_no_friends.hide()
+		friends_list.hide()
 	elif total_friends == 0 and pending_count == 0 and not is_guest:
 		v_box_container_no_service.hide()
 		v_box_container_no_friends.show()
+		friends_list.hide()
 	else:
 		v_box_container_no_service.hide()
 		v_box_container_no_friends.hide()
+		friends_list.show()
 
 
 func _on_load_error(_error_message: String) -> void:
