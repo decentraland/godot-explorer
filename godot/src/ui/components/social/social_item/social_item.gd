@@ -408,6 +408,7 @@ func _check_and_update_friend_status() -> void:
 
 
 func _update_button_visibility_from_status() -> void:
+	profile_picture.unset_friend()
 	# Update button and label visibility based on pre-checked friendship status
 	if (
 		current_friendship_status == Global.FriendshipStatus.REQUEST_SENT
@@ -416,6 +417,7 @@ func _update_button_visibility_from_status() -> void:
 		# REQUEST_SENT or REQUEST_RECEIVED - Show pending label, hide button
 		button_add_friend.hide()
 		label_pending_request.show()
+		
 	elif current_friendship_status == Global.FriendshipStatus.ACCEPTED:
 		# ACCEPTED - Hide both button and label
 		button_add_friend.hide()

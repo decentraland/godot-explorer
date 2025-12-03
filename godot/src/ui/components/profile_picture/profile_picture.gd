@@ -170,6 +170,8 @@ func set_offline() -> void:
 func set_friend() -> void:
 	texture_rect_friendship.show()
 
+func unset_friend() -> void:
+	texture_rect_friendship.hide()
 
 func hide_status() -> void:
 	texture_rect_status.hide()
