@@ -82,6 +82,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
+use_top = false
+use_bottom = false
 
 [node name="ChatContainer" type="Control" parent="UI"]
 unique_name_in_owner = true
@@ -127,6 +129,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
+use_top = false
+use_bottom = false
 
 [node name="InteractableHUD" type="Control" parent="UI/SafeMarginContainerHUD"]
 layout_mode = 2
