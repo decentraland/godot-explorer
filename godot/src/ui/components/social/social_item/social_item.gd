@@ -58,7 +58,7 @@ func set_data(data: SocialItemData, should_load: bool = true) -> void:
 	# Update jump button visibility if type is ONLINE
 	if item_type == SOCIAL_TYPE.ONLINE:
 		_update_jump_button_visibility()
-	
+
 	# Check blocked visibility for NEARBY items
 	if item_type == SOCIAL_TYPE.NEARBY:
 		_update_blocked_visibility()
@@ -243,7 +243,10 @@ func set_type(type: SocialItemData.SocialType) -> void:
 	item_type = type
 	_update_elements_visibility()
 	# Subscribe to blacklist changes for NEARBY items to hide/show themselves
-	if item_type == SOCIAL_TYPE.NEARBY and not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed):
+	if (
+		item_type == SOCIAL_TYPE.NEARBY
+		and not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed)
+	):
 		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
 
 
@@ -524,16 +527,16 @@ func _update_blocked_visibility() -> void:
 	# Only applies to NEARBY items
 	if item_type != SOCIAL_TYPE.NEARBY:
 		return
-	
+
 	# Need social_data and address to check
 	if not social_data or social_data.address.is_empty():
 		return
-	
+
 	# Hide if blocked, show if not blocked
 	if Global.social_blacklist.is_blocked(social_data.address):
 		visible = false
 	else:
 		visible = true
-	
+
 	# Notify parent to update list size
 	_notify_parent_size_changed()
