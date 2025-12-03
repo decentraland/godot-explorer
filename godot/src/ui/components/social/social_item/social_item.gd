@@ -199,6 +199,10 @@ func _update_elements_visibility() -> void:
 	match item_type:
 		SOCIAL_TYPE.NEARBY:
 			h_box_container_nearby.show()
+			if Global.player_identity.is_guest:
+				button_add_friend.hide()
+				return
+			# Guest users cannot add friends
 			# Check if already a friend and hide/show ADD FRIEND button accordingly
 			if social_data and not social_data.address.is_empty():
 				_update_buttons()
@@ -217,6 +221,10 @@ func _update_elements_visibility() -> void:
 			profile_picture.set_offline()
 		SOCIAL_TYPE.REQUEST:
 			h_box_container_request.show()
+			# Guest users cannot accept/reject friend requests
+			if Global.player_identity.is_guest:
+				button_accept.hide()
+				button_reject.hide()
 		SOCIAL_TYPE.BLOCKED:
 			h_box_container_blocked.show()
 		_:
@@ -408,7 +416,10 @@ func _check_and_update_friend_status() -> void:
 
 
 func _update_button_visibility_from_status() -> void:
+	
 	profile_picture.unset_friend()
+	if Global.player_identity.is_guest:
+		return
 	# Update button and label visibility based on pre-checked friendship status
 	if (
 		current_friendship_status == Global.FriendshipStatus.REQUEST_SENT
@@ -417,7 +428,7 @@ func _update_button_visibility_from_status() -> void:
 		# REQUEST_SENT or REQUEST_RECEIVED - Show pending label, hide button
 		button_add_friend.hide()
 		label_pending_request.show()
-		
+
 	elif current_friendship_status == Global.FriendshipStatus.ACCEPTED:
 		# ACCEPTED - Hide both button and label
 		button_add_friend.hide()
@@ -431,6 +442,8 @@ func _update_button_visibility_from_status() -> void:
 
 
 func _async_check_friend_status() -> void:
+	if Global.player_identity.is_guest:
+		return
 	var promise = Global.social_service.get_friendship_status(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
 

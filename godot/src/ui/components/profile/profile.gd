@@ -1199,6 +1199,14 @@ func _update_friendship_buttons() -> void:
 		return
 	_hide_friendship_buttons()
 
+	# Guest users cannot have social interactions
+	if Global.player_identity.is_guest:
+		return
+
+	# Check if target user is a guest (hasn't connected web3)
+	if current_profile != null and not current_profile.has_connected_web3():
+		return
+
 	# Check if user is blocked - if blocked, don't show any friendship buttons
 	var current_avatar = avatar_preview_landscape.avatar
 	var is_user_blocked = false

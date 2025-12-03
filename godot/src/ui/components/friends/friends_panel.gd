@@ -55,6 +55,8 @@ var _streaming_subscription_failed: bool = true
 @onready var label_out_of_service: Label = %Label_OutOfService
 @onready var timer: Timer = %Timer
 @onready var friends_list: VBoxContainer = %FriendsList
+@onready var button_nearby: Button = %Button_Nearby
+@onready var v_box_container_friends_tab: VBoxContainer = %VBoxContainer_FriendsTab
 
 
 func _ready() -> void:
@@ -130,7 +132,12 @@ func show_panel_on_friends_tab() -> void:
 	_load_unloaded_items()
 	_hide_all_drowpdown_highlights()
 	# Switch to friends tab by setting the button pressed (triggers _on_button_friends_toggled)
-	button_friends.button_pressed = true
+	if not Global.player_identity.is_guest:
+		v_box_container_friends_tab.show()
+		button_friends.button_pressed = true
+	else:
+		v_box_container_friends_tab.hide()
+		button_nearby.button_pressed = true
 	# Retry streaming subscription if it previously failed
 	if _streaming_subscription_failed:
 		_async_retry_streaming_subscription()
