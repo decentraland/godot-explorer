@@ -31,11 +31,6 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 			return "Friend Request Received"
 		"social_service_friendship_accepted":
 			return "Friend Request Accepted!"
-		"local_friend_request_received":
-			return "Friend Request Received"
-		"local_friend_request_accepted":
-			return "Friend Request Accepted!"
-
 		# Community notifications
 		"community_invite_received":
 			return "Community Invite Received"
@@ -157,21 +152,6 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 					% [color_hex, sender_name, short_address]
 				)
 			return "accepted your friend request."
-
-		"local_friend_request_received":
-			var sender_name = metadata.get("sender_name", "Unknown")
-			var color_hex = _get_avatar_color_hex(sender_name)
-			return (
-				"[color=#%s]%s [color=#ECEBED]wants to be your friend!" % [color_hex, sender_name]
-			)
-
-		"local_friend_request_accepted":
-			var friend_name = metadata.get("friend_name", "Unknown")
-			var color_hex = _get_avatar_color_hex(friend_name)
-			return (
-				"[color=#%s]%s [color=#ECEBED]accepted your friend request."
-				% [color_hex, friend_name]
-			)
 
 		# Community notifications
 		"community_invite_received":

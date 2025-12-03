@@ -235,7 +235,7 @@ func _notify_parent_size_changed() -> void:
 		parent.size_changed.emit()
 
 
-func set_type(type: SocialType) -> void:
+func set_type(type: SocialItemData.SocialType) -> void:
 	item_type = type
 	_update_elements_visibility()
 
@@ -501,7 +501,7 @@ func _update_jump_button_visibility() -> void:
 							break
 
 		if not found_location:
-			label_place.text = "Loading..."
+			label_place.text = "Somewhere"
 			_async_fetch_place_data()
 	else:
 		label_place.text = "Somewhere"

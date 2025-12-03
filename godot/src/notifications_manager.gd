@@ -36,8 +36,8 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 	"events_started",  # Events: Event has started
 	"reward_assignment",  # Rewards: Reward assigned/received
 	"reward_in_progress",  # Rewards: Reward being processed
-	"local_friend_request_received",  # Friends: Friend request received (local notification)
-	"local_friend_request_accepted",  # Friends: Friend request accepted (local notification)
+	"social_service_friendship_request",  # Friends: Friend request received (server notification)
+	"social_service_friendship_accepted",  # Friends: Friend request accepted (server notification)
 ]
 
 # Queue management constants (Phase 3)
@@ -421,83 +421,6 @@ func _is_user_authenticated() -> bool:
 		return false
 	var address = Global.player_identity.get_address_str()
 	return not address.is_empty()
-
-
-## Create and queue a friend request notification (called from social service)
-## @param from_address: The address of the user who sent the friend request
-## @param from_name: The display name of the user who sent the request
-## @param message: Optional message included with the request
-func queue_friend_request_notification(
-	from_address: String, from_name: String, message: String = ""
-) -> void:
-	var timestamp = int(Time.get_unix_time_from_system() * 1000)
-	var notification_id = "friend_request_" + from_address + "_" + str(timestamp)
-
-	var description = from_name + " wants to be your friend"
-	if not message.is_empty():
-		description += ': "' + message + '"'
-
-	var notification = {
-		"id": notification_id,
-		"type": "local_friend_request_received",
-		"address": from_address,
-		"timestamp": timestamp,
-		"read": false,
-		"metadata":
-		{
-			"title": "Friend Request",
-			"description": description,
-			"link": "",
-			"sender_address": from_address,
-			"sender_name": from_name,
-		}
-	}
-
-	# Add to notifications list
-	_notifications.append(notification)
-
-	# Queue for toast display
-	_notification_queue.append(notification)
-
-	# Emit signal to show toast (only if queue was empty before this)
-	if _notification_queue.size() == 1:
-		notification_queued.emit(notification)
-
-
-## Create and queue a friend request accepted notification (called from social service)
-## @param friend_address: The address of the user who accepted the friend request
-## @param friend_name: The display name of the user who accepted
-func queue_friend_accepted_notification(friend_address: String, friend_name: String) -> void:
-	var timestamp = int(Time.get_unix_time_from_system() * 1000)
-	var notification_id = "friend_accepted_" + friend_address + "_" + str(timestamp)
-
-	var description = friend_name + " accepted your friend request"
-
-	var notification = {
-		"id": notification_id,
-		"type": "local_friend_request_accepted",
-		"address": friend_address,
-		"timestamp": timestamp,
-		"read": false,
-		"metadata":
-		{
-			"title": "Friend Request Accepted",
-			"description": description,
-			"link": "",
-			"friend_address": friend_address,
-			"friend_name": friend_name,
-		}
-	}
-
-	# Add to notifications list
-	_notifications.append(notification)
-
-	# Queue for toast display
-	_notification_queue.append(notification)
-
-	# Emit signal to show toast (only if queue was empty before this)
-	if _notification_queue.size() == 1:
-		notification_queued.emit(notification)
 
 
 ## DEBUG: Start the debug timer with a random interval between 7-10 seconds

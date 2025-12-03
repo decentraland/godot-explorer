@@ -18,6 +18,10 @@ var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
 # Track which friends are online (address -> true if online)
 var _online_friends: Dictionary = {}
 
+# Track if streaming subscription failed (to show service error and retry on panel open)
+# Starts as true (service down) until the service loads successfully
+var _streaming_subscription_failed: bool = true
+
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
 @onready var color_rect_blocked: ColorRect = %ColorRect_Blocked
@@ -56,9 +60,7 @@ func _ready() -> void:
 	label_no_blockeds.text = NO_BLOCKED_MESSAGE
 	label_no_friends.text = NO_FRIENDS_MESSAGE
 	label_out_of_service.text = NO_SERVICE_MESSAGE
-	_update_dropdown_visibility()
 	_hide_all_drowpdown_highlights()
-	_expand_all_friend_lists()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
 	_on_button_nearby_toggled(true)
@@ -73,6 +75,14 @@ func _ready() -> void:
 	# Connect to error signals
 	request_list.load_error.connect(_on_load_error)
 	online_list.load_error.connect(_on_load_error)
+
+	# Initial state: hide friend lists and show service down message
+	# This will be updated when the social service successfully connects
+	v_box_container_request.hide()
+	v_box_container_online.hide()
+	v_box_container_offline.hide()
+	v_box_container_no_friends.hide()
+	v_box_container_no_service.show()
 
 
 func _connect_social_service_signals() -> void:
@@ -119,10 +129,37 @@ func show_panel_on_friends_tab() -> void:
 	_hide_all_drowpdown_highlights()
 	# Switch to friends tab by setting the button pressed (triggers _on_button_friends_toggled)
 	button_friends.button_pressed = true
+	# Retry streaming subscription if it previously failed
+	if _streaming_subscription_failed:
+		_async_retry_streaming_subscription()
 
 
 func hide_panel() -> void:
 	hide()
+
+
+func set_streaming_subscription_failed(failed: bool) -> void:
+	_streaming_subscription_failed = failed
+	_update_dropdown_visibility()
+
+
+func _async_retry_streaming_subscription() -> void:
+	# Try to re-subscribe to streaming updates
+	var promise = Global.social_service.subscribe_to_updates()
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		# Still failing, keep showing error
+		return
+
+	# Subscription succeeded, also try connectivity updates
+	var connectivity_promise = Global.social_service.subscribe_to_connectivity_updates()
+	await PromiseUtils.async_awaiter(connectivity_promise)
+
+	# Clear the error state and refresh lists
+	_streaming_subscription_failed = false
+	update_all_lists()
+	_update_dropdown_visibility()
 
 
 func _hide_all() -> void:
@@ -170,9 +207,11 @@ func _update_dropdown_visibility() -> void:
 	# Check if user is a guest - guests don't have access to friends service
 	var is_guest = Global.player_identity.is_guest
 
-	# Only show service error if we explicitly got an error from the lists
-	# Don't show error just because connection is still being established
-	var has_service_error = not is_guest and (request_list.has_error or online_list.has_error)
+	# Show service error if streaming subscription failed or lists had errors
+	var has_service_error = (
+		not is_guest
+		and (_streaming_subscription_failed or request_list.has_error or online_list.has_error)
+	)
 
 	var pending_count = request_list.list_size
 	var online_count = online_list.list_size
@@ -214,28 +253,13 @@ func _on_load_error(_error_message: String) -> void:
 	_update_dropdown_visibility()
 
 
-func _on_friendship_request_received(address: String, message: String) -> void:
+func _on_friendship_request_received(address: String, _message: String) -> void:
 	# Add the new request to the list without full refresh
 	request_list.async_add_request_by_address(address)
 	# Update dropdown visibility to show new request count
 	_update_dropdown_visibility()
-	# Queue a notification for the friend request
-	_async_queue_friend_request_notification(address, message)
-
-
-func _async_queue_friend_request_notification(address: String, message: String) -> void:
-	# Fetch the sender's profile to get their display name
-	var promise = Global.content_provider.fetch_profile(address)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	var sender_name = address  # Fallback to address if profile fetch fails
-	if not (result is PromiseError):
-		var profile = result as DclUserProfile
-		if profile != null:
-			sender_name = profile.get_name()
-
-	# Queue the notification
-	NotificationsManager.queue_friend_request_notification(address, sender_name, message)
+	# Trigger fetch_notifications to get the server-side notification sooner
+	NotificationsManager.fetch_notifications()
 
 
 func _async_on_friendship_request_accepted(address: String) -> void:
@@ -257,9 +281,9 @@ func _async_on_friendship_request_accepted(address: String) -> void:
 		else:
 			offline_list.add_item_by_social_item_data(item_data, should_load)
 
-		# Only show notification if they accepted OUR request (not us accepting theirs)
+		# Only fetch notifications if they accepted OUR request (not us accepting theirs)
 		if not was_incoming_request:
-			NotificationsManager.queue_friend_accepted_notification(address, item_data.name)
+			NotificationsManager.fetch_notifications()
 
 
 func _on_friendship_request_rejected(address: String) -> void:

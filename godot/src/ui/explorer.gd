@@ -293,6 +293,7 @@ func _async_initialize_social_service() -> void:
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 	# Subscribe to friendship updates (request/accept/reject/etc)
+	var streaming_failed = false
 	var promise = Global.social_service.subscribe_to_updates()
 	await PromiseUtils.async_awaiter(promise)
 
@@ -301,7 +302,7 @@ func _async_initialize_social_service() -> void:
 		push_error(
 			"[Explorer] Failed to subscribe to friendship updates: " + str(error.get_error())
 		)
-		return
+		streaming_failed = true
 
 	# Subscribe to connectivity updates (online/offline/away)
 	# This subscription also sends initial status of all friends
@@ -313,9 +314,13 @@ func _async_initialize_social_service() -> void:
 		push_error(
 			"[Explorer] Failed to subscribe to connectivity updates: " + str(error.get_error())
 		)
-		# Don't return - connectivity is nice-to-have, friendship updates are more critical
+		# Connectivity failure alone doesn't mark streaming as failed
 
-	# Populate friends lists after social service is ready
+	# Notify friends panel if streaming subscription failed (will show error and retry on open)
+	if streaming_failed:
+		friends_panel.set_streaming_subscription_failed(true)
+
+	# Populate friends lists even if streaming failed (one-time fetch still works)
 	friends_panel.update_all_lists()
 
 

@@ -120,7 +120,7 @@ func _set_default_notification_image(_notif_type: String) -> void:
 			image_path = "res://assets/ui/notifications/RewardNotification.png"
 		"governance_announcement", "governance_proposal_enacted", "governance_voting_ended":
 			image_path = "res://assets/ui/notifications/ProposalFinishedNotification.png"
-		"local_friend_request_received", "local_friend_request_accepted":
+		"social_service_friendship_request", "social_service_friendship_accepted":
 			image_path = "res://assets/ui/notifications/FriendNotification.png"
 		_:
 			image_path = "res://assets/ui/notifications/DefaultNotification.png"
@@ -148,11 +148,7 @@ func _set_icon_for_type(notif_type: String) -> void:
 			icon_path = "res://assets/ui/notifications/WorldUnaccessibleNotification.png"
 		"worlds_permission_granted", "worlds_permission_revoked":
 			icon_path = "res://assets/ui/notifications/WorldAccessRestoredNotification.png"
-		"social_service_friendship_request":
-			icon_path = "res://assets/ui/notifications/FriendNotification.png"
-		"local_friend_request_received":
-			icon_path = "res://assets/ui/notifications/FriendNotification.png"
-		"local_friend_request_accepted":
+		"social_service_friendship_request", "social_service_friendship_accepted":
 			icon_path = "res://assets/ui/notifications/FriendNotification.png"
 		"community_invite_received":
 			icon_path = "res://assets/ui/notifications/DefaultNotification.png"
@@ -172,8 +168,6 @@ func _apply_friend_notification_styling(notif_type: String, metadata: Dictionary
 	var friend_notification_types = [
 		"social_service_friendship_request",
 		"social_service_friendship_accepted",
-		"local_friend_request_received",
-		"local_friend_request_accepted",
 	]
 	if notif_type not in friend_notification_types:
 		return
