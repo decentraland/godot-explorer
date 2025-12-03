@@ -372,6 +372,7 @@ func _unset_avatar_loading(current: int):
 			button_mute_user.icon = MUTE
 		else:
 			button_mute_user.icon = UNMUTE
+	_update_friendship_buttons()
 
 
 func async_show_profile(profile: DclUserProfile) -> void:
@@ -1193,8 +1194,9 @@ func _update_friendship_buttons() -> void:
 			button_add_friend.show()
 			button_add_friend.text = "ACCEPT"
 		_:  # NONE, UNKNOWN, or other statuses
-			button_add_friend.show()
-			button_add_friend.text = "ADD FRIEND"
+			if not is_blocked_user:
+				button_add_friend.show()
+				button_add_friend.text = "ADD FRIEND"
 
 
 func _is_social_service_available() -> bool:
