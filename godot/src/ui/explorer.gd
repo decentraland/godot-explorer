@@ -840,13 +840,13 @@ func _show_notification_toast(notification: Dictionary) -> void:
 			var metadata = notification["metadata"]
 			if "sender" in metadata and metadata["sender"] is Dictionary:
 				sender_address = metadata["sender"].get("address", "")
-		
+
 		# Skip showing notification if sender is blocked
 		if not sender_address.is_empty() and Global.social_blacklist.is_blocked(sender_address):
 			# Immediately dequeue this notification and try to show next one
 			NotificationsManager.dequeue_notification()
 			return
-	
+
 	# Create and show toast notification
 	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
 	var toast = toast_scene.instantiate()

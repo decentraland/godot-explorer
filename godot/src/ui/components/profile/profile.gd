@@ -134,9 +134,11 @@ func _ready() -> void:
 		button_unfriend.pressed.connect(_on_button_unfriend_pressed)
 	if not button_block_user.pressed.is_connected(_on_button_block_user_pressed):
 		button_block_user.pressed.connect(_on_button_block_user_pressed)
-	
+
 	# Connect to blacklist changes to update button states
-	if not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed_for_buttons):
+	if not Global.social_blacklist.blacklist_changed.is_connected(
+		_on_blacklist_changed_for_buttons
+	):
 		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_for_buttons)
 
 
@@ -1196,17 +1198,17 @@ func _update_friendship_buttons() -> void:
 	if is_own_passport or not _is_social_service_available():
 		return
 	_hide_friendship_buttons()
-	
+
 	# Check if user is blocked - if blocked, don't show any friendship buttons
 	var current_avatar = avatar_preview_landscape.avatar
 	var is_user_blocked = false
 	if current_avatar != null and not current_avatar.avatar_id.is_empty():
 		is_user_blocked = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-	
+
 	# If user is blocked, hide all friendship buttons
 	if is_user_blocked:
 		return
-	
+
 	match current_friendship_status:
 		Global.FriendshipStatus.ACCEPTED:
 			button_friend.show()

@@ -22,7 +22,7 @@ func _ready():
 		Global.avatars.avatar_added.connect(_on_avatar_added)
 		Global.avatars.avatar_removed.connect(_on_avatar_removed)
 		# Also update when blacklist changes to remove blocked users from nearby list
-		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
+		Global.social_blacklist.blacklist_changed.connect(_async_on_blacklist_changed)
 		# Update nearby items when friendship requests change
 		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
 		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_changed)
@@ -67,7 +67,7 @@ func _on_avatar_removed(address: String) -> void:
 				return
 
 
-func _on_blacklist_changed() -> void:
+func _async_on_blacklist_changed() -> void:
 	# Handle blacklist changes for NEARBY and REQUEST lists
 	if player_list_type != SOCIAL_TYPE.NEARBY and player_list_type != SOCIAL_TYPE.REQUEST:
 		return

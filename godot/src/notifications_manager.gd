@@ -149,11 +149,14 @@ func _filter_notifications(notifications: Array) -> Array:
 						var metadata = notif["metadata"]
 						if "sender" in metadata and metadata["sender"] is Dictionary:
 							sender_address = metadata["sender"].get("address", "")
-					
+
 					# Skip this notification if sender is blocked
-					if not sender_address.is_empty() and Global.social_blacklist.is_blocked(sender_address):
+					if (
+						not sender_address.is_empty()
+						and Global.social_blacklist.is_blocked(sender_address)
+					):
 						continue
-				
+
 				filtered.append(notif)
 
 	return filtered
