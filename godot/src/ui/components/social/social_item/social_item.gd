@@ -44,6 +44,8 @@ func _ready():
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
 		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
+	# Connect to blacklist changes to update button states
+	Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_for_buttons)
 
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
@@ -520,6 +522,11 @@ func shorten_tittle(title: String, max_length: int) -> String:
 
 func _on_blacklist_changed() -> void:
 	# Handle blacklist changes for NEARBY and REQUEST items
+	_update_blocked_visibility_for_type()
+
+
+func _on_blacklist_changed_for_buttons() -> void:
+	# This function is kept for compatibility but now just calls the main visibility update
 	_update_blocked_visibility_for_type()
 
 

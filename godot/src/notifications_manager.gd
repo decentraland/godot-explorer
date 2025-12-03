@@ -141,6 +141,19 @@ func _filter_notifications(notifications: Array) -> Array:
 		if notif is Dictionary and "type" in notif:
 			var notif_type = notif["type"]
 			if notif_type in SUPPORTED_NOTIFICATION_TYPES:
+				# Additional filtering: exclude friend request notifications from blocked users
+				if notif_type == "social_service_friendship_request":
+					# Check if the sender is blocked
+					var sender_address = ""
+					if "metadata" in notif and notif["metadata"] is Dictionary:
+						var metadata = notif["metadata"]
+						if "sender" in metadata and metadata["sender"] is Dictionary:
+							sender_address = metadata["sender"].get("address", "")
+					
+					# Skip this notification if sender is blocked
+					if not sender_address.is_empty() and Global.social_blacklist.is_blocked(sender_address):
+						continue
+				
 				filtered.append(notif)
 
 	return filtered

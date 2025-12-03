@@ -134,6 +134,10 @@ func _ready() -> void:
 		button_unfriend.pressed.connect(_on_button_unfriend_pressed)
 	if not button_block_user.pressed.is_connected(_on_button_block_user_pressed):
 		button_block_user.pressed.connect(_on_button_block_user_pressed)
+	
+	# Connect to blacklist changes to update button states
+	if not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed_for_buttons):
+		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_for_buttons)
 
 
 func _find_option_index(value: String, options_array: Array) -> int:
@@ -895,6 +899,12 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id
 	):
 		call_deferred("_update_buttons")
+
+
+func _on_blacklist_changed_for_buttons() -> void:
+	# Update friendship button disabled states when blacklist changes
+	if not is_own_passport and current_profile != null:
+		call_deferred("_update_friendship_buttons")
 
 
 func _on_button_close_profile_button_up() -> void:
