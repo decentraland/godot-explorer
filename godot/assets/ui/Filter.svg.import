@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/Filter.svg-4bd7d8946af013d7f963205076b283dd.d
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
