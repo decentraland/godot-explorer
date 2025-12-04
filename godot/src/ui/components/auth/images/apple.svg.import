@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/apple.svg-641aec9d79b14fbb47eb0d04902e71d2.dp
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
