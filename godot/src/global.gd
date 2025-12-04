@@ -11,6 +11,7 @@ signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal deep_link_received
+signal delete_account
 
 enum CameraMode {
 	FIRST_PERSON = 0,

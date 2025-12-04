@@ -45,9 +45,11 @@ var fade_out_tween: Tween = null
 @onready var color_rect_landscape_top_safe_area: ColorRect = %ColorRect_Landscape_Top_SafeArea
 @onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
 @onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
+@onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
 
 
 func _ready():
+	account_deletion_pop_up.hide()
 	is_in_game = self != get_tree().current_scene
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -82,6 +84,7 @@ func _ready():
 	button_magic_wallet.visible = false
 
 	Global.deep_link_received.connect(_on_deep_link_received)
+	Global.delete_account.connect(_on_account_delete)
 
 
 func _unhandled_input(event):
@@ -341,3 +344,7 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 
 func _on_deep_link_received() -> void:
 	Global.check_deep_link_teleport_to()
+
+
+func _on_account_delete() -> void:
+	account_deletion_pop_up.start_flow()
