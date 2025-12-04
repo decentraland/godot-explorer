@@ -53,6 +53,7 @@ var _dirty_connected: bool = false
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
 @onready var radio_selector_skybox = %RadioSelector_Skybox
 @onready var radio_selector_shadow = %RadioSelector_Shadow
+@onready var radio_selector_bloom = %RadioSelector_Bloom
 @onready var radio_selector_aa = %RadioSelector_AA
 
 @onready var radio_selector_limit_fps = %RadioSelector_LimitFps
@@ -119,6 +120,7 @@ func refresh_graphic_settings():
 	radio_selector_texture_quality.selected = Global.get_config().texture_quality
 	radio_selector_skybox.selected = Global.get_config().skybox
 	radio_selector_shadow.selected = Global.get_config().shadow_quality
+	radio_selector_bloom.selected = Global.get_config().bloom_quality
 	radio_selector_aa.selected = Global.get_config().anti_aliasing
 
 	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
@@ -325,6 +327,11 @@ func _on_radio_selector_shadow_select_item(index, _item):
 	Global.get_config().save_to_settings_file()
 
 
+func _on_radio_selector_bloom_select_item(index, _item):
+	Global.get_config().bloom_quality = index
+	Global.get_config().save_to_settings_file()
+
+
 # gdlint:ignore = async-function-name
 func _on_radio_selector_windowed_select_item(index, _item):
 	Global.get_config().window_mode = index
@@ -345,16 +352,19 @@ func _on_radio_selector_graphic_profile_select_item(index, _item):
 		0:  # Performance
 			Global.get_config().anti_aliasing = 0  # off
 			Global.get_config().shadow_quality = 0  # disabled
+			Global.get_config().bloom_quality = 0  # off
 			Global.get_config().skybox = 0  # low
 			Global.get_config().texture_quality = 0  # low
 		1:  # Balanced
 			Global.get_config().anti_aliasing = 1  # x2
 			Global.get_config().shadow_quality = 1  # normal
+			Global.get_config().bloom_quality = 1  # low
 			Global.get_config().skybox = 1  # medium
 			Global.get_config().texture_quality = 1  # medium
 		2:  # Quality
 			Global.get_config().anti_aliasing = 3  # x8
 			Global.get_config().shadow_quality = 2  # high quality
+			Global.get_config().bloom_quality = 2  # high
 			Global.get_config().skybox = 2  # high
 			Global.get_config().texture_quality = 2  # high
 		3:  # Custom
