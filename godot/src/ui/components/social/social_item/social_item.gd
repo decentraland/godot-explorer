@@ -356,7 +356,8 @@ func _refresh_friends_button_count() -> void:
 func _on_button_jump_in_pressed() -> void:
 	if parcel.size() >= 2:
 		var parcel_position = Vector2i(parcel[0], parcel[1])
-		Global.teleport_to(parcel_position, "")
+		# Fixed realm to main because we only know our friends positions in Genesis City
+		Global.teleport_to(parcel_position, Realm.MAIN_REALM)
 	else:
 		push_error("Invalid parcel coordinates")
 
