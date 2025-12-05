@@ -26,7 +26,7 @@ corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
 [node name="NotificationItem" type="PanelContainer"]
-custom_minimum_size = Vector2(280, 67)
+custom_minimum_size = Vector2(280, 83)
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
 script = ExtResource("1_notification_item")
@@ -50,27 +50,33 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="ImageContainerWrapper" parent="MarginContainer/HBoxContainer/NotificationContent" index="0"]
-custom_minimum_size = Vector2(45, 45)
+custom_minimum_size = Vector2(50, 50)
 
 [node name="ImageContainer" parent="MarginContainer/HBoxContainer/NotificationContent/ImageContainerWrapper" index="0"]
 theme_override_styles/panel = SubResource("StyleBoxFlat_item_image")
 
+[node name="VBoxContainer" parent="MarginContainer/HBoxContainer/NotificationContent" index="1"]
+size_flags_vertical = 4
+
 [node name="LabelTitle" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="0"]
 custom_minimum_size = Vector2(0, 0)
-theme_override_font_sizes/normal_font_size = 12
-theme_override_font_sizes/bold_font_size = 12
-theme_override_font_sizes/bold_italics_font_size = 12
-theme_override_font_sizes/italics_font_size = 12
+size_flags_vertical = 1
+theme_override_font_sizes/normal_font_size = 14
+theme_override_font_sizes/bold_font_size = 14
+theme_override_font_sizes/bold_italics_font_size = 14
+theme_override_font_sizes/italics_font_size = 14
+theme_override_font_sizes/mono_font_size = 14
 fit_content = true
 
 [node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="1"]
 clip_contents = false
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 2
-theme_override_font_sizes/normal_font_size = 11
-theme_override_font_sizes/bold_font_size = 11
-theme_override_font_sizes/bold_italics_font_size = 11
-theme_override_font_sizes/italics_font_size = 11
+theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/bold_font_size = 13
+theme_override_font_sizes/bold_italics_font_size = 13
+theme_override_font_sizes/italics_font_size = 13
+theme_override_font_sizes/mono_font_size = 13
 fit_content = true
 
 [node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2"]
@@ -78,10 +84,11 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/default_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/normal_font_size = 10
-theme_override_font_sizes/bold_font_size = 10
-theme_override_font_sizes/bold_italics_font_size = 10
-theme_override_font_sizes/italics_font_size = 10
+theme_override_font_sizes/normal_font_size = 12
+theme_override_font_sizes/bold_font_size = 12
+theme_override_font_sizes/bold_italics_font_size = 12
+theme_override_font_sizes/italics_font_size = 12
+theme_override_font_sizes/mono_font_size = 12
 bbcode_enabled = true
 text = "[b]5m ago[/b]"
 fit_content = true

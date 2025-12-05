@@ -1,6 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://cw8x2h5p3y6kn"]
+[gd_scene load_steps=13 format=3 uid="uid://cw8x2h5p3y6kn"]
 
 [ext_resource type="Script" uid="uid://cccx1ovxbd1xc" path="res://src/ui/components/notifications/notifications_panel.gd" id="1_notifications_panel"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_oy6x2"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_ap3ic"]
+[ext_resource type="Texture2D" uid="uid://bpq2p8ej3umfx" path="res://assets/ui/unsubscribe.svg" id="4_ap3ic"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
 bg_color = Color(0, 0, 0, 0.8)
@@ -9,8 +12,24 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
+[sub_resource type="LabelSettings" id="LabelSettings_6tk6y"]
+font = ExtResource("2_oy6x2")
+font_size = 14
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
 bg_color = Color(0, 0, 0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.988235, 0.988235, 0.988235, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oy6x2"]
+bg_color = Color(0.096204735, 0.09620475, 0.096204735, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
@@ -28,6 +47,22 @@ colors = PackedColorArray(0.086275, 0.0823529, 0.0941176, 0, 0.086275, 0.0823529
 gradient = SubResource("Gradient_fade")
 fill_from = Vector2(0.5, 0)
 fill_to = Vector2(0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6tk6y"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_wd782"]
+font = ExtResource("3_ap3ic")
+font_size = 14
 
 [node name="NotificationsPanel" type="PanelContainer"]
 clip_contents = true
@@ -50,33 +85,25 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Header"]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="Label_Title" type="RichTextLabel" parent="MarginContainer/VBoxContainer/Header/VBoxContainer"]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/normal_font_size = 16
-bbcode_enabled = true
-text = "[b]NOTIFICATIONS[/b]"
-fit_content = true
-scroll_active = false
-vertical_alignment = 2
+text = "NOTIFICATIONS"
+label_settings = SubResource("LabelSettings_6tk6y")
 
 [node name="ButtonMarkAllRead" type="Button" parent="MarginContainer/VBoxContainer/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_font_sizes/font_size = 8
+theme_override_fonts/font = ExtResource("3_ap3ic")
+theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_oy6x2")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 text = "READ ALL"
 
@@ -108,15 +135,47 @@ grow_vertical = 0
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_fade")
 
-[node name="LabelEmptyState" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_NoNotifications" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/VBoxContainer/VBoxContainer_NoNotifications"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_6tk6y")
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/VBoxContainer_NoNotifications/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/VBoxContainer_NoNotifications/PanelContainer/MarginContainer"]
+layout_mode = 2
+texture = ExtResource("4_ap3ic")
+expand_mode = 4
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer_NoNotifications"]
+layout_mode = 2
+text = "No notifications yet"
+label_settings = SubResource("LabelSettings_wd782")
+horizontal_alignment = 1
+
+[node name="Label_NoNotifications" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer_NoNotifications"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "No notifications yet.
-Check back later for updates!"
+text = "Check back later for updates!"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
