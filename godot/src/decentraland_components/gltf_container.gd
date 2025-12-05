@@ -229,33 +229,42 @@ func fix_material(mat: BaseMaterial3D):
 
 func set_emission_params(mat: BaseMaterial3D):
 	var ios_workarounds = OS.get_name() == "iOS"
-	var base_energy_multiplier = 1.0 if !ios_workarounds else .15
+	var base_energy_multiplier = 1.0 if !ios_workarounds else 0.15
 
-	if mat.resource_name.contains("_emission"):
-		mat.emission_energy_multiplier = 1.0 * base_energy_multiplier
+	var has_emission_color = mat.emission != Color.BLACK
+	var has_emission_texture = mat.emission_texture != null
+	var albedo_equals_emission = mat.albedo_texture and mat.emission_texture and mat.albedo_texture == mat.emission_texture
+
+	# Case 1: Has non-black emission color - enable emission
+	if has_emission_color:
 		mat.emission_enabled = true
+		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
+		if has_emission_texture:
+			mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+		else:
+			mat.emission_operator = BaseMaterial3D.EMISSION_OP_ADD
 		return
 
-	if (
-		mat.albedo_texture
-		and mat.albedo_texture == mat.emission_texture
-		and mat.emission == Color.BLACK
-	):
-		mat.emission_enabled = false
-		return
-
-	if !mat.albedo_texture and !mat.emission_texture and mat.emission != Color.BLACK:
-		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 1.0 * base_energy_multiplier
-		mat.emission_operator = BaseMaterial3D.EMISSION_OP_ADD
-		return
-
-	if mat.albedo_texture and mat.emission_texture and mat.emission == Color.BLACK:
+	# Case 2: Has dedicated emission texture (different from albedo)
+	# This is a real emission texture, enable it with WHITE color for MULTIPLY
+	if has_emission_texture and not albedo_equals_emission:
 		mat.emission_enabled = true
 		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
 		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
 		mat.emission = Color.WHITE
 		return
+
+	# Case 3: Material explicitly named as emission (e.g., "kawaii_palettes_emission")
+	# These intentionally use albedo as emission texture for a "glow" effect
+	if mat.resource_name.to_lower().contains("_emission"):
+		mat.emission_enabled = true
+		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
+		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+		mat.emission = Color.WHITE
+		return
+
+	# Case 4: No valid emission indicators - disable emission
+	mat.emission_enabled = false
 
 
 func async_deferred_add_child():
