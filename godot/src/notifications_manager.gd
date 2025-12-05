@@ -36,6 +36,8 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 	"events_started",  # Events: Event has started
 	"reward_assignment",  # Rewards: Reward assigned/received
 	"reward_in_progress",  # Rewards: Reward being processed
+	"social_service_friendship_request",  # Friends: Friend request received (server notification)
+	"social_service_friendship_accepted",  # Friends: Friend request accepted (server notification)
 ]
 
 # Queue management constants (Phase 3)
@@ -139,6 +141,22 @@ func _filter_notifications(notifications: Array) -> Array:
 		if notif is Dictionary and "type" in notif:
 			var notif_type = notif["type"]
 			if notif_type in SUPPORTED_NOTIFICATION_TYPES:
+				# Additional filtering: exclude friend request notifications from blocked users
+				if notif_type == "social_service_friendship_request":
+					# Check if the sender is blocked
+					var sender_address = ""
+					if "metadata" in notif and notif["metadata"] is Dictionary:
+						var metadata = notif["metadata"]
+						if "sender" in metadata and metadata["sender"] is Dictionary:
+							sender_address = metadata["sender"].get("address", "")
+
+					# Skip this notification if sender is blocked
+					if (
+						not sender_address.is_empty()
+						and Global.social_blacklist.is_blocked(sender_address)
+					):
+						continue
+
 				filtered.append(notif)
 
 	return filtered
@@ -411,6 +429,14 @@ func resume_queue(emit_next: bool = false) -> void:
 	# Only emit if explicitly requested (for when toast is dismissed)
 	if emit_next and _notification_queue.size() > 0:
 		notification_queued.emit(_notification_queue[0])
+
+
+## Check if user is authenticated (not a guest)
+func _is_user_authenticated() -> bool:
+	if not Global.player_identity:
+		return false
+	var address = Global.player_identity.get_address_str()
+	return not address.is_empty()
 
 
 ## DEBUG: Start the debug timer with a random interval between 7-10 seconds

@@ -69,9 +69,6 @@ func _ready():
 
 		# Parcel data texture will be generated after parcels are loaded
 
-	# Initialize global uniforms
-	RenderingServer.global_shader_parameter_set("current_parcel_origin", Vector2(0.0, 0.0))
-
 	# Hardcoded scene radius 0
 	var scene_radius = 0
 	scene_entity_coordinator.set_scene_radius(scene_radius)

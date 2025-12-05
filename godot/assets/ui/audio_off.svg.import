@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/audio_off.svg-0685c591d6ae730e30185f28de90b5c
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

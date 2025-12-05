@@ -16,6 +16,17 @@ static func rejected(reason: String) -> Promise:
 	return promise
 
 
+static func get_error_message(promise: Promise) -> String:
+	if promise == null:
+		return "Promise is null"
+	if not promise.is_rejected():
+		return ""
+	var data = promise.get_data()
+	if data != null and data.has_method("get_error"):
+		return data.get_error()
+	return "Unknown error"
+
+
 static func async_awaiter(promise: Promise) -> Variant:
 	if promise == null:
 		printerr("try to await a null promise")

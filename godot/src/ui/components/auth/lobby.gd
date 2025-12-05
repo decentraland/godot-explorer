@@ -261,6 +261,9 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 	Global.get_config().save_to_settings_file()
 
+	# Note: Social service initialization moved to explorer.gd to ensure it completes
+	# before the Friends panel is used (lobby scene transitions before it finishes)
+
 
 func _on_button_different_account_pressed():
 	Global.metrics.update_identity("unauthenticated", false)

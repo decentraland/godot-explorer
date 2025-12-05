@@ -10,9 +10,10 @@ var _notification_items: Array[Control] = []
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
-@onready var label_empty_state: Label = %LabelEmptyState
 @onready var button_mark_all_read: Button = %ButtonMarkAllRead
 @onready var fade_overlay: TextureRect = %FadeOverlay
+@onready var v_box_container_no_notifications: VBoxContainer = %VBoxContainer_NoNotifications
+@onready var label_no_notifications: Label = %Label_NoNotifications
 
 
 func _ready() -> void:
@@ -71,13 +72,13 @@ func async_display_notifications(notifications: Array) -> void:
 
 	# Show empty state if no notifications
 	if notifications.size() == 0:
-		label_empty_state.visible = true
+		v_box_container_no_notifications.visible = true
 		scroll_container.visible = false
 		button_mark_all_read.visible = false
 		fade_overlay.visible = false
 		return
 
-	label_empty_state.visible = false
+	v_box_container_no_notifications.visible = false
 	scroll_container.visible = true
 
 	# Count unread notifications
@@ -179,8 +180,8 @@ func _show_guest_message() -> void:
 	fade_overlay.visible = false
 
 	# Show custom message for guests
-	label_empty_state.visible = true
-	label_empty_state.text = "Sign in to get notifications!"
+	v_box_container_no_notifications.visible = true
+	label_no_notifications.text = "Sign in to get notifications!"
 
 
 func _update_gradient_visibility() -> void:

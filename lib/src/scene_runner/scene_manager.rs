@@ -1226,10 +1226,12 @@ impl INode for SceneManager {
                             };
 
                             if ui_has_focus {
-                                // Emit open_profile signal on the Global singleton
+                                // Emit open_profile_by_avatar signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
-                                    global
-                                        .emit_signal("open_profile".into(), &[avatar.to_variant()]);
+                                    global.emit_signal(
+                                        "open_profile_by_avatar".into(),
+                                        &[avatar.to_variant()],
+                                    );
                                 }
                             }
                         }

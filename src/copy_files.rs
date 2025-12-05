@@ -44,8 +44,21 @@ pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
     Ok(())
 }
 
-pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Error> {
-    let mode = if debug_mode { "debug" } else { "release" };
+/// Copy the built library to the appropriate output folder.
+///
+/// The `profile` parameter should be one of: "dev", "dev-release", or "release".
+/// Cargo outputs to different folders based on the profile:
+/// - "dev" -> target/debug/
+/// - "dev-release" -> target/dev-release/
+/// - "release" -> target/release/
+pub fn copy_library(target: &String, profile: &str) -> Result<(), anyhow::Error> {
+    // Map profile to cargo output folder name
+    let mode = match profile {
+        "dev" => "debug",
+        "release" => "release",
+        "dev-release" => "dev-release",
+        _ => return Err(anyhow::anyhow!("Unknown profile: {}", profile)),
+    };
 
     match target.as_str() {
         "ios" => {
@@ -110,8 +123,8 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 )
             })?;
 
-            // If on Windows and debug mode, also copy PDB
-            if debug_mode && target == "win64" {
+            // If on Windows and dev profile, also copy PDB
+            if profile == "dev" && target == "win64" {
                 let pdb_name = "dclgodot.pdb";
                 let pdb_source = adjust_canonicalization(
                     std::fs::canonicalize(&source_folder)

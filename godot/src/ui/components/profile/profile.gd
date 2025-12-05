@@ -19,6 +19,7 @@ var is_own_passport: bool = false
 var is_blocked_user: bool = false
 var is_muted_user: bool = false
 var current_profile: DclUserProfile = null
+var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var address: String = ""
 var original_country_index: int = 0
 var original_language_index: int = 0
@@ -73,7 +74,6 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var button_edit_nick: Button = %Button_EditNick
 @onready var button_add_friend: Button = %Button_AddFriend
 @onready var button_block_user: Button = %Button_BlockUser
-@onready var button_send_dm: Button = %Button_SendDM
 @onready var label_no_intro: Label = %Label_NoIntro
 @onready var button_claim_name: Button = %Button_ClaimName
 @onready var url_popup: ColorRect = %UrlPopup
@@ -81,16 +81,24 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var change_nick_popup: ColorRect = %ChangeNickPopup
 @onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
-@onready var v_box_container_name_and_address: VBoxContainer = %VBoxContainer_NameAndAddress
 @onready var button_mute_user: Button = %Button_MuteUser
 @onready var control_avatar: Control = %Control_Avatar
 @onready var button_close_profile: Button = %Button_CloseProfile
+@onready var button_menu: Button = %Button_Menu
+@onready var button_cancel_request: Button = %Button_CancelRequest
+@onready var button_friend: Button = %Button_Friend
+@onready var button_unfriend: Button = %Button_Unfriend
+@onready var menu: ColorRect = %Menu
+@onready var mutual_friends: Control = %MutualFriends
+@onready var profile_header: VBoxContainer = %ProfileHeader
 
 
 func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
+	button_menu.button_pressed = false
+	menu.hide()
 
 	if rounded:
 		var current_style = get_theme_stylebox("panel")
@@ -116,6 +124,22 @@ func _ready() -> void:
 	_populate_about_fields()
 	_update_elements_visibility()
 	add_to_group("blacklist_ui_sync")
+
+	# Connect friendship buttons
+	if not button_add_friend.pressed.is_connected(_on_button_add_friend_pressed):
+		button_add_friend.pressed.connect(_on_button_add_friend_pressed)
+	if not button_cancel_request.pressed.is_connected(_on_button_cancel_request_pressed):
+		button_cancel_request.pressed.connect(_on_button_cancel_request_pressed)
+	if not button_unfriend.pressed.is_connected(_on_button_unfriend_pressed):
+		button_unfriend.pressed.connect(_on_button_unfriend_pressed)
+	if not button_block_user.pressed.is_connected(_on_button_block_user_pressed):
+		button_block_user.pressed.connect(_on_button_block_user_pressed)
+
+	# Connect to blacklist changes to update button states
+	if not Global.social_blacklist.blacklist_changed.is_connected(
+		_on_blacklist_changed_for_buttons
+	):
+		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_for_buttons)
 
 
 func _find_option_index(value: String, options_array: Array) -> int:
@@ -252,12 +276,23 @@ func _async_save_profile_changes() -> void:
 
 
 func _update_elements_visibility() -> void:
+	# Hide all friendship buttons by default - they will be shown by _update_friendship_buttons()
+	button_add_friend.hide()
+	button_cancel_request.hide()
+	button_friend.hide()
+	button_unfriend.hide()
 	url_popup.close()
 	change_nick_popup.close()
 	profile_new_link_popup.close()
+	menu.hide()
 	if is_own_passport:
 		button_block_user.hide()
 		button_mute_user.hide()
+		button_cancel_request.hide()
+		button_friend.hide()
+		button_menu.hide()
+		button_add_friend.hide()
+		button_unfriend.hide()
 		button_edit_about.show()
 		button_edit_links.show()
 		button_edit_nick.show()
@@ -273,6 +308,8 @@ func _update_elements_visibility() -> void:
 		button_edit_links.hide()
 		button_edit_nick.hide()
 		button_claim_name.hide()
+		button_menu.show()
+
 	if current_profile != null:
 		if current_profile.has_claimed_name():
 			texture_rect_claimed_checkmark.show()
@@ -292,7 +329,7 @@ func _update_elements_visibility() -> void:
 
 func _set_avatar_loading() -> int:
 	panel_container_getting_data.show()
-	v_box_container_name_and_address.hide()
+	profile_header.hide()
 	v_box_container_content.hide()
 	button_edit_about.hide()
 	button_edit_links.hide()
@@ -308,7 +345,7 @@ func _unset_avatar_loading(current: int):
 	avatar_preview_portrait.show()
 	avatar_preview_landscape.show()
 	panel_container_getting_data.hide()
-	v_box_container_name_and_address.show()
+	profile_header.show()
 	v_box_container_content.show()
 	_on_stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
@@ -316,11 +353,39 @@ func _unset_avatar_loading(current: int):
 	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
 		avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
 	_update_elements_visibility()
-	_update_buttons()
+	# Only update buttons for block/mute, not friendship buttons yet
+	# Friendship buttons will be updated after _async_check_friendship_status() completes
+	if is_own_passport:
+		_update_buttons()
+	else:
+		# Update only block/mute buttons, not friendship buttons
+		var current_avatar = avatar_preview_landscape.avatar
+		is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+		if is_blocked_user:
+			button_block_user.icon = null
+			button_block_user.text = "UNBLOCK"
+			button_block_user.custom_minimum_size.x = 86
+			button_mute_user.hide()
+		else:
+			button_block_user.icon = BLOCK
+			button_block_user.custom_minimum_size.x = 38
+			button_block_user.text = "BLOCK"
+			button_mute_user.show()
+
+		is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
+		button_mute_user.set_pressed_no_signal(is_muted_user)
+		if is_muted_user:
+			button_mute_user.icon = MUTE
+		else:
+			button_mute_user.icon = UNMUTE
+	_update_friendship_buttons()
 
 
 func async_show_profile(profile: DclUserProfile) -> void:
+	_hide_all_social_buttons()
 	current_profile = profile
+	# Reset friendship status to ensure buttons don't show with old state
+	current_friendship_status = Global.FriendshipStatus.UNKNOWN
 	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(current_profile)
 	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(current_profile)
 
@@ -341,6 +406,12 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	url_popup.close()
 
 	_unset_avatar_loading(loading_id)
+
+	if not is_own_passport:
+		_connect_friendship_signals()
+		# Wait for friendship status check before showing buttons
+		await _async_check_friendship_status()
+		mutual_friends.async_set_mutual_friends(profile.get_ethereum_address())
 
 	if is_own_passport:
 		var mutable := ProfileHelper.get_mutable_profile()
@@ -460,10 +531,12 @@ func _on_button_copy_address_pressed() -> void:
 
 func close() -> void:
 	hide()
+	_hide_all_social_buttons()
 	_on_stop_emote()
 	_on_reset_avatars_rotation()
 	_turn_links_editing(false)
 	_turn_about_editing(false)
+	_disconnect_friendship_signals()
 	if closable:
 		close_profile.emit()
 
@@ -544,9 +617,7 @@ func _refresh_name_and_address() -> void:
 	label_address.text = Global.shorten_address(address)
 
 	label_nickname.text = current_profile.get_name()
-	var nickname_color = avatar_preview_landscape.avatar.get_nickname_color(
-		current_profile.get_name()
-	)
+	var nickname_color = DclAvatar.get_nickname_color(current_profile.get_name())
 	label_nickname.add_theme_color_override("font_color", nickname_color)
 
 
@@ -785,7 +856,7 @@ func _update_buttons() -> void:
 	else:
 		button_block_user.icon = BLOCK
 		button_block_user.custom_minimum_size.x = 38
-		button_block_user.text = ""
+		button_block_user.text = "BLOCK"
 		button_mute_user.show()
 
 	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
@@ -795,6 +866,11 @@ func _update_buttons() -> void:
 	else:
 		button_mute_user.icon = UNMUTE
 
+	# Update friendship buttons based on status (only if status has been checked)
+	# Don't update if status is still UNKNOWN and we haven't verified it yet
+	if current_friendship_status != Global.FriendshipStatus.UNKNOWN or is_own_passport:
+		_update_friendship_buttons()
+
 
 func _on_button_block_user_pressed() -> void:
 	var current_avatar = avatar_preview_landscape.avatar
@@ -803,8 +879,11 @@ func _on_button_block_user_pressed() -> void:
 		Global.social_blacklist.remove_blocked(current_avatar.avatar_id)
 	else:
 		Global.social_blacklist.add_blocked(current_avatar.avatar_id)
+		# When blocking, also delete friendship if it exists
+		_async_delete_friendship_if_exists(current_avatar.avatar_id)
 	_update_buttons()
 	_notify_other_components_of_change()
+	button_menu.button_pressed = false
 
 
 func _notify_other_components_of_change() -> void:
@@ -824,6 +903,12 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 		call_deferred("_update_buttons")
 
 
+func _on_blacklist_changed_for_buttons() -> void:
+	# Update friendship button disabled states when blacklist changes
+	if not is_own_passport and current_profile != null:
+		call_deferred("_update_friendship_buttons")
+
+
 func _on_button_close_profile_button_up() -> void:
 	close()
 
@@ -831,3 +916,343 @@ func _on_button_close_profile_button_up() -> void:
 func _on_visibility_changed() -> void:
 	if visible:
 		grab_focus()
+
+
+func _async_delete_friendship_if_exists(friend_address: String) -> void:
+	# Check if there's an active friendship or pending request
+	var promise = Global.social_service.get_friendship_status(friend_address)
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		# On error, skip deletion
+		return
+
+	var status_data = promise.get_data()
+	var status = status_data.get("status", -1)
+
+	var action_promise = null
+
+	# Handle different relationship statuses
+	match status:
+		Global.FriendshipStatus.REQUEST_SENT:
+			action_promise = Global.social_service.cancel_friend_request(friend_address)
+		Global.FriendshipStatus.REQUEST_RECEIVED:
+			action_promise = Global.social_service.reject_friend_request(friend_address)
+		Global.FriendshipStatus.ACCEPTED:
+			action_promise = Global.social_service.delete_friendship(friend_address)
+		_:  # No relationship or other status, nothing to do
+			return
+
+	if action_promise != null:
+		await PromiseUtils.async_awaiter(action_promise)
+
+		if action_promise.is_rejected():
+			printerr(
+				"Failed to remove relationship when blocking: ",
+				action_promise.get_data().get_error()
+			)
+		_async_update_buttons_and_lists()
+
+
+func _get_friends_panel():
+	var parent = get_parent()
+	while parent != null:
+		if parent.has_method("update_all_lists") and parent.has_method("is_friend_online"):
+			print("Profile: Found friends panel in parent tree")
+			return parent
+		parent = parent.get_parent()
+	var scene_tree = get_tree()
+	if scene_tree == null:
+		return null
+	var friends_panel = _find_friends_panel_recursive(scene_tree.root)
+	if friends_panel != null:
+		print("Profile: Found friends panel in scene tree")
+	return friends_panel
+
+
+func _find_friends_panel_recursive(node: Node) -> Node:
+	if node == null:
+		return null
+	if node.has_method("update_all_lists") and node.has_method("is_friend_online"):
+		return node
+	for child in node.get_children():
+		var result = _find_friends_panel_recursive(child)
+		if result != null:
+			return result
+	return null
+
+
+func _force_update_all_social_lists() -> void:
+	var scene_tree = get_tree()
+	if scene_tree == null:
+		return
+	_force_update_social_lists_recursive(scene_tree.root)
+
+
+func _force_update_social_lists_recursive(node: Node) -> void:
+	if node == null:
+		return
+	if node.has_method("async_update_list") and "player_list_type" in node:
+		var list_type = node.get("player_list_type")
+		if list_type in [0, 1, 2, 3]:
+			node.call_deferred("async_update_list")
+	for child in node.get_children():
+		_force_update_social_lists_recursive(child)
+
+
+func _on_button_menu_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		menu.show()
+	else:
+		menu.hide()
+
+
+func _connect_friendship_signals() -> void:
+	if is_own_passport:
+		return
+
+	# Connect to friendship status change signals
+	if not Global.social_service.friendship_request_received.is_connected(
+		_on_friendship_request_received
+	):
+		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
+	if not Global.social_service.friendship_request_accepted.is_connected(
+		_on_friendship_request_accepted
+	):
+		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_accepted)
+	if not Global.social_service.friendship_request_rejected.is_connected(
+		_on_friendship_request_rejected
+	):
+		Global.social_service.friendship_request_rejected.connect(_on_friendship_request_rejected)
+	if not Global.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
+		Global.social_service.friendship_deleted.connect(_on_friendship_deleted)
+	if not Global.social_service.friendship_request_cancelled.is_connected(
+		_on_friendship_request_cancelled
+	):
+		Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_cancelled)
+
+
+func _disconnect_friendship_signals() -> void:
+	# Disconnect all friendship signals
+	if Global.social_service.friendship_request_received.is_connected(
+		_on_friendship_request_received
+	):
+		Global.social_service.friendship_request_received.disconnect(
+			_on_friendship_request_received
+		)
+	if Global.social_service.friendship_request_accepted.is_connected(
+		_on_friendship_request_accepted
+	):
+		Global.social_service.friendship_request_accepted.disconnect(
+			_on_friendship_request_accepted
+		)
+	if Global.social_service.friendship_request_rejected.is_connected(
+		_on_friendship_request_rejected
+	):
+		Global.social_service.friendship_request_rejected.disconnect(
+			_on_friendship_request_rejected
+		)
+	if Global.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
+		Global.social_service.friendship_deleted.disconnect(_on_friendship_deleted)
+	if Global.social_service.friendship_request_cancelled.is_connected(
+		_on_friendship_request_cancelled
+	):
+		Global.social_service.friendship_request_cancelled.disconnect(
+			_on_friendship_request_cancelled
+		)
+
+
+func _on_friendship_request_received(friend_address: String, _message: String = "") -> void:
+	_handle_friendship_change(friend_address)
+
+
+func _on_friendship_request_accepted(friend_address: String) -> void:
+	_handle_friendship_change(friend_address)
+
+
+func _on_friendship_request_rejected(friend_address: String) -> void:
+	_handle_friendship_change(friend_address)
+
+
+func _on_friendship_deleted(friend_address: String) -> void:
+	print("Profile: _on_friendship_deleted called for address: ", friend_address)
+	_handle_friendship_change(friend_address, true)
+
+
+func _on_friendship_request_cancelled(friend_address: String) -> void:
+	_handle_friendship_change(friend_address)
+
+
+func _handle_friendship_change(friend_address: String, is_deleted: bool = false) -> void:
+	if current_profile == null or current_profile.get_ethereum_address() != friend_address:
+		return
+	if is_deleted:
+		print("Profile: Updating buttons and lists after friendship deleted")
+	_async_update_buttons_and_lists()
+
+
+func _on_button_cancel_request_pressed() -> void:
+	if is_own_passport or current_profile == null:
+		return
+
+	var friend_address = current_profile.get_ethereum_address()
+	_async_cancel_friend_request(friend_address)
+
+
+func _async_cancel_friend_request(friend_address: String) -> void:
+	var promise = Global.social_service.cancel_friend_request(friend_address)
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		printerr("Failed to cancel friend request: ", promise.get_data().get_error())
+		return
+
+	_async_update_buttons_and_lists()
+
+
+func _on_button_unfriend_pressed() -> void:
+	if is_own_passport or current_profile == null:
+		return
+	button_menu.button_pressed = false
+	var friend_address = current_profile.get_ethereum_address()
+	_async_unfriend(friend_address)
+
+
+func _async_unfriend(friend_address: String) -> void:
+	print("Profile: _async_unfriend called for address: ", friend_address)
+	var promise = Global.social_service.delete_friendship(friend_address)
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		printerr("Failed to unfriend: ", promise.get_data().get_error())
+		return
+
+	print("Profile: Unfriend successful, waiting for signal to update lists")
+	# The signal friendship_deleted will update the UI
+	# But also update immediately to ensure UI is responsive
+	_async_update_buttons_and_lists()
+
+
+func _on_button_add_friend_pressed() -> void:
+	if is_own_passport or current_profile == null:
+		return
+	var friend_address = current_profile.get_ethereum_address()
+	if current_friendship_status == Global.FriendshipStatus.REQUEST_RECEIVED:
+		_async_accept_friend_request(friend_address)
+	else:
+		_async_send_friend_request(friend_address)
+
+
+func _async_send_friend_request(friend_address: String) -> void:
+	button_add_friend.disabled = true
+	var promise = Global.social_service.send_friend_request(friend_address, "")
+	await PromiseUtils.async_awaiter(promise)
+	button_add_friend.disabled = false
+	if promise.is_rejected():
+		printerr("Failed to send friend request: ", promise.get_data().get_error())
+		return
+	_async_update_buttons_and_lists()
+
+
+func _async_accept_friend_request(friend_address: String) -> void:
+	button_add_friend.disabled = true
+	var promise = Global.social_service.accept_friend_request(friend_address)
+	await PromiseUtils.async_awaiter(promise)
+	button_add_friend.disabled = false
+	if promise.is_rejected():
+		printerr("Failed to accept friend request: ", promise.get_data().get_error())
+		return
+	_async_update_buttons_and_lists()
+
+
+func _async_check_friendship_status() -> void:
+	if is_own_passport or current_profile == null:
+		return
+
+	# Check if social service is available before making the call
+	if not _is_social_service_available():
+		current_friendship_status = Global.FriendshipStatus.UNKNOWN
+		_update_friendship_buttons()
+		return
+
+	var friend_address = current_profile.get_ethereum_address()
+	print("Profile: Checking friendship status for address: ", friend_address)
+	var promise = Global.social_service.get_friendship_status(friend_address)
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		# On error, service might not be available or there was an error
+		# Hide all friendship buttons
+		print("Profile: Friendship status check failed: ", promise.get_data().get_error())
+		current_friendship_status = Global.FriendshipStatus.UNKNOWN
+		_update_friendship_buttons()
+		return
+
+	var status_data = promise.get_data()
+	current_friendship_status = status_data.get("status", Global.FriendshipStatus.UNKNOWN)
+	print("Profile: Friendship status result: ", current_friendship_status)
+	_update_friendship_buttons()
+
+
+func _update_friendship_buttons() -> void:
+	if is_own_passport or not _is_social_service_available():
+		return
+	_hide_friendship_buttons()
+
+	# Guest users cannot have social interactions
+	if Global.player_identity.is_guest:
+		return
+
+	# Check if target user is a guest (hasn't connected web3)
+	if current_profile != null and not current_profile.has_connected_web3():
+		return
+
+	# Check if user is blocked - if blocked, don't show any friendship buttons
+	var current_avatar = avatar_preview_landscape.avatar
+	var is_user_blocked = false
+	if current_avatar != null and not current_avatar.avatar_id.is_empty():
+		is_user_blocked = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+
+	# If user is blocked, hide all friendship buttons
+	if is_user_blocked:
+		return
+
+	match current_friendship_status:
+		Global.FriendshipStatus.ACCEPTED:
+			button_friend.show()
+			button_friend.button_pressed = true
+			button_unfriend.show()
+		Global.FriendshipStatus.REQUEST_SENT:
+			button_cancel_request.show()
+		Global.FriendshipStatus.REQUEST_RECEIVED:
+			button_add_friend.show()
+			button_add_friend.text = "ACCEPT"
+		_:  # NONE, UNKNOWN, or other statuses
+			if not is_blocked_user:
+				button_add_friend.show()
+				button_add_friend.text = "ADD FRIEND"
+
+
+func _is_social_service_available() -> bool:
+	return Global.social_service != null
+
+
+func _async_update_buttons_and_lists():
+	await _async_check_friendship_status()
+	var friends_panel = _get_friends_panel()
+	if friends_panel != null and friends_panel.has_method("update_all_lists"):
+		friends_panel.update_all_lists()
+	else:
+		_force_update_all_social_lists()
+
+
+func _hide_all_social_buttons() -> void:
+	_hide_friendship_buttons()
+	mutual_friends.hide()
+
+
+func _hide_friendship_buttons() -> void:
+	button_add_friend.hide()
+	button_cancel_request.hide()
+	button_friend.hide()
+	button_unfriend.hide()

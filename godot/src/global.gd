@@ -5,7 +5,8 @@ signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
-signal open_profile(avatar: DclAvatar)
+signal open_profile_by_avatar(avatar: DclAvatar)
+signal open_profile_by_address(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
@@ -16,6 +17,17 @@ enum CameraMode {
 	FIRST_PERSON = 0,
 	THIRD_PERSON = 1,
 	CINEMATIC = 2,
+}
+
+enum FriendshipStatus {
+	UNKNOWN = -1,
+	REQUEST_SENT = 0,
+	REQUEST_RECEIVED = 1,
+	CANCELED = 2,
+	ACCEPTED = 3,
+	REJECTED = 4,
+	DELETED = 5,
+	NONE = 7
 }
 
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
@@ -40,6 +52,8 @@ var nft_frame_loader: NftFrameStyleLoader
 var music_player: MusicPlayer
 
 var preload_assets: PreloadAssets
+
+var locations: Node
 
 var standalone = false
 
@@ -167,10 +181,14 @@ func _ready():
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
 
+	self.locations = load("res://src/helpers_components/locations.gd").new()
+	self.locations.set_name("locations")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
+	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 10
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+      PROTOC: ${{ github.workspace }}/.bin/protoc/bin/protoc
     steps:
       - uses: actions/checkout@v4
 

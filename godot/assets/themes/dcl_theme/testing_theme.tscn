@@ -4,11 +4,11 @@
 [ext_resource type="StyleBox" uid="uid://cvd354aiai815" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed.tres" id="2_k4dph"]
 [ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="3_yh6su"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_k4dph"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6uexn"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yh6su"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6uexn"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_k4dph"]
 
 [node name="TestingTheme" type="Control"]
 layout_mode = 3
@@ -96,24 +96,24 @@ size_flags_vertical = 3
 focus_mode = 0
 theme = ExtResource("1_q0jet")
 theme_type_variation = &"SnowOutlinedToggleButton"
-theme_override_colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_hover_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_hover_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(1, 0.176471, 0.333333, 1)
 theme_override_colors/font_color = Color(1, 0.176471, 0.333333, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_hover_color = Color(1, 0.176471, 0.333333, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(1, 0.176471, 0.333333, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_hover_color = Color(1, 0.176471, 0.333333, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 19
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_k4dph")
-theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_yh6su")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_6uexn")
-theme_override_styles/hover = ExtResource("2_k4dph")
-theme_override_styles/pressed_mirrored = ExtResource("2_k4dph")
-theme_override_styles/pressed = ExtResource("3_yh6su")
-theme_override_styles/normal_mirrored = ExtResource("3_yh6su")
 theme_override_styles/normal = ExtResource("2_k4dph")
+theme_override_styles/normal_mirrored = ExtResource("3_yh6su")
+theme_override_styles/pressed = ExtResource("3_yh6su")
+theme_override_styles/pressed_mirrored = ExtResource("2_k4dph")
+theme_override_styles/hover = ExtResource("2_k4dph")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_6uexn")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_yh6su")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_k4dph")
 toggle_mode = true
 text = "REMINDER"
 expand_icon = true
@@ -180,24 +180,24 @@ size_flags_vertical = 3
 focus_mode = 0
 theme = ExtResource("1_q0jet")
 theme_type_variation = &"SnowOutlinedToggleButton"
-theme_override_colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_hover_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_hover_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(1, 0.176471, 0.333333, 1)
 theme_override_colors/font_color = Color(1, 0.176471, 0.333333, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_hover_color = Color(1, 0.176471, 0.333333, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(1, 0.176471, 0.333333, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_hover_color = Color(1, 0.176471, 0.333333, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 35
 theme_override_font_sizes/font_size = 19
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_k4dph")
-theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_yh6su")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_6uexn")
-theme_override_styles/hover = ExtResource("2_k4dph")
-theme_override_styles/pressed_mirrored = ExtResource("2_k4dph")
-theme_override_styles/pressed = ExtResource("3_yh6su")
-theme_override_styles/normal_mirrored = ExtResource("3_yh6su")
 theme_override_styles/normal = ExtResource("2_k4dph")
+theme_override_styles/normal_mirrored = ExtResource("3_yh6su")
+theme_override_styles/pressed = ExtResource("3_yh6su")
+theme_override_styles/pressed_mirrored = ExtResource("2_k4dph")
+theme_override_styles/hover = ExtResource("2_k4dph")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_6uexn")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_yh6su")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_k4dph")
 toggle_mode = true
 button_pressed = true
 text = "REMOVE REMINDER"

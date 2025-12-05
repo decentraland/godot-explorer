@@ -28,7 +28,7 @@ fn test_avatar_generation(
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, vec![], with_build_envs, None)?;
+    run::build(false, false, vec![], with_build_envs, None)?;
 
     run::run(false, false, extra_args, false, false)?;
 
@@ -60,7 +60,7 @@ fn test_scene_generation(
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, vec![], with_build_envs, None)?;
+    run::build(false, false, vec![], with_build_envs, None)?;
 
     run::run(false, false, extra_args, false, false)?;
 
