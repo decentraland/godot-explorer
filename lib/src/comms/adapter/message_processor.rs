@@ -41,8 +41,9 @@ pub enum MessageType {
     Rfc4(Rfc4Message),
     InitVoice(VoiceInitData),
     VoiceFrame(VoiceFrameData),
-    PeerJoined, // Peer joined a room
-    PeerLeft,   // Peer left a room
+    PeerJoined,         // Peer joined a room
+    PeerLeft,           // Peer left a room
+    ConnectionReplaced, // Connection was replaced (same account logged in elsewhere)
 }
 
 #[derive(Debug, Clone)]
@@ -151,6 +152,9 @@ pub struct MessageProcessor {
     // Cached blocked/muted sets for performance (updated when social_blacklist changes)
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
+
+    // Flag to indicate connection was replaced (same account logged in elsewhere)
+    connection_replaced: bool,
 }
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
@@ -209,6 +213,7 @@ impl MessageProcessor {
             social_blacklist: None,
             cached_blocked: HashSet::new(),
             cached_muted: HashSet::new(),
+            connection_replaced: false,
         }
     }
 
@@ -324,6 +329,19 @@ impl MessageProcessor {
             messages.push(message);
         }
         messages
+    }
+
+    /// Checks if the connection was replaced (same account logged in elsewhere)
+    /// and clears the flag if it was set
+    ///
+    /// CommunicationManager should call this regularly to check for connection replacement
+    pub fn consume_connection_replaced(&mut self) -> bool {
+        if self.connection_replaced {
+            self.connection_replaced = false;
+            true
+        } else {
+            false
+        }
     }
 
     /// Processes all pending messages and performs periodic maintenance
@@ -627,6 +645,14 @@ impl MessageProcessor {
             MessageType::PeerLeft => {
                 // Handle peer leaving a room
                 self.handle_peer_left(message.address, room_id);
+            }
+            MessageType::ConnectionReplaced => {
+                // Connection was replaced (same account logged in elsewhere)
+                tracing::warn!(
+                    "🔌 Connection replaced detected in room '{}' - same account logged in elsewhere",
+                    room_id
+                );
+                self.connection_replaced = true;
             }
         }
     }

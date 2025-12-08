@@ -205,6 +205,7 @@ func _ready():
 	)
 
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
+	Global.comms.connection_replaced.connect(self._on_connection_replaced)
 
 	#Global.scene_fetcher.current_position = start_parcel_position
 	Global.scene_fetcher.update_position(start_parcel_position, true)
@@ -639,6 +640,65 @@ func _on_panel_profile_open_profile():
 
 func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
 	button_mic.visible = false  # voice_chat_enabled
+
+
+func _on_connection_replaced():
+	# Show a full-screen message when connection is replaced
+	# (same account logged in from another device/browser)
+
+	# Full screen black background
+	var overlay = ColorRect.new()
+	overlay.color = Color.BLACK
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(overlay)
+
+	# Center container for the message box
+	var center_container = CenterContainer.new()
+	center_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center_container)
+
+	# Message box container
+	var message_box = VBoxContainer.new()
+	message_box.custom_minimum_size = Vector2(400, 400)
+	message_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	center_container.add_child(message_box)
+
+	# Title label
+	var title_label = Label.new()
+	title_label.text = "Session Ended"
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_size_override("font_size", 32)
+	title_label.add_theme_color_override("font_color", Color.WHITE)
+	message_box.add_child(title_label)
+
+	# Spacer
+	var spacer1 = Control.new()
+	spacer1.custom_minimum_size = Vector2(0, 40)
+	message_box.add_child(spacer1)
+
+	# Message label
+	var message_label = Label.new()
+	message_label.text = (
+		"Your session was ended because your account\nlogged in from another location."
+	)
+	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message_label.add_theme_font_size_override("font_size", 18)
+	message_label.add_theme_color_override("font_color", Color.WHITE)
+	message_box.add_child(message_label)
+
+	# Spacer
+	var spacer2 = Control.new()
+	spacer2.custom_minimum_size = Vector2(0, 60)
+	message_box.add_child(spacer2)
+
+	# Exit button
+	var exit_button = Button.new()
+	exit_button.text = "EXIT"
+	exit_button.custom_minimum_size = Vector2(200, 50)
+	exit_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	exit_button.pressed.connect(func(): get_tree().quit())
+	message_box.add_child(exit_button)
 
 
 func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):

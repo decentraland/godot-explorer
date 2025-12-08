@@ -255,6 +255,7 @@ impl INode for CommunicationManager {
         let mut processor_reset = false;
         let mut chat_signals = Vec::new();
         let mut outgoing_messages = Vec::new();
+        let mut connection_replaced = false;
 
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
@@ -271,6 +272,11 @@ impl INode for CommunicationManager {
                     "📤 Consumed {} outgoing messages from MessageProcessor",
                     outgoing_messages.len()
                 );
+            }
+
+            // Check if connection was replaced (same account logged in elsewhere)
+            if processor.consume_connection_replaced() {
+                connection_replaced = true;
             }
 
             if !processor_polling_ok {
@@ -300,6 +306,13 @@ impl INode for CommunicationManager {
 
         if processor_reset {
             self.message_processor = None;
+        }
+
+        // Emit connection_replaced signal if needed (after borrowing is done)
+        if connection_replaced {
+            tracing::warn!("🔌 Emitting connection_replaced signal - user logged in elsewhere");
+            self.base_mut()
+                .emit_signal("connection_replaced".into(), &[]);
         }
 
         // Poll main room (if active)
@@ -517,6 +530,9 @@ impl CommunicationManager {
 
     #[signal]
     fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString) {}
+
+    #[signal]
+    fn connection_replaced() {}
 
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {

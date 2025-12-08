@@ -393,6 +393,18 @@ fn spawn_livekit_task(
                                 }
                             }
                         }
+                        livekit::RoomEvent::Disconnected { reason } => {
+                            tracing::warn!("🔌 Disconnected from LiveKit room '{}': {:?}", room_id, reason);
+                            // Send ConnectionReplaced message - use zero address since it's about us
+                            if let Err(e) = sender.send(IncomingMessage {
+                                message: MessageType::ConnectionReplaced,
+                                address: H160::zero(),
+                                room_id: room_id.clone(),
+                            }).await {
+                                tracing::warn!("Failed to send ConnectionReplaced: {}", e);
+                            }
+                            break 'stream;
+                        }
                         _ => { tracing::debug!("Event: {:?}", incoming); }
                     };
                 }
@@ -411,7 +423,9 @@ fn spawn_livekit_task(
             );
         }
 
-        room.close().await.unwrap();
+        if let Err(e) = room.close().await {
+            tracing::debug!("room.close() failed (may already be closed): {e}");
+        }
     });
 
     let _ = rt.block_on(task);
