@@ -3,12 +3,12 @@
 importer="svg"
 type="DPITexture"
 uid="uid://fx5fj4f8uf7k"
-path="res://.godot/imported/filter.svg-5de027f6bd138feb16afab8f576a6b4c.dpitex"
+path="res://.godot/imported/Filter.svg-4bd7d8946af013d7f963205076b283dd.dpitex"
 
 [deps]
 
-source_file="res://assets/ui/filter.svg"
-dest_files=["res://.godot/imported/filter.svg-5de027f6bd138feb16afab8f576a6b4c.dpitex"]
+source_file="res://assets/ui/Filter.svg"
+dest_files=["res://.godot/imported/Filter.svg-4bd7d8946af013d7f963205076b283dd.dpitex"]
 
 [params]
 
