@@ -157,7 +157,7 @@ func async_close_sign_in(generate_snapshots: bool = true):
 # gdlint:ignore = async-function-name
 func _ready():
 	# Set version label
-	label_version.set_text("v" + Global.get_version())
+	label_version.set_text("v" + DclGlobal.get_version())
 
 	Global.music_player.play("music_builder")
 	control_restore_and_choose_name.hide()
@@ -286,7 +286,8 @@ func _on_button_continue_pressed():
 
 func _on_button_start_pressed():
 	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	button_enter_as_guest.show()
+	if not DclGlobal.is_production():
+		button_enter_as_guest.show()
 	sign_in_title.text = "Create Your Account"
 	create_guest_account_if_needed()
 	is_creating_account = true
