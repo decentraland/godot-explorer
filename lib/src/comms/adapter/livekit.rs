@@ -418,13 +418,23 @@ fn spawn_livekit_task(
                         }
                         livekit::RoomEvent::Disconnected { reason } => {
                             tracing::warn!("🔌 Disconnected from LiveKit room '{}': {:?}", room_id, reason);
-                            // Send ConnectionReplaced message - use zero address since it's about us
+
+                            // Map LiveKit disconnect reason to our DisconnectReason
+                            use super::message_processor::DisconnectReason;
+                            let disconnect_reason = match reason {
+                                livekit::DisconnectReason::DuplicateIdentity => DisconnectReason::DuplicateIdentity,
+                                livekit::DisconnectReason::RoomClosed => DisconnectReason::RoomClosed,
+                                livekit::DisconnectReason::ParticipantRemoved => DisconnectReason::Kicked,
+                                livekit::DisconnectReason::RoomDeleted => DisconnectReason::RoomClosed,
+                                _ => DisconnectReason::Other,
+                            };
+
                             if let Err(e) = sender.send(IncomingMessage {
-                                message: MessageType::ConnectionReplaced,
+                                message: MessageType::Disconnected(disconnect_reason),
                                 address: H160::zero(),
                                 room_id: room_id.clone(),
                             }).await {
-                                tracing::warn!("Failed to send ConnectionReplaced: {}", e);
+                                tracing::warn!("Failed to send Disconnected: {}", e);
                             }
                             break 'stream;
                         }

@@ -35,15 +35,28 @@ pub struct IncomingMessage {
     pub room_id: String, // To identify which room the message came from
 }
 
+/// Reason for disconnection from the server
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisconnectReason {
+    /// Another participant with the same identity has joined the room
+    DuplicateIdentity,
+    /// The room was closed
+    RoomClosed,
+    /// Participant was removed/kicked from the server
+    Kicked,
+    /// Other disconnection reasons (server shutdown, signal close, etc.)
+    Other,
+}
+
 /// Types of messages that can be received from peers
 #[derive(Debug, Clone)]
 pub enum MessageType {
     Rfc4(Rfc4Message),
     InitVoice(VoiceInitData),
     VoiceFrame(VoiceFrameData),
-    PeerJoined,         // Peer joined a room
-    PeerLeft,           // Peer left a room
-    ConnectionReplaced, // Connection was replaced (same account logged in elsewhere)
+    PeerJoined,                            // Peer joined a room
+    PeerLeft,                              // Peer left a room
+    Disconnected(DisconnectReason),        // Disconnected from the server
 }
 
 #[derive(Debug, Clone)]
@@ -153,8 +166,8 @@ pub struct MessageProcessor {
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
 
-    // Flag to indicate connection was replaced (same account logged in elsewhere)
-    connection_replaced: bool,
+    // Disconnect reason if disconnected from the server
+    disconnect_reason: Option<DisconnectReason>,
 }
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
@@ -213,7 +226,7 @@ impl MessageProcessor {
             social_blacklist: None,
             cached_blocked: HashSet::new(),
             cached_muted: HashSet::new(),
-            connection_replaced: false,
+            disconnect_reason: None,
         }
     }
 
@@ -331,17 +344,12 @@ impl MessageProcessor {
         messages
     }
 
-    /// Checks if the connection was replaced (same account logged in elsewhere)
-    /// and clears the flag if it was set
+    /// Checks if there was a disconnection and returns the reason
+    /// Clears the reason after returning it
     ///
-    /// CommunicationManager should call this regularly to check for connection replacement
-    pub fn consume_connection_replaced(&mut self) -> bool {
-        if self.connection_replaced {
-            self.connection_replaced = false;
-            true
-        } else {
-            false
-        }
+    /// CommunicationManager should call this regularly to check for disconnection
+    pub fn consume_disconnect_reason(&mut self) -> Option<DisconnectReason> {
+        self.disconnect_reason.take()
     }
 
     /// Processes all pending messages and performs periodic maintenance
@@ -646,13 +654,14 @@ impl MessageProcessor {
                 // Handle peer leaving a room
                 self.handle_peer_left(message.address, room_id);
             }
-            MessageType::ConnectionReplaced => {
-                // Connection was replaced (same account logged in elsewhere)
+            MessageType::Disconnected(reason) => {
+                // Disconnected from the server
                 tracing::warn!(
-                    "🔌 Connection replaced detected in room '{}' - same account logged in elsewhere",
-                    room_id
+                    "🔌 Disconnected from room '{}': {:?}",
+                    room_id,
+                    reason
                 );
-                self.connection_replaced = true;
+                self.disconnect_reason = Some(*reason);
             }
         }
     }

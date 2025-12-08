@@ -205,7 +205,7 @@ func _ready():
 	)
 
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
-	Global.comms.connection_replaced.connect(self._on_connection_replaced)
+	Global.comms.disconnected.connect(self._on_disconnected)
 
 	#Global.scene_fetcher.current_position = start_parcel_position
 	Global.scene_fetcher.update_position(start_parcel_position, true)
@@ -642,10 +642,33 @@ func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
 	button_mic.visible = false  # voice_chat_enabled
 
 
-func _on_connection_replaced():
-	# Show a full-screen message when connection is replaced
-	# (same account logged in from another device/browser)
+## Disconnect reasons from CommunicationManager:
+## 0 = DuplicateIdentity (same account logged in elsewhere)
+## 1 = RoomClosed (the room was closed)
+## 2 = Kicked (removed from server by admin)
+## 3 = Other (server shutdown, signal close, etc.)
+func _on_disconnected(reason: int):
+	var title: String
+	var message: String
 
+	match reason:
+		0:  # DuplicateIdentity
+			title = "Session Ended"
+			message = "Your session was ended because your account\nlogged in from another location."
+		1:  # RoomClosed
+			title = "Room Closed"
+			message = "The room you were in has been closed."
+		2:  # Kicked
+			title = "Removed from Server"
+			message = "You have been removed from the server\nby an administrator."
+		_:  # Other
+			title = "Disconnected"
+			message = "You have been disconnected from the server.\nPlease try again later."
+
+	_show_disconnect_overlay(title, message)
+
+
+func _show_disconnect_overlay(title: String, message: String):
 	# Full screen black background
 	var overlay = ColorRect.new()
 	overlay.color = Color.BLACK
@@ -666,7 +689,7 @@ func _on_connection_replaced():
 
 	# Title label
 	var title_label = Label.new()
-	title_label.text = "Session Ended"
+	title_label.text = title
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 32)
 	title_label.add_theme_color_override("font_color", Color.WHITE)
@@ -679,7 +702,7 @@ func _on_connection_replaced():
 
 	# Message label
 	var message_label = Label.new()
-	message_label.text = ("Your session was ended because your account\nlogged in from another location.")
+	message_label.text = message
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	message_label.add_theme_font_size_override("font_size", 18)
 	message_label.add_theme_color_override("font_color", Color.WHITE)

@@ -271,7 +271,7 @@ impl INode for CommunicationManager {
         let mut processor_reset = false;
         let mut chat_signals = Vec::new();
         let mut outgoing_messages = Vec::new();
-        let mut connection_replaced = false;
+        let mut disconnect_reason: Option<crate::comms::adapter::message_processor::DisconnectReason> = None;
 
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
@@ -290,10 +290,8 @@ impl INode for CommunicationManager {
                 );
             }
 
-            // Check if connection was replaced (same account logged in elsewhere)
-            if processor.consume_connection_replaced() {
-                connection_replaced = true;
-            }
+            // Check if disconnected from the server
+            disconnect_reason = processor.consume_disconnect_reason();
 
             if !processor_polling_ok {
                 // Reset the message processor if it fails
@@ -324,11 +322,18 @@ impl INode for CommunicationManager {
             self.message_processor = None;
         }
 
-        // Emit connection_replaced signal if needed (after borrowing is done)
-        if connection_replaced {
-            tracing::warn!("🔌 Emitting connection_replaced signal - user logged in elsewhere");
+        // Emit disconnected signal if needed (after borrowing is done)
+        if let Some(reason) = disconnect_reason {
+            use crate::comms::adapter::message_processor::DisconnectReason;
+            let reason_code: i32 = match reason {
+                DisconnectReason::DuplicateIdentity => 0,
+                DisconnectReason::RoomClosed => 1,
+                DisconnectReason::Kicked => 2,
+                DisconnectReason::Other => 3,
+            };
+            tracing::warn!("🔌 Emitting disconnected signal with reason: {:?} (code: {})", reason, reason_code);
             self.base_mut()
-                .emit_signal("connection_replaced".into(), &[]);
+                .emit_signal("disconnected".into(), &[reason_code.to_variant()]);
         }
 
         // Poll main room (if active)
@@ -551,8 +556,10 @@ impl CommunicationManager {
     #[signal]
     fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString) {}
 
+    /// Signal emitted when disconnected from the server
+    /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other
     #[signal]
-    fn connection_replaced() {}
+    fn disconnected(reason: i32) {}
 
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
