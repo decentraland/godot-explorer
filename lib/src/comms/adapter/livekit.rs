@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use ethers_core::types::H160;
 use futures_util::StreamExt;
 use http::Uri;
-use livekit::{DataPacket, RoomOptions};
+use livekit::{id::ParticipantIdentity, DataPacket, RoomOptions};
 
 #[cfg(feature = "use_voice_chat")]
 use livekit::{
@@ -32,6 +32,7 @@ const CHANNEL_SIZE: usize = 1000;
 pub struct NetworkMessage {
     pub data: Vec<u8>,
     pub unreliable: bool,
+    pub recipient: Option<H160>,
 }
 
 pub struct LivekitRoom {
@@ -135,12 +136,34 @@ impl LivekitRoom {
     }
 
     fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
+        self._send_rfc4_targeted(packet, unreliable, None)
+    }
+
+    fn _send_rfc4_targeted(
+        &mut self,
+        packet: rfc4::Packet,
+        unreliable: bool,
+        recipient: Option<H160>,
+    ) -> bool {
         let mut data: Vec<u8> = Vec::new();
         packet.encode(&mut data).unwrap();
 
         self.sender_to_thread
-            .blocking_send(NetworkMessage { data, unreliable })
+            .blocking_send(NetworkMessage {
+                data,
+                unreliable,
+                recipient,
+            })
             .is_ok()
+    }
+
+    pub fn send_rfc4_targeted(
+        &mut self,
+        packet: rfc4::Packet,
+        unreliable: bool,
+        recipient: Option<H160>,
+    ) -> bool {
+        self._send_rfc4_targeted(packet, unreliable, recipient)
     }
 
     fn _broadcast_voice(&mut self, frame: Vec<i16>) {
@@ -415,7 +438,18 @@ fn spawn_livekit_task(
                     };
 
                     let reliable = !outgoing.unreliable;
-                    if let Err(e) = room.local_participant().publish_data(DataPacket { payload: outgoing.data, reliable, ..Default::default() }).await {
+                    let destination_identities = if let Some(address) = outgoing.recipient {
+                        vec![ParticipantIdentity(format!("{address:#x}"))]
+                    } else {
+                        Vec::new()
+                    };
+
+                    if let Err(e) = room.local_participant().publish_data(DataPacket {
+                        payload: outgoing.data,
+                        reliable,
+                        destination_identities,
+                        ..Default::default()
+                    }).await {
                         tracing::debug!("outgoing failed: {e}; not exiting loop though since it often fails at least once or twice at the start...");
                         // break 'stream;
                     };
