@@ -106,11 +106,6 @@ func _async_load_item() -> void:
 
 	# If type is NEARBY, check if already a friend
 	if item_type == SOCIAL_TYPE.NEARBY and not social_data.address.is_empty():
-		# CHECKING IF IT IS A GUEST - FIND A BETTER SOLUTION
-		var promise = Global.content_provider.fetch_profile(social_data.address)
-		var result = await PromiseUtils.async_awaiter(promise)
-		if result is PromiseError:
-			is_guest = true
 		_update_buttons()
 		_check_and_update_friend_status()
 
@@ -118,9 +113,9 @@ func _async_load_item() -> void:
 func set_data_from_avatar(avatar_param: Avatar) -> void:
 	_avatar_ref = weakref(avatar_param)
 
-	# Hide self initially while loading
-	visible = false
+	# Hide self while loading
 	_is_loading = true
+	visible = false
 
 	# If avatar is not ready, wait for it
 	if not avatar_param.avatar_ready:
@@ -148,15 +143,36 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 		queue_free()
 		return
 
+	# Check for duplicates - another item with same address may already exist
+	var parent_list = get_parent()
+	if parent_list and parent_list.has_method("has_item_with_address"):
+		if parent_list.has_item_with_address(avatar_param.avatar_id):
+			# Duplicate found, remove self
+			queue_free()
+			return
+
+	# Check if avatar has valid data
+	var avatar_data = avatar_param.get_avatar_data()
+	if avatar_data == null:
+		queue_free()
+		return
+
 	social_data = SocialItemData.new()
 	social_data.name = avatar_param.get_avatar_name()
 	social_data.address = avatar_param.avatar_id
-	social_data.profile_picture_url = avatar_param.get_avatar_data().get_snapshots_face_url()
+	social_data.profile_picture_url = avatar_data.get_snapshots_face_url()
+
+	# Validate we got a name (profile might have failed to load)
+	if social_data.name.is_empty():
+		queue_free()
+		return
 
 	social_data.has_claimed_name = false if social_data.name.contains("#") else true
 
-	# Now show self and set data
-	# set_data() will handle visibility for NEARBY items via _update_blocked_visibility()
+	# Check if user is a guest (hasn't connected web3 wallet)
+	is_guest = not avatar_param.has_connected_web3
+
+	# Show self and set data
 	_is_loading = false
 	set_data(social_data)
 
@@ -483,6 +499,9 @@ func _notify_parent_reorder() -> void:
 
 
 func _on_pressed() -> void:
+	# Don't open profile if still loading or no data
+	if social_data == null or social_data.address.is_empty():
+		return
 	Global.open_profile_by_address.emit(social_data.address)
 
 
@@ -547,8 +566,8 @@ func _on_blacklist_changed() -> void:
 
 
 func _on_blacklist_changed_for_buttons() -> void:
-	# This function is kept for compatibility but now just calls the main visibility update
-	_update_blocked_visibility_for_type()
+	# Update buttons state when blacklist changes
+	_update_buttons()
 
 
 func _update_blocked_visibility_for_type() -> void:
@@ -560,8 +579,13 @@ func _update_blocked_visibility_for_type() -> void:
 	if not social_data or social_data.address.is_empty():
 		return
 
+	# Don't change visibility while loading (item is hidden during loading)
+	if _is_loading:
+		return
+
 	# Hide if blocked, show if not blocked
-	if Global.social_blacklist.is_blocked(social_data.address):
+	var is_blocked = Global.social_blacklist.is_blocked(social_data.address)
+	if is_blocked:
 		visible = false
 	else:
 		visible = true

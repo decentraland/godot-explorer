@@ -17,6 +17,7 @@ const WEARABLE_NAME_PREFIX = "__"
 var avatar_id: String = ""
 var hidden: bool = false
 var avatar_ready: bool = false
+var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
@@ -145,6 +146,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	avatar_id = profile.get_ethereum_address()
+	has_connected_web3 = profile.has_connected_web3()
 	prints("Async update avatar from profile", avatar_id)
 
 	# Update metadata with the new avatar_id

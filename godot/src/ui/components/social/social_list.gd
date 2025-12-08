@@ -41,12 +41,14 @@ func _on_avatar_added(avatar: Avatar) -> void:
 		return
 
 	# Check if item with this address already exists to prevent duplicates
+	# Only check if avatar_id is available
 	if not avatar.avatar_id.is_empty():
 		if has_item_with_address(avatar.avatar_id):
 			return
 
 	# Create a new social item for this avatar
 	# The item will handle its own visibility based on blocked status
+	# The item will also check for duplicates when avatar_id becomes available
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 	self.add_child(social_item)
 	social_item.set_type(player_list_type)
@@ -98,6 +100,9 @@ func _update_nearby_friend_status() -> void:
 func _update_list_size() -> void:
 	var visible_count = 0
 	for child in get_children():
+		# Skip non-Control nodes (like Timer)
+		if not child is Control:
+			continue
 		if child.visible:
 			visible_count += 1
 	list_size = visible_count
