@@ -679,9 +679,7 @@ func _on_connection_replaced():
 
 	# Message label
 	var message_label = Label.new()
-	message_label.text = (
-		"Your session was ended because your account\nlogged in from another location."
-	)
+	message_label.text = ("Your session was ended because your account\nlogged in from another location.")
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	message_label.add_theme_font_size_override("font_size", 18)
 	message_label.add_theme_color_override("font_color", Color.WHITE)
