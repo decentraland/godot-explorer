@@ -417,22 +417,16 @@ fn spawn_livekit_task(
                             }
                         }
                         livekit::RoomEvent::Disconnected { reason } => {
-                            tracing::warn!("🔌 LiveKit DISCONNECT EVENT - room_id='{}', reason={:?}", room_id, reason);
-
                             // Map LiveKit disconnect reason to our DisconnectReason
                             use super::message_processor::DisconnectReason;
                             let disconnect_reason = match reason {
-                                livekit::DisconnectReason::DuplicateIdentity => {
-                                    tracing::warn!("🚫 LiveKit DuplicateIdentity in room '{}'", room_id);
-                                    DisconnectReason::DuplicateIdentity
-                                },
+                                livekit::DisconnectReason::DuplicateIdentity => DisconnectReason::DuplicateIdentity,
                                 livekit::DisconnectReason::RoomClosed => DisconnectReason::RoomClosed,
                                 livekit::DisconnectReason::ParticipantRemoved => DisconnectReason::Kicked,
                                 livekit::DisconnectReason::RoomDeleted => DisconnectReason::RoomClosed,
                                 _ => DisconnectReason::Other,
                             };
 
-                            tracing::warn!("🔌 LiveKit sending Disconnected message for room '{}' with reason {:?}", room_id, disconnect_reason);
                             if let Err(e) = sender.send(IncomingMessage {
                                 message: MessageType::Disconnected(disconnect_reason),
                                 address: H160::zero(),

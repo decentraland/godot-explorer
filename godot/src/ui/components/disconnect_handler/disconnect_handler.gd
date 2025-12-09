@@ -32,10 +32,7 @@ func _reset_reconnect_state() -> void:
 
 
 func _on_adapter_changed(_voice_chat_enabled: bool, _adapter_str: String) -> void:
-	print("[DisconnectHandler] _on_adapter_changed called - adapter='%s'" % _adapter_str)
 	# Successfully connected - reset reconnect attempts
-	if _reconnect_attempts > 0:
-		print("[DisconnectHandler] Reconnected successfully after %d attempt(s)" % _reconnect_attempts)
 	_reconnect_attempts = 0
 	_last_adapter_str = ""
 	_last_disconnect_reason = -1
@@ -43,16 +40,12 @@ func _on_adapter_changed(_voice_chat_enabled: bool, _adapter_str: String) -> voi
 
 
 func _on_disconnected(reason: int) -> void:
-	print("[DisconnectHandler] _on_disconnected called with reason: %d" % reason)
-
 	# Store the adapter string FIRST before any cleanup (might be cleared by clean())
 	if _last_adapter_str.is_empty():
 		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
-		print("[DisconnectHandler] Saved adapter string: '%s'" % _last_adapter_str)
 
 	# DuplicateIdentity means someone else logged in - don't retry, show error immediately
 	if reason == 0:
-		print("[DisconnectHandler] DuplicateIdentity - showing error overlay immediately")
 		# Note: Don't reset _last_adapter_str here - we need it for reconnection
 		_reconnect_attempts = 0
 		_last_disconnect_reason = -1
@@ -115,11 +108,8 @@ func _show_disconnect_error(reason: int) -> void:
 
 
 func _show_disconnect_overlay(title: String, message: String) -> void:
-	print("[DisconnectHandler] _show_disconnect_overlay called with title='%s'" % title)
-
 	# Remove existing overlay if any
 	if _overlay != null and is_instance_valid(_overlay):
-		print("[DisconnectHandler] Removing existing overlay")
 		_overlay.queue_free()
 
 	# Full screen black background
@@ -190,7 +180,6 @@ func _show_disconnect_overlay(title: String, message: String) -> void:
 
 func _on_reconnect_pressed() -> void:
 	var adapter_to_reconnect = _last_adapter_str if not _last_adapter_str.is_empty() else Global.comms.get_current_adapter_conn_str()
-	print("[DisconnectHandler] Reconnect pressed - adapter_to_reconnect='%s', _last_adapter_str='%s'" % [adapter_to_reconnect, _last_adapter_str])
 
 	# Remove overlay
 	if _overlay != null and is_instance_valid(_overlay):
@@ -203,7 +192,4 @@ func _on_reconnect_pressed() -> void:
 
 	# Reconnect
 	if not adapter_to_reconnect.is_empty():
-		print("[DisconnectHandler] Calling change_adapter with '%s'" % adapter_to_reconnect)
 		Global.comms.change_adapter(adapter_to_reconnect)
-	else:
-		print("[DisconnectHandler] ERROR: No adapter to reconnect to!")

@@ -655,21 +655,10 @@ impl MessageProcessor {
                 self.handle_peer_left(message.address, room_id);
             }
             MessageType::Disconnected(reason) => {
-                // Disconnected from the server
-                tracing::warn!(
-                    "🔌 MessageProcessor: Disconnected from room '{}': {:?} (previous disconnect_reason={:?})",
-                    room_id,
-                    reason,
-                    self.disconnect_reason
-                );
-
                 // Set disconnect_reason if not already set (first disconnect wins)
                 // Any room disconnect (scene or archipelago) should be reported
                 if self.disconnect_reason.is_none() {
-                    tracing::warn!("🔌 Setting disconnect_reason to {:?} from room '{}'", reason, room_id);
                     self.disconnect_reason = Some((*reason, room_id));
-                } else {
-                    tracing::warn!("🔌 Ignoring disconnect from room '{}' - already have disconnect_reason", room_id);
                 }
             }
         }
@@ -1198,7 +1187,6 @@ impl MessageProcessor {
     }
 
     pub fn clean(&mut self) {
-        tracing::info!("🧹 MessageProcessor::clean() - clearing {} peers and avatars", self.peer_identities.len());
         self.peer_identities.clear();
         self.last_chat_timestamps.clear();
         // Clean up all avatars when disconnected
