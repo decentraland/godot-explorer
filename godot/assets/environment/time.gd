@@ -3,10 +3,13 @@ extends Node
 
 # Time syncing singleton for the sky shader
 
+# Debug mode - set to true to make a full day/night cycle every 10 seconds
+@export var debug_time_rotation: bool = false
+
 var config: DclConfig
 var last_value: float
-
 var normalized_time := 0.0
+var debug_time_accumulator: float = 0.0
 
 
 func _ready():
@@ -18,6 +21,15 @@ func get_normalized_time():
 
 
 func _process(_delta: float) -> void:
+	# Debug mode: full cycle every 10 seconds
+	if debug_time_rotation:
+		debug_time_accumulator += _delta
+		normalized_time = fmod(debug_time_accumulator / 10.0, 1.0)
+		if last_value != normalized_time:
+			RenderingServer.global_shader_parameter_set("day_night_cycle", normalized_time)
+			last_value = normalized_time
+		return
+
 	if Global.get_fixed_skybox_time():
 		normalized_time = 0.625  # 3pm
 	else:

@@ -184,6 +184,7 @@ pointing/emulate_touch_from_mouse=true
 
 [layer_names]
 
+3d_render/layer_20="OUTLINE_SYSTEM_DEPTH"
 3d_physics/layer_1="CL_POINTER"
 3d_physics/layer_2="CL_PHYSICS"
 3d_physics/layer_3="CL_RESERVED1"
