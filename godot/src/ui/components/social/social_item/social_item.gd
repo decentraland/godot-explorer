@@ -1,9 +1,10 @@
 extends Button
 
-enum LoadState { UNLOADED, LOADING, LOADED }
+enum LoadState { UNLOADED, LOADING, LOADED, FAILED }
 
 const SOCIAL_TYPE = SocialItemData.SocialType
 const MAX_DISPLAY_NAME_LENGTH: int = 15
+const LOAD_TIMEOUT_SECONDS: float = 5.0
 
 @export var item_type: SocialItemData.SocialType
 
@@ -17,6 +18,7 @@ var load_state: LoadState = LoadState.UNLOADED
 var parcel: Array = []  # Parcel coordinates [x, y] when user is in genesis city
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
+var _load_start_time: float = 0.0
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
@@ -97,7 +99,18 @@ func load_item() -> void:
 		return
 
 	load_state = LoadState.LOADING
+	_load_start_time = Time.get_unix_time_from_system()
 	_async_load_item()
+
+
+func is_load_timed_out() -> bool:
+	if load_state != LoadState.LOADING:
+		return false
+	return Time.get_unix_time_from_system() - _load_start_time > LOAD_TIMEOUT_SECONDS
+
+
+func mark_as_failed() -> void:
+	load_state = LoadState.FAILED
 
 
 func _async_load_item() -> void:
@@ -129,8 +142,8 @@ func set_data_from_avatar(avatar_param: Avatar) -> void:
 func _on_avatar_loaded() -> void:
 	var avatar = _avatar_ref.get_ref() as Avatar if _avatar_ref else null
 	if avatar == null or not is_instance_valid(avatar):
-		# Avatar was freed, remove self
-		queue_free()
+		# Avatar was freed, mark as failed
+		load_state = LoadState.FAILED
 		return
 
 	_load_data_from_avatar(avatar)
@@ -139,22 +152,22 @@ func _on_avatar_loaded() -> void:
 func _load_data_from_avatar(avatar_param: Avatar) -> void:
 	# Check if avatar_id is set (it should be after avatar_ready)
 	if avatar_param.avatar_id.is_empty():
-		# Still no avatar_id, remove self
-		queue_free()
+		# Still no avatar_id, mark as failed
+		load_state = LoadState.FAILED
 		return
 
 	# Check for duplicates - another item with same address may already exist
 	var parent_list = get_parent()
 	if parent_list and parent_list.has_method("has_item_with_address"):
 		if parent_list.has_item_with_address(avatar_param.avatar_id):
-			# Duplicate found, remove self
-			queue_free()
+			# Duplicate found, mark as failed (will be cleaned up by sync)
+			load_state = LoadState.FAILED
 			return
 
 	# Check if avatar has valid data
 	var avatar_data = avatar_param.get_avatar_data()
 	if avatar_data == null:
-		queue_free()
+		load_state = LoadState.FAILED
 		return
 
 	social_data = SocialItemData.new()
@@ -164,7 +177,7 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 
 	# Validate we got a name (profile might have failed to load)
 	if social_data.name.is_empty():
-		queue_free()
+		load_state = LoadState.FAILED
 		return
 
 	social_data.has_claimed_name = false if social_data.name.contains("#") else true

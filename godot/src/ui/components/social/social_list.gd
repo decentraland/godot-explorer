@@ -6,22 +6,32 @@ signal load_error(error_message: String)
 
 const SOCIAL_TYPE = SocialItemData.SocialType
 const BLOCKED_AVATAR_ALIAS_BASE: int = 20000
+const NEARBY_SYNC_INTERVAL: float = 5.0
 
 @export var player_list_type: SocialItemData.SocialType
 
 var list_size: int = 0
 var has_error: bool = false
 var _update_request_id: int = 0
+var _nearby_sync_timer: Timer = null
 
 
 func _ready():
 	# Don't auto-load on _ready() - lists will be loaded when show_panel() is called
 	# This avoids race conditions with social service initialization
 	if player_list_type == SOCIAL_TYPE.NEARBY:
-		# Use individual avatar signals instead of refreshing the whole list
-		Global.avatars.avatar_added.connect(_on_avatar_added)
-		Global.avatars.avatar_removed.connect(_on_avatar_removed)
-		# Also update when blacklist changes to remove blocked users from nearby list
+		# Create sync timer for polling-based updates
+		_nearby_sync_timer = Timer.new()
+		_nearby_sync_timer.wait_time = NEARBY_SYNC_INTERVAL
+		_nearby_sync_timer.timeout.connect(_sync_nearby_list)
+		add_child(_nearby_sync_timer)
+		_nearby_sync_timer.start()
+
+		# Also sync on avatar signals for immediate response
+		Global.avatars.avatar_added.connect(_on_avatar_changed)
+		Global.avatars.avatar_removed.connect(_on_avatar_changed)
+
+		# Update when blacklist changes to remove blocked users from nearby list
 		Global.social_blacklist.blacklist_changed.connect(_async_on_blacklist_changed)
 		# Update nearby items when friendship requests change
 		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
@@ -36,37 +46,85 @@ func _ready():
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 
 
-func _on_avatar_added(avatar: Avatar) -> void:
+func _on_avatar_changed(_arg = null) -> void:
+	# Trigger sync when avatars change (for immediate response)
+	if player_list_type != SOCIAL_TYPE.NEARBY:
+		return
+	_sync_nearby_list()
+
+
+func _sync_nearby_list() -> void:
 	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
 
-	# Check if item with this address already exists to prevent duplicates
-	# Only check if avatar_id is available
-	if not avatar.avatar_id.is_empty():
-		if has_item_with_address(avatar.avatar_id):
-			return
+	# Get current avatar addresses (only those with valid data)
+	var current_avatar_addresses: Dictionary = {}  # address -> Avatar
+	var all_avatars = Global.avatars.get_avatars()
 
-	# Create a new social item for this avatar
-	# The item will handle its own visibility based on blocked status
-	# The item will also check for duplicates when avatar_id becomes available
+	for avatar in all_avatars:
+		if avatar == null or not avatar is Avatar:
+			continue
+		# Skip avatars without valid address (not ready yet)
+		if avatar.avatar_id.is_empty():
+			continue
+		current_avatar_addresses[avatar.avatar_id] = avatar
+
+	# Get existing item addresses and check for removals
+	var items_to_remove: Array = []
+	var existing_addresses: Dictionary = {}  # address -> social_item
+
+	for child in get_children():
+		if not child is Control:
+			continue
+		if not "social_data" in child or child.social_data == null:
+			# Item still loading without social_data, check if timed out
+			if "load_state" in child and "is_load_timed_out" in child:
+				if child.is_load_timed_out():
+					child.mark_as_failed()
+					items_to_remove.append(child)
+				elif child.load_state == child.LoadState.FAILED:
+					items_to_remove.append(child)
+			continue
+
+		var address = child.social_data.address
+
+		# Check if should be removed:
+		# 1. Address is empty
+		# 2. Avatar no longer exists
+		# 3. Item failed to load
+		# 4. Item timed out while loading
+		if address.is_empty():
+			items_to_remove.append(child)
+		elif not current_avatar_addresses.has(address):
+			items_to_remove.append(child)
+		elif child.load_state == child.LoadState.FAILED:
+			items_to_remove.append(child)
+		elif child.has_method("is_load_timed_out") and child.is_load_timed_out():
+			child.mark_as_failed()
+			items_to_remove.append(child)
+		else:
+			existing_addresses[address] = child
+
+	# Remove items that should be removed
+	for item in items_to_remove:
+		item.queue_free()
+
+	# Add items for new avatars
+	for address in current_avatar_addresses:
+		if not existing_addresses.has(address):
+			var avatar = current_avatar_addresses[address]
+			_add_item_for_avatar(avatar)
+
+	# Update list size after changes
+	# Use call_deferred to allow queue_free to complete
+	call_deferred("_update_list_size")
+
+
+func _add_item_for_avatar(avatar: Avatar) -> void:
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
-	self.add_child(social_item)
+	add_child(social_item)
 	social_item.set_type(player_list_type)
 	social_item.set_data_from_avatar(avatar)
-
-
-func _on_avatar_removed(address: String) -> void:
-	if player_list_type != SOCIAL_TYPE.NEARBY:
-		return
-
-	# Find and remove the social item for this address
-	for child in get_children():
-		if child.has_method("get") and child.get("social_data") != null:
-			var social_data = child.social_data
-			if social_data != null and social_data.address == address:
-				child.queue_free()
-				_update_list_size()
-				return
 
 
 func _async_on_blacklist_changed() -> void:
@@ -182,9 +240,8 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 	remove_items()
 	match player_list_type:
 		SOCIAL_TYPE.NEARBY:
-			# For NEARBY, load existing avatars on initial call
-			# After that, new avatars are added via avatar_added signal
-			_load_existing_nearby_avatars()
+			# For NEARBY, use sync-based approach
+			_sync_nearby_list()
 		SOCIAL_TYPE.BLOCKED:
 			await _async_reload_blocked_list(current_request_id)
 		SOCIAL_TYPE.ONLINE:
@@ -374,29 +431,11 @@ func _async_await_with_timeout(promise: Promise, timeout_seconds: float) -> bool
 	return not resolved
 
 
-func _load_existing_nearby_avatars() -> void:
-	# Load any avatars that already exist when the list is first shown
-	var all_avatars = Global.avatars.get_avatars()
-
-	for avatar in all_avatars:
-		if avatar != null and avatar is Avatar:
-			# Skip if item with this address already exists to prevent duplicates
-			if not avatar.avatar_id.is_empty():
-				if has_item_with_address(avatar.avatar_id):
-					continue
-
-			# Create item - it will handle its own loading and visibility
-			# Items will hide themselves if blocked via _update_blocked_visibility()
-			var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
-			self.add_child(social_item)
-			social_item.set_type(player_list_type)
-			social_item.set_data_from_avatar(avatar)
-
-	_update_list_size()
-
-
 func remove_items() -> void:
 	for child in self.get_children():
+		# Don't remove the sync timer
+		if child == _nearby_sync_timer:
+			continue
 		child.queue_free()
 
 

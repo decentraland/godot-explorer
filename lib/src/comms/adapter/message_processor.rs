@@ -166,8 +166,8 @@ pub struct MessageProcessor {
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
 
-    // Disconnect reason if disconnected from the server
-    disconnect_reason: Option<DisconnectReason>,
+    // Disconnect reason if disconnected from the server, along with the room_id
+    disconnect_reason: Option<(DisconnectReason, String)>,
 }
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
@@ -344,11 +344,11 @@ impl MessageProcessor {
         messages
     }
 
-    /// Checks if there was a disconnection and returns the reason
+    /// Checks if there was a disconnection and returns the reason along with the room_id
     /// Clears the reason after returning it
     ///
     /// CommunicationManager should call this regularly to check for disconnection
-    pub fn consume_disconnect_reason(&mut self) -> Option<DisconnectReason> {
+    pub fn consume_disconnect_reason(&mut self) -> Option<(DisconnectReason, String)> {
         self.disconnect_reason.take()
     }
 
@@ -657,11 +657,20 @@ impl MessageProcessor {
             MessageType::Disconnected(reason) => {
                 // Disconnected from the server
                 tracing::warn!(
-                    "🔌 Disconnected from room '{}': {:?}",
+                    "🔌 MessageProcessor: Disconnected from room '{}': {:?} (previous disconnect_reason={:?})",
                     room_id,
-                    reason
+                    reason,
+                    self.disconnect_reason
                 );
-                self.disconnect_reason = Some(*reason);
+
+                // Set disconnect_reason if not already set (first disconnect wins)
+                // Any room disconnect (scene or archipelago) should be reported
+                if self.disconnect_reason.is_none() {
+                    tracing::warn!("🔌 Setting disconnect_reason to {:?} from room '{}'", reason, room_id);
+                    self.disconnect_reason = Some((*reason, room_id));
+                } else {
+                    tracing::warn!("🔌 Ignoring disconnect from room '{}' - already have disconnect_reason", room_id);
+                }
             }
         }
     }
@@ -1189,7 +1198,11 @@ impl MessageProcessor {
     }
 
     pub fn clean(&mut self) {
+        tracing::info!("🧹 MessageProcessor::clean() - clearing {} peers and avatars", self.peer_identities.len());
         self.peer_identities.clear();
         self.last_chat_timestamps.clear();
+        // Clean up all avatars when disconnected
+        let mut avatar_scene_ref = self.avatars.clone();
+        avatar_scene_ref.bind_mut().clean();
     }
 }

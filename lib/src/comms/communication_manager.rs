@@ -144,6 +144,8 @@ pub struct CommunicationManager {
     start_time: Instant,
     last_profile_version_broadcast: Instant,
     archipelago_profile_announced: bool,
+    /// Flag to prevent automatic reconnection after DuplicateIdentity disconnect
+    block_auto_reconnect: bool,
 
     realm_min_bounds: Vector2i,
     realm_max_bounds: Vector2i,
@@ -181,6 +183,7 @@ impl INode for CommunicationManager {
             start_time: Instant::now(),
             last_profile_version_broadcast: Instant::now(),
             archipelago_profile_announced: false,
+            block_auto_reconnect: false,
             message_processor: None,
             main_room: None,
             #[cfg(feature = "use_livekit")]
@@ -271,7 +274,7 @@ impl INode for CommunicationManager {
         let mut processor_reset = false;
         let mut chat_signals = Vec::new();
         let mut outgoing_messages = Vec::new();
-        let mut disconnect_reason: Option<crate::comms::adapter::message_processor::DisconnectReason> = None;
+        let mut disconnect_info: Option<(crate::comms::adapter::message_processor::DisconnectReason, String)> = None;
 
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
@@ -290,8 +293,8 @@ impl INode for CommunicationManager {
                 );
             }
 
-            // Check if disconnected from the server
-            disconnect_reason = processor.consume_disconnect_reason();
+            // Check if disconnected from the server (returns reason + room_id)
+            disconnect_info = processor.consume_disconnect_reason();
 
             if !processor_polling_ok {
                 // Reset the message processor if it fails
@@ -323,7 +326,7 @@ impl INode for CommunicationManager {
         }
 
         // Emit disconnected signal if needed (after borrowing is done)
-        if let Some(reason) = disconnect_reason {
+        if let Some((reason, room_id)) = disconnect_info {
             use crate::comms::adapter::message_processor::DisconnectReason;
             let reason_code: i32 = match reason {
                 DisconnectReason::DuplicateIdentity => 0,
@@ -331,7 +334,36 @@ impl INode for CommunicationManager {
                 DisconnectReason::Kicked => 2,
                 DisconnectReason::Other => 3,
             };
-            tracing::warn!("🔌 Emitting disconnected signal with reason: {:?} (code: {})", reason, reason_code);
+
+            tracing::warn!(
+                "🔌 CommunicationManager: Got disconnect from room '{}', reason={:?}, block_auto_reconnect={}, main_room={}, scene_room={}",
+                room_id,
+                reason,
+                self.block_auto_reconnect,
+                self.main_room.is_some(),
+                {
+                    #[cfg(feature = "use_livekit")]
+                    { self.scene_room.is_some() }
+                    #[cfg(not(feature = "use_livekit"))]
+                    { false }
+                }
+            );
+
+            // For DuplicateIdentity, disconnect from ALL rooms immediately
+            // This prevents the infinite loop where one client stays connected and kicks the other back
+            if reason == DisconnectReason::DuplicateIdentity {
+                tracing::warn!("🚫 DuplicateIdentity from room '{}' - disconnecting ALL rooms and blocking auto-reconnect", room_id);
+                self.block_auto_reconnect = true;
+                // Save the connection string BEFORE clean() clears it - needed for reconnection
+                let saved_connection_str = self.current_connection_str.clone();
+                // Clean up all rooms to ensure we're fully disconnected
+                self.clean();
+                // Restore the connection string so user can reconnect via the RECONNECT button
+                self.current_connection_str = saved_connection_str;
+                tracing::info!("🔌 Saved connection string for potential reconnection: {}", self.current_connection_str);
+            }
+
+            tracing::warn!("🔌 Emitting disconnected signal with reason: {:?} (code: {}) from room '{}'", reason, reason_code, room_id);
             self.base_mut()
                 .emit_signal("disconnected".into(), &[reason_code.to_variant()]);
         }
@@ -1007,6 +1039,15 @@ impl CommunicationManager {
 
     #[func]
     fn _on_realm_changed_deferred(&mut self) {
+        tracing::info!("🔄 _on_realm_changed_deferred called, block_auto_reconnect={}", self.block_auto_reconnect);
+
+        // Skip automatic reconnection if blocked (e.g., after DuplicateIdentity)
+        if self.block_auto_reconnect {
+            tracing::info!("🚫 Skipping automatic reconnection due to block_auto_reconnect flag");
+            return;
+        }
+
+        tracing::info!("🔄 _on_realm_changed_deferred proceeding with clean()");
         self.clean();
 
         let comms = self._internal_get_comms_from_realm();
@@ -1044,6 +1085,8 @@ impl CommunicationManager {
 
     #[func]
     fn change_adapter(&mut self, comms_fixed_adapter_gstr: GString) {
+        tracing::info!("🔌 change_adapter called, block_auto_reconnect was {}", self.block_auto_reconnect);
+
         let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
@@ -1062,6 +1105,7 @@ impl CommunicationManager {
         self.current_connection_str
             .clone_from(&comms_fixed_adapter_str.to_godot());
         self.archipelago_profile_announced = false; // Reset flag when changing adapters
+        self.block_auto_reconnect = false; // Reset block flag to allow this reconnection
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");

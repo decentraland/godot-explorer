@@ -16,6 +16,7 @@ var _reconnect_attempts: int = 0
 var _last_adapter_str: String = ""
 var _last_disconnect_reason: int = -1
 var _overlay: ColorRect = null
+var _should_stop_reconnecting: bool = false
 
 
 func _ready() -> void:
@@ -23,27 +24,45 @@ func _ready() -> void:
 	Global.comms.on_adapter_changed.connect(_on_adapter_changed)
 
 
+func _reset_reconnect_state() -> void:
+	_reconnect_attempts = 0
+	_last_adapter_str = ""
+	_last_disconnect_reason = -1
+	_should_stop_reconnecting = true  # Stop any pending reconnect attempts
+
+
 func _on_adapter_changed(_voice_chat_enabled: bool, _adapter_str: String) -> void:
+	print("[DisconnectHandler] _on_adapter_changed called - adapter='%s'" % _adapter_str)
 	# Successfully connected - reset reconnect attempts
 	if _reconnect_attempts > 0:
 		print("[DisconnectHandler] Reconnected successfully after %d attempt(s)" % _reconnect_attempts)
 	_reconnect_attempts = 0
 	_last_adapter_str = ""
 	_last_disconnect_reason = -1
+	_should_stop_reconnecting = false
 
 
 func _on_disconnected(reason: int) -> void:
+	print("[DisconnectHandler] _on_disconnected called with reason: %d" % reason)
+
+	# Store the adapter string FIRST before any cleanup (might be cleared by clean())
+	if _last_adapter_str.is_empty():
+		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
+		print("[DisconnectHandler] Saved adapter string: '%s'" % _last_adapter_str)
+
 	# DuplicateIdentity means someone else logged in - don't retry, show error immediately
 	if reason == 0:
+		print("[DisconnectHandler] DuplicateIdentity - showing error overlay immediately")
+		# Note: Don't reset _last_adapter_str here - we need it for reconnection
+		_reconnect_attempts = 0
+		_last_disconnect_reason = -1
+		_should_stop_reconnecting = true  # Stop any pending reconnect attempts
 		_show_disconnect_error(reason)
 		return
 
-	# Store the adapter string before it gets cleared
-	if _last_adapter_str.is_empty():
-		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
-
 	_last_disconnect_reason = reason
 	_reconnect_attempts += 1
+	_should_stop_reconnecting = false  # Allow reconnection attempts
 
 	print("[DisconnectHandler] Disconnected (reason: %d), attempt %d/%d" % [reason, _reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
 
@@ -60,6 +79,17 @@ func _on_disconnected(reason: int) -> void:
 func _async_attempt_reconnect() -> void:
 	# Small delay before reconnecting to avoid rapid reconnection loops
 	await get_tree().create_timer(1.0).timeout
+
+	# Check if we should stop (e.g., DuplicateIdentity received during the wait)
+	if _should_stop_reconnecting:
+		print("[DisconnectHandler] Reconnect cancelled")
+		return
+
+	# Check if adapter string is still valid
+	if _last_adapter_str.is_empty():
+		print("[DisconnectHandler] No adapter to reconnect to")
+		return
+
 	Global.comms.change_adapter(_last_adapter_str)
 
 
@@ -85,8 +115,11 @@ func _show_disconnect_error(reason: int) -> void:
 
 
 func _show_disconnect_overlay(title: String, message: String) -> void:
+	print("[DisconnectHandler] _show_disconnect_overlay called with title='%s'" % title)
+
 	# Remove existing overlay if any
 	if _overlay != null and is_instance_valid(_overlay):
+		print("[DisconnectHandler] Removing existing overlay")
 		_overlay.queue_free()
 
 	# Full screen black background
@@ -157,6 +190,7 @@ func _show_disconnect_overlay(title: String, message: String) -> void:
 
 func _on_reconnect_pressed() -> void:
 	var adapter_to_reconnect = _last_adapter_str if not _last_adapter_str.is_empty() else Global.comms.get_current_adapter_conn_str()
+	print("[DisconnectHandler] Reconnect pressed - adapter_to_reconnect='%s', _last_adapter_str='%s'" % [adapter_to_reconnect, _last_adapter_str])
 
 	# Remove overlay
 	if _overlay != null and is_instance_valid(_overlay):
@@ -169,4 +203,7 @@ func _on_reconnect_pressed() -> void:
 
 	# Reconnect
 	if not adapter_to_reconnect.is_empty():
+		print("[DisconnectHandler] Calling change_adapter with '%s'" % adapter_to_reconnect)
 		Global.comms.change_adapter(adapter_to_reconnect)
+	else:
+		print("[DisconnectHandler] ERROR: No adapter to reconnect to!")
