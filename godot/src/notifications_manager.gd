@@ -43,6 +43,10 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 # Queue management constants (Phase 3)
 const MAX_OS_SCHEDULED_NOTIFICATIONS = 24  # Maximum notifications scheduled with OS at once
 
+## DEBUG: Enable verbose logging of notification database operations
+## Only active in debug builds (OS.is_debug_build())
+var _debug_notifications_enabled: bool = false
+
 var _notifications: Array = []
 var _poll_timer: Timer = null
 var _is_polling: bool = false
@@ -70,6 +74,9 @@ var _android_plugin = null:
 
 
 func _ready() -> void:
+	# Enable debug logging in debug builds
+	_debug_notifications_enabled = OS.is_debug_build()
+
 	# Create polling timer
 	_poll_timer = Timer.new()
 	_poll_timer.wait_time = POLL_INTERVAL_SECONDS
@@ -536,16 +543,17 @@ func async_queue_local_notification(
 	title: String,
 	body: String,
 	trigger_timestamp: int,
-	image_url: String = ""
+	image_url: String = "",
+	deep_link_data: String = ""
 ) -> bool:
 	if notification_id.is_empty():
 		push_error("Queue notification: notification_id cannot be empty")
 		return false
 
-	print(
+	_debug_log(
 		(
-			"queue_local_notification called: id=%s, title=%s, trigger_ts=%d, has_image=%s"
-			% [notification_id, title, trigger_timestamp, !image_url.is_empty()]
+			"queue_local_notification called: id=%s, title=%s, trigger_ts=%d, has_image=%s, deep_link=%s"
+			% [notification_id, title, trigger_timestamp, !image_url.is_empty(), deep_link_data]
 		)
 	)
 
@@ -562,11 +570,11 @@ func async_queue_local_notification(
 	# Insert into database (is_scheduled = 0 initially)
 	var success = (
 		plugin.dbInsertNotification(
-			notification_id, title, body, trigger_timestamp, 0, "", image_base64
+			notification_id, title, body, trigger_timestamp, 0, deep_link_data, image_base64
 		)
 		if OS.get_name() == "Android"
 		else plugin.db_insert_notification(
-			notification_id, title, body, trigger_timestamp, 0, "", image_base64
+			notification_id, title, body, trigger_timestamp, 0, deep_link_data, image_base64
 		)
 	)
 
@@ -574,8 +582,13 @@ func async_queue_local_notification(
 		push_error("Failed to insert notification into database: id=%s" % notification_id)
 		return false
 
+	_debug_log("Notification inserted into database: id=%s" % notification_id)
+
 	# Sync queue to schedule with OS if there are available slots
 	_sync_notification_queue()
+
+	# Print database state after insertion (dev mode only)
+	_debug_print_database()
 
 	return true
 
@@ -588,6 +601,8 @@ func cancel_queued_local_notification(notification_id: String) -> bool:
 	if notification_id.is_empty():
 		push_error("Cancel queued notification: notification_id cannot be empty")
 		return false
+
+	_debug_log("Cancelling queued notification: id=%s" % notification_id)
 
 	var plugin = _get_plugin()
 	if not plugin:
@@ -605,8 +620,11 @@ func cancel_queued_local_notification(notification_id: String) -> bool:
 	)
 
 	if success:
+		_debug_log("Notification deleted from database: id=%s" % notification_id)
 		# Sync queue to potentially schedule another notification
 		_sync_notification_queue()
+		# Print database state after deletion (dev mode only)
+		_debug_print_database()
 
 	return success
 
@@ -655,6 +673,8 @@ func _sync_notification_queue() -> void:
 	var plugin = _get_plugin()
 	if not plugin:
 		return
+
+	_debug_log("Starting queue sync...")
 
 	var current_time = Time.get_unix_time_from_system()
 
@@ -738,6 +758,7 @@ func _sync_notification_queue() -> void:
 
 		if not should_keep:
 			# This notification is scheduled but shouldn't be (not in top 24)
+			_debug_log("Cancelling OS notification (not in top 24): id=%s" % os_id)
 			var cancel_success = _os_cancel_notification(os_id)
 			if cancel_success:
 				# Mark as unscheduled in database
@@ -760,15 +781,23 @@ func _sync_notification_queue() -> void:
 		var title = notif.get("title", "")
 		var body = notif.get("body", "")
 		var trigger_ts = notif.get("trigger_timestamp", 0)
+		var data = notif.get("data", "")
 		var delay_seconds = maxi(1, trigger_ts - current_time)
 
 		var success = _os_schedule_notification(notif_id, title, body, delay_seconds)
 		if success:
+			# Log the scheduling with deep link info (dev mode only)
+			_debug_log_notification_scheduled(
+				notif_id, title, body, trigger_ts, delay_seconds, data
+			)
+
 			# Mark as scheduled in database
 			if OS.get_name() == "Android":
 				plugin.dbMarkScheduled(notif_id, true)
 			else:
 				plugin.db_mark_scheduled(notif_id, true)
+
+	_debug_log("Queue sync completed")
 
 
 ## Get the appropriate plugin for the current platform (used by queue management)
@@ -858,6 +887,96 @@ func _print_queue_state(current_time: int, scheduled_count: int, pending_count: 
 			print("  - '%s' in %d minutes" % [title, mins_until])
 
 	print("======================================\n")
+
+
+# =============================================================================
+# DEBUG LOGGING (Dev Mode Only)
+# =============================================================================
+
+
+## Print a debug message for notification operations (only in dev mode)
+func _debug_log(message: String) -> void:
+	if _debug_notifications_enabled:
+		print("[NotificationsManager DEBUG] %s" % message)
+
+
+## Print the entire notification database contents (only in dev mode)
+func _debug_print_database() -> void:
+	if not _debug_notifications_enabled:
+		return
+
+	var plugin = _get_plugin()
+	if not plugin:
+		print("[NotificationsManager DEBUG] Cannot print database: plugin not available")
+		return
+
+	var all_notifications = (
+		plugin.dbQueryNotifications("", "trigger_timestamp ASC", -1)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications("", "trigger_timestamp ASC", -1)
+	)
+
+	var current_time = int(Time.get_unix_time_from_system())
+
+	print("\n" + "=" * 70)
+	print("[NotificationsManager DEBUG] DATABASE DUMP")
+	print("=" * 70)
+	print("Current time: %d" % current_time)
+	print("Total notifications in database: %d" % all_notifications.size())
+	print("-" * 70)
+
+	if all_notifications.size() == 0:
+		print("  (database is empty)")
+	else:
+		for notif in all_notifications:
+			var notif_id = notif.get("id", "?")
+			var title = notif.get("title", "?")
+			var body = notif.get("body", "?")
+			var trigger_ts = notif.get("trigger_timestamp", 0)
+			var is_scheduled = notif.get("is_scheduled", 0)
+			var data = notif.get("data", "")
+
+			var time_until = trigger_ts - current_time
+			var mins_until = int(time_until / 60.0)
+			var status = "SCHEDULED" if is_scheduled == 1 else "PENDING"
+			var time_str = "%d min" % mins_until if time_until > 0 else "EXPIRED"
+
+			print("  [%s] id=%s" % [status, notif_id])
+			print("    title: %s" % title)
+			print("    body: %s" % body)
+			print("    trigger_timestamp: %d (%s)" % [trigger_ts, time_str])
+			if not data.is_empty():
+				print("    data (deep link): %s" % data)
+			print("")
+
+	print("=" * 70 + "\n")
+
+
+## Log a notification being queued/scheduled with deep link info
+func _debug_log_notification_scheduled(
+	notification_id: String,
+	title: String,
+	body: String,
+	trigger_timestamp: int,
+	delay_seconds: int,
+	data: String = ""
+) -> void:
+	if not _debug_notifications_enabled:
+		return
+
+	print("\n" + "-" * 50)
+	print("[NotificationsManager DEBUG] NOTIFICATION SCHEDULED")
+	print("-" * 50)
+	print("  id: %s" % notification_id)
+	print("  title: %s" % title)
+	print("  body: %s" % body)
+	print("  trigger_timestamp: %d" % trigger_timestamp)
+	print("  delay_seconds: %d" % delay_seconds)
+	if not data.is_empty():
+		print("  deep_link_data: %s" % data)
+	else:
+		print("  deep_link_data: (none)")
+	print("-" * 50 + "\n")
 
 
 ## Download an image from URL and convert to base64 string
