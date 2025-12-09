@@ -80,27 +80,6 @@ func _ready():
 	Global.deep_link_received.connect(_on_deep_link_received)
 
 
-func _unhandled_input(event):
-	if event is InputEventKey and visible:
-		if event.pressed and event.keycode == KEY_TAB:
-			pressed_index = group.get_pressed_button().get_index()
-			buttons_quantity = group.get_buttons().size() - 1
-
-			if pressed_index < buttons_quantity:
-				group.get_buttons()[pressed_index + 1].set_pressed(true)
-				group.get_buttons()[pressed_index + 1].emit_signal("pressed")
-			else:
-				#change index to 0 to include "Control Discover"
-				group.get_buttons()[1].set_pressed(true)
-				group.get_buttons()[1].emit_signal("pressed")
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			_async_request_hide_menu()
-		if event.pressed and event.keycode == KEY_P:
-			if selected_node == control_settings:
-				_async_request_hide_menu()
-			else:
-				_on_button_settings_pressed()
-
 
 func _on_button_close_pressed():
 	_async_request_hide_menu()

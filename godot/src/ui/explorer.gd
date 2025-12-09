@@ -323,13 +323,6 @@ func _unhandled_input(event):
 					control_menu.show_last()
 					release_mouse()
 
-			if event.pressed and event.keycode == KEY_M:
-				if control_menu.visible:
-					pass
-				else:
-					control_menu.show_map()
-					release_mouse()
-
 			if event.pressed and event.keycode == KEY_ESCAPE:
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
