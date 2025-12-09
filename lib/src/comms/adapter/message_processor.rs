@@ -54,9 +54,9 @@ pub enum MessageType {
     Rfc4(Rfc4Message),
     InitVoice(VoiceInitData),
     VoiceFrame(VoiceFrameData),
-    PeerJoined,                            // Peer joined a room
-    PeerLeft,                              // Peer left a room
-    Disconnected(DisconnectReason),        // Disconnected from the server
+    PeerJoined,                     // Peer joined a room
+    PeerLeft,                       // Peer left a room
+    Disconnected(DisconnectReason), // Disconnected from the server
 }
 
 #[derive(Debug, Clone)]

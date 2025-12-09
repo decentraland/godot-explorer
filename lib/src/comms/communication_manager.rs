@@ -274,7 +274,10 @@ impl INode for CommunicationManager {
         let mut processor_reset = false;
         let mut chat_signals = Vec::new();
         let mut outgoing_messages = Vec::new();
-        let mut disconnect_info: Option<(crate::comms::adapter::message_processor::DisconnectReason, String)> = None;
+        let mut disconnect_info: Option<(
+            crate::comms::adapter::message_processor::DisconnectReason,
+            String,
+        )> = None;
 
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
