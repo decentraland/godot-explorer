@@ -80,7 +80,6 @@ func _ready():
 	Global.deep_link_received.connect(_on_deep_link_received)
 
 
-
 func _on_button_close_pressed():
 	_async_request_hide_menu()
 
@@ -109,7 +108,6 @@ func show_discover():
 	select_discover_screen(false)
 	button_discover.set_pressed(true)
 	_open()
-
 
 
 func show_backpack():
