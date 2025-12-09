@@ -22,7 +22,6 @@ var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 
-
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 
@@ -208,7 +207,9 @@ func _ready():
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
 
 	# Add disconnect handler for reconnection logic
-	var disconnect_handler = load("res://src/ui/components/disconnect_handler/disconnect_handler.tscn").instantiate()
+	var disconnect_handler = (
+		load("res://src/ui/components/disconnect_handler/disconnect_handler.tscn").instantiate()
+	)
 	add_child(disconnect_handler)
 
 	#Global.scene_fetcher.current_position = start_parcel_position

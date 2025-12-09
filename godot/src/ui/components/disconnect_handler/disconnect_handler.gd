@@ -57,7 +57,12 @@ func _on_disconnected(reason: int) -> void:
 	_reconnect_attempts += 1
 	_should_stop_reconnecting = false  # Allow reconnection attempts
 
-	print("[DisconnectHandler] Disconnected (reason: %d), attempt %d/%d" % [reason, _reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
+	print(
+		(
+			"[DisconnectHandler] Disconnected (reason: %d), attempt %d/%d"
+			% [reason, _reconnect_attempts, MAX_RECONNECT_ATTEMPTS]
+		)
+	)
 
 	# If we haven't exhausted reconnect attempts, try to reconnect
 	if _reconnect_attempts < MAX_RECONNECT_ATTEMPTS and not _last_adapter_str.is_empty():
@@ -179,7 +184,11 @@ func _show_disconnect_overlay(title: String, message: String) -> void:
 
 
 func _on_reconnect_pressed() -> void:
-	var adapter_to_reconnect = _last_adapter_str if not _last_adapter_str.is_empty() else Global.comms.get_current_adapter_conn_str()
+	var adapter_to_reconnect = (
+		_last_adapter_str
+		if not _last_adapter_str.is_empty()
+		else Global.comms.get_current_adapter_conn_str()
+	)
 
 	# Remove overlay
 	if _overlay != null and is_instance_valid(_overlay):
