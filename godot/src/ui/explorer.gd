@@ -22,6 +22,12 @@ var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 
+# Reconnection state
+const MAX_RECONNECT_ATTEMPTS: int = 3
+var _reconnect_attempts: int = 0
+var _last_adapter_str: String = ""
+var _last_disconnect_reason: int = -1
+
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 
@@ -641,6 +647,13 @@ func _on_panel_profile_open_profile():
 func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
 	button_mic.visible = false  # voice_chat_enabled
 
+	# Successfully connected - reset reconnect attempts
+	if _reconnect_attempts > 0:
+		print("[Explorer] Reconnected successfully after %d attempt(s)" % _reconnect_attempts)
+	_reconnect_attempts = 0
+	_last_adapter_str = ""
+	_last_disconnect_reason = -1
+
 
 ## Disconnect reasons from CommunicationManager:
 ## 0 = DuplicateIdentity (same account logged in elsewhere)
@@ -648,6 +661,37 @@ func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
 ## 2 = Kicked (removed from server by admin)
 ## 3 = Other (server shutdown, signal close, etc.)
 func _on_disconnected(reason: int):
+	# DuplicateIdentity means someone else logged in - don't retry, show error immediately
+	if reason == 0:
+		_show_disconnect_error(reason)
+		return
+
+	# Store the adapter string before it gets cleared
+	if _last_adapter_str.is_empty():
+		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
+
+	_last_disconnect_reason = reason
+	_reconnect_attempts += 1
+
+	print("[Explorer] Disconnected (reason: %d), attempt %d/%d" % [reason, _reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
+
+	# If we haven't exhausted reconnect attempts, try to reconnect
+	if _reconnect_attempts < MAX_RECONNECT_ATTEMPTS and not _last_adapter_str.is_empty():
+		print("[Explorer] Attempting to reconnect...")
+		_async_attempt_reconnect()
+		return
+
+	# Exhausted all attempts - show error overlay
+	_show_disconnect_error(reason)
+
+
+func _async_attempt_reconnect() -> void:
+	# Small delay before reconnecting to avoid rapid reconnection loops
+	await get_tree().create_timer(1.0).timeout
+	Global.comms.change_adapter(_last_adapter_str)
+
+
+func _show_disconnect_error(reason: int) -> void:
 	var title: String
 	var message: String
 
@@ -712,6 +756,26 @@ func _show_disconnect_overlay(title: String, message: String):
 	var spacer2 = Control.new()
 	spacer2.custom_minimum_size = Vector2(0, 60)
 	message_box.add_child(spacer2)
+
+	# Reconnect button
+	var reconnect_button = Button.new()
+	reconnect_button.text = "RECONNECT"
+	reconnect_button.custom_minimum_size = Vector2(200, 50)
+	reconnect_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	reconnect_button.pressed.connect(func():
+		overlay.queue_free()
+		var adapter_to_reconnect = _last_adapter_str if not _last_adapter_str.is_empty() else Global.comms.get_current_adapter_conn_str()
+		_reconnect_attempts = 0
+		_last_adapter_str = ""
+		if not adapter_to_reconnect.is_empty():
+			Global.comms.change_adapter(adapter_to_reconnect)
+	)
+	message_box.add_child(reconnect_button)
+
+	# Small spacer between buttons
+	var spacer3 = Control.new()
+	spacer3.custom_minimum_size = Vector2(0, 10)
+	message_box.add_child(spacer3)
 
 	# Exit button
 	var exit_button = Button.new()
