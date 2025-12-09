@@ -2,10 +2,11 @@ extends TextureRect
 
 var success: bool = false
 
-@onready var confirmation_dialog: MarginContainer = %ConfirmationDialog
-@onready var processing_screen: MarginContainer = %ProcessingScreen
-@onready var done_dialog: MarginContainer = %DoneDialog
-@onready var fail_dialog: MarginContainer = %FailDialog
+@onready var confirmation_dialog: VBoxContainer = %ConfirmationDialog
+@onready var processing_screen: VBoxContainer = %ProcessingScreen
+@onready var done_dialog: VBoxContainer = %DoneDialog
+@onready var fail_dialog: VBoxContainer = %FailDialog
+
 @onready var timer: Timer = %Timer
 
 
