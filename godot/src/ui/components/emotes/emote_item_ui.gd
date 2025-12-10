@@ -27,7 +27,6 @@ signal select_emote(selected: bool, emote_urn: String)
 				color = Color("#FFB626")
 		%Inner.self_modulate = color
 
-
 @export var picture: Texture2D = null:
 	set(new_value):
 		%TextureRect_Picture.texture = new_value

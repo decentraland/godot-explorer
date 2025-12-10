@@ -766,3 +766,11 @@ func _notification(what: int) -> void:
 		NotificationsManager.force_queue_sync()
 
 		Global.check_deep_link_teleport_to()
+
+
+func _on_emote_wheel_emote_wheel_closed() -> void:
+	virtual_joystick.show()
+
+
+func _on_emote_wheel_emote_wheel_opened() -> void:
+	virtual_joystick.hide()

@@ -29,13 +29,12 @@ var last_selected_emote_urn: String = ""
 
 func _ready():
 	control_wheel.hide()
-	
+
 	for child in emote_wheel_container.get_children():
 		if child is EmoteItemUi:
 			child.play_emote.connect(self._on_play_emote)
 			child.select_emote.connect(self._on_select_emote.bind(child))
 			emote_items.push_back(child)
-
 
 	if avatar_node != null:
 		avatar_node.avatar_loaded.connect(self._on_avatar_loaded)
@@ -60,18 +59,13 @@ func _update_wheel(emote_urns: Array):
 		emote_item.async_load_from_urn(emote_urns[i], i)  # Forget await
 
 
-func _gui_input(event):
-	if event is InputEventScreenTouch:
-		UiSounds.play_sound("widget_emotes_close")
-		close()
-
-
 func _physics_process(_delta):
 	if Input.is_action_just_pressed("ia_open_emote_wheel"):
 		if control_wheel.is_visible_in_tree():
 			close(true)
 		else:
 			open()
+
 
 func _on_play_emote(emote_urn: String):
 	close()
@@ -95,13 +89,15 @@ func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 	last_selected_emote_urn = emote_urn
 	label_emote_name.text = child.emote_name
 	UiSounds.play_sound("backpack_item_highlight")
-	
-func close(play_sound:bool = false) -> void:
+
+
+func close(play_sound: bool = false) -> void:
 	control_wheel.hide()
 	emote_wheel_closed.emit()
 	Global.explorer_grab_focus()
 	if play_sound:
 		UiSounds.play_sound("widget_emotes_close")
+
 
 func open() -> void:
 	control_wheel.show()
@@ -109,3 +105,9 @@ func open() -> void:
 	emote_wheel_opened.emit()
 	grab_focus()
 	Global.release_mouse()
+
+
+func _on_control_wheel_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		UiSounds.play_sound("widget_emotes_close")
+		close()
