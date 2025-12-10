@@ -27,11 +27,6 @@ signal select_emote(selected: bool, emote_urn: String)
 				color = Color("#FFB626")
 		%Inner.self_modulate = color
 
-@export var number: int = 0:
-	set(new_value):
-		%Label_Number.visible = new_value >= 0
-		%Label_Number.text = str(new_value)
-		number = new_value
 
 @export var picture: Texture2D = null:
 	set(new_value):
@@ -49,12 +44,10 @@ var inside = false
 
 @onready var texture_rect_selected = %Selected
 @onready var texture_rect_pressed = %Pressed
-@onready var label_number = %Label_Number
 
 
 func async_load_from_urn(_emote_urn: String, index: int = -1):
 	emote_urn = _emote_urn
-	number = index
 
 	if Emotes.is_emote_default(emote_urn):
 		emote_name = Emotes.DEFAULT_EMOTE_NAMES[emote_urn]
@@ -101,14 +94,10 @@ func _ready():
 		button_up.connect(self._on_button_up)
 		toggled.connect(self._on_toggled)
 
-		if Global.is_mobile():
-			label_number.hide()
-
 
 # Executed with @tool
 func _on_item_rect_changed():
 	%TextureRect_Picture.set_rotation(-get_rotation())
-	%Label_Number.set_rotation(-get_rotation())
 
 
 func _on_mouse_exited():

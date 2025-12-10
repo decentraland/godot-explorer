@@ -1,9 +1,20 @@
 [gd_scene load_steps=5 format=3 uid="uid://nn0iih4xpn2e"]
 
-[ext_resource type="Texture2D" uid="uid://dnenlhbcgxgph" path="res://assets/themes/dark_dcl_theme/icons/Ellipse.svg" id="1_57o7r"]
 [ext_resource type="Script" uid="uid://dn3hlhbknm1ej" path="res://src/ui/components/button_touch_action/button_touch_action.gd" id="2_c0jk1"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="2_h4q5h"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_nbvik"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_op5sw"]
+bg_color = Color(0, 0, 0, 0.7019608)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
 
 [node name="TouchAction" type="Control"]
 layout_mode = 3
@@ -11,10 +22,22 @@ anchors_preset = 0
 offset_right = 80.0
 offset_bottom = 80.0
 script = ExtResource("2_c0jk1")
+toggle_on_action = null
+toggle_off_action = null
+is_toggle = null
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_op5sw")
 
 [node name="Button_TouchAction" type="TextureButton" parent="."]
 unique_name_in_owner = true
-modulate = Color(1, 1, 1, 0.501961)
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -22,48 +45,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0
-texture_normal = ExtResource("1_57o7r")
 ignore_texture_size = true
-stretch_mode = 4
-
-[node name="ShadowOutter" type="TextureRect" parent="Button_TouchAction"]
-self_modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -82.0
-offset_top = -82.0
-offset_right = 2.0
-offset_bottom = 2.0
-grow_horizontal = 0
-grow_vertical = 0
-mouse_filter = 2
-texture = ExtResource("1_57o7r")
-expand_mode = 1
-stretch_mode = 4
-
-[node name="ShadowInner" type="TextureRect" parent="Button_TouchAction"]
-self_modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -78.0
-offset_top = -78.0
-offset_right = -2.0
-offset_bottom = -2.0
-grow_horizontal = 0
-grow_vertical = 0
-mouse_filter = 2
-texture = ExtResource("1_57o7r")
-expand_mode = 1
 stretch_mode = 4
 
 [node name="Label_Letter" type="Label" parent="Button_TouchAction"]
@@ -107,3 +89,4 @@ stretch_mode = 5
 
 [connection signal="button_down" from="Button_TouchAction" to="." method="_on_button_touch_action_button_down"]
 [connection signal="button_up" from="Button_TouchAction" to="." method="_on_button_touch_action_button_up"]
+[connection signal="toggled" from="Button_TouchAction" to="." method="_on_button_touch_action_toggled"]
