@@ -25,11 +25,18 @@ func set_lobby(new_lobby: Lobby):
 
 
 func async_login(social: bool):
-	#TODO: Use Global.is_android() and connect directly with the selected provider
+	var target_config_id := ""
 	if Global.is_android():
-		Global.player_identity.try_connect_account("androidSocial" if social else "androidWeb3")
+		target_config_id = "androidSocial" if social else "androidWeb3"
+	elif Global.is_ios():
+		target_config_id = "ios"
+
+	# Use mobile auth flow (deep link based) for mobile platforms
+	# Desktop continues to use polling-based flow
+	if Global.is_mobile():
+		Global.player_identity.start_mobile_connect_account(target_config_id)
 	else:
-		Global.player_identity.try_connect_account("")
+		Global.player_identity.try_connect_account(target_config_id)
 
 	lobby.waiting_for_new_wallet = true
 	lobby.show_auth_browser_open_screen()

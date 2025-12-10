@@ -535,7 +535,20 @@ func _on_deeplink_received(url: String) -> void:
 	if not url.is_empty():
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
-		deep_link_received.emit.call_deferred()
+
+		# Handle signin deep link for mobile auth flow
+		if deep_link_obj.is_signin_request():
+			_handle_signin_deep_link(deep_link_obj.signin_identity_id)
+		else:
+			deep_link_received.emit.call_deferred()
+
+
+func _handle_signin_deep_link(identity_id: String) -> void:
+	print("[DEEPLINK] Handling signin with identity_id: ", identity_id)
+	if Global.player_identity.has_pending_mobile_auth():
+		Global.player_identity.complete_mobile_connect_account(identity_id)
+	else:
+		printerr("[DEEPLINK] Received signin deep link but no pending mobile auth")
 
 
 func _notification(what: int) -> void:
@@ -548,6 +561,10 @@ func _notification(what: int) -> void:
 
 			if not deep_link_url.is_empty():
 				deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
-				deep_link_received.emit.call_deferred()
+				# Handle signin deep link for mobile auth flow
+				if deep_link_obj.is_signin_request():
+					_handle_signin_deep_link(deep_link_obj.signin_identity_id)
+				else:
+					deep_link_received.emit.call_deferred()
 
 			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)
