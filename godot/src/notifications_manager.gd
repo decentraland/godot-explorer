@@ -840,7 +840,7 @@ func async_sync_attended_events() -> void:
 		# Get event details
 		var coordinates = Vector2i(int(event_data.get("x", 0)), int(event_data.get("y", 0)))
 		var image_url = event_data.get("image", "")
-		var deep_link = "decentraland://?position=%d,%d" % [coordinates.x, coordinates.y]
+		var deep_link = "decentraland://open?position=%d,%d" % [coordinates.x, coordinates.y]
 
 		# Generate notification text
 		var notification_text = generate_event_notification_text(event_name)

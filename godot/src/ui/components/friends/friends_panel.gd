@@ -12,6 +12,10 @@ const NO_FRIENDS_MESSAGE: String = """View someone's Profile or tap on 'Add Frie
 const NO_BLOCKED_MESSAGE: String = """If you block someone, you will not be able to see each other in-world or exchange any messages in private or public chats.
 You can block another user by going to the tree (3) dots menu available in their Profile."""
 
+# Polling constants
+const POLL_INTERVAL_SECONDS: float = 5.0
+const DEBOUNCE_INTERVAL_MS: int = 5000
+
 var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
 var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
 
@@ -21,6 +25,10 @@ var _online_friends: Dictionary = {}
 # Track if streaming subscription failed (to show service error and retry on panel open)
 # Starts as true (service down) until the service loads successfully
 var _streaming_subscription_failed: bool = true
+
+# Friends polling timer
+var _poll_timer: Timer = null
+var _last_update_time_ms: int = 0
 
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
@@ -42,7 +50,6 @@ var _streaming_subscription_failed: bool = true
 @onready var nearby_list: SocialList = %NearbyList
 @onready var blocked_list: SocialList = %BlockedList
 
-@onready var label_empty_state: Label = %LabelEmptyState
 @onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
 @onready var v_box_container_no_friends: VBoxContainer = %VBoxContainer_NoFriends
 @onready var request_container: PanelContainer = %RequestContainer
@@ -142,9 +149,14 @@ func show_panel_on_friends_tab() -> void:
 	if _streaming_subscription_failed:
 		_async_retry_streaming_subscription()
 
+	# Trigger debounced update and start polling
+	_debounced_update_lists()
+	_start_friends_polling()
+
 
 func hide_panel() -> void:
 	hide()
+	_stop_friends_polling()
 
 
 func set_streaming_subscription_failed(failed: bool) -> void:
@@ -512,3 +524,50 @@ func _on_visibility_changed() -> void:
 			timer.start(0)
 		else:
 			timer.stop()
+
+
+func _start_friends_polling() -> void:
+	if Global.player_identity.is_guest:
+		return
+
+	if _poll_timer != null:
+		return  # Already polling
+
+	_poll_timer = Timer.new()
+	_poll_timer.wait_time = POLL_INTERVAL_SECONDS
+	_poll_timer.timeout.connect(_on_poll_timer_timeout)
+	add_child(_poll_timer)
+	_poll_timer.start()
+
+
+func _stop_friends_polling() -> void:
+	if _poll_timer != null:
+		_poll_timer.stop()
+		_poll_timer.queue_free()
+		_poll_timer = null
+
+
+func _on_poll_timer_timeout() -> void:
+	if not visible:
+		_stop_friends_polling()
+		return
+
+	if Global.player_identity.is_guest:
+		return
+
+	# Update friends lists
+	update_all_lists()
+	_last_update_time_ms = int(Time.get_unix_time_from_system() * 1000)
+
+
+func _debounced_update_lists() -> void:
+	if Global.player_identity.is_guest:
+		return
+
+	var current_time_ms: int = int(Time.get_unix_time_from_system() * 1000)
+	var time_since_last_update: int = current_time_ms - _last_update_time_ms
+
+	# Only update if enough time has passed since last update
+	if time_since_last_update >= DEBOUNCE_INTERVAL_MS:
+		update_all_lists()
+		_last_update_time_ms = current_time_ms
