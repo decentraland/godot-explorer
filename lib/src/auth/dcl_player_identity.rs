@@ -316,8 +316,9 @@ impl DclPlayerIdentity {
             match result {
                 Ok((ephemeral_auth_chain, chain_id)) => {
                     let address = ephemeral_auth_chain.signer();
-                    let ephemeral_auth_chain_json_str = serde_json::to_string(&ephemeral_auth_chain)
-                        .expect("serialize ephemeral auth chain");
+                    let ephemeral_auth_chain_json_str =
+                        serde_json::to_string(&ephemeral_auth_chain)
+                            .expect("serialize ephemeral auth chain");
 
                     this.call_deferred(
                         "try_set_remote_wallet".into(),
