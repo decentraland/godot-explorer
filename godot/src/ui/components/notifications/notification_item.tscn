@@ -72,11 +72,7 @@ fit_content = true
 clip_contents = false
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 2
-theme_override_font_sizes/normal_font_size = 13
-theme_override_font_sizes/bold_font_size = 13
-theme_override_font_sizes/bold_italics_font_size = 13
-theme_override_font_sizes/italics_font_size = 13
-theme_override_font_sizes/mono_font_size = 13
+theme_override_font_sizes/mono_font_size = 14
 fit_content = true
 
 [node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2"]
