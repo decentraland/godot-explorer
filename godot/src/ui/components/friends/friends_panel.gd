@@ -12,10 +12,6 @@ const NO_FRIENDS_MESSAGE: String = """View someone's Profile or tap on 'Add Frie
 const NO_BLOCKED_MESSAGE: String = """If you block someone, you will not be able to see each other in-world or exchange any messages in private or public chats.
 You can block another user by going to the tree (3) dots menu available in their Profile."""
 
-# Polling constants
-const POLL_INTERVAL_SECONDS: float = 5.0
-const DEBOUNCE_INTERVAL_MS: int = 5000
-
 var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
 var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
 
@@ -25,10 +21,6 @@ var _online_friends: Dictionary = {}
 # Track if streaming subscription failed (to show service error and retry on panel open)
 # Starts as true (service down) until the service loads successfully
 var _streaming_subscription_failed: bool = true
-
-# Friends polling timer
-var _poll_timer: Timer = null
-var _last_update_time_ms: int = 0
 
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
@@ -50,6 +42,7 @@ var _last_update_time_ms: int = 0
 @onready var nearby_list: SocialList = %NearbyList
 @onready var blocked_list: SocialList = %BlockedList
 
+@onready var label_empty_state: Label = %LabelEmptyState
 @onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
 @onready var v_box_container_no_friends: VBoxContainer = %VBoxContainer_NoFriends
 @onready var request_container: PanelContainer = %RequestContainer
@@ -149,14 +142,9 @@ func show_panel_on_friends_tab() -> void:
 	if _streaming_subscription_failed:
 		_async_retry_streaming_subscription()
 
-	# Trigger debounced update and start polling
-	_debounced_update_lists()
-	_start_friends_polling()
-
 
 func hide_panel() -> void:
 	hide()
-	_stop_friends_polling()
 
 
 func set_streaming_subscription_failed(failed: bool) -> void:
@@ -418,122 +406,11 @@ func _async_check_friend_connectivity(address: String) -> void:
 
 
 func update_all_lists():
-	# Fetch data once and distribute to lists
-	_async_update_all_lists()
-
-
-func _async_update_all_lists() -> void:
-	# Fetch all friends and pending requests once
-	var all_friends = await _async_fetch_all_friends()
-	var pending_requests = await _async_fetch_pending_requests()
-
-	# Handle error state
-	if all_friends == null:
-		online_list.set_error_state()
-		offline_list.async_update_list([])
-		request_list.async_update_list([])
-	else:
-		_streaming_subscription_failed = false
-
-		# Filter friends into online/offline
-		var online_friends: Array = []
-		var offline_friends: Array = []
-		for friend in all_friends:
-			if is_friend_online(friend.address):
-				online_friends.append(friend)
-			else:
-				offline_friends.append(friend)
-
-		# Pass filtered data to lists
-		online_list.async_update_list(online_friends)
-		offline_list.async_update_list(offline_friends)
-
-		# Pass pending requests (filter out blocked users)
-		var filtered_requests: Array = []
-		for req in pending_requests:
-			if not Global.social_blacklist.is_blocked(req.address):
-				filtered_requests.append(req)
-		request_list.async_update_list(filtered_requests)
-
-	# Update visibility after data is set
-	_update_dropdown_visibility()
-
-	# Nearby and blocked use their own data sources
+	request_list.async_update_list()
+	online_list.async_update_list()
+	offline_list.async_update_list()
 	nearby_list.async_update_list()
 	blocked_list.async_update_list()
-
-
-func _async_fetch_all_friends() -> Variant:
-	# Fetch all friends (status=-1 for all)
-	# Returns null on error, empty array if no friends, array of SocialItemData otherwise
-	var promise = Global.social_service.get_friends(100, 0, -1)
-
-	# Use timeout to prevent hanging forever (10 seconds)
-	var timed_out = await _async_await_with_timeout(promise, 10.0)
-	if timed_out:
-		return null
-
-	if promise.is_rejected():
-		return null
-
-	var friends = promise.get_data()
-	var friend_items: Array = []
-
-	for friend_data in friends:
-		var item = SocialItemData.new()
-		item.address = friend_data["address"]
-		item.name = friend_data["name"]
-		item.has_claimed_name = friend_data["has_claimed_name"]
-		item.profile_picture_url = friend_data["profile_picture_url"]
-		friend_items.append(item)
-
-	return friend_items
-
-
-func _async_fetch_pending_requests() -> Array:
-	# Fetch pending friend requests
-	# Returns empty array on error
-	var promise = Global.social_service.get_pending_requests(100, 0)
-
-	var timed_out = await _async_await_with_timeout(promise, 10.0)
-	if timed_out:
-		return []
-
-	if promise.is_rejected():
-		return []
-
-	var requests = promise.get_data()
-	var request_items: Array = []
-
-	for req in requests:
-		var item = SocialItemData.new()
-		item.address = req["address"]
-		item.name = req["name"]
-		item.has_claimed_name = req["has_claimed_name"]
-		item.profile_picture_url = req["profile_picture_url"]
-		request_items.append(item)
-
-	return request_items
-
-
-func _async_await_with_timeout(promise: Promise, timeout_seconds: float) -> bool:
-	# Returns true if timed out, false if promise resolved
-	if promise == null:
-		return true
-	if promise.is_resolved():
-		return false
-
-	var timer_node = get_tree().create_timer(timeout_seconds)
-	var resolved = false
-
-	# Wait for either promise resolution or timeout
-	while not resolved and timer_node.time_left > 0:
-		if promise.is_resolved():
-			resolved = true
-			break
-		await get_tree().process_frame
-
-	return not resolved
 
 
 func _load_unloaded_items() -> void:
@@ -635,50 +512,3 @@ func _on_visibility_changed() -> void:
 			timer.start(0)
 		else:
 			timer.stop()
-
-
-func _start_friends_polling() -> void:
-	if Global.player_identity.is_guest:
-		return
-
-	if _poll_timer != null:
-		return  # Already polling
-
-	_poll_timer = Timer.new()
-	_poll_timer.wait_time = POLL_INTERVAL_SECONDS
-	_poll_timer.timeout.connect(_on_poll_timer_timeout)
-	add_child(_poll_timer)
-	_poll_timer.start()
-
-
-func _stop_friends_polling() -> void:
-	if _poll_timer != null:
-		_poll_timer.stop()
-		_poll_timer.queue_free()
-		_poll_timer = null
-
-
-func _on_poll_timer_timeout() -> void:
-	if not visible:
-		_stop_friends_polling()
-		return
-
-	if Global.player_identity.is_guest:
-		return
-
-	# Update friends lists
-	update_all_lists()
-	_last_update_time_ms = int(Time.get_unix_time_from_system() * 1000)
-
-
-func _debounced_update_lists() -> void:
-	if Global.player_identity.is_guest:
-		return
-
-	var current_time_ms: int = int(Time.get_unix_time_from_system() * 1000)
-	var time_since_last_update: int = current_time_ms - _last_update_time_ms
-
-	# Only update if enough time has passed since last update
-	if time_since_last_update >= DEBOUNCE_INTERVAL_MS:
-		update_all_lists()
-		_last_update_time_ms = current_time_ms
