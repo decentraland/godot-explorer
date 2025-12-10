@@ -54,6 +54,11 @@ impl DclSocialService {
     #[signal]
     pub fn friend_connectivity_updated(address: GString, status: i32);
 
+    /// Signal emitted when a streaming subscription is dropped (stream ended)
+    /// This can happen when the app is minimized or the connection is lost
+    #[signal]
+    pub fn subscription_dropped();
+
     /// Initialize the service with DclPlayerIdentity
     #[func]
     pub fn initialize_from_player_identity(
@@ -88,6 +93,18 @@ impl DclSocialService {
             tracing::error!(
                 "DclSocialService: Failed to acquire write lock during wallet initialization"
             );
+        }
+    }
+
+    /// Disconnect from the social service and clear all subscriptions
+    /// After calling this, you need to call initialize_from_player_identity again
+    #[func]
+    pub fn disconnect(&mut self) {
+        tracing::info!("DclSocialService: Disconnecting and clearing manager");
+        if let Ok(mut guard) = self.manager.try_write() {
+            *guard = None;
+        } else {
+            tracing::error!("DclSocialService: Failed to acquire write lock during disconnect");
         }
     }
 
@@ -591,6 +608,15 @@ impl DclSocialService {
 
             Self::emit_friendship_update_signal(&mut node, update);
         }
+
+        // Stream ended - emit subscription_dropped signal
+        if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
+            tracing::warn!("Friendship updates stream ended - emitting subscription_dropped signal");
+            node.call_deferred(
+                "emit_signal".into(),
+                &["subscription_dropped".to_variant()],
+            );
+        }
     }
 
     fn emit_friendship_update_signal(node: &mut Gd<DclSocialService>, update: FriendshipUpdate) {
@@ -702,6 +728,17 @@ impl DclSocialService {
                     ],
                 );
             }
+        }
+
+        // Stream ended - emit subscription_dropped signal
+        if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
+            tracing::warn!(
+                "Connectivity updates stream ended - emitting subscription_dropped signal"
+            );
+            node.call_deferred(
+                "emit_signal".into(),
+                &["subscription_dropped".to_variant()],
+            );
         }
     }
 

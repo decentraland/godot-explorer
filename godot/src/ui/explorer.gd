@@ -21,6 +21,7 @@ var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
+var _last_social_resubscribe_time: int = 0  # Debounce for social service re-subscription
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -298,6 +299,10 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 func _async_initialize_social_service() -> void:
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
+	# Connect to subscription_dropped signal for auto-reconnect
+	if not Global.social_service.subscription_dropped.is_connected(_async_on_subscription_dropped):
+		Global.social_service.subscription_dropped.connect(_async_on_subscription_dropped)
+
 	# Subscribe to friendship updates (request/accept/reject/etc)
 	var streaming_failed = false
 	var promise = Global.social_service.subscribe_to_updates()
@@ -327,6 +332,61 @@ func _async_initialize_social_service() -> void:
 	friends_panel.set_streaming_subscription_failed(streaming_failed)
 
 	# Populate friends lists even if streaming failed (one-time fetch still works)
+	friends_panel.update_all_lists()
+
+
+func _async_on_subscription_dropped() -> void:
+	print("[Explorer] Social service subscription dropped - re-subscribing...")
+
+	# Small delay to allow RPC to reconnect
+	await get_tree().create_timer(1.0).timeout
+
+	# Re-subscribe to both streams
+	_async_resubscribe_social_service()
+
+
+func _async_resubscribe_social_service() -> void:
+	if Global.player_identity.is_guest:
+		return
+
+	# Debounce: avoid multiple re-subscriptions within 5 seconds
+	var current_time = Time.get_ticks_msec()
+	if current_time - _last_social_resubscribe_time < 5000:
+		print("[Explorer] Social service re-subscription skipped (debounce)")
+		return
+	_last_social_resubscribe_time = current_time
+
+	print("[Explorer] Performing full social service reconnect...")
+
+	# 1. Disconnect from the RPC (clears manager and drops all subscriptions)
+	Global.social_service.disconnect()
+
+	# Small delay to ensure cleanup
+	await get_tree().create_timer(0.5).timeout
+
+	# 2. Re-initialize with player identity (creates new RPC connection)
+	Global.social_service.initialize_from_player_identity(Global.player_identity)
+
+	# Small delay to ensure initialization completes
+	await get_tree().create_timer(0.5).timeout
+
+	# 3. Re-subscribe to friendship updates
+	var promise = Global.social_service.subscribe_to_updates()
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		push_warning("[Explorer] Failed to re-subscribe to friendship updates: %s" % result.get_error())
+		return
+
+	# 4. Re-subscribe to connectivity updates
+	var connectivity_promise = Global.social_service.subscribe_to_connectivity_updates()
+	var connectivity_result = await PromiseUtils.async_awaiter(connectivity_promise)
+	if connectivity_result is PromiseError:
+		push_warning("[Explorer] Failed to re-subscribe to connectivity updates: %s" % connectivity_result.get_error())
+		return
+
+	print("[Explorer] Social service reconnected successfully")
+
+	# 5. Refresh friends lists to get current state
 	friends_panel.update_all_lists()
 
 
@@ -919,3 +979,8 @@ func _notification(what: int) -> void:
 		NotificationsManager.force_queue_sync()
 
 		Global.check_deep_link_teleport_to()
+
+		# Re-subscribe to social service streams (they may have dropped while minimized)
+		if not Global.player_identity.is_guest:
+			print("[Explorer] App focus regained - re-subscribing to social service...")
+			_async_resubscribe_social_service()
