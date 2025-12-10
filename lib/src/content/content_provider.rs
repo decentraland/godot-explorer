@@ -438,7 +438,10 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
+        godot_print!("[RUST_GLTF_DEBUG] fetch_scene_gltf called for: {} (hash: {})", file_path, file_hash);
+
         if let Some(entry) = self.cached.get_mut(file_hash) {
+            godot_print!("[RUST_GLTF_DEBUG] Using cached promise for hash: {}", file_hash);
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }

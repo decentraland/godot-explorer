@@ -156,9 +156,11 @@ func async_load_gltf():
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	timer.start()
 
-	if Global.content_provider.optimized_asset_exists(file_hash):
-		await async_try_load_gltf_from_local_file(file_hash)
-		return
+	# TEMP DEBUG: Force raw glTF import path to test C++ fix
+	#if Global.content_provider.optimized_asset_exists(file_hash):
+	#	await async_try_load_gltf_from_local_file(file_hash)
+	#	return
+	print("DEBUG: Forcing raw glTF import for hash: ", file_hash)
 
 	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
 	if promise == null:
@@ -210,10 +212,10 @@ func apply_fixes(gltf_instance: Node3D):
 		var mesh = instance.mesh
 		for idx in range(mesh.get_surface_count()):
 			var material = mesh.surface_get_material(idx)
-			fix_material(material)
+			fix_material(material, instance.name)
 
 
-func fix_material(mat: BaseMaterial3D):
+func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
 	# Induced rules for metallic specular roughness
 	# - If material has metallic texture then metallic value should be
 	# multiplied by .5
@@ -223,8 +225,13 @@ func fix_material(mat: BaseMaterial3D):
 	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
 
-	# Emission rules
-	set_emission_params(mat)
+	# Emission rules - TEMP: Desactivado para ver importador directo
+	# set_emission_params(mat)
+	# DEBUG: Solo imprimir info de emisión para diagnóstico
+	if mat.resource_name.to_lower().contains("cube"):
+		print("DEBUG RAW IMPORT cube_mat - emission_enabled: %s, emission: %s, emission_texture: %s, emission_operator: %s" % [
+			mat.emission_enabled, mat.emission, mat.emission_texture != null, mat.emission_operator
+		])
 
 
 func set_emission_params(mat: BaseMaterial3D):
@@ -234,6 +241,12 @@ func set_emission_params(mat: BaseMaterial3D):
 	var has_emission_color = mat.emission != Color.BLACK
 	var has_emission_texture = mat.emission_texture != null
 	var albedo_equals_emission = mat.albedo_texture and mat.emission_texture and mat.albedo_texture == mat.emission_texture
+
+	# DEBUG cube_mat
+	if mat.resource_name.to_lower().contains("cube"):
+		print("DEBUG cube_mat - name: %s, emission_enabled: %s, emission: %s, has_tex: %s, has_color: %s, albedo==emiss: %s" % [
+			mat.resource_name, mat.emission_enabled, mat.emission, has_emission_texture, has_emission_color, albedo_equals_emission
+		])
 
 	# Case 1: Has non-black emission color - enable emission
 	if has_emission_color:
