@@ -143,6 +143,7 @@ func _ready():
 
 	self.player_identity = PlayerIdentity.new()
 	self.player_identity.set_name("player_identity")
+	self.player_identity.profile_changed.connect(_on_player_profile_changed_sync_events)
 
 	self.testing_tools = TestingTools.new()
 	self.testing_tools.set_name("testing_tool")
@@ -569,3 +570,8 @@ func _notification(what: int) -> void:
 				deep_link_received.emit.call_deferred()
 
 			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)
+
+
+func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
+	# Sync attended events notifications from server after authentication
+	NotificationsManager.async_sync_attended_events()

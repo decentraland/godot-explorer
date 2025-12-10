@@ -50,6 +50,9 @@ const TOAST_MAX_AGE_MS = 5 * 60 * 1000  # 5 minutes in milliseconds
 const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
+# Local notifications version - increment this to clear and re-sync all notifications
+const LOCAL_NOTIFICATIONS_VERSION = 1
+
 ## DEBUG: Enable verbose logging of notification database operations
 ## Only active in debug builds (OS.is_debug_build())
 var _debug_notifications_enabled: bool = false
@@ -686,11 +689,61 @@ func force_queue_sync() -> void:
 	_sync_notification_queue()
 
 
+## Check if local notifications version has changed and clear all if needed
+## Returns true if notifications were cleared due to version mismatch
+func _check_and_handle_version_change() -> bool:
+	var stored_version: int = Global.get_config().local_notifications_version
+
+	if stored_version == LOCAL_NOTIFICATIONS_VERSION:
+		_debug_log("Local notifications version OK (v%d)" % LOCAL_NOTIFICATIONS_VERSION)
+		return false
+
+	_debug_log(
+		(
+			"Local notifications version mismatch: stored=%d, current=%d - clearing all notifications"
+			% [stored_version, LOCAL_NOTIFICATIONS_VERSION]
+		)
+	)
+
+	# Clear all notifications from OS
+	cancel_all_local_notifications()
+
+	# Clear all notifications from database
+	var plugin = _get_plugin()
+	if plugin:
+		if OS.get_name() == "Android":
+			plugin.dbClearAll()
+		else:
+			plugin.db_clear_all()
+
+	# Update stored version
+	Global.get_config().local_notifications_version = LOCAL_NOTIFICATIONS_VERSION
+	Global.get_config().save_to_settings_file()
+
+	_debug_log("All notifications cleared, version updated to v%d" % LOCAL_NOTIFICATIONS_VERSION)
+	return true
+
+
 ## Sync local notifications with attended events from server
 ## Adds missing notifications and removes ones for unsubscribed events
 ## Should be called after user authentication
 func async_sync_attended_events() -> void:
 	_debug_log("Starting attended events sync...")
+
+	# Check version and clear all notifications if version changed
+	_check_and_handle_version_change()
+
+	# Check and request notification permission
+	if not has_local_notification_permission():
+		request_local_notification_permission()
+
+		# Check permission after request
+		# Note: On iOS this is async, but we'll try to schedule anyway
+		# If permission is denied, the OS will handle it gracefully
+		if not has_local_notification_permission():
+			_debug_log(
+				"Notification permission not granted yet, scheduling anyway (OS will handle)"
+			)
 
 	var url = EVENTS_API_BASE_URL + "/events/?only_attendee=true"
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")

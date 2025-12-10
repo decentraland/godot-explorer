@@ -294,9 +294,6 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 	print("[Explorer] Player profile changed - starting notifications polling")
 	NotificationsManager.start_polling()
 
-	# Sync attended events notifications from server
-	NotificationsManager.async_sync_attended_events()
-
 
 func _async_initialize_social_service() -> void:
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
