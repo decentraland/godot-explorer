@@ -42,7 +42,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
-@onready var control_minimap = %Control_Minimap
 @onready var mobile_ui = %MobileUI
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
@@ -69,7 +68,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	control_minimap.set_center_position(parcel_position_real)
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
@@ -325,13 +323,6 @@ func _unhandled_input(event):
 					control_menu.show_last()
 					release_mouse()
 
-			if event.pressed and event.keycode == KEY_M:
-				if control_menu.visible:
-					pass
-				else:
-					control_menu.show_map()
-					release_mouse()
-
 			if event.pressed and event.keycode == KEY_ESCAPE:
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
@@ -359,10 +350,6 @@ func _on_control_menu_hide_menu():
 
 func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
-
-
-func _on_control_menu_toggle_minimap(visibility):
-	control_minimap.visible = visibility
 
 
 func toggle_debug_minimap(enabled: bool):
@@ -539,11 +526,6 @@ func _on_timer_fps_label_timeout():
 
 func hide_menu():
 	control_menu.close()
-	release_mouse()
-
-
-func _on_mini_map_pressed():
-	control_menu.show_map()
 	release_mouse()
 
 

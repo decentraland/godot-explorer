@@ -1,9 +1,0 @@
-<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M0 6.28571C0 2.81421 2.81421 0 6.28571 0H15.7143C19.1858 0 22 2.81421 22 6.28571V15.7143C22 19.1858 19.1858 22 15.7143 22H6.28571C2.81421 22 0 19.1858 0 15.7143V6.28571Z" fill="#40418D"/>
-<path d="M10.6064 5.94287L17.0626 9.17659L10.6064 12.4103L4.15012 9.17659L10.6064 5.94287Z" stroke="#FCFCFC" stroke-width="1.27679" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M14.1935 12.7637V13.9114C14.1935 14.8623 13.23 15.6331 12.0414 15.6331H9.17192C7.98335 15.6331 7.01982 14.8623 7.01982 13.9114V12.7637" stroke="#FCFCFC" stroke-width="0.638393" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M17.4244 9.17627V12.7631" stroke="#FCFCFC" stroke-width="0.638393" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M18.1395 14.1982L17.4221 12.7635" stroke="#FCFCFC" stroke-width="0.638393" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M16.7062 14.1982L17.4236 12.7635" stroke="#FCFCFC" stroke-width="0.638393" stroke-linecap="round" stroke-linejoin="round"/>
-<ellipse cx="17.4227" cy="12.7633" rx="1.43474" ry="0.717367" fill="#FCFCFC"/>
-</svg>

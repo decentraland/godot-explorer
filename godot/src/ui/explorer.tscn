@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=35 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
@@ -15,7 +15,6 @@
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
 [ext_resource type="Texture2D" uid="uid://72xpjysoxgwo" path="res://assets/themes/icons/InteractiveIcon.svg" id="11_2bq8g"]
-[ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_gwcjv"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/notifications/notification_bell_button.tscn" id="13_notif_bell"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="13_tdhdx"]
@@ -309,9 +308,6 @@ layout_mode = 2
 theme = ExtResource("4_2vs87")
 theme_override_constants/separation = 10
 
-[node name="MiniMap" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" instance=ExtResource("11_gwcjv")]
-layout_mode = 2
-
 [node name="Button_OpenChat" type="Button" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu"]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -533,7 +529,6 @@ script = ExtResource("20_064cw")
 [connection signal="on_open_chat" from="UI/ChatContainer/SafeMarginContainer/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_open_chat"]
 [connection signal="submit_message" from="UI/ChatContainer/SafeMarginContainer/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
 [connection signal="gui_input" from="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
-[connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="open_profile" from="UI/SafeMarginContainerHUD/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
