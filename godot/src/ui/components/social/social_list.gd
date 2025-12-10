@@ -232,7 +232,7 @@ func _compare_by_name(a, b) -> bool:
 	return name_a < name_b
 
 
-func async_update_list(_remote_avatars: Array = []) -> void:
+func async_update_list(preloaded_items: Array = []) -> void:
 	# Increment request ID to invalidate any in-flight requests
 	_update_request_id += 1
 	var current_request_id = _update_request_id
@@ -240,16 +240,36 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 	remove_items()
 	match player_list_type:
 		SOCIAL_TYPE.NEARBY:
-			# For NEARBY, use sync-based approach
+			# For NEARBY, use sync-based approach (ignores preloaded_items)
 			_sync_nearby_list()
 		SOCIAL_TYPE.BLOCKED:
+			# For BLOCKED, fetch from blacklist (ignores preloaded_items)
 			await _async_reload_blocked_list(current_request_id)
 		SOCIAL_TYPE.ONLINE:
-			await _async_reload_online_list(current_request_id)
+			_set_items_from_preloaded(preloaded_items)
 		SOCIAL_TYPE.OFFLINE:
-			await _async_reload_offline_list(current_request_id)
+			_set_items_from_preloaded(preloaded_items)
 		SOCIAL_TYPE.REQUEST:
-			await _async_reload_request_list(current_request_id)
+			_set_items_from_preloaded(preloaded_items)
+
+
+func _set_items_from_preloaded(preloaded_items: Array) -> void:
+	has_error = false
+	if preloaded_items.is_empty():
+		list_size = 0
+		size_changed.emit()
+		return
+
+	var should_load = _is_panel_visible()
+	add_items_by_social_item_data(preloaded_items, should_load)
+	_update_list_size()
+
+
+func set_error_state() -> void:
+	has_error = true
+	list_size = 0
+	load_error.emit("Friends service unavailable")
+	size_changed.emit()
 
 
 func _async_reload_blocked_list(request_id: int) -> void:
@@ -272,163 +292,6 @@ func _async_reload_blocked_list(request_id: int) -> void:
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(blocked_social_items, should_load)
 	_update_list_size()
-
-
-func _async_reload_online_list(request_id: int) -> void:
-	var all_friends = await _async_fetch_all_friends()
-
-	# Check if this request is still valid (no newer request started)
-	if request_id != _update_request_id:
-		return
-
-	if all_friends == null:
-		# null means error occurred
-		has_error = true
-		list_size = 0
-		load_error.emit("Friends service unavailable")
-		size_changed.emit()
-		return
-
-	has_error = false
-
-	# Filter to only show friends that are ONLINE
-	var online_friends = []
-	var friends_panel = _get_friends_panel()
-	for friend in all_friends:
-		var is_online = friends_panel and friends_panel.is_friend_online(friend.address)
-		if is_online:
-			online_friends.append(friend)
-
-	if online_friends.is_empty():
-		list_size = 0
-		size_changed.emit()
-		return
-
-	var should_load = _is_panel_visible()
-	add_items_by_social_item_data(online_friends, should_load)
-	_update_list_size()
-
-
-func _async_reload_offline_list(request_id: int) -> void:
-	var all_friends = await _async_fetch_all_friends()
-
-	# Check if this request is still valid (no newer request started)
-	if request_id != _update_request_id:
-		return
-
-	if all_friends == null:
-		# null means error occurred - don't show error for offline list, online list handles it
-		list_size = 0
-		size_changed.emit()
-		return
-
-	# Filter to only show friends that are OFFLINE (not in online tracking)
-	var offline_friends = []
-	var friends_panel = _get_friends_panel()
-	for friend in all_friends:
-		if not friends_panel or not friends_panel.is_friend_online(friend.address):
-			offline_friends.append(friend)
-
-	if offline_friends.is_empty():
-		list_size = 0
-		size_changed.emit()
-		return
-
-	var should_load = _is_panel_visible()
-	add_items_by_social_item_data(offline_friends, should_load)
-	_update_list_size()
-
-
-func _get_friends_panel():
-	# Navigate up the tree to find the friends panel
-	var parent = get_parent()
-	while parent != null:
-		if parent.has_method("is_friend_online"):
-			return parent
-		parent = parent.get_parent()
-	return null
-
-
-func _async_reload_request_list(request_id: int) -> void:
-	var promise = Global.social_service.get_pending_requests(100, 0)
-	await PromiseUtils.async_awaiter(promise)
-
-	# Check if this request is still valid (no newer request started)
-	if request_id != _update_request_id:
-		return
-
-	if promise.is_rejected():
-		printerr("Failed to load pending requests: ", PromiseUtils.get_error_message(promise))
-		has_error = true
-		list_size = 0
-		load_error.emit("Friends service unavailable")
-		size_changed.emit()
-		return
-
-	has_error = false
-	var requests = promise.get_data()
-	var request_items = []
-
-	for req in requests:
-		var item = SocialItemData.new()
-		item.address = req["address"]
-		item.name = req["name"]
-		item.has_claimed_name = req["has_claimed_name"]
-		item.profile_picture_url = req["profile_picture_url"]
-		request_items.append(item)
-
-	var should_load = _is_panel_visible()
-	add_items_by_social_item_data(request_items, should_load)
-	# Wait a frame for items to check their blocked status and update visibility
-	await get_tree().process_frame
-	_update_list_size()
-
-
-func _async_fetch_all_friends():
-	# Fetch all friends (status=-1 for all)
-	# Returns null on error, empty array if no friends, array of items otherwise
-	var promise = Global.social_service.get_friends(100, 0, -1)
-
-	# Use timeout to prevent hanging forever (10 seconds)
-	var timed_out = await _async_await_with_timeout(promise, 10.0)
-	if timed_out:
-		return null
-
-	if promise.is_rejected():
-		return null
-
-	var friends = promise.get_data()
-	var friend_items = []
-
-	for friend_data in friends:
-		var item = SocialItemData.new()
-		item.address = friend_data["address"]
-		item.name = friend_data["name"]
-		item.has_claimed_name = friend_data["has_claimed_name"]
-		item.profile_picture_url = friend_data["profile_picture_url"]
-		friend_items.append(item)
-
-	return friend_items
-
-
-func _async_await_with_timeout(promise: Promise, timeout_seconds: float) -> bool:
-	# Returns true if timed out, false if promise resolved
-	if promise == null:
-		return true
-	if promise.is_resolved():
-		return false
-
-	var timer = get_tree().create_timer(timeout_seconds)
-	var resolved = false
-
-	# Wait for either promise resolution or timeout
-	while not resolved and timer.time_left > 0:
-		if promise.is_resolved():
-			resolved = true
-			break
-		await get_tree().process_frame
-
-	return not resolved
 
 
 func remove_items() -> void:
@@ -511,6 +374,16 @@ func load_unloaded_items() -> void:
 func _is_panel_visible() -> bool:
 	var friends_panel = _get_friends_panel()
 	return friends_panel != null and friends_panel.visible
+
+
+func _get_friends_panel():
+	# Navigate up the tree to find the friends panel
+	var parent = get_parent()
+	while parent != null:
+		if parent.has_method("is_friend_online"):
+			return parent
+		parent = parent.get_parent()
+	return null
 
 
 func _async_fetch_profile_for_address(address: String) -> SocialItemData:

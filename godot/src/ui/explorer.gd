@@ -298,37 +298,6 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 func _async_initialize_social_service() -> void:
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
-	# Subscribe to friendship updates (request/accept/reject/etc)
-	var streaming_failed = false
-	var promise = Global.social_service.subscribe_to_updates()
-	await PromiseUtils.async_awaiter(promise)
-
-	if promise.is_rejected():
-		var error = promise.get_data()
-		push_error(
-			"[Explorer] Failed to subscribe to friendship updates: " + str(error.get_error())
-		)
-		streaming_failed = true
-
-	# Subscribe to connectivity updates (online/offline/away)
-	# This subscription also sends initial status of all friends
-	var connectivity_promise = Global.social_service.subscribe_to_connectivity_updates()
-	await PromiseUtils.async_awaiter(connectivity_promise)
-
-	if connectivity_promise.is_rejected():
-		var error = connectivity_promise.get_data()
-		push_error(
-			"[Explorer] Failed to subscribe to connectivity updates: " + str(error.get_error())
-		)
-		# Connectivity failure alone doesn't mark streaming as failed
-
-	# Notify friends panel about streaming subscription status
-	# This will hide the "no service" message if subscription succeeded
-	friends_panel.set_streaming_subscription_failed(streaming_failed)
-
-	# Populate friends lists even if streaming failed (one-time fetch still works)
-	friends_panel.update_all_lists()
-
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	_scene_console_message.call_deferred(scene_id, level, timestamp, text)

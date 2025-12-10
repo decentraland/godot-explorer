@@ -418,11 +418,122 @@ func _async_check_friend_connectivity(address: String) -> void:
 
 
 func update_all_lists():
-	request_list.async_update_list()
-	online_list.async_update_list()
-	offline_list.async_update_list()
+	# Fetch data once and distribute to lists
+	_async_update_all_lists()
+
+
+func _async_update_all_lists() -> void:
+	# Fetch all friends and pending requests once
+	var all_friends = await _async_fetch_all_friends()
+	var pending_requests = await _async_fetch_pending_requests()
+
+	# Handle error state
+	if all_friends == null:
+		online_list.set_error_state()
+		offline_list.async_update_list([])
+		request_list.async_update_list([])
+	else:
+		_streaming_subscription_failed = false
+
+		# Filter friends into online/offline
+		var online_friends: Array = []
+		var offline_friends: Array = []
+		for friend in all_friends:
+			if is_friend_online(friend.address):
+				online_friends.append(friend)
+			else:
+				offline_friends.append(friend)
+
+		# Pass filtered data to lists
+		online_list.async_update_list(online_friends)
+		offline_list.async_update_list(offline_friends)
+
+		# Pass pending requests (filter out blocked users)
+		var filtered_requests: Array = []
+		for req in pending_requests:
+			if not Global.social_blacklist.is_blocked(req.address):
+				filtered_requests.append(req)
+		request_list.async_update_list(filtered_requests)
+
+	# Update visibility after data is set
+	_update_dropdown_visibility()
+
+	# Nearby and blocked use their own data sources
 	nearby_list.async_update_list()
 	blocked_list.async_update_list()
+
+
+func _async_fetch_all_friends() -> Variant:
+	# Fetch all friends (status=-1 for all)
+	# Returns null on error, empty array if no friends, array of SocialItemData otherwise
+	var promise = Global.social_service.get_friends(100, 0, -1)
+
+	# Use timeout to prevent hanging forever (10 seconds)
+	var timed_out = await _async_await_with_timeout(promise, 10.0)
+	if timed_out:
+		return null
+
+	if promise.is_rejected():
+		return null
+
+	var friends = promise.get_data()
+	var friend_items: Array = []
+
+	for friend_data in friends:
+		var item = SocialItemData.new()
+		item.address = friend_data["address"]
+		item.name = friend_data["name"]
+		item.has_claimed_name = friend_data["has_claimed_name"]
+		item.profile_picture_url = friend_data["profile_picture_url"]
+		friend_items.append(item)
+
+	return friend_items
+
+
+func _async_fetch_pending_requests() -> Array:
+	# Fetch pending friend requests
+	# Returns empty array on error
+	var promise = Global.social_service.get_pending_requests(100, 0)
+
+	var timed_out = await _async_await_with_timeout(promise, 10.0)
+	if timed_out:
+		return []
+
+	if promise.is_rejected():
+		return []
+
+	var requests = promise.get_data()
+	var request_items: Array = []
+
+	for req in requests:
+		var item = SocialItemData.new()
+		item.address = req["address"]
+		item.name = req["name"]
+		item.has_claimed_name = req["has_claimed_name"]
+		item.profile_picture_url = req["profile_picture_url"]
+		request_items.append(item)
+
+	return request_items
+
+
+func _async_await_with_timeout(promise: Promise, timeout_seconds: float) -> bool:
+	# Returns true if timed out, false if promise resolved
+	if promise == null:
+		return true
+	if promise.is_resolved():
+		return false
+
+	var timer_node = get_tree().create_timer(timeout_seconds)
+	var resolved = false
+
+	# Wait for either promise resolution or timeout
+	while not resolved and timer_node.time_left > 0:
+		if promise.is_resolved():
+			resolved = true
+			break
+		await get_tree().process_frame
+
+	return not resolved
 
 
 func _load_unloaded_items() -> void:
