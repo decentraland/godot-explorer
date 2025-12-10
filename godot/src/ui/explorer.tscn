@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=37 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
@@ -26,6 +26,7 @@
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
 [ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
+[ext_resource type="PackedScene" uid="uid://btl8ag3s7oanm" path="res://src/ui/components/navbar/navbar.tscn" id="20_admxk"]
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
@@ -421,6 +422,11 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="Navbar" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("20_admxk")]
+layout_mode = 1
+offset_top = 86.0
+offset_right = -119.0
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI"]
 autostart = true
