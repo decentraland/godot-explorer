@@ -13,10 +13,7 @@ pub fn av_sinks(
     let (command_sender, _command_receiver) = tokio::sync::mpsc::channel(10);
     let (_stream_data_state_sender, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
 
-    tracing::warn!(
-        "Video playback not available (ffmpeg not enabled): {}",
-        source
-    );
+    tracing::warn!("Video playback not available: {}", source);
 
     (
         texture.map(|texture| VideoSink {

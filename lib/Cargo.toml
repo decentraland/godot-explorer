@@ -78,7 +78,6 @@ paranoid-android = "0.2.1"
 
 [features]
 default = ["use_livekit", "use_deno"]
-use_ffmpeg = []
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []

@@ -2,7 +2,6 @@ use godot::{engine::ImageTexture, prelude::*};
 
 use super::stream_processor::{AVCommand, StreamStateData};
 
-// AudioSink is always available (even without ffmpeg)
 pub struct AudioSink {
     pub command_sender: tokio::sync::mpsc::Sender<AVCommand>,
 }
