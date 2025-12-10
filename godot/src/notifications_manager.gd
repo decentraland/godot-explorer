@@ -28,6 +28,9 @@ const ENABLE_NOTIFICATION_FILTER = true
 ## DEBUG: Set to true to enable random notification generation for testing
 const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = false
 
+## DEBUG: Set to true to schedule a test notification 2 minutes from now using real event data
+const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
+
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
@@ -871,6 +874,32 @@ func async_sync_attended_events() -> void:
 	_debug_log(
 		"Event notifications sync complete: added=%d, removed=%d" % [added_count, removed_count]
 	)
+
+	# DEBUG: Schedule a test notification 5 minutes from now using the first attended event
+	if DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION and events.size() > 0:
+		var test_event = events[0]
+		var test_event_name = test_event.get("name", "Test Event")
+		var test_notification_id = "debug_test_event_" + str(int(Time.get_unix_time_from_system()))
+		var test_trigger_time = int(Time.get_unix_time_from_system()) + (2 * 60)  # 2 minutes from now
+		var test_deep_link = "decentraland://open?position=100,100"
+		var test_image_url = test_event.get("image", "")
+
+		var test_notification_text = generate_event_notification_text(test_event_name)
+
+		_debug_log("=".repeat(70))
+		_debug_log("DEBUG: Scheduling test notification in 2 minutes")
+		_debug_log("  Event: %s" % test_event_name)
+		_debug_log("  Deep link: %s" % test_deep_link)
+		_debug_log("=".repeat(70))
+
+		await async_queue_local_notification(
+			test_notification_id,
+			test_notification_text["title"],
+			test_notification_text["body"],
+			test_trigger_time,
+			test_image_url,
+			test_deep_link
+		)
 
 
 ## Parse ISO 8601 timestamp to Unix seconds

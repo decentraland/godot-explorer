@@ -368,6 +368,44 @@ class NotificationDatabase(context: Context) :
     }
 
     /**
+     * Get the deep link data for a specific notification.
+     *
+     * @param id Notification ID
+     * @return Deep link string, or null if no data or not found
+     */
+    fun getNotificationDeepLink(id: String): String? {
+        return try {
+            val db = readableDatabase
+            val cursor = db.query(
+                TABLE_NOTIFICATIONS,
+                arrayOf(COL_DATA),
+                "$COL_ID = ?",
+                arrayOf(id),
+                null,
+                null,
+                null,
+                "1"
+            )
+
+            cursor.use {
+                if (it.moveToFirst()) {
+                    val dataIdx = it.getColumnIndexOrThrow(COL_DATA)
+                    if (!it.isNull(dataIdx)) {
+                        it.getString(dataIdx)
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting notification deep link: ${e.message}")
+            null
+        }
+    }
+
+    /**
      * Get the image blob for a specific notification.
      * This is separate from queryNotifications() to avoid loading images into memory unnecessarily.
      *

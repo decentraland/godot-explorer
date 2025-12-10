@@ -529,13 +529,25 @@ func check_deep_link_teleport_to():
 	if Global.is_mobile():
 		var new_deep_link_url: String = ""
 		if DclGodotAndroidPlugin.is_available():
-			new_deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			var args = DclGodotAndroidPlugin.get_deeplink_args()
+			print("[DEEPLINK] Android args: ", args)
+			new_deep_link_url = args.get("data", "")
 		elif DclIosPlugin.is_available():
-			new_deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
+			var args = DclIosPlugin.get_deeplink_args()
+			print("[DEEPLINK] iOS args: ", args)
+			new_deep_link_url = args.get("data", "")
 
-		if new_deep_link_url.is_empty():
+		print("[DEEPLINK] check_deep_link_teleport_to: new_deep_link_url = ", new_deep_link_url)
+
+		if not new_deep_link_url.is_empty():
 			deep_link_url = new_deep_link_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+			print(
+				"[DEEPLINK] Parsed deep_link_obj: location=",
+				deep_link_obj.location,
+				" realm=",
+				deep_link_obj.realm
+			)
 
 		if Global.deep_link_obj.is_location_defined():
 			var realm = Global.deep_link_obj.realm

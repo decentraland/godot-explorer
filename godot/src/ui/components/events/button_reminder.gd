@@ -165,7 +165,9 @@ func _async_schedule_local_notification() -> void:
 	var notification_body = notification_text["body"]
 
 	# Construct deep link for event location
-	var deep_link = "decentraland://open?position=%d,%d" % [event_coordinates.x, event_coordinates.y]
+	var deep_link = (
+		"decentraland://open?position=%d,%d" % [event_coordinates.x, event_coordinates.y]
+	)
 
 	# Queue the notification with image and deep link
 	var success = await NotificationsManager.async_queue_local_notification(

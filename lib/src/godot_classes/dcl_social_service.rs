@@ -611,11 +611,10 @@ impl DclSocialService {
 
         // Stream ended - emit subscription_dropped signal
         if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
-            tracing::warn!("Friendship updates stream ended - emitting subscription_dropped signal");
-            node.call_deferred(
-                "emit_signal".into(),
-                &["subscription_dropped".to_variant()],
+            tracing::warn!(
+                "Friendship updates stream ended - emitting subscription_dropped signal"
             );
+            node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
         }
     }
 
@@ -735,10 +734,7 @@ impl DclSocialService {
             tracing::warn!(
                 "Connectivity updates stream ended - emitting subscription_dropped signal"
             );
-            node.call_deferred(
-                "emit_signal".into(),
-                &["subscription_dropped".to_variant()],
-            );
+            node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
         }
     }
 

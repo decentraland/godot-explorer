@@ -374,14 +374,21 @@ func _async_resubscribe_social_service() -> void:
 	var promise = Global.social_service.subscribe_to_updates()
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		push_warning("[Explorer] Failed to re-subscribe to friendship updates: %s" % result.get_error())
+		push_warning(
+			"[Explorer] Failed to re-subscribe to friendship updates: %s" % result.get_error()
+		)
 		return
 
 	# 4. Re-subscribe to connectivity updates
 	var connectivity_promise = Global.social_service.subscribe_to_connectivity_updates()
 	var connectivity_result = await PromiseUtils.async_awaiter(connectivity_promise)
 	if connectivity_result is PromiseError:
-		push_warning("[Explorer] Failed to re-subscribe to connectivity updates: %s" % connectivity_result.get_error())
+		push_warning(
+			(
+				"[Explorer] Failed to re-subscribe to connectivity updates: %s"
+				% connectivity_result.get_error()
+			)
+		)
 		return
 
 	print("[Explorer] Social service reconnected successfully")
