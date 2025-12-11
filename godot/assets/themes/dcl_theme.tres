@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=86 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=90 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -49,8 +49,12 @@
 [ext_resource type="StyleBox" uid="uid://bknvp87n5bpcq" path="res://assets/themes/wearable_disabled.tres" id="42_t5yfb"]
 [ext_resource type="StyleBox" uid="uid://d0clnpkagvv6p" path="res://assets/themes/wearable_normal.tres" id="43_xl2gf"]
 [ext_resource type="StyleBox" uid="uid://u0fvwsl85ccd" path="res://assets/themes/wearable_pressed.tres" id="44_xl2gf"]
+[ext_resource type="StyleBox" uid="uid://bk5rtvwf5rno4" path="res://assets/themes/dcl_theme/touchable_disabled.tres" id="45_0c0kf"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="45_k33ds"]
 [ext_resource type="StyleBox" uid="uid://dos4er8sw2ap6" path="res://assets/themes/wearable_secondary_disabled.tres" id="46_jqsp7"]
+[ext_resource type="StyleBox" uid="uid://b66geet5bo5yf" path="res://assets/themes/dcl_theme/touchable_normal.tres" id="46_wftf5"]
 [ext_resource type="StyleBox" uid="uid://djspketxj6yml" path="res://assets/themes/wearable_secondary.tres" id="47_ls4j2"]
+[ext_resource type="StyleBox" uid="uid://cvducxvis7n6e" path="res://assets/themes/dcl_theme/touchable_pressed.tres" id="47_wftf5"]
 [ext_resource type="StyleBox" uid="uid://bjtof22i81o4x" path="res://assets/themes/wearable_secondary_press_hover.tres" id="48_ec0gy"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1t6yp"]
@@ -507,6 +511,21 @@ TextEdit/colors/selection_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 TextEdit/styles/focus = ExtResource("17_xiu8x")
 TextEdit/styles/normal = ExtResource("18_uv0rg")
 TextEdit/styles/read_only = ExtResource("18_uv0rg")
+TouchableButton/base_type = &"Button"
+TouchableButton/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TouchableButton/colors/font_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.7019608)
+TouchableButton/colors/font_pressed_color = Color(0, 0, 0, 0.7019608)
+TouchableButton/colors/icon_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.7019608)
+TouchableButton/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TouchableButton/colors/icon_pressed_color = Color(0, 0, 0, 0.7019608)
+TouchableButton/font_sizes/font_size = 38
+TouchableButton/fonts/font = ExtResource("45_k33ds")
+TouchableButton/styles/disabled = ExtResource("45_0c0kf")
+TouchableButton/styles/disabled_mirrored = ExtResource("45_0c0kf")
+TouchableButton/styles/normal = ExtResource("46_wftf5")
+TouchableButton/styles/normal_mirrored = ExtResource("46_wftf5")
+TouchableButton/styles/pressed = ExtResource("47_wftf5")
+TouchableButton/styles/pressed_mirrored = ExtResource("47_wftf5")
 Tree/colors/children_hl_line_color = Color(1, 0.180392, 0.333333, 1)
 Tree/colors/custom_button_font_highlight = Color(0.960784, 0.152941, 0.345098, 1)
 Tree/colors/drop_position_color = Color(0.960784, 0.152941, 0.345098, 1)

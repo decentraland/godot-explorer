@@ -1,0 +1,7 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://db8stu8y6bu3w"]
+
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="1_em721"]
+
+[resource]
+font = ExtResource("1_em721")
+font_size = 14
