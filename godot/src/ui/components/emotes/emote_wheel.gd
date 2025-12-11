@@ -60,14 +60,6 @@ func _update_wheel(emote_urns: Array):
 		emote_item.async_load_from_urn(emote_urns[i], i)  # Forget await
 
 
-func _physics_process(_delta):
-	if Input.is_action_just_pressed("ia_open_emote_wheel"):
-		if control_wheel.is_visible_in_tree():
-			close(true)
-		else:
-			open()
-
-
 func _on_play_emote(emote_urn: String):
 	close()
 	if avatar_node != null:
