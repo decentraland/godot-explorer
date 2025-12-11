@@ -711,8 +711,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Convert string ID to integer hash for Android
             val intId = notificationId.hashCode()
 
-            // Fetch image blob from database if available
+            // Fetch image blob and deep link from database if available
             val imageBlob = notificationDatabase?.getNotificationImageBlob(notificationId)
+            val deepLink = notificationDatabase?.getNotificationDeepLink(notificationId) ?: ""
+
+            Log.d(pluginName, "Scheduling notification: id=$notificationId, deepLink=$deepLink")
 
             // Create intent for NotificationReceiver
             val intent = Intent(ctx, NotificationReceiver::class.java).apply {
@@ -723,6 +726,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 putExtra(NotificationReceiver.EXTRA_BODY, body)
                 if (imageBlob != null) {
                     putExtra(NotificationReceiver.EXTRA_IMAGE_BLOB, imageBlob)
+                }
+                if (deepLink.isNotEmpty()) {
+                    putExtra(NotificationReceiver.EXTRA_DEEP_LINK, deepLink)
                 }
             }
 

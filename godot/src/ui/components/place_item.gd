@@ -296,6 +296,15 @@ func set_data(item_data):
 			event_start_timestamp = timestamp  # Store for notification scheduling
 			set_time(timestamp, live)
 
+	# Set location before set_attending so event_coordinates is correct for notifications
+	var location_vector = item_data.get("base_position", "0,0").split(",")
+	if location_vector.size() == 2:
+		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
+
+	var event_location_vector = item_data.get("coordinates", [0, 0])
+	if event_location_vector.size() == 2:
+		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
+
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	set_user_name(item_data.get("user_name", ""))
 	set_views(item_data.get("user_visits", 0))
@@ -311,14 +320,6 @@ func set_data(item_data):
 			_async_download_image(image_url)
 		else:
 			set_image(texture_placeholder)
-
-	var location_vector = item_data.get("base_position", "0,0").split(",")
-	if location_vector.size() == 2:
-		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
-
-	var event_location_vector = item_data.get("coordinates", [0, 0])
-	if event_location_vector.size() == 2:
-		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
 	var world = item_data.get("world", false)

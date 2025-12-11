@@ -35,8 +35,11 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var jump_in_popup = %JumpInPopup
 
 @onready var panel_profile: Panel = %Panel_Profile
-@onready var notification_bell_button: Button = %NotificationBellButton
+
+@onready var hud_button_notifications: Button = %HudButton_Notifications
+@onready var hud_button_friends: Button = %HudButton_Friends
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
+@onready var friends_panel: PanelContainer = %FriendsPanel
 
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
@@ -111,11 +114,18 @@ func _ready():
 	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	# Connect notification bell button
-	notification_bell_button.bell_clicked.connect(_on_notification_bell_clicked)
+	hud_button_notifications.bell_clicked.connect(_on_notification_bell_clicked)
 	notifications_panel.panel_closed.connect(_on_notifications_panel_closed)
+
+	# Connect friends button
+	hud_button_friends.friends_clicked.connect(_on_friends_clicked)
+	friends_panel.panel_closed.connect(_on_friends_panel_closed)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
+
+	# Connect to notification clicks to handle friend request notifications
+	Global.notification_clicked.connect(_on_notification_clicked)
 
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
@@ -196,6 +206,12 @@ func _ready():
 
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
 
+	# Add disconnect handler for reconnection logic
+	var disconnect_handler = (
+		load("res://src/ui/components/disconnect_handler/disconnect_handler.tscn").instantiate()
+	)
+	add_child(disconnect_handler)
+
 	#Global.scene_fetcher.current_position = start_parcel_position
 	Global.scene_fetcher.update_position(start_parcel_position, true)
 
@@ -218,6 +234,10 @@ func _ready():
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
+	# Initialize social service for non-guest accounts
+	if not Global.player_identity.is_guest:
+		_async_initialize_social_service()
+
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
@@ -232,7 +252,8 @@ func _ready():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	Global.open_profile.connect(_async_open_profile)
+	Global.open_profile_by_address.connect(_async_open_profile_by_address)
+	Global.open_profile_by_avatar.connect(_async_open_profile_by_avatar)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -272,6 +293,12 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 	# Start notifications polling when authenticated
 	print("[Explorer] Player profile changed - starting notifications polling")
 	NotificationsManager.start_polling()
+
+
+func _async_initialize_social_service() -> void:
+	# Initialize the social service with player identity
+	# Note: Subscriptions are now handled by FriendsPanel when it opens/closes
+	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -619,12 +646,13 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 		button_load_scenes.hide()
 
 
-func _async_open_profile(avatar: DclAvatar):
+func _open_profile(dcl_user_profile: DclUserProfile):
 	panel_chat.exit_chat()
-	if avatar == null or not is_instance_valid(avatar):
-		return
+	profile_container.open(dcl_user_profile)
+	release_mouse()
 
-	var user_address = avatar.avatar_id
+
+func _async_open_profile_by_address(user_address: String):
 	var promise = Global.content_provider.fetch_profile(user_address)
 	var result = await PromiseUtils.async_awaiter(promise)
 
@@ -632,9 +660,37 @@ func _async_open_profile(avatar: DclAvatar):
 		printerr("Error getting player profile: ", result.get_error())
 		return
 
-	if result != null:
-		profile_container.open(result)
-	release_mouse()
+	if result != null and result is DclUserProfile:
+		_open_profile(result)
+
+
+func _async_open_profile_by_avatar(avatar: DclAvatar):
+	# Check if it's an Avatar (GDScript class) to access avatar_id
+	if avatar is Avatar:
+		var avatar_instance = avatar as Avatar
+		var avatar_id = avatar_instance.avatar_id
+		if not avatar_id.is_empty():
+			await _async_open_profile_by_address(avatar_id)
+		else:
+			printerr(
+				"_async_open_profile_by_avatar: avatar_id is empty for avatar: ",
+				avatar_instance.name
+			)
+	else:
+		# Try to get avatar_id from metadata if available (fallback)
+		if avatar.has_method("get") and avatar.get("avatar_id") != null:
+			var avatar_id = avatar.get("avatar_id")
+			if avatar_id is String and not avatar_id.is_empty():
+				await _async_open_profile_by_address(avatar_id)
+			else:
+				printerr(
+					"_async_open_profile_by_avatar: avatar is not an Avatar instance and avatar_id is not available"
+				)
+		else:
+			printerr(
+				"_async_open_profile_by_avatar: avatar is not an Avatar instance: ",
+				avatar.get_class()
+			)
 
 
 func _on_control_menu_open_profile() -> void:
@@ -677,19 +733,53 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 		panel_chat.exit_chat()
 
 
+func _on_friends_clicked() -> void:
+	# Toggle notification panel visibility
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+		hud_button_friends.set_panel_open(false)
+		# Grab focus back to enable camera controls
+		Global.explorer_grab_focus()
+		# Capture mouse to restore camera control
+	else:
+		friends_panel.show_panel_on_friends_tab()
+		hud_button_friends.set_panel_open(true)
+		if notifications_panel.visible:
+			notifications_panel.hide_panel()
+			hud_button_notifications.set_panel_open(false)
+		# Release focus to prevent camera rotation while panel is open
+		Global.explorer_release_focus()
+		if Global.is_mobile():
+			release_mouse()
+		# Close other panels if needed
+		if control_menu.visible:
+			control_menu.close()
+
+
+func _on_friends_panel_closed() -> void:
+	friends_panel.hide()
+	hud_button_friends.set_panel_open(false)
+	# Grab focus back to enable camera controls
+	Global.explorer_grab_focus()
+	# Capture mouse to restore camera control
+	capture_mouse()
+
+
 func _on_notification_bell_clicked() -> void:
 	# Toggle notification panel visibility
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-		notification_bell_button.set_panel_open(false)
-		# On desktop, grab focus back to enable camera controls
-		# On mobile, also capture mouse
+		hud_button_notifications.set_panel_open(false)
+		# Grab focus back to enable camera controls
 		Global.explorer_grab_focus()
-		if Global.is_mobile():
-			capture_mouse()
+		# Capture mouse to restore camera control
+		#capture_mouse()
 	else:
 		notifications_panel.show_panel()
-		notification_bell_button.set_panel_open(true)
+		hud_button_notifications.set_panel_open(true)
+		if friends_panel.visible:
+			friends_panel.hide_panel()
+			hud_button_friends.set_panel_open(false)
 		# Release focus to prevent camera rotation while panel is open
 		Global.explorer_release_focus()
 		if Global.is_mobile():
@@ -701,11 +791,11 @@ func _on_notification_bell_clicked() -> void:
 
 func _on_notifications_panel_closed() -> void:
 	notifications_panel.hide()
-	notification_bell_button.set_panel_open(false)
+	hud_button_notifications.set_panel_open(false)
 	# Grab focus back to enable camera controls
 	Global.explorer_grab_focus()
-	if Global.is_mobile():
-		capture_mouse()
+	# Capture mouse to restore camera control
+	capture_mouse()
 
 
 func _on_notification_queued(notification: Dictionary) -> void:
@@ -719,6 +809,21 @@ func _on_notification_queued(notification: Dictionary) -> void:
 
 
 func _show_notification_toast(notification: Dictionary) -> void:
+	# Filter out friend request notifications from blocked users
+	var notif_type = notification.get("type", "")
+	if notif_type == "social_service_friendship_request":
+		var sender_address = ""
+		if "metadata" in notification and notification["metadata"] is Dictionary:
+			var metadata = notification["metadata"]
+			if "sender" in metadata and metadata["sender"] is Dictionary:
+				sender_address = metadata["sender"].get("address", "")
+
+		# Skip showing notification if sender is blocked
+		if not sender_address.is_empty() and Global.social_blacklist.is_blocked(sender_address):
+			# Immediately dequeue this notification and try to show next one
+			NotificationsManager.dequeue_notification()
+			return
+
 	# Create and show toast notification
 	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
 	var toast = toast_scene.instantiate()
@@ -755,6 +860,25 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+
+
+func _on_notification_clicked(notification: Dictionary) -> void:
+	# Handle friend request notification clicks - open friends panel on friends tab
+	var notif_type = notification.get("type", "")
+
+	if notif_type == "friend_request_received":
+		# Open friends panel on friends tab
+		if not friends_panel.visible:
+			friends_panel.show_panel_on_friends_tab()
+			hud_button_friends.set_panel_open(true)
+			# Close notifications panel if open
+			if notifications_panel.visible:
+				notifications_panel.hide_panel()
+				hud_button_notifications.set_panel_open(false)
+			# Release focus to prevent camera rotation while panel is open
+			Global.explorer_release_focus()
+			if Global.is_mobile():
+				release_mouse()
 
 
 func _notification(what: int) -> void:

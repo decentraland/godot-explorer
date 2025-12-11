@@ -164,13 +164,19 @@ func _async_schedule_local_notification() -> void:
 	var notification_title = notification_text["title"]
 	var notification_body = notification_text["body"]
 
-	# Queue the notification with image
+	# Construct deep link for event location
+	var deep_link = (
+		"decentraland://open?position=%d,%d" % [event_coordinates.x, event_coordinates.y]
+	)
+
+	# Queue the notification with image and deep link
 	var success = await NotificationsManager.async_queue_local_notification(
 		notification_id,
 		notification_title,
 		notification_body,
 		notification_trigger_time,
-		event_cover_image_url
+		event_cover_image_url,
+		deep_link
 	)
 
 	if not success:
@@ -179,12 +185,9 @@ func _async_schedule_local_notification() -> void:
 
 func _cancel_local_notification() -> void:
 	if event_id_value.is_empty():
-		printerr("Cannot cancel notification: event_id is empty")
 		return
 
 	var notification_id = "event_" + event_id_value
 
-	var success = NotificationsManager.cancel_queued_local_notification(notification_id)
-
-	if not success:
-		printerr("Failed to cancel notification for event: ", event_id_value)
+	# Cancel returns false if notification doesn't exist, which is fine
+	NotificationsManager.cancel_queued_local_notification(notification_id)

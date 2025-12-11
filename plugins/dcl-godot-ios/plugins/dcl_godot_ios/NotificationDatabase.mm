@@ -495,6 +495,33 @@
     return rowsDeleted;
 }
 
+- (NSString *)getNotificationDeepLinkWithId:(NSString *)notificationId {
+    if (!_database || !notificationId) return nil;
+
+    const char *sql = "SELECT data FROM notifications WHERE id = ? LIMIT 1;";
+
+    sqlite3_stmt *statement;
+    if (sqlite3_prepare_v2(_database, sql, -1, &statement, NULL) != SQLITE_OK) {
+        NSLog(@"Error preparing deep link query: %s", sqlite3_errmsg(_database));
+        return nil;
+    }
+
+    sqlite3_bind_text(statement, 1, [notificationId UTF8String], -1, SQLITE_TRANSIENT);
+
+    NSString *deepLink = nil;
+    if (sqlite3_step(statement) == SQLITE_ROW) {
+        if (sqlite3_column_type(statement, 0) != SQLITE_NULL) {
+            const char *data = (const char *)sqlite3_column_text(statement, 0);
+            if (data) {
+                deepLink = [NSString stringWithUTF8String:data];
+            }
+        }
+    }
+
+    sqlite3_finalize(statement);
+    return deepLink;
+}
+
 - (NSData *)getNotificationImageBlobWithId:(NSString *)notificationId {
     if (!_database || !notificationId) return nil;
 

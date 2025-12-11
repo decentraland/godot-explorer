@@ -639,10 +639,18 @@ bool DclGodotiOS::schedule_local_notification(String notification_id, String tit
     content.sound = [UNNotificationSound defaultSound];
     content.badge = @(1);
 
-    // Fetch image blob from database if available
+    // Fetch image blob and deep link from database if available
     NSData *imageBlob = nil;
+    NSString *deepLink = nil;
     if (notificationDatabase) {
         imageBlob = [notificationDatabase getNotificationImageBlobWithId:ns_id];
+        deepLink = [notificationDatabase getNotificationDeepLinkWithId:ns_id];
+    }
+
+    // Store deep link in userInfo so it can be retrieved when notification is tapped
+    if (deepLink && deepLink.length > 0) {
+        content.userInfo = @{@"deep_link": deepLink};
+        NSLog(@"[NOTIFICATION] Setting deep link in userInfo: %@", deepLink);
     }
 
     // Add image attachment if available
