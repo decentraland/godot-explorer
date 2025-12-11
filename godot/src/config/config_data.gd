@@ -124,6 +124,8 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 
 var terms_and_conditions_version: int = 0
 
+var local_notifications_version: int = 0
+
 var last_places: Array[Dictionary] = []:
 	set(value):
 		last_places = value
@@ -321,6 +323,10 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
+	self.local_notifications_version = settings_file.get_value(
+		"user", "local_notifications_version", data_default.local_notifications_version
+	)
+
 
 func save_to_settings_file():
 	if Global.testing_scene_mode:
@@ -356,6 +362,9 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "last_places", self.last_places)
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
+	)
+	new_settings_file.set_value(
+		"user", "local_notifications_version", self.local_notifications_version
 	)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

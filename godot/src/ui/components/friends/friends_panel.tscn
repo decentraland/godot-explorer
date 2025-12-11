@@ -1,0 +1,596 @@
+[gd_scene load_steps=22 format=3 uid="uid://dd2w2ysk3akdj"]
+
+[ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="10_spinner"]
+[ext_resource type="StyleBox" uid="uid://c1jov5bbl6rpn" path="res://src/ui/components/friends/friends_separator.tres" id="2_ifioe"]
+[ext_resource type="Script" uid="uid://cjlqmhcfpgaed" path="res://src/ui/components/social/social_list.gd" id="2_l4o08"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_wese4"]
+[ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="2_x48bx"]
+[ext_resource type="Texture2D" uid="uid://diaawk0cbxw0j" path="res://assets/ui/up_arrow.svg" id="5_h1uhn"]
+[ext_resource type="Texture2D" uid="uid://bogcegqbgujx4" path="res://assets/ui/warning-color.svg" id="7_wenh7"]
+[ext_resource type="Texture2D" uid="uid://dkp2m2ov71fv5" path="res://assets/ui/friends-color.svg" id="8_nlw6c"]
+[ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="9_2vk4g"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wese4"]
+bg_color = Color(0, 0, 0, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ifioe"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+shadow_color = Color(0, 0, 0, 0.356863)
+shadow_size = 2
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_v2dsn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2vk4g"]
+bg_color = Color(1, 1, 1, 0.09803922)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nlw6c"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_2vk4g"]
+font = ExtResource("2_wese4")
+font_size = 14
+
+[sub_resource type="Gradient" id="Gradient_l4o08"]
+colors = PackedColorArray(0.086275, 0.0823529, 0.0941176, 0, 0.086275, 0.0823529, 0.0941176, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_x48bx"]
+gradient = SubResource("Gradient_l4o08")
+fill_from = Vector2(0.4957265, 1)
+fill_to = Vector2(0.47008547, 0)
+
+[sub_resource type="Gradient" id="Gradient_fade"]
+colors = PackedColorArray(0.086275, 0.0823529, 0.0941176, 0, 0.086275, 0.0823529, 0.0941176, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fade"]
+gradient = SubResource("Gradient_fade")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h1uhn"]
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+border_color = Color(0, 0, 0, 1)
+border_blend = true
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="FriendsPanel" type="PanelContainer"]
+clip_contents = true
+custom_minimum_size = Vector2(450, 300)
+offset_right = 450.0
+offset_bottom = 546.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_wese4")
+script = ExtResource("1_v2dsn")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ifioe")
+
+[node name="MarginContainer_Header" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 0
+
+[node name="Header" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Friends" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "FRIENDS"
+flat = true
+
+[node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
+[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "NEARBY"
+flat = true
+
+[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
+[node name="VBoxContainer_BlockedTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Button_Blocked" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+button_group = SubResource("ButtonGroup_v2dsn")
+text = "BLOCKED"
+flat = true
+
+[node name="ColorRect_Blocked" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(1, 0.1764706, 0.33333334, 1)
+
+[node name="MarginContainer" type="Control" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="ScrollContainer_Friends" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+scroll_deadzone = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="FriendsList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="VBoxContainer_Request" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RequestContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/separator = ExtResource("2_ifioe")
+
+[node name="RequestButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("2_wese4")
+theme_override_font_sizes/font_size = 12
+text = "REQUESTS (0)"
+icon = ExtResource("2_x48bx")
+flat = true
+alignment = 0
+expand_icon = true
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="RequestList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_l4o08")
+player_list_type = 2
+
+[node name="VBoxContainer_Online" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="OnlineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="OnlineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("2_wese4")
+theme_override_font_sizes/font_size = 12
+text = "ONLINE (0)"
+icon = ExtResource("5_h1uhn")
+flat = true
+alignment = 0
+expand_icon = true
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="OnlineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_l4o08")
+
+[node name="VBoxContainer_Offline" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="OfflineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="OfflineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("2_wese4")
+theme_override_font_sizes/font_size = 12
+text = "OFFLINE (0)"
+icon = ExtResource("2_x48bx")
+flat = true
+alignment = 0
+expand_icon = true
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="OfflineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_l4o08")
+player_list_type = 1
+
+[node name="VBoxContainer_NoService" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService/PanelContainer/MarginContainer"]
+layout_mode = 2
+texture = ExtResource("7_wenh7")
+expand_mode = 4
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+layout_mode = 2
+text = "Whoops..Friends System is Down!"
+label_settings = SubResource("LabelSettings_2vk4g")
+horizontal_alignment = 1
+
+[node name="Label_OutOfService" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "No Friends System Message"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="VBoxContainer_NoFriends" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer/MarginContainer"]
+layout_mode = 2
+texture = ExtResource("8_nlw6c")
+expand_mode = 4
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+layout_mode = 2
+text = "Time to Make Some Friends!"
+label_settings = SubResource("LabelSettings_2vk4g")
+horizontal_alignment = 1
+
+[node name="Label_NoFriends" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "No Friends Yet Message"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="VBoxContainer_Loading" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="LoadingSpinner" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_Loading" instance=ExtResource("10_spinner")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Label_Loading" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_Loading"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Loading friends..."
+label_settings = SubResource("LabelSettings_2vk4g")
+horizontal_alignment = 1
+
+[node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+scroll_deadzone = 10
+
+[node name="NearbyList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("2_l4o08")
+player_list_type = 3
+
+[node name="ScrollContainer_Blocked" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+scroll_deadzone = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BlockedList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("2_l4o08")
+player_list_type = 4
+
+[node name="VBoxContainer_NoBlockeds" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds/PanelContainer/MarginContainer"]
+layout_mode = 2
+texture = ExtResource("9_2vk4g")
+expand_mode = 4
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+layout_mode = 2
+text = "No Blocked Accounts Yet"
+label_settings = SubResource("LabelSettings_2vk4g")
+horizontal_alignment = 1
+
+[node name="Label_NoBlockeds" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "No Blocked Accounts Message"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="FadeOverlayTop" type="Control" parent="VBoxContainer/MarginContainer"]
+visible = false
+self_modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+size_flags_vertical = 8
+mouse_filter = 2
+
+[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/FadeOverlayTop"]
+layout_mode = 0
+offset_right = 448.0
+offset_bottom = 64.0
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_x48bx")
+
+[node name="FadeOverlayBottom" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
+visible = false
+self_modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -75.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 8
+mouse_filter = 2
+theme_override_constants/separation = -1
+
+[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/FadeOverlayBottom"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_fade")
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/FadeOverlayBottom"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
+
+[node name="Timer" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 15.0
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab/Button_Blocked" to="." method="_on_button_blocked_toggled"]
+[connection signal="mouse_entered" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_mouse_entered"]
+[connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_mouse_exited"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer/RequestButton" to="." method="_on_request_button_pressed"]
+[connection signal="mouse_entered" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer/OnlineButton" to="." method="_on_online_button_mouse_entered"]
+[connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer/OnlineButton" to="." method="_on_online_button_mouse_exited"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer/OnlineButton" to="." method="_on_online_button_pressed"]
+[connection signal="mouse_entered" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_mouse_entered"]
+[connection signal="mouse_exited" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_mouse_exited"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton" to="." method="_on_offline_button_pressed"]
+[connection signal="size_changed" from="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/BlockedList" to="." method="_on_blocked_list_size_changed"]
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

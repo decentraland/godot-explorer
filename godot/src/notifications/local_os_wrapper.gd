@@ -81,12 +81,14 @@ func schedule(notification_id: String, title: String, body: String, delay_second
 
 	if success:
 		notification_scheduled.emit(notification_id)
-		print(
-			(
-				"Local notification scheduled: id=%s, title=%s, delay=%ds"
-				% [notification_id, title, delay_seconds]
+		# Only log in non-debug mode (debug mode uses NotificationsManager's detailed logging)
+		if not OS.is_debug_build():
+			print(
+				(
+					"Local notification scheduled: id=%s, title=%s, delay=%ds"
+					% [notification_id, title, delay_seconds]
+				)
 			)
-		)
 
 	return success
 
