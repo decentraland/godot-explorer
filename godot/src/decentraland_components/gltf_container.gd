@@ -156,11 +156,9 @@ func async_load_gltf():
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	timer.start()
 
-	# TEMP DEBUG: Force raw glTF import path to test C++ fix
-	#if Global.content_provider.optimized_asset_exists(file_hash):
-	#	await async_try_load_gltf_from_local_file(file_hash)
-	#	return
-	print("DEBUG: Forcing raw glTF import for hash: ", file_hash)
+	if Global.content_provider.optimized_asset_exists(file_hash):
+		await async_try_load_gltf_from_local_file(file_hash)
+		return
 
 	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
 	if promise == null:
@@ -224,60 +222,6 @@ func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
 
 	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
-
-	# Emission rules - TEMP: Desactivado para ver importador directo
-	# set_emission_params(mat)
-	# DEBUG: Solo imprimir info de emisión para diagnóstico
-	if mat.resource_name.to_lower().contains("cube"):
-		print("DEBUG RAW IMPORT cube_mat - emission_enabled: %s, emission: %s, emission_texture: %s, emission_operator: %s" % [
-			mat.emission_enabled, mat.emission, mat.emission_texture != null, mat.emission_operator
-		])
-
-
-func set_emission_params(mat: BaseMaterial3D):
-	var ios_workarounds = OS.get_name() == "iOS"
-	var base_energy_multiplier = 1.0 if !ios_workarounds else 0.15
-
-	var has_emission_color = mat.emission != Color.BLACK
-	var has_emission_texture = mat.emission_texture != null
-	var albedo_equals_emission = mat.albedo_texture and mat.emission_texture and mat.albedo_texture == mat.emission_texture
-
-	# DEBUG cube_mat
-	if mat.resource_name.to_lower().contains("cube"):
-		print("DEBUG cube_mat - name: %s, emission_enabled: %s, emission: %s, has_tex: %s, has_color: %s, albedo==emiss: %s" % [
-			mat.resource_name, mat.emission_enabled, mat.emission, has_emission_texture, has_emission_color, albedo_equals_emission
-		])
-
-	# Case 1: Has non-black emission color - enable emission
-	if has_emission_color:
-		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
-		if has_emission_texture:
-			mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
-		else:
-			mat.emission_operator = BaseMaterial3D.EMISSION_OP_ADD
-		return
-
-	# Case 2: Has dedicated emission texture (different from albedo)
-	# This is a real emission texture, enable it with WHITE color for MULTIPLY
-	if has_emission_texture and not albedo_equals_emission:
-		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
-		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
-		mat.emission = Color.WHITE
-		return
-
-	# Case 3: Material explicitly named as emission (e.g., "kawaii_palettes_emission")
-	# These intentionally use albedo as emission texture for a "glow" effect
-	if mat.resource_name.to_lower().contains("_emission"):
-		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
-		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
-		mat.emission = Color.WHITE
-		return
-
-	# Case 4: No valid emission indicators - disable emission
-	mat.emission_enabled = false
 
 
 func async_deferred_add_child():
