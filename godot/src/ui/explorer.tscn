@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=42 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
@@ -19,7 +19,6 @@
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="13_notif_bell"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="13_tdhdx"]
-[ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
 [ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/notifications/notifications_panel.tscn" id="14_notif_panel"]
 [ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="14_xlu8p"]
 [ext_resource type="PackedScene" uid="uid://bkjdjy0wlvltq" path="res://src/ui/components/chat/notifications.tscn" id="15_ky6fv"]
@@ -42,10 +41,10 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_u4dfr"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ecwks"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_kllev"]
 allow_unpress = true
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_t4gc2"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_ecwks"]
 allow_unpress = true
 
 [node name="explorer" type="Node"]
@@ -193,23 +192,6 @@ grow_horizontal = 0
 grow_vertical = 0
 text_letter = "F"
 trigger_action = "ia_secondary"
-
-[node name="Button_EmoteAction" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -307.0
-offset_top = -111.0
-offset_right = -227.0
-offset_bottom = -31.0
-grow_horizontal = 0
-grow_vertical = 0
-text_letter = "F"
-icon = ExtResource("14_jag8f")
-trigger_action = "ia_open_emote_wheel"
 
 [node name="Button_Press" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
 unique_name_in_owner = true
@@ -375,7 +357,7 @@ theme_override_constants/separation = 13
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_ecwks")
+button_group = SubResource("ButtonGroup_kllev")
 script = ExtResource("19_admxk")
 sprite_frames_source = ExtResource("22_ecwks")
 
@@ -383,7 +365,7 @@ sprite_frames_source = ExtResource("22_ecwks")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_t4gc2")
+button_group = SubResource("ButtonGroup_ecwks")
 script = ExtResource("19_6q4se")
 sprite_frames_source = ExtResource("20_kllev")
 
@@ -421,13 +403,16 @@ layout_mode = 2
 
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 layout_mode = 1
-anchors_preset = 2
+anchors_preset = 7
+anchor_left = 0.5
 anchor_top = 1.0
+anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = 15.0
-offset_top = -30.0
-offset_right = 169.0
-offset_bottom = -15.0
+offset_left = -77.0
+offset_top = -25.0
+offset_right = 77.0
+offset_bottom = -8.0
+grow_horizontal = 2
 grow_vertical = 0
 
 [node name="Label_Version" type="Label" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_VersionFPS"]
@@ -467,6 +452,10 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="EmoteWheel" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("21_pows0")]
+unique_name_in_owner = true
+layout_mode = 1
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI"]
 autostart = true
@@ -543,11 +532,6 @@ offset_bottom = -72.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="EmoteWheel" parent="UI" instance=ExtResource("21_pows0")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
 [node name="ProfileContainer" parent="UI" instance=ExtResource("25_c5h7v")]
 unique_name_in_owner = true
 visible = false
@@ -583,6 +567,8 @@ script = ExtResource("20_064cw")
 [connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="open_profile" from="UI/SafeMarginContainerHUD/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
+[connection signal="emote_wheel_closed" from="UI/SafeMarginContainerHUD/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
+[connection signal="emote_wheel_opened" from="UI/SafeMarginContainerHUD/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
 [connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
 [connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]

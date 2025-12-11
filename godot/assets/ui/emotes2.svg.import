@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/emotes2.svg-74b5511521a19045dd813d43af6bb52a.
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
