@@ -25,6 +25,7 @@ var last_selected_emote_urn: String = ""
 @onready var label_emote_name = %Label_EmoteName
 @onready var control_wheel: Control = %Control_Wheel
 @onready var button_emote_action = %Button_EmoteAction
+@onready var button_emotes: Button = $Button_Emotes
 
 
 func _ready():
@@ -92,14 +93,20 @@ func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 
 
 func close(play_sound: bool = false) -> void:
+	if not control_wheel.visible:
+		return
 	control_wheel.hide()
 	emote_wheel_closed.emit()
 	Global.explorer_grab_focus()
 	if play_sound:
 		UiSounds.play_sound("widget_emotes_close")
+	if button_emotes != null and button_emotes.button_pressed:
+		button_emotes.set_pressed_no_signal(false)
 
 
 func open() -> void:
+	if control_wheel.visible:
+		return
 	control_wheel.show()
 	UiSounds.play_sound("widget_emotes_open")
 	emote_wheel_opened.emit()
@@ -111,3 +118,10 @@ func _on_control_wheel_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		UiSounds.play_sound("widget_emotes_close")
 		close()
+
+
+func _on_button_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		open()
+	else:
+		close(true)

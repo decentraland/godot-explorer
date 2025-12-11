@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://c7bnh6p6qygxu" path="res://src/ui/components/emotes/emote_wheel_item.tscn" id="2_h3qru"]
 [ext_resource type="Texture2D" uid="uid://bgx284betq718" path="res://src/ui/components/emotes/dance_figure.png" id="3_poid4"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_ntwf1"]
-[ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="6_0irnm"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_0irnm"]
 [ext_resource type="Texture2D" uid="uid://b2mc65ohvctmu" path="res://assets/ui/emotes2.svg" id="7_lttyx"]
 
 [sub_resource type="Gradient" id="Gradient_rhu8p"]
@@ -276,8 +276,8 @@ theme_override_font_sizes/font_size = 14
 text = "EMOTES"
 horizontal_alignment = 1
 
-[node name="Button_EmoteAction" parent="." instance=ExtResource("6_0irnm")]
-unique_name_in_owner = true
+[node name="Button_Emotes" type="Button" parent="."]
+custom_minimum_size = Vector2(80, 80)
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
@@ -287,9 +287,12 @@ offset_top = -100.0
 offset_right = 100.0
 offset_bottom = -20.0
 grow_vertical = 0
-mouse_force_pass_scroll_events = false
-text_letter = "F"
+focus_mode = 0
+theme = ExtResource("7_0irnm")
+theme_type_variation = &"TouchableButton"
+toggle_mode = true
 icon = ExtResource("7_lttyx")
-trigger_action = "ia_open_emote_wheel"
+icon_alignment = 1
 
 [connection signal="gui_input" from="Control_Wheel" to="." method="_on_control_wheel_gui_input"]
+[connection signal="toggled" from="Button_Emotes" to="." method="_on_button_toggled"]
