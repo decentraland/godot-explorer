@@ -1,6 +1,7 @@
 use godot::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::dcl::components::proto_components::social_service::v2::*;
@@ -15,6 +16,10 @@ type FriendshipRequestData = (String, String, bool, String, String, i64);
 #[class(base=Node)]
 pub struct DclSocialService {
     manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
+    /// Cancellation token for friendship updates subscription
+    friendship_updates_cancel: Arc<RwLock<Option<CancellationToken>>>,
+    /// Cancellation token for connectivity updates subscription
+    connectivity_updates_cancel: Arc<RwLock<Option<CancellationToken>>>,
     base: Base<Node>,
 }
 
@@ -23,6 +28,8 @@ impl INode for DclSocialService {
     fn init(base: Base<Node>) -> Self {
         Self {
             manager: Arc::new(RwLock::new(None)),
+            friendship_updates_cancel: Arc::new(RwLock::new(None)),
+            connectivity_updates_cancel: Arc::new(RwLock::new(None)),
             base,
         }
     }
@@ -272,11 +279,25 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let instance_id = self.base().instance_id();
 
+        // Create a new cancellation token for this subscription
+        let cancel_token = CancellationToken::new();
+        let cancel_token_clone = cancel_token.clone();
+        let cancel_handle = self.friendship_updates_cancel.clone();
+
         TokioRuntime::spawn(async move {
+            // Cancel any existing subscription first
+            {
+                let mut guard = cancel_handle.write().await;
+                if let Some(old_token) = guard.take() {
+                    old_token.cancel();
+                }
+                *guard = Some(cancel_token);
+            }
+
             // Add timeout to prevent hanging forever
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(15),
-                Self::async_subscribe_to_updates(manager, instance_id),
+                Self::async_subscribe_to_updates(manager, instance_id, cancel_token_clone),
             )
             .await;
 
@@ -333,12 +354,57 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let instance_id = self.base().instance_id();
 
+        // Create a new cancellation token for this subscription
+        let cancel_token = CancellationToken::new();
+        let cancel_token_clone = cancel_token.clone();
+        let cancel_handle = self.connectivity_updates_cancel.clone();
+
         TokioRuntime::spawn(async move {
-            let result = Self::async_subscribe_to_connectivity_updates(manager, instance_id).await;
+            // Cancel any existing subscription first
+            {
+                let mut guard = cancel_handle.write().await;
+                if let Some(old_token) = guard.take() {
+                    old_token.cancel();
+                }
+                *guard = Some(cancel_token);
+            }
+
+            let result = Self::async_subscribe_to_connectivity_updates(
+                manager,
+                instance_id,
+                cancel_token_clone,
+            )
+            .await;
             Self::resolve_simple_promise(get_promise, result);
         });
 
         promise
+    }
+
+    /// Unsubscribe from friendship updates (cancels the streaming subscription)
+    #[func]
+    pub fn unsubscribe_from_updates(&mut self) {
+        let cancel_handle = self.friendship_updates_cancel.clone();
+        TokioRuntime::spawn(async move {
+            let mut guard = cancel_handle.write().await;
+            if let Some(token) = guard.take() {
+                tracing::info!("Cancelling friendship updates subscription");
+                token.cancel();
+            }
+        });
+    }
+
+    /// Unsubscribe from connectivity updates (cancels the streaming subscription)
+    #[func]
+    pub fn unsubscribe_from_connectivity_updates(&mut self) {
+        let cancel_handle = self.connectivity_updates_cancel.clone();
+        TokioRuntime::spawn(async move {
+            let mut guard = cancel_handle.write().await;
+            if let Some(token) = guard.take() {
+                tracing::info!("Cancelling connectivity updates subscription");
+                token.cancel();
+            }
+        });
     }
 }
 
@@ -577,6 +643,7 @@ impl DclSocialService {
     async fn async_subscribe_to_updates(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
+        cancel_token: CancellationToken,
     ) -> Result<(), String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
@@ -590,7 +657,7 @@ impl DclSocialService {
 
         // Spawn update listener task
         tokio::spawn(async move {
-            Self::handle_friendship_updates(&mut rx, instance_id).await;
+            Self::handle_friendship_updates(&mut rx, instance_id, cancel_token).await;
         });
 
         Ok(())
@@ -599,22 +666,40 @@ impl DclSocialService {
     async fn handle_friendship_updates(
         rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendshipUpdate>,
         instance_id: InstanceId,
+        cancel_token: CancellationToken,
     ) {
-        while let Some(update) = rx.recv().await {
-            let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
-            else {
-                break;
-            };
-
-            Self::emit_friendship_update_signal(&mut node, update);
+        loop {
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    tracing::info!("Friendship updates subscription cancelled");
+                    return;
+                }
+                update = rx.recv() => {
+                    match update {
+                        Some(update) => {
+                            let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
+                            else {
+                                break;
+                            };
+                            Self::emit_friendship_update_signal(&mut node, update);
+                        }
+                        None => {
+                            // Stream ended
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
-        // Stream ended - emit subscription_dropped signal
-        if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
-            tracing::warn!(
-                "Friendship updates stream ended - emitting subscription_dropped signal"
-            );
-            node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
+        // Stream ended - emit subscription_dropped signal (only if not cancelled)
+        if !cancel_token.is_cancelled() {
+            if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
+                tracing::warn!(
+                    "Friendship updates stream ended - emitting subscription_dropped signal"
+                );
+                node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
+            }
         }
     }
 
@@ -687,6 +772,7 @@ impl DclSocialService {
     async fn async_subscribe_to_connectivity_updates(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
+        cancel_token: CancellationToken,
     ) -> Result<(), String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
@@ -699,7 +785,7 @@ impl DclSocialService {
             .map_err(|e| format!("Failed to subscribe to connectivity updates: {}", e))?;
 
         tokio::spawn(async move {
-            Self::handle_connectivity_updates(&mut rx, instance_id).await;
+            Self::handle_connectivity_updates(&mut rx, instance_id, cancel_token).await;
         });
 
         Ok(())
@@ -708,33 +794,52 @@ impl DclSocialService {
     async fn handle_connectivity_updates(
         rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>,
         instance_id: InstanceId,
+        cancel_token: CancellationToken,
     ) {
-        while let Some(update) = rx.recv().await {
-            let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
-            else {
-                break;
-            };
+        loop {
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    tracing::info!("Connectivity updates subscription cancelled");
+                    return;
+                }
+                update = rx.recv() => {
+                    match update {
+                        Some(update) => {
+                            let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
+                            else {
+                                break;
+                            };
 
-            if let Some(friend) = update.friend {
-                let address = friend.address.clone();
-                let status = update.status;
-                node.call_deferred(
-                    "emit_signal".into(),
-                    &[
-                        "friend_connectivity_updated".to_variant(),
-                        address.to_variant(),
-                        status.to_variant(),
-                    ],
-                );
+                            if let Some(friend) = update.friend {
+                                let address = friend.address.clone();
+                                let status = update.status;
+                                node.call_deferred(
+                                    "emit_signal".into(),
+                                    &[
+                                        "friend_connectivity_updated".to_variant(),
+                                        address.to_variant(),
+                                        status.to_variant(),
+                                    ],
+                                );
+                            }
+                        }
+                        None => {
+                            // Stream ended
+                            break;
+                        }
+                    }
+                }
             }
         }
 
-        // Stream ended - emit subscription_dropped signal
-        if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
-            tracing::warn!(
-                "Connectivity updates stream ended - emitting subscription_dropped signal"
-            );
-            node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
+        // Stream ended - emit subscription_dropped signal (only if not cancelled)
+        if !cancel_token.is_cancelled() {
+            if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
+                tracing::warn!(
+                    "Connectivity updates stream ended - emitting subscription_dropped signal"
+                );
+                node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
+            }
         }
     }
 

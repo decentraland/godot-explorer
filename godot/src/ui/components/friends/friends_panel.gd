@@ -22,6 +22,9 @@ var _online_friends: Dictionary = {}
 # Starts as true (service down) until the service loads successfully
 var _streaming_subscription_failed: bool = true
 
+# Track if we're currently loading friends data
+var _is_loading: bool = false
+
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
 @onready var color_rect_blocked: ColorRect = %ColorRect_Blocked
@@ -57,6 +60,7 @@ var _streaming_subscription_failed: bool = true
 @onready var friends_list: VBoxContainer = %FriendsList
 @onready var button_nearby: Button = %Button_Nearby
 @onready var v_box_container_friends_tab: VBoxContainer = %VBoxContainer_FriendsTab
+@onready var v_box_container_loading: VBoxContainer = %VBoxContainer_Loading
 
 
 func _ready() -> void:
@@ -79,14 +83,14 @@ func _ready() -> void:
 	request_list.load_error.connect(_on_load_error)
 	online_list.load_error.connect(_on_load_error)
 
-	# Initial state: hide friend lists and show service down message
-	# This will be updated when the social service successfully connects
+	# Initial state: hide all containers - will show loading when panel opens
 	v_box_container_request.hide()
 	v_box_container_online.hide()
 	v_box_container_offline.hide()
 	v_box_container_no_friends.hide()
+	v_box_container_no_service.hide()
+	v_box_container_loading.hide()
 	friends_list.hide()
-	v_box_container_no_service.show()
 
 
 func _connect_social_service_signals() -> void:
@@ -97,6 +101,7 @@ func _connect_social_service_signals() -> void:
 	_safe_connect(social.friendship_deleted, _on_friendship_deleted)
 	_safe_connect(social.friendship_request_cancelled, _on_friendship_request_cancelled)
 	_safe_connect(social.friend_connectivity_updated, _on_friend_connectivity_updated)
+	_safe_connect(social.subscription_dropped, _async_on_subscription_dropped)
 
 
 func _safe_connect(sig: Signal, callback: Callable) -> void:
@@ -135,16 +140,20 @@ func show_panel_on_friends_tab() -> void:
 	if not Global.player_identity.is_guest:
 		v_box_container_friends_tab.show()
 		button_friends.button_pressed = true
+		# Subscribe to friends updates when panel opens
+		_async_subscribe_to_friends_updates()
 	else:
 		v_box_container_friends_tab.hide()
 		button_nearby.button_pressed = true
-	# Retry streaming subscription if it previously failed
-	if _streaming_subscription_failed:
-		_async_retry_streaming_subscription()
 
 
 func hide_panel() -> void:
 	hide()
+	# Unsubscribe from friends updates when panel closes
+	if not Global.player_identity.is_guest:
+		Global.social_service.unsubscribe_from_updates()
+		Global.social_service.unsubscribe_from_connectivity_updates()
+	panel_closed.emit()
 
 
 func set_streaming_subscription_failed(failed: bool) -> void:
@@ -152,22 +161,42 @@ func set_streaming_subscription_failed(failed: bool) -> void:
 	_update_dropdown_visibility()
 
 
-func _async_retry_streaming_subscription() -> void:
-	# Try to re-subscribe to streaming updates
+func _async_subscribe_to_friends_updates() -> void:
+	# Show loading state
+	_is_loading = true
+	_update_dropdown_visibility()
+
+	# Subscribe to friendship updates (request/accept/reject/etc)
+	var streaming_failed = false
 	var promise = Global.social_service.subscribe_to_updates()
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
-		# Still failing, keep showing error
-		return
+		var error = promise.get_data()
+		push_error(
+			"[FriendsPanel] Failed to subscribe to friendship updates: " + str(error.get_error())
+		)
+		streaming_failed = true
 
-	# Subscription succeeded, also try connectivity updates
+	# Subscribe to connectivity updates (online/offline/away)
 	var connectivity_promise = Global.social_service.subscribe_to_connectivity_updates()
 	await PromiseUtils.async_awaiter(connectivity_promise)
 
-	# Clear the error state and refresh lists
-	_streaming_subscription_failed = false
-	update_all_lists()
+	if connectivity_promise.is_rejected():
+		var error = connectivity_promise.get_data()
+		push_error(
+			"[FriendsPanel] Failed to subscribe to connectivity updates: " + str(error.get_error())
+		)
+		# Connectivity failure alone doesn't mark streaming as failed
+
+	# Update streaming subscription status
+	_streaming_subscription_failed = streaming_failed
+
+	# Fetch/refresh friends lists and wait for them to load
+	await _async_update_all_lists()
+
+	# Loading complete
+	_is_loading = false
 	_update_dropdown_visibility()
 
 
@@ -215,6 +244,17 @@ func _on_offline_button_toggled(toggled_on: bool) -> void:
 func _update_dropdown_visibility() -> void:
 	# Check if user is a guest - guests don't have access to friends service
 	var is_guest = Global.player_identity.is_guest
+
+	# Show loading state if currently loading
+	if _is_loading:
+		v_box_container_loading.show()
+		v_box_container_no_service.hide()
+		v_box_container_no_friends.hide()
+		friends_list.hide()
+		return
+
+	# Hide loading container when not loading
+	v_box_container_loading.hide()
 
 	# Show service error if streaming subscription failed or lists had errors
 	var has_service_error = (
@@ -385,6 +425,17 @@ func _send_friend_online_chat_message(friend_name: String) -> void:
 	Global.on_chat_message.emit("system", message, Time.get_unix_time_from_system())
 
 
+func _async_on_subscription_dropped() -> void:
+	# Auto-reconnect if panel is visible
+	if visible and not Global.player_identity.is_guest:
+		print("[FriendsPanel] Subscription dropped while panel is open - reconnecting...")
+		# Small delay before reconnecting
+		await get_tree().create_timer(1.0).timeout
+		# Only reconnect if still visible
+		if visible:
+			_async_subscribe_to_friends_updates()
+
+
 func is_friend_online(address: String) -> bool:
 	return _online_friends.has(address)
 
@@ -409,6 +460,16 @@ func update_all_lists():
 	request_list.async_update_list()
 	online_list.async_update_list()
 	offline_list.async_update_list()
+	nearby_list.async_update_list()
+	blocked_list.async_update_list()
+
+
+func _async_update_all_lists() -> void:
+	# Update all lists and wait for them to complete
+	await request_list.async_update_list()
+	await online_list.async_update_list()
+	await offline_list.async_update_list()
+	# Don't wait for nearby and blocked as they're not critical for friends tab loading
 	nearby_list.async_update_list()
 	blocked_list.async_update_list()
 
