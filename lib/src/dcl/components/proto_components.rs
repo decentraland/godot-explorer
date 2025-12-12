@@ -220,3 +220,16 @@ pub mod kernel {
         }
     }
 }
+
+pub mod social_service {
+    // Include the error types from the social_service package
+    include!(concat!(env!("OUT_DIR"), "/decentraland.social_service.rs"));
+
+    #[allow(clippy::all)]
+    pub mod v2 {
+        include!(concat!(
+            env!("OUT_DIR"),
+            "/decentraland.social_service.v2.rs"
+        ));
+    }
+}

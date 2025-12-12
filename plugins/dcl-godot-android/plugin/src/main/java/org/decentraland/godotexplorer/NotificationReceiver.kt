@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -25,6 +26,7 @@ class NotificationReceiver : BroadcastReceiver() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_BODY = "body"
         const val EXTRA_IMAGE_BLOB = "image_blob"
+        const val EXTRA_DEEP_LINK = "deep_link"
         const val DEFAULT_CHANNEL_ID = "dcl_local_notifications"
         const val DEFAULT_CHANNEL_NAME = "Decentraland Notifications"
     }
@@ -41,18 +43,19 @@ class NotificationReceiver : BroadcastReceiver() {
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Notification"
         val body = intent.getStringExtra(EXTRA_BODY) ?: ""
         val imageBlob = intent.getByteArrayExtra(EXTRA_IMAGE_BLOB)
+        val deepLink = intent.getStringExtra(EXTRA_DEEP_LINK) ?: ""
 
         if (notificationId == -1) {
             Log.e(TAG, "Invalid notification ID")
             return
         }
 
-        Log.d(TAG, "Showing notification: id=$notificationId, title=$title, hasImage=${imageBlob != null}")
+        Log.d(TAG, "Showing notification: id=$notificationId, title=$title, hasImage=${imageBlob != null}, deepLink=$deepLink")
 
-        showNotification(context, notificationId, title, body, imageBlob)
+        showNotification(context, notificationId, title, body, imageBlob, deepLink)
     }
 
-    private fun showNotification(context: Context, notificationId: Int, title: String, body: String, imageBlob: ByteArray?) {
+    private fun showNotification(context: Context, notificationId: Int, title: String, body: String, imageBlob: ByteArray?, deepLink: String = "") {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create notification channel for Android 8.0+
@@ -73,6 +76,11 @@ class NotificationReceiver : BroadcastReceiver() {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+            // Set deep link data so the app can handle it
+            if (deepLink.isNotEmpty()) {
+                data = Uri.parse(deepLink)
+                Log.d(TAG, "Setting deep link on launch intent: $deepLink")
+            }
         }
 
         val pendingIntent = PendingIntent.getActivity(

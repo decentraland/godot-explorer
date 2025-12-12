@@ -38,6 +38,8 @@ jobs:
       - name: Test
         working-directory: lib
         run: cargo test --release -- --skip auth
+        env:
+          PROTOC: ${{ github.workspace }}/.bin/protoc/bin/protoc
 
       # Export section (multi platform)
       - name: Import Assets
@@ -59,5 +61,5 @@ jobs:
         with:
           name: libdclgodot_macos
           path: |
-            lib/target/release/libdclgodot.dylib
+            lib/target/libdclgodot_macos/libdclgodot.dylib
           if-no-files-found: error

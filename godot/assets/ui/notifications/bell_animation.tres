@@ -1,10 +1,6 @@
-[gd_resource type="SpriteFrames" load_steps=66 format=3 uid="uid://47x4o6mgwyd"]
+[gd_resource type="SpriteFrames" load_steps=65 format=3 uid="uid://cahxyogw018tq"]
 
 [ext_resource type="Texture2D" uid="uid://b0r0ooru1kg0o" path="res://assets/ui/notifications/bell_animation_spritesheet.png" id="1"]
-
-[sub_resource type="AtlasTexture" id="atlas_0"]
-atlas = ExtResource("1")
-region = Rect2(0, 0, 70, 70)
 
 [sub_resource type="AtlasTexture" id="atlas_1"]
 atlas = ExtResource("1")
@@ -261,9 +257,6 @@ region = Rect2(490, 490, 70, 70)
 [resource]
 animations = [{
 "frames": [{
-"duration": 1.0,
-"texture": SubResource("atlas_0")
-}, {
 "duration": 1.0,
 "texture": SubResource("atlas_1")
 }, {

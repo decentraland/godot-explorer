@@ -120,6 +120,8 @@ func _set_default_notification_image(_notif_type: String) -> void:
 			image_path = "res://assets/ui/notifications/RewardNotification.png"
 		"governance_announcement", "governance_proposal_enacted", "governance_voting_ended":
 			image_path = "res://assets/ui/notifications/ProposalFinishedNotification.png"
+		"social_service_friendship_request", "social_service_friendship_accepted":
+			image_path = "res://assets/ui/notifications/FriendNotification.png"
 		_:
 			image_path = "res://assets/ui/notifications/DefaultNotification.png"
 
@@ -146,7 +148,7 @@ func _set_icon_for_type(notif_type: String) -> void:
 			icon_path = "res://assets/ui/notifications/WorldUnaccessibleNotification.png"
 		"worlds_permission_granted", "worlds_permission_revoked":
 			icon_path = "res://assets/ui/notifications/WorldAccessRestoredNotification.png"
-		"social_service_friendship_request":
+		"social_service_friendship_request", "social_service_friendship_accepted":
 			icon_path = "res://assets/ui/notifications/FriendNotification.png"
 		"community_invite_received":
 			icon_path = "res://assets/ui/notifications/DefaultNotification.png"
@@ -163,16 +165,22 @@ func _set_icon_for_type(notif_type: String) -> void:
 
 func _apply_friend_notification_styling(notif_type: String, metadata: Dictionary) -> void:
 	# Only apply to friend notifications
-	if (
-		notif_type != "social_service_friendship_request"
-		and notif_type != "social_service_friendship_accepted"
-	):
+	var friend_notification_types = [
+		"social_service_friendship_request",
+		"social_service_friendship_accepted",
+	]
+	if notif_type not in friend_notification_types:
 		return
 
-	if "sender" not in metadata or not metadata["sender"] is Dictionary:
-		return
+	# Get sender/friend name based on notification type
+	var sender_name = ""
+	if "sender" in metadata and metadata["sender"] is Dictionary:
+		sender_name = metadata["sender"].get("name", "")
+	elif "sender_name" in metadata:
+		sender_name = metadata.get("sender_name", "")
+	elif "friend_name" in metadata:
+		sender_name = metadata.get("friend_name", "")
 
-	var sender_name = metadata["sender"].get("name", "")
 	if sender_name.is_empty():
 		return
 
@@ -212,4 +220,4 @@ func _get_avatar_color(username: String) -> Color:
 	if player_avatar == null:
 		return Color.WHITE
 
-	return player_avatar.get_nickname_color(username)
+	return DclAvatar.get_nickname_color(username)
