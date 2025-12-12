@@ -45,7 +45,6 @@ var _is_loading: bool = false
 @onready var nearby_list: SocialList = %NearbyList
 @onready var blocked_list: SocialList = %BlockedList
 
-@onready var label_empty_state: Label = %LabelEmptyState
 @onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
 @onready var v_box_container_no_friends: VBoxContainer = %VBoxContainer_NoFriends
 @onready var request_container: PanelContainer = %RequestContainer
