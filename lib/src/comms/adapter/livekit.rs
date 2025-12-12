@@ -416,6 +416,26 @@ fn spawn_livekit_task(
                                 }
                             }
                         }
+                        livekit::RoomEvent::Disconnected { reason } => {
+                            // Map LiveKit disconnect reason to our DisconnectReason
+                            use super::message_processor::DisconnectReason;
+                            let disconnect_reason = match reason {
+                                livekit::DisconnectReason::DuplicateIdentity => DisconnectReason::DuplicateIdentity,
+                                livekit::DisconnectReason::RoomClosed => DisconnectReason::RoomClosed,
+                                livekit::DisconnectReason::ParticipantRemoved => DisconnectReason::Kicked,
+                                livekit::DisconnectReason::RoomDeleted => DisconnectReason::RoomClosed,
+                                _ => DisconnectReason::Other,
+                            };
+
+                            if let Err(e) = sender.send(IncomingMessage {
+                                message: MessageType::Disconnected(disconnect_reason),
+                                address: H160::zero(),
+                                room_id: room_id.clone(),
+                            }).await {
+                                tracing::warn!("Failed to send Disconnected: {}", e);
+                            }
+                            break 'stream;
+                        }
                         _ => { tracing::debug!("Event: {:?}", incoming); }
                     };
                 }
@@ -445,7 +465,9 @@ fn spawn_livekit_task(
             );
         }
 
-        room.close().await.unwrap();
+        if let Err(e) = room.close().await {
+            tracing::debug!("room.close() failed (may already be closed): {e}");
+        }
     });
 
     let _ = rt.block_on(task);

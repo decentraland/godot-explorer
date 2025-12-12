@@ -35,14 +35,28 @@ pub struct IncomingMessage {
     pub room_id: String, // To identify which room the message came from
 }
 
+/// Reason for disconnection from the server
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisconnectReason {
+    /// Another participant with the same identity has joined the room
+    DuplicateIdentity,
+    /// The room was closed
+    RoomClosed,
+    /// Participant was removed/kicked from the server
+    Kicked,
+    /// Other disconnection reasons (server shutdown, signal close, etc.)
+    Other,
+}
+
 /// Types of messages that can be received from peers
 #[derive(Debug, Clone)]
 pub enum MessageType {
     Rfc4(Rfc4Message),
     InitVoice(VoiceInitData),
     VoiceFrame(VoiceFrameData),
-    PeerJoined, // Peer joined a room
-    PeerLeft,   // Peer left a room
+    PeerJoined,                     // Peer joined a room
+    PeerLeft,                       // Peer left a room
+    Disconnected(DisconnectReason), // Disconnected from the server
 }
 
 #[derive(Debug, Clone)]
@@ -151,6 +165,9 @@ pub struct MessageProcessor {
     // Cached blocked/muted sets for performance (updated when social_blacklist changes)
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
+
+    // Disconnect reason if disconnected from the server, along with the room_id
+    disconnect_reason: Option<(DisconnectReason, String)>,
 }
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
@@ -209,6 +226,7 @@ impl MessageProcessor {
             social_blacklist: None,
             cached_blocked: HashSet::new(),
             cached_muted: HashSet::new(),
+            disconnect_reason: None,
         }
     }
 
@@ -324,6 +342,14 @@ impl MessageProcessor {
             messages.push(message);
         }
         messages
+    }
+
+    /// Checks if there was a disconnection and returns the reason along with the room_id
+    /// Clears the reason after returning it
+    ///
+    /// CommunicationManager should call this regularly to check for disconnection
+    pub fn consume_disconnect_reason(&mut self) -> Option<(DisconnectReason, String)> {
+        self.disconnect_reason.take()
     }
 
     /// Processes all pending messages and performs periodic maintenance
@@ -627,6 +653,13 @@ impl MessageProcessor {
             MessageType::PeerLeft => {
                 // Handle peer leaving a room
                 self.handle_peer_left(message.address, room_id);
+            }
+            MessageType::Disconnected(reason) => {
+                // Set disconnect_reason if not already set (first disconnect wins)
+                // Any room disconnect (scene or archipelago) should be reported
+                if self.disconnect_reason.is_none() {
+                    self.disconnect_reason = Some((*reason, room_id));
+                }
             }
         }
     }
@@ -1156,5 +1189,8 @@ impl MessageProcessor {
     pub fn clean(&mut self) {
         self.peer_identities.clear();
         self.last_chat_timestamps.clear();
+        // Clean up all avatars when disconnected
+        let mut avatar_scene_ref = self.avatars.clone();
+        avatar_scene_ref.bind_mut().clean();
     }
 }
