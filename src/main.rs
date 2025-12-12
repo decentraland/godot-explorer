@@ -208,6 +208,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("staging")
+                        .long("staging")
+                        .help("mark as staging build (affects version string)")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("itest")
                         .long("itest")
                         .help("run integration-tests"),
@@ -276,6 +282,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("staging")
+                        .long("staging")
+                        .help("mark as staging build (affects version string)")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("resource-tracking")
                         .help("enables resource tracking feature")
                         .takes_value(false),
@@ -340,9 +352,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Check dependencies first
             dependencies::check_command_dependencies("run", None)?;
 
-            // Set PROD environment variable if --prod flag is present
+            // Set environment variable based on --prod or --staging flag
             if sm.is_present("prod") {
                 std::env::set_var("DECENTRALAND_PROD_BUILD", "1");
+            } else if sm.is_present("staging") {
+                std::env::set_var("DECENTRALAND_STAGING_BUILD", "1");
             }
 
             let mut build_args: Vec<&str> = sm
@@ -375,10 +389,11 @@ fn main() -> Result<(), anyhow::Error> {
                 && (target == Some("android") || target == Some("ios"))
                 && !sm.is_present("editor");
 
+            // Both --prod and --staging require release profile
+            let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
+
             if should_deploy {
                 let platform = target.unwrap();
-
-                let is_prod = sm.is_present("prod");
 
                 if is_only_lib && platform == "android" {
                     // Hotreload mode: build and push .so file only
@@ -390,7 +405,7 @@ fn main() -> Result<(), anyhow::Error> {
                     // Build for Android
                     run::build(
                         sm.is_present("release"),
-                        is_prod,
+                        production_or_staging,
                         build_args.clone(),
                         None,
                         Some(platform),
@@ -416,7 +431,7 @@ fn main() -> Result<(), anyhow::Error> {
                     // 1. Build for host OS first
                     run::build(
                         sm.is_present("release"),
-                        is_prod,
+                        production_or_staging,
                         build_args.clone(),
                         None,
                         None,
@@ -425,7 +440,7 @@ fn main() -> Result<(), anyhow::Error> {
                     // 2. Build for the platform
                     run::build(
                         sm.is_present("release"),
-                        is_prod,
+                        production_or_staging,
                         build_args.clone(),
                         None,
                         Some(platform),
@@ -446,7 +461,7 @@ fn main() -> Result<(), anyhow::Error> {
                 // Normal build (either host OS or just build for target without deploying)
                 run::build(
                     sm.is_present("release"),
-                    sm.is_present("prod"),
+                    production_or_staging,
                     build_args,
                     None,
                     target,
@@ -471,9 +486,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Run version check first
             version_check::run_version_check()?;
 
-            // Set PROD environment variable if --prod flag is present
+            // Set environment variable based on --prod or --staging flag
             if sm.is_present("prod") {
                 std::env::set_var("DECENTRALAND_PROD_BUILD", "1");
+            } else if sm.is_present("staging") {
+                std::env::set_var("DECENTRALAND_STAGING_BUILD", "1");
             }
 
             // Check dependencies first
@@ -500,9 +517,11 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
+            // Both --prod and --staging require release profile
+            let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
             let result = run::build(
                 sm.is_present("release"),
-                sm.is_present("prod"),
+                production_or_staging,
                 build_args,
                 None,
                 target,
