@@ -57,12 +57,12 @@ jobs:
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
-          ls -la godot/android/build/build/outputs/native-debug-symbols/standardRelease/
+          mkdir -p android-debug-symbols
+          cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
       
       - name: Export Android AAB
         run: |
           cargo run -- export --target android --format aab --release
-          ls -la godot/android/build/build/outputs/native-debug-symbols/standardRelease/
 
       # Decode and setup keystore for AAB signing
       - name: Setup AAB Signing Keystore
@@ -95,10 +95,8 @@ jobs:
           ls -la exports/
           mkdir -p android-artifacts-apk
           mkdir -p android-artifacts-aab
-          mkdir -p android-debug-symbols
           mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
           mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
-          cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
