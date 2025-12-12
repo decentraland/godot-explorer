@@ -591,6 +591,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+metadata/_edit_lock_ = true
 
 [node name="Button_Combo" type="Button" parent="Control"]
 unique_name_in_owner = true
@@ -634,6 +635,7 @@ grow_vertical = 2
 rotation = 0.08726646
 pivot_offset = Vector2(140, 30)
 mouse_filter = 2
+metadata/_edit_lock_ = true
 
 [node name="Button_Combo1" parent="Control/Button_Combo/HBoxContainer" instance=ExtResource("1_81cx4")]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
@@ -649,6 +651,7 @@ pivot_offset = Vector2(30, 30)
 theme_override_constants/icon_max_width = 25
 text = "1"
 trigger_action = "ia_action_3"
+metadata/_edit_lock_ = true
 
 [node name="HBoxContainer2" type="Control" parent="Control/Button_Combo"]
 show_behind_parent = true
@@ -668,6 +671,7 @@ grow_vertical = 2
 rotation = 0.7853982
 pivot_offset = Vector2(140, 30)
 mouse_filter = 2
+metadata/_edit_lock_ = true
 
 [node name="Button_Combo2" parent="Control/Button_Combo/HBoxContainer2" instance=ExtResource("1_81cx4")]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
@@ -682,6 +686,7 @@ rotation = -0.7853982
 pivot_offset = Vector2(30, 30)
 text = "2"
 trigger_action = "ia_action_4"
+metadata/_edit_lock_ = true
 
 [node name="HBoxContainer3" type="Control" parent="Control/Button_Combo"]
 show_behind_parent = true
@@ -701,6 +706,7 @@ grow_vertical = 2
 rotation = 1.4835298
 pivot_offset = Vector2(140, 30)
 mouse_filter = 2
+metadata/_edit_lock_ = true
 
 [node name="Button_Combo3" parent="Control/Button_Combo/HBoxContainer3" instance=ExtResource("1_81cx4")]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
@@ -715,6 +721,7 @@ rotation = -1.4835298
 pivot_offset = Vector2(30, 30)
 text = "3"
 trigger_action = "ia_action_5"
+metadata/_edit_lock_ = true
 
 [node name="HBoxContainer4" type="Control" parent="Control/Button_Combo"]
 show_behind_parent = true
@@ -734,6 +741,7 @@ grow_vertical = 2
 rotation = 2.1816616
 pivot_offset = Vector2(140, 30)
 mouse_filter = 2
+metadata/_edit_lock_ = true
 
 [node name="Button_Combo4" parent="Control/Button_Combo/HBoxContainer4" instance=ExtResource("1_81cx4")]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
@@ -748,6 +756,7 @@ rotation = -2.1816616
 pivot_offset = Vector2(30, 30)
 text = "4"
 trigger_action = "ia_action_6"
+metadata/_edit_lock_ = true
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 unique_name_in_owner = true

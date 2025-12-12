@@ -572,14 +572,6 @@ func _on_mini_map_pressed():
 	release_mouse()
 
 
-func _on_button_jump_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			Input.action_press("ia_jump")
-		else:
-			Input.action_release("ia_jump")
-
-
 func _on_button_open_chat_pressed():
 	panel_chat.async_start_chat()
 	release_mouse()
@@ -615,6 +607,7 @@ func _on_panel_profile_open_profile():
 func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
 	#button_mic.visible = false  # voice_chat_enabled
 	pass
+
 
 func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
 	pass  # Replace with function body.
