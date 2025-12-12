@@ -58,8 +58,8 @@ pub enum MessageType {
     VideoFrame(VideoFrameData),
     InitStreamerAudio(StreamerAudioInitData),
     StreamerAudioFrame(StreamerAudioFrameData),
-    PeerJoined, // Peer joined a room
-    PeerLeft,   // Peer left a room
+    PeerJoined,                     // Peer joined a room
+    PeerLeft,                       // Peer left a room
     Disconnected(DisconnectReason), // Disconnected from the server
 }
 
