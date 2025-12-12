@@ -4,7 +4,7 @@ extends Control
 const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
-const FILTER: Texture = preload("res://assets/ui/filter.svg")
+const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
 @export var hide_navbar: bool = false
 
