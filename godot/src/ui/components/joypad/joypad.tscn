@@ -1,0 +1,759 @@
+[gd_scene load_steps=10 format=3 uid="uid://b7e8iko6dwv7p"]
+
+[ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="1_81cx4"]
+[ext_resource type="Script" uid="uid://dwlnsnbe4h0b0" path="res://src/ui/components/joypad/joypad.gd" id="1_il1fe"]
+[ext_resource type="Texture2D" uid="uid://72xpjysoxgwo" path="res://assets/themes/icons/InteractiveIcon.svg" id="2_6enwl"]
+[ext_resource type="Texture2D" uid="uid://ck3atqpytstpo" path="res://assets/themes/dark_dcl_theme/icons/Jump.svg" id="3_6enwl"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_8at3g"]
+[ext_resource type="Texture2D" uid="uid://doi4r1nh7rtr7" path="res://assets/themes/dark_dcl_theme/icons/multi_action.svg" id="5_il1fe"]
+
+[sub_resource type="Animation" id="Animation_pbx80"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Button_Combo/HBoxContainer/Button_Combo1:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(-0.000854454),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(100, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Button_Combo/HBoxContainer2/Button_Combo2:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(-0.000854454),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(100, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Button_Combo/HBoxContainer4/Button_Combo4:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(-0.000854454),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(100, 0)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Control/Button_Combo/HBoxContainer/Button_Combo1:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0)]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Control/Button_Combo/HBoxContainer2/Button_Combo2:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0)]
+}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Control/Button_Combo/HBoxContainer4/Button_Combo4:modulate")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0)]
+}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Button_Press:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 1)]
+}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Control/Button_Combo/HBoxContainer3/Button_Combo3:position")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(-0.000854454),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(100, 0)]
+}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Control/Button_Combo/HBoxContainer3/Button_Combo3:modulate")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0)]
+}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Control/Button_Combo/HBoxContainer/Button_Combo1:visible")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0.001),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Control/Button_Combo/HBoxContainer2/Button_Combo2:visible")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0.001),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Control/Button_Combo/HBoxContainer3/Button_Combo3:visible")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0.001),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Control/Button_Combo/HBoxContainer4/Button_Combo4:visible")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0.001),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Button_Press/HBoxContainer2/Button_Primary:disabled")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Button_Press/HBoxContainer/Button_Jump:disabled")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Button_Press/HBoxContainer4/Button_Secondary:disabled")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Button_Press:disabled")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+
+[sub_resource type="Animation" id="Animation_1t5lc"]
+resource_name = "open_combo"
+length = 0.05
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Button_Combo/HBoxContainer/Button_Combo1:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(100, 0), Vector2(0, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Button_Combo/HBoxContainer2/Button_Combo2:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(100, 0), Vector2(0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Button_Combo/HBoxContainer4/Button_Combo4:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(100, 0), Vector2(0, 0)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Control/Button_Combo/HBoxContainer/Button_Combo1:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0), Color(0.9882353, 0.9882353, 0.9882353, 1)]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Control/Button_Combo/HBoxContainer2/Button_Combo2:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0), Color(0.9882353, 0.9882353, 0.9882353, 1)]
+}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Control/Button_Combo/HBoxContainer4/Button_Combo4:modulate")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0), Color(0.9882353, 0.9882353, 0.9882353, 1)]
+}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Button_Press:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 1), Color(0.9882353, 0.9882353, 0.9882353, 0.39215687)]
+}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Control/Button_Combo/HBoxContainer3/Button_Combo3:position")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(100, 0), Vector2(0, 0)]
+}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Control/Button_Combo/HBoxContainer3/Button_Combo3:modulate")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(0.9882353, 0.9882353, 0.9882353, 0), Color(0.9882353, 0.9882353, 0.9882353, 1)]
+}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Control/Button_Combo/HBoxContainer4/Button_Combo4:visible")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0, 0.0033472378),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Control/Button_Combo/HBoxContainer3/Button_Combo3:visible")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0, 0.0033472378),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Control/Button_Combo/HBoxContainer2/Button_Combo2:visible")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0, 0.0033472378),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Control/Button_Combo/HBoxContainer/Button_Combo1:visible")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {
+"times": PackedFloat32Array(0, 0.0033472378),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Button_Press/HBoxContainer2/Button_Primary:disabled")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {
+"times": PackedFloat32Array(0, 0.0020598387),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Button_Press/HBoxContainer/Button_Jump:disabled")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {
+"times": PackedFloat32Array(0, 0.0020598387),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Button_Press/HBoxContainer4/Button_Secondary:disabled")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {
+"times": PackedFloat32Array(0, 0.0020598387),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Button_Press:disabled")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {
+"times": PackedFloat32Array(0, 0.003089758),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [false, true]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_dl5qg"]
+_data = {
+&"RESET": SubResource("Animation_pbx80"),
+&"open_combo": SubResource("Animation_1t5lc")
+}
+
+[node name="Joypad" type="Control"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_il1fe")
+
+[node name="Button_Press" parent="." instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -170.0
+offset_right = -50.0
+offset_bottom = -50.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(60, 60)
+theme_override_constants/icon_max_width = 50
+text = ""
+icon = ExtResource("2_6enwl")
+expand_icon = true
+trigger_action = "ia_pointer"
+
+[node name="HBoxContainer" type="Control" parent="Button_Press"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = -0.2617994
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Button_Jump" parent="Button_Press/HBoxContainer" instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = 0.2617994
+pivot_offset = Vector2(40, 40)
+theme_override_constants/icon_max_width = 25
+text = ""
+icon = ExtResource("3_6enwl")
+trigger_action = "ia_jump"
+
+[node name="HBoxContainer2" type="Control" parent="Button_Press"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.43633232
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Button_Primary" parent="Button_Press/HBoxContainer2" instance=ExtResource("1_81cx4")]
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -0.43633232
+pivot_offset = Vector2(40, 40)
+
+[node name="HBoxContainer3" type="Control" parent="Button_Press"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 1.134464
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Button_Combo_Position" type="Button" parent="Button_Press/HBoxContainer3"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0.06666667)
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -1.134464
+pivot_offset = Vector2(40, 40)
+focus_mode = 0
+theme = ExtResource("4_8at3g")
+theme_type_variation = &"TouchableButton"
+theme_override_constants/icon_max_width = 40
+disabled = true
+icon = ExtResource("5_il1fe")
+icon_alignment = 1
+
+[node name="HBoxContainer4" type="Control" parent="Button_Press"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 1.8325957
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Button_Secondary" parent="Button_Press/HBoxContainer4" instance=ExtResource("1_81cx4")]
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -1.8325957
+pivot_offset = Vector2(40, 40)
+text = "F"
+trigger_action = "ia_secondary"
+
+[node name="Control" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Button_Combo" type="Button" parent="Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -207.0
+offset_top = -272.0
+offset_right = -127.0
+offset_bottom = -192.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(40, 40)
+focus_mode = 0
+theme = ExtResource("4_8at3g")
+theme_type_variation = &"TouchableButton"
+theme_override_constants/icon_max_width = 40
+toggle_mode = true
+icon = ExtResource("5_il1fe")
+icon_alignment = 1
+
+[node name="HBoxContainer" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.08726646
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+
+[node name="Button_Combo1" parent="Control/Button_Combo/HBoxContainer" instance=ExtResource("1_81cx4")]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -0.08726646
+pivot_offset = Vector2(30, 30)
+theme_override_constants/icon_max_width = 25
+text = "1"
+trigger_action = "ia_action_3"
+
+[node name="HBoxContainer2" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.7853982
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+
+[node name="Button_Combo2" parent="Control/Button_Combo/HBoxContainer2" instance=ExtResource("1_81cx4")]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -0.7853982
+pivot_offset = Vector2(30, 30)
+text = "2"
+trigger_action = "ia_action_4"
+
+[node name="HBoxContainer3" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 1.4835298
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+
+[node name="Button_Combo3" parent="Control/Button_Combo/HBoxContainer3" instance=ExtResource("1_81cx4")]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -1.4835298
+pivot_offset = Vector2(30, 30)
+text = "3"
+trigger_action = "ia_action_5"
+
+[node name="HBoxContainer4" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 2.1816616
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+
+[node name="Button_Combo4" parent="Control/Button_Combo/HBoxContainer4" instance=ExtResource("1_81cx4")]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -2.1816616
+pivot_offset = Vector2(30, 30)
+text = "4"
+trigger_action = "ia_action_6"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+unique_name_in_owner = true
+libraries = {
+&"": SubResource("AnimationLibrary_dl5qg")
+}
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="toggled" from="Control/Button_Combo" to="." method="_on_button_combo_toggled"]
