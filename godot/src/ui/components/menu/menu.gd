@@ -347,4 +347,4 @@ func _on_deep_link_received() -> void:
 
 
 func _on_account_delete() -> void:
-	account_deletion_pop_up.start_flow()
+	account_deletion_pop_up.async_start_flow()
