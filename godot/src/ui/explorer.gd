@@ -52,7 +52,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var loading_ui = %Loading
 
-@onready var button_mic = %Button_Mic
 @onready var emote_wheel = %EmoteWheel
 
 @onready var world: Node3D = %world
@@ -102,7 +101,6 @@ func get_params_from_cmd():
 
 
 func _ready():
-	button_mic.visible = false
 	label_version.set_text("v" + DclGlobal.get_version())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
@@ -574,14 +572,6 @@ func _on_mini_map_pressed():
 	release_mouse()
 
 
-func _on_button_jump_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			Input.action_press("ia_jump")
-		else:
-			Input.action_release("ia_jump")
-
-
 func _on_button_open_chat_pressed():
 	panel_chat.async_start_chat()
 	release_mouse()
@@ -615,7 +605,8 @@ func _on_panel_profile_open_profile():
 
 
 func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
-	button_mic.visible = false  # voice_chat_enabled
+	#button_mic.visible = false  # voice_chat_enabled
+	pass
 
 
 func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
@@ -890,3 +881,11 @@ func _notification(what: int) -> void:
 		NotificationsManager.force_queue_sync()
 
 		Global.check_deep_link_teleport_to()
+
+
+func _on_emote_wheel_emote_wheel_closed() -> void:
+	virtual_joystick.show()
+
+
+func _on_emote_wheel_emote_wheel_opened() -> void:
+	virtual_joystick.hide()
