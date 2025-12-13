@@ -2,27 +2,50 @@ class_name Player
 extends CharacterBody3D
 
 const DEFAULT_CAMERA_FOV = 75.0
-const SPRINTING_CAMERA_FOV = 100.0
-const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
+const SPRINTING_CAMERA_FOV = 90.0
+const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)
 
 var last_position: Vector3
 var actual_velocity_xz: float
 
-var walk_speed = 1.5
-var jog_speed = 8.0
-var run_speed = 11.0
-var gravity := 10.0
-var jump_height := 1.8
-var jump_velocity_0 := sqrt(2 * jump_height * gravity)
+# Movement speeds
+var walk_speed := 1.5
+var jog_speed := 8.0
+var run_speed := 10.0
 
+# Physics
+var gravity := 10.0
+var jump_gravity_factor := 4.0  # Multiplier during ascent for snappy jumps
+var long_jump_time := 0.5  # Seconds to hold jump for higher jump
+var long_jump_gravity_scale := 0.5  # Gravity multiplier while holding jump
+
+# Jump heights (max reach ~2.25m)
+var jog_jump_height := 0.9
+var run_jump_height := 1.35
+
+# Acceleration
+var ground_acceleration := 20.0
+var max_ground_acceleration := 25.0
+var air_acceleration := 40.0  # More air control
+var max_air_acceleration := 50.0
+var acceleration_time := 0.5
+var stop_time := 0.0  # Instant stop
+
+# Coyote time
+var coyote_time := 0.15
+var jump_cooldown := 1.5
+
+# Internal state
 var jump_time := 0.0
+var jump_held_time := 0.0
+var last_on_floor_time := 0.0  # For coyote time
+var acceleration_weight := 0.0
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
 
 var current_direction: Vector3 = Vector3()
 
-var time_falling := 0.0
 var current_profile_version: int = -1
 var forced_position: Vector3
 var has_forced_position: bool = false
@@ -126,7 +149,8 @@ func _ready():
 	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.activate_attach_points()
 
-	floor_snap_length = 0.2
+	floor_snap_length = 0.35
+	floor_max_angle = deg_to_rad(46)  # Slope limit: can climb up to 46°
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
@@ -159,57 +183,125 @@ func _physics_process(dt: float) -> void:
 		input_dir = Vector2(0, 0)
 
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	current_direction = current_direction.move_toward(direction, 8 * dt)
 
-	var on_floor = is_on_floor() or position.y <= 0.0
+	# Acceleration weight for smooth acceleration curve
+	var target_accel_weight := 1.0 if direction.length() > 0 else 0.0
+	acceleration_weight = move_toward(acceleration_weight, target_accel_weight, dt / acceleration_time)
+
+	var on_floor := is_on_floor() or position.y <= 0.0
 	jump_time -= dt
 
-	if !on_floor:
-		time_falling += dt
+	# Track time since last on floor (for coyote time)
+	if on_floor:
+		last_on_floor_time = 0.0
 	else:
-		time_falling = 0.0
+		last_on_floor_time += dt
 
-	if not on_floor:
-		var in_grace_time = (
-			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
-		)
-		avatar.land = in_grace_time
-		avatar.rise = velocity.y > .3
-		avatar.fall = velocity.y < -.3 && !in_grace_time
-		velocity.y -= gravity * dt
-	elif Input.is_action_pressed("ia_jump") and jump_time < 0:
-		velocity.y = jump_velocity_0
+	# Track jump button hold time for long jump mechanic
+	if Input.is_action_pressed("ia_jump"):
+		jump_held_time += dt
+	else:
+		jump_held_time = 0.0
+
+	# Can jump if on floor OR within coyote time
+	var can_coyote_jump := last_on_floor_time < coyote_time and velocity.y <= 0
+
+	# --- Jump Logic ---
+	var just_jumped := false
+	if Input.is_action_pressed("ia_jump") and jump_time < 0 and (on_floor or can_coyote_jump):
+		# Jump height depends on sprint input
+		var jump_height := run_jump_height if Input.is_action_pressed("ia_sprint") else jog_jump_height
+		var effective_gravity := gravity * jump_gravity_factor
+		var jump_velocity := sqrt(2.0 * jump_height * effective_gravity)
+
+		velocity.y = jump_velocity
+		jump_held_time = 0.0
+		last_on_floor_time = coyote_time  # Prevent double jump
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
-		jump_time = 1.5
+		jump_time = jump_cooldown
+		just_jumped = true
+
+	# --- Gravity Logic ---
+	if not on_floor or just_jumped:
+		if not just_jumped:
+			avatar.rise = velocity.y > 0.3
+			avatar.fall = velocity.y < -0.3
+			avatar.land = false
+
+			var effective_gravity := gravity
+
+			# Increase gravity during ascent for snappy jumps
+			if velocity.y > 0:
+				effective_gravity *= jump_gravity_factor
+
+			# Reduce gravity while holding jump (long jump mechanic)
+			if Input.is_action_pressed("ia_jump") and jump_held_time < long_jump_time:
+				effective_gravity *= long_jump_gravity_scale
+
+			velocity.y -= effective_gravity * dt
 	else:
 		if not avatar.land:
 			avatar.land = true
-
 		velocity.y = 0
 		avatar.rise = false
 		avatar.fall = false
 
+	# --- Movement with acceleration ---
+	var is_sprinting := Input.is_action_pressed("ia_sprint")
+	var is_walking := Input.is_action_pressed("ia_walk")
+
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
-	if current_direction:
-		if Input.is_action_pressed("ia_walk"):
-			velocity.x = current_direction.x * walk_speed
-			velocity.z = current_direction.z * walk_speed
-		elif Input.is_action_pressed("ia_sprint"):
-			camera.set_target_fov(SPRINTING_CAMERA_FOV)
-			velocity.x = current_direction.x * run_speed
-			velocity.z = current_direction.z * run_speed
+	if is_sprinting and direction.length() > 0:
+		camera.set_target_fov(SPRINTING_CAMERA_FOV)
+
+	# Determine target speed
+	var target_speed := jog_speed
+	if is_walking:
+		target_speed = walk_speed
+	elif is_sprinting:
+		target_speed = run_speed
+
+	# Calculate acceleration based on ground/air state
+	var current_accel: float
+	if on_floor:
+		current_accel = lerpf(ground_acceleration, max_ground_acceleration, acceleration_weight)
+	else:
+		current_accel = lerpf(air_acceleration, max_air_acceleration, acceleration_weight)
+
+	# Apply movement
+	if direction.length() > 0:
+		if on_floor:
+			current_direction = current_direction.move_toward(direction, current_accel * dt)
+			velocity.x = current_direction.x * target_speed
+			velocity.z = current_direction.z * target_speed
 		else:
-			velocity.x = current_direction.x * jog_speed
-			velocity.z = current_direction.z * jog_speed
+			# Air control - slower velocity change
+			current_direction = current_direction.move_toward(direction, current_accel * dt)
+			var target_velocity := direction * target_speed
+			var horizontal_vel := Vector3(velocity.x, 0, velocity.z)
+			horizontal_vel = horizontal_vel.move_toward(target_velocity, current_accel * dt)
+			velocity.x = horizontal_vel.x
+			velocity.z = horizontal_vel.z
 
 		avatar.look_at(current_direction.normalized() + position)
 		avatar.rotation.x = 0.0
 		avatar.rotation.z = 0.0
 	else:
-		velocity.x = move_toward(velocity.x, 0, walk_speed)
-		velocity.z = move_toward(velocity.z, 0, walk_speed)
+		# Deceleration
+		if on_floor:
+			if stop_time <= 0:
+				velocity.x = 0
+				velocity.z = 0
+				current_direction = Vector3.ZERO
+			else:
+				velocity.x = move_toward(velocity.x, 0, target_speed / stop_time * dt)
+				velocity.z = move_toward(velocity.z, 0, target_speed / stop_time * dt)
+		else:
+			# In air, maintain momentum with slight drag
+			velocity.x = move_toward(velocity.x, 0, 0.5 * dt)
+			velocity.z = move_toward(velocity.z, 0, 0.5 * dt)
 
 	actual_velocity_xz = (to_xz(global_position) - to_xz(last_position)).length() / dt
 
