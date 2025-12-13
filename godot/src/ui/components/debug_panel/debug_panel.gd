@@ -30,6 +30,7 @@ var icon_visible: Texture2D = preload(
 @onready var button_show_hide: Button = %Button_ShowHide
 @onready var popup_menu: PopupMenu = %PopupMenu
 @onready var button_debug_js = %Button_DebugJS
+@onready var button_open_source = %Button_OpenSource
 @onready var label_debug_info = $"TabContainer_DebugPanel/Misc&Debugger/Label_DebugInfo"
 
 
@@ -215,3 +216,27 @@ func _on_button_debug_js_pressed():
 	label_debug_info.show()
 
 	print("debugging js file ", current_scene.scene_entity_definition.get_main_js_hash())
+
+
+func _on_button_open_source_pressed():
+	var current_scene = Global.scene_fetcher.get_current_scene_data()
+	if current_scene == null:
+		printerr("there is no current scene")
+		return
+
+	var main_js_hash = current_scene.scene_entity_definition.get_main_js_hash()
+	if main_js_hash.is_empty():
+		printerr("no main js file found for current scene")
+		return
+
+	var js_file_path = "user://content/" + main_js_hash
+	var absolute_path = ProjectSettings.globalize_path(js_file_path)
+
+	if not FileAccess.file_exists(js_file_path):
+		printerr("js file does not exist: ", absolute_path)
+		return
+
+	DisplayServer.clipboard_set(absolute_path)
+	print("Opening scene source code: ", absolute_path)
+	print("Absolute path copied to clipboard")
+	OS.shell_open(absolute_path)

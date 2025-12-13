@@ -102,7 +102,7 @@ cargo run -- export --target ios
 ### Directory Structure
 - **`lib/`**: Core Rust library with all systems
   - `src/dcl/`: Decentraland-specific components (scene runner, SDK bindings)
-  - `src/av/`: Audio/video processing (ffmpeg, video player)
+  - `src/av/`: Audio/video processing (video player)
   - `src/comms/`: WebRTC, voice chat (livekit)
   - `src/wallet/`: Ethereum integration
   - `src/content/`: Asset loading and caching
@@ -161,7 +161,6 @@ cargo run -- export --target ios
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
 - Integration with Decentraland SDK7 requires the JavaScript runtime to be properly initialized
 - **Android builds**: No longer use cargo-ndk due to NDK 27 issues. Direct cargo build with `GN_ARGS=use_custom_libcxx=false`
-- **FFmpeg**: In process of deprecation (not intention to fix it) previously automatically disabled for Android/iOS builds (TODO: mobile implementation)
 - **Dependencies**: Run `cargo run -- doctor` to check system health and missing dependencies
 - **Build order**: Commands now check dependencies and suggest next steps automatically
 
@@ -172,7 +171,6 @@ cargo run -- export --target ios
 - **Progress indicators**: Long-running operations show progress bars
 - **Dependency checking**: Commands validate prerequisites and provide helpful error messages
 - **Platform detection**: Automatically detects OS and suggests platform-specific commands
-- **Smart defaults**: FFmpeg automatically disabled, dead code for docs purposes
 
 ### Improved Android Workflow
 ```bash
