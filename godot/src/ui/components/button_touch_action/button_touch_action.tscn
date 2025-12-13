@@ -11,9 +11,9 @@ offset_bottom = 55.0
 focus_mode = 0
 theme = ExtResource("2_asumd")
 theme_type_variation = &"TouchableButton"
+toggle_mode = false
 text = "E"
 icon_alignment = 1
 script = ExtResource("2_c0jk1")
 
-[connection signal="button_down" from="." to="." method="_on_button_down"]
-[connection signal="button_up" from="." to="." method="_on_button_up"]
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
