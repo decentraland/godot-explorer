@@ -209,6 +209,10 @@ pointing/emulate_touch_from_mouse=true
 
 limits/debugger/max_chars_per_second=3276800
 
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
 [rendering]
 
 rendering_device/driver.ios="vulkan"
