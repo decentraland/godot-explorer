@@ -12,6 +12,10 @@ pub struct DclParseDeepLink {
 
     #[var]
     params: Dictionary,
+
+    /// The signin identity ID from deep link `decentraland://open?signin=${identityId}`
+    #[var]
+    signin_identity_id: GString,
 }
 
 #[godot_api]
@@ -23,6 +27,7 @@ impl IRefCounted for DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
             params: Dictionary::new(),
+            signin_identity_id: GString::new(),
         }
     }
 }
@@ -35,6 +40,7 @@ impl DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
             params: Dictionary::new(),
+            signin_identity_id: GString::new(),
         };
 
         if url_str.is_empty() {
@@ -75,6 +81,10 @@ impl DclParseDeepLink {
                 "realm" => {
                     return_object.realm = value.to_string().into();
                 }
+                "signin" => {
+                    // Handle signin identity ID from deep link `decentraland://open?signin=${identityId}`
+                    return_object.signin_identity_id = value.to_string().into();
+                }
                 _ => {}
             }
         }
@@ -85,5 +95,10 @@ impl DclParseDeepLink {
     #[func]
     pub fn is_location_defined(&self) -> bool {
         self.location.x < 1000000
+    }
+
+    #[func]
+    pub fn is_signin_request(&self) -> bool {
+        !self.signin_identity_id.is_empty()
     }
 }

@@ -34,16 +34,27 @@ use super::{
 
 #[cfg(target_os = "android")]
 mod android {
-    use tracing_subscriber::filter::LevelFilter;
+    use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{self, registry};
 
     pub fn init_logger() {
+        let filter = EnvFilter::new(
+            // TODO: Modify this line to change logging levels
+            // "warn"  // Only warnings and errors
+            // "libwebrtc=error,debug" // Filter out libwebrtc noise, show debug for everything else
+            // "debug"  // Debug, info, warnings and errors (shows all debug logs)
+            // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
+            // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
+            "dclgodot::auth=debug", // Info, warnings and errors
+        );
+
         let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
             .with_span_events(FmtSpan::CLOSE)
             .with_thread_names(true)
-            .with_filter(LevelFilter::WARN);
+            .with_ansi(false) // Disable ANSI color codes for cleaner logcat output
+            .with_filter(filter);
 
         registry().with(android_layer).init();
     }
