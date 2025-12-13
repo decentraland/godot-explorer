@@ -1,42 +1,20 @@
 class_name Player
-extends CharacterBody3D
+extends DclPlayer
 
 const DEFAULT_CAMERA_FOV = 75.0
-const SPRINTING_CAMERA_FOV = 100.0
-const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
-
-var last_position: Vector3
-var actual_velocity_xz: float
-
-var walk_speed = 1.5
-var jog_speed = 8.0
-var run_speed = 11.0
-var gravity := 10.0
-var jump_height := 1.8
-var jump_velocity_0 := sqrt(2 * jump_height * gravity)
-
-var jump_time := 0.0
+const SPRINTING_CAMERA_FOV = 90.0
+const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
 
-var current_direction: Vector3 = Vector3()
-
-var time_falling := 0.0
 var current_profile_version: int = -1
-var forced_position: Vector3
-var has_forced_position: bool = false
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
 @onready var avatar_raycast: RayCast3D = $Mount/Camera3D/AvatarRaycast
 @onready var outline_system: OutlineSystem = $Mount/Camera3D/OutlineSystem
-@onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
-
-
-func to_xz(pos: Vector3) -> Vector2:
-	return Vector2(pos.x, pos.z)
 
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
@@ -85,32 +63,6 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			UiSounds.play_sound("ui_fade_in")
 
 
-func update_avatar_movement_state(vel: float):
-	avatar.walk = false
-	avatar.jog = false
-	avatar.run = false
-
-	var speed_diffs = {
-		"idle": abs(vel),
-		"walk": abs(vel - walk_speed),
-		"jog": abs(vel - jog_speed),
-		"run": abs(vel - run_speed)
-	}
-
-	var nearest = speed_diffs.keys()[0]
-	for key in speed_diffs.keys():
-		if speed_diffs[key] < speed_diffs[nearest]:
-			nearest = key
-
-	match nearest:
-		"walk":
-			avatar.walk = true
-		"jog":
-			avatar.jog = true
-		"run":
-			avatar.run = true
-
-
 func _ready():
 	if Global.is_mobile():
 		add_child(PlayerMobileInput.new(self))
@@ -125,8 +77,6 @@ func _ready():
 
 	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.activate_attach_points()
-
-	floor_snap_length = 0.2
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
@@ -153,75 +103,31 @@ func clamp_camera_rotation():
 
 
 func _physics_process(dt: float) -> void:
-	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
+	# Call Rust movement processing with focus state
+	var has_focus := Global.explorer_has_focus()
+	process_movement(dt, has_focus)
 
-	if not Global.explorer_has_focus():  # ignore input
-		input_dir = Vector2(0, 0)
 
-	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	current_direction = current_direction.move_toward(direction, 8 * dt)
+func _process(_dt: float) -> void:
+	# Update avatar animation state from Rust movement state
+	avatar.walk = is_walking
+	avatar.jog = is_jogging
+	avatar.run = is_running
+	avatar.rise = is_rising
+	avatar.fall = is_falling
+	avatar.land = is_landing
 
-	var on_floor = is_on_floor() or position.y <= 0.0
-	jump_time -= dt
-
-	if !on_floor:
-		time_falling += dt
-	else:
-		time_falling = 0.0
-
-	if not on_floor:
-		var in_grace_time = (
-			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
-		)
-		avatar.land = in_grace_time
-		avatar.rise = velocity.y > .3
-		avatar.fall = velocity.y < -.3 && !in_grace_time
-		velocity.y -= gravity * dt
-	elif Input.is_action_pressed("ia_jump") and jump_time < 0:
-		velocity.y = jump_velocity_0
-		avatar.land = false
-		avatar.rise = true
-		avatar.fall = false
-		jump_time = 1.5
-	else:
-		if not avatar.land:
-			avatar.land = true
-
-		velocity.y = 0
-		avatar.rise = false
-		avatar.fall = false
-
-	camera.set_target_fov(DEFAULT_CAMERA_FOV)
-	if current_direction:
-		if Input.is_action_pressed("ia_walk"):
-			velocity.x = current_direction.x * walk_speed
-			velocity.z = current_direction.z * walk_speed
-		elif Input.is_action_pressed("ia_sprint"):
-			camera.set_target_fov(SPRINTING_CAMERA_FOV)
-			velocity.x = current_direction.x * run_speed
-			velocity.z = current_direction.z * run_speed
-		else:
-			velocity.x = current_direction.x * jog_speed
-			velocity.z = current_direction.z * jog_speed
-
-		avatar.look_at(current_direction.normalized() + position)
+	# Update avatar facing direction
+	var current_dir := get_current_direction()
+	if current_dir.length() > 0.01:
+		avatar.look_at(current_dir.normalized() + position)
 		avatar.rotation.x = 0.0
 		avatar.rotation.z = 0.0
-	else:
-		velocity.x = move_toward(velocity.x, 0, walk_speed)
-		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
-	actual_velocity_xz = (to_xz(global_position) - to_xz(last_position)).length() / dt
-
-	update_avatar_movement_state(actual_velocity_xz)
-
-	last_position = global_position
-	move_and_slide()
-	position.y = max(position.y, 0)
-
-	if has_forced_position:
-		global_position = forced_position
-		velocity = Vector3.ZERO
+	# Update camera FOV based on sprint input
+	camera.set_target_fov(DEFAULT_CAMERA_FOV)
+	if is_sprint_input_active() and current_dir.length() > 0:
+		camera.set_target_fov(SPRINTING_CAMERA_FOV)
 
 
 func avatar_look_at(target_position: Vector3):
@@ -322,20 +228,10 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
-func async_move_to(target: Vector3):
-	# Clear any previous forced position state
-	has_forced_position = false
-
-	var original_target = target
-	global_position = target
-	velocity = Vector3.ZERO
+# gdlint:ignore = async-function-name
+func teleport_to(target: Vector3):
+	# Use the Rust async_move_to for initial teleport
+	async_move_to(target)
 	await get_tree().physics_frame
-
-	# If physics engine pushed us out due to collision, lock at original position to stay stuck
-	# The player will remain stuck until either:
-	# 1. The collider that caused the stuck state is removed/moves away
-	# 2. async_move_to is called again with a new position
-	if global_position.distance_to(original_target) > 0.01:
-		forced_position = original_target
-		has_forced_position = true
-		global_position = original_target
+	# Check if we got stuck after the physics frame
+	check_stuck_after_teleport(target)

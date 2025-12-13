@@ -9,13 +9,32 @@
 length = 1.0779
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
-margin = 0.05
-radius = 0.25
-height = 1.5
+margin = 0.08
+radius = 0.3
+height = 1.6
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="DclPlayer"]
 collision_layer = 0
 collision_mask = 2
+walk_speed = 1.5
+jog_speed = 8.0
+run_speed = 10.0
+gravity = 10.0
+jump_gravity_factor = 4.0
+long_jump_time = 0.5
+long_jump_gravity_scale = 0.5
+jog_jump_height = 0.9
+run_jump_height = 1.35
+ground_acceleration = 20.0
+max_ground_acceleration = 25.0
+air_acceleration = 40.0
+max_air_acceleration = 50.0
+acceleration_time = 0.5
+stop_time = 0.0
+coyote_time = 0.15
+jump_cooldown = 1.5
+floor_snap_length = 0.35
+floor_max_angle_degrees = 46.0
 script = ExtResource("1_5bfm2")
 
 [node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="."]
