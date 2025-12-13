@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=44 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -30,6 +30,7 @@
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="22_1kuym"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
 [ext_resource type="PackedScene" uid="uid://c7xids68ikyt4" path="res://src/ui/components/map_satellite/map_satellite.tscn" id="25_53o0i"]
+[ext_resource type="PackedScene" uid="uid://b3e5xybvamaqr" path="res://src/ui/components/menu/account_deletion_popup.tscn" id="31_kkhkt"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5emsx"]
 
@@ -208,10 +209,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -233,10 +234,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -258,10 +259,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -283,10 +284,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -315,8 +316,8 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dymeh")
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 60
 theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
@@ -335,8 +336,8 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dymeh")
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
 icon = ExtResource("12_rk6dl")
@@ -398,11 +399,11 @@ grow_vertical = 2
 
 [node name="Control_Discover" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("4_5qyiw")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("3_1stdy")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 offset_bottom = 19.0
 
@@ -470,10 +471,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 80
 toggle_mode = true
 button_group = SubResource("ButtonGroup_udswp")
@@ -495,10 +496,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 80
 toggle_mode = true
 button_group = SubResource("ButtonGroup_udswp")
@@ -520,10 +521,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 80
 toggle_mode = true
 button_group = SubResource("ButtonGroup_udswp")
@@ -545,10 +546,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 80
 toggle_mode = true
 button_group = SubResource("ButtonGroup_udswp")
@@ -623,6 +624,10 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_odvpn")
 [node name="TextureProgressBar" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("17_tc0me")]
 layout_mode = 2
 size_flags_horizontal = 4
+
+[node name="AccountDeletionPopUp" parent="." instance=ExtResource("31_kkhkt")]
+visible = false
+layout_mode = 1
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
