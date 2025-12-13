@@ -317,7 +317,8 @@ impl DclPlayer {
                     move_toward_vec3(self.current_direction, direction, current_accel * dt);
                 let target_velocity = direction * target_speed;
                 let mut horizontal_vel = Vector3::new(new_velocity.x, 0.0, new_velocity.z);
-                horizontal_vel = move_toward_vec3(horizontal_vel, target_velocity, current_accel * dt);
+                horizontal_vel =
+                    move_toward_vec3(horizontal_vel, target_velocity, current_accel * dt);
                 new_velocity.x = horizontal_vel.x;
                 new_velocity.z = horizontal_vel.z;
             }
@@ -329,8 +330,10 @@ impl DclPlayer {
                     new_velocity.z = 0.0;
                     self.current_direction = Vector3::ZERO;
                 } else {
-                    new_velocity.x = move_toward(new_velocity.x, 0.0, target_speed / self.stop_time * dt);
-                    new_velocity.z = move_toward(new_velocity.z, 0.0, target_speed / self.stop_time * dt);
+                    new_velocity.x =
+                        move_toward(new_velocity.x, 0.0, target_speed / self.stop_time * dt);
+                    new_velocity.z =
+                        move_toward(new_velocity.z, 0.0, target_speed / self.stop_time * dt);
                 }
             } else {
                 // In air, maintain momentum with slight drag

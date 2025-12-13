@@ -228,6 +228,7 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
+# gdlint:ignore = async-function-name
 func teleport_to(target: Vector3):
 	# Use the Rust async_move_to for initial teleport
 	async_move_to(target)
