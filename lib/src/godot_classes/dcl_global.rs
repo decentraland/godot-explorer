@@ -338,6 +338,16 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").contains("-prod")
     }
 
+    #[func]
+    pub fn is_staging() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-staging")
+    }
+
+    #[func]
+    pub fn is_dev() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-dev")
+    }
+
     pub fn has_singleton() -> bool {
         let Some(main_loop) = Engine::singleton().get_main_loop() else {
             return false;
