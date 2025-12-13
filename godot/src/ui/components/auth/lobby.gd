@@ -159,7 +159,7 @@ func _ready():
 	# Set version label
 	label_version.set_text("v" + DclGlobal.get_version())
 
-	Global.music_player.play("music_builder")
+	Global.music_player.play.call_deferred("music_builder")
 	control_restore_and_choose_name.hide()
 
 	var login = %Login

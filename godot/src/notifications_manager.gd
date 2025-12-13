@@ -121,7 +121,7 @@ func _ready() -> void:
 	_os_wrapper.clear_badge()
 
 	# Initial queue sync on app launch (relaunch)
-	_sync_notification_queue()
+	_sync_notification_queue.call_deferred()
 
 
 ## Start polling for new notifications
