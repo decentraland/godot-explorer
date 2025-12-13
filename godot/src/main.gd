@@ -37,7 +37,6 @@ func start():
 		print("Running from Server - version ", Global.renderer_version)
 
 	if Global.is_mobile():
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		InputMap.action_erase_events("ia_pointer")
 
 	self._start.call_deferred()
