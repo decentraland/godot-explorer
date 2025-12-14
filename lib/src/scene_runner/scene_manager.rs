@@ -32,6 +32,7 @@ use godot::{
     prelude::*,
 };
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
     time::{Duration, Instant},
@@ -43,6 +44,7 @@ use super::{
         trigger_area::physics_update_trigger_area,
     },
     input::InputState,
+    object_pool::PhysicsAreaPool,
     scene::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
         SceneUpdateState,
@@ -108,6 +110,10 @@ pub struct SceneManager {
 
     // Track when pointer was pressed on avatar for click-and-release mechanism
     avatar_pointer_press_time: Option<Instant>,
+
+    // Global pool for trigger area physics RIDs (shared across all scenes)
+    // Uses RefCell because we need interior mutability while iterating scenes
+    trigger_area_pool: RefCell<PhysicsAreaPool>,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -507,6 +513,7 @@ impl SceneManager {
                     &self.current_parcel_scene_id,
                     &self.begin_time,
                     &self.ui_canvas_information,
+                    &self.trigger_area_pool,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -1181,6 +1188,7 @@ impl INode for SceneManager {
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,
+            trigger_area_pool: RefCell::new(PhysicsAreaPool::default()),
         }
     }
 

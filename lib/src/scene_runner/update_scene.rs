@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{cell::RefCell, time::Instant};
 
 use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
 
@@ -31,6 +31,7 @@ use super::{
         visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
+    object_pool::PhysicsAreaPool,
     rpc_calls::process_rpcs,
     scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
@@ -69,6 +70,7 @@ pub fn _process_scene(
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
     ui_canvas_information: &PbUiCanvasInformation,
+    trigger_area_pool: &RefCell<PhysicsAreaPool>,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
     let Ok(mut crdt_state) = crdt.try_lock() else {
@@ -262,7 +264,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::TriggerArea => {
-                update_trigger_area(scene, crdt_state);
+                update_trigger_area(scene, crdt_state, &mut trigger_area_pool.borrow_mut());
                 false
             }
             SceneUpdateState::VirtualCameras => {
