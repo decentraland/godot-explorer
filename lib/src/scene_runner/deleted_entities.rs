@@ -47,7 +47,7 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
 
         // Clean up trigger area - release back to pool for reuse
         if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {
-            tracing::info!(
+            tracing::debug!(
                 "[TriggerArea] DELETE (entity died) entity={:?}: area_rid={:?}, shape_rid={:?}",
                 deleted_entity,
                 instance.area_rid,

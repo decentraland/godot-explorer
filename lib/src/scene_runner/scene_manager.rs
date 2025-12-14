@@ -625,17 +625,12 @@ impl SceneManager {
         // Update trigger areas for all scenes
         for scene in self.scenes.values_mut() {
             // Skip scenes that are not alive or have no trigger areas
-            if !matches!(scene.state, SceneState::Alive)
-                || scene.trigger_areas.instances.is_empty()
+            if !matches!(scene.state, SceneState::Alive) || scene.trigger_areas.instances.is_empty()
             {
                 continue;
             }
 
-            physics_update_trigger_area(
-                scene,
-                &player_global_transform,
-                &mut space_state,
-            );
+            physics_update_trigger_area(scene, &player_global_transform, &mut space_state);
         }
     }
 

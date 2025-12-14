@@ -311,7 +311,10 @@ pub fn physics_update_trigger_area(
         }
 
         // Swap scratch into entities_inside (reuses both HashSet allocations)
-        std::mem::swap(&mut instance.entities_inside, &mut instance.entities_scratch);
+        std::mem::swap(
+            &mut instance.entities_inside,
+            &mut instance.entities_scratch,
+        );
     }
 }
 
@@ -399,7 +402,7 @@ fn create_or_update_trigger_area(
         physics_server.area_set_collision_mask(area_rid, collision_mask);
         physics_server.area_set_monitorable(area_rid, false);
 
-        tracing::info!(
+        tracing::debug!(
             "[TriggerArea] CREATE entity={:?}: area_rid={:?}, shape_rid={:?}, mesh_type={:?}, collision_mask={}",
             entity,
             area_rid,
@@ -433,7 +436,7 @@ fn remove_trigger_area(
     pool: &mut crate::scene_runner::object_pool::PhysicsAreaPool,
 ) {
     if let Some(instance) = scene.trigger_areas.instances.remove(entity) {
-        tracing::info!(
+        tracing::debug!(
             "[TriggerArea] DELETE entity={:?}: area_rid={:?}, shape_rid={:?}, mesh_type={:?}",
             entity,
             instance.area_rid,
@@ -524,15 +527,18 @@ fn get_overlapping_entities_into(
 
                             // Check if this is a DCL entity
                             let has_dcl_entity_id = collider
-                                .call(has_meta.clone(), &[entity_id_variant.clone()])
+                                .call(has_meta.clone(), std::slice::from_ref(&entity_id_variant))
                                 .to::<bool>();
 
                             if has_dcl_entity_id {
                                 let dcl_entity_id = collider
-                                    .call(get_meta.clone(), &[entity_id_variant.clone()])
+                                    .call(
+                                        get_meta.clone(),
+                                        std::slice::from_ref(&entity_id_variant),
+                                    )
                                     .to::<i32>();
                                 let dcl_scene_id = collider
-                                    .call(get_meta.clone(), &[scene_id_variant.clone()])
+                                    .call(get_meta.clone(), std::slice::from_ref(&scene_id_variant))
                                     .to::<i32>();
 
                                 if dcl_scene_id == scene_id.0 {
@@ -540,9 +546,8 @@ fn get_overlapping_entities_into(
                                 }
                             } else {
                                 // Check if this is the player's area detector
-                                let collider_layer = collider
-                                    .call(get_collision_layer.clone(), &[])
-                                    .to::<u32>();
+                                let collider_layer =
+                                    collider.call(get_collision_layer.clone(), &[]).to::<u32>();
 
                                 if (collider_layer & CL_PLAYER) != 0
                                     && (collision_mask & CL_PLAYER) != 0
@@ -558,6 +563,7 @@ fn get_overlapping_entities_into(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_trigger_result(
     triggered_entity: &SceneEntityId,
     trigger_entity: &SceneEntityId,

@@ -51,7 +51,7 @@ impl PoolManagerSnapshot {
 
     /// Log all pool statistics
     pub fn log(&self) {
-        tracing::info!(
+        tracing::debug!(
             "[PoolManager] areas=(created={}, in_use={}, pooled={}), box_shapes=(created={}, in_use={}, pooled={}), sphere_shapes=(created={}, in_use={}, pooled={})",
             self.physics_areas.created, self.physics_areas.in_use, self.physics_areas.pooled,
             self.physics_box_shapes.created, self.physics_box_shapes.in_use, self.physics_box_shapes.pooled,
@@ -74,7 +74,6 @@ pub struct PoolManager {
     // Future pools:
     // rendering_pool: RenderingServerPool,
     // audio_pool: AudioServerPool,
-
     /// Previous snapshot for leak detection comparison
     previous_snapshot: Option<PoolManagerSnapshot>,
 

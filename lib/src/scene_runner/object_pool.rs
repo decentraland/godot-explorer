@@ -90,7 +90,8 @@ impl Default for PhysicsAreaPool {
 #[allow(dead_code)]
 impl PhysicsAreaPool {
     pub fn acquire_area(&mut self) -> Rid {
-        let (rid, reused) = self.areas
+        let (rid, reused) = self
+            .areas
             .acquire(|| PhysicsServer3D::singleton().area_create());
         let (created, in_use, pooled) = self.areas.stats();
         tracing::debug!(
@@ -108,12 +109,16 @@ impl PhysicsAreaPool {
         let (created, in_use, pooled) = self.areas.stats();
         tracing::debug!(
             "[PhysicsAreaPool] RELEASE area: rid={:?}, stats=(created={}, in_use={}, pooled={})",
-            rid, created, in_use, pooled
+            rid,
+            created,
+            in_use,
+            pooled
         );
     }
 
     pub fn acquire_box_shape(&mut self) -> Rid {
-        let (rid, reused) = self.shapes_box
+        let (rid, reused) = self
+            .shapes_box
             .acquire(|| PhysicsServer3D::singleton().box_shape_create());
         let (created, in_use, pooled) = self.shapes_box.stats();
         tracing::debug!(
@@ -124,7 +129,8 @@ impl PhysicsAreaPool {
     }
 
     pub fn acquire_sphere_shape(&mut self) -> Rid {
-        let (rid, reused) = self.shapes_sphere
+        let (rid, reused) = self
+            .shapes_sphere
             .acquire(|| PhysicsServer3D::singleton().sphere_shape_create());
         let (created, in_use, pooled) = self.shapes_sphere.stats();
         tracing::debug!(

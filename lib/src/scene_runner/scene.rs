@@ -188,7 +188,10 @@ pub struct Scene {
 
     pub gltf_loading: HashSet<SceneEntityId>,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
-    pub trigger_area_results: Vec<(SceneEntityId, crate::dcl::components::proto_components::sdk::components::PbTriggerAreaResult)>,
+    pub trigger_area_results: Vec<(
+        SceneEntityId,
+        crate::dcl::components::proto_components::sdk::components::PbTriggerAreaResult,
+    )>,
     pub continuos_raycast: HashSet<SceneEntityId>,
 
     pub current_dirty: Dirty,
