@@ -767,33 +767,23 @@ impl SceneManager {
             return None;
         }
 
-        let collider = raycast_result.get("collider")?;
+        // Validate collider is still a valid object before calling methods on it
+        // (object could be freed between raycast and method call during scene loading)
+        let collider_obj: Gd<Object> = raycast_result.get("collider")?.try_to().ok()?;
+        if !collider_obj.is_instance_valid() {
+            return None;
+        }
 
         // The raycast returns the closest hit, so we just need to identify what type it is
         // Priority is naturally handled by distance - closer objects are returned first
 
         // First check if this is a DCL entity (scene object)
-        let has_dcl_entity_id = collider
-            .call(
-                StringName::from("has_meta"),
-                &[Variant::from("dcl_entity_id")],
-            )
-            .booleanize();
+        let has_dcl_entity_id = collider_obj.has_meta("dcl_entity_id".into());
 
         if has_dcl_entity_id {
             // It's a scene entity, return it
-            let dcl_entity_id = collider
-                .call(
-                    StringName::from("get_meta"),
-                    &[Variant::from("dcl_entity_id")],
-                )
-                .to::<i32>();
-            let dcl_scene_id = collider
-                .call(
-                    StringName::from("get_meta"),
-                    &[Variant::from("dcl_scene_id")],
-                )
-                .to::<i32>();
+            let dcl_entity_id = collider_obj.get_meta("dcl_entity_id".into()).to::<i32>();
+            let dcl_scene_id = collider_obj.get_meta("dcl_scene_id".into()).to::<i32>();
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
@@ -812,12 +802,8 @@ impl SceneManager {
         }
 
         // If not a scene entity, check if it's an avatar
-        let is_avatar = collider
-            .call(StringName::from("has_meta"), &[Variant::from("is_avatar")])
-            .booleanize()
-            && collider
-                .call(StringName::from("get_meta"), &[Variant::from("is_avatar")])
-                .booleanize();
+        let is_avatar = collider_obj.has_meta("is_avatar".into())
+            && collider_obj.get_meta("is_avatar".into()).booleanize();
 
         if is_avatar {
             // Check distance for avatar interactions (limit to 10 meters)
@@ -831,19 +817,20 @@ impl SceneManager {
                 // Only allow avatar interaction within the distance limit
                 if distance <= MAX_AVATAR_INTERACTION_DISTANCE {
                     // Walk up the node tree to find the DclAvatar node
-                    let mut node = collider;
-                    loop {
-                        // Try to cast to DclAvatar
-                        if let Ok(avatar) = node.try_to::<Gd<DclAvatar>>() {
-                            return Some(RaycastResult::Avatar(avatar));
-                        }
+                    // First try to cast collider_obj to Node for tree traversal
+                    if let Ok(mut current_node) = collider_obj.clone().try_cast::<Node>() {
+                        loop {
+                            // Try to cast to DclAvatar
+                            if let Ok(avatar) = current_node.clone().try_cast::<DclAvatar>() {
+                                return Some(RaycastResult::Avatar(avatar));
+                            }
 
-                        // Try to get parent
-                        let parent_result = node.call(StringName::from("get_parent"), &[]);
-                        if parent_result.is_nil() {
-                            break;
+                            // Try to get parent
+                            match current_node.get_parent() {
+                                Some(parent) => current_node = parent,
+                                None => break,
+                            }
                         }
-                        node = parent_result;
                     }
                 }
             }

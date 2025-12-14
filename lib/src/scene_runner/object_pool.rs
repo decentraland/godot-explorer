@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use godot::builtin::Callable;
 use godot::engine::PhysicsServer3D;
 use godot::prelude::Rid;
 
@@ -90,72 +91,41 @@ impl Default for PhysicsAreaPool {
 #[allow(dead_code)]
 impl PhysicsAreaPool {
     pub fn acquire_area(&mut self) -> Rid {
-        let (rid, reused) = self
+        let (rid, _reused) = self
             .areas
             .acquire(|| PhysicsServer3D::singleton().area_create());
-        let (created, in_use, pooled) = self.areas.stats();
-        tracing::debug!(
-            "[PhysicsAreaPool] ACQUIRE area: rid={:?}, reused={}, stats=(created={}, in_use={}, pooled={})",
-            rid, reused, created, in_use, pooled
-        );
         rid
     }
 
     pub fn release_area(&mut self, rid: Rid) {
         let mut server = PhysicsServer3D::singleton();
+        // Clear monitor callback to prevent stale events
+        server.area_set_monitor_callback(rid, Callable::invalid());
         server.area_clear_shapes(rid);
         server.area_set_space(rid, Rid::Invalid);
         self.areas.release(rid);
-        let (created, in_use, pooled) = self.areas.stats();
-        tracing::debug!(
-            "[PhysicsAreaPool] RELEASE area: rid={:?}, stats=(created={}, in_use={}, pooled={})",
-            rid,
-            created,
-            in_use,
-            pooled
-        );
     }
 
     pub fn acquire_box_shape(&mut self) -> Rid {
-        let (rid, reused) = self
+        let (rid, _reused) = self
             .shapes_box
             .acquire(|| PhysicsServer3D::singleton().box_shape_create());
-        let (created, in_use, pooled) = self.shapes_box.stats();
-        tracing::debug!(
-            "[PhysicsAreaPool] ACQUIRE box_shape: rid={:?}, reused={}, stats=(created={}, in_use={}, pooled={})",
-            rid, reused, created, in_use, pooled
-        );
         rid
     }
 
     pub fn acquire_sphere_shape(&mut self) -> Rid {
-        let (rid, reused) = self
+        let (rid, _reused) = self
             .shapes_sphere
             .acquire(|| PhysicsServer3D::singleton().sphere_shape_create());
-        let (created, in_use, pooled) = self.shapes_sphere.stats();
-        tracing::debug!(
-            "[PhysicsAreaPool] ACQUIRE sphere_shape: rid={:?}, reused={}, stats=(created={}, in_use={}, pooled={})",
-            rid, reused, created, in_use, pooled
-        );
         rid
     }
 
     pub fn release_box_shape(&mut self, rid: Rid) {
         self.shapes_box.release(rid);
-        let (created, in_use, pooled) = self.shapes_box.stats();
-        tracing::debug!(
-            "[PhysicsAreaPool] RELEASE box_shape: rid={:?}, stats=(created={}, in_use={}, pooled={})",
-            rid, created, in_use, pooled
-        );
     }
 
     pub fn release_sphere_shape(&mut self, rid: Rid) {
         self.shapes_sphere.release(rid);
-        let (created, in_use, pooled) = self.shapes_sphere.stats();
-        tracing::debug!(
-            "[PhysicsAreaPool] RELEASE sphere_shape: rid={:?}, stats=(created={}, in_use={}, pooled={})",
-            rid, created, in_use, pooled
-        );
     }
 
     pub fn cleanup(&mut self) {

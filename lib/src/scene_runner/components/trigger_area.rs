@@ -113,6 +113,7 @@ fn handle_body_monitor_event(
     };
 
     let Some(&(scene_id, trigger_entity, collision_mask)) = monitor.registry.get(&area_rid) else {
+        // Stale callback from a released area, ignore
         return;
     };
 
@@ -160,6 +161,13 @@ fn handle_body_monitor_event(
     } else {
         return; // No instance ID
     };
+
+    tracing::debug!(
+        "[TriggerArea] {} trigger={:?}, collider={:?}",
+        if is_enter { "ENTER" } else { "EXIT" },
+        trigger_entity,
+        collider_entity
+    );
 
     monitor.pending_events.push(PendingTriggerEvent {
         scene_id,
@@ -214,6 +222,8 @@ impl TriggerAreaState {
         let mut physics_server = PhysicsServer3D::singleton();
         for (_, instance) in self.instances.drain() {
             unregister_trigger_area(instance.area_rid);
+            // Clear monitor callback before freeing to prevent stale events
+            physics_server.area_set_monitor_callback(instance.area_rid, Callable::invalid());
             physics_server.free_rid(instance.area_rid);
             physics_server.free_rid(instance.shape_rid);
         }
