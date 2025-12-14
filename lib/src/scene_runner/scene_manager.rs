@@ -38,7 +38,10 @@ use std::{
 };
 
 use super::{
-    components::pointer_events::{get_entity_pointer_event, pointer_events_system},
+    components::{
+        pointer_events::{get_entity_pointer_event, pointer_events_system},
+        trigger_area::physics_update_trigger_area,
+    },
     input::InputState,
     scene::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
@@ -585,6 +588,38 @@ impl SceneManager {
             self.base_mut().emit_signal(
                 "scene_killed".into(),
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+            );
+        }
+    }
+
+    fn physics_update_trigger_areas(&mut self) {
+        // Get player transform
+        let player_global_transform = self.player_avatar_node.get_global_transform();
+
+        // Get physics space state from world
+        let Some(camera_node) = self.base().get_viewport().and_then(|x| x.get_camera_3d()) else {
+            return;
+        };
+        let Some(mut world_3d) = camera_node.get_world_3d() else {
+            return;
+        };
+        let Some(mut space_state) = world_3d.get_direct_space_state() else {
+            return;
+        };
+
+        // Update trigger areas for all scenes
+        for scene in self.scenes.values_mut() {
+            // Skip scenes that are not alive or have no trigger areas
+            if !matches!(scene.state, SceneState::Alive)
+                || scene.trigger_areas.instances.is_empty()
+            {
+                continue;
+            }
+
+            physics_update_trigger_area(
+                scene,
+                &player_global_transform,
+                &mut space_state,
             );
         }
     }
@@ -1168,6 +1203,9 @@ impl INode for SceneManager {
 
     fn physics_process(&mut self, delta: f64) {
         self.scene_runner_update(delta);
+
+        // Update trigger areas physics without throttling
+        self.physics_update_trigger_areas();
 
         let changed_inputs = self.input_state.get_new_inputs();
         let current_raycast = self.get_current_mouse_entity();

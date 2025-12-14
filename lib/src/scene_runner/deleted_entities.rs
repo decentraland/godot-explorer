@@ -43,6 +43,13 @@ pub fn update_deleted_entities(scene: &mut Scene) {
         scene.gltf_loading.remove(deleted_entity);
         scene.continuos_raycast.remove(deleted_entity);
 
+        // Clean up trigger area
+        if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {
+            let mut physics_server = godot::engine::PhysicsServer3D::singleton();
+            physics_server.free_rid(instance.area_rid);
+            physics_server.free_rid(instance.shape_rid);
+        }
+
         scene.pointer_events_result = scene
             .pointer_events_result
             .drain(..)

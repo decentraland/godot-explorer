@@ -3,6 +3,7 @@ mod deleted_entities;
 pub mod global_get_node_helper;
 mod godot_dcl_scene;
 mod input;
+pub mod object_pool;
 mod rpc_calls;
 pub mod scene;
 pub mod scene_manager;

@@ -25,6 +25,7 @@ use super::{
         realm_info::sync_realm_info,
         text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent,
+        trigger_area::update_trigger_area,
         tween::update_tween,
         ui::scene_ui::update_scene_ui,
         visibility::update_visibility,
@@ -260,6 +261,10 @@ pub fn _process_scene(
                 update_camera_mode_area(scene, crdt_state);
                 false
             }
+            SceneUpdateState::TriggerArea => {
+                update_trigger_area(scene, crdt_state);
+                false
+            }
             SceneUpdateState::VirtualCameras => {
                 update_main_and_virtual_cameras(scene, crdt_state);
                 false
@@ -364,6 +369,16 @@ pub fn _process_scene(
                 let results = ui_results.pointer_event_results.drain(0..);
                 for (entity, value) in results {
                     pointer_events_result_component.append(entity, value);
+                }
+
+                // Process trigger area results
+                if !scene.trigger_area_results.is_empty() {
+                    let trigger_area_result_component =
+                        SceneCrdtStateProtoComponents::get_trigger_area_result_mut(crdt_state);
+                    let results = scene.trigger_area_results.drain(0..);
+                    for (entity, value) in results {
+                        trigger_area_result_component.append(entity, value);
+                    }
                 }
 
                 let incoming_comms_message = DclGlobal::singleton()
