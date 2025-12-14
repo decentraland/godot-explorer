@@ -31,7 +31,7 @@ use super::{
         visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
-    object_pool::PhysicsAreaPool,
+    pool_manager::PoolManager,
     rpc_calls::process_rpcs,
     scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
@@ -70,7 +70,7 @@ pub fn _process_scene(
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
     ui_canvas_information: &PbUiCanvasInformation,
-    trigger_area_pool: &RefCell<PhysicsAreaPool>,
+    pool_manager: &RefCell<PoolManager>,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
     let Ok(mut crdt_state) = crdt.try_lock() else {
@@ -178,7 +178,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::DeletedEntities => {
-                update_deleted_entities(scene);
+                update_deleted_entities(scene, &mut pool_manager.borrow_mut());
                 false
             }
             SceneUpdateState::Tween => {
@@ -264,7 +264,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::TriggerArea => {
-                update_trigger_area(scene, crdt_state, &mut trigger_area_pool.borrow_mut());
+                update_trigger_area(scene, crdt_state, &mut pool_manager.borrow_mut());
                 false
             }
             SceneUpdateState::VirtualCameras => {

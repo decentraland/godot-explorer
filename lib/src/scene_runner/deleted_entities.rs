@@ -1,8 +1,10 @@
-use crate::dcl::components::SceneEntityId;
+use crate::dcl::components::{
+    proto_components::sdk::components::TriggerAreaMeshType, SceneEntityId,
+};
 
-use super::scene::Scene;
+use super::{pool_manager::PoolManager, scene::Scene};
 
-pub fn update_deleted_entities(scene: &mut Scene) {
+pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
     if scene.current_dirty.entities.died.is_empty() {
         return;
     }
@@ -43,11 +45,24 @@ pub fn update_deleted_entities(scene: &mut Scene) {
         scene.gltf_loading.remove(deleted_entity);
         scene.continuos_raycast.remove(deleted_entity);
 
-        // Clean up trigger area
+        // Clean up trigger area - release back to pool for reuse
         if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {
-            let mut physics_server = godot::engine::PhysicsServer3D::singleton();
-            physics_server.free_rid(instance.area_rid);
-            physics_server.free_rid(instance.shape_rid);
+            tracing::info!(
+                "[TriggerArea] DELETE (entity died) entity={:?}: area_rid={:?}, shape_rid={:?}",
+                deleted_entity,
+                instance.area_rid,
+                instance.shape_rid
+            );
+            let pool = pools.physics_area();
+            pool.release_area(instance.area_rid);
+            match instance.mesh_type {
+                TriggerAreaMeshType::TamtBox => {
+                    pool.release_box_shape(instance.shape_rid);
+                }
+                TriggerAreaMeshType::TamtSphere => {
+                    pool.release_sphere_shape(instance.shape_rid);
+                }
+            }
         }
 
         scene.pointer_events_result = scene

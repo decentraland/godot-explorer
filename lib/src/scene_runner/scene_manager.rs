@@ -44,7 +44,7 @@ use super::{
         trigger_area::physics_update_trigger_area,
     },
     input::InputState,
-    object_pool::PhysicsAreaPool,
+    pool_manager::PoolManager,
     scene::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
         SceneUpdateState,
@@ -111,9 +111,9 @@ pub struct SceneManager {
     // Track when pointer was pressed on avatar for click-and-release mechanism
     avatar_pointer_press_time: Option<Instant>,
 
-    // Global pool for trigger area physics RIDs (shared across all scenes)
+    // Global pool manager for all scene resources (physics areas, etc.)
     // Uses RefCell because we need interior mutability while iterating scenes
-    trigger_area_pool: RefCell<PhysicsAreaPool>,
+    pool_manager: RefCell<PoolManager>,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -513,7 +513,7 @@ impl SceneManager {
                     &self.current_parcel_scene_id,
                     &self.begin_time,
                     &self.ui_canvas_information,
-                    &self.trigger_area_pool,
+                    &self.pool_manager,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -558,9 +558,17 @@ impl SceneManager {
             }
         }
 
+        // Periodic pool health check and stats logging (handled by PoolManager)
+        self.pool_manager.borrow_mut().tick();
+
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
             let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+
+            // Cleanup trigger areas and release RIDs back to pool
+            scene
+                .trigger_areas
+                .cleanup(self.pool_manager.borrow_mut().physics_area());
 
             scene.godot_dcl_scene.root_node_ui.queue_free();
             scene.godot_dcl_scene.root_node_3d.queue_free();
@@ -1188,7 +1196,7 @@ impl INode for SceneManager {
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,
-            trigger_area_pool: RefCell::new(PhysicsAreaPool::default()),
+            pool_manager: RefCell::new(PoolManager::new()),
         }
     }
 

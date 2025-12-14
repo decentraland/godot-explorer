@@ -23,7 +23,7 @@ use crate::{
         },
         SceneId,
     },
-    scene_runner::{object_pool::PhysicsAreaPool, scene::Scene},
+    scene_runner::{pool_manager::PoolManager, scene::Scene},
 };
 
 const CL_PLAYER: u32 = 4;
@@ -80,7 +80,7 @@ impl std::fmt::Debug for TriggerAreaState {
 
 impl TriggerAreaState {
     /// Cleanup all trigger areas, releasing RIDs back to the global pool
-    pub fn cleanup(&mut self, pool: &mut PhysicsAreaPool) {
+    pub fn cleanup(&mut self, pool: &mut crate::scene_runner::object_pool::PhysicsAreaPool) {
         // Release all instances back to pool
         for (_, instance) in self.instances.drain() {
             pool.release_area(instance.area_rid);
@@ -121,7 +121,7 @@ impl TriggerAreaState {
 pub fn update_trigger_area(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
-    pool: &mut PhysicsAreaPool,
+    pools: &mut PoolManager,
 ) {
     let trigger_area_component = SceneCrdtStateProtoComponents::get_trigger_area(crdt_state);
 
@@ -143,6 +143,7 @@ pub fn update_trigger_area(
         })
         .unwrap_or_default();
 
+    let pool = pools.physics_area();
     for (entity, config) in entities_to_process {
         match config {
             Some(config) => {
@@ -344,7 +345,7 @@ fn create_or_update_trigger_area(
     scene: &mut Scene,
     entity: &SceneEntityId,
     config: &PbTriggerArea,
-    pool: &mut PhysicsAreaPool,
+    pool: &mut crate::scene_runner::object_pool::PhysicsAreaPool,
 ) {
     let mut physics_server = PhysicsServer3D::singleton();
     let mesh_type = config.mesh();
@@ -398,11 +399,12 @@ fn create_or_update_trigger_area(
         physics_server.area_set_collision_mask(area_rid, collision_mask);
         physics_server.area_set_monitorable(area_rid, false);
 
-        tracing::debug!(
-            "[TriggerArea] Created area for entity {:?}: area_rid={:?}, shape_rid={:?}, collision_mask={}",
+        tracing::info!(
+            "[TriggerArea] CREATE entity={:?}: area_rid={:?}, shape_rid={:?}, mesh_type={:?}, collision_mask={}",
             entity,
             area_rid,
             shape_rid,
+            mesh_type,
             collision_mask
         );
 
@@ -425,8 +427,19 @@ fn create_or_update_trigger_area(
     }
 }
 
-fn remove_trigger_area(scene: &mut Scene, entity: &SceneEntityId, pool: &mut PhysicsAreaPool) {
+fn remove_trigger_area(
+    scene: &mut Scene,
+    entity: &SceneEntityId,
+    pool: &mut crate::scene_runner::object_pool::PhysicsAreaPool,
+) {
     if let Some(instance) = scene.trigger_areas.instances.remove(entity) {
+        tracing::info!(
+            "[TriggerArea] DELETE entity={:?}: area_rid={:?}, shape_rid={:?}, mesh_type={:?}",
+            entity,
+            instance.area_rid,
+            instance.shape_rid,
+            instance.mesh_type
+        );
         // Release back to pool for reuse
         pool.release_area(instance.area_rid);
         match instance.mesh_type {
