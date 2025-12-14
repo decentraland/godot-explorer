@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use godot::{
     engine::{PhysicsDirectSpaceState3D, PhysicsServer3D, PhysicsShapeQueryParameters3D},
@@ -21,6 +21,7 @@ use crate::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
+        SceneId,
     },
     scene_runner::scene::Scene,
 };
@@ -32,7 +33,8 @@ const CL_PLAYER: u32 = 4;
 pub struct TriggerAreaInstance {
     pub area_rid: Rid,
     pub shape_rid: Rid,
-    pub player_inside: bool,
+    /// Set of entities currently inside this trigger area (including player)
+    pub entities_inside: HashSet<SceneEntityId>,
     pub mesh_type: TriggerAreaMeshType,
     pub collision_mask: u32,
 }
@@ -102,9 +104,10 @@ pub fn physics_update_trigger_area(
     }
 
     let tick_number = scene.tick_number;
+    let scene_id = scene.scene_id;
     let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
 
-    // Collect entity transforms
+    // Collect entity transforms for trigger areas
     let entity_transforms: HashMap<SceneEntityId, Transform3D> = scene
         .trigger_areas
         .instances
@@ -117,52 +120,97 @@ pub fn physics_update_trigger_area(
         })
         .collect();
 
-    for (entity, instance) in scene.trigger_areas.instances.iter_mut() {
-        let Some(entity_transform) = entity_transforms.get(entity) else {
+    // Collect transforms for all entities with colliders (for building trigger results)
+    let collider_entity_transforms: HashMap<SceneEntityId, Transform3D> = scene
+        .godot_dcl_scene
+        .entities
+        .iter()
+        .filter_map(|(entity_id, godot_entity)| {
+            godot_entity
+                .base_3d
+                .as_ref()
+                .map(|n| (*entity_id, n.get_global_transform()))
+        })
+        .collect();
+
+    for (trigger_entity, instance) in scene.trigger_areas.instances.iter_mut() {
+        let Some(trigger_transform) = entity_transforms.get(trigger_entity) else {
             continue;
         };
 
-        // Check if player overlaps with this trigger area using intersect_shape
-        let is_inside = check_player_overlaps_area(
+        // Get all entities currently overlapping with this trigger area
+        let current_entities = get_overlapping_entities(
             space_state,
             instance.shape_rid,
             instance.area_rid,
-            *entity_transform,
+            *trigger_transform,
             instance.collision_mask,
+            scene_id,
         );
 
-        let was_inside = instance.player_inside;
+        let previous_entities = &instance.entities_inside;
 
-        let event_type = match (was_inside, is_inside) {
-            (false, true) => Some(TriggerAreaEventType::TaetEnter),
-            (true, true) => Some(TriggerAreaEventType::TaetStay),
-            (true, false) => Some(TriggerAreaEventType::TaetExit),
-            (false, false) => None,
-        };
+        // Process each entity that is currently inside or was previously inside
+        let all_entities: HashSet<_> = current_entities
+            .iter()
+            .chain(previous_entities.iter())
+            .cloned()
+            .collect();
 
-        // Update state
-        instance.player_inside = is_inside;
+        for collider_entity in all_entities {
+            let was_inside = previous_entities.contains(&collider_entity);
+            let is_inside = current_entities.contains(&collider_entity);
 
-        if let Some(event_type) = event_type {
-            tracing::info!(
-                "[TriggerArea] EVENT: entity={:?}, event_type={:?}, was_inside={}, is_inside={}",
-                entity,
-                event_type,
-                was_inside,
-                is_inside
-            );
-            let result = build_trigger_result(
-                entity,
-                &SceneEntityId::PLAYER,
-                event_type,
-                tick_number,
-                *player_global_transform,
-                *entity_transform,
-                scene_pos,
-            );
-            // Store in scene struct - will be appended to CRDT during ComputeCrdtState
-            scene.trigger_area_results.push((*entity, result));
+            let event_type = match (was_inside, is_inside) {
+                (false, true) => Some(TriggerAreaEventType::TaetEnter),
+                (true, true) => Some(TriggerAreaEventType::TaetStay),
+                (true, false) => Some(TriggerAreaEventType::TaetExit),
+                (false, false) => None,
+            };
+
+            if let Some(event_type) = event_type {
+                // Get the transform of the colliding entity
+                let collider_transform = if collider_entity == SceneEntityId::PLAYER {
+                    *player_global_transform
+                } else {
+                    collider_entity_transforms
+                        .get(&collider_entity)
+                        .copied()
+                        .unwrap_or(Transform3D::IDENTITY)
+                };
+
+                // Determine which collision layer the collider is on
+                let collider_layers = if collider_entity == SceneEntityId::PLAYER {
+                    CL_PLAYER
+                } else {
+                    // MeshColliders typically use CL_POINTER | CL_PHYSICS (3)
+                    instance.collision_mask & !CL_PLAYER
+                };
+
+                tracing::info!(
+                    "[TriggerArea] EVENT: trigger={:?}, collider={:?}, event_type={:?}",
+                    trigger_entity,
+                    collider_entity,
+                    event_type,
+                );
+
+                let result = build_trigger_result(
+                    trigger_entity,
+                    &collider_entity,
+                    event_type,
+                    tick_number,
+                    collider_transform,
+                    *trigger_transform,
+                    scene_pos,
+                    collider_layers,
+                );
+                // Store in scene struct - will be appended to CRDT during ComputeCrdtState
+                scene.trigger_area_results.push((*trigger_entity, result));
+            }
         }
+
+        // Update the entities_inside set
+        instance.entities_inside = current_entities;
     }
 }
 
@@ -232,7 +280,7 @@ fn create_or_update_trigger_area(scene: &mut Scene, entity: &SceneEntityId, conf
             TriggerAreaInstance {
                 area_rid,
                 shape_rid,
-                player_inside: false,
+                entities_inside: HashSet::new(),
                 mesh_type,
                 collision_mask,
             },
@@ -271,21 +319,26 @@ fn update_trigger_area_transforms(scene: &mut Scene) {
     }
 }
 
-/// Check if the player (via camera_mode_area_detector layer) overlaps with the trigger area shape
-fn check_player_overlaps_area(
+/// Get all entities overlapping with the trigger area shape
+/// Returns a HashSet of SceneEntityIds (including PLAYER if the player is inside)
+fn get_overlapping_entities(
     space_state: &mut Gd<PhysicsDirectSpaceState3D>,
     shape_rid: Rid,
     area_rid: Rid,
     shape_transform: Transform3D,
     collision_mask: u32,
-) -> bool {
+    scene_id: SceneId,
+) -> HashSet<SceneEntityId> {
+    let mut entities = HashSet::new();
+
     // Create query parameters
     let mut query = PhysicsShapeQueryParameters3D::new_gd();
     query.set_shape_rid(shape_rid);
     query.set_transform(shape_transform);
-    query.set_collision_mask(collision_mask); // Use configured collision mask (default CL_PLAYER=4)
+    query.set_collision_mask(collision_mask);
+    // Detect both areas (player's camera_mode_area_detector) and bodies (MeshColliders)
     query.set_collide_with_areas(true);
-    query.set_collide_with_bodies(false);
+    query.set_collide_with_bodies(true);
 
     // Exclude self from the query
     let mut exclude = godot::prelude::Array::new();
@@ -295,8 +348,62 @@ fn check_player_overlaps_area(
     // Query for overlapping shapes
     let results = space_state.intersect_shape(query);
 
-    // If any results, player is overlapping
-    !results.is_empty()
+    // Process results to extract entity IDs
+    for i in 0..results.len() {
+        let Some(result_dict) = results.get(i) else {
+            continue;
+        };
+        let Some(collider) = result_dict.get("collider") else {
+            continue;
+        };
+        if collider.is_nil() {
+            continue;
+        }
+
+        // Check if this is a DCL entity by looking for metadata
+        let has_dcl_entity_id = collider
+            .call(
+                StringName::from("has_meta"),
+                &[Variant::from("dcl_entity_id")],
+            )
+            .to::<bool>();
+
+        if has_dcl_entity_id {
+            let dcl_entity_id = collider
+                .call(
+                    StringName::from("get_meta"),
+                    &[Variant::from("dcl_entity_id")],
+                )
+                .to::<i32>();
+            let dcl_scene_id = collider
+                .call(
+                    StringName::from("get_meta"),
+                    &[Variant::from("dcl_scene_id")],
+                )
+                .to::<i32>();
+
+            // Only include entities from the same scene
+            if dcl_scene_id == scene_id.0 {
+                entities.insert(SceneEntityId::from_i32(dcl_entity_id));
+            }
+        } else {
+            // Check if this is the player's area detector (camera_mode_area_detector)
+            // The player area detector has collision_layer that includes CL_PLAYER (bit 2)
+            let collider_layer = collider
+                .call(
+                    StringName::from("get_collision_layer"),
+                    &[],
+                )
+                .to::<u32>();
+
+            // If the collider is on the CL_PLAYER layer and we're looking for CL_PLAYER
+            if (collider_layer & CL_PLAYER) != 0 && (collision_mask & CL_PLAYER) != 0 {
+                entities.insert(SceneEntityId::PLAYER);
+            }
+        }
+    }
+
+    entities
 }
 
 fn build_trigger_result(
@@ -307,6 +414,7 @@ fn build_trigger_result(
     trigger_transform: Transform3D,
     triggered_transform: Transform3D,
     scene_pos: Vector3,
+    trigger_layers: u32,
 ) -> PbTriggerAreaResult {
     let triggered_pos = triggered_transform.origin - scene_pos;
     let triggered_rot = triggered_transform.basis.to_quat();
@@ -331,7 +439,7 @@ fn build_trigger_result(
         timestamp,
         trigger: Some(Trigger {
             entity: trigger_entity.as_i32() as u32,
-            layers: CL_PLAYER,
+            layers: trigger_layers,
             position: Some(proto_components::common::Vector3 {
                 x: trigger_pos.x,
                 y: trigger_pos.y,
