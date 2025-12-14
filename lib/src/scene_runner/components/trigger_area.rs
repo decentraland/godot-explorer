@@ -27,9 +27,6 @@ use crate::{
 
 const CL_PLAYER: u32 = 4;
 
-// Collision layer for trigger areas - matches player's camera_mode_area_detector (bit 31)
-const TRIGGER_COLLISION_LAYER: u32 = 2147483648;
-
 /// State for a single trigger area instance
 #[derive(Debug)]
 pub struct TriggerAreaInstance {
@@ -131,6 +128,7 @@ pub fn physics_update_trigger_area(
             instance.shape_rid,
             instance.area_rid,
             *entity_transform,
+            instance.collision_mask,
         );
 
         let was_inside = instance.player_inside;
@@ -215,18 +213,18 @@ fn create_or_update_trigger_area(scene: &mut Scene, entity: &SceneEntityId, conf
 
         // Configure collision layer/mask
         // Layer = 0: trigger areas don't need to be detected by others
-        // Mask = TRIGGER_COLLISION_LAYER: detect player's camera_mode_area_detector
+        // Mask = collision_mask: configured in scene component (default CL_PLAYER=4)
+        // Note: These settings are for Godot's internal area system, but we use intersect_shape for detection
         physics_server.area_set_collision_layer(area_rid, 0);
-        physics_server.area_set_collision_mask(area_rid, TRIGGER_COLLISION_LAYER);
+        physics_server.area_set_collision_mask(area_rid, collision_mask);
         physics_server.area_set_monitorable(area_rid, false);
 
         tracing::info!(
-            "[TriggerArea] Created area for entity {:?}: area_rid={:?}, shape_rid={:?}, layer={}, mask={}",
+            "[TriggerArea] Created area for entity {:?}: area_rid={:?}, shape_rid={:?}, collision_mask={}",
             entity,
             area_rid,
             shape_rid,
-            TRIGGER_COLLISION_LAYER,
-            TRIGGER_COLLISION_LAYER
+            collision_mask
         );
 
         scene.trigger_areas.instances.insert(
@@ -279,12 +277,13 @@ fn check_player_overlaps_area(
     shape_rid: Rid,
     area_rid: Rid,
     shape_transform: Transform3D,
+    collision_mask: u32,
 ) -> bool {
     // Create query parameters
     let mut query = PhysicsShapeQueryParameters3D::new_gd();
     query.set_shape_rid(shape_rid);
     query.set_transform(shape_transform);
-    query.set_collision_mask(TRIGGER_COLLISION_LAYER); // Detect player's area
+    query.set_collision_mask(collision_mask); // Use configured collision mask (default CL_PLAYER=4)
     query.set_collide_with_areas(true);
     query.set_collide_with_bodies(false);
 
