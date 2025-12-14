@@ -2,7 +2,9 @@ use crate::dcl::components::{
     proto_components::sdk::components::TriggerAreaMeshType, SceneEntityId,
 };
 
-use super::{pool_manager::PoolManager, scene::Scene};
+use super::{
+    components::trigger_area::unregister_trigger_area, pool_manager::PoolManager, scene::Scene,
+};
 
 pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
     if scene.current_dirty.entities.died.is_empty() {
@@ -45,14 +47,9 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
         scene.gltf_loading.remove(deleted_entity);
         scene.continuos_raycast.remove(deleted_entity);
 
-        // Clean up trigger area - release back to pool for reuse
+        // Clean up trigger area - unregister from monitor and release back to pool
         if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {
-            tracing::debug!(
-                "[TriggerArea] DELETE (entity died) entity={:?}: area_rid={:?}, shape_rid={:?}",
-                deleted_entity,
-                instance.area_rid,
-                instance.shape_rid
-            );
+            unregister_trigger_area(instance.area_rid);
             let pool = pools.physics_area();
             pool.release_area(instance.area_rid);
             match instance.mesh_type {

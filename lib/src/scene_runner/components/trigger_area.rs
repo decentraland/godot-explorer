@@ -1,9 +1,8 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
 
-use godot::{
-    engine::{PhysicsDirectSpaceState3D, PhysicsServer3D, PhysicsShapeQueryParameters3D},
-    prelude::*,
-};
+use godot::{engine::PhysicsServer3D, prelude::*};
+use once_cell::sync::Lazy;
 
 use crate::{
     dcl::{
@@ -28,14 +27,143 @@ use crate::{
 
 const CL_PLAYER: u32 = 4;
 
-// Cached StringNames to avoid per-frame allocations
-thread_local! {
-    static META_DCL_ENTITY_ID: StringName = StringName::from("dcl_entity_id");
-    static META_DCL_SCENE_ID: StringName = StringName::from("dcl_scene_id");
-    static METHOD_HAS_META: StringName = StringName::from("has_meta");
-    static METHOD_GET_META: StringName = StringName::from("get_meta");
-    static METHOD_GET_COLLISION_LAYER: StringName = StringName::from("get_collision_layer");
+// ============================================================================
+// Global Monitor Registry for PhysicsServer3D Callbacks
+// ============================================================================
+
+/// A pending ENTER/EXIT event from the PhysicsServer3D monitor callback
+#[derive(Debug, Clone)]
+struct PendingTriggerEvent {
+    scene_id: SceneId,
+    trigger_entity: SceneEntityId,
+    /// The collider entity that entered/exited (PLAYER or scene entity)
+    collider_entity: SceneEntityId,
+    /// The collision layer of the collider
+    collider_layer: u32,
+    /// true = ENTER, false = EXIT
+    is_enter: bool,
 }
+
+/// Global registry for trigger area callbacks.
+/// Since all PhysicsServer3D callbacks run on the main thread, we use a simple Mutex.
+struct TriggerAreaMonitor {
+    /// Maps area RID -> (scene_id, entity_id, collision_mask)
+    registry: HashMap<Rid, (SceneId, SceneEntityId, u32)>,
+    /// Pending ENTER/EXIT events from callbacks
+    pending_events: Vec<PendingTriggerEvent>,
+}
+
+impl Default for TriggerAreaMonitor {
+    fn default() -> Self {
+        Self {
+            registry: HashMap::new(),
+            pending_events: Vec::with_capacity(64),
+        }
+    }
+}
+
+static TRIGGER_MONITOR: Lazy<Mutex<TriggerAreaMonitor>> = Lazy::new(Default::default);
+
+/// Register a trigger area in the global monitor
+fn register_trigger_area(
+    area_rid: Rid,
+    scene_id: SceneId,
+    entity_id: SceneEntityId,
+    collision_mask: u32,
+) {
+    if let Ok(mut monitor) = TRIGGER_MONITOR.lock() {
+        monitor
+            .registry
+            .insert(area_rid, (scene_id, entity_id, collision_mask));
+    }
+}
+
+/// Unregister a trigger area from the global monitor
+pub fn unregister_trigger_area(area_rid: Rid) {
+    if let Ok(mut monitor) = TRIGGER_MONITOR.lock() {
+        monitor.registry.remove(&area_rid);
+    }
+}
+
+/// Drain pending events for a specific scene
+fn drain_pending_events(scene_id: SceneId) -> Vec<PendingTriggerEvent> {
+    if let Ok(mut monitor) = TRIGGER_MONITOR.lock() {
+        let (scene_events, other_events): (Vec<_>, Vec<_>) = monitor
+            .pending_events
+            .drain(..)
+            .partition(|e| e.scene_id == scene_id);
+        monitor.pending_events = other_events;
+        scene_events
+    } else {
+        Vec::new()
+    }
+}
+
+/// Handle a body entering/exiting a trigger area (from PhysicsServer3D callback)
+fn handle_body_monitor_event(
+    area_rid: Rid,
+    status: i64, // 0 = ADDED, 1 = REMOVED
+    _body_rid: Rid,
+    instance_id: i64,
+    _body_shape_idx: i64,
+    _local_shape_idx: i64,
+) {
+    let Ok(mut monitor) = TRIGGER_MONITOR.lock() else {
+        return;
+    };
+
+    let Some(&(scene_id, trigger_entity, collision_mask)) = monitor.registry.get(&area_rid) else {
+        return;
+    };
+
+    let is_enter = status == 0; // AREA_BODY_ADDED = 0
+
+    // Try to get the collider object to determine if it's a player or scene entity
+    let (collider_entity, collider_layer) = if instance_id > 0 {
+        if let Ok(mut object) =
+            Gd::<Object>::try_from_instance_id(InstanceId::from_i64(instance_id))
+        {
+            // Check if this is a DCL entity
+            if object.has_meta("dcl_entity_id".into()) {
+                let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
+                let dcl_scene_id = object.get_meta("dcl_scene_id".into()).to::<i32>();
+                // Only accept entities from the same scene
+                if dcl_scene_id == scene_id.0 {
+                    (
+                        SceneEntityId::from_i32(dcl_entity_id),
+                        collision_mask & !CL_PLAYER,
+                    )
+                } else {
+                    return; // Different scene, ignore
+                }
+            } else {
+                // Check if this is the player
+                let collider_layer = object.call("get_collision_layer".into(), &[]).to::<u32>();
+                if (collider_layer & CL_PLAYER) != 0 && (collision_mask & CL_PLAYER) != 0 {
+                    (SceneEntityId::PLAYER, CL_PLAYER)
+                } else {
+                    return; // Not a player and not a DCL entity
+                }
+            }
+        } else {
+            return; // Invalid instance
+        }
+    } else {
+        return; // No instance ID
+    };
+
+    monitor.pending_events.push(PendingTriggerEvent {
+        scene_id,
+        trigger_entity,
+        collider_entity,
+        collider_layer,
+        is_enter,
+    });
+}
+
+// ============================================================================
+// TriggerAreaInstance and TriggerAreaState
+// ============================================================================
 
 /// State for a single trigger area instance
 #[derive(Debug)]
@@ -44,45 +172,22 @@ pub struct TriggerAreaInstance {
     pub shape_rid: Rid,
     /// Set of entities currently inside this trigger area (including player)
     pub entities_inside: HashSet<SceneEntityId>,
-    /// Scratch buffer reused each frame to avoid allocations
-    entities_scratch: HashSet<SceneEntityId>,
     pub mesh_type: TriggerAreaMeshType,
     pub collision_mask: u32,
 }
 
 /// Global trigger area state for a scene
+#[derive(Debug, Default)]
 pub struct TriggerAreaState {
     pub instances: HashMap<SceneEntityId, TriggerAreaInstance>,
-    /// Pooled query parameters to avoid per-frame allocations
-    query_params: Option<Gd<PhysicsShapeQueryParameters3D>>,
-    /// Pooled exclude array to avoid per-frame allocations
-    exclude_array: Array<Rid>,
-}
-
-impl Default for TriggerAreaState {
-    fn default() -> Self {
-        Self {
-            instances: HashMap::new(),
-            query_params: None,
-            exclude_array: Array::new(),
-        }
-    }
-}
-
-impl std::fmt::Debug for TriggerAreaState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TriggerAreaState")
-            .field("instances", &self.instances)
-            .field("query_params", &self.query_params.is_some())
-            .finish()
-    }
 }
 
 impl TriggerAreaState {
     /// Cleanup all trigger areas, releasing RIDs back to the global pool
     pub fn cleanup(&mut self, pool: &mut crate::scene_runner::object_pool::PhysicsAreaPool) {
-        // Release all instances back to pool
+        // Unregister from global monitor and release to pool
         for (_, instance) in self.instances.drain() {
+            unregister_trigger_area(instance.area_rid);
             pool.release_area(instance.area_rid);
             match instance.mesh_type {
                 TriggerAreaMeshType::TamtBox => {
@@ -93,31 +198,21 @@ impl TriggerAreaState {
                 }
             }
         }
-        self.query_params = None;
-        self.exclude_array.clear();
     }
 
     /// Cleanup without pool (frees RIDs directly) - used when scene is destroyed
     pub fn cleanup_without_pool(&mut self) {
         let mut physics_server = PhysicsServer3D::singleton();
         for (_, instance) in self.instances.drain() {
+            unregister_trigger_area(instance.area_rid);
             physics_server.free_rid(instance.area_rid);
             physics_server.free_rid(instance.shape_rid);
         }
-        self.query_params = None;
-        self.exclude_array.clear();
-    }
-
-    /// Get or create pooled query parameters
-    fn get_query_params(&mut self) -> &mut Gd<PhysicsShapeQueryParameters3D> {
-        if self.query_params.is_none() {
-            self.query_params = Some(PhysicsShapeQueryParameters3D::new_gd());
-        }
-        self.query_params.as_mut().unwrap()
     }
 }
 
 /// Called during scene update (with throttling) - handles component creation/deletion
+/// and processes ENTER/EXIT events from callbacks + throttled STAY events
 pub fn update_trigger_area(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -125,7 +220,7 @@ pub fn update_trigger_area(
 ) {
     let trigger_area_component = SceneCrdtStateProtoComponents::get_trigger_area(crdt_state);
 
-    // Process dirty TriggerArea components
+    // Step 1: Process dirty TriggerArea components
     let entities_to_process: Vec<_> = scene
         .current_dirty
         .lww_components
@@ -155,192 +250,146 @@ pub fn update_trigger_area(
         }
     }
 
-    // Update transforms for all trigger areas
+    // Step 2: Update transforms for all trigger areas
     update_trigger_area_transforms(scene);
+
+    // Step 3: Process pending callback events (ENTER/EXIT)
+    process_callback_events(scene);
+
+    // Step 4: Generate throttled STAY events
+    generate_stay_events(scene);
 }
 
-/// Called every physics frame (without throttling) - checks collisions using PhysicsDirectSpaceState3D
-/// Results are stored in scene.trigger_area_results and will be appended to CRDT during ComputeCrdtState
-pub fn physics_update_trigger_area(
-    scene: &mut Scene,
-    player_global_transform: &Transform3D,
-    space_state: &mut Gd<PhysicsDirectSpaceState3D>,
-) {
-    if scene.trigger_areas.instances.is_empty() {
+/// Process ENTER/EXIT events from the global monitor callback queue
+fn process_callback_events(scene: &mut Scene) {
+    let events = drain_pending_events(scene.scene_id);
+    if events.is_empty() {
         return;
     }
 
     let tick_number = scene.tick_number;
-    let scene_id = scene.scene_id;
     let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
 
-    // Check if any trigger area needs entity detection (not just player)
-    // This is an optimization to skip collecting all entity transforms when only checking for player
-    let needs_entity_detection = scene
-        .trigger_areas
-        .instances
-        .values()
-        .any(|instance| (instance.collision_mask & !CL_PLAYER) != 0);
-
-    // Collect transforms for entities with colliders ONLY if needed
-    // This avoids iterating all entities when only checking for player
-    let collider_entity_transforms: Option<HashMap<SceneEntityId, Transform3D>> =
-        if needs_entity_detection {
-            Some(
-                scene
-                    .godot_dcl_scene
-                    .entities
-                    .iter()
-                    .filter_map(|(entity_id, godot_entity)| {
-                        godot_entity
-                            .base_3d
-                            .as_ref()
-                            .map(|n| (*entity_id, n.get_global_transform()))
-                    })
-                    .collect(),
-            )
-        } else {
-            None
-        };
-
-    // Collect trigger entity IDs and their transforms first (to avoid borrow conflicts)
-    let trigger_data: Vec<_> = scene
-        .trigger_areas
-        .instances
-        .keys()
-        .filter_map(|entity| {
-            scene
-                .godot_dcl_scene
-                .get_node_or_null_3d(entity)
-                .map(|n| (*entity, n.get_global_transform()))
-        })
-        .collect();
-
-    // Get pooled resources from trigger_areas state
-    let query_params = scene.trigger_areas.get_query_params().clone();
-    let exclude_array = &mut scene.trigger_areas.exclude_array;
-
-    for (trigger_entity, trigger_transform) in &trigger_data {
-        let Some(instance) = scene.trigger_areas.instances.get_mut(trigger_entity) else {
+    for event in events {
+        let Some(instance) = scene.trigger_areas.instances.get_mut(&event.trigger_entity) else {
             continue;
         };
 
-        // Reuse scratch buffer: clear and populate with current overlapping entities
-        instance.entities_scratch.clear();
-        get_overlapping_entities_into(
-            space_state,
-            &query_params,
-            exclude_array,
-            instance.shape_rid,
-            instance.area_rid,
-            *trigger_transform,
-            instance.collision_mask,
-            scene_id,
-            &mut instance.entities_scratch,
-        );
+        // Get transforms for result building
+        let trigger_transform = scene
+            .godot_dcl_scene
+            .get_node_or_null_3d(&event.trigger_entity)
+            .map(|n| n.get_global_transform())
+            .unwrap_or(Transform3D::IDENTITY);
 
-        // Process events by comparing previous vs current state
-        // Iterate over previous entities to find EXIT events
-        for prev_entity in &instance.entities_inside {
-            let is_inside = instance.entities_scratch.contains(prev_entity);
-            let event_type = if is_inside {
-                TriggerAreaEventType::TaetStay
+        let collider_transform = if event.collider_entity == SceneEntityId::PLAYER {
+            scene
+                .godot_dcl_scene
+                .get_node_or_null_3d(&SceneEntityId::PLAYER)
+                .map(|n| n.get_global_transform())
+                .unwrap_or(Transform3D::IDENTITY)
+        } else {
+            scene
+                .godot_dcl_scene
+                .get_node_or_null_3d(&event.collider_entity)
+                .map(|n| n.get_global_transform())
+                .unwrap_or(Transform3D::IDENTITY)
+        };
+
+        let event_type = if event.is_enter {
+            // ENTER: add to entities_inside
+            instance.entities_inside.insert(event.collider_entity);
+            TriggerAreaEventType::TaetEnter
+        } else {
+            // EXIT: remove from entities_inside
+            instance.entities_inside.remove(&event.collider_entity);
+            TriggerAreaEventType::TaetExit
+        };
+
+        let result = build_trigger_result(
+            &event.trigger_entity,
+            &event.collider_entity,
+            event_type,
+            tick_number,
+            collider_transform,
+            trigger_transform,
+            scene_pos,
+            event.collider_layer,
+        );
+        scene
+            .trigger_area_results
+            .push((event.trigger_entity, result));
+    }
+}
+
+/// Generate STAY events for entities still inside trigger areas
+fn generate_stay_events(scene: &mut Scene) {
+    let tick_number = scene.tick_number;
+    let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
+
+    // Collect trigger entities that need STAY events
+    let stay_data: Vec<_> = scene
+        .trigger_areas
+        .instances
+        .iter()
+        .filter_map(|(trigger_entity, instance)| {
+            if instance.entities_inside.is_empty() {
+                return None;
+            }
+
+            // Collect entities inside with their collision masks
+            let entities: Vec<_> = instance
+                .entities_inside
+                .iter()
+                .map(|e| (*e, instance.collision_mask))
+                .collect();
+
+            // Get trigger transform
+            let trigger_transform = scene
+                .godot_dcl_scene
+                .get_node_or_null_3d(trigger_entity)
+                .map(|n| n.get_global_transform())
+                .unwrap_or(Transform3D::IDENTITY);
+
+            Some((*trigger_entity, entities, trigger_transform))
+        })
+        .collect();
+
+    // Generate STAY events
+    for (trigger_entity, entities, trigger_transform) in stay_data {
+        for (collider_entity, collision_mask) in entities {
+            let collider_transform = if collider_entity == SceneEntityId::PLAYER {
+                scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(&SceneEntityId::PLAYER)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY)
             } else {
-                TriggerAreaEventType::TaetExit
+                scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(&collider_entity)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY)
             };
 
-            let collider_transform = get_collider_transform(
-                *prev_entity,
-                player_global_transform,
-                &collider_entity_transforms,
-            );
-            let collider_layers = get_collider_layers(*prev_entity, instance.collision_mask);
-
-            // Only log ENTER/EXIT events, not STAY (reduces log spam significantly)
-            if event_type != TriggerAreaEventType::TaetStay {
-                tracing::debug!(
-                    "[TriggerArea] EVENT: trigger={:?}, collider={:?}, event_type={:?}",
-                    trigger_entity,
-                    prev_entity,
-                    event_type,
-                );
-            }
+            let collider_layer = if collider_entity == SceneEntityId::PLAYER {
+                CL_PLAYER
+            } else {
+                collision_mask & !CL_PLAYER
+            };
 
             let result = build_trigger_result(
-                trigger_entity,
-                prev_entity,
-                event_type,
+                &trigger_entity,
+                &collider_entity,
+                TriggerAreaEventType::TaetStay,
                 tick_number,
                 collider_transform,
-                *trigger_transform,
+                trigger_transform,
                 scene_pos,
-                collider_layers,
+                collider_layer,
             );
-            scene.trigger_area_results.push((*trigger_entity, result));
+            scene.trigger_area_results.push((trigger_entity, result));
         }
-
-        // Iterate over current entities to find ENTER events (entities not in previous)
-        for curr_entity in &instance.entities_scratch {
-            if !instance.entities_inside.contains(curr_entity) {
-                let collider_transform = get_collider_transform(
-                    *curr_entity,
-                    player_global_transform,
-                    &collider_entity_transforms,
-                );
-                let collider_layers = get_collider_layers(*curr_entity, instance.collision_mask);
-
-                tracing::debug!(
-                    "[TriggerArea] EVENT: trigger={:?}, collider={:?}, event_type={:?}",
-                    trigger_entity,
-                    curr_entity,
-                    TriggerAreaEventType::TaetEnter,
-                );
-
-                let result = build_trigger_result(
-                    trigger_entity,
-                    curr_entity,
-                    TriggerAreaEventType::TaetEnter,
-                    tick_number,
-                    collider_transform,
-                    *trigger_transform,
-                    scene_pos,
-                    collider_layers,
-                );
-                scene.trigger_area_results.push((*trigger_entity, result));
-            }
-        }
-
-        // Swap scratch into entities_inside (reuses both HashSet allocations)
-        std::mem::swap(
-            &mut instance.entities_inside,
-            &mut instance.entities_scratch,
-        );
-    }
-}
-
-#[inline]
-fn get_collider_transform(
-    entity: SceneEntityId,
-    player_transform: &Transform3D,
-    entity_transforms: &Option<HashMap<SceneEntityId, Transform3D>>,
-) -> Transform3D {
-    if entity == SceneEntityId::PLAYER {
-        *player_transform
-    } else {
-        entity_transforms
-            .as_ref()
-            .and_then(|m| m.get(&entity))
-            .copied()
-            .unwrap_or(Transform3D::IDENTITY)
-    }
-}
-
-#[inline]
-fn get_collider_layers(entity: SceneEntityId, collision_mask: u32) -> u32 {
-    if entity == SceneEntityId::PLAYER {
-        CL_PLAYER
-    } else {
-        collision_mask & !CL_PLAYER
     }
 }
 
@@ -353,6 +402,7 @@ fn create_or_update_trigger_area(
     let mut physics_server = PhysicsServer3D::singleton();
     let mesh_type = config.mesh();
     let collision_mask = config.collision_mask.unwrap_or(CL_PLAYER);
+    let scene_id = scene.scene_id;
 
     // Check if mesh type changed (requires recreate)
     let needs_recreate = scene
@@ -395,18 +445,43 @@ fn create_or_update_trigger_area(
         physics_server.area_add_shape(area_rid, shape_rid);
 
         // Configure collision layer/mask
-        // Layer = 0: trigger areas don't need to be detected by others
+        // Layer = collision_mask: trigger areas need to be on the same layers they detect
+        //         This is required for area-to-area detection in Godot
         // Mask = collision_mask: configured in scene component (default CL_PLAYER=4)
-        // Note: These settings are for Godot's internal area system, but we use intersect_shape for detection
-        physics_server.area_set_collision_layer(area_rid, 0);
+        physics_server.area_set_collision_layer(area_rid, collision_mask);
         physics_server.area_set_collision_mask(area_rid, collision_mask);
-        physics_server.area_set_monitorable(area_rid, false);
+        physics_server.area_set_monitorable(area_rid, true); // Enable for callbacks
+
+        // Register in global monitor for callback routing
+        register_trigger_area(area_rid, scene_id, *entity, collision_mask);
+
+        // Set up monitor callbacks for ENTER/EXIT events
+        // Body monitor: detects RigidBody3D, CharacterBody3D, etc.
+        let area_rid_body = area_rid;
+        let body_callback =
+            Callable::from_fn("trigger_body_monitor", move |args: &[&Variant]| {
+                if args.len() >= 5 {
+                    let status = args[0].to::<i64>();
+                    let body_rid = args[1].to::<Rid>();
+                    let instance_id = args[2].to::<i64>();
+                    let body_shape_idx = args[3].to::<i64>();
+                    let local_shape_idx = args[4].to::<i64>();
+                    handle_body_monitor_event(
+                        area_rid_body,
+                        status,
+                        body_rid,
+                        instance_id,
+                        body_shape_idx,
+                        local_shape_idx,
+                    );
+                }
+                Ok(Variant::nil())
+            });
+        physics_server.area_set_monitor_callback(area_rid, body_callback);
 
         tracing::debug!(
-            "[TriggerArea] CREATE entity={:?}: area_rid={:?}, shape_rid={:?}, mesh_type={:?}, collision_mask={}",
+            "[TriggerArea] CREATE entity={:?}, mesh={:?}, mask={}",
             entity,
-            area_rid,
-            shape_rid,
             mesh_type,
             collision_mask
         );
@@ -417,15 +492,16 @@ fn create_or_update_trigger_area(
                 area_rid,
                 shape_rid,
                 entities_inside: HashSet::new(),
-                entities_scratch: HashSet::new(),
                 mesh_type,
                 collision_mask,
             },
         );
     } else if let Some(instance) = scene.trigger_areas.instances.get_mut(entity) {
-        // Update collision mask only (stored for reference)
+        // Update collision mask in both instance and global registry
         if instance.collision_mask != collision_mask {
             instance.collision_mask = collision_mask;
+            physics_server.area_set_collision_mask(instance.area_rid, collision_mask);
+            register_trigger_area(instance.area_rid, scene_id, *entity, collision_mask);
         }
     }
 }
@@ -436,13 +512,8 @@ fn remove_trigger_area(
     pool: &mut crate::scene_runner::object_pool::PhysicsAreaPool,
 ) {
     if let Some(instance) = scene.trigger_areas.instances.remove(entity) {
-        tracing::debug!(
-            "[TriggerArea] DELETE entity={:?}: area_rid={:?}, shape_rid={:?}, mesh_type={:?}",
-            entity,
-            instance.area_rid,
-            instance.shape_rid,
-            instance.mesh_type
-        );
+        tracing::debug!("[TriggerArea] DELETE entity={:?}", entity);
+        unregister_trigger_area(instance.area_rid);
         // Release back to pool for reuse
         pool.release_area(instance.area_rid);
         match instance.mesh_type {
@@ -472,95 +543,6 @@ fn update_trigger_area_transforms(scene: &mut Scene) {
         // and let the transform handle all scaling to avoid double-scaling.
         physics_server.area_set_transform(instance.area_rid, global_transform);
     }
-}
-
-/// Get all entities overlapping with the trigger area shape
-/// Populates the output HashSet (should be cleared before calling)
-/// Uses pooled query params and exclude array to minimize allocations
-#[allow(clippy::too_many_arguments)]
-fn get_overlapping_entities_into(
-    space_state: &mut Gd<PhysicsDirectSpaceState3D>,
-    query_params: &Gd<PhysicsShapeQueryParameters3D>,
-    exclude_array: &mut Array<Rid>,
-    shape_rid: Rid,
-    area_rid: Rid,
-    shape_transform: Transform3D,
-    collision_mask: u32,
-    scene_id: SceneId,
-    output: &mut HashSet<SceneEntityId>,
-) {
-    // Configure pooled query parameters (reused across frames)
-    let mut query = query_params.clone();
-    query.set_shape_rid(shape_rid);
-    query.set_transform(shape_transform);
-    query.set_collision_mask(collision_mask);
-    query.set_collide_with_areas(true);
-    query.set_collide_with_bodies(true);
-
-    // Reuse exclude array
-    exclude_array.clear();
-    exclude_array.push(area_rid);
-    query.set_exclude(exclude_array.clone());
-
-    // Query for overlapping shapes
-    let results = space_state.intersect_shape(query);
-
-    // Process results using cached StringNames
-    METHOD_HAS_META.with(|has_meta| {
-        METHOD_GET_META.with(|get_meta| {
-            META_DCL_ENTITY_ID.with(|entity_id_key| {
-                META_DCL_SCENE_ID.with(|scene_id_key| {
-                    METHOD_GET_COLLISION_LAYER.with(|get_collision_layer| {
-                        let entity_id_variant = Variant::from(entity_id_key.clone());
-                        let scene_id_variant = Variant::from(scene_id_key.clone());
-
-                        for i in 0..results.len() {
-                            let Some(result_dict) = results.get(i) else {
-                                continue;
-                            };
-                            let Some(collider) = result_dict.get("collider") else {
-                                continue;
-                            };
-                            if collider.is_nil() {
-                                continue;
-                            }
-
-                            // Check if this is a DCL entity
-                            let has_dcl_entity_id = collider
-                                .call(has_meta.clone(), std::slice::from_ref(&entity_id_variant))
-                                .to::<bool>();
-
-                            if has_dcl_entity_id {
-                                let dcl_entity_id = collider
-                                    .call(
-                                        get_meta.clone(),
-                                        std::slice::from_ref(&entity_id_variant),
-                                    )
-                                    .to::<i32>();
-                                let dcl_scene_id = collider
-                                    .call(get_meta.clone(), std::slice::from_ref(&scene_id_variant))
-                                    .to::<i32>();
-
-                                if dcl_scene_id == scene_id.0 {
-                                    output.insert(SceneEntityId::from_i32(dcl_entity_id));
-                                }
-                            } else {
-                                // Check if this is the player's area detector
-                                let collider_layer =
-                                    collider.call(get_collision_layer.clone(), &[]).to::<u32>();
-
-                                if (collider_layer & CL_PLAYER) != 0
-                                    && (collision_mask & CL_PLAYER) != 0
-                                {
-                                    output.insert(SceneEntityId::PLAYER);
-                                }
-                            }
-                        }
-                    });
-                });
-            });
-        });
-    });
 }
 
 #[allow(clippy::too_many_arguments)]
