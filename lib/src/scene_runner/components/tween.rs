@@ -6,7 +6,8 @@ use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                pb_tween::Mode, EasingFunction, PbTween, PbTweenState, TweenStateStatus,
+                pb_tween::Mode, EasingFunction, PbTween, PbTweenState, TextureMovementType,
+                TweenStateStatus,
             },
             transform_and_parent::DclTransformAndParent,
             SceneComponentId,
@@ -16,7 +17,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::scene::{Scene, TextureAnimation},
 };
 
 pub struct Tween {
@@ -25,6 +26,8 @@ pub struct Tween {
     pub start_time: std::time::Instant,
     pub paused_time: Option<std::time::Instant>,
     pub playing: Option<bool>,
+    /// Last update time for delta time calculation (used by continuous modes)
+    pub last_update: std::time::Instant,
 }
 
 impl Tween {
@@ -143,6 +146,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             start_time: now - offset_time,
                             paused_time,
                             playing: None,
+                            last_update: now,
                         },
                     );
                 };
@@ -152,6 +156,8 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     for entity in tweens_to_delete {
         scene.tweens.remove(entity);
+        // Also clean up any texture animation state
+        scene.texture_animations.remove(entity);
 
         // update tween state
         SceneCrdtStateProtoComponents::get_tween_state_mut(crdt_state).put(*entity, None);
@@ -162,17 +168,33 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             continue;
         }
 
+        // Check if this is a continuous mode
+        let is_continuous = matches!(
+            &tween.data.mode,
+            Some(Mode::RotateContinuous(_))
+                | Some(Mode::MoveContinuous(_))
+                | Some(Mode::TextureMoveContinuous(_))
+        );
+
         let mut current_tween_state: TweenStateStatus = TweenStateStatus::TsActive;
+        let delta_time = now.duration_since(tween.last_update).as_secs_f32();
 
-        let elapsed_time = now - tween.start_time;
-        let duration = std::time::Duration::from_millis(tween.data.duration as u64);
-
-        let progress = if elapsed_time >= duration {
-            tween.playing = Some(false);
-            current_tween_state = TweenStateStatus::TsCompleted;
-            1.0 // finished
+        // For standard tweens, calculate progress based on duration
+        let progress = if is_continuous {
+            // Continuous tweens don't use progress in the traditional sense
+            // We use delta_time instead for incremental updates
+            0.0 // Progress not meaningful for continuous modes
         } else {
-            tween.get_progress(elapsed_time)
+            let elapsed_time = now - tween.start_time;
+            let duration = std::time::Duration::from_millis(tween.data.duration as u64);
+
+            if elapsed_time >= duration {
+                tween.playing = Some(false);
+                current_tween_state = TweenStateStatus::TsCompleted;
+                1.0 // finished
+            } else {
+                tween.get_progress(elapsed_time)
+            }
         };
 
         tween.playing = tween.data.playing;
@@ -191,10 +213,13 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }),
         );
 
-        // if we paused the tween, we skip the
+        // if we paused the tween, we skip the transform update
         if tween.playing == Some(false) {
             continue;
         }
+
+        // Update last_update for next frame's delta time calculation
+        tween.last_update = now;
 
         // get entity transform from crdt state
         let mut transform: DclTransformAndParent = crdt_state
@@ -250,6 +275,111 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let end = data.end.clone().unwrap().to_godot();
                 transform.scale = start + ((end - start) * ease_value);
                 transform
+            }
+            Some(Mode::MoveContinuous(data)) => {
+                // MoveContinuous: Apply incremental position change based on direction and speed
+                let direction = data
+                    .direction
+                    .clone()
+                    .map(|d| d.to_godot())
+                    .unwrap_or(godot::builtin::Vector3::ZERO);
+                let speed = data.speed;
+                let delta = direction * speed * delta_time;
+                transform.translation += delta;
+                transform
+            }
+            Some(Mode::RotateContinuous(data)) => {
+                // RotateContinuous: Apply incremental rotation based on direction quaternion and speed
+                // The direction quaternion represents the rotation per second
+                // We scale it by speed * delta_time using slerp from identity
+                let direction = data
+                    .direction
+                    .clone()
+                    .map(|d| d.to_godot())
+                    .unwrap_or(godot::builtin::Quaternion::default());
+                let speed = data.speed;
+
+                // Extract euler angles from direction quaternion to get rotation per second
+                let direction_euler = Basis::from_quat(direction).to_euler(godot::builtin::EulerOrder::YXZ);
+
+                // Scale by speed and delta_time
+                let rotation_delta = direction_euler * speed * delta_time;
+
+                // Get current rotation as euler, add delta, convert back
+                let current_euler = Basis::from_quat(transform.rotation).to_euler(godot::builtin::EulerOrder::YXZ);
+                let new_euler = current_euler + rotation_delta;
+                transform.rotation = Basis::from_euler(godot::builtin::EulerOrder::YXZ, new_euler).to_quat();
+                transform
+            }
+            Some(Mode::TextureMove(data)) => {
+                // TextureMove: Interpolate UV offset/tiling between start and end
+                let start = data
+                    .start
+                    .clone()
+                    .map(|v| v.to_godot())
+                    .unwrap_or(godot::builtin::Vector2::ZERO);
+                let end = data
+                    .end
+                    .clone()
+                    .map(|v| v.to_godot())
+                    .unwrap_or(godot::builtin::Vector2::ZERO);
+                let movement_type = TextureMovementType::from_i32(
+                    data.movement_type.unwrap_or(0),
+                )
+                .unwrap_or(TextureMovementType::TmtOffset);
+
+                let value = start + ((end - start) * ease_value);
+
+                // Get or create texture animation state
+                let tex_anim = scene
+                    .texture_animations
+                    .entry(*entity)
+                    .or_insert_with(|| TextureAnimation {
+                        uv_offset: godot::builtin::Vector2::ZERO,
+                        uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
+                    });
+
+                match movement_type {
+                    TextureMovementType::TmtOffset => tex_anim.uv_offset = value,
+                    TextureMovementType::TmtTiling => tex_anim.uv_scale = value,
+                }
+
+                // Mark material as dirty for this entity
+                scene.dirty_materials = true;
+                continue;
+            }
+            Some(Mode::TextureMoveContinuous(data)) => {
+                // TextureMoveContinuous: Apply incremental UV change based on direction and speed
+                let direction = data
+                    .direction
+                    .clone()
+                    .map(|v| v.to_godot())
+                    .unwrap_or(godot::builtin::Vector2::ZERO);
+                let speed = data.speed;
+                let movement_type = TextureMovementType::from_i32(
+                    data.movement_type.unwrap_or(0),
+                )
+                .unwrap_or(TextureMovementType::TmtOffset);
+
+                let delta = direction * speed * delta_time;
+
+                // Get or create texture animation state
+                let tex_anim = scene
+                    .texture_animations
+                    .entry(*entity)
+                    .or_insert_with(|| TextureAnimation {
+                        uv_offset: godot::builtin::Vector2::ZERO,
+                        uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
+                    });
+
+                match movement_type {
+                    TextureMovementType::TmtOffset => tex_anim.uv_offset += delta,
+                    TextureMovementType::TmtTiling => tex_anim.uv_scale += delta,
+                }
+
+                // Mark material as dirty for this entity
+                scene.dirty_materials = true;
+                continue;
             }
             _ => {
                 continue;

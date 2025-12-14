@@ -37,6 +37,15 @@ use super::{
     godot_dcl_scene::GodotDclScene,
 };
 
+/// State for texture UV animation (used by TextureMove and TextureMoveContinuous tweens)
+#[derive(Debug, Clone, Default)]
+pub struct TextureAnimation {
+    /// Accumulated UV offset (for TMT_OFFSET mode)
+    pub uv_offset: godot::builtin::Vector2,
+    /// Accumulated UV scale multiplier (for TMT_TILING mode, starts at 1.0)
+    pub uv_scale: godot::builtin::Vector2,
+}
+
 pub struct Dirty {
     pub waiting_process: bool,
     pub entities: DirtyEntities,
@@ -218,6 +227,8 @@ pub struct Scene {
 
     // Tween
     pub tweens: HashMap<SceneEntityId, Tween>,
+    // Texture animations (UV offset/scale) driven by TextureMove/TextureMoveContinuous tweens
+    pub texture_animations: HashMap<SceneEntityId, TextureAnimation>,
     // Duplicated value to async-access the animator
     pub dup_animator: HashMap<SceneEntityId, PbAnimator>,
 
@@ -326,6 +337,7 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
             paused: false,
@@ -391,6 +403,7 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
             paused: false,

@@ -250,6 +250,28 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         scene.materials.retain(|k, _| !dead_materials.contains(k));
         scene.dirty_materials = keep_dirty;
     }
+
+    // Apply texture animations (UV offset/scale from TextureMove/TextureMoveContinuous tweens)
+    for (entity, tex_anim) in scene.texture_animations.iter() {
+        if let Some(material_item) = scene.materials.get(entity) {
+            let material_ref = material_item.weak_ref.call("get_ref", &[]);
+            if !material_ref.is_nil() {
+                let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
+                // Apply UV offset (x, y are used, z is ignored)
+                material.set_uv1_offset(godot::builtin::Vector3::new(
+                    tex_anim.uv_offset.x,
+                    tex_anim.uv_offset.y,
+                    0.0,
+                ));
+                // Apply UV scale (x, y are used, z should be 1.0)
+                material.set_uv1_scale(godot::builtin::Vector3::new(
+                    tex_anim.uv_scale.x,
+                    tex_anim.uv_scale.y,
+                    1.0,
+                ));
+            }
+        }
+    }
 }
 
 fn check_texture(
