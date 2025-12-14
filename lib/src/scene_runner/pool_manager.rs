@@ -174,7 +174,7 @@ impl PoolManager {
                 .in_use
                 .saturating_sub(prev.physics_areas.in_use);
             if areas_growth > self.leak_threshold && current.physics_areas.pooled == 0 {
-                tracing::warn!(
+                tracing::error!(
                     "[PoolManager] POTENTIAL LEAK in 'physics_areas': in_use grew by {} ({} -> {}) with pooled=0",
                     areas_growth, prev.physics_areas.in_use, current.physics_areas.in_use
                 );
@@ -187,7 +187,7 @@ impl PoolManager {
                 .in_use
                 .saturating_sub(prev.physics_box_shapes.in_use);
             if box_growth > self.leak_threshold && current.physics_box_shapes.pooled == 0 {
-                tracing::warn!(
+                tracing::error!(
                     "[PoolManager] POTENTIAL LEAK in 'physics_box_shapes': in_use grew by {} ({} -> {}) with pooled=0",
                     box_growth, prev.physics_box_shapes.in_use, current.physics_box_shapes.in_use
                 );
@@ -200,7 +200,7 @@ impl PoolManager {
                 .in_use
                 .saturating_sub(prev.physics_sphere_shapes.in_use);
             if sphere_growth > self.leak_threshold && current.physics_sphere_shapes.pooled == 0 {
-                tracing::warn!(
+                tracing::error!(
                     "[PoolManager] POTENTIAL LEAK in 'physics_sphere_shapes': in_use grew by {} ({} -> {}) with pooled=0",
                     sphere_growth, prev.physics_sphere_shapes.in_use, current.physics_sphere_shapes.in_use
                 );

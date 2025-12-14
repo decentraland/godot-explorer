@@ -120,33 +120,42 @@ fn handle_body_monitor_event(
 
     // Try to get the collider object to determine if it's a player or scene entity
     let (collider_entity, collider_layer) = if instance_id > 0 {
-        if let Ok(mut object) =
-            Gd::<Object>::try_from_instance_id(InstanceId::from_i64(instance_id))
-        {
-            // Check if this is a DCL entity
-            if object.has_meta("dcl_entity_id".into()) {
-                let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
-                let dcl_scene_id = object.get_meta("dcl_scene_id".into()).to::<i32>();
-                // Only accept entities from the same scene
-                if dcl_scene_id == scene_id.0 {
-                    (
-                        SceneEntityId::from_i32(dcl_entity_id),
-                        collision_mask & !CL_PLAYER,
-                    )
-                } else {
-                    return; // Different scene, ignore
-                }
+        let Ok(object) = Gd::<Object>::try_from_instance_id(InstanceId::from_i64(instance_id))
+        else {
+            return; // Invalid instance
+        };
+
+        // Check if instance is still valid (not being freed)
+        if !object.is_instance_valid() {
+            return;
+        }
+
+        // Check if this is a DCL entity
+        if object.has_meta("dcl_entity_id".into()) {
+            let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
+            let dcl_scene_id = object.get_meta("dcl_scene_id".into()).to::<i32>();
+            // Only accept entities from the same scene
+            if dcl_scene_id == scene_id.0 {
+                (
+                    SceneEntityId::from_i32(dcl_entity_id),
+                    collision_mask & !CL_PLAYER,
+                )
             } else {
-                // Check if this is the player
-                let collider_layer = object.call("get_collision_layer".into(), &[]).to::<u32>();
-                if (collider_layer & CL_PLAYER) != 0 && (collision_mask & CL_PLAYER) != 0 {
-                    (SceneEntityId::PLAYER, CL_PLAYER)
-                } else {
-                    return; // Not a player and not a DCL entity
-                }
+                return; // Different scene, ignore
             }
         } else {
-            return; // Invalid instance
+            // Check if this is the player by checking collision layer
+            // Use try_cast to safely check if it's a CollisionObject3D
+            let Some(collision_obj) = object.try_cast::<godot::engine::CollisionObject3D>().ok()
+            else {
+                return; // Not a collision object
+            };
+            let collider_layer = collision_obj.get_collision_layer();
+            if (collider_layer & CL_PLAYER) != 0 && (collision_mask & CL_PLAYER) != 0 {
+                (SceneEntityId::PLAYER, CL_PLAYER)
+            } else {
+                return; // Not a player and not a DCL entity
+            }
         }
     } else {
         return; // No instance ID
