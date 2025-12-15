@@ -17,7 +17,7 @@ use crate::{
 };
 use godot::{
     engine::{
-        base_material_3d::{Feature, Flags, ShadingMode, Transparency},
+        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode},
         MeshInstance3D, StandardMaterial3D,
     },
     global::weakref,
@@ -131,15 +131,16 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_roughness(pbr.roughness.0);
                         godot_material.set_specular(pbr.specular_intensity.0);
 
-                        let emission = pbr
-                            .emissive_color
-                            .0
-                            .clone()
-                            .multiply(pbr.emissive_intensity.0);
-
-                        // Godot 4 3D rendering operates in linear color space
-                        godot_material.set_emission(emission.to_godot());
+                        godot_material.set_emission(pbr.emissive_color.0.to_godot());
+                        godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
                         godot_material.set_feature(Feature::EMISSION, true);
+
+                        // Use MULTIPLY operator when there's an emissive texture
+                        if pbr.emissive_texture.is_some() {
+                            godot_material
+                                .set_emission_operator(EmissionOperator::MULTIPLY);
+                        }
+
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot());
                     }
