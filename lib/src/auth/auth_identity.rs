@@ -50,8 +50,11 @@ pub async fn try_create_remote_ephemeral(
     let signature = Signature::from_str(result)?;
     let chain_id = 1;
 
-    let auth_chain =
-        SimpleAuthChain::new_ephemeral_identity_auth_chain(signer, ephemeral_message.clone(), signature);
+    let auth_chain = SimpleAuthChain::new_ephemeral_identity_auth_chain(
+        signer,
+        ephemeral_message.clone(),
+        signature,
+    );
 
     let expiration_datetime: DateTime<Utc> = expiration.into();
     tracing::debug!(

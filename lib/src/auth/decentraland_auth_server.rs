@@ -247,8 +247,8 @@ mod test {
         let local_wallet = LocalWallet::new(&mut thread_rng());
         let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
         let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
-        let expiration =
-            std::time::SystemTime::now() + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS);
+        let expiration = std::time::SystemTime::now()
+            + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS);
         let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
         let result = do_request(
