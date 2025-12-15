@@ -290,8 +290,8 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
             Some(Mode::RotateContinuous(data)) => {
                 // RotateContinuous: Apply incremental rotation based on direction quaternion and speed
-                // The direction quaternion represents the rotation per second
-                // We scale it by speed * delta_time using slerp from identity
+                // The direction quaternion represents the rotation to apply per second
+                // We extract axis-angle, scale the angle by speed*dt, and apply
                 let direction = data
                     .direction
                     .clone()
@@ -299,17 +299,40 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .unwrap_or(godot::builtin::Quaternion::new(0.0, 0.0, 0.0, 1.0));
                 let speed = data.speed;
 
-                // Extract euler angles from direction quaternion to get rotation per second
-                let direction_euler = Basis::from_quat(direction).to_euler(godot::builtin::EulerOrder::YXZ);
+                // Extract axis and angle from direction quaternion
+                // Quaternion: (x, y, z, w) where (x, y, z) = axis * sin(angle/2), w = cos(angle/2)
+                let axis = godot::builtin::Vector3::new(direction.x, direction.y, direction.z);
+                let axis_length = axis.length();
 
-                // Scale by speed and delta_time
-                let rotation_delta = direction_euler * speed * delta_time;
+                if axis_length > 0.0001 {
+                    let axis_normalized = axis / axis_length;
+                    // angle = 2 * asin(axis_length), but more stable: 2 * atan2(axis_length, w)
+                    let angle = 2.0 * axis_length.atan2(direction.w);
 
-                // Get current rotation as euler, add delta, convert back
-                // Normalize the quaternion to ensure it's valid (floating-point precision)
-                let current_euler = Basis::from_quat(transform.rotation.normalized()).to_euler(godot::builtin::EulerOrder::YXZ);
-                let new_euler = current_euler + rotation_delta;
-                transform.rotation = Basis::from_euler(godot::builtin::EulerOrder::YXZ, new_euler).to_quat().normalized();
+                    // Scale angle by speed and delta_time
+                    let scaled_angle = angle * speed * delta_time;
+
+                    // Create rotation quaternion for this frame's rotation step
+                    let half_angle = scaled_angle / 2.0;
+                    let sin_half = half_angle.sin();
+                    let cos_half = half_angle.cos();
+                    let rotation_step = godot::builtin::Quaternion::new(
+                        axis_normalized.x * sin_half,
+                        axis_normalized.y * sin_half,
+                        axis_normalized.z * sin_half,
+                        cos_half,
+                    );
+
+                    // Apply the rotation step to the current rotation
+                    let current = transform.rotation.normalized();
+                    transform.rotation = (current * rotation_step).normalized();
+
+                    tracing::trace!(
+                        "[Tween] RotateContinuous: axis={:?}, angle={}, scaled={}, result={:?}",
+                        axis_normalized, angle, scaled_angle, transform.rotation
+                    );
+                }
+
                 transform
             }
             Some(Mode::TextureMove(data)) => {
