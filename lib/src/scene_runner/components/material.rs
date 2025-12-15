@@ -127,6 +127,20 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material
                             .set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
+
+                        // Apply UV offset/tiling from main texture (only main texture supports this)
+                        if let Some(texture) = &unlit.texture {
+                            godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                                texture.offset.0.x,
+                                texture.offset.0.y,
+                                0.0,
+                            ));
+                            godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                                texture.tiling.0.x,
+                                texture.tiling.0.y,
+                                1.0,
+                            ));
+                        }
                     }
                     DclMaterial::Pbr(pbr) => {
                         godot_material.set_metallic(pbr.metallic.0);
@@ -147,6 +161,20 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_feature(Feature::EMISSION, true);
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot().linear_to_srgb());
+
+                        // Apply UV offset/tiling from main texture (only main texture supports this)
+                        if let Some(texture) = &pbr.texture {
+                            godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                                texture.offset.0.x,
+                                texture.offset.0.y,
+                                0.0,
+                            ));
+                            godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                                texture.tiling.0.x,
+                                texture.tiling.0.y,
+                                1.0,
+                            ));
+                        }
                     }
                 }
                 let mesh_renderer =
@@ -249,28 +277,6 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
         scene.materials.retain(|k, _| !dead_materials.contains(k));
         scene.dirty_materials = keep_dirty;
-    }
-
-    // Apply texture animations (UV offset/scale from TextureMove/TextureMoveContinuous tweens)
-    for (entity, tex_anim) in scene.texture_animations.iter() {
-        if let Some(material_item) = scene.materials.get(entity) {
-            let material_ref = material_item.weak_ref.call("get_ref", &[]);
-            if !material_ref.is_nil() {
-                let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
-                // Apply UV offset (x, y are used, z is ignored)
-                material.set_uv1_offset(godot::builtin::Vector3::new(
-                    tex_anim.uv_offset.x,
-                    tex_anim.uv_offset.y,
-                    0.0,
-                ));
-                // Apply UV scale (x, y are used, z should be 1.0)
-                material.set_uv1_scale(godot::builtin::Vector3::new(
-                    tex_anim.uv_scale.x,
-                    tex_anim.uv_scale.y,
-                    1.0,
-                ));
-            }
-        }
     }
 }
 

@@ -38,12 +38,21 @@ use super::{
 };
 
 /// State for texture UV animation (used by TextureMove and TextureMoveContinuous tweens)
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TextureAnimation {
     /// Accumulated UV offset (for TMT_OFFSET mode)
     pub uv_offset: godot::builtin::Vector2,
     /// Accumulated UV scale multiplier (for TMT_TILING mode, starts at 1.0)
     pub uv_scale: godot::builtin::Vector2,
+}
+
+impl Default for TextureAnimation {
+    fn default() -> Self {
+        Self {
+            uv_offset: godot::builtin::Vector2::ZERO,
+            uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
+        }
+    }
 }
 
 pub struct Dirty {

@@ -1,6 +1,10 @@
 use std::time::Duration;
 
-use godot::builtin::Basis;
+use godot::{
+    builtin::Basis,
+    engine::{BaseMaterial3D, MeshInstance3D, Node3D},
+    prelude::*,
+};
 
 use crate::{
     dcl::{
@@ -17,6 +21,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
+    godot_classes::dcl_gltf_container::DclGltfContainer,
     scene_runner::scene::{Scene, TextureAnimation},
 };
 
@@ -72,6 +77,72 @@ fn get_ease_fn(ease_type: EasingFunction) -> fn(f32) -> f32 {
     }
 }
 
+/// Apply UV offset and scale to a single MeshInstance3D
+fn apply_uv_to_mesh(mesh: &mut Gd<MeshInstance3D>, tex_anim: &TextureAnimation) {
+    let surface_count = mesh.get_surface_override_material_count();
+    for surface_idx in 0..surface_count {
+        // Get the active material (override or mesh resource material)
+        if let Some(material) = mesh.get_active_material(surface_idx) {
+            if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
+                base_material.set_uv1_offset(Vector3::new(
+                    tex_anim.uv_offset.x,
+                    tex_anim.uv_offset.y,
+                    0.0,
+                ));
+                base_material.set_uv1_scale(Vector3::new(
+                    tex_anim.uv_scale.x,
+                    tex_anim.uv_scale.y,
+                    1.0,
+                ));
+            }
+        }
+    }
+}
+
+/// Recursively find all MeshInstance3D nodes in a tree and apply UV animation
+fn apply_uv_to_tree(node: &Gd<Node3D>, tex_anim: &TextureAnimation) {
+    // Check if this node is a MeshInstance3D
+    if let Ok(mut mesh) = node.clone().try_cast::<MeshInstance3D>() {
+        apply_uv_to_mesh(&mut mesh, tex_anim);
+    }
+
+    // Recursively check children
+    for i in 0..node.get_child_count() {
+        if let Some(child) = node.get_child(i) {
+            if let Ok(child_3d) = child.try_cast::<Node3D>() {
+                apply_uv_to_tree(&child_3d, tex_anim);
+            }
+        }
+    }
+}
+
+/// Apply UV animation to all meshes of an entity (both DCL primitives and GLTF models)
+fn apply_texture_animation_to_entity(
+    scene: &Scene,
+    entity: &crate::dcl::components::SceneEntityId,
+    tex_anim: &TextureAnimation,
+) {
+    let Some(godot_entity_node) = scene.godot_dcl_scene.get_godot_entity_node(entity) else {
+        return;
+    };
+
+    let Some(base_3d) = &godot_entity_node.base_3d else {
+        return;
+    };
+
+    // Try DCL primitive (MeshRenderer child)
+    if let Some(mut mesh_renderer) = base_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer") {
+        apply_uv_to_mesh(&mut mesh_renderer, tex_anim);
+    }
+
+    // Try GLTF container
+    if let Some(gltf_container) = base_3d.try_get_node_as::<DclGltfContainer>("GltfContainer") {
+        if let Some(gltf_root) = gltf_container.bind().get_gltf_resource() {
+            apply_uv_to_tree(&gltf_root, tex_anim);
+        }
+    }
+}
+
 pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let tween_component = SceneCrdtStateProtoComponents::get_tween(crdt_state);
@@ -79,6 +150,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let now = std::time::Instant::now();
 
     let mut tweens_to_delete = Vec::new();
+    let mut texture_animations_to_apply = Vec::new();
 
     if let Some(tween_dirty) = dirty_lww_components.get(&SceneComponentId::TWEEN) {
         for entity in tween_dirty {
@@ -348,22 +420,15 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let value = start + ((end - start) * ease_value);
 
                 // Get or create texture animation state
-                let tex_anim =
-                    scene
-                        .texture_animations
-                        .entry(*entity)
-                        .or_insert_with(|| TextureAnimation {
-                            uv_offset: godot::builtin::Vector2::ZERO,
-                            uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
-                        });
+                let tex_anim = scene.texture_animations.entry(*entity).or_default();
 
                 match movement_type {
                     TextureMovementType::TmtOffset => tex_anim.uv_offset = value,
                     TextureMovementType::TmtTiling => tex_anim.uv_scale = value,
                 }
 
-                // Mark material as dirty for this entity
-                scene.dirty_materials = true;
+                // Queue UV animation to apply after the loop (to avoid borrow issues)
+                texture_animations_to_apply.push((*entity, tex_anim.clone()));
                 continue;
             }
             Some(Mode::TextureMoveContinuous(data)) => {
@@ -380,22 +445,15 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let delta = direction * speed * delta_time;
 
                 // Get or create texture animation state
-                let tex_anim =
-                    scene
-                        .texture_animations
-                        .entry(*entity)
-                        .or_insert_with(|| TextureAnimation {
-                            uv_offset: godot::builtin::Vector2::ZERO,
-                            uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
-                        });
+                let tex_anim = scene.texture_animations.entry(*entity).or_default();
 
                 match movement_type {
                     TextureMovementType::TmtOffset => tex_anim.uv_offset += delta,
                     TextureMovementType::TmtTiling => tex_anim.uv_scale += delta,
                 }
 
-                // Mark material as dirty for this entity
-                scene.dirty_materials = true;
+                // Queue UV animation to apply after the loop (to avoid borrow issues)
+                texture_animations_to_apply.push((*entity, tex_anim.clone()));
                 continue;
             }
             _ => {
@@ -421,5 +479,10 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .lww_components
                 .insert(SceneComponentId::TRANSFORM, vec![*entity]);
         }
+    }
+
+    // Apply texture animations to meshes (after the main loop to avoid borrow issues)
+    for (entity, tex_anim) in texture_animations_to_apply {
+        apply_texture_animation_to_entity(scene, &entity, &tex_anim);
     }
 }
