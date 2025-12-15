@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://daykm1kr2u274"
+uid="uid://bpyjmcmp55cvv"
 path.s3tc="res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.s3tc.ctex"
 path.etc2="res://.godot/imported/friends_animation_spritesheet.png-cfcf14fee1542a93dc6fdd9dce8d6b6c.etc2.ctex"
 metadata={
@@ -39,4 +39,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1

@@ -1,7 +1,5 @@
 extends AnimatedButton
 
-signal friends_clicked
-
 var _pending_requests_count: int = 0
 
 
@@ -45,7 +43,7 @@ func _async_fetch_pending_count() -> void:
 
 
 func _on_button_clicked() -> void:
-	friends_clicked.emit()
+	Global.open_friends_panel.emit()
 
 
 func _get_button_metric_name() -> String:

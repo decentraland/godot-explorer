@@ -15,8 +15,8 @@ var _animation_tween: Tween
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
-	#toggled.connect(_on_toggled)
-	instantiate_animatd_sprite()
+	toggled.connect(_on_toggled)
+	instantiate_animated_sprite()
 	# Las clases hijas deben implementar este método para conectar sus señales
 	_connect_update_signals()
 
@@ -38,7 +38,11 @@ func _on_pressed() -> void:
 	_on_button_clicked()
 
 
-func instantiate_animatd_sprite():
+func _on_toggled(button_pressed: bool) -> void:
+	set_panel_open(button_pressed)
+
+
+func instantiate_animated_sprite():
 	animated_sprite = AnimatedSprite2D.new()
 	add_child(animated_sprite)
 	move_child(animated_sprite, 0)

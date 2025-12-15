@@ -36,8 +36,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var panel_profile: Panel = %Panel_Profile
 
-@onready var hud_button_notifications: Button = %HudButton_Notifications
-@onready var hud_button_friends: Button = %HudButton_Friends
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
 
@@ -67,6 +65,9 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var chat_container: Control = %ChatContainer
 @onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
+
+@onready var navbar: Control = %Navbar
+@onready var joypad: Control = %Joypad
 
 
 func _process(_dt):
@@ -112,12 +113,12 @@ func _ready():
 	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	# Connect notification bell button
-	hud_button_notifications.bell_clicked.connect(_on_notification_bell_clicked)
-	notifications_panel.panel_closed.connect(_on_notifications_panel_closed)
+	Global.open_notifications_panel.connect(_show_notifications_panel)
 
 	# Connect friends button
-	hud_button_friends.friends_clicked.connect(_on_friends_clicked)
-	friends_panel.panel_closed.connect(_on_friends_panel_closed)
+	Global.open_friends_panel.connect(_show_friends_panel)
+
+	navbar.close_all.connect(_close_all_panels)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -721,68 +722,39 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 		panel_chat.exit_chat()
 
 
-func _on_friends_clicked() -> void:
-	# Toggle notification panel visibility
+func _show_friends_panel() -> void:
 	if friends_panel.visible:
-		friends_panel.hide_panel()
-		hud_button_friends.set_panel_open(false)
-		# Grab focus back to enable camera controls
-		Global.explorer_grab_focus()
-		# Capture mouse to restore camera control
-	else:
-		friends_panel.show_panel_on_friends_tab()
-		hud_button_friends.set_panel_open(true)
-		if notifications_panel.visible:
-			notifications_panel.hide_panel()
-			hud_button_notifications.set_panel_open(false)
-		# Release focus to prevent camera rotation while panel is open
-		Global.explorer_release_focus()
-		if Global.is_mobile():
-			release_mouse()
-		# Close other panels if needed
-		if control_menu.visible:
-			control_menu.close()
+		return
+	joypad.hide()
+	friends_panel.show_panel_on_friends_tab()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
 
 
 func _on_friends_panel_closed() -> void:
-	friends_panel.hide()
-	hud_button_friends.set_panel_open(false)
-	# Grab focus back to enable camera controls
+	friends_panel.hide_panel()
 	Global.explorer_grab_focus()
-	# Capture mouse to restore camera control
 	capture_mouse()
 
 
-func _on_notification_bell_clicked() -> void:
-	# Toggle notification panel visibility
+func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
-		notifications_panel.hide_panel()
-		hud_button_notifications.set_panel_open(false)
-		# Grab focus back to enable camera controls
-		Global.explorer_grab_focus()
-		# Capture mouse to restore camera control
-		#capture_mouse()
-	else:
-		notifications_panel.show_panel()
-		hud_button_notifications.set_panel_open(true)
-		if friends_panel.visible:
-			friends_panel.hide_panel()
-			hud_button_friends.set_panel_open(false)
-		# Release focus to prevent camera rotation while panel is open
-		Global.explorer_release_focus()
-		if Global.is_mobile():
-			release_mouse()
-		# Close other panels if needed
-		if control_menu.visible:
-			control_menu.close()
+		return
+	joypad.hide()
+	notifications_panel.show_panel()
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
 
 
 func _on_notifications_panel_closed() -> void:
-	notifications_panel.hide()
-	hud_button_notifications.set_panel_open(false)
-	# Grab focus back to enable camera controls
+	notifications_panel.hide_panel()
 	Global.explorer_grab_focus()
-	# Capture mouse to restore camera control
 	capture_mouse()
 
 
@@ -858,11 +830,9 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 		# Open friends panel on friends tab
 		if not friends_panel.visible:
 			friends_panel.show_panel_on_friends_tab()
-			hud_button_friends.set_panel_open(true)
 			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
-				hud_button_notifications.set_panel_open(false)
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
@@ -886,3 +856,10 @@ func _on_emote_wheel_emote_wheel_closed() -> void:
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
+
+
+func _close_all_panels():
+	control_menu.close()
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	joypad.show()
