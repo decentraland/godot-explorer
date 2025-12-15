@@ -1,0 +1,275 @@
+[gd_scene load_steps=11 format=3 uid="uid://btl8ag3s7oanm"]
+
+[ext_resource type="Script" uid="uid://cmhycf7qy54n5" path="res://src/ui/components/navbar/navbar.gd" id="1_40xfh"]
+[ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="2_1xf7s"]
+[ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/notifications/notification_bell_button.tscn" id="2_5wifw"]
+
+[sub_resource type="Animation" id="Animation_xbtqw"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Control/PanelContainer:size")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(80, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Control/PanelContainer:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0, 0)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_n2t8a"]
+resource_name = "open"
+length = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Control/PanelContainer:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0, -500), Vector2(0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_1xf7s"]
+resource_name = "close"
+length = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.1),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Control/PanelContainer:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0, 0), Vector2(0, -500)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_lur8b"]
+_data = {
+&"RESET": SubResource("Animation_xbtqw"),
+&"close": SubResource("Animation_1xf7s"),
+&"open": SubResource("Animation_n2t8a")
+}
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5wifw"]
+bg_color = Color(0, 0, 0, 0.78431374)
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xbtqw"]
+
+[node name="Navbar" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_40xfh")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+unique_name_in_owner = true
+libraries = {
+&"": SubResource("AnimationLibrary_lur8b")
+}
+autoplay = "close"
+speed_scale = 0.5
+
+[node name="Control" type="Control" parent="."]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -120.0
+offset_bottom = 120.0
+grow_horizontal = 0
+
+[node name="Control" type="Control" parent="Control"]
+clip_contents = true
+custom_minimum_size = Vector2(80, 500)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -40.0
+offset_top = 60.0
+offset_right = 40.0
+offset_bottom = 560.0
+grow_horizontal = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="Control/Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 404.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_5wifw")
+
+[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control/Control/PanelContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="Separator" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_n2t8a")
+
+[node name="NotificationBellButton" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+size_flags_horizontal = 4
+size_flags_vertical = 4
+flat = true
+icon_alignment = 1
+
+[node name="NotificationBellButton2" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+size_flags_horizontal = 4
+size_flags_vertical = 0
+flat = true
+
+[node name="NotificationBellButton3" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+size_flags_horizontal = 4
+size_flags_vertical = 0
+flat = true
+
+[node name="NotificationBellButton4" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+size_flags_horizontal = 4
+size_flags_vertical = 0
+flat = true
+
+[node name="NotificationBellButton5" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+size_flags_horizontal = 4
+size_flags_vertical = 0
+flat = true
+
+[node name="Separator2" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xbtqw")
+
+[node name="Panel_Profile" parent="Control" instance=ExtResource("2_1xf7s")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Button" type="Button" parent="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+toggle_mode = true
+flat = true
+
+[connection signal="toggled" from="Control/Button" to="." method="_on_button_toggled"]
