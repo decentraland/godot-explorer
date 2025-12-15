@@ -28,6 +28,9 @@ const ENABLE_NOTIFICATION_FILTER = true
 ## DEBUG: Set to true to enable random notification generation for testing
 const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = false
 
+## DEBUG: Set to true to schedule a test notification 2 minutes from now using real event data
+const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
+
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
@@ -36,10 +39,26 @@ const SUPPORTED_NOTIFICATION_TYPES = [
 	"events_started",  # Events: Event has started
 	"reward_assignment",  # Rewards: Reward assigned/received
 	"reward_in_progress",  # Rewards: Reward being processed
+	"social_service_friendship_request",  # Friends: Friend request received (server notification)
+	"social_service_friendship_accepted",  # Friends: Friend request accepted (server notification)
 ]
 
 # Queue management constants (Phase 3)
 const MAX_OS_SCHEDULED_NOTIFICATIONS = 24  # Maximum notifications scheduled with OS at once
+
+# Toast display: Only show notifications newer than 5 minutes
+const TOAST_MAX_AGE_MS = 5 * 60 * 1000  # 5 minutes in milliseconds
+
+# Event notification sync constants
+const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
+const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
+
+# Local notifications version - increment this to clear and re-sync all notifications
+const LOCAL_NOTIFICATIONS_VERSION = 1
+
+## DEBUG: Enable verbose logging of notification database operations
+## Only active in debug builds (OS.is_debug_build())
+var _debug_notifications_enabled: bool = false
 
 var _notifications: Array = []
 var _poll_timer: Timer = null
@@ -68,6 +87,9 @@ var _android_plugin = null:
 
 
 func _ready() -> void:
+	# Enable debug logging in debug builds
+	_debug_notifications_enabled = OS.is_debug_build()
+
 	# Create polling timer
 	_poll_timer = Timer.new()
 	_poll_timer.wait_time = POLL_INTERVAL_SECONDS
@@ -99,7 +121,7 @@ func _ready() -> void:
 	_os_wrapper.clear_badge()
 
 	# Initial queue sync on app launch (relaunch)
-	_sync_notification_queue()
+	_sync_notification_queue.call_deferred()
 
 
 ## Start polling for new notifications
@@ -139,6 +161,22 @@ func _filter_notifications(notifications: Array) -> Array:
 		if notif is Dictionary and "type" in notif:
 			var notif_type = notif["type"]
 			if notif_type in SUPPORTED_NOTIFICATION_TYPES:
+				# Additional filtering: exclude friend request notifications from blocked users
+				if notif_type == "social_service_friendship_request":
+					# Check if the sender is blocked
+					var sender_address = ""
+					if "metadata" in notif and notif["metadata"] is Dictionary:
+						var metadata = notif["metadata"]
+						if "sender" in metadata and metadata["sender"] is Dictionary:
+							sender_address = metadata["sender"].get("address", "")
+
+					# Skip this notification if sender is blocked
+					if (
+						not sender_address.is_empty()
+						and Global.social_blacklist.is_blocked(sender_address)
+					):
+						continue
+
 				filtered.append(notif)
 
 	return filtered
@@ -274,10 +312,15 @@ func _async_fetch_notifications(promise: Promise, url: String) -> void:
 				_notifications.append(notif)
 				existing_ids[notif_id] = true
 
-				# Queue unread notifications for toast display
+				# Queue unread notifications for toast display (only if recent)
 				if not notif.get("read", false):
-					new_notifs.append(notif)
-					_notification_queue.append(notif)
+					var notif_timestamp: int = int(notif.get("timestamp", 0))
+					var current_time_ms: int = int(Time.get_unix_time_from_system() * 1000)
+					var is_recent: bool = notif_timestamp > (current_time_ms - TOAST_MAX_AGE_MS)
+
+					if is_recent:
+						new_notifs.append(notif)
+						_notification_queue.append(notif)
 
 	if new_notifs.size() > 0:
 		# Emit signal to start processing queue
@@ -413,6 +456,14 @@ func resume_queue(emit_next: bool = false) -> void:
 		notification_queued.emit(_notification_queue[0])
 
 
+## Check if user is authenticated (not a guest)
+func _is_user_authenticated() -> bool:
+	if not Global.player_identity:
+		return false
+	var address = Global.player_identity.get_address_str()
+	return not address.is_empty()
+
+
 ## DEBUG: Start the debug timer with a random interval between 7-10 seconds
 func _start_debug_timer() -> void:
 	if _debug_timer:
@@ -510,16 +561,17 @@ func async_queue_local_notification(
 	title: String,
 	body: String,
 	trigger_timestamp: int,
-	image_url: String = ""
+	image_url: String = "",
+	deep_link_data: String = ""
 ) -> bool:
 	if notification_id.is_empty():
 		push_error("Queue notification: notification_id cannot be empty")
 		return false
 
-	print(
+	_debug_log(
 		(
-			"queue_local_notification called: id=%s, title=%s, trigger_ts=%d, has_image=%s"
-			% [notification_id, title, trigger_timestamp, !image_url.is_empty()]
+			"queue_local_notification called: id=%s, title=%s, trigger_ts=%d, has_image=%s, deep_link=%s"
+			% [notification_id, title, trigger_timestamp, !image_url.is_empty(), deep_link_data]
 		)
 	)
 
@@ -536,11 +588,11 @@ func async_queue_local_notification(
 	# Insert into database (is_scheduled = 0 initially)
 	var success = (
 		plugin.dbInsertNotification(
-			notification_id, title, body, trigger_timestamp, 0, "", image_base64
+			notification_id, title, body, trigger_timestamp, 0, deep_link_data, image_base64
 		)
 		if OS.get_name() == "Android"
 		else plugin.db_insert_notification(
-			notification_id, title, body, trigger_timestamp, 0, "", image_base64
+			notification_id, title, body, trigger_timestamp, 0, deep_link_data, image_base64
 		)
 	)
 
@@ -548,8 +600,13 @@ func async_queue_local_notification(
 		push_error("Failed to insert notification into database: id=%s" % notification_id)
 		return false
 
+	_debug_log("Notification inserted into database: id=%s" % notification_id)
+
 	# Sync queue to schedule with OS if there are available slots
 	_sync_notification_queue()
+
+	# Print database state after insertion (dev mode only)
+	_debug_print_database()
 
 	return true
 
@@ -557,11 +614,13 @@ func async_queue_local_notification(
 ## Cancel a queued local notification (removes from database and OS if scheduled)
 ##
 ## @param notification_id: The ID of the notification to cancel
-## @return: true if cancelled successfully
+## @return: true if cancelled successfully, false if notification doesn't exist or error
 func cancel_queued_local_notification(notification_id: String) -> bool:
 	if notification_id.is_empty():
 		push_error("Cancel queued notification: notification_id cannot be empty")
 		return false
+
+	_debug_log("Cancelling queued notification: id=%s" % notification_id)
 
 	var plugin = _get_plugin()
 	if not plugin:
@@ -579,8 +638,18 @@ func cancel_queued_local_notification(notification_id: String) -> bool:
 	)
 
 	if success:
+		_debug_log("Notification deleted from database: id=%s" % notification_id)
 		# Sync queue to potentially schedule another notification
 		_sync_notification_queue()
+		# Print database state after deletion (dev mode only)
+		_debug_print_database()
+	else:
+		_debug_log(
+			(
+				"Notification not found in database (already cancelled or never scheduled): id=%s"
+				% notification_id
+			)
+		)
 
 	return success
 
@@ -623,12 +692,254 @@ func force_queue_sync() -> void:
 	_sync_notification_queue()
 
 
+## Check if local notifications version has changed and clear all if needed
+## Returns true if notifications were cleared due to version mismatch
+func _check_and_handle_version_change() -> bool:
+	var stored_version: int = Global.get_config().local_notifications_version
+
+	if stored_version == LOCAL_NOTIFICATIONS_VERSION:
+		_debug_log("Local notifications version OK (v%d)" % LOCAL_NOTIFICATIONS_VERSION)
+		return false
+
+	_debug_log(
+		(
+			"Local notifications version mismatch: stored=%d, current=%d - clearing all notifications"
+			% [stored_version, LOCAL_NOTIFICATIONS_VERSION]
+		)
+	)
+
+	# Clear all notifications from OS
+	cancel_all_local_notifications()
+
+	# Clear all notifications from database
+	var plugin = _get_plugin()
+	if plugin:
+		if OS.get_name() == "Android":
+			plugin.dbClearAll()
+		else:
+			plugin.db_clear_all()
+
+	# Update stored version
+	Global.get_config().local_notifications_version = LOCAL_NOTIFICATIONS_VERSION
+	Global.get_config().save_to_settings_file()
+
+	_debug_log("All notifications cleared, version updated to v%d" % LOCAL_NOTIFICATIONS_VERSION)
+	return true
+
+
+## Sync local notifications with attended events from server
+## Adds missing notifications and removes ones for unsubscribed events
+## Should be called after user authentication
+func async_sync_attended_events() -> void:
+	_debug_log("Starting attended events sync...")
+
+	# Check version and clear all notifications if version changed
+	_check_and_handle_version_change()
+
+	# Check and request notification permission
+	if not has_local_notification_permission():
+		request_local_notification_permission()
+
+		# Check permission after request
+		# Note: On iOS this is async, but we'll try to schedule anyway
+		# If permission is denied, the OS will handle it gracefully
+		if not has_local_notification_permission():
+			_debug_log(
+				"Notification permission not granted yet, scheduling anyway (OS will handle)"
+			)
+
+	var url = EVENTS_API_BASE_URL + "/events/?only_attendee=true"
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+
+	if response is PromiseError:
+		push_warning("Failed to fetch attended events: %s" % response.get_error())
+		return
+
+	var json = response.get_string_response_as_json()
+	if not json is Dictionary or not json.has("data"):
+		push_warning("Invalid attended events response format")
+		return
+
+	var events: Array = json.get("data", [])
+	_debug_log("Found %d attended events" % events.size())
+
+	# Debug: Print all attended events
+	_debug_log("=".repeat(70))
+	_debug_log("ATTENDED EVENTS (only_attendee=true)")
+	_debug_log("=".repeat(70))
+	for i in range(events.size()):
+		var ev = events[i]
+		var ev_id = ev.get("id", "")
+		var ev_name = ev.get("name", "")
+		var ev_start = ev.get("next_start_at", ev.get("start_at", ""))
+		var ev_x = ev.get("x", 0)
+		var ev_y = ev.get("y", 0)
+		_debug_log("  [%d] id=%s" % [i + 1, ev_id])
+		_debug_log("      name: %s" % ev_name)
+		_debug_log("      start_at: %s" % ev_start)
+		_debug_log("      position: %d,%d" % [ev_x, ev_y])
+	_debug_log("=".repeat(70))
+
+	# Build set of attended event notification IDs
+	var attended_notification_ids: Dictionary = {}
+	for event_data in events:
+		var event_id = event_data.get("id", "")
+		if not event_id.is_empty():
+			attended_notification_ids["event_" + event_id] = event_data
+
+	# Get existing event notifications from database
+	var existing_notifications = get_queued_local_notifications()
+	var existing_event_ids: Dictionary = {}
+	for notif in existing_notifications:
+		var notif_id = notif.get("id", "")
+		# Only track event notifications (prefixed with "event_")
+		if notif_id.begins_with("event_"):
+			existing_event_ids[notif_id] = true
+
+	var current_time = int(Time.get_unix_time_from_system())
+	var added_count = 0
+	var removed_count = 0
+
+	# REMOVE notifications for events user is no longer attending
+	for existing_id in existing_event_ids:
+		if not attended_notification_ids.has(existing_id):
+			cancel_queued_local_notification(existing_id)
+			removed_count += 1
+			_debug_log("Removed notification for unsubscribed event: %s" % existing_id)
+
+	# ADD notifications for attended events not yet scheduled
+	_debug_log("-".repeat(70))
+	_debug_log("PROCESSING EVENTS FOR SCHEDULING")
+	_debug_log("-".repeat(70))
+
+	for notification_id in attended_notification_ids:
+		var event_data = attended_notification_ids[notification_id]
+		var event_name = event_data.get("name", "Event")
+
+		if existing_event_ids.has(notification_id):
+			_debug_log("  [SKIP] %s - already scheduled" % event_name)
+			continue
+
+		# Parse event start time
+		var start_at = event_data.get("next_start_at", event_data.get("start_at", ""))
+		if start_at.is_empty():
+			_debug_log("  [SKIP] %s - no start time" % event_name)
+			continue
+
+		var event_timestamp = _parse_iso_timestamp(start_at)
+		if event_timestamp <= 0:
+			_debug_log("  [SKIP] %s - invalid timestamp" % event_name)
+			continue
+
+		# Calculate trigger time (3 minutes before event)
+		var trigger_time = event_timestamp - (NOTIFICATION_ADVANCE_MINUTES * 60)
+
+		# Skip events that already started
+		if trigger_time <= current_time:
+			var mins_ago = (current_time - trigger_time) / 60
+			_debug_log("  [SKIP] %s - already started (%d mins ago)" % [event_name, mins_ago])
+			continue
+
+		# Get event details
+		var coordinates = Vector2i(int(event_data.get("x", 0)), int(event_data.get("y", 0)))
+		var image_url = event_data.get("image", "")
+		var deep_link = "decentraland://open?position=%d,%d" % [coordinates.x, coordinates.y]
+
+		# Generate notification text
+		var notification_text = generate_event_notification_text(event_name)
+
+		var mins_until = (trigger_time - current_time) / 60
+		_debug_log(
+			(
+				"  [SCHEDULE] %s - in %d mins at %d,%d"
+				% [event_name, mins_until, coordinates.x, coordinates.y]
+			)
+		)
+
+		# Schedule the notification
+		var success = await async_queue_local_notification(
+			notification_id,
+			notification_text["title"],
+			notification_text["body"],
+			trigger_time,
+			image_url,
+			deep_link
+		)
+
+		if success:
+			added_count += 1
+		else:
+			_debug_log("    [FAILED] Could not schedule notification")
+
+	_debug_log(
+		"Event notifications sync complete: added=%d, removed=%d" % [added_count, removed_count]
+	)
+
+	# DEBUG: Schedule a test notification 5 minutes from now using the first attended event
+	if DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION and events.size() > 0:
+		var test_event = events[0]
+		var test_event_name = test_event.get("name", "Test Event")
+		var test_notification_id = "debug_test_event_" + str(int(Time.get_unix_time_from_system()))
+		var test_trigger_time = int(Time.get_unix_time_from_system()) + (2 * 60)  # 2 minutes from now
+		var test_deep_link = "decentraland://open?position=100,100"
+		var test_image_url = test_event.get("image", "")
+
+		var test_notification_text = generate_event_notification_text(test_event_name)
+
+		_debug_log("=".repeat(70))
+		_debug_log("DEBUG: Scheduling test notification in 2 minutes")
+		_debug_log("  Event: %s" % test_event_name)
+		_debug_log("  Deep link: %s" % test_deep_link)
+		_debug_log("=".repeat(70))
+
+		await async_queue_local_notification(
+			test_notification_id,
+			test_notification_text["title"],
+			test_notification_text["body"],
+			test_trigger_time,
+			test_image_url,
+			test_deep_link
+		)
+
+
+## Parse ISO 8601 timestamp to Unix seconds
+func _parse_iso_timestamp(iso_string: String) -> int:
+	if iso_string.is_empty():
+		return 0
+
+	var date_parts = iso_string.split("T")
+	if date_parts.size() != 2:
+		return 0
+
+	var date_part = date_parts[0]
+	var time_part = date_parts[1].replace("Z", "").split(".")[0]
+
+	var date_components = date_part.split("-")
+	var time_components = time_part.split(":")
+
+	if date_components.size() != 3 or time_components.size() != 3:
+		return 0
+
+	var date_dict = {
+		"year": int(date_components[0]),
+		"month": int(date_components[1]),
+		"day": int(date_components[2]),
+		"hour": int(time_components[0]),
+		"minute": int(time_components[1]),
+		"second": int(time_components[2])
+	}
+
+	return Time.get_unix_time_from_datetime_dict(date_dict)
+
+
 ## Sync notification queue - ensures next 24 notifications are scheduled with OS
 ## This is called automatically, but can be called manually to force a sync
 func _sync_notification_queue() -> void:
 	var plugin = _get_plugin()
 	if not plugin:
 		return
+
+	_debug_log("Starting queue sync...")
 
 	var current_time = Time.get_unix_time_from_system()
 
@@ -712,6 +1023,7 @@ func _sync_notification_queue() -> void:
 
 		if not should_keep:
 			# This notification is scheduled but shouldn't be (not in top 24)
+			_debug_log("Cancelling OS notification (not in top 24): id=%s" % os_id)
 			var cancel_success = _os_cancel_notification(os_id)
 			if cancel_success:
 				# Mark as unscheduled in database
@@ -734,15 +1046,23 @@ func _sync_notification_queue() -> void:
 		var title = notif.get("title", "")
 		var body = notif.get("body", "")
 		var trigger_ts = notif.get("trigger_timestamp", 0)
+		var data = notif.get("data", "")
 		var delay_seconds = maxi(1, trigger_ts - current_time)
 
 		var success = _os_schedule_notification(notif_id, title, body, delay_seconds)
 		if success:
+			# Log the scheduling with deep link info (dev mode only)
+			_debug_log_notification_scheduled(
+				notif_id, title, body, trigger_ts, delay_seconds, data
+			)
+
 			# Mark as scheduled in database
 			if OS.get_name() == "Android":
 				plugin.dbMarkScheduled(notif_id, true)
 			else:
 				plugin.db_mark_scheduled(notif_id, true)
+
+	_debug_log("Queue sync completed")
 
 
 ## Get the appropriate plugin for the current platform (used by queue management)
@@ -832,6 +1152,95 @@ func _print_queue_state(current_time: int, scheduled_count: int, pending_count: 
 			print("  - '%s' in %d minutes" % [title, mins_until])
 
 	print("======================================\n")
+
+
+# =============================================================================
+# DEBUG LOGGING (Dev Mode Only)
+# =============================================================================
+
+
+## Print a debug message for notification operations (only in dev mode)
+func _debug_log(message: String) -> void:
+	if _debug_notifications_enabled:
+		print("[NotificationsManager DEBUG] %s" % message)
+
+
+## Print the entire notification database contents (only in dev mode)
+func _debug_print_database() -> void:
+	if not _debug_notifications_enabled:
+		return
+
+	var plugin = _get_plugin()
+	if not plugin:
+		print("[NotificationsManager DEBUG] Cannot print database: plugin not available")
+		return
+
+	var all_notifications = (
+		plugin.dbQueryNotifications("", "trigger_timestamp ASC", -1)
+		if OS.get_name() == "Android"
+		else plugin.db_query_notifications("", "trigger_timestamp ASC", -1)
+	)
+
+	var current_time = int(Time.get_unix_time_from_system())
+
+	print("\n" + "=".repeat(70))
+	print("[NotificationsManager DEBUG] DATABASE DUMP")
+	print("=".repeat(70))
+	print("Current time: %d" % current_time)
+	print("Total notifications in database: %d" % all_notifications.size())
+	print("-".repeat(70))
+
+	if all_notifications.size() == 0:
+		print("  (database is empty)")
+	else:
+		for notif in all_notifications:
+			var notif_id = notif.get("id", "?")
+			var title = notif.get("title", "?")
+			var body = notif.get("body", "?")
+			var trigger_ts = notif.get("trigger_timestamp", 0)
+			var is_scheduled = notif.get("is_scheduled", 0)
+			var data = notif.get("data", "")
+
+			var time_until = trigger_ts - current_time
+			var mins_until = int(time_until / 60.0)
+			var status = "SCHEDULED" if is_scheduled == 1 else "PENDING"
+			var time_str = "%d min" % mins_until if time_until > 0 else "EXPIRED"
+
+			print("  [%s] id=%s" % [status, notif_id])
+			print("    title: %s" % title)
+			print("    body: %s" % body)
+			print("    trigger_timestamp: %d (%s)" % [trigger_ts, time_str])
+			print("    data (deep link): %s" % data)
+			print("")
+
+	print("=".repeat(70) + "\n")
+
+
+## Log a notification being queued/scheduled with deep link info
+func _debug_log_notification_scheduled(
+	notification_id: String,
+	title: String,
+	body: String,
+	trigger_timestamp: int,
+	delay_seconds: int,
+	data: String = ""
+) -> void:
+	if not _debug_notifications_enabled:
+		return
+
+	print("\n" + "-".repeat(50))
+	print("[NotificationsManager DEBUG] NOTIFICATION SCHEDULED")
+	print("-".repeat(50))
+	print("  id: %s" % notification_id)
+	print("  title: %s" % title)
+	print("  body: %s" % body)
+	print("  trigger_timestamp: %d" % trigger_timestamp)
+	print("  delay_seconds: %d" % delay_seconds)
+	if not data.is_empty():
+		print("  deep_link_data: %s" % data)
+	else:
+		print("  deep_link_data: (none)")
+	print("-".repeat(50) + "\n")
 
 
 ## Download an image from URL and convert to base64 string

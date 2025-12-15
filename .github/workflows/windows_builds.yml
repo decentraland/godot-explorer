@@ -41,6 +41,8 @@ jobs:
       - name: Test
         working-directory: lib
         run: cargo test --release -- --skip auth
+        env:
+          PROTOC: ${{ github.workspace }}/.bin/protoc/bin/protoc.exe
 
       # Export section
       - name: Import Assets
@@ -62,5 +64,5 @@ jobs:
         with:
           name: libdclgodot_windows
           path: |
-            lib/target/release/dclgodot.dll
+            lib/target/libdclgodot_windows/dclgodot.dll
           if-no-files-found: error

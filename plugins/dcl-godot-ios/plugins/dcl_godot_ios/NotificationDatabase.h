@@ -104,6 +104,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (int)clearAll;
 
 /**
+ * Get the deep link data for a specific notification.
+ *
+ * @param notificationId Notification ID
+ * @return NSString with deep link URL, or nil if no data or not found
+ */
+- (NSString * _Nullable)getNotificationDeepLinkWithId:(NSString *)notificationId;
+
+/**
  * Get the image blob for a specific notification.
  * This is separate from queryNotifications() to avoid loading images into memory unnecessarily.
  *

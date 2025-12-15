@@ -129,7 +129,7 @@ func set_avatar(avatar: DclAvatar) -> void:
 	if avatar == null or !is_instance_valid(avatar):
 		return
 	nickname = avatar.get_avatar_name()
-	var color = avatar.get_nickname_color(nickname)
+	var color = DclAvatar.get_nickname_color(nickname)
 	label_nickname.add_theme_color_override("font_color", color)
 	nickname_color_hex = color.to_html(false) if color != null else "ffffff"
 
@@ -149,8 +149,8 @@ func set_avatar(avatar: DclAvatar) -> void:
 		has_claimed_name = true
 
 	# Update both profile pictures (extended and compact)
-	profile_picture.async_update_profile_picture(avatar)
-	profile_picture_compact.async_update_profile_picture(avatar)
+	#profile_picture.async_update_profile_picture(avatar)
+	#profile_picture_compact.async_update_profile_picture(avatar)
 
 
 func set_system_avatar() -> void:
@@ -450,7 +450,7 @@ func _handle_mention_click(mention_str: String):
 				var avatar_name = avatar.get_avatar_name()
 				if avatar_name == mention_without_at:
 					# Show some kind of user profile or interaction
-					Global.get_explorer()._async_open_profile(avatar)
+					Global.get_explorer()._async_open_profile(avatar.avatar_id)
 					break
 
 

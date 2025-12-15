@@ -16,6 +16,8 @@ const WEARABLE_NAME_PREFIX = "__"
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
+var avatar_ready: bool = false
+var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
@@ -101,7 +103,7 @@ func _input(event):
 		var selected = Global.get_selected_avatar()
 		if selected and selected == self and avatar_id:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-				Global.open_profile.emit(self)
+				Global.open_profile_by_avatar.emit(self)
 
 
 func try_show():
@@ -144,6 +146,8 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	avatar_id = profile.get_ethereum_address()
+	has_connected_web3 = profile.has_connected_web3()
+	prints("Async update avatar from profile", avatar_id)
 
 	# Update metadata with the new avatar_id
 	if click_area:
@@ -169,7 +173,7 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 		nickname_ui.nickname = new_avatar_name
 		nickname_ui.tag = ""
 
-	nickname_ui.nickname_color = get_nickname_color(new_avatar_name)
+	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
 	if hide_name:
@@ -437,6 +441,7 @@ func async_load_wearables():
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
+	avatar_ready = true
 	avatar_loaded.emit()
 
 

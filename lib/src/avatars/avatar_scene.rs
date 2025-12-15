@@ -97,6 +97,12 @@ impl AvatarScene {
     #[signal]
     fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>) {}
 
+    #[signal]
+    fn avatar_added(avatar: Gd<DclAvatar>) {}
+
+    #[signal]
+    fn avatar_removed(address: GString) {}
+
     #[func]
     pub fn update_primary_player_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.update_avatar(SceneEntityId::PLAYER, &profile.bind().inner);
@@ -202,9 +208,14 @@ impl AvatarScene {
         new_avatar.connect("emote_triggered".into(), emote_triggered_callable);
 
         self.base_mut().add_child(new_avatar.clone().upcast());
-        self.avatar_godot_scene.insert(entity_id, new_avatar);
+        self.avatar_godot_scene
+            .insert(entity_id, new_avatar.clone());
 
-        // Emit signal with updated avatar list
+        // Emit signal for the new avatar
+        self.base_mut()
+            .emit_signal("avatar_added".into(), &[new_avatar.to_variant()]);
+
+        // Emit signal with updated avatar list (for backwards compatibility)
         let avatars = self.get_avatars();
         self.base_mut()
             .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
@@ -365,6 +376,13 @@ impl AvatarScene {
             self.crdt_state.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
 
+            // Get the address before removing it from the map
+            let removed_address: Option<H160> = self
+                .avatar_address
+                .iter()
+                .find(|(_, &v)| v == alias)
+                .map(|(k, _)| *k);
+
             self.avatar_address.retain(|_, v| *v != alias);
 
             self.last_updated_profile.remove(&entity_id);
@@ -384,7 +402,14 @@ impl AvatarScene {
                     .insert(entity_id);
             }
 
-            // Emit signal with updated avatar list
+            // Emit signal for the removed avatar with its address
+            if let Some(address) = removed_address {
+                let address_str = format!("{:#x}", address);
+                self.base_mut()
+                    .emit_signal("avatar_removed".into(), &[address_str.to_variant()]);
+            }
+
+            // Emit signal with updated avatar list (for backwards compatibility)
             let avatars = self.get_avatars();
             self.base_mut()
                 .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);

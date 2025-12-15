@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://de7563ke1agyk"]
+[gd_scene load_steps=2 format=3 uid="uid://d0oaxa3sbrjqb"]
 
 [ext_resource type="Script" uid="uid://bk6uyo14cy17u" path="res://src/decentraland_components/audio_stream.gd" id="1_oqq6w"]
 

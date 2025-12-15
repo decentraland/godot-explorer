@@ -14,6 +14,9 @@ func _ready():
 
 
 func play(music_name: StringName):
+	if !is_instance_valid(_audio_stream):
+		return
+
 	var new_stream = load("res://assets/sfx/ambient/%s.ogg" % music_name)
 	if is_instance_valid(new_stream):
 		if not _current_music.is_empty():
