@@ -1,11 +1,13 @@
 import { type Vector3 } from '@dcl/sdk/math'
 import { getExplorerInformation } from '~system/Runtime'
 import {
-  takeAndCompareScreenshot,
   type Vector2,
   type TakeAndCompareScreenshotRequest_ComparisonMethodGreyPixelDiff,
   type TakeAndCompareScreenshotResponse
 } from '~system/Testing'
+
+// @ts-ignore - takeAndCompareScreenshot exists at runtime but not in type definitions
+import { takeAndCompareScreenshot } from '~system/Testing'
 
 let explorerAgent = 'unknown'
 

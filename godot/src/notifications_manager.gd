@@ -733,7 +733,7 @@ func _check_and_handle_version_change() -> bool:
 ## Only runs on iOS/Android (local notifications are not supported on desktop)
 func async_sync_attended_events() -> void:
 	# Only run on mobile platforms
-	if not DclGlobal.is_android() and not DclGlobal.is_ios():
+	if not Global.is_android() and not Global.is_ios():
 		return
 
 	_debug_log("Starting attended events sync...")
