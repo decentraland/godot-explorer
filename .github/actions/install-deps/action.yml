@@ -9,18 +9,12 @@ runs:
     - name: Install alsa and udev
       if: runner.os == 'linux'
       shell: bash
-      run: "sudo apt-get update\n# alsa and udev\nsudo apt-get install -y --no-install-recommends \\\n  libasound2-dev libudev-dev\n# ffmpeg deps\nsudo apt install -y --no-install-recommends \\\n  clang curl pkg-config \n# livekit deps\nsudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev        \n  #magic___^_^___line\n"
+      run: "sudo apt-get update\n# alsa and udev\nsudo apt-get install -y --no-install-recommends \\\n  libasound2-dev libudev-dev\n# c deps\nsudo apt install -y --no-install-recommends \\\n  clang curl pkg-config \n# livekit deps\nsudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev        \n  #magic___^_^___line\n"
 
     # => Windows
-    - name: set CLANG path for ffmpeg deps (windows)
+    - name: set CLANG path deps (windows)
       if: runner.os == 'windows' && matrix.os != 'self-hosted-windows'
       shell: pwsh
       run: |
         $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
         Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
-        Invoke-WebRequest "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build-shared.7z" -OutFile ffmpeg-release-full-shared.7z
-        7z x ffmpeg-release-full-shared.7z
-        mkdir ffmpeg
-        mv ffmpeg-*/* ffmpeg/
-        Add-Content $env:GITHUB_ENV "FFMPEG_DIR=${pwd}\ffmpeg`n"
-        Add-Content $env:GITHUB_PATH "${pwd}\ffmpeg\bin`n"

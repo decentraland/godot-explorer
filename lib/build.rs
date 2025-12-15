@@ -481,15 +481,22 @@ fn set_godot_explorer_version() {
     // Get the CARGO_PKG_VERSION env var
     let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());
 
-    // Check if this is a production build
+    // Check if this is a production or staging build
     let is_prod_build = env::var("DECENTRALAND_PROD_BUILD").is_ok();
+    let is_staging_build = env::var("DECENTRALAND_STAGING_BUILD").is_ok();
 
     // Check if debug or release build
     let profile = env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
     let is_debug = profile == "debug";
 
-    // Determine environment suffix (dev or prod)
-    let env_suffix = if is_prod_build { "prod" } else { "dev" };
+    // Determine environment suffix (dev, staging, or prod)
+    let env_suffix = if is_prod_build {
+        "prod"
+    } else if is_staging_build {
+        "staging"
+    } else {
+        "dev"
+    };
 
     // Determine build mode suffix (debug for debug builds, none for release)
     let mode_suffix = if is_debug { "-debug" } else { "" };

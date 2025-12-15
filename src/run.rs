@@ -103,20 +103,20 @@ pub fn build(
     Ok(())
 }
 
-/// Determines the cargo build profile based on release and production flags.
+/// Determines the cargo build profile based on release and production/staging flags.
 ///
 /// Returns:
-/// - "dev" when neither --release nor --prod is set
-/// - "dev-release" when --release is set but --prod is not
-/// - "release" when both --release and --prod are set
-/// - Error when --prod is set without --release
+/// - "dev" when neither --release nor --prod/--staging is set
+/// - "dev-release" when --release is set but --prod/--staging is not
+/// - "release" when both --release and --prod/--staging are set
+/// - Error when --prod/--staging is set without --release
 fn get_build_profile(release_mode: bool, production_mode: bool) -> anyhow::Result<&'static str> {
     match (release_mode, production_mode) {
         (false, false) => Ok("dev"),
         (true, false) => Ok("dev-release"),
         (true, true) => Ok("release"),
         (false, true) => Err(anyhow::anyhow!(
-            "--prod flag requires --release flag. Use: cargo run -- build -r --prod"
+            "--prod/--staging flag requires --release flag. Use: cargo run -- build -r --prod (or --staging)"
         )),
     }
 }
