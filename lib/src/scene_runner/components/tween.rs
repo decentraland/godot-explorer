@@ -295,8 +295,8 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let direction = data
                     .direction
                     .clone()
-                    .map(|d| d.to_godot())
-                    .unwrap_or(godot::builtin::Quaternion::default());
+                    .map(|d| d.to_godot().normalized())
+                    .unwrap_or(godot::builtin::Quaternion::new(0.0, 0.0, 0.0, 1.0));
                 let speed = data.speed;
 
                 // Extract euler angles from direction quaternion to get rotation per second
@@ -306,9 +306,10 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let rotation_delta = direction_euler * speed * delta_time;
 
                 // Get current rotation as euler, add delta, convert back
-                let current_euler = Basis::from_quat(transform.rotation).to_euler(godot::builtin::EulerOrder::YXZ);
+                // Normalize the quaternion to ensure it's valid (floating-point precision)
+                let current_euler = Basis::from_quat(transform.rotation.normalized()).to_euler(godot::builtin::EulerOrder::YXZ);
                 let new_euler = current_euler + rotation_delta;
-                transform.rotation = Basis::from_euler(godot::builtin::EulerOrder::YXZ, new_euler).to_quat();
+                transform.rotation = Basis::from_euler(godot::builtin::EulerOrder::YXZ, new_euler).to_quat().normalized();
                 transform
             }
             Some(Mode::TextureMove(data)) => {
