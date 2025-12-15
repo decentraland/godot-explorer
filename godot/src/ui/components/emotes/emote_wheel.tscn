@@ -277,19 +277,20 @@ text = "EMOTES"
 horizontal_alignment = 1
 
 [node name="Button_Emotes" type="Button" parent="."]
-custom_minimum_size = Vector2(80, 80)
+custom_minimum_size = Vector2(65, 65)
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 20.0
 offset_top = -100.0
-offset_right = 100.0
-offset_bottom = -20.0
+offset_right = 85.0
+offset_bottom = -35.0
 grow_vertical = 0
 focus_mode = 0
 theme = ExtResource("7_0irnm")
 theme_type_variation = &"TouchableButton"
+theme_override_constants/icon_max_width = 25
 toggle_mode = true
 icon = ExtResource("7_lttyx")
 icon_alignment = 1

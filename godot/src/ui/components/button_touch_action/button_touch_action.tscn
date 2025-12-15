@@ -5,13 +5,12 @@
 
 [node name="Button_TouchAction" type="Button"]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
-custom_minimum_size = Vector2(80, 80)
+custom_minimum_size = Vector2(65, 65)
 offset_right = 31.0
 offset_bottom = 55.0
 focus_mode = 0
 theme = ExtResource("2_asumd")
 theme_type_variation = &"TouchableButton"
-toggle_mode = false
 text = "E"
 icon_alignment = 1
 script = ExtResource("2_c0jk1")

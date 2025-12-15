@@ -59,9 +59,9 @@
 [ext_resource type="StyleBox" uid="uid://djspketxj6yml" path="res://assets/themes/wearable_secondary.tres" id="47_ls4j2"]
 [ext_resource type="StyleBox" uid="uid://bjtof22i81o4x" path="res://assets/themes/wearable_secondary_press_hover.tres" id="48_ec0gy"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="51_adyvx"]
-[ext_resource type="StyleBox" path="res://assets/themes/dcl_theme/touchable_disabled.tres" id="51_b8nvg"]
-[ext_resource type="StyleBox" path="res://assets/themes/dcl_theme/touchable_normal.tres" id="52_adyvx"]
-[ext_resource type="StyleBox" path="res://assets/themes/dcl_theme/touchable_pressed.tres" id="53_f0x44"]
+[ext_resource type="StyleBox" uid="uid://bk5rtvwf5rno4" path="res://assets/themes/dcl_theme/touchable_disabled.tres" id="51_b8nvg"]
+[ext_resource type="StyleBox" uid="uid://b66geet5bo5yf" path="res://assets/themes/dcl_theme/touchable_normal.tres" id="52_adyvx"]
+[ext_resource type="StyleBox" uid="uid://cvducxvis7n6e" path="res://assets/themes/dcl_theme/touchable_pressed.tres" id="53_f0x44"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1t6yp"]
 
