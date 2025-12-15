@@ -289,31 +289,26 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 transform
             }
             Some(Mode::RotateContinuous(data)) => {
-                // RotateContinuous: Apply incremental rotation based on direction quaternion and speed
-                // The direction quaternion represents the rotation to apply per second
-                // We extract axis-angle, scale the angle by speed*dt, and apply
-                let direction = data
-                    .direction
-                    .clone()
-                    .map(|d| d.to_godot().normalized())
-                    .unwrap_or(godot::builtin::Quaternion::new(0.0, 0.0, 0.0, 1.0));
+                // RotateContinuous: The SDK encodes the rotation axis in (x, y, z) of the quaternion
+                // with w=0, and speed is in DEGREES per second
+                let raw_direction = data.direction.clone().map(|d| d.to_godot());
                 let speed = data.speed;
 
-                // Extract axis and angle from direction quaternion
-                // Quaternion: (x, y, z, w) where (x, y, z) = axis * sin(angle/2), w = cos(angle/2)
-                let axis = godot::builtin::Vector3::new(direction.x, direction.y, direction.z);
+                // Extract axis from the quaternion's (x, y, z) components
+                // The SDK uses this as a direction vector, not a true quaternion
+                let axis = raw_direction
+                    .map(|d| godot::builtin::Vector3::new(d.x, d.y, d.z))
+                    .unwrap_or(godot::builtin::Vector3::ZERO);
                 let axis_length = axis.length();
 
                 if axis_length > 0.0001 {
                     let axis_normalized = axis / axis_length;
-                    // angle = 2 * asin(axis_length), but more stable: 2 * atan2(axis_length, w)
-                    let angle = 2.0 * axis_length.atan2(direction.w);
 
-                    // Scale angle by speed and delta_time
-                    let scaled_angle = angle * speed * delta_time;
+                    // Speed is in degrees per second, convert to radians
+                    let angle_radians = speed.to_radians() * delta_time;
 
                     // Create rotation quaternion for this frame's rotation step
-                    let half_angle = scaled_angle / 2.0;
+                    let half_angle = angle_radians / 2.0;
                     let sin_half = half_angle.sin();
                     let cos_half = half_angle.cos();
                     let rotation_step = godot::builtin::Quaternion::new(
@@ -327,9 +322,9 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     let current = transform.rotation.normalized();
                     transform.rotation = (current * rotation_step).normalized();
 
-                    tracing::trace!(
-                        "[Tween] RotateContinuous: axis={:?}, angle={}, scaled={}, result={:?}",
-                        axis_normalized, angle, scaled_angle, transform.rotation
+                    tracing::debug!(
+                        "[Tween] RotateContinuous: entity={:?}, axis={:?}, speed={} deg/s, angle_rad={:.6}, result={:?}",
+                        entity, axis_normalized, speed, angle_radians, transform.rotation
                     );
                 }
 
@@ -347,21 +342,20 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .clone()
                     .map(|v| v.to_godot())
                     .unwrap_or(godot::builtin::Vector2::ZERO);
-                let movement_type = TextureMovementType::from_i32(
-                    data.movement_type.unwrap_or(0),
-                )
-                .unwrap_or(TextureMovementType::TmtOffset);
+                let movement_type = TextureMovementType::from_i32(data.movement_type.unwrap_or(0))
+                    .unwrap_or(TextureMovementType::TmtOffset);
 
                 let value = start + ((end - start) * ease_value);
 
                 // Get or create texture animation state
-                let tex_anim = scene
-                    .texture_animations
-                    .entry(*entity)
-                    .or_insert_with(|| TextureAnimation {
-                        uv_offset: godot::builtin::Vector2::ZERO,
-                        uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
-                    });
+                let tex_anim =
+                    scene
+                        .texture_animations
+                        .entry(*entity)
+                        .or_insert_with(|| TextureAnimation {
+                            uv_offset: godot::builtin::Vector2::ZERO,
+                            uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
+                        });
 
                 match movement_type {
                     TextureMovementType::TmtOffset => tex_anim.uv_offset = value,
@@ -380,21 +374,20 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .map(|v| v.to_godot())
                     .unwrap_or(godot::builtin::Vector2::ZERO);
                 let speed = data.speed;
-                let movement_type = TextureMovementType::from_i32(
-                    data.movement_type.unwrap_or(0),
-                )
-                .unwrap_or(TextureMovementType::TmtOffset);
+                let movement_type = TextureMovementType::from_i32(data.movement_type.unwrap_or(0))
+                    .unwrap_or(TextureMovementType::TmtOffset);
 
                 let delta = direction * speed * delta_time;
 
                 // Get or create texture animation state
-                let tex_anim = scene
-                    .texture_animations
-                    .entry(*entity)
-                    .or_insert_with(|| TextureAnimation {
-                        uv_offset: godot::builtin::Vector2::ZERO,
-                        uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
-                    });
+                let tex_anim =
+                    scene
+                        .texture_animations
+                        .entry(*entity)
+                        .or_insert_with(|| TextureAnimation {
+                            uv_offset: godot::builtin::Vector2::ZERO,
+                            uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
+                        });
 
                 match movement_type {
                     TextureMovementType::TmtOffset => tex_anim.uv_offset += delta,
