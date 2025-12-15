@@ -2,7 +2,6 @@ extends Control
 
 var combo_opened: bool = false
 
-
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
 @onready var button_combo: Button = %Button_Combo
 
@@ -14,4 +13,3 @@ func _on_button_combo_toggled(toggled_on: bool) -> void:
 	else:
 		animation_player.play_backwards("open_combo")
 		UiSounds.play_sound("widget_emotes_close")
-		

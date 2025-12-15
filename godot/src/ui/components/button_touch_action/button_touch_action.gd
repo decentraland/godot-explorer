@@ -17,23 +17,23 @@ func _input(event: InputEvent) -> void:
 	# incluso cuando el joystick marca eventos como handled
 	if not Global.is_mobile():
 		return
-	
+
 	if event is InputEventScreenTouch:
 		var touch_pos = event.position
 		var is_inside = _is_point_inside_button(touch_pos)
-		
+
 		if event.pressed:
 			if is_inside and _touch_index == -1:
 				# Nuevo toque dentro del botón
 				_touch_index = event.index
 				_is_action_active = true
-				
+
 				# Actualizar estado visual INMEDIATAMENTE
 				set_pressed_no_signal(true)
-				
+
 				# Disparar la acción de input
 				Input.action_press(trigger_action)
-				
+
 				# NO marcamos como handled aquí para permitir que gui_input() también se ejecute
 				# si el evento no fue handled por otro sistema (como el joystick)
 			elif not is_inside:
@@ -50,7 +50,7 @@ func _input(event: InputEvent) -> void:
 					# Liberar la acción solo si estaba activa
 					Input.action_release(trigger_action)
 					_is_action_active = false
-				
+
 				# Actualizar estado visual INMEDIATAMENTE
 				set_pressed_no_signal(false)
 				_touch_index = -1
@@ -59,7 +59,7 @@ func _input(event: InputEvent) -> void:
 		if _touch_index == event.index:
 			var touch_pos = event.position
 			var is_inside = _is_point_inside_button(touch_pos)
-			
+
 			if is_inside and not _is_action_active:
 				# Re-entrada al botón sin levantar el dedo - NO activar acción
 				# NO mostrar visualmente como pressed porque no estamos enviando acción
@@ -77,7 +77,7 @@ func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch_pos = event.position
 		var is_inside = get_rect().has_point(touch_pos)
-		
+
 		if event.pressed and is_inside:
 			# Si llegamos aquí, el evento no fue handled por otro sistema
 			# Actualizar el estado visual inmediatamente
@@ -99,7 +99,7 @@ func _on_gui_input(event: InputEvent) -> void:
 		if _touch_index == event.index:
 			var touch_pos = event.position
 			var is_inside = get_rect().has_point(touch_pos)
-			
+
 			if is_inside and not _is_action_active:
 				# Re-entrada - NO mostrar visual ni activar acción
 				pass
@@ -112,8 +112,5 @@ func _on_gui_input(event: InputEvent) -> void:
 
 func _is_point_inside_button(point: Vector2) -> bool:
 	# Obtener el rectángulo global del botón
-	var global_rect = Rect2(
-		global_position,
-		size * get_global_transform_with_canvas().get_scale()
-	)
+	var global_rect = Rect2(global_position, size * get_global_transform_with_canvas().get_scale())
 	return global_rect.has_point(point)

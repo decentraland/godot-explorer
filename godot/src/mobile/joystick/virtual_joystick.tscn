@@ -1,11 +1,21 @@
 [gd_scene load_steps=4 format=3 uid="uid://dmr0fcamx7t56"]
 
 [ext_resource type="Script" uid="uid://bu1t2cfib3j0n" path="res://src/mobile/joystick/virtual_joystick.gd" id="1_8x4dy"]
-[ext_resource type="Texture2D" uid="uid://dnenlhbcgxgph" path="res://assets/themes/dark_dcl_theme/icons/Ellipse.svg" id="2_vn7es"]
-[ext_resource type="Texture2D" uid="uid://drsf2hj5gs602" path="res://assets/themes/dark_dcl_theme/icons/FillEllipse.svg" id="3_yjory"]
+[ext_resource type="StyleBox" uid="uid://b66geet5bo5yf" path="res://assets/themes/dcl_theme/touchable_normal.tres" id="2_nwqs6"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nwqs6"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+corner_radius_top_left = 500
+corner_radius_top_right = 500
+corner_radius_bottom_right = 500
+corner_radius_bottom_left = 500
 
 [node name="VirtualJoystick" type="Control"]
-modulate = Color(1, 1, 1, 0.501961)
 layout_mode = 3
 anchors_preset = 2
 anchor_top = 1.0
@@ -19,23 +29,21 @@ deadzone_size = 1.0
 joystick_mode = 1
 visibility_mode = 1
 
-[node name="Base" type="TextureRect" parent="."]
+[node name="Base" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 40.0
-offset_top = -200.0
-offset_right = 200.0
-offset_bottom = -40.0
+offset_left = 80.0
+offset_top = -245.0
+offset_right = 240.0
+offset_bottom = -85.0
 grow_vertical = 0
-pivot_offset = Vector2(100, 100)
+pivot_offset = Vector2(80, 80)
 mouse_force_pass_scroll_events = false
-texture = ExtResource("2_vn7es")
-expand_mode = 1
-stretch_mode = 5
+theme_override_styles/panel = ExtResource("2_nwqs6")
 
-[node name="Tip" type="TextureRect" parent="Base"]
+[node name="Tip" type="Panel" parent="Base"]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.3
@@ -45,65 +53,7 @@ anchor_bottom = 0.7
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(40, 34)
-texture = ExtResource("3_yjory")
-expand_mode = 3
-stretch_mode = 4
-
-[node name="TipShadow" type="TextureRect" parent="Base/Tip"]
-modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -2.0
-offset_top = -2.0
-offset_right = 2.0
-offset_bottom = 2.0
-grow_horizontal = 2
-grow_vertical = 2
-pivot_offset = Vector2(40, 34)
-texture = ExtResource("3_yjory")
-expand_mode = 3
-stretch_mode = 4
-
-[node name="BaseShadowOutter" type="TextureRect" parent="Base"]
-modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -2.0
-offset_top = -2.0
-offset_right = 2.0
-offset_bottom = 2.0
-grow_horizontal = 2
-grow_vertical = 2
-pivot_offset = Vector2(100, 100)
-mouse_force_pass_scroll_events = false
-texture = ExtResource("2_vn7es")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="BaseShadowInner" type="TextureRect" parent="Base"]
-modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = -2.0
-offset_bottom = -2.0
-grow_horizontal = 2
-grow_vertical = 2
-pivot_offset = Vector2(100, 100)
-mouse_force_pass_scroll_events = false
-texture = ExtResource("2_vn7es")
-expand_mode = 1
-stretch_mode = 5
+theme_override_styles/panel = SubResource("StyleBoxFlat_nwqs6")
 
 [node name="SprintTimer" type="Timer" parent="."]
 unique_name_in_owner = true
