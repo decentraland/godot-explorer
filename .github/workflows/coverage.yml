@@ -118,3 +118,76 @@ jobs:
             tests/snapshots/scenes/comparison/**/*
             tests/snapshots/avatar-image-generation/comparison/**/*
             tests/snapshots/client/comparison/**/*
+
+      - name: Comment on PR with snapshot differences
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Find all comparison directories
+            const comparisonDirs = [
+              'tests/snapshots/scenes/comparison',
+              'tests/snapshots/avatar-image-generation/comparison',
+              'tests/snapshots/client/comparison'
+            ];
+
+            let snapshotRows = [];
+
+            for (const dir of comparisonDirs) {
+              if (!fs.existsSync(dir)) continue;
+
+              const files = fs.readdirSync(dir, { recursive: true });
+              for (const file of files) {
+                const filePath = path.join(dir, file);
+                if (!fs.statSync(filePath).isFile()) continue;
+                if (!file.endsWith('.png') && !file.endsWith('.jpg')) continue;
+
+                // Parse the filename to determine if it's generated or original
+                const baseName = path.basename(file);
+                const dirName = path.dirname(file);
+
+                // Look for pairs: *_generated.png and *_original.png or similar naming
+                if (baseName.includes('_generated') || baseName.includes('_new') || baseName.includes('_actual')) {
+                  const testName = baseName.replace(/_generated|_new|_actual/g, '').replace(/\.(png|jpg)$/, '');
+                  const category = dir.split('/')[2]; // scenes, avatar-image-generation, or client
+                  snapshotRows.push({
+                    category,
+                    testName: dirName ? `${dirName}/${testName}` : testName,
+                    file: baseName
+                  });
+                }
+              }
+            }
+
+            if (snapshotRows.length === 0) {
+              console.log('No snapshot differences found');
+              return;
+            }
+
+            // Build the comment
+            let body = `## 📸 Snapshot Test Differences\n\n`;
+            body += `The following snapshot tests have differences. Download the [coverage-snapshots artifact](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) to review.\n\n`;
+            body += `| Category | Test | Status |\n`;
+            body += `|----------|------|--------|\n`;
+
+            for (const row of snapshotRows) {
+              body += `| ${row.category} | ${row.testName} | ⚠️ Changed |\n`;
+            }
+
+            body += `\n### How to review\n`;
+            body += `1. Download the \`coverage-snapshots\` artifact from this workflow run\n`;
+            body += `2. Each comparison folder contains:\n`;
+            body += `   - \`*_original.png\` - Expected snapshot\n`;
+            body += `   - \`*_generated.png\` - Actual snapshot from this run\n`;
+            body += `   - \`*_diff.png\` - Visual difference (if available)\n`;
+
+            // Post the comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
