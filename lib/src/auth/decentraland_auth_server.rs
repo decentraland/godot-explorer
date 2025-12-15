@@ -211,7 +211,7 @@ impl CreateRequest {
 mod test {
     use crate::auth::wallet::Wallet;
 
-    use super::super::auth_identity::get_ephemeral_message;
+    use super::super::auth_identity::{get_ephemeral_message, AUTH_CHAIN_EXPIRATION_SECS};
     use super::*;
     use ethers_signers::LocalWallet;
     use rand::thread_rng;
@@ -248,7 +248,7 @@ mod test {
         let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
         let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
         let expiration =
-            std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
+            std::time::SystemTime::now() + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS);
         let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
         let result = do_request(
