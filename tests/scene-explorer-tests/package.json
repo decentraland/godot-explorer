@@ -1,0 +1,73 @@
+{
+  "name": "@dcl/scene-explorer-tests",
+  "version": "1.0.0",
+  "description": "SDK7 Template scene",
+  "scripts": {
+    "build": "sdk-commands build --skip-install",
+    "deploy": "sdk-commands deploy",
+    "start": "sdk-commands start --skip-build -w",
+    "export-static": "sdk-commands export-static --destination static/ --realmName scene-explorer-tests --baseUrl https://decentraland.github.io/scene-explorer-tests/ --commsAdapter ws-room:ws-room-service.decentraland.org/rooms/scene-explorer-tests",
+    "export-static-local": "sdk-commands export-static --destination static/ --realmName scene-explorer-tests --baseUrl http://localhost:7666/ --commsAdapter ws-room:ws-room-service.decentraland.org/rooms/scene-explorer-tests",
+    "serve": "http-server static -p 7666",
+    "lint": "eslint ./**/*.{ts,tsx}",
+    "lint:fix": "eslint --fix ./**/*.{ts,tsx}",
+    "format": "prettier --config .prettierrc -c ./**/*.{ts,tsx}",
+    "format:fix": "prettier -w --config .prettierrc -c ./**/*.{ts,tsx}",
+    "sync": "syncpack format --config .syncpackrc.json  --source \"*/package.json\" --source package.json",
+    "test-sync": "syncpack list-mismatches --config .syncpackrc.json  --source \"*/package.json\" --source package.json"
+  },
+  "devDependencies": {
+    "@dcl/js-runtime": "https://sdk-team-cdn.decentraland.org/@dcl/js-sdk-toolchain/branch/psquad/test-framework-tool/@dcl/js-runtime/dcl-js-runtime-7.3.36-7291127796.commit-b299b0d.tgz",
+    "@dcl/sdk": "https://sdk-team-cdn.decentraland.org/@dcl/js-sdk-toolchain/branch/psquad/test-framework-tool/dcl-sdk-7.3.36-7291127796.commit-b299b0d.tgz",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "eslint": "^8.53.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-config-standard-with-typescript": "^39.1.1",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-react": "^7.33.2",
+    "prettier": "3.0.3",
+    "testing-library": "./testing-library/",
+    "glob": "^10.3.10",
+    "syncpack": "^11.2.1",
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=6.0.0"
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "printWidth": 120,
+    "trailingComma": "none"
+  },
+  "workspaces": [
+    "52,-52-raycast",
+    "52,-54-transform",
+    "52,-56-billboard",
+    "52,-58-camera-mode",
+    "52,-60-engine-info",
+    "52,-62-gltf-container",
+    "52,-64-visibility",
+    "52,-66-mesh-renderer",
+    "52,-68-avatar-attach",
+    "54,-52-material",
+    "54,-54-text-shape",
+    "54,-56-video-player",
+    "54,-58-ui-background",
+    "54,-60-ui-text",
+    "54,-62-avatar-shape",
+    "54,-64-ui-button",
+    "54,-66-ui-dropdown",
+    "54,-68-nft-shape",
+    "testing-library"
+  ],
+  "files": [
+    "static"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/decentraland/scene-explorer-tests"
+  }
+}

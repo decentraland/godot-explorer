@@ -1,17 +1,17 @@
-use std::{collections::HashMap, fs::create_dir_all, path::Path};
+use std::path::Path;
 
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 use export::import_assets;
 use image_comparison::compare_images_folders;
 use tests::test_godot_tools;
-use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
-use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
+use crate::install_dependency::clear_cache_dir;
 
 mod check_gdscript;
 mod consts;
 mod copy_files;
+mod coverage;
 mod dependencies;
 mod doctor;
 mod download_file;
@@ -562,7 +562,7 @@ fn main() -> Result<(), anyhow::Error> {
             }
             Ok(())
         }
-        ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
+        ("coverage", sm) => coverage::coverage_with_itest(sm.is_present("dev")),
         ("test-tools", _) => test_godot_tools(None),
         ("vars", _) => {
             println!("root: {root:?}");
@@ -593,168 +593,4 @@ fn main() -> Result<(), anyhow::Error> {
         print_message(MessageType::Error, &format!("Failed: {}", e));
     }
     res
-    // xtaskops::tasks::main()
-}
-
-pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
-    let scene_snapshot_folder = Path::new("./tests/snapshots/scenes");
-    let scene_snapshot_folder = scene_snapshot_folder.canonicalize()?;
-    let client_snapshot_folder = Path::new("./tests/snapshots/client");
-    let client_snapshot_folder = client_snapshot_folder.canonicalize()?;
-
-    remove_dir("./coverage")?;
-    create_dir_all("./coverage")?;
-
-    ui::print_section("Running Coverage");
-    let mut test_cmd = cmd!("cargo", "test", "--", "--skip", "auth")
-        .env("CARGO_INCREMENTAL", "0")
-        .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .dir(RUST_LIB_PROJECT_FOLDER);
-
-    // Set PROTOC environment variable to use locally installed protoc
-    let protoc_path = helpers::BinPaths::protoc_bin();
-    if protoc_path.exists() {
-        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
-            test_cmd = test_cmd.env("PROTOC", canonical_path.to_string_lossy().to_string());
-        }
-    }
-
-    test_cmd.run()?;
-
-    let build_envs: HashMap<String, String> = [
-        ("CARGO_INCREMENTAL", "0"),
-        ("RUSTFLAGS", "-Cinstrument-coverage"),
-        ("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw"),
-    ]
-    .iter()
-    .map(|(k, v)| (k.to_string(), v.to_string()))
-    .collect();
-
-    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
-
-    run::run(false, true, vec![], false, false)?;
-
-    let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
-    let scene_test_coords: Vec<[i32; 2]> = vec![
-        [52, -52], // raycast
-        [52, -54], // transform
-        [52, -56], // billboard
-        [52, -58], // camera-mode
-        [52, -60], // engine-info
-        [52, -62], // gltf-container
-        [52, -64], // visibility
-        [52, -66], // mesh-renderer
-        [52, -68], // avatar-attach
-        [54, -52], // material
-        [54, -54], // text-shape
-        // TODO: video events not working well
-        // [54, -56], // video-player
-        [54, -58], // ui-background
-        [54, -60], // ui-text
-    ];
-    let scene_test_coords_str = serde_json::ser::to_string(&scene_test_coords)
-        .expect("failed to serialize scene_test_coords");
-
-    let extra_args = [
-        "--scene-test",
-        scene_test_coords_str.as_str(),
-        "--realm",
-        scene_test_realm,
-        "--snapshot-folder",
-        scene_snapshot_folder.to_str().unwrap(),
-    ]
-    .iter()
-    .map(|it| it.to_string())
-    .collect();
-
-    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
-
-    run::run(false, false, extra_args, true, false)?;
-
-    ui::print_section("Running Client Tests");
-    let client_extra_args = [
-        "--snapshot-folder",
-        client_snapshot_folder.to_str().unwrap(),
-    ]
-    .iter()
-    .map(|it| it.to_string())
-    .collect();
-
-    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
-    run::run(false, false, client_extra_args, false, true)?;
-
-    let err = glob::glob("./godot/*.profraw")?
-        .filter_map(|entry| entry.ok())
-        .map(|entry| {
-            println!("moving {:?} to ./lib", entry);
-            cmd!("mv", entry, "./lib").run()
-        })
-        .any(|res| res.is_err());
-
-    if err {
-        return Err(anyhow::anyhow!("failed to move profraw files"));
-    }
-
-    println!("ok.");
-
-    println!("=== generating report ===");
-    let (fmt, file) = if devmode {
-        ("html", "coverage/html")
-    } else {
-        ("lcov", "coverage/tests.lcov")
-    };
-    cmd!(
-        "grcov",
-        ".",
-        "--binary-path",
-        "./lib/target/debug/deps",
-        "-s",
-        ".",
-        "-t",
-        fmt,
-        "--branch",
-        "--ignore-not-existing",
-        "--ignore",
-        "/*",
-        "--ignore",
-        "./*",
-        "--ignore",
-        "*/src/tests/*",
-        "-o",
-        file,
-    )
-    .run()?;
-    println!("ok.");
-
-    println!("=== cleaning up ===");
-    clean_files("./**/*.profraw")?;
-    println!("ok.");
-    if devmode {
-        if confirm("open report folder?") {
-            cmd!("open", file).run()?;
-        } else {
-            println!("report location: {file}");
-        }
-    }
-
-    println!("=== test build without default features ===");
-    let mut no_default_cmd = cmd!("cargo", "build", "--no-default-features")
-        .env("CARGO_INCREMENTAL", "0")
-        .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .dir(RUST_LIB_PROJECT_FOLDER);
-
-    // Set PROTOC environment variable to use locally installed protoc
-    let protoc_path = helpers::BinPaths::protoc_bin();
-    if protoc_path.exists() {
-        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
-            no_default_cmd =
-                no_default_cmd.env("PROTOC", canonical_path.to_string_lossy().to_string());
-        }
-    }
-
-    no_default_cmd.run()?;
-
-    Ok(())
 }

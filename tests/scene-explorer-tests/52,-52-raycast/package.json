@@ -1,0 +1,16 @@
+{
+  "name": "raycast-test",
+  "version": "protocol-squad",
+  "description": "SDK7 Template scene",
+  "scripts": {
+    "build": "sdk-commands build --skip-install",
+    "deploy": "sdk-commands deploy",
+    "start": "sdk-commands start"
+  },
+  "devDependencies": {
+    "@dcl/js-runtime": "https://sdk-team-cdn.decentraland.org/@dcl/js-sdk-toolchain/branch/psquad/test-framework-tool/@dcl/js-runtime/dcl-js-runtime-7.3.36-7291127796.commit-b299b0d.tgz",
+    "@dcl/sdk": "https://sdk-team-cdn.decentraland.org/@dcl/js-sdk-toolchain/branch/psquad/test-framework-tool/dcl-sdk-7.3.36-7291127796.commit-b299b0d.tgz",
+
+    "testing-library": "./../testing-library/"
+  }
+}

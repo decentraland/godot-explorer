@@ -730,7 +730,12 @@ func _check_and_handle_version_change() -> bool:
 ## Sync local notifications with attended events from server
 ## Adds missing notifications and removes ones for unsubscribed events
 ## Should be called after user authentication
+## Only runs on iOS/Android (local notifications are not supported on desktop)
 func async_sync_attended_events() -> void:
+	# Only run on mobile platforms
+	if not DclGlobal.is_android() and not DclGlobal.is_ios():
+		return
+
 	_debug_log("Starting attended events sync...")
 
 	# Check version and clear all notifications if version changed
