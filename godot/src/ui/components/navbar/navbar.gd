@@ -27,7 +27,16 @@ func _ready() -> void:
 	# Asegurar que siempre haya un botón presionado al inicio
 	# El ButtonGroup con allow_unpress = false garantiza que siempre haya uno presionado
 
+	get_window().size_changed.connect(self._on_size_changed)
+	_on_size_changed()
 
+
+func _on_size_changed():
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	visible = window_size.x > window_size.y
+
+		
+		
 func _on_button_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		animation_player.play("open")
@@ -37,7 +46,6 @@ func _on_button_toggled(toggled_on: bool) -> void:
 	else:
 		animation_player.play("close")
 		close_all.emit()
-
 
 func _on_hud_button_notifications_toggled(toggled_on: bool) -> void:
 	if toggled_on:
@@ -57,3 +65,6 @@ func _on_hud_button_backpack_toggled(toggled_on: bool) -> void:
 func _on_hud_button_settings_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		settings_button_clicked.emit()
+
+func capture_mouse():
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)

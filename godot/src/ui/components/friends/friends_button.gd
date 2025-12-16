@@ -43,6 +43,7 @@ func _async_fetch_pending_count() -> void:
 
 
 func _on_button_clicked() -> void:
+	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
 
 

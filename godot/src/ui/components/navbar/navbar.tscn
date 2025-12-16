@@ -157,13 +157,13 @@ corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ls4bg"]
-
 [sub_resource type="ButtonGroup" id="ButtonGroup_ria76"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_650er"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_d3cqe"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_ckthm"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xbtqw"]
 
@@ -232,7 +232,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_ls4bg")
+button_group = SubResource("ButtonGroup_ria76")
 script = ExtResource("3_lur8b")
 sprite_frames_source = ExtResource("4_hvf0m")
 
@@ -241,7 +241,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_ria76")
+button_group = SubResource("ButtonGroup_650er")
 script = ExtResource("5_ly2kd")
 sprite_frames_source = ExtResource("6_fmmda")
 
@@ -250,7 +250,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_650er")
+button_group = SubResource("ButtonGroup_d3cqe")
 script = ExtResource("7_ly2kd")
 sprite_frames_source = ExtResource("7_hvf0m")
 
@@ -259,7 +259,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_d3cqe")
+button_group = SubResource("ButtonGroup_ckthm")
 script = ExtResource("8_fmmda")
 sprite_frames_source = ExtResource("8_ly2kd")
 

@@ -1,8 +1,9 @@
-[gd_scene load_steps=49 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=50 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
 [ext_resource type="Shader" uid="uid://c17t4i65mhoo0" path="res://src/ui/components/profile/profile.gdshader" id="3_4hw2j"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_54w24"]
 [ext_resource type="Texture2D" uid="uid://b6t3f0hltrjov" path="res://assets/ui/edit_icon.svg" id="3_gf7h4"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="3_oe5oo"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_4hw2j"]
@@ -137,6 +138,9 @@ theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
+script = ExtResource("3_54w24")
+default_margin = 20
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2

@@ -12,10 +12,13 @@ signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal deep_link_received
+signal open_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
 signal open_backpack
+signal open_discover
+signal close_menu
 
 enum CameraMode {
 	FIRST_PERSON = 0,
