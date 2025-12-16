@@ -73,13 +73,6 @@ func _ready():
 	_update_info()
 
 
-func _process(_delta):
-	# Update all player textures
-	for player in players:
-		if player and is_instance_valid(player):
-			player.update_texture()
-
-
 func _create_players():
 	for i in range(min(visible_players, TEST_VIDEOS.size())):
 		_create_player_panel(i)
