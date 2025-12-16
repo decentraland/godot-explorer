@@ -43,6 +43,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private var isWebViewOpen: Boolean = false
     private var overlayLayout: FrameLayout? = null
 
+    // ExoPlayer management
+    private val exoPlayers = mutableMapOf<Int, org.decentraland.godotexplorer.ExoPlayerWrapper>()
+    private var nextPlayerId = 1
     // Notification database instance
     private var notificationDatabase: NotificationDatabase? = null
 
@@ -1080,6 +1083,301 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     companion object {
         private const val CALENDAR_PERMISSION_REQUEST_CODE = 1001
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
+    }
+
+
+    // ==================== ExoPlayer Methods ====================
+
+    @UsedByGodot
+    fun createExoPlayer(): Int {
+        return try {
+            val playerId = nextPlayerId++
+            val act = activity ?: return -1
+
+            var player: org.decentraland.godotexplorer.ExoPlayerWrapper? = null
+            val latch = java.util.concurrent.CountDownLatch(1)
+
+            runOnUiThread {
+                try {
+                    player = org.decentraland.godotexplorer.ExoPlayerWrapper(act, playerId)
+                } catch (e: Exception) {
+                    Log.e(pluginName, "Error creating ExoPlayer: ${e.message}", e)
+                } finally {
+                    latch.countDown()
+                }
+            }
+
+            latch.await()
+
+            val createdPlayer = player ?: return -1
+            exoPlayers[playerId] = createdPlayer
+            playerId
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error creating ExoPlayer: ${e.message}", e)
+            -1
+        }
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetLastError(playerId: Int): String {
+        return exoPlayers[playerId]?.getInitError() ?: "No error or player not found"
+    }
+
+    @UsedByGodot
+    fun exoPlayerInitSurface(playerId: Int, width: Int, height: Int): Int {
+        return exoPlayers[playerId]?.initializeSurface(width, height) ?: -1
+    }
+
+    @UsedByGodot
+    fun exoPlayerUpdateTexture(playerId: Int): Boolean {
+        return exoPlayers[playerId]?.updateTexture() ?: false
+    }
+
+    @UsedByGodot
+    fun exoPlayerSetSourceUrl(playerId: Int, url: String): Boolean {
+        return exoPlayers[playerId]?.setSourceUrl(url) ?: false
+    }
+
+    @UsedByGodot
+    fun exoPlayerSetSourceLocal(playerId: Int, filePath: String): Boolean {
+        return exoPlayers[playerId]?.setSourceLocal(filePath) ?: false
+    }
+
+    @UsedByGodot
+    fun exoPlayerPlay(playerId: Int) {
+        exoPlayers[playerId]?.play()
+    }
+
+    @UsedByGodot
+    fun exoPlayerPause(playerId: Int) {
+        exoPlayers[playerId]?.pause()
+    }
+
+    @UsedByGodot
+    fun exoPlayerStop(playerId: Int) {
+        exoPlayers[playerId]?.stop()
+    }
+
+    @UsedByGodot
+    fun exoPlayerSetPosition(playerId: Int, positionMs: Long) {
+        exoPlayers[playerId]?.setPosition(positionMs)
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetPosition(playerId: Int): Long {
+        return exoPlayers[playerId]?.getPosition() ?: 0L
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetDuration(playerId: Int): Long {
+        return exoPlayers[playerId]?.getDuration() ?: 0L
+    }
+
+    @UsedByGodot
+    fun exoPlayerIsPlaying(playerId: Int): Boolean {
+        return exoPlayers[playerId]?.isPlaying() ?: false
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetVideoWidth(playerId: Int): Int {
+        return exoPlayers[playerId]?.getVideoWidth() ?: 0
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetVideoHeight(playerId: Int): Int {
+        return exoPlayers[playerId]?.getVideoHeight() ?: 0
+    }
+
+    @UsedByGodot
+    fun exoPlayerHasVideoSizeChanged(playerId: Int): Boolean {
+        return exoPlayers[playerId]?.hasVideoSizeChanged() ?: false
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetTextureWidth(playerId: Int): Int {
+        return exoPlayers[playerId]?.getTextureWidth() ?: 0
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetTextureHeight(playerId: Int): Int {
+        return exoPlayers[playerId]?.getTextureHeight() ?: 0
+    }
+
+    @UsedByGodot
+    fun exoPlayerSetVolume(playerId: Int, volume: Float) {
+        exoPlayers[playerId]?.setVolume(volume)
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetVolume(playerId: Int): Float {
+        return exoPlayers[playerId]?.getVolume() ?: 1.0f
+    }
+
+    @UsedByGodot
+    fun exoPlayerSetLooping(playerId: Int, loop: Boolean) {
+        exoPlayers[playerId]?.setLooping(loop)
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetInfo(playerId: Int): String {
+        return exoPlayers[playerId]?.getPlayerInfo() ?: "Player not found"
+    }
+
+    @UsedByGodot
+    fun exoPlayerGetPixelData(playerId: Int): ByteArray {
+        return exoPlayers[playerId]?.getPixelData() ?: ByteArray(0)
+    }
+
+    // ==================== ExoPlayer GPU Mode Methods ====================
+
+    /**
+     * Check if the player is using GPU mode (HardwareBuffer).
+     * @return true if GPU mode is active, false if using CPU mode
+     */
+    @UsedByGodot
+    fun exoPlayerIsGpuMode(playerId: Int): Boolean {
+        return exoPlayers[playerId]?.isGpuMode() ?: false
+    }
+
+    /**
+     * Check if a new HardwareBuffer frame is available (GPU mode only).
+     * @return true if a new frame is available for GPU texture update
+     */
+    @UsedByGodot
+    fun exoPlayerHasNewHardwareBuffer(playerId: Int): Boolean {
+        return exoPlayers[playerId]?.hasNewHardwareBuffer() ?: false
+    }
+
+    /**
+     * Get the native AHardwareBuffer* pointer for the current frame (GPU mode only).
+     * This pointer can be passed to Godot's ExternalTexture for zero-copy GPU rendering.
+     *
+     * After calling this, the frame is marked as consumed and exoPlayerHasNewHardwareBuffer()
+     * will return false until a new frame arrives from the video decoder.
+     *
+     * @return native AHardwareBuffer* pointer as a long (0 if not available or not in GPU mode)
+     */
+    @UsedByGodot
+    fun exoPlayerAcquireHardwareBufferPtr(playerId: Int): Long {
+        val player = exoPlayers[playerId] ?: return 0L
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            player.acquireHardwareBufferPtr()
+        } else {
+            0L
+        }
+    }
+
+    @UsedByGodot
+    fun exoPlayerRelease(playerId: Int): Boolean {
+        val player = exoPlayers.remove(playerId) ?: return false
+        player.release()
+        return true
+    }
+
+    @UsedByGodot
+    fun exoPlayerReleaseAll() {
+        exoPlayers.values.forEach { it.release() }
+        exoPlayers.clear()
+    }
+
+    // ==================== Memory Monitoring ====================
+
+    /**
+     * Get detailed memory information for the app.
+     * Returns a Dictionary with memory stats in MB.
+     */
+    @UsedByGodot
+    fun getMemoryInfo(): Dictionary {
+        val dict = Dictionary()
+        try {
+            val activityManager = activity?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            if (activityManager != null) {
+                val memInfo = ActivityManager.MemoryInfo()
+                activityManager.getMemoryInfo(memInfo)
+
+                // System-wide memory
+                dict["system_total_mb"] = memInfo.totalMem / (1024.0 * 1024.0)
+                dict["system_available_mb"] = memInfo.availMem / (1024.0 * 1024.0)
+                dict["system_low_memory"] = memInfo.lowMemory
+                dict["system_threshold_mb"] = memInfo.threshold / (1024.0 * 1024.0)
+
+                // App-specific memory (requires Debug.MemoryInfo)
+                val pids = intArrayOf(android.os.Process.myPid())
+                val processMemInfo = activityManager.getProcessMemoryInfo(pids)
+                if (processMemInfo.isNotEmpty()) {
+                    val appMem = processMemInfo[0]
+                    // Total PSS (Proportional Set Size) - best measure of actual memory use
+                    dict["app_total_pss_mb"] = appMem.totalPss / 1024.0
+                    // Private dirty - memory that can't be shared
+                    dict["app_private_dirty_mb"] = appMem.totalPrivateDirty / 1024.0
+                    // Shared dirty - memory shared with other processes
+                    dict["app_shared_dirty_mb"] = appMem.totalSharedDirty / 1024.0
+
+                    // Native heap (C/C++ allocations including Godot engine)
+                    dict["native_pss_mb"] = appMem.nativePss / 1024.0
+                    dict["native_private_dirty_mb"] = appMem.nativePrivateDirty / 1024.0
+
+                    // Dalvik/ART heap (Java/Kotlin objects)
+                    dict["dalvik_pss_mb"] = appMem.dalvikPss / 1024.0
+                    dict["dalvik_private_dirty_mb"] = appMem.dalvikPrivateDirty / 1024.0
+
+                    // Graphics memory (GPU allocations, textures, etc.)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        // These are summaries that include GL, EGL, and Vulkan memory
+                        dict["graphics_pss_mb"] = appMem.getMemoryStat("summary.graphics")?.toDouble()?.div(1024.0) ?: 0.0
+                        dict["gl_pss_mb"] = appMem.getMemoryStat("summary.gl")?.toDouble()?.div(1024.0) ?: 0.0
+                    }
+                }
+
+                // Runtime memory info
+                val runtime = Runtime.getRuntime()
+                dict["java_max_heap_mb"] = runtime.maxMemory() / (1024.0 * 1024.0)
+                dict["java_total_heap_mb"] = runtime.totalMemory() / (1024.0 * 1024.0)
+                dict["java_free_heap_mb"] = runtime.freeMemory() / (1024.0 * 1024.0)
+                dict["java_used_heap_mb"] = (runtime.totalMemory() - runtime.freeMemory()) / (1024.0 * 1024.0)
+
+                // Native heap from Debug
+                dict["native_heap_size_mb"] = android.os.Debug.getNativeHeapSize() / (1024.0 * 1024.0)
+                dict["native_heap_allocated_mb"] = android.os.Debug.getNativeHeapAllocatedSize() / (1024.0 * 1024.0)
+                dict["native_heap_free_mb"] = android.os.Debug.getNativeHeapFreeSize() / (1024.0 * 1024.0)
+            }
+        } catch (e: Exception) {
+            Log.e(pluginName, "Error getting memory info: ${e.message}")
+            dict["error"] = e.message ?: "Unknown error"
+        }
+        return dict
+    }
+
+    /**
+     * Force a garbage collection (for testing memory leaks).
+     * Note: This only suggests GC, doesn't guarantee immediate collection.
+     */
+    @UsedByGodot
+    fun forceGarbageCollection() {
+        System.gc()
+        Runtime.getRuntime().gc()
+    }
+
+    /**
+     * Get a formatted string summary of memory usage for display.
+     */
+    @UsedByGodot
+    fun getMemorySummary(): String {
+        val memInfo = getMemoryInfo()
+        val sb = StringBuilder()
+        sb.appendLine("=== ANDROID MEMORY ===")
+        sb.appendLine("App Total PSS: %.1f MB".format(memInfo.getOrDefault("app_total_pss_mb", 0.0)))
+        sb.appendLine("Native Heap: %.1f / %.1f MB".format(
+            memInfo.getOrDefault("native_heap_allocated_mb", 0.0),
+            memInfo.getOrDefault("native_heap_size_mb", 0.0)
+        ))
+        sb.appendLine("Java Heap: %.1f / %.1f MB".format(
+            memInfo.getOrDefault("java_used_heap_mb", 0.0),
+            memInfo.getOrDefault("java_max_heap_mb", 0.0)
+        ))
+        sb.appendLine("Graphics: %.1f MB".format(memInfo.getOrDefault("graphics_pss_mb", 0.0)))
+        sb.appendLine("System Available: %.1f MB".format(memInfo.getOrDefault("system_available_mb", 0.0)))
+        return sb.toString()
     }
 
 }

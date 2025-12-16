@@ -31,7 +31,14 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			return PackedStringArray([_plugin_name + "/bin/release/" + _plugin_name + "-release.aar"])
 
 	func _get_android_dependencies(platform, debug):
-		return PackedStringArray(["androidx.browser:browser:1.5.0"])
+		return PackedStringArray([
+			"androidx.browser:browser:1.5.0",
+			# ExoPlayer dependencies for video playback
+			"androidx.media3:media3-exoplayer:1.4.1",
+			"androidx.media3:media3-exoplayer-dash:1.4.1",
+			"androidx.media3:media3-exoplayer-hls:1.4.1",
+			"androidx.media3:media3-ui:1.4.1"
+		])
 
 	func _get_name():
 		return _plugin_name
