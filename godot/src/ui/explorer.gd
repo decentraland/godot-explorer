@@ -34,7 +34,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var url_popup = %UrlPopup
 @onready var jump_in_popup = %JumpInPopup
 
-@onready var panel_profile: Panel = %Panel_Profile
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
 @onready var label_version = %Label_Version
@@ -110,7 +109,9 @@ func _ready():
 
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)
-	Global.open_chat.connect(_on_panel_chat_on_open_chat)
+	Global.open_chat.connect(_on_global_open_chat)
+	Global.open_discover.connect(_on_discover_open)
+	Global.on_menu_close.connect(_on_menu_close)
 
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
@@ -558,16 +559,6 @@ func hide_menu():
 	release_mouse()
 
 
-func _on_mini_map_pressed():
-	control_menu.show_map()
-	release_mouse()
-
-
-func _on_button_open_chat_pressed():
-	panel_chat.async_start_chat()
-	release_mouse()
-
-
 func set_cursor_position(position: Vector2):
 	if Global.scene_runner.raycast_use_cursor_position:
 		var crosshair_position = position - (label_crosshair.size / 2) - Vector2(0, 1)
@@ -692,7 +683,17 @@ func _get_viewport_scale_factors() -> Vector2:
 	return Vector2(x_factor, y_factor)
 
 
+func _on_global_open_chat() -> void:
+	# Cuando viene de Global.open_chat, iniciar el chat y manejar la UI
+	safe_margin_container_hud.hide()
+	chat_container.show()
+	panel_chat.async_start_chat()
+	release_mouse()
+
+
 func _on_panel_chat_on_open_chat() -> void:
+	# Cuando viene de on_open_chat del panel_chat, solo manejar la UI
+	# NO llamar a async_start_chat() porque ya se está ejecutando (evita recursión)
 	safe_margin_container_hud.hide()
 	chat_container.show()
 
@@ -751,23 +752,23 @@ func _on_notifications_panel_closed() -> void:
 	capture_mouse()
 
 
-func _on_notification_queued(notification: Dictionary) -> void:
+func _on_notification_queued(notification_d: Dictionary) -> void:
 	# Only show notifications if not loading
 	if not _is_loading:
-		_show_notification_toast(notification)
+		_show_notification_toast(notification_d)
 	else:
 		# Store the notification to show after loading finishes
 		if _pending_notification_toast.is_empty():
-			_pending_notification_toast = notification
+			_pending_notification_toast = notification_d
 
 
-func _show_notification_toast(notification: Dictionary) -> void:
+func _show_notification_toast(notification_d: Dictionary) -> void:
 	# Filter out friend request notifications from blocked users
-	var notif_type = notification.get("type", "")
+	var notif_type = notification_d.get("type", "")
 	if notif_type == "social_service_friendship_request":
 		var sender_address = ""
-		if "metadata" in notification and notification["metadata"] is Dictionary:
-			var metadata = notification["metadata"]
+		if "metadata" in notification_d and notification_d["metadata"] is Dictionary:
+			var metadata = notification_d["metadata"]
 			if "sender" in metadata and metadata["sender"] is Dictionary:
 				sender_address = metadata["sender"].get("address", "")
 
@@ -794,9 +795,9 @@ func _on_toast_closed() -> void:
 	NotificationsManager.dequeue_notification()
 
 
-func _on_toast_mark_as_read(notification: Dictionary) -> void:
+func _on_toast_mark_as_read(notification_d: Dictionary) -> void:
 	# Mark notification as read via drag gesture
-	var notification_id = notification.get("id", "")
+	var notification_id = notification_d.get("id", "")
 	if not notification_id.is_empty():
 		var ids = PackedStringArray([notification_id])
 		NotificationsManager.mark_as_read(ids)
@@ -815,9 +816,9 @@ func _on_loading_finished() -> void:
 		_pending_notification_toast = {}
 
 
-func _on_notification_clicked(notification: Dictionary) -> void:
+func _on_notification_clicked(notification_d: Dictionary) -> void:
 	# Handle friend request notification clicks - open friends panel on friends tab
-	var notif_type = notification.get("type", "")
+	var notif_type = notification_d.get("type", "")
 
 	if notif_type == "friend_request_received":
 		# Open friends panel on friends tab
@@ -856,3 +857,12 @@ func _close_all_panels():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	joypad.show()
+
+func _on_discover_open():
+	navbar.button.set_pressed_no_signal(false)
+	navbar.hide()
+	
+	
+func _on_menu_close():
+	if !navbar.visible:
+		navbar.show()

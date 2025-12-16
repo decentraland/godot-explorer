@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=32 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" uid="uid://kfsjxah2khkg" path="res://src/ui/components/discover/places/custom_places_generator.tscn" id="7_ehm1e"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="8_t3lcc"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="9_2ra1o"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="9_pwm2g"]
 [ext_resource type="Texture2D" uid="uid://cj4xqne10w3ka" path="res://assets/ui/discover/genesis_banner.png" id="11_t2lm2"]
@@ -201,6 +202,18 @@ theme_type_variation = &"SnowButton"
 theme_override_font_sizes/font_size = 16
 text = "Clear filter"
 icon = ExtResource("4_ck13e")
+
+[node name="Button_Close" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 41)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("6_5g6gd")
+theme_type_variation = &"SnowButton"
+theme_override_constants/h_separation = 0
+theme_override_constants/icon_max_width = 10
+theme_override_font_sizes/font_size = 16
+icon = ExtResource("9_g4fdo")
 
 [node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -487,6 +500,7 @@ visible = false
 [connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
 [connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
 [connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]

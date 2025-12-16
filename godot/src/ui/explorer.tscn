@@ -179,10 +179,10 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(370, 60)
 layout_mode = 2
 theme = ExtResource("4_2vs87")
-theme_override_constants/separation = 10
+theme_override_constants/separation = 30
 
 [node name="Chatbar" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" instance=ExtResource("9_u4dfr")]
-custom_minimum_size = Vector2(225, 0)
+custom_minimum_size = Vector2(200, 66)
 layout_mode = 2
 
 [node name="Panel" type="PanelContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu"]
@@ -191,7 +191,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_c5h7v")
 
 [node name="Button_LoadScenes" type="Button" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Panel"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 60)
+custom_minimum_size = Vector2(66, 60)
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/icon_max_width = 30
@@ -298,7 +298,6 @@ vertical_alignment = 1
 
 [node name="EmoteWheel" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("21_pows0")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI"]

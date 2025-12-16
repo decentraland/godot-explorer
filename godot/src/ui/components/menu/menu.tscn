@@ -27,15 +27,15 @@ gradient = SubResource("Gradient_6v8vt")
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_080im"]
 bg_color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
+[sub_resource type="ButtonGroup" id="ButtonGroup_2fqoa"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_rdch8"]
+
 [sub_resource type="ButtonGroup" id="ButtonGroup_udswp"]
 resource_local_to_scene = false
 resource_name = "Tabs"
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_rdch8"]
-
 [sub_resource type="ButtonGroup" id="ButtonGroup_7v87b"]
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_0o5gq"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4hsmp"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -154,11 +154,19 @@ size_flags_horizontal = 3
 focus_mode = 2
 alignment = 1
 
-[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
+[node name="HudButton_Discover" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
-button_group = SubResource("ButtonGroup_udswp")
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_pressed = true
+button_group = SubResource("ButtonGroup_2fqoa")
+icon_alignment = 1
+vertical_icon_alignment = 0
+script = ExtResource("13_2fqoa")
+sprite_frames_source = ExtResource("15_rdch8")
+sprite_frames_scale = Vector2(1, 1)
 
 [node name="HudButton_Backpack" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
 unique_name_in_owner = true
@@ -173,18 +181,11 @@ script = ExtResource("16_p7nyr")
 sprite_frames_source = ExtResource("17_iib41")
 sprite_frames_scale = Vector2(1, 1)
 
-[node name="HudButton_Discover" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
+[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_7v87b")
-icon_alignment = 1
-vertical_icon_alignment = 0
-script = ExtResource("13_2fqoa")
-sprite_frames_source = ExtResource("15_rdch8")
-sprite_frames_scale = Vector2(1, 1)
+button_group = SubResource("ButtonGroup_udswp")
 
 [node name="HudButton_Settings" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
 unique_name_in_owner = true
@@ -192,7 +193,7 @@ custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_0o5gq")
+button_group = SubResource("ButtonGroup_7v87b")
 icon_alignment = 1
 vertical_icon_alignment = 0
 script = ExtResource("18_3id7u")

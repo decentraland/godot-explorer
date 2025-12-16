@@ -1,9 +1,5 @@
 extends Control
 
-signal notifications_button_clicked
-signal friends_button_clicked
-signal backpack_button_clicked
-signal settings_button_clicked
 signal close_all
 signal navbar_opened
 
@@ -14,6 +10,8 @@ signal navbar_opened
 @onready var hud_button_notifications: Button = %HudButton_Notifications
 @onready var hud_button_backpack: Button = %HudButton_Backpack
 @onready var hud_button_settings: Button = %HudButton_Settings
+@onready var button: Button = %Button
+@onready var portrait_button_profile: Button = %Portrait_Button_Profile
 
 
 
@@ -24,6 +22,7 @@ func _ready() -> void:
 	hud_button_notifications.button_group = btn_group
 	hud_button_backpack.button_group = btn_group
 	hud_button_settings.button_group = btn_group
+	portrait_button_profile.button_group = btn_group
 	# Asegurar que siempre haya un botón presionado al inicio
 	# El ButtonGroup con allow_unpress = false garantiza que siempre haya uno presionado
 
@@ -47,24 +46,11 @@ func _on_button_toggled(toggled_on: bool) -> void:
 		animation_player.play("close")
 		close_all.emit()
 
-func _on_hud_button_notifications_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		notifications_button_clicked.emit()
-
-
-func _on_hud_button_friends_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		friends_button_clicked.emit()
-
-
-func _on_hud_button_backpack_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		backpack_button_clicked.emit()
-
-
-func _on_hud_button_settings_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		settings_button_clicked.emit()
 
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+func _on_portrait_button_profile_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Global.open_own_profile.emit()

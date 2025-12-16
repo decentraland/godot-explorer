@@ -158,3 +158,7 @@ func _async_handle_event_notification(event_id: String) -> void:
 
 	# Show event details
 	on_event_pressed(event_data)
+
+
+func _on_button_close_pressed() -> void:
+	Global.close_menu.emit()

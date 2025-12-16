@@ -91,6 +91,7 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var menu: ColorRect = %Menu
 @onready var mutual_friends: Control = %MutualFriends
 @onready var profile_header: VBoxContainer = %ProfileHeader
+@onready var control_own_and_landscape: Control = %Control_OwnAndLandscape
 
 
 func _ready() -> void:
@@ -112,8 +113,10 @@ func _ready() -> void:
 
 	if closable:
 		button_close_profile.show()
+		control_own_and_landscape.hide()
 	else:
 		button_close_profile.hide()
+		control_own_and_landscape.show()
 
 	_deploy_timeout_timer = Timer.new()
 	_deploy_timeout_timer.wait_time = 15.0

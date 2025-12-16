@@ -18,6 +18,7 @@ signal open_notifications_panel
 signal open_settings
 signal open_backpack
 signal open_discover
+signal open_own_profile
 signal close_menu
 
 enum CameraMode {

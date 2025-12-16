@@ -24,7 +24,6 @@ var last_selected_emote_urn: String = ""
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
 @onready var control_wheel: Control = %Control_Wheel
-@onready var button_emote_action = %Button_EmoteAction
 @onready var button_emotes: Button = $Button_Emotes
 
 

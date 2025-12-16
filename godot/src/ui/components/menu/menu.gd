@@ -81,6 +81,7 @@ func _ready():
 	Global.open_settings.connect(show_settings)
 	Global.open_backpack.connect(show_backpack)
 	Global.open_discover.connect(show_discover)
+	Global.open_own_profile.connect(show_own_profile)
 	Global.close_menu.connect(close)
 
 
