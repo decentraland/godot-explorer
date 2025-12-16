@@ -5,9 +5,10 @@
 [resource]
 background_mode = 2
 sky = ExtResource("1_mk51q")
-ambient_light_source = 3
-ambient_light_color = Color(0.67077476, 0.05978684, 0.45939875, 1)
-ambient_light_sky_contribution = 0.2
+ambient_light_source = 2
+ambient_light_color = Color(0.98744863, 0.5753482, 0.76988745, 1)
+ambient_light_sky_contribution = 0.15
+ambient_light_energy = 0.5
 reflected_light_source = 2
 tonemap_mode = 3
 glow_enabled = true
