@@ -4,14 +4,11 @@ extends Node
 ## ExoPlayer wrapper for Android video playback with GPU texture support
 ##
 ## This class provides a high-level interface to the Android ExoPlayer through
-## the dcl-godot-android plugin. It supports two rendering modes:
+## the dcl-godot-android plugin.
 ##
-## 1. GPU Mode (preferred, API 29+): Uses ExternalTexture with AHardwareBuffer
+## GPU Mode: Uses ExternalTexture with AHardwareBuffer
 ##    for zero-copy GPU texture sharing. Video frames go directly from the
 ##    video decoder to the GPU without any CPU readback.
-##
-## 2. CPU Mode (fallback): Uses ImageTexture with CPU-based YUV to RGBA
-##    conversion. This is slower but works on all devices.
 ##
 ## The texture is automatically resized when the actual video dimensions become
 ## known after loading a video source.
@@ -25,14 +22,9 @@ var plugin: Object = null
 # Player ID from native side
 var player_id: int = -1
 
-# Rendering mode
-var is_gpu_mode: bool = false
-
 # GPU mode: ExternalTexture for zero-copy GPU rendering
 var external_texture: ExternalTexture = null
 
-# CPU mode: ImageTexture for fallback rendering
-var video_texture: ImageTexture = null
 var video_image: Image = null
 
 # Video properties
@@ -63,8 +55,7 @@ func _exit_tree():
 
 ## Initialize the video texture with specified dimensions
 ## This should be called before setting the video source
-## If cpu_fallback_texture is provided, it will be used for CPU mode fallback
-func init_texture(width: int, height: int, cpu_fallback_texture: ImageTexture = null) -> bool:
+func init_texture(width: int, height: int) -> bool:
 	if not plugin or player_id <= 0:
 		push_error("ExoPlayer: Player not initialized")
 		return false
@@ -72,29 +63,16 @@ func init_texture(width: int, height: int, cpu_fallback_texture: ImageTexture = 
 	video_width = width
 	video_height = height
 
-	# Initialize surface - returns: 1=CPU mode, 2=GPU mode, -1=error
+	# Initialize surface - returns: 1=success, -1=error
 	var result = plugin.exoPlayerInitSurface(player_id, width, height)
 	if result <= 0:
 		push_error("ExoPlayer: Failed to initialize surface")
 		return false
 
-	# Check which mode we're in
-	is_gpu_mode = plugin.exoPlayerIsGpuMode(player_id)
-
-	if is_gpu_mode:
-		# GPU mode: Create ExternalTexture for zero-copy rendering
-		external_texture = ExternalTexture.new()
-		external_texture.set_size(Vector2i(width, height))
-		print("ExoPlayer: Initialized in GPU mode (%dx%d)" % [width, height])
-	else:
-		# CPU mode: Create ImageTexture for fallback
-		video_image = Image.create(width, height, false, Image.FORMAT_RGBA8)
-		if cpu_fallback_texture:
-			video_texture = cpu_fallback_texture
-			video_texture.set_image(video_image)
-		else:
-			video_texture = ImageTexture.create_from_image(video_image)
-		print("ExoPlayer: Initialized in CPU mode (%dx%d)" % [width, height])
+	# GPU mode: Create ExternalTexture for zero-copy rendering
+	external_texture = ExternalTexture.new()
+	external_texture.set_size(Vector2i(width, height))
+	print("ExoPlayer: Initialized in GPU mode (%dx%d)" % [width, height])
 
 	return true
 
@@ -235,11 +213,9 @@ func get_player_info() -> String:
 
 
 ## Get the video texture for rendering
-## Returns ExternalTexture in GPU mode, ImageTexture in CPU mode
+## Returns ExternalTexture in GPU mode
 func get_texture() -> Texture2D:
-	if is_gpu_mode:
-		return external_texture
-	return video_texture
+	return external_texture
 
 
 ## Update the video texture (call this every frame when playing)
@@ -252,15 +228,14 @@ func update_texture() -> bool:
 	if plugin.exoPlayerHasVideoSizeChanged(player_id):
 		var new_width = plugin.exoPlayerGetVideoWidth(player_id)
 		var new_height = plugin.exoPlayerGetVideoHeight(player_id)
-		if new_width > 0 and new_height > 0 and (new_width != video_width or new_height != video_height):
+		if (
+			new_width > 0
+			and new_height > 0
+			and (new_width != video_width or new_height != video_height)
+		):
 			_reinitialize_surface(new_width, new_height)
 
-	if is_gpu_mode:
-		# GPU mode: Update ExternalTexture with HardwareBuffer
-		return _update_texture_gpu()
-	else:
-		# CPU mode: Update ImageTexture with pixel data
-		return _update_texture_cpu()
+	return _update_texture_gpu()
 
 
 ## GPU mode texture update - zero-copy path
@@ -280,31 +255,15 @@ func _update_texture_gpu() -> bool:
 	return true
 
 
-## CPU mode texture update - fallback path with YUV->RGBA conversion
-func _update_texture_cpu() -> bool:
-	# Update the SurfaceTexture with the latest video frame from ExoPlayer
-	var success = plugin.exoPlayerUpdateTexture(player_id)
-	if not success:
-		return false
-
-	# Get pixel data from the plugin (CPU readback)
-	var pixel_data: PackedByteArray = plugin.exoPlayerGetPixelData(player_id)
-	if pixel_data.size() == 0:
-		return false
-
-	# Update the image with the pixel data
-	if video_image and pixel_data.size() == video_width * video_height * 4:
-		video_image.set_data(video_width, video_height, false, Image.FORMAT_RGBA8, pixel_data)
-		video_texture.update(video_image)
-		return true
-
-	return false
-
-
 ## Reinitialize the surface and texture with new dimensions
 ## Called automatically when video size changes
 func _reinitialize_surface(new_width: int, new_height: int) -> void:
-	print("ExoPlayer: Reinitializing surface from %dx%d to %dx%d" % [video_width, video_height, new_width, new_height])
+	print(
+		(
+			"ExoPlayer: Reinitializing surface from %dx%d to %dx%d"
+			% [video_width, video_height, new_width, new_height]
+		)
+	)
 
 	video_width = new_width
 	video_height = new_height
@@ -315,23 +274,14 @@ func _reinitialize_surface(new_width: int, new_height: int) -> void:
 		push_error("ExoPlayer: Failed to reinitialize surface with new dimensions")
 		return
 
-	# Check if mode changed
-	var new_gpu_mode = plugin.exoPlayerIsGpuMode(player_id)
-
-	if new_gpu_mode:
-		# GPU mode: Update ExternalTexture size
-		if not external_texture:
-			external_texture = ExternalTexture.new()
-		external_texture.set_size(Vector2i(new_width, new_height))
-		is_gpu_mode = true
-	else:
-		# CPU mode: Create new image and texture with proper dimensions
-		video_image = Image.create(new_width, new_height, false, Image.FORMAT_RGBA8)
-		if video_texture:
-			video_texture.set_image(video_image)
-		else:
-			video_texture = ImageTexture.create_from_image(video_image)
-		is_gpu_mode = false
+	# GPU mode: Update ExternalTexture size
+	if not external_texture:
+		external_texture = ExternalTexture.new()
+	external_texture.set_size(Vector2i(new_width, new_height))
 
 	# Emit signal to notify listeners of the size change
 	video_size_changed.emit(new_width, new_height)
+
+
+func _process(_delta):
+	update_texture()

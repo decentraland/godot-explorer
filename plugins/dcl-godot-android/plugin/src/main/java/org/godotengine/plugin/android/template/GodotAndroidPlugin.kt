@@ -1129,11 +1129,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     @UsedByGodot
-    fun exoPlayerUpdateTexture(playerId: Int): Boolean {
-        return exoPlayers[playerId]?.updateTexture() ?: false
-    }
-
-    @UsedByGodot
     fun exoPlayerSetSourceUrl(playerId: Int, url: String): Boolean {
         return exoPlayers[playerId]?.setSourceUrl(url) ?: false
     }
@@ -1223,21 +1218,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return exoPlayers[playerId]?.getPlayerInfo() ?: "Player not found"
     }
 
-    @UsedByGodot
-    fun exoPlayerGetPixelData(playerId: Int): ByteArray {
-        return exoPlayers[playerId]?.getPixelData() ?: ByteArray(0)
-    }
-
     // ==================== ExoPlayer GPU Mode Methods ====================
-
-    /**
-     * Check if the player is using GPU mode (HardwareBuffer).
-     * @return true if GPU mode is active, false if using CPU mode
-     */
-    @UsedByGodot
-    fun exoPlayerIsGpuMode(playerId: Int): Boolean {
-        return exoPlayers[playerId]?.isGpuMode() ?: false
-    }
 
     /**
      * Check if a new HardwareBuffer frame is available (GPU mode only).

@@ -56,9 +56,6 @@ func _process(_delta):
 	if not player:
 		return
 
-	# Always try to update texture (handles buffering and playing states)
-	player.update_texture()
-
 	# Update UI with player state when playing
 	if player.is_playing():
 		# Update position slider (block signal to prevent seek feedback loop)

@@ -80,8 +80,6 @@ func _update_display():
 
 	# Process time breakdown
 	var process_time := Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
-	var _physics_time := Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
-	var _navigation_time := Performance.get_monitor(Performance.TIME_NAVIGATION_PROCESS) * 1000.0
 	text += "Process: %.2f ms\n" % process_time
 
 	# Memory
@@ -109,7 +107,6 @@ func _update_display():
 	# Video player specific (if set)
 	if video_player and is_instance_valid(video_player):
 		text += "\n=== VIDEO PLAYER ===\n"
-		text += "Mode: %s\n" % ("GPU" if video_player.is_gpu_mode else "CPU")
 		text += "Size: %dx%d\n" % [video_player.video_width, video_player.video_height]
 		text += "Playing: %s\n" % str(video_player.is_playing())
 		text += (

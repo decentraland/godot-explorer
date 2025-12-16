@@ -29,18 +29,14 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * This class decodes video using hardware acceleration via ImageReader.
  *
- * Two modes are supported:
- * 1. GPU Mode (API 29+): Uses HardwareBuffer for zero-copy GPU texture sharing.
+ * GPU Mode (API 29+): Uses HardwareBuffer for zero-copy GPU texture sharing.
  *    The HardwareBuffer is passed directly to Godot's Vulkan renderer.
- * 2. CPU Mode (fallback): Uses YUV_420_888 format, converts to RGBA on CPU,
- *    and provides the pixel data as a ByteArray for Godot to consume.
  *
  * Architecture:
  * - ExoPlayer runs on the main thread (Android requirement)
  * - Video frames are decoded to an ImageReader surface
  * - ImageReader callback runs on a background thread, storing the latest frame
  * - GPU mode: getHardwareBufferPtr() returns native AHardwareBuffer* for Vulkan import
- * - CPU mode: updateTexture() converts YUV->RGBA, getPixelData() returns the byte array
  */
 class ExoPlayerWrapper(private val context: Context, private val playerId: Int) {
     private val TAG = "ExoPlayerWrapper"
@@ -75,8 +71,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
 
     private var initError: String? = null
 
-    // GPU mode: HardwareBuffer for zero-copy texture sharing
-    private var useGpuMode: Boolean = false
     @Volatile
     private var latestHardwareBuffer: HardwareBuffer? = null
     // Keep the Image alive while we're using its HardwareBuffer
@@ -89,14 +83,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     @Volatile
     private var hardwareBufferConsumed: Boolean = true
     private val hardwareBufferLock = Any()
-
-    // CPU mode: Latest captured image (set by ImageReader callback, consumed by updateTexture)
-    @Volatile
-    private var latestImage: android.media.Image? = null
-    private val imageLock = Any()
-
-    // CPU mode: Pixel buffer for RGBA data (consumed by Godot)
-    private var pixelBufferArray: ByteArray? = null
 
     init {
         initializePlayer()
@@ -226,10 +212,9 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
      *
      * @param width Desired frame width
      * @param height Desired frame height
-     * @param preferGpuMode If true, try to use GPU mode with HardwareBuffer (API 29+)
-     * @return 1 on success (CPU mode), 2 on success (GPU mode), -1 on failure
+     * @return 1 on success (CPU mode), -1 on failure
      */
-    fun initializeSurface(width: Int, height: Int, preferGpuMode: Boolean = true): Int {
+    fun initializeSurface(width: Int, height: Int): Int {
         return try {
             cleanupSurface()
 
@@ -242,53 +227,13 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
             // Try GPU mode if requested and API level supports it
             // GPU mode uses HardwareBuffer -> AHardwareBuffer -> Vulkan import with YCbCr conversion.
             // The YCbCr-to-RGB conversion is performed by Godot's copy_effects shader.
-            if (preferGpuMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val gpuResult = initializeSurfaceGpuMode(width, height)
-                if (gpuResult > 0) {
-                    return gpuResult
-                }
-                // Fall back to CPU mode
-                Log.w(TAG, "GPU mode failed, falling back to CPU mode")
+            val gpuResult = initializeSurfaceGpuMode(width, height)
+            if (gpuResult > 0) {
+                gpuResult
+            } else {
+                Log.e(TAG, "Failed to initialize surface")
+                -1
             }
-            Log.d(TAG, "Using CPU mode for video decoding")
-
-            // CPU mode: Use YUV_420_888 format
-            useGpuMode = false
-            imageReader = ImageReader.newInstance(
-                width, height,
-                ImageFormat.YUV_420_888,
-                3
-            ).apply {
-                setOnImageAvailableListener({ reader ->
-                    try {
-                        val image = reader.acquireLatestImage()
-                        if (image != null) {
-                            synchronized(imageLock) {
-                                latestImage?.close()
-                                latestImage = image
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in ImageReader callback: ${e.message}")
-                    }
-                }, imageReaderHandler)
-            }
-
-            surface = imageReader!!.surface
-            pixelBufferArray = ByteArray(width * height * 4)
-
-            val latch = CountDownLatch(1)
-            mainHandler.post {
-                try {
-                    player?.setVideoSurface(surface)
-                } finally {
-                    latch.countDown()
-                }
-            }
-            latch.await(2, TimeUnit.SECONDS)
-
-            Log.d(TAG, "Initialized surface in CPU mode: ${width}x${height}")
-            1  // CPU mode success
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize surface", e)
             -1
@@ -340,7 +285,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
             }
 
             surface = imageReader!!.surface
-            useGpuMode = true
 
             val latch = CountDownLatch(1)
             mainHandler.post {
@@ -353,112 +297,12 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
             latch.await(2, TimeUnit.SECONDS)
 
             Log.d(TAG, "Initialized surface in GPU mode: ${width}x${height}")
-            2  // GPU mode success
+            1
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize GPU mode surface: ${e.message}", e)
             -1
         }
     }
-
-    /**
-     * Update the texture with the latest video frame.
-     * Call this from Godot's render thread each frame.
-     *
-     * @return true if a new frame was processed, false otherwise
-     */
-    fun updateTexture(): Boolean {
-        val image: android.media.Image?
-        synchronized(imageLock) {
-            image = latestImage
-            latestImage = null
-        }
-
-        if (image == null) {
-            return false
-        }
-
-        return try {
-            convertYuvToRgba(image)
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to process frame: ${e.message}", e)
-            false
-        } finally {
-            image.close()
-        }
-    }
-
-    /**
-     * Convert YUV_420_888 image to RGBA byte array.
-     * Uses integer math for better performance.
-     */
-    private fun convertYuvToRgba(image: android.media.Image) {
-        val array = pixelBufferArray ?: return
-
-        val yPlane = image.planes[0]
-        val uPlane = image.planes[1]
-        val vPlane = image.planes[2]
-
-        val yBuffer = yPlane.buffer
-        val uBuffer = uPlane.buffer
-        val vBuffer = vPlane.buffer
-
-        val yRowStride = yPlane.rowStride
-        val uvRowStride = uPlane.rowStride
-        val uvPixelStride = uPlane.pixelStride
-
-        val width = image.width
-        val height = image.height
-
-        var outputIndex = 0
-
-        for (row in 0 until height) {
-            val yRowOffset = row * yRowStride
-            val uvRowOffset = (row shr 1) * uvRowStride
-
-            for (col in 0 until width) {
-                val yIndex = yRowOffset + col
-                val uvIndex = uvRowOffset + (col shr 1) * uvPixelStride
-
-                val y = (yBuffer.get(yIndex).toInt() and 0xFF)
-                val u = (uBuffer.get(uvIndex).toInt() and 0xFF) - 128
-                val v = (vBuffer.get(uvIndex).toInt() and 0xFF) - 128
-
-                // YUV to RGB conversion using integer math (BT.601)
-                // R = Y + 1.402 * V
-                // G = Y - 0.344 * U - 0.714 * V
-                // B = Y + 1.772 * U
-                var r = y + ((1436 * v) shr 10)
-                var g = y - ((352 * u + 731 * v) shr 10)
-                var b = y + ((1815 * u) shr 10)
-
-                // Clamp to [0, 255]
-                r = if (r < 0) 0 else if (r > 255) 255 else r
-                g = if (g < 0) 0 else if (g > 255) 255 else g
-                b = if (b < 0) 0 else if (b > 255) 255 else b
-
-                array[outputIndex++] = r.toByte()
-                array[outputIndex++] = g.toByte()
-                array[outputIndex++] = b.toByte()
-                array[outputIndex++] = 0xFF.toByte()  // Alpha
-            }
-        }
-    }
-
-    /**
-     * Get the RGBA pixel data from the latest frame.
-     * Call this after updateTexture() returns true.
-     *
-     * @return ByteArray containing RGBA pixel data, or null if unavailable
-     */
-    fun getPixelData(): ByteArray? = pixelBufferArray
-
-    /**
-     * Check if GPU mode is active.
-     *
-     * @return true if using GPU mode with HardwareBuffer, false if using CPU mode
-     */
-    fun isGpuMode(): Boolean = useGpuMode
 
     /**
      * Check if a new HardwareBuffer frame is available (GPU mode only).
@@ -467,7 +311,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
      * @return true if a new frame is available and hasn't been consumed yet
      */
     fun hasNewHardwareBuffer(): Boolean {
-        if (!useGpuMode) return false
         synchronized(hardwareBufferLock) {
             return latestHardwareBuffer != null && !hardwareBufferConsumed
         }
@@ -481,7 +324,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
      */
     @RequiresApi(Build.VERSION_CODES.Q)
     fun getHardwareBuffer(): HardwareBuffer? {
-        if (!useGpuMode) return null
         synchronized(hardwareBufferLock) {
             return latestHardwareBuffer
         }
@@ -498,7 +340,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
      */
     @RequiresApi(Build.VERSION_CODES.Q)
     fun acquireHardwareBufferPtr(): Long {
-        if (!useGpuMode) return 0L
         synchronized(hardwareBufferLock) {
             val buffer = latestHardwareBuffer ?: return 0L
             // Mark frame as consumed so we don't process it again
@@ -643,11 +484,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
 
     private fun cleanupSurface() {
         try {
-            // Clean up CPU mode resources
-            synchronized(imageLock) {
-                latestImage?.close()
-                latestImage = null
-            }
 
             // Clean up GPU mode resources
             synchronized(hardwareBufferLock) {
@@ -670,9 +506,6 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
 
             surface?.release()
             surface = null
-
-            pixelBufferArray = null
-            useGpuMode = false
         } catch (e: Exception) {
             Log.e(TAG, "Error cleaning up surface", e)
         }

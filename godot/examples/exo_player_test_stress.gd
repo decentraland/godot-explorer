@@ -230,25 +230,19 @@ func _update_status(index: int, status: String):
 	var status_label = panel.get_node("VBoxContainer/StatusLabel") as Label
 	if status_label:
 		var player = players[index]
-		var mode = "GPU" if player.is_gpu_mode else "CPU"
 		var size = "%dx%d" % [player.video_width, player.video_height]
-		status_label.text = "%s [%s] %s" % [status, mode, size]
+		status_label.text = "%s %s" % [status, size]
 
 
 func _update_info():
 	var total_players = players.size()
 	var playing_count = 0
-	var gpu_count = 0
 
 	for player in players:
 		if player.is_playing():
 			playing_count += 1
-		if player.is_gpu_mode:
-			gpu_count += 1
 
-	info_label.text = (
-		"Players: %d | Playing: %d | GPU Mode: %d" % [total_players, playing_count, gpu_count]
-	)
+	info_label.text = ("Players: %d | Playing: %d | GPU Mode: %d" % [total_players, playing_count])
 
 
 func _on_load_all_pressed():
@@ -280,8 +274,6 @@ func _on_add_player_pressed():
 
 func _on_remove_player_pressed():
 	if players.size() > 1:
-		var _last_index = players.size() - 1
-
 		# Remove player
 		var player = players.pop_back()
 		if player:
