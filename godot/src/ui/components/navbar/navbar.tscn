@@ -1,13 +1,16 @@
-[gd_scene load_steps=16 format=3 uid="uid://btl8ag3s7oanm"]
+[gd_scene load_steps=23 format=3 uid="uid://btl8ag3s7oanm"]
 
 [ext_resource type="Script" uid="uid://cmhycf7qy54n5" path="res://src/ui/components/navbar/navbar.gd" id="1_40xfh"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="2_1xf7s"]
 [ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="2_5wifw"]
-[ext_resource type="ButtonGroup" uid="uid://cl8hx40tmfmwj" path="res://src/ui/explorer_right_buttons.tres" id="3_hvf0m"]
 [ext_resource type="Script" uid="uid://dqervv7c0nbk0" path="res://src/ui/components/friends/friends_button.gd" id="3_lur8b"]
 [ext_resource type="SpriteFrames" uid="uid://gq4877nacgyh" path="res://src/ui/components/friends/friends_animation.tres" id="4_hvf0m"]
 [ext_resource type="Script" uid="uid://cfwp61u2tjxyh" path="res://src/ui/components/notifications/notification_bell_button.gd" id="5_ly2kd"]
 [ext_resource type="SpriteFrames" uid="uid://cahxyogw018tq" path="res://assets/ui/notifications/bell_animation.tres" id="6_fmmda"]
+[ext_resource type="SpriteFrames" uid="uid://pdugkxtvb5a2" path="res://assets/animations/backpack_animation.tres" id="7_hvf0m"]
+[ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/components/backpack/backpack_button.gd" id="7_ly2kd"]
+[ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/components/settings/settings_button.gd" id="8_fmmda"]
+[ext_resource type="SpriteFrames" uid="uid://bkr6jgehk1ji0" path="res://assets/animations/settings_animation.tres" id="8_ly2kd"]
 
 [sub_resource type="Animation" id="Animation_xbtqw"]
 length = 0.001
@@ -154,6 +157,14 @@ corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
 
+[sub_resource type="ButtonGroup" id="ButtonGroup_ls4bg"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_ria76"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_650er"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_d3cqe"]
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xbtqw"]
 
 [node name="Navbar" type="Control"]
@@ -202,7 +213,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 0
 offset_right = 80.0
-offset_bottom = 212.0
+offset_bottom = 340.0
 grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_5wifw")
 
@@ -217,20 +228,40 @@ layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_n2t8a")
 
 [node name="HudButton_Friends" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = ExtResource("3_hvf0m")
+button_group = SubResource("ButtonGroup_ls4bg")
 script = ExtResource("3_lur8b")
 sprite_frames_source = ExtResource("4_hvf0m")
 
 [node name="HudButton_Notifications" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = ExtResource("3_hvf0m")
+button_group = SubResource("ButtonGroup_ria76")
 script = ExtResource("5_ly2kd")
 sprite_frames_source = ExtResource("6_fmmda")
+
+[node name="HudButton_Backpack" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_650er")
+script = ExtResource("7_ly2kd")
+sprite_frames_source = ExtResource("7_hvf0m")
+
+[node name="HudButton_Settings" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_d3cqe")
+script = ExtResource("8_fmmda")
+sprite_frames_source = ExtResource("8_ly2kd")
 
 [node name="Separator2" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
 custom_minimum_size = Vector2(0, 20)
@@ -263,6 +294,4 @@ grow_vertical = 2
 toggle_mode = true
 flat = true
 
-[connection signal="toggled" from="Control/Control/PanelContainer/VBoxContainer_Buttons/HudButton_Friends" to="." method="_on_hud_button_friends_toggled"]
-[connection signal="toggled" from="Control/Control/PanelContainer/VBoxContainer_Buttons/HudButton_Notifications" to="." method="_on_hud_button_notifications_toggled"]
 [connection signal="toggled" from="Control/Button" to="." method="_on_button_toggled"]

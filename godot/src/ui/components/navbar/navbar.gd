@@ -10,10 +10,11 @@ signal navbar_opened
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
 @onready var panel_container: PanelContainer = %PanelContainer
 @onready var v_box_container_buttons: VBoxContainer = %VBoxContainer_Buttons
-@onready
-var hud_button_friends: AnimatedButton = $Control/Control/PanelContainer/VBoxContainer_Buttons/HudButton_Friends
-@onready
-var hud_button_notifications: AnimatedButton = $Control/Control/PanelContainer/VBoxContainer_Buttons/HudButton_Notifications
+@onready var hud_button_friends: Button = %HudButton_Friends
+@onready var hud_button_notifications: Button = %HudButton_Notifications
+@onready var hud_button_backpack: Button = %HudButton_Backpack
+@onready var hud_button_settings: Button = %HudButton_Settings
+
 
 
 func _ready() -> void:
@@ -21,6 +22,8 @@ func _ready() -> void:
 	btn_group.allow_unpress = false
 	hud_button_friends.button_group = btn_group
 	hud_button_notifications.button_group = btn_group
+	hud_button_backpack.button_group = btn_group
+	hud_button_settings.button_group = btn_group
 	# Asegurar que siempre haya un botón presionado al inicio
 	# El ButtonGroup con allow_unpress = false garantiza que siempre haya uno presionado
 
@@ -44,3 +47,13 @@ func _on_hud_button_notifications_toggled(toggled_on: bool) -> void:
 func _on_hud_button_friends_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		friends_button_clicked.emit()
+
+
+func _on_hud_button_backpack_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		backpack_button_clicked.emit()
+
+
+func _on_hud_button_settings_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		settings_button_clicked.emit()

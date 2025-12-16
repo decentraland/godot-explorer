@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b0r0ooru1kg0o"
-path.s3tc="res://.godot/imported/bell_animation_spritesheet.png-040e17e5248dd4445007b560a4d2efaa.s3tc.ctex"
-path.etc2="res://.godot/imported/bell_animation_spritesheet.png-040e17e5248dd4445007b560a4d2efaa.etc2.ctex"
+uid="uid://col63t58l6qpk"
+path.s3tc="res://.godot/imported/settings_spritesheet_modified.png-5a2acbc6d33ea9e934922d24a19c8301.s3tc.ctex"
+path.etc2="res://.godot/imported/settings_spritesheet_modified.png-5a2acbc6d33ea9e934922d24a19c8301.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/notifications/bell_animation_spritesheet.png"
-dest_files=["res://.godot/imported/bell_animation_spritesheet.png-040e17e5248dd4445007b560a4d2efaa.s3tc.ctex", "res://.godot/imported/bell_animation_spritesheet.png-040e17e5248dd4445007b560a4d2efaa.etc2.ctex"]
+source_file="res://assets/ui/spritesheets/settings_spritesheet_modified.png"
+dest_files=["res://.godot/imported/settings_spritesheet_modified.png-5a2acbc6d33ea9e934922d24a19c8301.s3tc.ctex", "res://.godot/imported/settings_spritesheet_modified.png-5a2acbc6d33ea9e934922d24a19c8301.etc2.ctex"]
 
 [params]
 
@@ -39,4 +39,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1
