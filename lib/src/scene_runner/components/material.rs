@@ -137,8 +137,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                         // Use MULTIPLY operator when there's an emissive texture
                         if pbr.emissive_texture.is_some() {
-                            godot_material
-                                .set_emission_operator(EmissionOperator::MULTIPLY);
+                            godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
                         }
 
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
