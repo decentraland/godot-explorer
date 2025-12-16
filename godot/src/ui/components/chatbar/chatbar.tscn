@@ -1,0 +1,86 @@
+[gd_scene load_steps=11 format=3 uid="uid://dfi5ql6ogtlxc"]
+
+[ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="1_2fmgn"]
+[ext_resource type="Script" uid="uid://m5kn7oablps6" path="res://src/ui/components/chat/chat_button.gd" id="2_kneg8"]
+[ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/components/discover/discover_button.gd" id="2_o1l3x"]
+[ext_resource type="SpriteFrames" uid="uid://ypc3pqssk3mk" path="res://assets/animations/chat_animation.tres" id="3_j7l7o"]
+[ext_resource type="SpriteFrames" uid="uid://dixfuphroeh3a" path="res://assets/animations/discover_animation.tres" id="3_kneg8"]
+[ext_resource type="Script" uid="uid://dqervv7c0nbk0" path="res://src/ui/components/friends/friends_button.gd" id="4_j7l7o"]
+[ext_resource type="SpriteFrames" uid="uid://gq4877nacgyh" path="res://src/ui/components/friends/friends_animation.tres" id="5_8t8cm"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tw2ns"]
+bg_color = Color(0, 0, 0, 0.9019608)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_grvqo"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_akf1h"]
+
+[node name="Chatbar" type="Control"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/separation = 20
+
+[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
+
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="HudButton_Chat" parent="HBoxContainer/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("1_2fmgn")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_grvqo")
+icon_alignment = 1
+vertical_icon_alignment = 0
+script = ExtResource("2_kneg8")
+sprite_frames_source = ExtResource("3_j7l7o")
+
+[node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
+
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HudButton_Discover" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons" instance=ExtResource("1_2fmgn")]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_grvqo")
+icon_alignment = 1
+vertical_icon_alignment = 0
+script = ExtResource("2_o1l3x")
+sprite_frames_source = ExtResource("3_kneg8")
+
+[node name="HudButton_Share" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons" instance=ExtResource("1_2fmgn")]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_akf1h")
+script = ExtResource("4_j7l7o")
+sprite_frames_source = ExtResource("5_8t8cm")
