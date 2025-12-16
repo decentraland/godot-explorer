@@ -1,6 +1,7 @@
 name: Bug report
 description: Report a bug on Decentraland Mobile & Web Clients
-labels: ["bug"]
+labels: ["bug", "triage"]
+projects: ["decentraland/43"]
 title: "[Bug]: "
 
 body:
