@@ -4,13 +4,13 @@ extends Node
 # Day/night phase timing constants (normalized 0.0-1.0)
 # Sun is active for 70% of the day (0.15-0.85), moon for 30% (0.85-0.15 wrapping)
 const SUNRISE_START = 0.12  # Dawn begins
-const SUNRISE_END = 0.15    # Sun fully up, moon down
-const SUNSET_START = 0.85   # Dusk begins
-const SUNSET_END = 0.88     # Moon fully up, sun down
+const SUNRISE_END = 0.15  # Sun fully up, moon down
+const SUNSET_START = 0.85  # Dusk begins
+const SUNSET_END = 0.88  # Moon fully up, sun down
 
 # Derived constants for phase durations
 const SUN_PHASE_DURATION = SUNSET_START - SUNRISE_END  # 0.7 (70% of day)
-const MOON_PHASE_DURATION = 1.0 - SUN_PHASE_DURATION   # 0.3 (30% of day)
+const MOON_PHASE_DURATION = 1.0 - SUN_PHASE_DURATION  # 0.3 (30% of day)
 
 # Transition fade window (how far before/after phase change to fade light)
 const TRANSITION_FADE_MARGIN = 0.03
@@ -175,7 +175,9 @@ func _process(_delta: float) -> void:
 			main_light.light_color = main_light.light_color.lerp(gradient_color, 0.5)
 
 		if ambient_light_gradient:
-			world_environment.environment.ambient_light_color = ambient_light_gradient.sample(skybox_time)
+			world_environment.environment.ambient_light_color = ambient_light_gradient.sample(
+				skybox_time
+			)
 
 		if fog_color_gradient:
 			world_environment.environment.fog_light_color = fog_color_gradient.sample(skybox_time)
