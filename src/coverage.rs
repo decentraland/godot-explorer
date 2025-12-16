@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::create_dir_all,
+    fs::{self, create_dir_all},
     path::Path,
     process::{Child, Stdio},
 };
@@ -9,6 +9,12 @@ use anyhow::Context;
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 use crate::{consts::RUST_LIB_PROJECT_FOLDER, helpers, run, ui};
+
+const SNAPSHOT_DIRS: &[&str] = &[
+    "tests/snapshots/scenes",
+    "tests/snapshots/avatar-image-generation",
+    "tests/snapshots/client",
+];
 
 const SCENE_EXPLORER_TESTS_DIR: &str = "./tests/scene-explorer-tests";
 
@@ -97,6 +103,128 @@ fn stop_scene_test_server(mut server: Child) {
     let _ = server.kill();
     let _ = server.wait();
     ui::print_message(ui::MessageType::Success, "Scene test server stopped");
+}
+
+#[derive(Debug)]
+struct SnapshotDiff {
+    category: String,
+    test_name: String,
+    is_new: bool,
+}
+
+/// Finds snapshot differences by looking for .diff.png files in comparison folders.
+fn find_snapshot_diffs() -> Vec<SnapshotDiff> {
+    let mut diffs = Vec::new();
+
+    for snapshot_dir in SNAPSHOT_DIRS {
+        let comparison_dir = Path::new(snapshot_dir).join("comparison");
+        let original_dir = Path::new(snapshot_dir);
+
+        if !comparison_dir.exists() {
+            continue;
+        }
+
+        // Find all .diff.png files
+        if let Ok(entries) = fs::read_dir(&comparison_dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let path = entry.path();
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.ends_with(".diff.png") {
+                        let test_name = name.trim_end_matches(".diff.png").to_string();
+                        let original_file = original_dir.join(format!("{}.png", test_name));
+                        let category = Path::new(snapshot_dir)
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("unknown")
+                            .to_string();
+
+                        diffs.push(SnapshotDiff {
+                            category,
+                            test_name,
+                            is_new: !original_file.exists(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // Sort by category and test name
+    diffs.sort_by(|a, b| (&a.category, &a.test_name).cmp(&(&b.category, &b.test_name)));
+    diffs
+}
+
+/// Generates a markdown report of snapshot differences and saves it to a file.
+/// Returns the number of differences found.
+fn generate_snapshot_report() -> usize {
+    let diffs = find_snapshot_diffs();
+    let count = diffs.len();
+
+    if diffs.is_empty() {
+        ui::print_message(ui::MessageType::Success, "No snapshot differences found");
+        // Remove report file if it exists (no differences)
+        let _ = fs::remove_file("coverage/snapshot-report.md");
+        return 0;
+    }
+
+    ui::print_message(
+        ui::MessageType::Warning,
+        &format!("Found {} snapshot(s) with differences", count),
+    );
+
+    let mut lines = vec![
+        "## 📸 Snapshot Test Differences\n".to_string(),
+        format!("Found **{}** snapshot(s) with differences.\n", count),
+        String::new(),
+        "| Category | Test Name | Status |".to_string(),
+        "|----------|-----------|--------|".to_string(),
+    ];
+
+    for diff in &diffs {
+        let status = if diff.is_new {
+            "🆕 New"
+        } else {
+            "⚠️ Changed"
+        };
+        lines.push(format!(
+            "| {} | `{}` | {} |",
+            diff.category, diff.test_name, status
+        ));
+    }
+
+    lines.push(String::new());
+    lines.push("### How to review".to_string());
+    lines.push("1. Download the `coverage-snapshots` artifact from this workflow run".to_string());
+    lines.push("2. The comparison folder contains:".to_string());
+    lines.push("   - `<name>.png` - Generated snapshot from this run".to_string());
+    lines.push("   - `<name>.diff.png` - Visual difference highlighting changes".to_string());
+    lines.push("3. Original snapshots are in the parent folder with the same name".to_string());
+    lines.push(String::new());
+    lines.push("### To update snapshots".to_string());
+    lines.push(
+        "If the changes are expected, copy the generated snapshots to replace the originals."
+            .to_string(),
+    );
+
+    let report = lines.join("\n");
+
+    // Ensure coverage directory exists
+    let _ = create_dir_all("coverage");
+
+    // Write report to file
+    if let Err(e) = fs::write("coverage/snapshot-report.md", &report) {
+        ui::print_message(
+            ui::MessageType::Error,
+            &format!("Failed to write snapshot report: {}", e),
+        );
+    } else {
+        ui::print_message(
+            ui::MessageType::Info,
+            "Snapshot report saved to coverage/snapshot-report.md",
+        );
+    }
+
+    count
 }
 
 /// Reads scene test coordinates from index.json in the scene-explorer-tests directory.
@@ -264,6 +392,10 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         None,
     )?;
     run::run(false, false, client_extra_args, false, true)?;
+
+    // Generate snapshot difference report
+    ui::print_section("Checking Snapshot Differences");
+    generate_snapshot_report();
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
