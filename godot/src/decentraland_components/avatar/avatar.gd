@@ -13,6 +13,11 @@ const WEARABLE_NAME_PREFIX = "__"
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
 
+# Entity info for trigger area detection (set by avatar_shape.rs for scene avatars)
+var dcl_scene_id: int = -1
+var dcl_entity_id: int = -1
+var is_local_player: bool = false
+
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
@@ -53,6 +58,7 @@ var wearable_promises = null
 
 @onready var avatar_modifier_area_detector = $avatar_modifier_area_detector
 @onready var click_area = $ClickArea
+@onready var trigger_detector = %TriggerDetector
 
 
 func _ready():
@@ -89,6 +95,41 @@ func _ready():
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
+
+	# Connect to scene change signal for trigger area tracking
+	# This signal is emitted by DclAvatar (Rust side) when the avatar changes parcels
+	change_scene_id.connect(self._on_avatar_scene_changed)
+
+	# Trigger detection is setup later via setup_trigger_detection() when entity info is available
+
+
+## Setup trigger detection for this avatar.
+## Call this after the avatar is created with the appropriate entity info.
+## - For local player: scene_id=-1, entity_id=SceneEntityId.PLAYER (0x10000)
+## - For remote avatars: scene_id=-1, entity_id=assigned entity from avatar_scene.rs
+## - For scene avatars (NPCs): scene_id and entity_id from the scene
+func setup_trigger_detection(p_scene_id: int, p_entity_id: int) -> void:
+	dcl_scene_id = p_scene_id
+	dcl_entity_id = p_entity_id
+
+	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
+	trigger_detector.set_meta("dcl_scene_id", dcl_scene_id)
+	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
+
+	# Initialize current scene metadata (will be updated via _on_avatar_scene_changed)
+	# For scene NPCs, this stays at dcl_scene_id; for remote avatars, it will be updated
+	trigger_detector.set_meta("dcl_avatar_current_scene_id", dcl_scene_id)
+
+	# Enable the collision shape
+	trigger_detector.get_node("CollisionShape3D").disabled = false
+
+
+## Called when the avatar changes parcel scenes (signal from DclAvatar/Rust)
+func _on_avatar_scene_changed(new_scene_id: int, _prev_scene_id: int) -> void:
+	# Update the current scene metadata on TriggerDetector
+	# This allows trigger_area.rs to know which scene this avatar is currently in
+	if trigger_detector:
+		trigger_detector.set_meta("dcl_avatar_current_scene_id", new_scene_id)
 
 
 func on_chat_message(address: String, message: String, _timestamp: float):

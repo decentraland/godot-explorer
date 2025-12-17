@@ -264,7 +264,12 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::TriggerArea => {
-                update_trigger_area(scene, crdt_state, &mut pool_manager.borrow_mut());
+                update_trigger_area(
+                    scene,
+                    crdt_state,
+                    &mut pool_manager.borrow_mut(),
+                    current_parcel_scene_id,
+                );
                 false
             }
             SceneUpdateState::VirtualCameras => {

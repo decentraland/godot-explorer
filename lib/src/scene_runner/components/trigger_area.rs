@@ -22,7 +22,10 @@ use crate::{
         },
         SceneId,
     },
-    scene_runner::{pool_manager::PoolManager, scene::Scene},
+    scene_runner::{
+        pool_manager::PoolManager,
+        scene::{Scene, SceneType},
+    },
 };
 
 const CL_PLAYER: u32 = 4;
@@ -42,6 +45,10 @@ struct PendingTriggerEvent {
     collider_layer: u32,
     /// true = ENTER, false = EXIT
     is_enter: bool,
+    /// For remote avatars: their current parcel scene ID (None if not applicable)
+    avatar_current_scene_id: Option<i32>,
+    /// Instance ID of the colliding object (used to query current metadata later)
+    instance_id: i64,
 }
 
 /// Global registry for trigger area callbacks.
@@ -120,7 +127,7 @@ fn handle_body_monitor_event(
     let is_enter = status == 0; // AREA_BODY_ADDED = 0
 
     // Try to get the collider object to determine if it's a player or scene entity
-    let (collider_entity, collider_layer) = if instance_id > 0 {
+    let (collider_entity, collider_layer, avatar_current_scene_id) = if instance_id > 0 {
         let Ok(object) = Gd::<Object>::try_from_instance_id(InstanceId::from_i64(instance_id))
         else {
             return; // Invalid instance
@@ -131,42 +138,76 @@ fn handle_body_monitor_event(
             return;
         }
 
-        // Check if this is a DCL entity
+        // Check if this is a DCL entity or avatar with entity metadata
         if object.has_meta("dcl_entity_id".into()) {
             let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
             let dcl_scene_id = object.get_meta("dcl_scene_id".into()).to::<i32>();
-            // Only accept entities from the same scene
-            if dcl_scene_id == scene_id.0 {
+
+            // Check if this is an avatar (has CL_PLAYER layer)
+            let is_avatar = object
+                .clone()
+                .try_cast::<godot::engine::CollisionObject3D>()
+                .ok()
+                .map(|co| (co.get_collision_layer() & CL_PLAYER) != 0)
+                .unwrap_or(false);
+
+            if is_avatar {
+                // Avatar detection (local player, remote avatar, or scene NPC)
+                // dcl_scene_id == -1 means it's not a scene NPC (local player or remote avatar)
+                // In that case, we accept it regardless of scene
+                // For scene NPCs (dcl_scene_id >= 0), only accept from same scene
+                if dcl_scene_id >= 0 && dcl_scene_id != scene_id.0 {
+                    return; // Scene NPC from different scene, ignore
+                }
+
+                // For remote avatars (dcl_scene_id == -1), get their current parcel scene
+                let avatar_current_scene = if dcl_scene_id == -1 {
+                    if object.has_meta("dcl_avatar_current_scene_id".into()) {
+                        Some(
+                            object
+                                .get_meta("dcl_avatar_current_scene_id".into())
+                                .to::<i32>(),
+                        )
+                    } else {
+                        None
+                    }
+                } else {
+                    // For scene NPCs, their scene is fixed
+                    Some(dcl_scene_id)
+                };
+
+                (
+                    SceneEntityId::from_i32(dcl_entity_id),
+                    CL_PLAYER,
+                    avatar_current_scene,
+                )
+            } else {
+                // Regular DCL scene entity (not avatar)
+                // Only accept entities from the same scene
+                if dcl_scene_id != scene_id.0 {
+                    return; // Different scene, ignore
+                }
                 (
                     SceneEntityId::from_i32(dcl_entity_id),
                     collision_mask & !CL_PLAYER,
+                    None,
                 )
-            } else {
-                return; // Different scene, ignore
             }
         } else {
-            // Check if this is the player by checking collision layer
-            // Use try_cast to safely check if it's a CollisionObject3D
-            let Some(collision_obj) = object.try_cast::<godot::engine::CollisionObject3D>().ok()
-            else {
-                return; // Not a collision object
-            };
-            let collider_layer = collision_obj.get_collision_layer();
-            if (collider_layer & CL_PLAYER) != 0 && (collision_mask & CL_PLAYER) != 0 {
-                (SceneEntityId::PLAYER, CL_PLAYER)
-            } else {
-                return; // Not a player and not a DCL entity
-            }
+            // No dcl_entity_id metadata - this shouldn't happen for avatars anymore
+            // but keep as fallback for any other collision objects
+            return;
         }
     } else {
         return; // No instance ID
     };
 
     tracing::debug!(
-        "[TriggerArea] {} trigger={:?}, collider={:?}",
+        "[TriggerArea] {} trigger={:?}, collider={:?}, avatar_scene={:?}",
         if is_enter { "ENTER" } else { "EXIT" },
         trigger_entity,
-        collider_entity
+        collider_entity,
+        avatar_current_scene_id
     );
 
     monitor.pending_events.push(PendingTriggerEvent {
@@ -175,6 +216,8 @@ fn handle_body_monitor_event(
         collider_entity,
         collider_layer,
         is_enter,
+        avatar_current_scene_id,
+        instance_id,
     });
 }
 
@@ -187,8 +230,14 @@ fn handle_body_monitor_event(
 pub struct TriggerAreaInstance {
     pub area_rid: Rid,
     pub shape_rid: Rid,
-    /// Set of entities currently inside this trigger area (including player)
+    /// Set of entities physically overlapping this trigger area (tracked by physics)
     pub entities_inside: HashSet<SceneEntityId>,
+    /// Set of entities for which we've sent ENTER event (logical state)
+    /// An entity can be in entities_inside but not entities_entered if it's not active in the scene
+    pub entities_entered: HashSet<SceneEntityId>,
+    /// Instance IDs for avatars inside this trigger area (used to query current scene metadata)
+    /// Maps entity_id -> Godot instance_id of their TriggerDetector node
+    pub avatar_instance_ids: HashMap<SceneEntityId, i64>,
     pub mesh_type: TriggerAreaMeshType,
     pub collision_mask: u32,
 }
@@ -236,6 +285,7 @@ pub fn update_trigger_area(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
     pools: &mut PoolManager,
+    current_parcel_scene_id: &SceneId,
 ) {
     let trigger_area_component = SceneCrdtStateProtoComponents::get_trigger_area(crdt_state);
 
@@ -272,15 +322,196 @@ pub fn update_trigger_area(
     // Step 2: Update transforms for all trigger areas
     update_trigger_area_transforms(scene);
 
-    // Step 3: Process pending callback events (ENTER/EXIT)
-    process_callback_events(scene);
+    // Step 3: Process pending callback events (ENTER/EXIT) - updates physical state
+    process_callback_events(scene, current_parcel_scene_id);
 
-    // Step 4: Generate throttled STAY events
+    // Step 4: Sync entity states - generates synthetic ENTER/EXIT for state transitions
+    // (e.g., player enters scene while already physically inside trigger area)
+    sync_entity_states(scene, current_parcel_scene_id);
+
+    // Step 5: Generate throttled STAY events (only for entities that have entered)
     generate_stay_events(scene);
 }
 
+/// Query the current scene ID for an avatar from its TriggerDetector metadata
+fn get_avatar_current_scene(instance_id: i64) -> Option<i32> {
+    let Ok(object) = Gd::<Object>::try_from_instance_id(InstanceId::from_i64(instance_id)) else {
+        return None;
+    };
+    if !object.is_instance_valid() {
+        return None;
+    }
+    if object.has_meta("dcl_avatar_current_scene_id".into()) {
+        Some(
+            object
+                .get_meta("dcl_avatar_current_scene_id".into())
+                .to::<i32>(),
+        )
+    } else {
+        None
+    }
+}
+
+/// Sync entity states: handle entities becoming active/inactive
+/// This generates synthetic ENTER events for entities that entered physically before becoming active
+/// and EXIT events for entities that became inactive while inside
+fn sync_entity_states(scene: &mut Scene, current_parcel_scene_id: &SceneId) {
+    // Only parcel scenes need syncing - global scenes always receive events
+    if !matches!(scene.scene_type, SceneType::Parcel) {
+        return;
+    }
+
+    let tick_number = scene.tick_number;
+    let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
+    let this_scene_id = scene.scene_id.0;
+
+    // Check if local player is active in this scene
+    let player_active = scene.scene_id == *current_parcel_scene_id;
+
+    // Collect entities that need state transitions
+    let mut enter_events = Vec::new();
+    let mut exit_events = Vec::new();
+
+    for (trigger_entity, instance) in scene.trigger_areas.instances.iter() {
+        // Only check trigger areas that can detect players/avatars
+        if (instance.collision_mask & CL_PLAYER) == 0 {
+            continue;
+        }
+
+        // Check for entities that need synthetic ENTER (physically inside but not entered)
+        for collider_entity in instance.entities_inside.iter() {
+            if instance.entities_entered.contains(collider_entity) {
+                continue; // Already entered, skip
+            }
+
+            // Entity is physically inside but hasn't had ENTER sent
+            let is_now_active = if *collider_entity == SceneEntityId::PLAYER {
+                // Local player: check current_parcel_scene_id
+                player_active
+            } else if let Some(&instance_id) = instance.avatar_instance_ids.get(collider_entity) {
+                // Remote avatar: query their current scene from metadata
+                get_avatar_current_scene(instance_id)
+                    .map(|scene| scene == this_scene_id)
+                    .unwrap_or(false)
+            } else {
+                false
+            };
+
+            if is_now_active {
+                let trigger_transform = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(trigger_entity)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY);
+
+                let collider_transform = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(collider_entity)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY);
+
+                enter_events.push((
+                    *trigger_entity,
+                    *collider_entity,
+                    trigger_transform,
+                    collider_transform,
+                ));
+            }
+        }
+
+        // Check for entities that need EXIT (entered but no longer active)
+        for collider_entity in instance.entities_entered.iter() {
+            let is_still_active = if *collider_entity == SceneEntityId::PLAYER {
+                // Local player: check if they're still in this scene
+                player_active
+            } else if let Some(&instance_id) = instance.avatar_instance_ids.get(collider_entity) {
+                // Remote avatar: query their current scene from metadata
+                get_avatar_current_scene(instance_id)
+                    .map(|scene| scene == this_scene_id)
+                    .unwrap_or(false)
+            } else {
+                // No instance_id tracked - entity might have been removed, treat as inactive
+                false
+            };
+
+            if !is_still_active {
+                let trigger_transform = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(trigger_entity)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY);
+
+                let collider_transform = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(collider_entity)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY);
+
+                exit_events.push((
+                    *trigger_entity,
+                    *collider_entity,
+                    trigger_transform,
+                    collider_transform,
+                ));
+            }
+        }
+    }
+
+    // Process synthetic ENTER events
+    for (trigger_entity, collider_entity, trigger_transform, collider_transform) in enter_events {
+        if let Some(instance) = scene.trigger_areas.instances.get_mut(&trigger_entity) {
+            instance.entities_entered.insert(collider_entity);
+
+            let result = build_trigger_result(
+                &trigger_entity,
+                &collider_entity,
+                TriggerAreaEventType::TaetEnter,
+                tick_number,
+                collider_transform,
+                trigger_transform,
+                scene_pos,
+                CL_PLAYER,
+            );
+            scene.trigger_area_results.push((trigger_entity, result));
+
+            tracing::debug!(
+                "[TriggerArea] SYNC_ENTER trigger={:?}, collider={:?} (entity became active)",
+                trigger_entity,
+                collider_entity
+            );
+        }
+    }
+
+    // Process EXIT events for entities that became inactive
+    for (trigger_entity, collider_entity, trigger_transform, collider_transform) in exit_events {
+        if let Some(instance) = scene.trigger_areas.instances.get_mut(&trigger_entity) {
+            instance.entities_entered.remove(&collider_entity);
+
+            let result = build_trigger_result(
+                &trigger_entity,
+                &collider_entity,
+                TriggerAreaEventType::TaetExit,
+                tick_number,
+                collider_transform,
+                trigger_transform,
+                scene_pos,
+                CL_PLAYER,
+            );
+            scene.trigger_area_results.push((trigger_entity, result));
+
+            tracing::debug!(
+                "[TriggerArea] SYNC_EXIT trigger={:?}, collider={:?} (entity became inactive)",
+                trigger_entity,
+                collider_entity
+            );
+        }
+    }
+}
+
 /// Process ENTER/EXIT events from the global monitor callback queue
-fn process_callback_events(scene: &mut Scene) {
+/// This only updates physical state (entities_inside). Logical state (entities_entered)
+/// is synced separately in sync_entity_states.
+fn process_callback_events(scene: &mut Scene, current_parcel_scene_id: &SceneId) {
     let events = drain_pending_events(scene.scene_id);
     if events.is_empty() {
         return;
@@ -289,49 +520,137 @@ fn process_callback_events(scene: &mut Scene) {
     let tick_number = scene.tick_number;
     let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
 
-    for event in events {
+    // Pre-compute scene info needed for is_entity_active_in_scene
+    let is_parcel_scene = matches!(scene.scene_type, SceneType::Parcel);
+    let this_scene_id = scene.scene_id;
+
+    // First pass: collect transforms and determine which events to process
+    struct ProcessedEvent {
+        trigger_entity: SceneEntityId,
+        collider_entity: SceneEntityId,
+        collider_layer: u32,
+        is_enter: bool,
+        entity_active: bool,
+        trigger_transform: Transform3D,
+        collider_transform: Transform3D,
+        instance_id: i64,
+    }
+
+    let processed_events: Vec<_> = events
+        .into_iter()
+        .filter_map(|event| {
+            // Check if trigger area exists
+            if !scene
+                .trigger_areas
+                .instances
+                .contains_key(&event.trigger_entity)
+            {
+                return None;
+            }
+
+            // Determine if entity is active in this scene
+            let entity_active = if (event.collider_layer & CL_PLAYER) == 0 {
+                // Non-avatar entities are always active
+                true
+            } else if !is_parcel_scene {
+                // Global scenes always receive all avatar events
+                true
+            } else if event.collider_entity == SceneEntityId::PLAYER {
+                // Local player: check current_parcel_scene_id
+                this_scene_id == *current_parcel_scene_id
+            } else if let Some(avatar_scene) = event.avatar_current_scene_id {
+                // Remote avatar: check their current scene
+                avatar_scene == this_scene_id.0
+            } else {
+                // No scene info available - treat as inactive
+                false
+            };
+
+            let trigger_transform = scene
+                .godot_dcl_scene
+                .get_node_or_null_3d(&event.trigger_entity)
+                .map(|n| n.get_global_transform())
+                .unwrap_or(Transform3D::IDENTITY);
+
+            let collider_transform = scene
+                .godot_dcl_scene
+                .get_node_or_null_3d(&event.collider_entity)
+                .map(|n| n.get_global_transform())
+                .unwrap_or(Transform3D::IDENTITY);
+
+            Some(ProcessedEvent {
+                trigger_entity: event.trigger_entity,
+                collider_entity: event.collider_entity,
+                collider_layer: event.collider_layer,
+                is_enter: event.is_enter,
+                entity_active,
+                trigger_transform,
+                collider_transform,
+                instance_id: event.instance_id,
+            })
+        })
+        .collect();
+
+    // Second pass: update state and generate events
+    for event in processed_events {
         let Some(instance) = scene.trigger_areas.instances.get_mut(&event.trigger_entity) else {
             continue;
         };
 
-        // Get transforms for result building
-        let trigger_transform = scene
-            .godot_dcl_scene
-            .get_node_or_null_3d(&event.trigger_entity)
-            .map(|n| n.get_global_transform())
-            .unwrap_or(Transform3D::IDENTITY);
+        let is_avatar = (event.collider_layer & CL_PLAYER) != 0;
 
-        let collider_transform = if event.collider_entity == SceneEntityId::PLAYER {
-            scene
-                .godot_dcl_scene
-                .get_node_or_null_3d(&SceneEntityId::PLAYER)
-                .map(|n| n.get_global_transform())
-                .unwrap_or(Transform3D::IDENTITY)
-        } else {
-            scene
-                .godot_dcl_scene
-                .get_node_or_null_3d(&event.collider_entity)
-                .map(|n| n.get_global_transform())
-                .unwrap_or(Transform3D::IDENTITY)
-        };
-
-        let event_type = if event.is_enter {
-            // ENTER: add to entities_inside
+        // Always update physical state (entities_inside)
+        if event.is_enter {
             instance.entities_inside.insert(event.collider_entity);
-            TriggerAreaEventType::TaetEnter
+            // Store instance_id for avatars so we can query their current scene later
+            if is_avatar {
+                instance
+                    .avatar_instance_ids
+                    .insert(event.collider_entity, event.instance_id);
+            }
         } else {
-            // EXIT: remove from entities_inside
             instance.entities_inside.remove(&event.collider_entity);
-            TriggerAreaEventType::TaetExit
-        };
+            // Remove instance_id tracking for avatars
+            if is_avatar {
+                instance.avatar_instance_ids.remove(&event.collider_entity);
+            }
+            // If entity exits physically, also remove from entered state
+            if instance.entities_entered.remove(&event.collider_entity) {
+                // Entity was in entered state, need to send EXIT event
+                let result = build_trigger_result(
+                    &event.trigger_entity,
+                    &event.collider_entity,
+                    TriggerAreaEventType::TaetExit,
+                    tick_number,
+                    event.collider_transform,
+                    event.trigger_transform,
+                    scene_pos,
+                    event.collider_layer,
+                );
+                scene
+                    .trigger_area_results
+                    .push((event.trigger_entity, result));
+            }
+            continue;
+        }
+
+        // For ENTER events, only send if entity is active in this scene
+        if !event.entity_active {
+            // Entity entered physically but isn't active in scene
+            // Just track in entities_inside, don't send event or add to entities_entered
+            continue;
+        }
+
+        // Entity is active, send ENTER event and track in entities_entered
+        instance.entities_entered.insert(event.collider_entity);
 
         let result = build_trigger_result(
             &event.trigger_entity,
             &event.collider_entity,
-            event_type,
+            TriggerAreaEventType::TaetEnter,
             tick_number,
-            collider_transform,
-            trigger_transform,
+            event.collider_transform,
+            event.trigger_transform,
             scene_pos,
             event.collider_layer,
         );
@@ -341,7 +660,7 @@ fn process_callback_events(scene: &mut Scene) {
     }
 }
 
-/// Generate STAY events for entities still inside trigger areas
+/// Generate STAY events for entities that have entered (are in entities_entered state)
 fn generate_stay_events(scene: &mut Scene) {
     let tick_number = scene.tick_number;
     let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
@@ -352,13 +671,14 @@ fn generate_stay_events(scene: &mut Scene) {
         .instances
         .iter()
         .filter_map(|(trigger_entity, instance)| {
-            if instance.entities_inside.is_empty() {
+            // Only generate STAY for entities in entities_entered (logically active)
+            if instance.entities_entered.is_empty() {
                 return None;
             }
 
-            // Collect entities inside with their collision masks
+            // Collect entities that have entered
             let entities: Vec<_> = instance
-                .entities_inside
+                .entities_entered
                 .iter()
                 .map(|e| (*e, instance.collision_mask))
                 .collect();
@@ -511,6 +831,8 @@ fn create_or_update_trigger_area(
                 area_rid,
                 shape_rid,
                 entities_inside: HashSet::new(),
+                entities_entered: HashSet::new(),
+                avatar_instance_ids: HashMap::new(),
                 mesh_type,
                 collision_mask,
             },

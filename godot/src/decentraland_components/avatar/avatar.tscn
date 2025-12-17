@@ -360,6 +360,10 @@ height = 0.1
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mwwx3"]
 
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_trigger"]
+radius = 0.25
+height = 1.5
+
 [node name="Avatar" type="DclAvatar"]
 script = ExtResource("1_mwwx3")
 
@@ -898,6 +902,16 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
 bus = &"Scene"
 
 [node name="Avatar_SFXs" parent="." instance=ExtResource("7_xt6ge")]
+
+[node name="TriggerDetector" type="StaticBody3D" parent="."]
+unique_name_in_owner = true
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerDetector"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+shape = SubResource("CapsuleShape3D_trigger")
+disabled = true
 
 [node name="ClickArea" type="Area3D" parent="."]
 unique_name_in_owner = true
