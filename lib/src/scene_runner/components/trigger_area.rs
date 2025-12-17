@@ -37,7 +37,6 @@ const CL_PLAYER: u32 = 4;
 /// A pending ENTER/EXIT event from the PhysicsServer3D monitor callback
 #[derive(Debug, Clone)]
 struct PendingTriggerEvent {
-    scene_id: SceneId,
     trigger_entity: SceneEntityId,
     /// The collider entity that entered/exited (PLAYER or scene entity)
     collider_entity: SceneEntityId,
@@ -49,20 +48,12 @@ struct PendingTriggerEvent {
 
 /// Global registry for trigger area callbacks.
 /// Since all PhysicsServer3D callbacks run on the main thread, we use a simple Mutex.
+#[derive(Default)]
 struct TriggerAreaMonitor {
     /// Maps area RID -> (scene_id, entity_id, collision_mask)
     registry: HashMap<Rid, (SceneId, SceneEntityId, u32)>,
-    /// Pending ENTER/EXIT events from callbacks
-    pending_events: Vec<PendingTriggerEvent>,
-}
-
-impl Default for TriggerAreaMonitor {
-    fn default() -> Self {
-        Self {
-            registry: HashMap::new(),
-            pending_events: Vec::with_capacity(64),
-        }
-    }
+    /// Pending ENTER/EXIT events from callbacks, keyed by scene ID for O(1) drain per scene
+    pending_events: HashMap<SceneId, Vec<PendingTriggerEvent>>,
 }
 
 static TRIGGER_MONITOR: Lazy<Mutex<TriggerAreaMonitor>> = Lazy::new(Default::default);
@@ -88,15 +79,10 @@ pub fn unregister_trigger_area(area_rid: Rid) {
     }
 }
 
-/// Drain pending events for a specific scene
+/// Drain pending events for a specific scene - O(1) lookup + O(E_scene) drain
 fn drain_pending_events(scene_id: SceneId) -> Vec<PendingTriggerEvent> {
     if let Ok(mut monitor) = TRIGGER_MONITOR.lock() {
-        let (scene_events, other_events): (Vec<_>, Vec<_>) = monitor
-            .pending_events
-            .drain(..)
-            .partition(|e| e.scene_id == scene_id);
-        monitor.pending_events = other_events;
-        scene_events
+        monitor.pending_events.remove(&scene_id).unwrap_or_default()
     } else {
         Vec::new()
     }
@@ -181,13 +167,16 @@ fn handle_body_monitor_event(
         collider_entity,
     );
 
-    monitor.pending_events.push(PendingTriggerEvent {
-        scene_id,
-        trigger_entity,
-        collider_entity,
-        collider_layer,
-        is_enter,
-    });
+    monitor
+        .pending_events
+        .entry(scene_id)
+        .or_default()
+        .push(PendingTriggerEvent {
+            trigger_entity,
+            collider_entity,
+            collider_layer,
+            is_enter,
+        });
 }
 
 // ============================================================================
