@@ -374,7 +374,6 @@ func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
 
 
-
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
 

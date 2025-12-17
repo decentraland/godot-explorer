@@ -97,6 +97,7 @@ func close():
 
 func show_discover():
 	select_discover_screen()
+	hud_button_discover.toggled.emit(true)
 	_open()
 
 
