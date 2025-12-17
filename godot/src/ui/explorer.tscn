@@ -182,6 +182,7 @@ theme = ExtResource("4_2vs87")
 theme_override_constants/separation = 30
 
 [node name="Chatbar" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" instance=ExtResource("9_u4dfr")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 66)
 layout_mode = 2
 

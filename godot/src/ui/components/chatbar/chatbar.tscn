@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="1_2fmgn"]
 [ext_resource type="Script" uid="uid://iot0yhkloep2" path="res://src/ui/components/chatbar/chatbar.gd" id="1_8wxvk"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="2_j7l7o"]
-[ext_resource type="Script" uid="uid://m5kn7oablps6" path="res://src/ui/components/chat/chat_button.gd" id="2_kneg8"]
+[ext_resource type="Script" path="res://src/ui/components/chat/chat_button.gd" id="2_kneg8"]
 [ext_resource type="SpriteFrames" uid="uid://ypc3pqssk3mk" path="res://assets/animations/chat_animation.tres" id="3_j7l7o"]
 [ext_resource type="Texture2D" uid="uid://bwgsvqbd8dub4" path="res://assets/ui/MapOff.png" id="5_o1l3x"]
 [ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="6_kneg8"]

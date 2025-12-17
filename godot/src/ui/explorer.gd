@@ -62,6 +62,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
+@onready var chatbar: Control = %Chatbar
 
 
 func _process(_dt):
@@ -115,6 +116,7 @@ func _ready():
 	Global.open_friends_panel.connect(_show_friends_panel)
 
 	navbar.close_all.connect(_close_all_panels)
+	chatbar.share_place.connect(_share_place)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -864,3 +866,25 @@ func _on_menu_close():
 	if !navbar.visible:
 		navbar.set_manually_hidden(false)
 		release_mouse()
+
+
+func _share_place():
+	print(parcel_position)
+	#if not _data or not _data.has("id"):
+	#printerr("No event data available to share")
+	#return
+#
+#if event_id.is_empty():
+#printerr("Event ID not available")
+#return
+#
+#var event_url = "https://decentraland.org/events/event/?id=" + event_id
+#
+#var event_title = _data.get("name", "Decentraland Event")
+#
+#var text = "Visit the event '" + event_title + "' following this link " + event_url
+#
+#if Global.is_android():
+#DclGodotAndroidPlugin.share_text(text)
+#elif Global.is_ios():
+#DclIosPlugin.share_text(text)
