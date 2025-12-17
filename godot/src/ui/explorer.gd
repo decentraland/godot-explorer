@@ -478,7 +478,7 @@ func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
 
-	player.async_move_to(position)
+	player.move_to(position)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
 	)
