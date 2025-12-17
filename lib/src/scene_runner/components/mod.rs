@@ -1,6 +1,5 @@
 pub mod animator;
 pub mod audio_source;
-#[cfg(feature = "use_ffmpeg")]
 pub mod audio_stream;
 pub mod avatar_attach;
 pub mod avatar_data;
@@ -21,7 +20,6 @@ pub mod transform_and_parent;
 pub mod trigger_area;
 pub mod tween;
 pub mod ui;
-#[cfg(feature = "use_ffmpeg")]
 pub mod video_player;
 pub mod virtual_cameras;
 pub mod visibility;
