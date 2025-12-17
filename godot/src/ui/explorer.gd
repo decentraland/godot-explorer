@@ -392,23 +392,23 @@ func _parse_coordinates(coord_string: String) -> Vector2i:
 	# Remove parentheses if present
 	var cleaned = coord_string.strip_edges()
 	cleaned = cleaned.replace("(", "").replace(")", "")
-	
+
 	# Remove all spaces
 	cleaned = cleaned.replace(" ", "")
-	
+
 	# Split by comma
 	var parts = cleaned.split(",")
 	if parts.size() >= 2:
 		var x_str = parts[0].strip_edges()
 		var y_str = parts[1].strip_edges()
-		
+
 		# Validate and parse integers (including negative values)
 		var int_regex = RegEx.new()
 		int_regex.compile(r"^-?\d+$")
-		
+
 		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
 			return Vector2i(int(x_str), int(y_str))
-	
+
 	return Vector2i(0, 0)
 
 
@@ -424,7 +424,7 @@ func _on_panel_chat_submit_message(message: String):
 			var coord_string = ""
 			if params.size() > 1:
 				coord_string = " ".join(params.slice(1))
-			
+
 			var dest_vector = _parse_coordinates(coord_string)
 
 			Global.on_chat_message.emit(
