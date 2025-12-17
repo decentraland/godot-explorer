@@ -388,6 +388,30 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
+func _parse_coordinates(coord_string: String) -> Vector2i:
+	# Remove parentheses if present
+	var cleaned = coord_string.strip_edges()
+	cleaned = cleaned.replace("(", "").replace(")", "")
+	
+	# Remove all spaces
+	cleaned = cleaned.replace(" ", "")
+	
+	# Split by comma
+	var parts = cleaned.split(",")
+	if parts.size() >= 2:
+		var x_str = parts[0].strip_edges()
+		var y_str = parts[1].strip_edges()
+		
+		# Validate and parse integers (including negative values)
+		var int_regex = RegEx.new()
+		int_regex.compile(r"^-?\d+$")
+		
+		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
+			return Vector2i(int(x_str), int(y_str))
+	
+	return Vector2i(0, 0)
+
+
 func _on_panel_chat_submit_message(message: String):
 	if message.length() == 0:
 		return
@@ -396,12 +420,12 @@ func _on_panel_chat_submit_message(message: String):
 	var command_str := params[0].to_lower()
 	if command_str.begins_with("/"):
 		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-			var comma_params = params[1].split(",")
-			var dest_vector = Vector2i(0, 0)
-			if comma_params.size() > 1:
-				dest_vector = Vector2i(int(comma_params[0]), int(comma_params[1]))
-			elif params.size() > 2:
-				dest_vector = Vector2i(int(params[1]), int(params[2]))
+			# Join all params after the command to handle spaces properly
+			var coord_string = ""
+			if params.size() > 1:
+				coord_string = " ".join(params.slice(1))
+			
+			var dest_vector = _parse_coordinates(coord_string)
 
 			Global.on_chat_message.emit(
 				"system",
