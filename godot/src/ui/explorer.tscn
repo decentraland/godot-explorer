@@ -1,9 +1,8 @@
-[gd_scene load_steps=43 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=42 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
-[ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
@@ -42,10 +41,10 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_u4dfr"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ecwks"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_kllev"]
 allow_unpress = true
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_t4gc2"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_ecwks"]
 allow_unpress = true
 
 [node name="explorer" type="Node"]
@@ -375,7 +374,7 @@ theme_override_constants/separation = 13
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_ecwks")
+button_group = SubResource("ButtonGroup_kllev")
 script = ExtResource("19_admxk")
 sprite_frames_source = ExtResource("22_ecwks")
 
@@ -383,7 +382,7 @@ sprite_frames_source = ExtResource("22_ecwks")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-button_group = SubResource("ButtonGroup_t4gc2")
+button_group = SubResource("ButtonGroup_ecwks")
 script = ExtResource("19_6q4se")
 sprite_frames_source = ExtResource("20_kllev")
 
@@ -498,18 +497,6 @@ theme_override_font_sizes/font_size = 20
 text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 0
-anchors_preset = 0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 15.0
-offset_bottom = 15.0
 
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 unique_name_in_owner = true

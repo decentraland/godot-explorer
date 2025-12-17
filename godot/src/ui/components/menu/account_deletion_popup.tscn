@@ -44,13 +44,10 @@ texture = SubResource("GradientTexture2D_sl71o")
 script = ExtResource("1_fnbls")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
-custom_minimum_size = Vector2(580, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -44.5
-offset_bottom = 44.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 150
@@ -258,6 +255,7 @@ script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
 [node name="Button_CancelDeletion" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 3

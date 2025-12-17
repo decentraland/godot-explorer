@@ -24,18 +24,15 @@ var fade_out_tween: Tween = null
 
 @onready var control_discover = %Control_Discover
 @onready var control_settings = %Control_Settings
-@onready var control_map_satellite: Control = %Control_MapSatellite
 @onready var control_backpack: Backpack = %Control_Backpack
 @onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
 
 @onready var button_discover = %Button_Discover
-@onready var button_map = %Button_Map
 @onready var button_backpack = %Button_Backpack
 @onready var button_settings = %Button_Settings
 @onready var control_deploying_profile = %Control_DeployingProfile
 
 @onready var portrait_button_discover: Button = %Portrait_Button_Discover
-@onready var portrait_button_map: Button = %Portrait_Button_Map
 @onready var portrait_button_backpack: Button = %Portrait_Button_Backpack
 @onready var portrait_button_settings: Button = %Portrait_Button_Settings
 @onready var portrait_button_profile: Button = %Portrait_Button_Profile
@@ -49,7 +46,10 @@ var fade_out_tween: Tween = null
 
 
 func _ready():
-	account_deletion_pop_up.hide()
+	if account_deletion_pop_up:
+		account_deletion_pop_up.hide()
+	else:
+		printerr("AccountDeletionPopUp node not found in menu!")
 	is_in_game = self != get_tree().current_scene
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -70,12 +70,10 @@ func _ready():
 	button_discover.set_pressed(true)
 	portrait_button_discover.set_pressed(true)
 	selected_node = control_discover
-	control_map_satellite.hide()
 	control_settings.hide()
 	control_discover.show()
 	control_backpack.hide()
 	control_profile_settings.hide()
-	control_map_satellite.jump_to.connect(_jump_to)
 
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
@@ -85,33 +83,6 @@ func _ready():
 
 	Global.deep_link_received.connect(_on_deep_link_received)
 	Global.delete_account.connect(_on_account_delete)
-
-
-func _unhandled_input(event):
-	if event is InputEventKey and visible:
-		if event.pressed and event.keycode == KEY_TAB:
-			pressed_index = group.get_pressed_button().get_index()
-			buttons_quantity = group.get_buttons().size() - 1
-
-			if pressed_index < buttons_quantity:
-				group.get_buttons()[pressed_index + 1].set_pressed(true)
-				group.get_buttons()[pressed_index + 1].emit_signal("pressed")
-			else:
-				#change index to 0 to include "Control Discover"
-				group.get_buttons()[1].set_pressed(true)
-				group.get_buttons()[1].emit_signal("pressed")
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			_async_request_hide_menu()
-		if event.pressed and event.keycode == KEY_M:
-			if selected_node == control_map_satellite:
-				_async_request_hide_menu()
-			else:
-				show_map()
-		if event.pressed and event.keycode == KEY_P:
-			if selected_node == control_settings:
-				_async_request_hide_menu()
-			else:
-				_on_button_settings_pressed()
 
 
 func _on_button_close_pressed():
@@ -144,12 +115,6 @@ func show_discover():
 	_open()
 
 
-func show_map():
-	select_map_screen(false)
-	button_map.set_pressed(true)
-	_open()
-
-
 func show_backpack():
 	select_backpack_screen(false)
 	button_backpack.set_pressed(true)
@@ -166,7 +131,6 @@ func show_own_profile():
 	select_profile_screen(false)
 	button_settings.set_pressed(false)
 	button_backpack.set_pressed(false)
-	button_map.set_pressed(false)
 	button_discover.set_pressed(false)
 	_open()
 
@@ -195,12 +159,6 @@ func select_settings_screen(play_sfx: bool = true):
 	current_screen_name = ("SETTINGS" if Global.is_orientation_portrait() else "SETTINGS_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_settings, play_sfx)
-
-
-func select_map_screen(play_sfx: bool = true):
-	current_screen_name = "MAP" if Global.is_orientation_portrait() else "MAP_IN_GAME"
-	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_map_satellite, play_sfx)
 
 
 func select_discover_screen(play_sfx: bool = true):
@@ -232,10 +190,6 @@ func select_node(node: Node, play_sfx: bool = true):
 
 func _on_button_settings_pressed():
 	select_settings_screen()
-
-
-func _on_button_map_pressed():
-	select_map_screen()
 
 
 func _on_button_discover_pressed():
@@ -274,6 +228,9 @@ func _on_visibility_changed():
 		UiSounds.play_sound("mainmenu_widget_open")
 		grab_focus()
 		Global.explorer_release_focus()
+		# Check if user has a pending deletion request and show the popup
+		if account_deletion_pop_up:
+			account_deletion_pop_up.check_and_show_pending_deletion()
 	else:
 		UiSounds.play_sound("mainmenu_widget_close")
 		Global.on_menu_close.emit()
@@ -347,4 +304,5 @@ func _on_deep_link_received() -> void:
 
 
 func _on_account_delete() -> void:
-	account_deletion_pop_up.async_start_flow()
+	if account_deletion_pop_up:
+		account_deletion_pop_up.async_start_flow()
