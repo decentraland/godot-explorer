@@ -31,6 +31,10 @@ var video_image: Image = null
 var video_width: int = 0
 var video_height: int = 0
 
+# Flag to skip texture updates during surface reinitialization
+# This prevents grey flickering when transitioning between surfaces
+var _reinitializing_surface: bool = false
+
 
 func _ready():
 	if OS.get_name() != "Android":
@@ -239,7 +243,20 @@ func update_texture() -> bool:
 
 
 ## GPU mode texture update - zero-copy path
+## Track if we've received a frame after reinitialization (for debugging)
+var _frames_after_reinit: int = 0
+var _waiting_for_first_frame: bool = false
+
+
 func _update_texture_gpu() -> bool:
+	# Skip updates during surface reinitialization to prevent flickering
+	if _reinitializing_surface:
+		return false
+
+	# Check if plugin and player are valid
+	if not plugin or player_id <= 0:
+		return false
+
 	# Check if new frame available
 	if not plugin.exoPlayerHasNewHardwareBuffer(player_id):
 		return false
@@ -248,6 +265,17 @@ func _update_texture_gpu() -> bool:
 	var hw_buffer_ptr: int = plugin.exoPlayerAcquireHardwareBufferPtr(player_id)
 	if hw_buffer_ptr == 0:
 		return false
+
+	# Debug: log first frame after reinitialization
+	if _waiting_for_first_frame:
+		_waiting_for_first_frame = false
+		_frames_after_reinit += 1
+		print(
+			(
+				"ExoPlayer: First frame received after reinit #%d (buffer=0x%x)"
+				% [_frames_after_reinit, hw_buffer_ptr]
+			)
+		)
 
 	# Update the ExternalTexture with the new hardware buffer
 	# This passes the AHardwareBuffer* to Godot's Vulkan renderer
@@ -265,19 +293,40 @@ func _reinitialize_surface(new_width: int, new_height: int) -> void:
 		)
 	)
 
+	# Set flag to prevent texture updates during transition
+	# This prevents grey flickering from invalid/stale buffers
+	_reinitializing_surface = true
+
 	video_width = new_width
 	video_height = new_height
 
+	# IMPORTANT: Clear the external buffer reference BEFORE reinitializing the surface.
+	# This prevents Vulkan memory allocation failures (VK_ERROR_OUT_OF_DEVICE_MEMORY)
+	# that occur when set_size() is called with the old hardware buffer still referenced.
+	# The old buffer pointer would cause a size mismatch in texture_external_update().
+	if external_texture:
+		external_texture.set_external_buffer_id(0)
+
 	# Reinitialize the native surface with new dimensions
+	# Note: ExoPlayerWrapper.initializeSurface() now detaches the player from the old surface
+	# before cleanup, which prevents BufferQueue abandonment errors
 	var result = plugin.exoPlayerInitSurface(player_id, new_width, new_height)
 	if result <= 0:
 		push_error("ExoPlayer: Failed to reinitialize surface with new dimensions")
+		_reinitializing_surface = false
 		return
 
 	# GPU mode: Update ExternalTexture size
+	# Now safe to resize since the old hardware buffer has been cleared
 	if not external_texture:
 		external_texture = ExternalTexture.new()
 	external_texture.set_size(Vector2i(new_width, new_height))
+
+	# Clear the reinitialization flag - next frame from new surface will be valid
+	_reinitializing_surface = false
+
+	# Debug: mark that we're waiting for first frame after reinit
+	_waiting_for_first_frame = true
 
 	# Emit signal to notify listeners of the size change
 	video_size_changed.emit(new_width, new_height)

@@ -69,6 +69,9 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     // Flag to indicate video size has changed and surface needs reinitialization
     private val videoSizeChanged = AtomicBoolean(false)
 
+    // Track looping state internally (ExoPlayer's repeatMode can be unreliable)
+    private val isLooping = AtomicBoolean(false)
+
     private var initError: String? = null
 
     @Volatile
@@ -76,9 +79,17 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     // Keep the Image alive while we're using its HardwareBuffer
     @Volatile
     private var latestHardwareBufferImage: android.media.Image? = null
-    // Double buffering: keep previous frame while current is being used by GPU
+    // Triple buffering: keep 2 previous frames alive to ensure Vulkan has finished using them
+    // before we close them. The GPU render pipeline may still be using N-1 frame.
     @Volatile
     private var previousHardwareBufferImage: android.media.Image? = null
+    @Volatile
+    private var previousHardwareBuffer: HardwareBuffer? = null
+    // N-2 frame - safe to close since Vulkan should be done with it
+    @Volatile
+    private var oldestHardwareBufferImage: android.media.Image? = null
+    @Volatile
+    private var oldestHardwareBuffer: HardwareBuffer? = null
     // Flag to track if the current frame has been consumed by Godot
     @Volatile
     private var hardwareBufferConsumed: Boolean = true
@@ -115,13 +126,29 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
                             setAudioAttributes(audioAttributes, /* handleAudioFocus= */ false)
                             addListener(object : Player.Listener {
                                 override fun onPlaybackStateChanged(playbackState: Int) {
+                                    val stateName = when (playbackState) {
+                                        Player.STATE_IDLE -> "IDLE"
+                                        Player.STATE_BUFFERING -> "BUFFERING"
+                                        Player.STATE_READY -> "READY"
+                                        Player.STATE_ENDED -> "ENDED"
+                                        else -> "UNKNOWN($playbackState)"
+                                    }
+                                    Log.d(TAG, "onPlaybackStateChanged: $stateName")
+
                                     when (playbackState) {
                                         Player.STATE_READY -> {
                                             this@ExoPlayerWrapper.isPrepared.set(true)
                                             this@ExoPlayerWrapper.updateCachedState()
                                         }
                                         Player.STATE_ENDED -> {
-                                            this@ExoPlayerWrapper.isPlayingState.set(false)
+                                            val shouldLoop = this@ExoPlayerWrapper.isLooping.get()
+                                            if (shouldLoop) {
+                                                Log.d(TAG, "Looping: seeking to start and replaying")
+                                                seekTo(0)
+                                                play()
+                                            } else {
+                                                this@ExoPlayerWrapper.isPlayingState.set(false)
+                                            }
                                         }
                                     }
                                 }
@@ -216,6 +243,12 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
      */
     fun initializeSurface(width: Int, height: Int): Int {
         return try {
+            // Before cleaning up the old surface, we need to:
+            // 1. Detach ExoPlayer from the current surface to stop buffer production
+            // 2. Wait for any pending buffers to be released
+            // 3. Then safely clean up the old ImageReader
+            detachPlayerFromSurface()
+
             cleanupSurface()
 
             textureWidth = width
@@ -241,6 +274,26 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     }
 
     /**
+     * Detach the player from the current surface to stop buffer production.
+     * This must be called before cleaning up the surface to prevent race conditions.
+     */
+    private fun detachPlayerFromSurface() {
+        val latch = CountDownLatch(1)
+        mainHandler.post {
+            try {
+                player?.setVideoSurface(null)
+            } finally {
+                latch.countDown()
+            }
+        }
+        latch.await(1, TimeUnit.SECONDS)
+
+        // Give a brief moment for any in-flight buffers to be processed
+        // This helps prevent "BufferQueue has been abandoned" errors
+        Thread.sleep(50)
+    }
+
+    /**
      * Initialize surface in GPU mode using HardwareBuffer.
      * Requires API 29+ (Android Q).
      *
@@ -254,7 +307,7 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
             imageReader = ImageReader.newInstance(
                 width, height,
                 ImageFormat.PRIVATE,
-                4,  // maxImages - increased for double buffering
+                5,  // maxImages - increased for triple buffering
                 HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE or HardwareBuffer.USAGE_VIDEO_ENCODE
             ).apply {
                 setOnImageAvailableListener({ reader ->
@@ -264,8 +317,16 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
                             val hwBuffer = image.hardwareBuffer
                             if (hwBuffer != null) {
                                 synchronized(hardwareBufferLock) {
-                                    // Close previous images to free up ImageReader slots
-                                    previousHardwareBufferImage?.close()
+                                    // Triple buffering: close the OLDEST (N-2) buffer
+                                    // This ensures Vulkan has had enough time to finish using it
+                                    // per Android docs: Image.getHardwareBuffer() returns a buffer that
+                                    // "must be closed by the caller when it is no longer needed"
+                                    oldestHardwareBuffer?.close()
+                                    oldestHardwareBufferImage?.close()
+                                    // Shift: oldest <- previous <- current <- new
+                                    oldestHardwareBuffer = previousHardwareBuffer
+                                    oldestHardwareBufferImage = previousHardwareBufferImage
+                                    previousHardwareBuffer = latestHardwareBuffer
                                     previousHardwareBufferImage = latestHardwareBufferImage
                                     // Keep the new image alive so its HardwareBuffer stays valid
                                     latestHardwareBufferImage = image
@@ -395,6 +456,7 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     }
 
     fun play() {
+        Log.d(TAG, "play() called")
         runOnMainThreadAsync {
             player?.apply {
                 playWhenReady = true
@@ -404,6 +466,7 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     }
 
     fun pause() {
+        Log.d(TAG, "pause() called")
         runOnMainThreadAsync {
             player?.pause()
             isPlayingState.set(false)
@@ -477,6 +540,8 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     fun getVolume(): Float = volume.get()
 
     fun setLooping(loop: Boolean) {
+        isLooping.set(loop)
+        Log.d(TAG, "setLooping: loop=$loop")
         runOnMainThreadAsync {
             player?.repeatMode = if (loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         }
@@ -487,13 +552,27 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
 
             // Clean up GPU mode resources
             synchronized(hardwareBufferLock) {
-                // Close both images (this also invalidates their HardwareBuffers)
+                // Close HardwareBuffers first (must be closed separately from Images)
+                // per Android docs: Image.getHardwareBuffer() returns a buffer that
+                // "must be closed by the caller when it is no longer needed"
+                // NOTE: We don't close latestHardwareBuffer/Image here because Vulkan might
+                // still be using it. Vulkan imports the AHardwareBuffer into VkDeviceMemory
+                // and holds its own reference, but closing the Image could release the buffer
+                // back to the BufferQueue before Vulkan is done. The old buffer will be
+                // eventually cleaned up by GC, and Vulkan will release its reference when
+                // the ycbcr_source_texture is freed on the next set_external_buffer_id() call.
+                oldestHardwareBuffer?.close()
+                oldestHardwareBuffer = null
+                oldestHardwareBufferImage?.close()
+                oldestHardwareBufferImage = null
+                previousHardwareBuffer?.close()
+                previousHardwareBuffer = null
                 previousHardwareBufferImage?.close()
                 previousHardwareBufferImage = null
-                latestHardwareBufferImage?.close()
-                latestHardwareBufferImage = null
-                // The HardwareBuffer is now invalid, just clear the reference
+                // Don't close latest - Vulkan may still reference it
+                // Just clear our references, let GC handle it later
                 latestHardwareBuffer = null
+                latestHardwareBufferImage = null
                 hardwareBufferConsumed = true
             }
 
