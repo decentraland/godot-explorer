@@ -1,11 +1,26 @@
 extends DclVideoPlayer
 
 
+func init_livekit_audio(sample_rate: int, _num_channels: int, _samples_per_channel: int):
+	# Configure the AudioStreamGenerator with the correct sample rate
+	var stream = self.get_stream() as AudioStreamGenerator
+	if stream:
+		print(
+			"VideoPlayer: mix_rate BEFORE=",
+			stream.mix_rate,
+			" setting to sample_rate=",
+			sample_rate
+		)
+		stream.mix_rate = sample_rate
+		print("VideoPlayer: mix_rate AFTER=", stream.mix_rate)
+
+
 func stream_buffer(data: PackedVector2Array):
 	if not self.playing:
 		self.play()
 
-	self.get_stream_playback().push_buffer(data)
+	var playback = self.get_stream_playback() as AudioStreamGeneratorPlayback
+	playback.push_buffer(data)
 
 
 func async_request_video(file_hash):

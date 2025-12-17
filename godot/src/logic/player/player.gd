@@ -135,6 +135,10 @@ func _ready():
 	if own_click_area:
 		own_click_area.queue_free()
 
+	# Setup trigger detection for local player's avatar
+	# scene_id=-1 (not a scene NPC), entity_id=1 (SceneEntityId::PLAYER)
+	avatar.setup_trigger_detection(-1, 1)
+
 
 func _on_player_profile_changed(new_profile: DclUserProfile):
 	var new_version = new_profile.get_profile_version()

@@ -309,12 +309,6 @@ fn check_texture(
         DclSourceTex::AvatarTexture(_user_id) => {
             // TODO: implement load avatar texture
         }
-
-        #[cfg(not(feature = "use_ffmpeg"))]
-        DclSourceTex::VideoTexture(_video_entity_id) => {
-            // TODO: set a texture with a `without-video build` message
-        }
-        #[cfg(feature = "use_ffmpeg")]
         DclSourceTex::VideoTexture(video_entity_id) => {
             if let Some(node) = _scene
                 .godot_dcl_scene

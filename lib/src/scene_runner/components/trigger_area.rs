@@ -22,7 +22,10 @@ use crate::{
         },
         SceneId,
     },
-    scene_runner::{pool_manager::PoolManager, scene::Scene},
+    scene_runner::{
+        pool_manager::PoolManager,
+        scene::{Scene, SceneType},
+    },
 };
 
 const CL_PLAYER: u32 = 4;
@@ -119,7 +122,7 @@ fn handle_body_monitor_event(
 
     let is_enter = status == 0; // AREA_BODY_ADDED = 0
 
-    // Try to get the collider object to determine if it's a player or scene entity
+    // Try to get the collider object to determine entity type
     let (collider_entity, collider_layer) = if instance_id > 0 {
         let Ok(object) = Gd::<Object>::try_from_instance_id(InstanceId::from_i64(instance_id))
         else {
@@ -131,32 +134,41 @@ fn handle_body_monitor_event(
             return;
         }
 
-        // Check if this is a DCL entity
+        // Check if this is a DCL entity or avatar with entity metadata
         if object.has_meta("dcl_entity_id".into()) {
             let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
             let dcl_scene_id = object.get_meta("dcl_scene_id".into()).to::<i32>();
-            // Only accept entities from the same scene
-            if dcl_scene_id == scene_id.0 {
+
+            // Check if this is an avatar (has CL_PLAYER layer)
+            let is_avatar = object
+                .clone()
+                .try_cast::<godot::engine::CollisionObject3D>()
+                .ok()
+                .map(|co| (co.get_collision_layer() & CL_PLAYER) != 0)
+                .unwrap_or(false);
+
+            if is_avatar {
+                // Avatar detection (local player, remote avatar, or scene NPC)
+                // dcl_scene_id == -1 means it's not a scene NPC (local player or remote avatar)
+                // For scene NPCs (dcl_scene_id >= 0), only accept from same scene
+                if dcl_scene_id >= 0 && dcl_scene_id != scene_id.0 {
+                    return; // Scene NPC from different scene, ignore
+                }
+                (SceneEntityId::from_i32(dcl_entity_id), CL_PLAYER)
+            } else {
+                // Regular DCL scene entity (not avatar)
+                // Only accept entities from the same scene
+                if dcl_scene_id != scene_id.0 {
+                    return; // Different scene, ignore
+                }
                 (
                     SceneEntityId::from_i32(dcl_entity_id),
                     collision_mask & !CL_PLAYER,
                 )
-            } else {
-                return; // Different scene, ignore
             }
         } else {
-            // Check if this is the player by checking collision layer
-            // Use try_cast to safely check if it's a CollisionObject3D
-            let Some(collision_obj) = object.try_cast::<godot::engine::CollisionObject3D>().ok()
-            else {
-                return; // Not a collision object
-            };
-            let collider_layer = collision_obj.get_collision_layer();
-            if (collider_layer & CL_PLAYER) != 0 && (collision_mask & CL_PLAYER) != 0 {
-                (SceneEntityId::PLAYER, CL_PLAYER)
-            } else {
-                return; // Not a player and not a DCL entity
-            }
+            // No dcl_entity_id metadata - ignore
+            return;
         }
     } else {
         return; // No instance ID
@@ -166,7 +178,7 @@ fn handle_body_monitor_event(
         "[TriggerArea] {} trigger={:?}, collider={:?}",
         if is_enter { "ENTER" } else { "EXIT" },
         trigger_entity,
-        collider_entity
+        collider_entity,
     );
 
     monitor.pending_events.push(PendingTriggerEvent {
@@ -187,10 +199,13 @@ fn handle_body_monitor_event(
 pub struct TriggerAreaInstance {
     pub area_rid: Rid,
     pub shape_rid: Rid,
-    /// Set of entities currently inside this trigger area (including player)
+    /// Set of entities physically overlapping this trigger area (tracked by physics)
     pub entities_inside: HashSet<SceneEntityId>,
     pub mesh_type: TriggerAreaMeshType,
     pub collision_mask: u32,
+    /// Whether this trigger area is active (player is in this scene)
+    /// When inactive, physics monitoring is disabled and no events are generated
+    pub is_active: bool,
 }
 
 /// Global trigger area state for a scene
@@ -236,6 +251,7 @@ pub fn update_trigger_area(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
     pools: &mut PoolManager,
+    current_parcel_scene_id: &SceneId,
 ) {
     let trigger_area_component = SceneCrdtStateProtoComponents::get_trigger_area(crdt_state);
 
@@ -261,7 +277,13 @@ pub fn update_trigger_area(
     for (entity, config) in entities_to_process {
         match config {
             Some(config) => {
-                create_or_update_trigger_area(scene, &entity, &config, pool);
+                create_or_update_trigger_area(
+                    scene,
+                    &entity,
+                    &config,
+                    pool,
+                    current_parcel_scene_id,
+                );
             }
             None => {
                 remove_trigger_area(scene, &entity, pool);
@@ -269,17 +291,131 @@ pub fn update_trigger_area(
         }
     }
 
-    // Step 2: Update transforms for all trigger areas
+    // Step 2: Check if scene became active/inactive and enable/disable trigger areas
+    check_scene_active(scene, current_parcel_scene_id);
+
+    // Step 3: Update transforms for all trigger areas
     update_trigger_area_transforms(scene);
 
-    // Step 3: Process pending callback events (ENTER/EXIT)
+    // Step 4: Process pending callback events (ENTER/EXIT)
     process_callback_events(scene);
 
-    // Step 4: Generate throttled STAY events
+    // Step 5: Generate STAY events for entities inside active trigger areas
     generate_stay_events(scene);
 }
 
-/// Process ENTER/EXIT events from the global monitor callback queue
+/// Helper to create monitor callback for a trigger area
+fn create_monitor_callback(area_rid: Rid) -> Callable {
+    Callable::from_fn("trigger_body_monitor", move |args: &[&Variant]| {
+        if args.len() >= 5 {
+            let status = args[0].to::<i64>();
+            let body_rid = args[1].to::<Rid>();
+            let instance_id = args[2].to::<i64>();
+            let body_shape_idx = args[3].to::<i64>();
+            let local_shape_idx = args[4].to::<i64>();
+            handle_body_monitor_event(
+                area_rid,
+                status,
+                body_rid,
+                instance_id,
+                body_shape_idx,
+                local_shape_idx,
+            );
+        }
+        Ok(Variant::nil())
+    })
+}
+
+/// Check if the scene became active/inactive (player entered/left) and enable/disable trigger areas accordingly.
+/// When player leaves: generate EXIT for all entities inside, disable physics monitoring.
+/// When player enters: re-enable physics monitoring (physics will auto-fire ENTERs for overlapping bodies).
+fn check_scene_active(scene: &mut Scene, current_parcel_scene_id: &SceneId) {
+    // Global scenes are always active
+    if !matches!(scene.scene_type, SceneType::Parcel) {
+        return;
+    }
+
+    let was_active = scene.last_player_scene_id == scene.scene_id;
+    let is_active = *current_parcel_scene_id == scene.scene_id;
+
+    // Update stored value
+    scene.last_player_scene_id = *current_parcel_scene_id;
+
+    // No transition
+    if was_active == is_active {
+        return;
+    }
+
+    let mut physics_server = PhysicsServer3D::singleton();
+    let tick_number = scene.tick_number;
+    let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
+
+    if was_active && !is_active {
+        // Player LEFT this scene - deactivate all trigger areas
+        tracing::debug!(
+            "[TriggerArea] Scene {:?} became INACTIVE - disabling {} trigger areas",
+            scene.scene_id,
+            scene.trigger_areas.instances.len()
+        );
+
+        for (trigger_entity, instance) in &mut scene.trigger_areas.instances {
+            // Generate EXIT for everyone inside
+            for entity in instance.entities_inside.drain() {
+                let trigger_transform = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(trigger_entity)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY);
+
+                let collider_transform = scene
+                    .godot_dcl_scene
+                    .get_node_or_null_3d(&entity)
+                    .map(|n| n.get_global_transform())
+                    .unwrap_or(Transform3D::IDENTITY);
+
+                let collider_layer = if entity == SceneEntityId::PLAYER {
+                    CL_PLAYER
+                } else {
+                    instance.collision_mask
+                };
+
+                let result = build_trigger_result(
+                    trigger_entity,
+                    &entity,
+                    TriggerAreaEventType::TaetExit,
+                    tick_number,
+                    collider_transform,
+                    trigger_transform,
+                    scene_pos,
+                    collider_layer,
+                );
+                scene.trigger_area_results.push((*trigger_entity, result));
+            }
+
+            // Disable physics monitoring
+            physics_server.area_set_monitor_callback(instance.area_rid, Callable::invalid());
+            instance.is_active = false;
+        }
+    } else if !was_active && is_active {
+        // Player ENTERED this scene - reactivate all trigger areas
+        tracing::debug!(
+            "[TriggerArea] Scene {:?} became ACTIVE - enabling {} trigger areas",
+            scene.scene_id,
+            scene.trigger_areas.instances.len()
+        );
+
+        for instance in scene.trigger_areas.instances.values_mut() {
+            // Re-enable physics monitoring (will auto-fire ENTERs for overlapping bodies)
+            let callback = create_monitor_callback(instance.area_rid);
+            physics_server.area_set_monitor_callback(instance.area_rid, callback);
+            instance.is_active = true;
+        }
+    }
+}
+
+/// Process ENTER/EXIT events from the global monitor callback queue.
+/// Since trigger areas are disabled when player is not in scene, all events
+/// received here are for active trigger areas.
 fn process_callback_events(scene: &mut Scene) {
     let events = drain_pending_events(scene.scene_id);
     if events.is_empty() {
@@ -294,76 +430,78 @@ fn process_callback_events(scene: &mut Scene) {
             continue;
         };
 
-        // Get transforms for result building
+        // Skip events for inactive trigger areas (shouldn't happen, but be safe)
+        if !instance.is_active {
+            continue;
+        }
+
         let trigger_transform = scene
             .godot_dcl_scene
             .get_node_or_null_3d(&event.trigger_entity)
             .map(|n| n.get_global_transform())
             .unwrap_or(Transform3D::IDENTITY);
 
-        let collider_transform = if event.collider_entity == SceneEntityId::PLAYER {
-            scene
-                .godot_dcl_scene
-                .get_node_or_null_3d(&SceneEntityId::PLAYER)
-                .map(|n| n.get_global_transform())
-                .unwrap_or(Transform3D::IDENTITY)
-        } else {
-            scene
-                .godot_dcl_scene
-                .get_node_or_null_3d(&event.collider_entity)
-                .map(|n| n.get_global_transform())
-                .unwrap_or(Transform3D::IDENTITY)
-        };
+        let collider_transform = scene
+            .godot_dcl_scene
+            .get_node_or_null_3d(&event.collider_entity)
+            .map(|n| n.get_global_transform())
+            .unwrap_or(Transform3D::IDENTITY);
 
-        let event_type = if event.is_enter {
-            // ENTER: add to entities_inside
+        if event.is_enter {
             instance.entities_inside.insert(event.collider_entity);
-            TriggerAreaEventType::TaetEnter
-        } else {
-            // EXIT: remove from entities_inside
-            instance.entities_inside.remove(&event.collider_entity);
-            TriggerAreaEventType::TaetExit
-        };
 
-        let result = build_trigger_result(
-            &event.trigger_entity,
-            &event.collider_entity,
-            event_type,
-            tick_number,
-            collider_transform,
-            trigger_transform,
-            scene_pos,
-            event.collider_layer,
-        );
-        scene
-            .trigger_area_results
-            .push((event.trigger_entity, result));
+            let result = build_trigger_result(
+                &event.trigger_entity,
+                &event.collider_entity,
+                TriggerAreaEventType::TaetEnter,
+                tick_number,
+                collider_transform,
+                trigger_transform,
+                scene_pos,
+                event.collider_layer,
+            );
+            scene
+                .trigger_area_results
+                .push((event.trigger_entity, result));
+        } else if instance.entities_inside.remove(&event.collider_entity) {
+            let result = build_trigger_result(
+                &event.trigger_entity,
+                &event.collider_entity,
+                TriggerAreaEventType::TaetExit,
+                tick_number,
+                collider_transform,
+                trigger_transform,
+                scene_pos,
+                event.collider_layer,
+            );
+            scene
+                .trigger_area_results
+                .push((event.trigger_entity, result));
+        }
     }
 }
 
-/// Generate STAY events for entities still inside trigger areas
+/// Generate STAY events for entities inside active trigger areas
 fn generate_stay_events(scene: &mut Scene) {
     let tick_number = scene.tick_number;
     let scene_pos = scene.godot_dcl_scene.root_node_3d.get_global_position();
 
-    // Collect trigger entities that need STAY events
+    // Collect data for STAY events (avoid borrowing issues)
     let stay_data: Vec<_> = scene
         .trigger_areas
         .instances
         .iter()
         .filter_map(|(trigger_entity, instance)| {
-            if instance.entities_inside.is_empty() {
+            if !instance.is_active || instance.entities_inside.is_empty() {
                 return None;
             }
 
-            // Collect entities inside with their collision masks
             let entities: Vec<_> = instance
                 .entities_inside
                 .iter()
                 .map(|e| (*e, instance.collision_mask))
                 .collect();
 
-            // Get trigger transform
             let trigger_transform = scene
                 .godot_dcl_scene
                 .get_node_or_null_3d(trigger_entity)
@@ -377,24 +515,16 @@ fn generate_stay_events(scene: &mut Scene) {
     // Generate STAY events
     for (trigger_entity, entities, trigger_transform) in stay_data {
         for (collider_entity, collision_mask) in entities {
-            let collider_transform = if collider_entity == SceneEntityId::PLAYER {
-                scene
-                    .godot_dcl_scene
-                    .get_node_or_null_3d(&SceneEntityId::PLAYER)
-                    .map(|n| n.get_global_transform())
-                    .unwrap_or(Transform3D::IDENTITY)
-            } else {
-                scene
-                    .godot_dcl_scene
-                    .get_node_or_null_3d(&collider_entity)
-                    .map(|n| n.get_global_transform())
-                    .unwrap_or(Transform3D::IDENTITY)
-            };
+            let collider_transform = scene
+                .godot_dcl_scene
+                .get_node_or_null_3d(&collider_entity)
+                .map(|n| n.get_global_transform())
+                .unwrap_or(Transform3D::IDENTITY);
 
             let collider_layer = if collider_entity == SceneEntityId::PLAYER {
                 CL_PLAYER
             } else {
-                collision_mask & !CL_PLAYER
+                collision_mask
             };
 
             let result = build_trigger_result(
@@ -417,11 +547,17 @@ fn create_or_update_trigger_area(
     entity: &SceneEntityId,
     config: &PbTriggerArea,
     pool: &mut crate::scene_runner::object_pool::PhysicsAreaPool,
+    current_parcel_scene_id: &SceneId,
 ) {
     let mut physics_server = PhysicsServer3D::singleton();
     let mesh_type = config.mesh();
     let collision_mask = config.collision_mask.unwrap_or(CL_PLAYER);
     let scene_id = scene.scene_id;
+
+    // Determine if this trigger area should be active
+    // Global scenes are always active, parcel scenes only when player is in them
+    let is_active = !matches!(scene.scene_type, SceneType::Parcel)
+        || *current_parcel_scene_id == scene.scene_id;
 
     // Check if mesh type changed (requires recreate)
     let needs_recreate = scene
@@ -464,45 +600,25 @@ fn create_or_update_trigger_area(
         physics_server.area_add_shape(area_rid, shape_rid);
 
         // Configure collision layer/mask
-        // Layer = collision_mask: trigger areas need to be on the same layers they detect
-        //         This is required for area-to-area detection in Godot
-        // Mask = collision_mask: configured in scene component (default CL_PLAYER=4)
         physics_server.area_set_collision_layer(area_rid, collision_mask);
         physics_server.area_set_collision_mask(area_rid, collision_mask);
-        physics_server.area_set_monitorable(area_rid, true); // Enable for callbacks
+        physics_server.area_set_monitorable(area_rid, true);
 
         // Register in global monitor for callback routing
         register_trigger_area(area_rid, scene_id, *entity, collision_mask);
 
-        // Set up monitor callbacks for ENTER/EXIT events
-        // Body monitor: detects RigidBody3D, CharacterBody3D, etc.
-        let area_rid_body = area_rid;
-        let body_callback =
-            Callable::from_fn("trigger_body_monitor", move |args: &[&Variant]| {
-                if args.len() >= 5 {
-                    let status = args[0].to::<i64>();
-                    let body_rid = args[1].to::<Rid>();
-                    let instance_id = args[2].to::<i64>();
-                    let body_shape_idx = args[3].to::<i64>();
-                    let local_shape_idx = args[4].to::<i64>();
-                    handle_body_monitor_event(
-                        area_rid_body,
-                        status,
-                        body_rid,
-                        instance_id,
-                        body_shape_idx,
-                        local_shape_idx,
-                    );
-                }
-                Ok(Variant::nil())
-            });
-        physics_server.area_set_monitor_callback(area_rid, body_callback);
+        // Only set up monitor callback if active
+        if is_active {
+            let callback = create_monitor_callback(area_rid);
+            physics_server.area_set_monitor_callback(area_rid, callback);
+        }
 
         tracing::debug!(
-            "[TriggerArea] CREATE entity={:?}, mesh={:?}, mask={}",
+            "[TriggerArea] CREATE entity={:?}, mesh={:?}, mask={}, active={}",
             entity,
             mesh_type,
-            collision_mask
+            collision_mask,
+            is_active
         );
 
         scene.trigger_areas.instances.insert(
@@ -513,6 +629,7 @@ fn create_or_update_trigger_area(
                 entities_inside: HashSet::new(),
                 mesh_type,
                 collision_mask,
+                is_active,
             },
         );
     } else if let Some(instance) = scene.trigger_areas.instances.get_mut(entity) {

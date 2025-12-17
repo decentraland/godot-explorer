@@ -4,7 +4,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::NewAlloc, prelude::Gd};
+use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -109,9 +109,7 @@ pub enum SceneUpdateState {
     Raycasts,
     AvatarAttach,
     SceneUi,
-    #[cfg(feature = "use_ffmpeg")]
     VideoPlayer,
-    #[cfg(feature = "use_ffmpeg")]
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
@@ -126,44 +124,39 @@ pub enum SceneUpdateState {
 
 impl SceneUpdateState {
     pub fn next(&self) -> Self {
-        match &self {
-            &Self::None => Self::PrintLogs,
-            &Self::PrintLogs => Self::DeletedEntities,
-            &Self::DeletedEntities => Self::Tween,
-            &Self::Tween => Self::TransformAndParent,
-            &Self::TransformAndParent => Self::VisibilityComponent,
-            &Self::VisibilityComponent => Self::MeshRenderer,
-            &Self::MeshRenderer => Self::ScenePointerEvents,
-            &Self::ScenePointerEvents => Self::Material,
-            &Self::Material => Self::TextShape,
-            &Self::TextShape => Self::Billboard,
-            &Self::Billboard => Self::MeshCollider,
-            &Self::MeshCollider => Self::GltfContainer,
-            &Self::GltfContainer => Self::SyncGltfContainer,
-            &Self::SyncGltfContainer => Self::NftShape,
-            &Self::NftShape => Self::Animator,
-            &Self::Animator => Self::AvatarShape,
-            &Self::AvatarShape => Self::AvatarShapeEmoteCommand,
-            &Self::AvatarShapeEmoteCommand => Self::Raycasts,
-            #[cfg(feature = "use_ffmpeg")]
-            &Self::Raycasts => Self::VideoPlayer,
-            #[cfg(feature = "use_ffmpeg")]
-            &Self::VideoPlayer => Self::AudioStream,
-            #[cfg(feature = "use_ffmpeg")]
-            &Self::AudioStream => Self::AvatarModifierArea,
-            #[cfg(not(feature = "use_ffmpeg"))]
-            &Self::Raycasts => Self::AvatarModifierArea,
-            &Self::AvatarModifierArea => Self::CameraModeArea,
-            &Self::CameraModeArea => Self::TriggerArea,
-            &Self::TriggerArea => Self::VirtualCameras,
-            &Self::VirtualCameras => Self::AudioSource,
-            &Self::AudioSource => Self::AvatarAttach,
-            &Self::AvatarAttach => Self::SceneUi,
-            &Self::SceneUi => Self::ProcessRpcs,
-            &Self::ProcessRpcs => Self::ComputeCrdtState,
-            &Self::ComputeCrdtState => Self::SendToThread,
-            &Self::SendToThread => Self::Processed,
-            &Self::Processed => Self::Processed,
+        match self {
+            Self::None => Self::PrintLogs,
+            Self::PrintLogs => Self::DeletedEntities,
+            Self::DeletedEntities => Self::Tween,
+            Self::Tween => Self::TransformAndParent,
+            Self::TransformAndParent => Self::VisibilityComponent,
+            Self::VisibilityComponent => Self::MeshRenderer,
+            Self::MeshRenderer => Self::ScenePointerEvents,
+            Self::ScenePointerEvents => Self::Material,
+            Self::Material => Self::TextShape,
+            Self::TextShape => Self::Billboard,
+            Self::Billboard => Self::MeshCollider,
+            Self::MeshCollider => Self::GltfContainer,
+            Self::GltfContainer => Self::SyncGltfContainer,
+            Self::SyncGltfContainer => Self::NftShape,
+            Self::NftShape => Self::Animator,
+            Self::Animator => Self::AvatarShape,
+            Self::AvatarShape => Self::AvatarShapeEmoteCommand,
+            Self::AvatarShapeEmoteCommand => Self::Raycasts,
+            Self::Raycasts => Self::VideoPlayer,
+            Self::VideoPlayer => Self::AudioStream,
+            Self::AudioStream => Self::AvatarModifierArea,
+            Self::AvatarModifierArea => Self::CameraModeArea,
+            Self::CameraModeArea => Self::TriggerArea,
+            Self::TriggerArea => Self::VirtualCameras,
+            Self::VirtualCameras => Self::AudioSource,
+            Self::AudioSource => Self::AvatarAttach,
+            Self::AvatarAttach => Self::SceneUi,
+            Self::SceneUi => Self::ProcessRpcs,
+            Self::ProcessRpcs => Self::ComputeCrdtState,
+            Self::ComputeCrdtState => Self::SendToThread,
+            Self::SendToThread => Self::Processed,
+            Self::Processed => Self::Processed,
         }
     }
 }
@@ -230,6 +223,9 @@ pub struct Scene {
     pub audio_streams: HashMap<SceneEntityId, Gd<DclAudioStream>>,
     pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
 
+    // Tracks entities with livekit video players
+    pub livekit_video_player_entities: HashSet<SceneEntityId>,
+
     pub avatar_scene_updates: SceneAvatarUpdates,
     pub scene_tests: HashMap<String, Option<SceneTestResult>>,
     pub scene_test_plan_received: bool,
@@ -243,6 +239,9 @@ pub struct Scene {
 
     // Trigger Areas
     pub trigger_areas: TriggerAreaState,
+    /// Last known player scene - used to detect when player enters/leaves this scene
+    /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
+    pub last_player_scene_id: SceneId,
 
     pub virtual_camera: Gd<DclVirtualCamera>,
 
@@ -341,6 +340,7 @@ impl Scene {
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
+            livekit_video_player_entities: HashSet::new(),
             scene_type,
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
@@ -349,6 +349,7 @@ impl Scene {
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
@@ -408,6 +409,7 @@ impl Scene {
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
+            livekit_video_player_entities: HashSet::new(),
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
@@ -415,9 +417,68 @@ impl Scene {
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
+        }
+    }
+
+    pub fn register_livekit_video_player(&mut self, entity_id: SceneEntityId) {
+        self.livekit_video_player_entities.insert(entity_id);
+        tracing::info!(
+            "Registered livekit video player entity {}",
+            entity_id.as_i32()
+        );
+    }
+
+    pub fn process_livekit_video_frame(&mut self, width: u32, height: u32, data: &[u8]) {
+        // Send video frames to all registered livekit video players
+        for entity_id in &self.livekit_video_player_entities {
+            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(entity_id) {
+                if let Some(vp_data) = &mut node.video_player_data {
+                    use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
+                    update_video_texture_from_livekit(&mut vp_data.video_sink, width, height, data);
+                }
+            }
+        }
+    }
+
+    pub fn init_livekit_audio(
+        &mut self,
+        sample_rate: u32,
+        num_channels: u32,
+        samples_per_channel: u32,
+    ) {
+        tracing::info!(
+            "Livekit audio initialized: sample_rate={}, channels={}, samples_per_channel={}",
+            sample_rate,
+            num_channels,
+            samples_per_channel
+        );
+
+        // Configure the AudioStreamGenerator with the correct sample rate for all livekit video players
+        for entity_id in self.livekit_video_player_entities.clone() {
+            if let Some(video_player) = self.video_players.get_mut(&entity_id) {
+                video_player.call(
+                    "init_livekit_audio".into(),
+                    &[
+                        sample_rate.to_variant(),
+                        num_channels.to_variant(),
+                        samples_per_channel.to_variant(),
+                    ],
+                );
+            }
+        }
+    }
+
+    pub fn process_livekit_audio_frame(&mut self, frame: godot::prelude::PackedVector2Array) {
+        // Send audio frames to all registered livekit video players
+        for entity_id in self.livekit_video_player_entities.clone() {
+            if let Some(video_player) = self.video_players.get_mut(&entity_id) {
+                // Call the stream_buffer method on the video player (GDScript)
+                video_player.call("stream_buffer".into(), &[frame.to_variant()]);
+            }
         }
     }
 }
