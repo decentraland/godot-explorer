@@ -395,7 +395,7 @@ impl Scene {
             if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(entity_id) {
                 if let Some(vp_data) = &mut node.video_player_data {
                     use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
-                    update_video_texture_from_livekit(&mut vp_data.video_sink, width, height, data);
+                    update_video_texture_from_livekit(vp_data, width, height, data);
                 }
             }
         }

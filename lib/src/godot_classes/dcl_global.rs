@@ -56,7 +56,8 @@ mod android {
             // "debug"  // Debug, info, warnings and errors (shows all debug logs)
             // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
             // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
-            "info", // Info, warnings and errors
+            "dclgodot::scene_runner::components::video_player=debug", // Debug for scene_runner, info for comms, warn for everything else
+                                                                      // "info", // Info, warnings and errors
         );
 
         let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))

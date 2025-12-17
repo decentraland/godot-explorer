@@ -18,7 +18,9 @@ use std::{
 };
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
-use crate::av::backend::{AudioSink, VideoSink};
+use crate::av::backend::{AudioSink, BackendType};
+use crate::av::stream_processor::StreamStateData;
+use godot::engine::ImageTexture;
 
 pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, GodotEntityNode>,
@@ -36,11 +38,58 @@ pub struct GodotDclScene {
 
     pub ui_results: Rc<RefCell<UiResults>>,
 }
+
+/// Simplified video player data for CRDT event tracking.
+/// Backend management is now handled by GDScript.
 pub struct VideoPlayerData {
-    pub video_sink: VideoSink,
-    pub audio_sink: AudioSink,
+    /// The video source URL
+    pub source: String,
+    /// The backend type being used
+    pub backend_type: BackendType,
+    /// Texture for LiveKit video frames (only used for LiveKit backend)
+    pub texture: Option<Gd<ImageTexture>>,
+    /// Event timestamp counter for CRDT events
     pub timestamp: u32,
+    /// Video length in seconds (updated from backend events)
     pub length: f32,
+    /// Receiver for stream state events (for CRDT event generation)
+    pub stream_data_state_receiver: tokio::sync::mpsc::Receiver<StreamStateData>,
+}
+
+impl VideoPlayerData {
+    pub fn new(source: String, backend_type: BackendType) -> Self {
+        // Create a channel for stream state events
+        // For now, most backends don't send events through this channel,
+        // but we keep it for future compatibility and existing event polling code
+        let (_, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
+
+        Self {
+            source,
+            backend_type,
+            texture: None,
+            timestamp: 0,
+            length: -1.0,
+            stream_data_state_receiver,
+        }
+    }
+
+    /// Create VideoPlayerData with a texture (for LiveKit backend)
+    pub fn new_with_texture(
+        source: String,
+        backend_type: BackendType,
+        texture: Gd<ImageTexture>,
+    ) -> Self {
+        let (_, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
+
+        Self {
+            source,
+            backend_type,
+            texture: Some(texture),
+            timestamp: 0,
+            length: -1.0,
+            stream_data_state_receiver,
+        }
+    }
 }
 
 pub struct UiNode {
