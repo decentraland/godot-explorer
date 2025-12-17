@@ -96,15 +96,15 @@ func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void
 	Global.teleport_to(parcel_position, realm)
 
 
-func _on_notification_clicked(notification: Dictionary) -> void:
+func _on_notification_clicked(notification_d: Dictionary) -> void:
 	# Handle notification clicks - open event details for event notifications
-	var notif_type = notification.get("type", "")
+	var notif_type = notification_d.get("type", "")
 
 	# Early return if not an event notification
 	if notif_type not in ["event_created", "events_starts_soon", "events_started"]:
 		return
 
-	var metadata = notification.get("metadata", {})
+	var metadata = notification_d.get("metadata", {})
 
 	# Extract event ID from the link URL (e.g., "https://decentraland.org/jump/events?id=5f776ddc-...")
 	var link = metadata.get("link", "")

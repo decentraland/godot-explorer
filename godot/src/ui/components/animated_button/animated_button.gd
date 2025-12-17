@@ -17,7 +17,6 @@ func _ready() -> void:
 	pressed.connect(_on_pressed)
 	toggled.connect(_on_toggled)
 	instantiate_animated_sprite()
-	# Las clases hijas deben implementar este método para conectar sus señales
 	_connect_update_signals()
 
 	# Initial update
@@ -34,7 +33,6 @@ func _on_pressed() -> void:
 	if metric_name != "":
 		Global.metrics.track_click_button(metric_name, "HUD", "")
 
-	# Las clases hijas deben implementar este método para emitir su señal específica
 	_on_button_clicked()
 
 

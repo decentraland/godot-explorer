@@ -869,7 +869,7 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="Control" type="Control" parent="MarginContainer/HBoxContainer/Control_OwnAndLandscape"]
-custom_minimum_size = Vector2(70, 0)
+custom_minimum_size = Vector2(90, 0)
 layout_mode = 2
 script = ExtResource("3_oe5oo")
 hide_on_portrait = true

@@ -24,7 +24,7 @@ corner_radius_bottom_left = 24
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_grvqo"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_8t8cm"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_kneg8"]
 
 [node name="Chatbar" type="Control"]
 custom_minimum_size = Vector2(200, 60)
@@ -75,7 +75,7 @@ visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_8t8cm")
+button_group = SubResource("ButtonGroup_kneg8")
 icon_alignment = 1
 vertical_icon_alignment = 0
 script = ExtResource("2_kneg8")
