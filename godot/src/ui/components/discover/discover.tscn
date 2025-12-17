@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=33 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="9_pwm2g"]
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="10_73ifx"]
 [ext_resource type="Texture2D" uid="uid://cj4xqne10w3ka" path="res://assets/ui/discover/genesis_banner.png" id="11_t2lm2"]
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
@@ -214,6 +215,8 @@ theme_override_constants/h_separation = 0
 theme_override_constants/icon_max_width = 10
 theme_override_font_sizes/font_size = 16
 icon = ExtResource("9_g4fdo")
+script = ExtResource("10_73ifx")
+hide_on_portrait = true
 
 [node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true

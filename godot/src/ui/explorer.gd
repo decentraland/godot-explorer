@@ -696,6 +696,9 @@ func _on_panel_chat_on_open_chat() -> void:
 	# NO llamar a async_start_chat() porque ya se está ejecutando (evita recursión)
 	safe_margin_container_hud.hide()
 	chat_container.show()
+	# Ocultar navbar cuando se abre el chat para evitar que se muestre cuando aparece el teclado virtual
+	if Global.is_mobile():
+		navbar.set_manually_hidden(true)
 
 
 func _on_panel_chat_on_exit_chat() -> void:
@@ -703,6 +706,8 @@ func _on_panel_chat_on_exit_chat() -> void:
 	chat_container.hide()
 	if Global.is_mobile():
 		mobile_ui.show()
+		# Restaurar visibilidad del navbar cuando se cierra el chat
+		navbar.set_manually_hidden(false)
 
 
 func _on_change_virtual_keyboard(virtual_keyboard_height: int):
@@ -859,10 +864,14 @@ func _close_all_panels():
 	joypad.show()
 
 func _on_discover_open():
-	navbar.button.set_pressed_no_signal(false)
-	navbar.hide()
+	navbar.close_from_discover_button()
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	navbar.set_manually_hidden(true)
+	control_menu.show_discover()
 	
 	
 func _on_menu_close():
 	if !navbar.visible:
-		navbar.show()
+		navbar.set_manually_hidden(false)
+		release_mouse()
