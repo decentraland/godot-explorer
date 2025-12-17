@@ -12,8 +12,6 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
-var debug_map_container: DebugMapContainer = null
-
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -139,12 +137,6 @@ func _ready():
 		player.vr_screen.set_instantiate_scene(ui_root)
 
 	emote_wheel.avatar_node = player.avatar
-
-	# Add debug map container only if --debug-minimap flag is present
-	if Global.cli.debug_minimap:
-		debug_map_container = load("res://src/ui/components/debug_map/debug_map_container.gd").new()
-		ui_root.add_child(debug_map_container)
-		debug_map_container.set_enabled(true)
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
@@ -374,11 +366,6 @@ func _on_control_menu_hide_menu():
 
 func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
-
-
-func toggle_debug_minimap(enabled: bool):
-	if debug_map_container:
-		debug_map_container.set_enabled(enabled)
 
 
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
