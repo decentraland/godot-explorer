@@ -1,7 +1,9 @@
 class_name Explorer
 extends Node
 
+var is_world: bool
 var player: Node3D = null
+var scene_title: String
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -96,6 +98,9 @@ func get_params_from_cmd():
 
 
 func _ready():
+	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
+	Global.change_parcel.connect(_on_change_parcel)
+
 	label_version.set_text("v" + DclGlobal.get_version())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
@@ -868,23 +873,57 @@ func _on_menu_close():
 		release_mouse()
 
 
+func _extract_short_realm_url(full_url: String) -> String:
+	#https://worlds-content-server.decentraland.org/world/boedo.dcl.eth/ -> boedo.dcl.eth
+	var url_trimmed = full_url.trim_suffix("/")
+	var parts = url_trimmed.split("/")
+	if parts.size() > 0:
+		return parts[parts.size() - 1]
+	return full_url
+
+
 func _share_place():
-	print(parcel_position)
-	#if not _data or not _data.has("id"):
-	#printerr("No event data available to share")
-	#return
-#
-#if event_id.is_empty():
-#printerr("Event ID not available")
-#return
-#
-#var event_url = "https://decentraland.org/events/event/?id=" + event_id
-#
-#var event_title = _data.get("name", "Decentraland Event")
-#
-#var text = "Visit the event '" + event_title + "' following this link " + event_url
-#
-#if Global.is_android():
-#DclGodotAndroidPlugin.share_text(text)
-#elif Global.is_ios():
-#DclIosPlugin.share_text(text)
+	print(Global.realm.realm_url)
+	print(Realm.MAIN_REALM)
+	var msg: String
+	var url: String
+
+	if is_world:
+		var realm_url = Global.realm.realm_url
+		var short_realm_url = _extract_short_realm_url(realm_url)
+		url = "https://decentraland.org/places/world/?name=" + short_realm_url
+	else:
+		url = (
+			"https://decentraland.org/places/place/?position="
+			+ str(parcel_position[0])
+			+ "."
+			+ str(parcel_position[1])
+		)
+
+	if is_world:
+		msg = "Visit the World: '" + scene_title + "' following this link " + url
+	else:
+		msg = "Visit the Place: '" + scene_title + "' following this link " + url
+
+	print(msg)
+
+	if Global.is_android():
+		DclGodotAndroidPlugin.share_text(msg)
+	elif Global.is_ios():
+		DclIosPlugin.share_text(msg)
+
+
+func _on_change_scene_id(scene_id: int):
+	is_world = Global.realm.realm_url != Realm.MAIN_REALM
+	if scene_id == -1:
+		scene_title = ""
+		return
+	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
+	if scene != null:
+		scene_title = scene.scene_entity_definition.get_title()
+	else:
+		scene_title = ""
+
+
+func _on_change_parcel(_position: Vector2i):
+	parcel_position = _position

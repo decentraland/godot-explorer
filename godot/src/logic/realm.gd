@@ -3,7 +3,7 @@ extends DclRealm
 
 signal realm_changed
 
-const MAIN_REALM: String = "https://realm-provider-ea.decentraland.org/main"
+const MAIN_REALM: String = "https://realm-provider-ea.decentraland.org/main/"
 
 const WORLDS_URL: String = "https://worlds-content-server.decentraland.org/world/"
 
