@@ -35,6 +35,11 @@ var video_height: int = 0
 # This prevents grey flickering when transitioning between surfaces
 var _reinitializing_surface: bool = false
 
+## GPU mode texture update - zero-copy path
+## Track if we've received a frame after reinitialization (for debugging)
+var _frames_after_reinit: int = 0
+var _waiting_for_first_frame: bool = false
+
 
 func _ready():
 	if OS.get_name() != "Android":
@@ -240,12 +245,6 @@ func update_texture() -> bool:
 			_reinitialize_surface(new_width, new_height)
 
 	return _update_texture_gpu()
-
-
-## GPU mode texture update - zero-copy path
-## Track if we've received a frame after reinitialization (for debugging)
-var _frames_after_reinit: int = 0
-var _waiting_for_first_frame: bool = false
 
 
 func _update_texture_gpu() -> bool:
