@@ -96,10 +96,6 @@ func _ready():
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
 
-	# Connect to scene change signal for trigger area tracking
-	# This signal is emitted by DclAvatar (Rust side) when the avatar changes parcels
-	change_scene_id.connect(self._on_avatar_scene_changed)
-
 	# Trigger detection is setup later via setup_trigger_detection() when entity info is available
 
 
@@ -116,20 +112,8 @@ func setup_trigger_detection(p_scene_id: int, p_entity_id: int) -> void:
 	trigger_detector.set_meta("dcl_scene_id", dcl_scene_id)
 	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
 
-	# Initialize current scene metadata (will be updated via _on_avatar_scene_changed)
-	# For scene NPCs, this stays at dcl_scene_id; for remote avatars, it will be updated
-	trigger_detector.set_meta("dcl_avatar_current_scene_id", dcl_scene_id)
-
 	# Enable the collision shape
 	trigger_detector.get_node("CollisionShape3D").disabled = false
-
-
-## Called when the avatar changes parcel scenes (signal from DclAvatar/Rust)
-func _on_avatar_scene_changed(new_scene_id: int, _prev_scene_id: int) -> void:
-	# Update the current scene metadata on TriggerDetector
-	# This allows trigger_area.rs to know which scene this avatar is currently in
-	if trigger_detector:
-		trigger_detector.set_meta("dcl_avatar_current_scene_id", new_scene_id)
 
 
 func on_chat_message(address: String, message: String, _timestamp: float):

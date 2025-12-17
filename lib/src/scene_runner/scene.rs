@@ -223,6 +223,9 @@ pub struct Scene {
 
     // Trigger Areas
     pub trigger_areas: TriggerAreaState,
+    /// Last known player scene - used to detect when player enters/leaves this scene
+    /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
+    pub last_player_scene_id: SceneId,
 
     pub virtual_camera: Gd<DclVirtualCamera>,
 
@@ -328,6 +331,7 @@ impl Scene {
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
@@ -393,6 +397,7 @@ impl Scene {
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
