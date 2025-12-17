@@ -20,7 +20,7 @@ class Asset:
 	var token_id: String = ""
 	var image_url: String = ""
 	var background_color: Color
-	var texture: ImageTexture = null
+	var texture: Texture2D = null
 	var username: String = ""  # TODO: Need to fetch to users
 	var address: String = ""
 
@@ -69,10 +69,11 @@ class Asset:
 				"open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error()
 			)
 			return
+		prints("Texture format: ", result.texture.get_class())
 		self.texture = result.texture
 
 	func get_hash() -> String:
-		return contract_address + ":" + token_id
+		return contract_address + "_" + token_id
 
 
 var cached_promises: Dictionary

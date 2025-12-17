@@ -33,6 +33,7 @@ pub mod dcl_ui_control;
 pub mod dcl_ui_dropdown;
 pub mod dcl_ui_input;
 pub mod dcl_ui_text;
+pub mod dcl_unified_media_loader;
 pub mod dcl_video_player;
 pub mod dcl_virtual_camera;
 pub mod font;
