@@ -863,14 +863,15 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	joypad.show()
 
+
 func _on_discover_open():
 	navbar.close_from_discover_button()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	navbar.set_manually_hidden(true)
 	control_menu.show_discover()
-	
-	
+
+
 func _on_menu_close():
 	if !navbar.visible:
 		navbar.set_manually_hidden(false)

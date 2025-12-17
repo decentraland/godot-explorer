@@ -8,7 +8,7 @@ func _get_unread_count() -> int:
 
 func _connect_update_signals() -> void:
 	pass
-	
+
 
 func _on_button_clicked() -> void:
 	Global.open_chat.emit()

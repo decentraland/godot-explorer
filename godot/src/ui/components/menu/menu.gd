@@ -28,9 +28,7 @@ var fade_out_tween: Tween = null
 
 @onready var control_deploying_profile = %Control_DeployingProfile
 
-
 @onready var portrait_button_profile: Button = %Portrait_Button_Profile
-
 
 @onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
 @onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
@@ -49,8 +47,7 @@ func _ready():
 	portrait_button_profile.button_group = btn_group
 	hud_button_discover.pressed.emit()
 	hud_button_discover.button_pressed = true
-	
-	
+
 	is_in_game = self != get_tree().current_scene
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -144,6 +141,7 @@ func select_discover_screen(play_sfx: bool = true):
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_discover, play_sfx)
+
 
 func select_backpack_screen(play_sfx: bool = true):
 	current_screen_name = ("BACKPACK" if Global.is_orientation_portrait() else "BACKPACK_IN_GAME")

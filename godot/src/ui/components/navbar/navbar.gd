@@ -4,6 +4,8 @@ signal close_all
 signal close_only_panels
 signal navbar_opened
 
+var _manually_hidden: bool = false
+
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
 @onready var panel_container: PanelContainer = %PanelContainer
 @onready var v_box_container_buttons: VBoxContainer = %VBoxContainer_Buttons
@@ -13,8 +15,6 @@ signal navbar_opened
 @onready var hud_button_settings: Button = %HudButton_Settings
 @onready var button: Button = %Button
 @onready var portrait_button_profile: Button = %Portrait_Button_Profile
-
-var _manually_hidden: bool = false
 
 
 func _ready() -> void:
@@ -36,24 +36,27 @@ func _on_size_changed():
 	# Si el navbar fue ocultado manualmente, no cambiar su visibilidad
 	if _manually_hidden:
 		return
-	
+
 	# Verificar si discover o chat están abiertos - si lo están, mantener oculto
 	var explorer = Global.get_explorer()
 	if explorer != null:
 		# Si discover está abierto, mantener oculto
-		if explorer.control_menu != null and explorer.control_menu.visible and explorer.control_menu.control_discover.visible:
+		if (
+			explorer.control_menu != null
+			and explorer.control_menu.visible
+			and explorer.control_menu.control_discover.visible
+		):
 			hide()
 			return
 		# Si chat está abierto, mantener oculto
 		if explorer.chat_container != null and explorer.chat_container.visible:
 			hide()
 			return
-	
+
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	visible = window_size.x > window_size.y
 
-		
-		
+
 func _on_button_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		animation_player.play("open")
@@ -63,8 +66,8 @@ func _on_button_toggled(toggled_on: bool) -> void:
 	else:
 		animation_player.play("close")
 		close_all.emit()
-	
-	
+
+
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
@@ -93,7 +96,7 @@ func set_manually_hidden(is_hidden: bool) -> void:
 			# Si chat está abierto, mantener oculto
 			if explorer.chat_container.visible:
 				return
-		
+
 		# Restaurar visibilidad basada en el tamaño de la ventana solo si discover y chat están cerrados
 		var window_size: Vector2i = DisplayServer.window_get_size()
 		visible = window_size.x > window_size.y
