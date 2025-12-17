@@ -29,7 +29,7 @@ func _init_backend_impl(backend_type: int, source: String, playing: bool, loopin
 		BackendType.LIVEKIT:
 			_init_livekit_backend()
 		BackendType.EXO_PLAYER:
-			_init_exo_player_backend()
+			_async_init_exo_player_backend()
 		BackendType.AV_PLAYER:
 			_init_av_player_backend()
 		_:
@@ -47,7 +47,7 @@ func _init_livekit_backend():
 	self.play()
 
 
-func _init_exo_player_backend():
+func _async_init_exo_player_backend():
 	if OS.get_name() != "Android":
 		push_warning("ExoPlayer backend only available on Android, falling back to Noop")
 		current_backend = BackendType.NOOP
@@ -75,7 +75,7 @@ func _init_exo_player_backend():
 		success = exo_player.set_source_url(_source)
 	else:
 		# For local files, we need to fetch them first
-		await _fetch_and_set_local_source()
+		await _async_fetch_and_set_local_source()
 		return
 
 	if not success:
@@ -88,7 +88,7 @@ func _init_exo_player_backend():
 		exo_player.play()
 
 
-func _fetch_and_set_local_source():
+func _async_fetch_and_set_local_source():
 	# This is a local file reference, need to fetch it first
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 	var file_hash = content_mapping.get_hash(_source)
