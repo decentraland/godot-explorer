@@ -25,31 +25,31 @@ func _ready() -> void:
 	hud_button_backpack.button_group = btn_group
 	hud_button_settings.button_group = btn_group
 	portrait_button_profile.button_group = btn_group
-	# Asegurar que siempre haya un botón presionado al inicio
-	# El ButtonGroup con allow_unpress = false garantiza que siempre haya uno presionado
+	# Ensure there's always a pressed button at startup
+	# The ButtonGroup with allow_unpress = false ensures one is always pressed
 
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
 
 
 func _on_size_changed():
-	# Si el navbar fue ocultado manualmente, no cambiar su visibilidad
 	if _manually_hidden:
 		return
+	# If navbar was manually hidden, don't change its visibility
 
-	# Verificar si discover o chat están abiertos - si lo están, mantener oculto
 	var explorer = Global.get_explorer()
 	if explorer != null:
-		# Si discover está abierto, mantener oculto
+		# Check if discover or chat are open - if so, keep hidden
 		if (
 			explorer.control_menu != null
 			and explorer.control_menu.visible
 			and explorer.control_menu.control_discover.visible
 		):
+			# If discover is open, keep hidden
 			hide()
 			return
-		# Si chat está abierto, mantener oculto
 		if explorer.chat_container != null and explorer.chat_container.visible:
+			# If chat is open, keep hidden
 			hide()
 			return
 
@@ -87,16 +87,16 @@ func set_manually_hidden(is_hidden: bool) -> void:
 	if is_hidden:
 		hide()
 	else:
-		# Verificar si discover o chat están abiertos antes de restaurar la visibilidad
 		var explorer = Global.get_explorer()
 		if explorer != null:
-			# Si discover está abierto, mantener oculto
+			# Check if discover or chat are open before restoring visibility
 			if explorer.control_menu.visible and explorer.control_menu.control_discover.visible:
+				# If discover is open, keep hidden
 				return
-			# Si chat está abierto, mantener oculto
 			if explorer.chat_container.visible:
+				# If chat is open, keep hidden
 				return
 
-		# Restaurar visibilidad basada en el tamaño de la ventana solo si discover y chat están cerrados
+		# Restore visibility based on window size only if discover and chat are closed
 		var window_size: Vector2i = DisplayServer.window_get_size()
 		visible = window_size.x > window_size.y

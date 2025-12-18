@@ -3,11 +3,11 @@ extends Button
 @export var trigger_action = "ia_primary"
 
 var _touch_index: int = -1
-var _is_action_active: bool = false  # Rastrea si realmente estamos enviando la acción
+var _is_action_active: bool = false  # Tracks if we're actually sending the action
 
 
 func _ready() -> void:
-	# Deshabilitar toggle_mode para comportamiento de botón normal
+	# Disable toggle_mode for normal button behavior
 	toggle_mode = false
 
 

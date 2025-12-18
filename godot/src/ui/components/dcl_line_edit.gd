@@ -54,7 +54,7 @@ func _check_error():
 
 
 func _ready() -> void:
-	# Conectar la señal text_changed para ejecutar acciones personalizadas
+	# Connect the text_changed signal to execute custom actions
 	text_changed.connect(_on_text_changed)
 	_check_error()
 

@@ -710,7 +710,7 @@ func _get_viewport_scale_factors() -> Vector2:
 
 
 func _on_global_open_chat() -> void:
-	# Cuando viene de Global.open_chat, iniciar el chat y manejar la UI
+	# When coming from Global.open_chat, start chat and handle UI
 	safe_margin_container_hud.hide()
 	chat_container.show()
 	panel_chat.async_start_chat()
@@ -718,11 +718,11 @@ func _on_global_open_chat() -> void:
 
 
 func _on_panel_chat_on_open_chat() -> void:
-	# Cuando viene de on_open_chat del panel_chat, solo manejar la UI
-	# NO llamar a async_start_chat() porque ya se está ejecutando (evita recursión)
+	# When coming from on_open_chat from panel_chat, only handle the UI
+	# DO NOT call async_start_chat() because it's already running (avoids recursion)
 	safe_margin_container_hud.hide()
 	chat_container.show()
-	# Ocultar navbar cuando se abre el chat para evitar que se muestre cuando aparece el teclado virtual
+	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
 	if Global.is_mobile():
 		navbar.set_manually_hidden(true)
 
@@ -732,7 +732,7 @@ func _on_panel_chat_on_exit_chat() -> void:
 	chat_container.hide()
 	if Global.is_mobile():
 		mobile_ui.show()
-		# Restaurar visibilidad del navbar cuando se cierra el chat
+		# Restore navbar visibility when chat closes
 		navbar.set_manually_hidden(false)
 
 
