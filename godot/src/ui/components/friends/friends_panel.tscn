@@ -1,7 +1,6 @@
 [gd_scene load_steps=22 format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="10_spinner"]
 [ext_resource type="StyleBox" uid="uid://c1jov5bbl6rpn" path="res://src/ui/components/friends/friends_separator.tres" id="2_ifioe"]
 [ext_resource type="Script" uid="uid://cjlqmhcfpgaed" path="res://src/ui/components/social/social_list.gd" id="2_l4o08"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_wese4"]
@@ -10,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://bogcegqbgujx4" path="res://assets/ui/warning-color.svg" id="7_wenh7"]
 [ext_resource type="Texture2D" uid="uid://dkp2m2ov71fv5" path="res://assets/ui/friends-color.svg" id="8_nlw6c"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="9_2vk4g"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="10_spinner"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wese4"]
 bg_color = Color(0, 0, 0, 0.8)
