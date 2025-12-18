@@ -14,7 +14,7 @@ radius = 0.25
 height = 1.5
 
 [node name="Player" type="CharacterBody3D"]
-collision_layer = 0
+collision_layer = 4
 collision_mask = 2
 script = ExtResource("1_5bfm2")
 
@@ -28,8 +28,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("CapsuleShape3D_pxti1")
 
 [node name="camera_mode_area_detector" parent="." instance=ExtResource("2_rco65")]
-collision_layer = 2147483904
-collision_mask = 2147483904
+collision_layer = 2147483908
+collision_mask = 2147483908
 
 [node name="Mount" type="SpringArm3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
