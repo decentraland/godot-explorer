@@ -86,6 +86,10 @@ func get_params_from_cmd():
 	if location_vector == Vector2i.MAX:
 		location_vector = null
 
+	# Preview deeplink takes priority - use it as the realm for hot reload development
+	if not Global.deep_link_obj.preview.is_empty() and realm_string == null:
+		realm_string = Global.deep_link_obj.preview
+
 	if not Global.deep_link_obj.realm.is_empty() and realm_string == null:
 		realm_string = Global.deep_link_obj.realm
 
@@ -148,8 +152,8 @@ func _ready():
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --debug-panel (automatically enabled with --preview)
-	if Global.cli.debug_panel:
+	# --debug-panel (automatically enabled with --preview or preview deeplink)
+	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
 		_on_control_menu_request_debug_panel(true)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
