@@ -13,14 +13,17 @@ use crate::{
         SceneId,
     },
     godot_classes::dcl_video_player::{
-        DclVideoPlayer, VIDEO_STATE_BUFFERING, VIDEO_STATE_LOADING, VIDEO_STATE_PAUSED,
-        VIDEO_STATE_PLAYING, VIDEO_STATE_READY, VIDEO_STATE_SEEKING,
+        DclVideoPlayer, VIDEO_STATE_BUFFERING, VIDEO_STATE_ERROR, VIDEO_STATE_LOADING,
+        VIDEO_STATE_PAUSED, VIDEO_STATE_PLAYING, VIDEO_STATE_READY, VIDEO_STATE_SEEKING,
     },
     scene_runner::{
         godot_dcl_scene::VideoPlayerData,
         scene::{Scene, SceneType},
     },
 };
+
+/// Position change threshold in seconds - emit event if position changes by more than this
+const POSITION_CHANGE_THRESHOLD: f64 = 0.5;
 use godot::{
     engine::{image::Format, Image, ImageTexture},
     prelude::*,
@@ -116,6 +119,13 @@ pub fn update_video_player(
                     }
 
                     VideoUpdateMode::ChangeVideo => {
+                        // Preserve the timestamp from the old VideoPlayerData for monotonic counter
+                        let old_timestamp = godot_entity_node
+                            .video_player_data
+                            .as_ref()
+                            .map(|d| d.timestamp)
+                            .unwrap_or(0);
+
                         tracing::debug!(
                             "Video player changing video for entity {}: {} -> {}",
                             entity,
@@ -147,8 +157,8 @@ pub fn update_video_player(
                             looping,
                         );
 
-                        // Update tracking data - for LiveKit, store the texture reference
-                        let video_player_data = if backend_type == BackendType::LiveKit {
+                        // Update tracking data - preserve timestamp for monotonic counter
+                        let mut video_player_data = if backend_type == BackendType::LiveKit {
                             let texture = video_player_node
                                 .bind()
                                 .get_dcl_texture()
@@ -161,6 +171,7 @@ pub fn update_video_player(
                         } else {
                             VideoPlayerData::new(target_src.clone(), backend_type)
                         };
+                        video_player_data.timestamp = old_timestamp;
 
                         godot_entity_node.video_player_data = Some(video_player_data);
                         scene.video_players.insert(*entity, video_player_node);
@@ -331,11 +342,21 @@ fn update_video_player_params(
 fn poll_video_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let video_event_component = SceneCrdtStateProtoComponents::get_video_event_mut(crdt_state);
 
+    if !scene.video_players.is_empty() {
+        tracing::trace!(
+            "Polling {} video players in scene {}",
+            scene.video_players.len(),
+            scene.scene_id.0
+        );
+    }
+
     for (entity_id, video_player_node) in scene.video_players.iter() {
         let Some(godot_entity) = scene.godot_dcl_scene.get_godot_entity_node_mut(entity_id) else {
+            tracing::warn!("Video player entity {} has no godot entity node", entity_id);
             continue;
         };
         let Some(video_player_data) = godot_entity.video_player_data.as_mut() else {
+            tracing::warn!("Video player entity {} has no video_player_data", entity_id);
             continue;
         };
 
@@ -346,12 +367,14 @@ fn poll_video_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let current_length = player.get_video_length();
         drop(player);
 
-        // Check if state has changed
+        // Check if any relevant property has changed
         let state_changed = current_state != video_player_data.last_state;
         let length_changed =
             current_length > 0.0 && (current_length - video_player_data.last_length).abs() > 0.001;
+        let position_changed =
+            (current_position - video_player_data.last_position).abs() > POSITION_CHANGE_THRESHOLD;
 
-        if state_changed || length_changed {
+        if state_changed || length_changed || position_changed {
             // Map internal state to SDK VideoState
             let sdk_state = match current_state {
                 VIDEO_STATE_LOADING => VideoState::VsLoading,
@@ -360,8 +383,20 @@ fn poll_video_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 VIDEO_STATE_BUFFERING => VideoState::VsBuffering,
                 VIDEO_STATE_SEEKING => VideoState::VsSeeking,
                 VIDEO_STATE_PAUSED => VideoState::VsPaused,
+                VIDEO_STATE_ERROR => VideoState::VsError,
                 _ => VideoState::VsNone,
             };
+
+            tracing::info!(
+                "Video event for entity {}: state={:?}, position={:.2}, length={:.2} (state_changed={}, length_changed={}, position_changed={})",
+                entity_id,
+                sdk_state,
+                current_position,
+                current_length,
+                state_changed,
+                length_changed,
+                position_changed
+            );
 
             // Emit the video event
             video_event_component.append(

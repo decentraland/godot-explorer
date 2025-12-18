@@ -151,6 +151,9 @@ func _init_av_player_backend():
 
 func _init_noop_backend():
 	print("VideoPlayer: Using Noop backend (video playback not available)")
+	video_state = VIDEO_STATE_NONE
+	video_position = 0.0
+	video_length = -1.0
 
 
 func _process(_delta):
@@ -318,6 +321,11 @@ func _backend_dispose():
 
 	current_backend = BackendType.NOOP
 	_source = ""
+	# Reset state when disposing - will trigger state change event on next source
+	video_state = VIDEO_STATE_NONE
+	video_position = 0.0
+	video_length = -1.0
+	_last_effective_volume = -1.0
 
 
 func _get_backend_texture() -> Texture2D:
