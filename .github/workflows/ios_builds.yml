@@ -24,6 +24,9 @@ jobs:
       fail-fast: false
     runs-on: warp-macos-14-arm64-6x
     timeout-minutes: 35
+    env:
+      R2_CACHE_ENABLED: ${{ secrets.R2_ACCOUNT_ID != '' && github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch' }}
+      R2_UPLOAD_ENABLED: ${{ secrets.R2_ACCOUNT_ID != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,7 +57,7 @@ jobs:
       # Check for cached macOS lib (only if R2 secrets are configured, skip on main branch and manual triggers)
       - name: Check macOS lib cache
         id: macos-lib-cache
-        if: ${{ secrets.R2_ACCOUNT_ID != '' && github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch' }}
+        if: env.R2_CACHE_ENABLED == 'true'
         uses: ./.github/actions/lib-cache
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
@@ -68,7 +71,7 @@ jobs:
       # Check for cached iOS lib (only if R2 secrets are configured, skip on main branch and manual triggers)
       - name: Check iOS lib cache
         id: ios-lib-cache
-        if: ${{ secrets.R2_ACCOUNT_ID != '' && github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch' }}
+        if: env.R2_CACHE_ENABLED == 'true'
         uses: ./.github/actions/lib-cache
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
@@ -89,7 +92,7 @@ jobs:
 
       # Upload macOS lib cache after successful build (only if R2 secrets are configured)
       - name: Upload macOS lib cache
-        if: ${{ secrets.R2_ACCOUNT_ID != '' && steps.macos-lib-cache.outputs.cache-hit != 'true' }}
+        if: env.R2_UPLOAD_ENABLED == 'true' && steps.macos-lib-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/lib-cache
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
@@ -102,7 +105,7 @@ jobs:
 
       # Upload iOS lib cache after successful build (only if R2 secrets are configured)
       - name: Upload iOS lib cache
-        if: ${{ secrets.R2_ACCOUNT_ID != '' && steps.ios-lib-cache.outputs.cache-hit != 'true' }}
+        if: env.R2_UPLOAD_ENABLED == 'true' && steps.ios-lib-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/lib-cache
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
