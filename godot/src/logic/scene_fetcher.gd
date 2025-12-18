@@ -555,8 +555,8 @@ func async_load_scene(
 		)
 		download_res = await PromiseUtils.async_awaiter(download_promise)
 
-	if true:  # TEMP: Skip optimized assets to test raw glTF import
-		pass  # Scene optimization skipped
+	if Global.is_xr() or Global.get_testing_scene_mode():
+		pass  # Scene optimization skipped (XR/testing mode)
 	elif download_res is PromiseError:
 		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
 	else:
