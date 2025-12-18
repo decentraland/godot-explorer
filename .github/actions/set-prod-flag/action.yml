@@ -1,5 +1,5 @@
 name: Set Prod Flag
-description: Set PROD_FLAG environment variable based on the current branch (--prod for main, --staging for other branches)
+description: Set PROD_FLAG environment variable based on the current branch (--prod for release, --staging for main and other branches)
 
 runs:
   using: composite
@@ -7,10 +7,10 @@ runs:
     - name: Set prod/staging flag based on branch
       shell: bash
       run: |
-        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+        if [ "${{ github.ref }}" = "refs/heads/release" ]; then
           echo "PROD_FLAG=--prod" >> $GITHUB_ENV
-          echo "✅ Running on main branch - setting PROD_FLAG=--prod"
+          echo "Running on release branch - setting PROD_FLAG=--prod"
         else
           echo "PROD_FLAG=--staging" >> $GITHUB_ENV
-          echo "ℹ️  Running on ${{ github.ref }} - setting PROD_FLAG=--staging"
+          echo "Running on ${{ github.ref }} - setting PROD_FLAG=--staging"
         fi
