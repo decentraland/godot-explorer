@@ -786,7 +786,7 @@ func _show_notification_toast(notification_d: Dictionary) -> void:
 	toast.toast_closed.connect(_on_toast_closed)
 	toast.mark_as_read.connect(_on_toast_mark_as_read)
 
-	toast.async_show_notification(notification)
+	toast.async_show_notification(notification_d)
 
 
 func _on_toast_closed() -> void:
@@ -900,10 +900,7 @@ func _share_place():
 			+ str(parcel_position[1])
 		)
 
-	if is_world:
-		msg = "Visit the World: '" + scene_title + "' following this link " + url
-	else:
-		msg = "Visit the Place: '" + scene_title + "' following this link " + url
+		msg = "Join Me At " + scene_title + " following this link " + url
 
 	print(msg)
 

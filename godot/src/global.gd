@@ -20,6 +20,7 @@ signal open_backpack
 signal open_discover
 signal open_own_profile
 signal close_menu
+signal friends_request_size_changed(size: int)
 
 enum CameraMode {
 	FIRST_PERSON = 0,

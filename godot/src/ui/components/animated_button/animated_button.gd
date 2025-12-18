@@ -84,7 +84,6 @@ func _on_notifications_updated(_notifications: Array = []) -> void:
 
 
 func _update_badge() -> void:
-	# Las clases hijas deben implementar este método para obtener su conteo específico
 	_unread_count = _get_unread_count()
 
 	if _unread_count > 0:

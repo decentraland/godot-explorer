@@ -158,17 +158,17 @@ corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ls4bg"]
-
 [sub_resource type="ButtonGroup" id="ButtonGroup_ria76"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_650er"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_d3cqe"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_ckthm"]
 resource_local_to_scene = false
 resource_name = "Tabs"
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_d3cqe"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_voda5"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xbtqw"]
 
@@ -212,6 +212,7 @@ offset_top = 60.0
 offset_right = 40.0
 offset_bottom = 560.0
 grow_horizontal = 2
+mouse_filter = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="Control/Control"]
 unique_name_in_owner = true
@@ -236,7 +237,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_ls4bg")
+button_group = SubResource("ButtonGroup_ria76")
 script = ExtResource("3_lur8b")
 sprite_frames_source = ExtResource("4_hvf0m")
 
@@ -245,7 +246,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_ria76")
+button_group = SubResource("ButtonGroup_650er")
 script = ExtResource("5_ly2kd")
 sprite_frames_source = ExtResource("6_fmmda")
 
@@ -254,23 +255,37 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_650er")
+button_group = SubResource("ButtonGroup_d3cqe")
 script = ExtResource("7_ly2kd")
 sprite_frames_source = ExtResource("7_hvf0m")
 
-[node name="Portrait_Button_Profile" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("9_ria76")]
-unique_name_in_owner = true
+[node name="Control" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
+
+[node name="Portrait_Button_Profile" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/Control" instance=ExtResource("9_ria76")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.5
+offset_top = -22.5
+offset_right = 22.5
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
 button_group = SubResource("ButtonGroup_ckthm")
-text = "WIP"
+metadata/_edit_group_ = true
 
 [node name="HudButton_Settings" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_d3cqe")
+button_group = SubResource("ButtonGroup_voda5")
 script = ExtResource("8_fmmda")
 sprite_frames_source = ExtResource("8_ly2kd")
 
@@ -306,6 +321,6 @@ grow_vertical = 2
 toggle_mode = true
 flat = true
 
-[connection signal="pressed" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_pressed"]
-[connection signal="toggled" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_toggled"]
+[connection signal="pressed" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Control/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_pressed"]
+[connection signal="toggled" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Control/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_toggled"]
 [connection signal="toggled" from="Control/Button" to="." method="_on_button_toggled"]
