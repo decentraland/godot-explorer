@@ -70,6 +70,71 @@ mod android {
     }
 }
 
+#[cfg(target_os = "ios")]
+mod ios {
+    use tracing_subscriber::filter::EnvFilter;
+    use tracing_subscriber::fmt::format::Writer;
+    use tracing_subscriber::fmt::{self, FormatEvent, FormatFields};
+    use tracing_subscriber::registry::LookupSpan;
+
+    /// Custom formatter that includes target in the message for iOS
+    /// Format: [LEVEL] [target] message
+    struct IosFormatter;
+
+    impl<S, N> FormatEvent<S, N> for IosFormatter
+    where
+        S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+        N: for<'a> FormatFields<'a> + 'static,
+    {
+        fn format_event(
+            &self,
+            ctx: &fmt::FmtContext<'_, S, N>,
+            mut writer: Writer<'_>,
+            event: &tracing::Event<'_>,
+        ) -> std::fmt::Result {
+            let metadata = event.metadata();
+            let level = metadata.level();
+            let target = metadata.target();
+
+            // Format: [LEVEL] [target] message
+            write!(writer, "[{}] [{}] ", level, target)?;
+
+            // Write the event fields (the actual message)
+            ctx.field_format().format_fields(writer.by_ref(), event)?;
+
+            writeln!(writer)
+        }
+    }
+
+    pub fn init_logger() {
+        // Configure logging filters for iOS
+        // By default, filter everything to WARN level
+        // You can customize specific modules here:
+        // Examples:
+        //   "warn" - only warnings and errors (default)
+        //   "debug" - show debug logs from all modules
+        //   "dclgodot::scene_runner=debug,warn" - debug for scene_runner, warn for others
+        //   "dclgodot::scene_runner=debug,dclgodot::comms=info,warn" - multiple modules
+
+        let filter = EnvFilter::new(
+            // TODO: Modify this line to change logging levels
+            // "warn"  // Only warnings and errors
+            // "debug"  // Debug, info, warnings and errors (shows all debug logs)
+            // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
+            // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
+            "warn,dclgodot::scene_runner::components::video_player=debug", // Debug for video_player, warn for everything else
+        );
+
+        // Use custom formatter that explicitly includes target in every message
+        // This ensures the module path is visible even when iOS strips formatting
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_ansi(false) // Disable ANSI color codes
+            .event_format(IosFormatter)
+            .init();
+    }
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclGlobal {
@@ -160,7 +225,10 @@ impl INode for DclGlobal {
         #[cfg(target_os = "android")]
         android::init_logger();
 
-        #[cfg(not(target_os = "android"))]
+        #[cfg(target_os = "ios")]
+        ios::init_logger();
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let _ = tracing_subscriber::fmt::try_init();
 
         tracing::info!(

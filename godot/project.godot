@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
-run/main_scene="uid://cnhr2p8m1vqjk"
+run/main_scene="uid://b0jonmd2rfupn"
 run/main_loop_type="ProjectMainLoop"
 config/features=PackedStringArray("4.5")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
@@ -209,6 +209,8 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
+rendering_device/driver.ios="vulkan"
+rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=2048
