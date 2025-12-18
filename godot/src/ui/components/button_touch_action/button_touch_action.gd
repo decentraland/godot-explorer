@@ -30,11 +30,6 @@ func _input(event: InputEvent) -> void:
 				set_pressed_no_signal(true)
 				Input.action_press(trigger_action)
 				_close_combo_menu()
-
-			elif not is_inside:
-				pass
-			else:
-				pass
 		else:
 			if event.index == _touch_index:
 				if _is_action_active:

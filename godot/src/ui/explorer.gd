@@ -201,8 +201,6 @@ func _ready():
 		self._on_notify_pending_loading_scenes
 	)
 
-	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
-
 	# Add disconnect handler for reconnection logic
 	var disconnect_handler = (
 		load("res://src/ui/components/disconnect_handler/disconnect_handler.tscn").instantiate()
@@ -342,31 +340,6 @@ func _unhandled_input(event):
 		if event is InputEventMouseButton and event.pressed and ui_root.has_focus():
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				capture_mouse()
-
-		if event is InputEventKey and ui_root.has_focus():
-			if event.pressed and event.keycode == KEY_TAB:
-				if not control_menu.visible:
-					control_menu.show_last()
-					release_mouse()
-
-			if event.pressed and event.keycode == KEY_M:
-				if control_menu.visible:
-					pass
-				else:
-					control_menu.show_map()
-					release_mouse()
-
-			if event.pressed and event.keycode == KEY_ESCAPE:
-				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-					release_mouse()
-
-			if event.pressed and event.keycode == KEY_P:
-				if not control_menu.visible:
-					breakpoint
-
-			#if event.pressed and event.keycode == KEY_ENTER:
-			#	panel_chat.toggle_chat_visibility(true)
-			#	panel_chat.line_edit_command.grab_focus.call_deferred()
 
 
 func _on_control_minimap_request_open_map():
@@ -610,15 +583,6 @@ func _on_ui_root_gui_input(event: InputEvent):
 
 func _on_panel_profile_open_profile():
 	_open_own_profile()
-
-
-func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
-	#button_mic.visible = false  # voice_chat_enabled
-	pass
-
-
-func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
-	pass  # Replace with function body.
 
 
 func _on_button_load_scenes_pressed() -> void:

@@ -2,8 +2,7 @@ extends AnimatedButton
 
 
 func _get_unread_count() -> int:
-	var count = 0
-	return count
+	return 0
 
 
 func _connect_update_signals() -> void:
