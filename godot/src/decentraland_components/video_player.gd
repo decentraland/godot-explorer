@@ -20,6 +20,7 @@ const VIDEO_STATE_ERROR = 7
 
 var current_backend: BackendType = BackendType.NOOP
 var exo_player: Node = null  # ExoPlayer child node when using ExoPlayer backend
+var av_player: Node = null  # AVPlayer child node when using AVPlayer backend
 var _source: String = ""
 var _is_playing: bool = false
 var _is_looping: bool = false
@@ -142,11 +143,105 @@ func _async_fetch_and_set_local_source():
 			exo_player.play()
 
 
+func _async_fetch_and_set_local_source_av_player():
+	# This is a local file reference, need to fetch it first
+	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var file_hash = content_mapping.get_hash(_source)
+
+	if file_hash.is_empty():
+		push_error("VideoPlayer: Could not find hash for local file: ", _source)
+		video_state = VIDEO_STATE_ERROR
+		return
+
+	var promise = Global.content_provider.fetch_video(file_hash, content_mapping)
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
+		printerr("VideoPlayer: Error fetching video: ", res.get_error())
+		video_state = VIDEO_STATE_ERROR
+		return
+
+	# Get the file extension from the original source (AVPlayer needs it to determine format)
+	var extension = _source.get_extension()
+	var local_video_path = "user://content/" + file_hash
+	var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
+
+	# If the source has an extension, create a copy with extension for AVPlayer
+	# AVPlayer needs the file extension to determine the video format
+	# TODO: Optimize by using hard links or storing with extension originally
+	if not extension.is_empty():
+		var path_with_ext = absolute_file_path + "." + extension
+		var user_path_with_ext = "user://content/" + file_hash + "." + extension
+		# Check if we need to create a copy with extension
+		if FileAccess.file_exists(user_path_with_ext):
+			absolute_file_path = path_with_ext
+		else:
+			var err = DirAccess.copy_absolute(absolute_file_path, path_with_ext)
+			if err == OK:
+				print("VideoPlayer: Created file copy with extension: ", path_with_ext)
+				absolute_file_path = path_with_ext
+			else:
+				push_warning(
+					"VideoPlayer: Failed to create file with extension, trying without: ", err
+				)
+
+	print("VideoPlayer: AVPlayer local source path: ", absolute_file_path)
+
+	if av_player:
+		var success = av_player.set_source_local(absolute_file_path)
+		if not success:
+			push_error("VideoPlayer: Failed to set AVPlayer local source: ", absolute_file_path)
+			video_state = VIDEO_STATE_ERROR
+			return
+
+		av_player.set_looping(_is_looping)
+		if _is_playing:
+			av_player.play()
+
+
 func _init_av_player_backend():
-	# TODO: Implement AVPlayer backend for iOS
-	push_warning("AVPlayer backend not yet implemented, falling back to Noop")
-	current_backend = BackendType.NOOP
-	_init_noop_backend()
+	if OS.get_name() != "iOS":
+		push_warning("AVPlayer backend only available on iOS, falling back to Noop")
+		current_backend = BackendType.NOOP
+		_init_noop_backend()
+		return
+
+	print("VideoPlayer: Initializing AVPlayer backend for ", _source)
+
+	# Set initial state to loading
+	video_state = VIDEO_STATE_LOADING
+
+	# Create AVPlayer child node
+	var av_player_scene = load("res://src/decentraland_components/av_player.tscn")
+	av_player = av_player_scene.instantiate()
+	add_child(av_player)
+
+	# Wait for AVPlayer to be ready
+	await get_tree().process_frame
+
+	# Initialize texture with initial size (will be resized when video loads)
+	if not av_player.init_texture(640, 360):
+		push_error("VideoPlayer: Failed to initialize AVPlayer texture")
+		video_state = VIDEO_STATE_ERROR
+		return
+
+	# Set the video source
+	var success: bool
+	if _source.begins_with("http://") or _source.begins_with("https://"):
+		success = av_player.set_source_url(_source)
+	else:
+		# For local files, we need to fetch them first
+		await _async_fetch_and_set_local_source_av_player()
+		return
+
+	if not success:
+		push_error("VideoPlayer: Failed to set AVPlayer source: ", _source)
+		video_state = VIDEO_STATE_ERROR
+		return
+
+	av_player.set_looping(_is_looping)
+
+	if _is_playing:
+		av_player.play()
 
 
 func _init_noop_backend():
@@ -162,12 +257,14 @@ func _process(_delta):
 
 
 ## Calculate and apply effective volume for each backend
-## ExoPlayer: effective_volume = master * scene * video_volume (bypasses Godot audio)
+## ExoPlayer/AVPlayer: effective_volume = master * scene * video_volume (bypasses Godot audio)
 ## LiveKit: Only apply video_volume (Godot buses handle master/scene)
 func _update_effective_volume():
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			_update_exo_player_volume()
+		BackendType.AV_PLAYER:
+			_update_av_player_volume()
 		BackendType.LIVEKIT:
 			_update_livekit_volume()
 		_:
@@ -194,6 +291,26 @@ func _update_exo_player_volume():
 	exo_player.set_volume(effective_volume)
 
 
+## AVPlayer bypasses Godot's audio system, so we calculate full effective volume
+func _update_av_player_volume():
+	if not av_player:
+		return
+
+	var effective_volume: float = 0.0
+
+	if not dcl_muted:
+		var config = Global.get_config()
+		var master_volume: float = config.audio_general_volume / 100.0
+		var scene_volume: float = config.audio_scene_volume / 100.0
+		effective_volume = master_volume * scene_volume * dcl_volume
+
+	if absf(effective_volume - _last_effective_volume) < 0.001:
+		return
+
+	_last_effective_volume = effective_volume
+	av_player.set_volume(effective_volume)
+
+
 ## LiveKit uses Godot's AudioStreamPlayer which goes through audio buses
 ## Godot buses handle master/scene volume, we only apply video's own volume
 func _update_livekit_volume():
@@ -213,6 +330,8 @@ func _update_video_state():
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			_update_exo_player_state()
+		BackendType.AV_PLAYER:
+			_update_av_player_state()
 		BackendType.LIVEKIT:
 			_update_livekit_state()
 		_:
@@ -234,6 +353,34 @@ func _update_exo_player_state():
 		video_length = duration
 
 	# Determine state based on ExoPlayer status
+	if duration <= 0:
+		# Still loading/buffering
+		video_state = VIDEO_STATE_LOADING
+	elif is_playing:
+		video_state = VIDEO_STATE_PLAYING
+	else:
+		# Not playing - could be paused or ready
+		if video_state == VIDEO_STATE_LOADING:
+			video_state = VIDEO_STATE_READY
+		elif video_state != VIDEO_STATE_READY:
+			video_state = VIDEO_STATE_PAUSED
+
+
+## Poll AVPlayer state and update video_state/position/length
+func _update_av_player_state():
+	if not av_player:
+		return
+
+	var duration: float = av_player.get_duration()
+	var position: float = av_player.get_position()
+	var is_playing: bool = av_player.is_playing()
+
+	# Update position and length
+	video_position = position
+	if duration > 0:
+		video_length = duration
+
+	# Determine state based on AVPlayer status
 	if duration <= 0:
 		# Still loading/buffering
 		video_state = VIDEO_STATE_LOADING
@@ -282,6 +429,9 @@ func _backend_play():
 		BackendType.EXO_PLAYER:
 			if exo_player:
 				exo_player.play()
+		BackendType.AV_PLAYER:
+			if av_player:
+				av_player.play()
 		BackendType.LIVEKIT:
 			pass  # LiveKit is always "playing" when receiving frames
 		_:
@@ -294,6 +444,9 @@ func _backend_pause():
 		BackendType.EXO_PLAYER:
 			if exo_player:
 				exo_player.pause()
+		BackendType.AV_PLAYER:
+			if av_player:
+				av_player.pause()
 		BackendType.LIVEKIT:
 			pass  # LiveKit doesn't support pause
 		_:
@@ -306,6 +459,9 @@ func _backend_set_looping(looping: bool):
 		BackendType.EXO_PLAYER:
 			if exo_player:
 				exo_player.set_looping(looping)
+		BackendType.AV_PLAYER:
+			if av_player:
+				av_player.set_looping(looping)
 		_:
 			pass
 
@@ -316,6 +472,10 @@ func _backend_dispose():
 			if exo_player:
 				exo_player.queue_free()
 				exo_player = null
+		BackendType.AV_PLAYER:
+			if av_player:
+				av_player.queue_free()
+				av_player = null
 		_:
 			pass
 
@@ -333,6 +493,9 @@ func _get_backend_texture() -> Texture2D:
 		BackendType.EXO_PLAYER:
 			if exo_player:
 				return exo_player.get_texture()
+		BackendType.AV_PLAYER:
+			if av_player:
+				return av_player.get_texture()
 		BackendType.LIVEKIT:
 			# LiveKit uses dcl_texture which is set from Rust
 			return dcl_texture

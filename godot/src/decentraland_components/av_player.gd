@@ -245,6 +245,7 @@ func update_texture() -> bool:
 var _frame_count: int = 0
 var _last_iosurface_ptr: int = 0
 
+
 func _update_texture_gpu() -> bool:
 	# Skip updates during surface reinitialization to prevent flickering
 	if _reinitializing_surface:
@@ -270,8 +271,10 @@ func _update_texture_gpu() -> bool:
 	# Debug: log first few frames and when IOSurface pointer changes
 	if _frame_count <= 5 or iosurface_ptr != _last_iosurface_ptr:
 		print(
-			"AVPlayer: Frame #%d, IOSurface=0x%x, size=%dx%d"
-			% [_frame_count, iosurface_ptr, video_width, video_height]
+			(
+				"AVPlayer: Frame #%d, IOSurface=0x%x, size=%dx%d"
+				% [_frame_count, iosurface_ptr, video_width, video_height]
+			)
 		)
 		_last_iosurface_ptr = iosurface_ptr
 
