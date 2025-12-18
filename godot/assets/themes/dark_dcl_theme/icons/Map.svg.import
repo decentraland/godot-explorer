@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/Map.svg-eade606d6263ceea619c57d290cf7d40.dpit
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

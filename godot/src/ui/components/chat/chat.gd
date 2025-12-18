@@ -113,7 +113,8 @@ func _on_gui_input(event: InputEvent) -> void:
 func exit_chat() -> void:
 	hide()
 	on_exit_chat.emit()
-	DisplayServer.virtual_keyboard_hide()
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_hide()
 
 
 func async_start_chat():
