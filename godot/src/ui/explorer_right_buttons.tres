@@ -1,4 +1,3 @@
-[gd_resource type="ButtonGroup" load_steps=0 format=3 uid="uid://cl8hx40tmfmwj"]
+[gd_resource type="ButtonGroup" format=3 uid="uid://cl8hx40tmfmwj"]
 
 [resource]
-allow_unpress = true

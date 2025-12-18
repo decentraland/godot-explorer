@@ -15,9 +15,8 @@ var _animation_tween: Tween
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
-	#toggled.connect(_on_toggled)
-	instantiate_animatd_sprite()
-	# Las clases hijas deben implementar este método para conectar sus señales
+	toggled.connect(_on_toggled)
+	instantiate_animated_sprite()
 	_connect_update_signals()
 
 	# Initial update
@@ -34,11 +33,14 @@ func _on_pressed() -> void:
 	if metric_name != "":
 		Global.metrics.track_click_button(metric_name, "HUD", "")
 
-	# Las clases hijas deben implementar este método para emitir su señal específica
 	_on_button_clicked()
 
 
-func instantiate_animatd_sprite():
+func _on_toggled(button_pressed: bool) -> void:
+	set_panel_open(button_pressed)
+
+
+func instantiate_animated_sprite():
 	animated_sprite = AnimatedSprite2D.new()
 	add_child(animated_sprite)
 	move_child(animated_sprite, 0)
@@ -82,7 +84,6 @@ func _on_notifications_updated(_notifications: Array = []) -> void:
 
 
 func _update_badge() -> void:
-	# Las clases hijas deben implementar este método para obtener su conteo específico
 	_unread_count = _get_unread_count()
 
 	if _unread_count > 0:
