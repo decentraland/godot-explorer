@@ -360,6 +360,10 @@ func _unhandled_input(event):
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
 
+			if event.pressed and event.keycode == KEY_P:
+				if not control_menu.visible:
+					breakpoint
+
 			#if event.pressed and event.keycode == KEY_ENTER:
 			#	panel_chat.toggle_chat_visibility(true)
 			#	panel_chat.line_edit_command.grab_focus.call_deferred()
