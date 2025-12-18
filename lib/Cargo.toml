@@ -79,8 +79,6 @@ modular-bitfield = "0.11"
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
-# iOS uses tracing_subscriber::fmt with ansi disabled (no special dependencies needed)
-
 [features]
 default = ["use_livekit", "use_deno"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
