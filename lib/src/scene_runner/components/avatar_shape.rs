@@ -126,6 +126,9 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     new_avatar_shape.set_name(GString::from("AvatarShape"));
                     node_3d.add_child(new_avatar_shape.clone().upcast());
 
+                    // Remove trigger detection for AvatarShapes - scene NPCs should not trigger areas
+                    new_avatar_shape.call("remove_trigger_detection".into(), &[]);
+
                     new_avatar_shape.call_deferred(
                         "async_update_avatar".into(),
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],

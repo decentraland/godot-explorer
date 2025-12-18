@@ -32,7 +32,10 @@ use crate::{
     realm::scene_definition::SceneEntityDefinition,
 };
 
-use super::{components::tween::Tween, godot_dcl_scene::GodotDclScene};
+use super::{
+    components::{trigger_area::TriggerAreaState, tween::Tween},
+    godot_dcl_scene::GodotDclScene,
+};
 
 pub struct Dirty {
     pub waiting_process: bool,
@@ -92,6 +95,7 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
+    TriggerArea,
     VirtualCameras,
     AudioSource,
     ProcessRpcs,
@@ -125,7 +129,8 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::CameraModeArea,
-            Self::CameraModeArea => Self::VirtualCameras,
+            Self::CameraModeArea => Self::TriggerArea,
+            Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
             Self::AvatarAttach => Self::SceneUi,
@@ -176,6 +181,10 @@ pub struct Scene {
 
     pub gltf_loading: HashSet<SceneEntityId>,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
+    pub trigger_area_results: Vec<(
+        SceneEntityId,
+        crate::dcl::components::proto_components::sdk::components::PbTriggerAreaResult,
+    )>,
     pub continuos_raycast: HashSet<SceneEntityId>,
 
     pub current_dirty: Dirty,
@@ -207,6 +216,12 @@ pub struct Scene {
     pub tweens: HashMap<SceneEntityId, Tween>,
     // Duplicated value to async-access the animator
     pub dup_animator: HashMap<SceneEntityId, PbAnimator>,
+
+    // Trigger Areas
+    pub trigger_areas: TriggerAreaState,
+    /// Last known player scene - used to detect when player enters/leaves this scene
+    /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
+    pub last_player_scene_id: SceneId,
 
     pub virtual_camera: Gd<DclVirtualCamera>,
 
@@ -297,6 +312,7 @@ impl Scene {
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
             pointer_events_result: Vec::new(),
+            trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),
             start_time: Instant::now(),
             materials: HashMap::new(),
@@ -311,6 +327,8 @@ impl Scene {
             scene_test_plan_received: false,
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
+            trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
@@ -361,6 +379,7 @@ impl Scene {
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
             pointer_events_result: Vec::new(),
+            trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),
             start_time: Instant::now(),
             materials: HashMap::new(),
@@ -375,6 +394,8 @@ impl Scene {
             scene_test_plan_received: false,
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
+            trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,

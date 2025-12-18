@@ -208,6 +208,15 @@ impl AvatarScene {
         new_avatar.connect("emote_triggered".into(), emote_triggered_callable);
 
         self.base_mut().add_child(new_avatar.clone().upcast());
+
+        // Setup trigger detection with the assigned entity_id
+        // NOTE: This must be called AFTER add_child so that _ready() has been called
+        // and the @onready trigger_detector variable is initialized
+        new_avatar.call(
+            "setup_trigger_detection".into(),
+            &[entity_id.as_i32().to_variant()],
+        );
+
         self.avatar_godot_scene
             .insert(entity_id, new_avatar.clone());
 
