@@ -290,8 +290,8 @@ fn initialize_video_player(
     playing: bool,
     looping: bool,
 ) {
-    // Set volume and mute state
-    video_player_node.bind_mut().set_dcl_volume(volume);
+    // Set volume and mute state (actual volume application handled by GDScript _process)
+    video_player_node.bind_mut().set_volume(volume);
     video_player_node.bind_mut().set_muted(muted);
 
     // Initialize the backend (this calls into GDScript)
@@ -311,7 +311,8 @@ fn update_video_player_params(
     playing: bool,
     looping: bool,
 ) {
-    video_player_node.bind_mut().set_dcl_volume(volume);
+    // Set volume and mute state (actual volume application handled by GDScript _process)
+    video_player_node.bind_mut().set_volume(volume);
     video_player_node.bind_mut().set_muted(muted);
 
     if playing {

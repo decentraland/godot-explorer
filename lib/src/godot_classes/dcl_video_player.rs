@@ -5,11 +5,13 @@ use godot::prelude::*;
 #[derive(GodotClass)]
 #[class(init, base=AudioStreamPlayer)]
 pub struct DclVideoPlayer {
-    // Used to mute and restore the volume
+    // The video's own volume (0.0-1.0)
+    #[var]
     dcl_volume: f32,
 
-    // Track muted state to know if we should apply volume changes
-    is_muted: bool,
+    // Muted state (e.g., when not in current scene)
+    #[var]
+    dcl_muted: bool,
 
     #[export]
     dcl_source: GString,
@@ -38,37 +40,17 @@ impl DclVideoPlayer {
         let _ = sender.send(file_path.to_string());
     }
 
-    #[func]
-    pub fn get_dcl_volume(&self) -> f32 {
-        self.dcl_volume
-    }
-
-    #[func]
-    pub fn set_dcl_volume(&mut self, value: f32) {
+    /// Set the video's own volume (0.0-1.0)
+    /// Note: Actual volume application is handled by GDScript _process
+    /// which calculates effective_volume = master * scene * video_volume
+    pub fn set_volume(&mut self, value: f32) {
         self.dcl_volume = value;
-        // Update the actual audio volume if not muted
-        if !self.is_muted {
-            let db_volume = if value <= 0.0 {
-                -80.0
-            } else {
-                20.0 * f32::log10(value)
-            };
-            self.base_mut().set_volume_db(db_volume);
-        }
     }
 
+    /// Set the muted state (e.g., when not in current scene)
+    /// Note: Actual volume application is handled by GDScript _process
     pub fn set_muted(&mut self, value: bool) {
-        self.is_muted = value;
-        if value {
-            self.base_mut().set_volume_db(-80.0);
-        } else {
-            let db_volume = if self.dcl_volume <= 0.0 {
-                -80.0
-            } else {
-                20.0 * f32::log10(self.dcl_volume)
-            };
-            self.base_mut().set_volume_db(db_volume);
-        }
+        self.dcl_muted = value;
     }
 
     /// Initialize the backend for this video player.

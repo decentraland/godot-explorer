@@ -14,6 +14,9 @@ var _source: String = ""
 var _is_playing: bool = false
 var _is_looping: bool = false
 
+# Volume tracking for efficient updates
+var _last_effective_volume: float = -1.0  # -1 means uninitialized
+
 
 # Called from Rust DclVideoPlayer::init_backend
 func _init_backend_impl(backend_type: int, source: String, playing: bool, looping: bool):
@@ -126,6 +129,56 @@ func _init_av_player_backend():
 
 func _init_noop_backend():
 	print("VideoPlayer: Using Noop backend (video playback not available)")
+
+
+func _process(_delta):
+	_update_effective_volume()
+
+
+## Calculate and apply effective volume for each backend
+## ExoPlayer: effective_volume = master * scene * video_volume (bypasses Godot audio)
+## LiveKit: Only apply video_volume (Godot buses handle master/scene)
+func _update_effective_volume():
+	match current_backend:
+		BackendType.EXO_PLAYER:
+			_update_exo_player_volume()
+		BackendType.LIVEKIT:
+			_update_livekit_volume()
+		_:
+			pass
+
+
+## ExoPlayer bypasses Godot's audio system, so we calculate full effective volume
+func _update_exo_player_volume():
+	if not exo_player:
+		return
+
+	var effective_volume: float = 0.0
+
+	if not dcl_muted:
+		var config = Global.get_config()
+		var master_volume: float = config.audio_general_volume / 100.0
+		var scene_volume: float = config.audio_scene_volume / 100.0
+		effective_volume = master_volume * scene_volume * dcl_volume
+
+	if absf(effective_volume - _last_effective_volume) < 0.001:
+		return
+
+	_last_effective_volume = effective_volume
+	exo_player.set_volume(effective_volume)
+
+
+## LiveKit uses Godot's AudioStreamPlayer which goes through audio buses
+## Godot buses handle master/scene volume, we only apply video's own volume
+func _update_livekit_volume():
+	var effective_volume: float = 0.0 if dcl_muted else dcl_volume
+
+	if absf(effective_volume - _last_effective_volume) < 0.001:
+		return
+
+	_last_effective_volume = effective_volume
+	var db_volume: float = -80.0 if effective_volume <= 0.0 else 20.0 * log(effective_volume)
+	self.volume_db = db_volume
 
 
 # Backend control methods called from Rust
