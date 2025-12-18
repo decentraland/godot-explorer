@@ -568,6 +568,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 
 [node name="AccountDeletionPopUp" parent="." instance=ExtResource("31_kkhkt")]
+visible = false
 layout_mode = 1
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

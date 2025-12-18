@@ -1,6 +1,6 @@
 extends TextureRect
 
-const DELETION_API_URL = "https://bff-mobile.decentraland.org/deletion"
+const DELETION_API_URL = "https://mobile-bff.decentraland.org/deletion"
 const DELETION_STORAGE_PATH = "user://account_deletion_requests.cfg"
 
 @onready var confirmation_dialog: VBoxContainer = %ConfirmationDialog
@@ -11,6 +11,7 @@ const DELETION_STORAGE_PATH = "user://account_deletion_requests.cfg"
 
 
 func _ready() -> void:
+	hide()
 	# Hide the cancel deletion button
 	if button_cancel_deletion:
 		button_cancel_deletion.get_parent().hide()
@@ -52,21 +53,6 @@ func _clear_deletion_request(address: String) -> void:
 	if config.has_section_key("deletion_requests", address):
 		config.erase_section_key("deletion_requests", address)
 		config.save(DELETION_STORAGE_PATH)
-
-
-func check_and_show_pending_deletion() -> void:
-	var player_identity = Global.get_player_identity()
-	if player_identity == null:
-		return
-
-	var address = player_identity.get_address_str()
-	if address.is_empty():
-		return
-
-	if _has_pending_deletion_request(address):
-		_hide_all()
-		done_dialog.show()
-		show()
 
 
 func async_start_flow() -> void:

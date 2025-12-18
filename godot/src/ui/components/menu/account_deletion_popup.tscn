@@ -157,6 +157,7 @@ hide_on_portrait = true
 
 [node name="ProcessingScreen" type="VBoxContainer" parent="MarginContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 5
@@ -178,7 +179,6 @@ size_flags_horizontal = 4
 
 [node name="DoneDialog" type="VBoxContainer" parent="MarginContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 5

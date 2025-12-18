@@ -46,10 +46,7 @@ var fade_out_tween: Tween = null
 
 
 func _ready():
-	if account_deletion_pop_up:
-		account_deletion_pop_up.hide()
-	else:
-		printerr("AccountDeletionPopUp node not found in menu!")
+	account_deletion_pop_up.hide()
 	is_in_game = self != get_tree().current_scene
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -228,9 +225,6 @@ func _on_visibility_changed():
 		UiSounds.play_sound("mainmenu_widget_open")
 		grab_focus()
 		Global.explorer_release_focus()
-		# Check if user has a pending deletion request and show the popup
-		if account_deletion_pop_up:
-			account_deletion_pop_up.check_and_show_pending_deletion()
 	else:
 		UiSounds.play_sound("mainmenu_widget_close")
 		Global.on_menu_close.emit()
