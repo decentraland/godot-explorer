@@ -31,6 +31,7 @@ var current_profile_version: int = -1
 @onready var outline_system: OutlineSystem = $Mount/Camera3D/OutlineSystem
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
+@onready var stuck_detector := $StuckDetector
 
 
 func to_xz(pos: Vector3) -> Vector2:
@@ -323,3 +324,5 @@ func get_avatar_under_crosshair() -> Avatar:
 func move_to(target: Vector3):
 	global_position = target
 	velocity = Vector3.ZERO
+	if stuck_detector:
+		stuck_detector.check_stuck()
