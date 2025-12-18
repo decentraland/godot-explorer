@@ -1,7 +1,7 @@
 class_name Explorer
 extends Node
 
-var is_world: bool
+var is_genesis_city: bool
 var player: Node3D = null
 var scene_title: String
 var parcel_position: Vector2i
@@ -871,7 +871,6 @@ func _on_menu_close():
 
 
 func _extract_short_realm_url(full_url: String) -> String:
-	#https://worlds-content-server.decentraland.org/world/boedo.dcl.eth/ -> boedo.dcl.eth
 	var url_trimmed = full_url.trim_suffix("/")
 	var parts = url_trimmed.split("/")
 	if parts.size() > 0:
@@ -880,24 +879,22 @@ func _extract_short_realm_url(full_url: String) -> String:
 
 
 func _share_place():
-	print(Global.realm.realm_url)
-	print(Realm.MAIN_REALM)
 	var msg: String
 	var url: String
 
-	if is_world:
-		var realm_url = Global.realm.realm_url
-		var short_realm_url = _extract_short_realm_url(realm_url)
-		url = "https://decentraland.org/places/world/?name=" + short_realm_url
-	else:
+	if is_genesis_city:
 		url = (
 			"https://decentraland.org/places/place/?position="
 			+ str(parcel_position[0])
 			+ "."
 			+ str(parcel_position[1])
 		)
+	else:
+		var realm_url = Global.realm.realm_url
+		var short_realm_url = _extract_short_realm_url(realm_url)
+		url = "https://decentraland.org/places/world/?name=" + short_realm_url
 
-		msg = "Join Me At " + scene_title + " following this link " + url
+	msg = "Join Me At " + scene_title + " following this link " + url
 
 	print(msg)
 
@@ -908,7 +905,7 @@ func _share_place():
 
 
 func _on_change_scene_id(scene_id: int):
-	is_world = Global.realm.realm_url != Realm.MAIN_REALM
+	is_genesis_city = Realm.is_genesis_city(Global.realm.realm_url)
 	if scene_id == -1:
 		scene_title = ""
 		return
