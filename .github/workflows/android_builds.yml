@@ -12,6 +12,14 @@ on:
         required: true
       SENTRY_PROJECT:
         required: true
+      R2_ACCOUNT_ID:
+        required: false
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
+      R2_BUCKET:
+        required: false
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
@@ -48,11 +56,70 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
 
-      - name: Build Rust libraries
-        run: |
-          cargo run -- build --release ${{ env.PROD_FLAG }}
-          cargo run -- build --release --target android ${{ env.PROD_FLAG }}
-          cargo run -- import-assets
+      # Check for cached Linux lib (only if R2 secrets are configured, skip on main branch and manual triggers)
+      - name: Check Linux lib cache
+        id: linux-lib-cache
+        if: ${{ secrets.R2_ACCOUNT_ID != '' && github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch' }}
+        uses: ./.github/actions/lib-cache
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          target: linux
+          release: 'true'
+          action: download
+
+      # Check for cached Android lib (only if R2 secrets are configured, skip on main branch and manual triggers)
+      - name: Check Android lib cache
+        id: android-lib-cache
+        if: ${{ secrets.R2_ACCOUNT_ID != '' && github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch' }}
+        uses: ./.github/actions/lib-cache
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          target: android
+          release: 'true'
+          action: download
+
+      - name: Build Linux library
+        if: steps.linux-lib-cache.outputs.cache-hit != 'true'
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
+
+      - name: Build Android library
+        if: steps.android-lib-cache.outputs.cache-hit != 'true'
+        run: cargo run -- build --release --target android ${{ env.PROD_FLAG }}
+
+      - name: Import assets
+        run: cargo run -- import-assets
+
+      # Upload Linux lib cache after successful build (only if R2 secrets are configured)
+      - name: Upload Linux lib cache
+        if: ${{ secrets.R2_ACCOUNT_ID != '' && steps.linux-lib-cache.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/lib-cache
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          target: linux
+          release: 'true'
+          action: upload
+
+      # Upload Android lib cache after successful build (only if R2 secrets are configured)
+      - name: Upload Android lib cache
+        if: ${{ secrets.R2_ACCOUNT_ID != '' && steps.android-lib-cache.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/lib-cache
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          target: android
+          release: 'true'
+          action: upload
       
       - name: Export Android APK
         run: |

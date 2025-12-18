@@ -1,6 +1,15 @@
 name: 🏁 Windows Builds
 on:
   workflow_call:
+    secrets:
+      R2_ACCOUNT_ID:
+        required: false
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
+      R2_BUCKET:
+        required: false
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-windows
@@ -28,6 +37,20 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
+      # Check for cached lib (only if R2 secrets are configured, skip on main branch and manual triggers)
+      - name: Check lib cache
+        id: lib-cache
+        if: ${{ secrets.R2_ACCOUNT_ID != '' && github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch' }}
+        uses: ./.github/actions/lib-cache
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          target: windows
+          release: 'true'
+          action: download
+
       # Build section
       - name: Cargo install
         run: cargo run -- install --targets windows
@@ -36,7 +59,21 @@ jobs:
         uses: ./.github/actions/set-prod-flag
 
       - name: Build
+        if: steps.lib-cache.outputs.cache-hit != 'true'
         run: cargo run -- build --release ${{ env.PROD_FLAG }}
+
+      # Upload lib cache after successful build (only if R2 secrets are configured)
+      - name: Upload lib cache
+        if: ${{ secrets.R2_ACCOUNT_ID != '' && steps.lib-cache.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/lib-cache
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          target: windows
+          release: 'true'
+          action: upload
 
       - name: Test
         working-directory: lib

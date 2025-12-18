@@ -1,0 +1,235 @@
+name: Library Cache (Cloudflare R2)
+description: |
+  Cache pre-built Rust libraries using Cloudflare R2.
+  Downloads cached library if lib/ hasn't changed, otherwise signals that a build is needed.
+  After build, use the upload step to cache the new library.
+
+inputs:
+  r2-account-id:
+    description: 'Cloudflare R2 Account ID'
+    required: true
+  r2-access-key-id:
+    description: 'Cloudflare R2 Access Key ID'
+    required: true
+  r2-secret-access-key:
+    description: 'Cloudflare R2 Secret Access Key'
+    required: true
+  r2-bucket:
+    description: 'Cloudflare R2 Bucket Name'
+    required: true
+  target:
+    description: 'Build target (e.g., linux, android, macos, windows, ios)'
+    required: true
+  release:
+    description: 'Whether this is a release build'
+    required: false
+    default: 'false'
+  action:
+    description: 'Action to perform: check, download, or upload'
+    required: true
+
+outputs:
+  cache-hit:
+    description: 'Whether a cached library was found and downloaded'
+    value: ${{ steps.check-cache.outputs.cache-hit }}
+  lib-commit:
+    description: 'The commit hash of the last lib/ modification'
+    value: ${{ steps.get-lib-commit.outputs.lib-commit }}
+  needs-build:
+    description: 'Whether a build is needed (no cache found)'
+    value: ${{ steps.check-cache.outputs.needs-build }}
+
+runs:
+  using: composite
+  steps:
+    # Install rclone
+    - name: Install rclone
+      shell: bash
+      run: |
+        if command -v rclone &> /dev/null; then
+          echo "rclone already installed"
+          rclone version
+        elif [[ "$RUNNER_OS" == "Windows" ]]; then
+          # Windows installation
+          curl -O https://downloads.rclone.org/rclone-current-windows-amd64.zip
+          unzip rclone-current-windows-amd64.zip
+          mv rclone-*-windows-amd64/rclone.exe /usr/bin/ || mv rclone-*-windows-amd64/rclone.exe $HOME/bin/
+          rm -rf rclone-*
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          # macOS installation
+          brew install rclone || curl https://rclone.org/install.sh | sudo bash
+        else
+          # Linux installation
+          curl https://rclone.org/install.sh | sudo bash
+        fi
+        rclone version
+
+    # Get the last commit that modified lib/
+    - name: Get last lib commit
+      id: get-lib-commit
+      shell: bash
+      run: |
+        # Get the last commit that modified any file in lib/
+        LIB_COMMIT=$(git log -1 --format="%H" -- lib/)
+        echo "Last commit modifying lib/: $LIB_COMMIT"
+        echo "lib-commit=$LIB_COMMIT" >> $GITHUB_OUTPUT
+
+        # Also check if current commit modified lib/
+        CURRENT_COMMIT=${{ github.sha }}
+        CHANGED_FILES=$(git diff --name-only $LIB_COMMIT^..$CURRENT_COMMIT 2>/dev/null || echo "")
+        LIB_CHANGED=$(echo "$CHANGED_FILES" | grep "^lib/" || true)
+
+        if [ -n "$LIB_CHANGED" ]; then
+          echo "lib-changed=true" >> $GITHUB_OUTPUT
+          echo "Current commit modifies lib/"
+        else
+          echo "lib-changed=false" >> $GITHUB_OUTPUT
+          echo "Current commit does NOT modify lib/"
+        fi
+
+    # Determine cache key based on target and release mode
+    - name: Determine cache key
+      id: cache-key
+      shell: bash
+      run: |
+        RELEASE_SUFFIX=""
+        if [ "${{ inputs.release }}" = "true" ]; then
+          RELEASE_SUFFIX="-release"
+        fi
+        CACHE_KEY="lib-${{ inputs.target }}${RELEASE_SUFFIX}-${{ steps.get-lib-commit.outputs.lib-commit }}"
+        echo "cache-key=$CACHE_KEY" >> $GITHUB_OUTPUT
+        echo "Cache key: $CACHE_KEY"
+
+    # Configure rclone for R2
+    - name: Configure rclone
+      if: inputs.action == 'download' || inputs.action == 'upload' || inputs.action == 'check'
+      shell: bash
+      run: |
+        mkdir -p ~/.config/rclone
+        cat > ~/.config/rclone/rclone.conf << EOF
+        [r2]
+        type = s3
+        provider = Cloudflare
+        access_key_id = ${{ inputs.r2-access-key-id }}
+        secret_access_key = ${{ inputs.r2-secret-access-key }}
+        endpoint = https://${{ inputs.r2-account-id }}.r2.cloudflarestorage.com
+        acl = private
+        EOF
+
+    # Check if cache exists
+    - name: Check cache exists
+      id: check-cache
+      if: inputs.action == 'check' || inputs.action == 'download'
+      shell: bash
+      run: |
+        CACHE_KEY="${{ steps.cache-key.outputs.cache-key }}"
+        REMOTE_PATH="r2:${{ inputs.r2-bucket }}/godot-explorer-lib/${CACHE_KEY}.tar.gz"
+
+        echo "Checking for cached library at: $REMOTE_PATH"
+
+        if rclone ls "$REMOTE_PATH" 2>/dev/null; then
+          echo "Cache HIT: Found cached library"
+          echo "cache-hit=true" >> $GITHUB_OUTPUT
+          echo "needs-build=false" >> $GITHUB_OUTPUT
+        else
+          echo "Cache MISS: No cached library found"
+          echo "cache-hit=false" >> $GITHUB_OUTPUT
+          echo "needs-build=true" >> $GITHUB_OUTPUT
+        fi
+
+    # Download cached library
+    - name: Download cached library
+      id: download-cache
+      if: inputs.action == 'download' && steps.check-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        CACHE_KEY="${{ steps.cache-key.outputs.cache-key }}"
+        REMOTE_PATH="r2:${{ inputs.r2-bucket }}/godot-explorer-lib/${CACHE_KEY}.tar.gz"
+        LOCAL_PATH="/tmp/${CACHE_KEY}.tar.gz"
+
+        echo "Downloading cached library from: $REMOTE_PATH"
+        rclone copy "$REMOTE_PATH" /tmp/ --progress
+
+        if [ -f "$LOCAL_PATH" ]; then
+          echo "Extracting cached library..."
+          tar -xzf "$LOCAL_PATH" -C .
+          echo "download-success=true" >> $GITHUB_OUTPUT
+          echo "Cached library restored successfully"
+
+          # Show what was restored
+          echo "Restored files:"
+          ls -la lib/target/ 2>/dev/null || echo "No lib/target directory"
+          ls -la godot/*.so godot/*.dylib godot/*.dll 2>/dev/null || echo "No library files in godot/"
+        else
+          echo "download-success=false" >> $GITHUB_OUTPUT
+          echo "Failed to download cached library"
+        fi
+
+    # Upload library to cache
+    - name: Upload library to cache
+      if: inputs.action == 'upload'
+      shell: bash
+      run: |
+        CACHE_KEY="${{ steps.cache-key.outputs.cache-key }}"
+        REMOTE_PATH="r2:${{ inputs.r2-bucket }}/godot-explorer-lib/${CACHE_KEY}.tar.gz"
+        LOCAL_PATH="/tmp/${CACHE_KEY}.tar.gz"
+
+        echo "Preparing library archive..."
+
+        # Determine what to archive based on target
+        TARGET="${{ inputs.target }}"
+        ARCHIVE_PATHS=""
+
+        case "$TARGET" in
+          linux)
+            ARCHIVE_PATHS="lib/target/libdclgodot_linux godot/libdclgodot.so"
+            ;;
+          android)
+            ARCHIVE_PATHS="lib/target/libdclgodot_android godot/android/build/libs"
+            ;;
+          macos)
+            ARCHIVE_PATHS="lib/target/libdclgodot_macos godot/libdclgodot.dylib"
+            ;;
+          windows)
+            ARCHIVE_PATHS="lib/target/libdclgodot_windows godot/dclgodot.dll"
+            ;;
+          ios)
+            ARCHIVE_PATHS="lib/target/libdclgodot_ios"
+            ;;
+          *)
+            echo "Unknown target: $TARGET"
+            exit 1
+            ;;
+        esac
+
+        # Filter to only existing paths
+        EXISTING_PATHS=""
+        for path in $ARCHIVE_PATHS; do
+          if [ -e "$path" ]; then
+            EXISTING_PATHS="$EXISTING_PATHS $path"
+          fi
+        done
+
+        if [ -z "$EXISTING_PATHS" ]; then
+          echo "No library files found to cache"
+          exit 1
+        fi
+
+        echo "Archiving: $EXISTING_PATHS"
+        tar -czf "$LOCAL_PATH" $EXISTING_PATHS
+
+        echo "Uploading to: $REMOTE_PATH"
+        rclone copy "$LOCAL_PATH" "r2:${{ inputs.r2-bucket }}/godot-explorer-lib/" --progress
+
+        echo "Library cached successfully"
+
+        # Clean up old caches for this target (keep last 10)
+        echo "Cleaning up old caches..."
+        rclone lsf "r2:${{ inputs.r2-bucket }}/godot-explorer-lib/" | \
+          grep "^lib-$TARGET" | \
+          sort -r | \
+          tail -n +11 | \
+          while read -r old_file; do
+            echo "Deleting old cache: $old_file"
+            rclone delete "r2:${{ inputs.r2-bucket }}/godot-explorer-lib/$old_file" || true
+          done
