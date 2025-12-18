@@ -95,16 +95,11 @@ func _ready():
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
 
-	# AvatarShapes (scene NPCs) have skip_process=true and don't need trigger detection
-	# Remove the trigger_detector entirely for them
-	if skip_process:
-		trigger_detector.queue_free()
-		trigger_detector = null
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
+	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
 
 
 ## Setup trigger detection for this avatar (local player and remote avatars only).
-## AvatarShapes (scene NPCs) should NOT call this function.
 ## - For local player: entity_id=SceneEntityId.PLAYER (0x10000)
 ## - For remote avatars: entity_id=assigned entity from avatar_scene.rs
 func setup_trigger_detection(p_entity_id: int) -> void:
@@ -115,6 +110,14 @@ func setup_trigger_detection(p_entity_id: int) -> void:
 
 	# Enable the collision shape
 	trigger_detector.get_node("CollisionShape3D").disabled = false
+
+
+## Remove trigger detection for this avatar (AvatarShapes/scene NPCs only).
+## Called from avatar_shape.rs after the avatar is added to the scene.
+func remove_trigger_detection() -> void:
+	if trigger_detector != null:
+		trigger_detector.queue_free()
+		trigger_detector = null
 
 
 func on_chat_message(address: String, message: String, _timestamp: float):
