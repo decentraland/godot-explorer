@@ -134,11 +134,11 @@ fn handle_body_monitor_event(
                 .unwrap_or(false);
 
             if is_avatar {
-                // Avatar detection (local player, remote avatar, or scene NPC)
-                // dcl_scene_id == -1 means it's not a scene NPC (local player or remote avatar)
-                // For scene NPCs (dcl_scene_id >= 0), only accept from same scene
-                if dcl_scene_id >= 0 && dcl_scene_id != scene_id.0 {
-                    return; // Scene NPC from different scene, ignore
+                // Avatar detection (local player or remote avatar only)
+                // dcl_scene_id == -1 means it's local player or remote avatar (detect these)
+                // dcl_scene_id >= 0 means it's a scene AvatarShape/NPC (ignore ALL of these)
+                if dcl_scene_id >= 0 {
+                    return; // AvatarShape from any scene, ignore
                 }
                 (SceneEntityId::from_i32(dcl_entity_id), CL_PLAYER)
             } else {
