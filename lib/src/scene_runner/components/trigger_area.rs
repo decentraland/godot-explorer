@@ -120,35 +120,35 @@ fn handle_body_monitor_event(
             return;
         }
 
-        // Check if this is a DCL entity or avatar with entity metadata
-        if object.has_meta("dcl_entity_id".into()) {
+        // Check if this is an avatar (has CL_PLAYER layer)
+        let is_avatar = object
+            .clone()
+            .try_cast::<godot::engine::CollisionObject3D>()
+            .ok()
+            .map(|co| (co.get_collision_layer() & CL_PLAYER) != 0)
+            .unwrap_or(false);
+
+        if is_avatar {
+            // Avatar detection (local player or remote avatar)
+            // AvatarShapes (scene NPCs) don't have trigger detection enabled, so they can't reach here
+            if !object.has_meta("dcl_entity_id".into()) {
+                return;
+            }
+            let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
+            (SceneEntityId::from_i32(dcl_entity_id), CL_PLAYER)
+        } else if object.has_meta("dcl_entity_id".into()) {
+            // Regular DCL scene entity (not avatar)
             let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
             let dcl_scene_id = object.get_meta("dcl_scene_id".into()).to::<i32>();
 
-            // Check if this is an avatar (has CL_PLAYER layer)
-            let is_avatar = object
-                .clone()
-                .try_cast::<godot::engine::CollisionObject3D>()
-                .ok()
-                .map(|co| (co.get_collision_layer() & CL_PLAYER) != 0)
-                .unwrap_or(false);
-
-            if is_avatar {
-                // Avatar detection (local player or remote avatar)
-                // dcl_scene_id == -1 means it's local player or remote avatar
-                // AvatarShapes (scene NPCs) have their trigger_detector freed, so they won't reach here
-                (SceneEntityId::from_i32(dcl_entity_id), CL_PLAYER)
-            } else {
-                // Regular DCL scene entity (not avatar)
-                // Only accept entities from the same scene
-                if dcl_scene_id != scene_id.0 {
-                    return; // Different scene, ignore
-                }
-                (
-                    SceneEntityId::from_i32(dcl_entity_id),
-                    collision_mask & !CL_PLAYER,
-                )
+            // Only accept entities from the same scene
+            if dcl_scene_id != scene_id.0 {
+                return; // Different scene, ignore
             }
+            (
+                SceneEntityId::from_i32(dcl_entity_id),
+                collision_mask & !CL_PLAYER,
+            )
         } else {
             // No dcl_entity_id metadata - ignore
             return;

@@ -13,8 +13,7 @@ const WEARABLE_NAME_PREFIX = "__"
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
 
-# Entity info for trigger area detection (set by avatar_shape.rs for scene avatars)
-var dcl_scene_id: int = -1
+# Entity info for trigger area detection
 var dcl_entity_id: int = -1
 var is_local_player: bool = false
 
@@ -96,26 +95,22 @@ func _ready():
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
 
-	# Trigger detection is setup later via setup_trigger_detection() when entity info is available
-
-
-## Setup trigger detection for this avatar.
-## Call this after the avatar is created with the appropriate entity info.
-## - For local player: scene_id=-1, entity_id=SceneEntityId.PLAYER (0x10000)
-## - For remote avatars: scene_id=-1, entity_id=assigned entity from avatar_scene.rs
-## - For scene avatars (NPCs): scene_id and entity_id from the scene (trigger detection disabled)
-func setup_trigger_detection(p_scene_id: int, p_entity_id: int) -> void:
-	dcl_scene_id = p_scene_id
-	dcl_entity_id = p_entity_id
-
-	# AvatarShapes (scene NPCs) should not trigger areas - remove their collider
-	if dcl_scene_id >= 0:
+	# AvatarShapes (scene NPCs) have skip_process=true and don't need trigger detection
+	# Remove the trigger_detector entirely for them
+	if skip_process:
 		trigger_detector.queue_free()
 		trigger_detector = null
-		return
+	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
+
+
+## Setup trigger detection for this avatar (local player and remote avatars only).
+## AvatarShapes (scene NPCs) should NOT call this function.
+## - For local player: entity_id=SceneEntityId.PLAYER (0x10000)
+## - For remote avatars: entity_id=assigned entity from avatar_scene.rs
+func setup_trigger_detection(p_entity_id: int) -> void:
+	dcl_entity_id = p_entity_id
 
 	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
-	trigger_detector.set_meta("dcl_scene_id", dcl_scene_id)
 	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
 
 	# Enable the collision shape

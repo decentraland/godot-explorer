@@ -210,12 +210,11 @@ impl AvatarScene {
         self.base_mut().add_child(new_avatar.clone().upcast());
 
         // Setup trigger detection with the assigned entity_id
-        // scene_id=-1 means this is a remote avatar (not a scene NPC)
         // NOTE: This must be called AFTER add_child so that _ready() has been called
         // and the @onready trigger_detector variable is initialized
         new_avatar.call(
             "setup_trigger_detection".into(),
-            &[(-1_i32).to_variant(), entity_id.as_i32().to_variant()],
+            &[entity_id.as_i32().to_variant()],
         );
 
         self.avatar_godot_scene
