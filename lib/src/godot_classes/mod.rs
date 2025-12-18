@@ -20,6 +20,7 @@ pub mod dcl_hashing;
 pub mod dcl_ios_plugin;
 pub mod dcl_node_entity_3d;
 pub mod dcl_parse_deep_link;
+pub mod dcl_player;
 pub mod dcl_realm;
 #[cfg(feature = "use_resource_tracking")]
 pub mod dcl_resource_tracker;
