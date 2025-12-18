@@ -103,10 +103,16 @@ func _ready():
 ## Call this after the avatar is created with the appropriate entity info.
 ## - For local player: scene_id=-1, entity_id=SceneEntityId.PLAYER (0x10000)
 ## - For remote avatars: scene_id=-1, entity_id=assigned entity from avatar_scene.rs
-## - For scene avatars (NPCs): scene_id and entity_id from the scene
+## - For scene avatars (NPCs): scene_id and entity_id from the scene (trigger detection disabled)
 func setup_trigger_detection(p_scene_id: int, p_entity_id: int) -> void:
 	dcl_scene_id = p_scene_id
 	dcl_entity_id = p_entity_id
+
+	# AvatarShapes (scene NPCs) should not trigger areas - remove their collider
+	if dcl_scene_id >= 0:
+		trigger_detector.queue_free()
+		trigger_detector = null
+		return
 
 	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
 	trigger_detector.set_meta("dcl_scene_id", dcl_scene_id)

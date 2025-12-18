@@ -134,12 +134,9 @@ fn handle_body_monitor_event(
                 .unwrap_or(false);
 
             if is_avatar {
-                // Avatar detection (local player or remote avatar only)
-                // dcl_scene_id == -1 means it's local player or remote avatar (detect these)
-                // dcl_scene_id >= 0 means it's a scene AvatarShape/NPC (ignore ALL of these)
-                if dcl_scene_id >= 0 {
-                    return; // AvatarShape from any scene, ignore
-                }
+                // Avatar detection (local player or remote avatar)
+                // dcl_scene_id == -1 means it's local player or remote avatar
+                // AvatarShapes (scene NPCs) have their trigger_detector freed, so they won't reach here
                 (SceneEntityId::from_i32(dcl_entity_id), CL_PLAYER)
             } else {
                 // Regular DCL scene entity (not avatar)
