@@ -53,16 +53,38 @@ runs:
           # Windows installation
           curl -O https://downloads.rclone.org/rclone-current-windows-amd64.zip
           unzip rclone-current-windows-amd64.zip
-          mv rclone-*-windows-amd64/rclone.exe /usr/bin/ || mv rclone-*-windows-amd64/rclone.exe $HOME/bin/
+          mkdir -p $HOME/bin
+          mv rclone-*-windows-amd64/rclone.exe $HOME/bin/
           rm -rf rclone-*
+          echo "$HOME/bin" >> $GITHUB_PATH
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
           # macOS installation
-          brew install rclone || curl https://rclone.org/install.sh | sudo bash
+          brew install rclone || {
+            curl -O https://downloads.rclone.org/rclone-current-osx-amd64.zip
+            unzip rclone-current-osx-amd64.zip
+            mkdir -p $HOME/bin
+            mv rclone-*-osx-amd64/rclone $HOME/bin/
+            chmod +x $HOME/bin/rclone
+            rm -rf rclone-*
+            echo "$HOME/bin" >> $GITHUB_PATH
+          }
         else
-          # Linux installation
-          curl https://rclone.org/install.sh | sudo bash
+          # Linux installation - handle containers without sudo
+          if command -v sudo &> /dev/null; then
+            curl https://rclone.org/install.sh | sudo bash
+          else
+            # No sudo available (e.g., Docker container) - install to user directory
+            curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip
+            unzip -q rclone-current-linux-amd64.zip
+            mkdir -p $HOME/bin
+            mv rclone-*-linux-amd64/rclone $HOME/bin/
+            chmod +x $HOME/bin/rclone
+            rm -rf rclone-*
+            echo "$HOME/bin" >> $GITHUB_PATH
+            export PATH="$HOME/bin:$PATH"
+          fi
         fi
-        rclone version
+        rclone version || $HOME/bin/rclone version
 
     # Get the last commit that modified lib/
     - name: Get last lib commit
