@@ -144,7 +144,7 @@ func async_close_sign_in(generate_snapshots: bool = true):
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty():
+	if _should_go_to_explorer_from_deeplink():
 		go_to_explorer()
 		return
 
@@ -182,9 +182,13 @@ func _ready():
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
 
+	# Preview deeplink: create guest and skip lobby for hot reload development
+	if not Global.deep_link_obj.preview.is_empty():
+		_skip_lobby = true
+
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if Global.cli.guest_profile:
+	if Global.cli.guest_profile or not Global.deep_link_obj.preview.is_empty():
 		session_account.clear()
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()
@@ -206,6 +210,15 @@ func _ready():
 func go_to_explorer():
 	if is_inside_tree():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
+## Check if any deeplink parameter should redirect to explorer (preview, realm, or location)
+func _should_go_to_explorer_from_deeplink() -> bool:
+	return (
+		Global.deep_link_obj.is_location_defined()
+		or not Global.deep_link_obj.realm.is_empty()
+		or not Global.deep_link_obj.preview.is_empty()
+	)
 
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
@@ -243,7 +256,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		await async_close_sign_in()
 	else:
 		ready_for_redirect_by_deep_link = true
-		if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty():
+		if _should_go_to_explorer_from_deeplink():
 			go_to_explorer()
 			return
 
