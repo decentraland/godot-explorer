@@ -1,11 +1,17 @@
-[gd_scene load_steps=4 format=3 uid="uid://y5q8yolbxvfv"]
+[gd_scene load_steps=7 format=3 uid="uid://y5q8yolbxvfv"]
 
 [ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="2_5v3h1"]
 [ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="2_duxmw"]
 [ext_resource type="PackedScene" uid="uid://cf8j7k2x3p4hl" path="res://assets/environment/sky_lights.tscn" id="3_lights"]
+[ext_resource type="Gradient" path="res://assets/environment/gradients/directional_light_color.tres" id="4_dir"]
+[ext_resource type="Gradient" path="res://assets/environment/gradients/ambient_light_color.tres" id="5_amb"]
+[ext_resource type="Gradient" path="res://assets/environment/gradients/fog_color.tres" id="6_fog"]
 
 [node name="SkyMedium" type="Node"]
 script = ExtResource("2_5v3h1")
+directional_light_gradient = ExtResource("4_dir")
+ambient_light_gradient = ExtResource("5_amb")
+fog_color_gradient = ExtResource("6_fog")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = ExtResource("2_duxmw")

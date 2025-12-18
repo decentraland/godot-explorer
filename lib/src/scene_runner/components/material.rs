@@ -17,7 +17,7 @@ use crate::{
 };
 use godot::{
     engine::{
-        base_material_3d::{Feature, Flags, ShadingMode, Transparency},
+        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode},
         MeshInstance3D, StandardMaterial3D,
     },
     global::weakref,
@@ -115,8 +115,6 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     godot_material
                 };
 
-                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
-
                 match &dcl_material {
                     DclMaterial::Unlit(unlit) => {
                         godot_material.set_metallic(0.0);
@@ -133,20 +131,17 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_roughness(pbr.roughness.0);
                         godot_material.set_specular(pbr.specular_intensity.0);
 
-                        let emission = pbr
-                            .emissive_color
-                            .0
-                            .clone()
-                            .multiply(pbr.emissive_intensity.0);
-
-                        // In the Mobile renderer, HDR will be capped at 2.0 so we'll have to reduce the energy multiplier to be able to see fluctuations in energy
-                        godot_material.set_emission_energy_multiplier(0.2);
-
-                        // In the same way, godot uses sRGB instead of linear colors.
-                        godot_material.set_emission(emission.to_godot().linear_to_srgb());
+                        godot_material.set_emission(pbr.emissive_color.0.to_godot());
+                        godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
                         godot_material.set_feature(Feature::EMISSION, true);
+
+                        // Use MULTIPLY operator when there's an emissive texture
+                        if pbr.emissive_texture.is_some() {
+                            godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
+                        }
+
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
-                        godot_material.set_albedo(pbr.albedo_color.0.to_godot().linear_to_srgb());
+                        godot_material.set_albedo(pbr.albedo_color.0.to_godot());
                     }
                 }
                 let mesh_renderer =

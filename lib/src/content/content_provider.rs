@@ -121,7 +121,7 @@ pub struct ContentProviderContext {
 
 unsafe impl Send for ContentProviderContext {}
 
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v1";
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v2";
 
 #[godot_api]
 impl INode for ContentProvider {
