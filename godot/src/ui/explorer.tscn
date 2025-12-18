@@ -41,6 +41,22 @@ corner_radius_bottom_left = 40
 [node name="explorer" type="Node"]
 script = ExtResource("1_5n8xk")
 
+[node name="MarginContainer" type="MarginContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 50
+
+[node name="ColorRect" type="ColorRect" parent="MarginContainer"]
+layout_mode = 2
+color = Color(0, 1, 0, 1)
+
 [node name="world" type="Node3D" parent="."]
 unique_name_in_owner = true
 
@@ -159,7 +175,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 10
+theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 10
 
@@ -179,11 +195,11 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(370, 60)
 layout_mode = 2
 theme = ExtResource("4_2vs87")
-theme_override_constants/separation = 30
+theme_override_constants/separation = 12
 
 [node name="Chatbar" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" instance=ExtResource("9_u4dfr")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 66)
+custom_minimum_size = Vector2(210, 66)
 layout_mode = 2
 
 [node name="Panel" type="PanelContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu"]

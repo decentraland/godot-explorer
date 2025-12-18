@@ -8,8 +8,8 @@
 [ext_resource type="Script" uid="uid://cfwp61u2tjxyh" path="res://src/ui/components/notifications/notification_bell_button.gd" id="5_ly2kd"]
 [ext_resource type="SpriteFrames" uid="uid://cahxyogw018tq" path="res://assets/ui/notifications/bell_animation.tres" id="6_fmmda"]
 [ext_resource type="SpriteFrames" uid="uid://pdugkxtvb5a2" path="res://assets/animations/backpack_animation.tres" id="7_hvf0m"]
-[ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/components/backpack/backpack_button.gd" id="7_ly2kd"]
-[ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/components/settings/settings_button.gd" id="8_fmmda"]
+[ext_resource type="Script" path="res://src/ui/components/backpack/backpack_button.gd" id="7_ly2kd"]
+[ext_resource type="Script" path="res://src/ui/components/settings/settings_button.gd" id="8_fmmda"]
 [ext_resource type="SpriteFrames" uid="uid://bkr6jgehk1ji0" path="res://assets/animations/settings_animation.tres" id="8_ly2kd"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="9_ria76"]
 
@@ -191,13 +191,14 @@ autoplay = "close"
 speed_scale = 0.5
 
 [node name="Control" type="Control" parent="."]
-custom_minimum_size = Vector2(120, 120)
+custom_minimum_size = Vector2(120, 100)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -120.0
-offset_bottom = 120.0
+offset_left = -128.0
+offset_right = -8.0
+offset_bottom = 136.0
 grow_horizontal = 0
 
 [node name="Control" type="Control" parent="Control"]
@@ -208,9 +209,9 @@ anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -40.0
-offset_top = 60.0
+offset_top = 68.0
 offset_right = 40.0
-offset_bottom = 560.0
+offset_bottom = 568.0
 grow_horizontal = 2
 mouse_filter = 2
 
