@@ -159,7 +159,6 @@ func _ready():
 		Global.content_provider.clear_cache_folder()
 
 	# Clear cache if optimized assets version changed
-	var config := Global.get_config()
 	if config.optimized_assets_version != Global.OPTIMIZED_ASSETS_VERSION:
 		prints("Optimized assets version changed, clearing cache!")
 		Global.content_provider.clear_cache_folder()
