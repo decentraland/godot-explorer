@@ -341,6 +341,11 @@ func _unhandled_input(event):
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				capture_mouse()
 
+	if event is InputEventKey and ui_root.has_focus():
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				release_mouse()
+
 
 func _on_control_minimap_request_open_map():
 	if !control_menu.visible:
@@ -895,8 +900,6 @@ func _share_place():
 		url = "https://decentraland.org/places/world/?name=" + short_realm_url
 
 	msg = "Join Me At " + scene_title + " following this link " + url
-
-	print(msg)
 
 	if Global.is_android():
 		DclGodotAndroidPlugin.share_text(msg)
