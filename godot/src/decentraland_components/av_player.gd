@@ -29,6 +29,9 @@ var external_texture: ExternalTexture = null
 var video_width: int = 0
 var video_height: int = 0
 
+var _frame_count: int = 0
+var _last_iosurface_ptr: int = 0
+
 # Flag to skip texture updates during surface reinitialization
 # This prevents grey flickering when transitioning between surfaces
 var _reinitializing_surface: bool = false
@@ -240,10 +243,6 @@ func update_texture() -> bool:
 			_reinitialize_surface(new_width, new_height)
 
 	return _update_texture_gpu()
-
-
-var _frame_count: int = 0
-var _last_iosurface_ptr: int = 0
 
 
 func _update_texture_gpu() -> bool:

@@ -18,6 +18,12 @@ const VIDEO_STATE_SEEKING = 5
 const VIDEO_STATE_PAUSED = 6
 const VIDEO_STATE_ERROR = 7
 
+## Poll LiveKit state
+## Note: LiveKit state is primarily managed by Rust when frames arrive
+## This function detects buffering/paused when frames stop arriving
+const LIVEKIT_BUFFERING_THRESHOLD: float = 2.0  # seconds without frames = buffering
+const LIVEKIT_STOPPED_THRESHOLD: float = 10.0  # seconds without frames = stopped/paused
+
 var current_backend: BackendType = BackendType.NOOP
 var exo_player: Node = null  # ExoPlayer child node when using ExoPlayer backend
 var av_player: Node = null  # AVPlayer child node when using AVPlayer backend
@@ -45,7 +51,7 @@ func _init_backend_impl(backend_type: int, source: String, playing: bool, loopin
 		BackendType.EXO_PLAYER:
 			_async_init_exo_player_backend()
 		BackendType.AV_PLAYER:
-			_init_av_player_backend()
+			_async_init_av_player_backend()
 		_:
 			_init_noop_backend()
 
@@ -198,7 +204,7 @@ func _async_fetch_and_set_local_source_av_player():
 			av_player.play()
 
 
-func _init_av_player_backend():
+func _async_init_av_player_backend():
 	if OS.get_name() != "iOS":
 		push_warning("AVPlayer backend only available on iOS, falling back to Noop")
 		current_backend = BackendType.NOOP
@@ -394,17 +400,9 @@ func _update_av_player_state():
 			video_state = VIDEO_STATE_PAUSED
 
 
-## Poll LiveKit state
-## Note: LiveKit state is primarily managed by Rust when frames arrive
-## This function detects buffering/paused when frames stop arriving
-const LIVEKIT_BUFFERING_THRESHOLD: float = 2.0  # seconds without frames = buffering
-const LIVEKIT_STOPPED_THRESHOLD: float = 10.0  # seconds without frames = stopped/paused
-
-
 func _update_livekit_state():
 	# LiveKit state is set to PLAYING by Rust when frames arrive
 	# Here we detect buffering/stopped when frames haven't arrived for a while
-
 	# Only check if we've received at least one frame
 	if last_frame_time <= 0:
 		return
