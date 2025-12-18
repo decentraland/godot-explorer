@@ -1,51 +1,34 @@
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
-use crate::consts::{BIN_FOLDER, EXPORTS_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER};
+use crate::android_godot_lib::GodotEngineConfig;
+use crate::consts::{EXPORTS_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER};
 use crate::export::import_assets;
 use crate::path::get_godot_path;
 use crate::ui::{create_spinner, print_message, print_section, MessageType};
-
-const IOS_CONFIG_FILE: &str = ".bin/ios_config.json";
-
-#[derive(serde::Serialize, serde::Deserialize, Default)]
-struct IosConfig {
-    godot_engine_path: Option<String>,
-}
-
-impl IosConfig {
-    fn load() -> Self {
-        let config_path = Path::new(IOS_CONFIG_FILE);
-        if config_path.exists() {
-            if let Ok(content) = fs::read_to_string(config_path) {
-                if let Ok(config) = serde_json::from_str(&content) {
-                    return config;
-                }
-            }
-        }
-        Self::default()
-    }
-
-    fn save(&self) -> anyhow::Result<()> {
-        // Ensure .bin folder exists
-        fs::create_dir_all(BIN_FOLDER)?;
-        let content = serde_json::to_string_pretty(self)?;
-        fs::write(IOS_CONFIG_FILE, content)?;
-        Ok(())
-    }
-}
 
 /// Check if Xcode project exists
 fn xcode_project_exists() -> bool {
     Path::new(&format!("{}/Decentraland.xcodeproj", EXPORTS_FOLDER)).exists()
 }
 
-/// Get the Godot engine path, prompting user if not configured
-fn get_godot_engine_path() -> anyhow::Result<Option<String>> {
-    let mut config = IosConfig::load();
+/// Expand ~ to home directory
+fn expand_path(path: &str) -> String {
+    if path.starts_with("~/") {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(&path[2..]).to_string_lossy().to_string();
+        }
+    }
+    path.to_string()
+}
 
-    // Check if we have a saved path and it's still valid
+/// Get the Godot engine path for iOS, prompting user if not configured
+fn get_godot_engine_path_for_ios() -> anyhow::Result<Option<String>> {
+    let mut config = GodotEngineConfig::load();
+
+    // Check if we have a saved path and it's still valid for iOS
     if let Some(ref path) = config.godot_engine_path {
         let godot_lib = format!("{}/bin/libgodot.ios.template_debug.arm64.a", path);
         if Path::new(&godot_lib).exists() {
@@ -53,7 +36,10 @@ fn get_godot_engine_path() -> anyhow::Result<Option<String>> {
         } else {
             print_message(
                 MessageType::Warning,
-                &format!("Saved Godot engine path no longer valid: {}", path),
+                &format!(
+                    "iOS library not found at saved path. Build it with:\n  cd {} && scons platform=ios target=template_debug arch=arm64",
+                    path
+                ),
             );
         }
     }
@@ -67,10 +53,13 @@ fn get_godot_engine_path() -> anyhow::Result<Option<String>> {
         MessageType::Info,
         "This should contain bin/libgodot.ios.template_debug.arm64.a",
     );
-    print_message(MessageType::Info, "Leave empty to skip Godot engine update.");
+    print_message(
+        MessageType::Info,
+        "Leave empty to skip Godot engine update.",
+    );
 
     print!("Godot engine path: ");
-    std::io::Write::flush(&mut std::io::stdout())?;
+    std::io::stdout().flush()?;
 
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
@@ -80,16 +69,7 @@ fn get_godot_engine_path() -> anyhow::Result<Option<String>> {
         return Ok(None);
     }
 
-    // Expand ~ to home directory
-    let expanded_path = if input.starts_with("~/") {
-        if let Some(home) = dirs::home_dir() {
-            home.join(&input[2..]).to_string_lossy().to_string()
-        } else {
-            input.to_string()
-        }
-    } else {
-        input.to_string()
-    };
+    let expanded_path = expand_path(input);
 
     // Validate path
     let godot_lib = format!("{}/bin/libgodot.ios.template_debug.arm64.a", expanded_path);
@@ -181,7 +161,10 @@ fn update_plugin() -> anyhow::Result<()> {
 
 /// Update Rust library (libdclgodot)
 fn update_rust_lib() -> anyhow::Result<()> {
-    let source = format!("{}target/libdclgodot_ios/libdclgodot.dylib", RUST_LIB_PROJECT_FOLDER);
+    let source = format!(
+        "{}target/libdclgodot_ios/libdclgodot.dylib",
+        RUST_LIB_PROJECT_FOLDER
+    );
     let target = format!(
         "{}/Decentraland/lib/target/libdclgodot_ios/libdclgodot.framework/libdclgodot",
         EXPORTS_FOLDER
@@ -212,9 +195,7 @@ fn update_rust_lib() -> anyhow::Result<()> {
     spinner.finish();
 
     // Fix the install name to use @rpath instead of absolute path
-    let output = Command::new("otool")
-        .args(["-D", &target])
-        .output()?;
+    let output = Command::new("otool").args(["-D", &target]).output()?;
     let install_name = String::from_utf8_lossy(&output.stdout);
     let current_name = install_name.lines().last().unwrap_or("");
 
@@ -315,9 +296,7 @@ pub fn update_ios_xcode(
 
     // Check platform
     if std::env::consts::OS != "macos" {
-        return Err(anyhow::anyhow!(
-            "This command is only supported on macOS"
-        ));
+        return Err(anyhow::anyhow!("This command is only supported on macOS"));
     }
 
     // Check if Xcode project exists, if not run export first
@@ -340,7 +319,7 @@ pub fn update_ios_xcode(
 
     // Update Godot library
     if update_all || update_godot {
-        if let Some(godot_path) = get_godot_engine_path()? {
+        if let Some(godot_path) = get_godot_engine_path_for_ios()? {
             update_godot_lib(&godot_path)?;
         }
     }

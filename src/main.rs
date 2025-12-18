@@ -9,6 +9,7 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
 
+mod android_godot_lib;
 mod check_gdscript;
 mod consts;
 mod copy_files;
@@ -292,6 +293,16 @@ fn main() -> Result<(), anyhow::Error> {
                     Arg::new("pck")
                         .long("pck")
                         .help("Re-export and update the PCK file")
+                        .takes_value(false),
+                ),
+        ).subcommand(
+            Command::new("update-libgodot-android")
+                .about("Update Godot Android library (libgodot_android.so) in the AAR template")
+                .arg(
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .help("Update release build instead of debug")
                         .takes_value(false),
                 ),
         ).subcommand(
@@ -609,13 +620,14 @@ fn main() -> Result<(), anyhow::Error> {
         ),
         ("doctor", _) => doctor::run_doctor(),
         ("check-gdscript", _) => check_gdscript::check_gdscript(),
-        ("update-ios-xcode", sm) => {
-            ios_xcode::update_ios_xcode(
-                sm.is_present("godot"),
-                sm.is_present("plugin"),
-                sm.is_present("lib"),
-                sm.is_present("pck"),
-            )
+        ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
+            sm.is_present("godot"),
+            sm.is_present("plugin"),
+            sm.is_present("lib"),
+            sm.is_present("pck"),
+        ),
+        ("update-libgodot-android", sm) => {
+            android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => {
