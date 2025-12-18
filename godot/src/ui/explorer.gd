@@ -12,8 +12,6 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
-var debug_map_container: DebugMapContainer = null
-
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -45,7 +43,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
-@onready var control_minimap = %Control_Minimap
 @onready var mobile_ui = %MobileUI
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
@@ -72,7 +69,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	control_minimap.set_center_position(parcel_position_real)
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
@@ -89,6 +85,10 @@ func get_params_from_cmd():
 	var location_vector = Global.cli.get_location_vector()
 	if location_vector == Vector2i.MAX:
 		location_vector = null
+
+	# Preview deeplink takes priority - use it as the realm for hot reload development
+	if not Global.deep_link_obj.preview.is_empty() and realm_string == null:
+		realm_string = Global.deep_link_obj.preview
 
 	if not Global.deep_link_obj.realm.is_empty() and realm_string == null:
 		realm_string = Global.deep_link_obj.realm
@@ -142,12 +142,6 @@ func _ready():
 
 	emote_wheel.avatar_node = player.avatar
 
-	# Add debug map container only if --debug-minimap flag is present
-	if Global.cli.debug_minimap:
-		debug_map_container = load("res://src/ui/components/debug_map/debug_map_container.gd").new()
-		ui_root.add_child(debug_map_container)
-		debug_map_container.set_enabled(true)
-
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
@@ -158,8 +152,8 @@ func _ready():
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --debug-panel (automatically enabled with --preview)
-	if Global.cli.debug_panel:
+	# --debug-panel (automatically enabled with --preview or preview deeplink)
+	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
 		_on_control_menu_request_debug_panel(true)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -349,13 +343,6 @@ func _unhandled_input(event):
 					control_menu.show_last()
 					release_mouse()
 
-			if event.pressed and event.keycode == KEY_M:
-				if control_menu.visible:
-					pass
-				else:
-					control_menu.show_map()
-					release_mouse()
-
 			if event.pressed and event.keycode == KEY_ESCAPE:
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
@@ -385,15 +372,6 @@ func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
 
 
-func _on_control_menu_toggle_minimap(visibility):
-	control_minimap.visible = visibility
-
-
-func toggle_debug_minimap(enabled: bool):
-	if debug_map_container:
-		debug_map_container.set_enabled(enabled)
-
-
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
 
@@ -414,6 +392,30 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
+func _parse_coordinates(coord_string: String) -> Vector2i:
+	# Remove parentheses if present
+	var cleaned = coord_string.strip_edges()
+	cleaned = cleaned.replace("(", "").replace(")", "")
+
+	# Remove all spaces
+	cleaned = cleaned.replace(" ", "")
+
+	# Split by comma
+	var parts = cleaned.split(",")
+	if parts.size() >= 2:
+		var x_str = parts[0].strip_edges()
+		var y_str = parts[1].strip_edges()
+
+		# Validate and parse integers (including negative values)
+		var int_regex = RegEx.new()
+		int_regex.compile(r"^-?\d+$")
+
+		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
+			return Vector2i(int(x_str), int(y_str))
+
+	return Vector2i(0, 0)
+
+
 func _on_panel_chat_submit_message(message: String):
 	if message.length() == 0:
 		return
@@ -422,12 +424,12 @@ func _on_panel_chat_submit_message(message: String):
 	var command_str := params[0].to_lower()
 	if command_str.begins_with("/"):
 		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-			var comma_params = params[1].split(",")
-			var dest_vector = Vector2i(0, 0)
-			if comma_params.size() > 1:
-				dest_vector = Vector2i(int(comma_params[0]), int(comma_params[1]))
-			elif params.size() > 2:
-				dest_vector = Vector2i(int(params[1]), int(params[2]))
+			# Join all params after the command to handle spaces properly
+			var coord_string = ""
+			if params.size() > 1:
+				coord_string = " ".join(params.slice(1))
+
+			var dest_vector = _parse_coordinates(coord_string)
 
 			Global.on_chat_message.emit(
 				"system",
@@ -563,11 +565,6 @@ func _on_timer_fps_label_timeout():
 
 func hide_menu():
 	control_menu.close()
-	release_mouse()
-
-
-func _on_mini_map_pressed():
-	control_menu.show_map()
 	release_mouse()
 
 
