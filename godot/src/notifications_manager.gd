@@ -88,7 +88,7 @@ var _android_plugin = null:
 
 func _ready() -> void:
 	# Enable debug logging in debug builds
-	_debug_notifications_enabled = OS.is_debug_build()
+	# _debug_notifications_enabled = OS.is_debug_build()
 
 	# Create polling timer
 	_poll_timer = Timer.new()
