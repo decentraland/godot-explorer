@@ -13,6 +13,10 @@ const WEARABLE_NAME_PREFIX = "__"
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
 
+# Entity info for trigger area detection
+var dcl_entity_id: int = -1
+var is_local_player: bool = false
+
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
@@ -53,6 +57,7 @@ var wearable_promises = null
 
 @onready var avatar_modifier_area_detector = $avatar_modifier_area_detector
 @onready var click_area = $ClickArea
+@onready var trigger_detector = %TriggerDetector
 
 
 func _ready():
@@ -89,6 +94,30 @@ func _ready():
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
+
+	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
+	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
+
+
+## Setup trigger detection for this avatar (local player and remote avatars only).
+## - For local player: entity_id=SceneEntityId.PLAYER (0x10000)
+## - For remote avatars: entity_id=assigned entity from avatar_scene.rs
+func setup_trigger_detection(p_entity_id: int) -> void:
+	dcl_entity_id = p_entity_id
+
+	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
+	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
+
+	# Enable the collision shape
+	trigger_detector.get_node("CollisionShape3D").disabled = false
+
+
+## Remove trigger detection for this avatar (AvatarShapes/scene NPCs only).
+## Called from avatar_shape.rs after the avatar is added to the scene.
+func remove_trigger_detection() -> void:
+	if trigger_detector != null:
+		trigger_detector.queue_free()
+		trigger_detector = null
 
 
 func on_chat_message(address: String, message: String, _timestamp: float):
