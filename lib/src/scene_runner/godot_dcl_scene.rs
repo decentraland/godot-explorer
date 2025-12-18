@@ -19,7 +19,6 @@ use std::{
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
 use crate::av::backend::{AudioSink, BackendType};
-use crate::av::stream_processor::StreamStateData;
 use godot::engine::ImageTexture;
 
 pub struct GodotDclScene {
@@ -39,8 +38,8 @@ pub struct GodotDclScene {
     pub ui_results: Rc<RefCell<UiResults>>,
 }
 
-/// Simplified video player data for CRDT event tracking.
-/// Backend management is now handled by GDScript.
+/// Video player data for CRDT event tracking.
+/// State is polled from the video player node each frame.
 pub struct VideoPlayerData {
     /// The video source URL
     pub source: String,
@@ -50,26 +49,26 @@ pub struct VideoPlayerData {
     pub texture: Option<Gd<ImageTexture>>,
     /// Event timestamp counter for CRDT events
     pub timestamp: u32,
-    /// Video length in seconds (updated from backend events)
-    pub length: f32,
-    /// Receiver for stream state events (for CRDT event generation)
-    pub stream_data_state_receiver: tokio::sync::mpsc::Receiver<StreamStateData>,
+
+    // Last known state - used to detect changes and generate events
+    /// Last known video state (matches VIDEO_STATE_* constants in dcl_video_player.rs)
+    pub last_state: i32,
+    /// Last known video position in seconds
+    pub last_position: f64,
+    /// Last known video length in seconds
+    pub last_length: f64,
 }
 
 impl VideoPlayerData {
     pub fn new(source: String, backend_type: BackendType) -> Self {
-        // Create a channel for stream state events
-        // For now, most backends don't send events through this channel,
-        // but we keep it for future compatibility and existing event polling code
-        let (_, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
-
         Self {
             source,
             backend_type,
             texture: None,
             timestamp: 0,
-            length: -1.0,
-            stream_data_state_receiver,
+            last_state: 0, // VIDEO_STATE_NONE
+            last_position: 0.0,
+            last_length: -1.0,
         }
     }
 
@@ -79,15 +78,14 @@ impl VideoPlayerData {
         backend_type: BackendType,
         texture: Gd<ImageTexture>,
     ) -> Self {
-        let (_, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
-
         Self {
             source,
             backend_type,
             texture: Some(texture),
             timestamp: 0,
-            length: -1.0,
-            stream_data_state_receiver,
+            last_state: 0, // VIDEO_STATE_NONE
+            last_position: 0.0,
+            last_length: -1.0,
         }
     }
 }

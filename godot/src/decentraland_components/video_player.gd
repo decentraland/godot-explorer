@@ -8,6 +8,16 @@ extends DclVideoPlayer
 
 enum BackendType { LIVEKIT = 0, EXO_PLAYER = 1, AV_PLAYER = 2, NOOP = 3 }
 
+# Video state constants (matching Rust VIDEO_STATE_* constants)
+const VIDEO_STATE_NONE = 0
+const VIDEO_STATE_LOADING = 1
+const VIDEO_STATE_READY = 2
+const VIDEO_STATE_PLAYING = 3
+const VIDEO_STATE_BUFFERING = 4
+const VIDEO_STATE_SEEKING = 5
+const VIDEO_STATE_PAUSED = 6
+const VIDEO_STATE_ERROR = 7
+
 var current_backend: BackendType = BackendType.NOOP
 var exo_player: Node = null  # ExoPlayer child node when using ExoPlayer backend
 var _source: String = ""
@@ -41,6 +51,10 @@ func _init_backend_impl(backend_type: int, source: String, playing: bool, loopin
 
 func _init_livekit_backend():
 	print("VideoPlayer: Initializing LiveKit backend for ", _source)
+
+	# Set initial state to loading (will be updated to PLAYING when frames arrive)
+	video_state = VIDEO_STATE_LOADING
+
 	# LiveKit backend uses AudioStreamGenerator for audio
 	# Video frames are pushed directly to texture from Rust
 	var audio_stream_generator = AudioStreamGenerator.new()
@@ -59,6 +73,9 @@ func _async_init_exo_player_backend():
 
 	print("VideoPlayer: Initializing ExoPlayer backend for ", _source)
 
+	# Set initial state to loading
+	video_state = VIDEO_STATE_LOADING
+
 	# Create ExoPlayer child node
 	var exo_player_scene = load("res://src/decentraland_components/exo_player.tscn")
 	exo_player = exo_player_scene.instantiate()
@@ -70,6 +87,7 @@ func _async_init_exo_player_backend():
 	# Initialize texture with initial size (will be resized when video loads)
 	if not exo_player.init_texture(640, 360):
 		push_error("VideoPlayer: Failed to initialize ExoPlayer texture")
+		video_state = VIDEO_STATE_ERROR
 		return
 
 	# Set the video source
@@ -83,6 +101,7 @@ func _async_init_exo_player_backend():
 
 	if not success:
 		push_error("VideoPlayer: Failed to set ExoPlayer source: ", _source)
+		video_state = VIDEO_STATE_ERROR
 		return
 
 	exo_player.set_looping(_is_looping)
@@ -98,12 +117,14 @@ func _async_fetch_and_set_local_source():
 
 	if file_hash.is_empty():
 		push_error("VideoPlayer: Could not find hash for local file: ", _source)
+		video_state = VIDEO_STATE_ERROR
 		return
 
 	var promise = Global.content_provider.fetch_video(file_hash, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
 		printerr("VideoPlayer: Error fetching video: ", res.get_error())
+		video_state = VIDEO_STATE_ERROR
 		return
 
 	var local_video_path = "user://content/" + file_hash
@@ -113,6 +134,7 @@ func _async_fetch_and_set_local_source():
 		var success = exo_player.set_source_local(absolute_file_path)
 		if not success:
 			push_error("VideoPlayer: Failed to set ExoPlayer local source: ", absolute_file_path)
+			video_state = VIDEO_STATE_ERROR
 			return
 
 		exo_player.set_looping(_is_looping)
@@ -133,6 +155,7 @@ func _init_noop_backend():
 
 func _process(_delta):
 	_update_effective_volume()
+	_update_video_state()
 
 
 ## Calculate and apply effective volume for each backend
@@ -179,6 +202,74 @@ func _update_livekit_volume():
 	_last_effective_volume = effective_volume
 	var db_volume: float = -80.0 if effective_volume <= 0.0 else 20.0 * log(effective_volume)
 	self.volume_db = db_volume
+
+
+## Update video state variables based on current backend state
+## These variables are polled by Rust to generate CRDT events
+func _update_video_state():
+	match current_backend:
+		BackendType.EXO_PLAYER:
+			_update_exo_player_state()
+		BackendType.LIVEKIT:
+			_update_livekit_state()
+		_:
+			pass
+
+
+## Poll ExoPlayer state and update video_state/position/length
+func _update_exo_player_state():
+	if not exo_player:
+		return
+
+	var duration: float = exo_player.get_duration()
+	var position: float = exo_player.get_position()
+	var is_playing: bool = exo_player.is_playing()
+
+	# Update position and length
+	video_position = position
+	if duration > 0:
+		video_length = duration
+
+	# Determine state based on ExoPlayer status
+	if duration <= 0:
+		# Still loading/buffering
+		video_state = VIDEO_STATE_LOADING
+	elif is_playing:
+		video_state = VIDEO_STATE_PLAYING
+	else:
+		# Not playing - could be paused or ready
+		if video_state == VIDEO_STATE_LOADING:
+			video_state = VIDEO_STATE_READY
+		elif video_state != VIDEO_STATE_READY:
+			video_state = VIDEO_STATE_PAUSED
+
+
+## Poll LiveKit state
+## Note: LiveKit state is primarily managed by Rust when frames arrive
+## This function detects buffering/paused when frames stop arriving
+const LIVEKIT_BUFFERING_THRESHOLD: float = 2.0  # seconds without frames = buffering
+const LIVEKIT_STOPPED_THRESHOLD: float = 10.0  # seconds without frames = stopped/paused
+
+
+func _update_livekit_state():
+	# LiveKit state is set to PLAYING by Rust when frames arrive
+	# Here we detect buffering/stopped when frames haven't arrived for a while
+
+	# Only check if we've received at least one frame
+	if last_frame_time <= 0:
+		return
+
+	var current_time: float = Time.get_ticks_msec() / 1000.0
+	var time_since_last_frame: float = current_time - last_frame_time
+
+	if video_state == VIDEO_STATE_PLAYING:
+		# If no frames for a short while, we're buffering
+		if time_since_last_frame > LIVEKIT_BUFFERING_THRESHOLD:
+			video_state = VIDEO_STATE_BUFFERING
+	elif video_state == VIDEO_STATE_BUFFERING:
+		# If no frames for a long time, stream is likely stopped
+		if time_since_last_frame > LIVEKIT_STOPPED_THRESHOLD:
+			video_state = VIDEO_STATE_PAUSED
 
 
 # Backend control methods called from Rust

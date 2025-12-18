@@ -12,7 +12,10 @@ use crate::{
         },
         SceneId,
     },
-    godot_classes::dcl_video_player::DclVideoPlayer,
+    godot_classes::dcl_video_player::{
+        DclVideoPlayer, VIDEO_STATE_BUFFERING, VIDEO_STATE_LOADING, VIDEO_STATE_PAUSED,
+        VIDEO_STATE_PLAYING, VIDEO_STATE_READY, VIDEO_STATE_SEEKING,
+    },
     scene_runner::{
         godot_dcl_scene::VideoPlayerData,
         scene::{Scene, SceneType},
@@ -22,8 +25,6 @@ use godot::{
     engine::{image::Format, Image, ImageTexture},
     prelude::*,
 };
-
-use crate::av::stream_processor::StreamStateData;
 
 /// Determines what kind of update is needed for a video player entity
 enum VideoUpdateMode {
@@ -160,6 +161,7 @@ pub fn update_video_player(
                         } else {
                             VideoPlayerData::new(target_src.clone(), backend_type)
                         };
+
                         godot_entity_node.video_player_data = Some(video_player_data);
                         scene.video_players.insert(*entity, video_player_node);
 
@@ -203,6 +205,7 @@ pub fn update_video_player(
                         } else {
                             VideoPlayerData::new(target_src.clone(), backend_type)
                         };
+
                         godot_entity_node.video_player_data = Some(video_player_data);
                         scene.video_players.insert(*entity, video_player_node);
 
@@ -324,91 +327,59 @@ fn update_video_player_params(
     video_player_node.bind_mut().backend_set_looping(looping);
 }
 
-/// Poll video events from all video players and update CRDT state
+/// Poll video state from all video players and generate CRDT events on state changes
 fn poll_video_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
-    let video_player_entities = SceneCrdtStateProtoComponents::get_video_player(crdt_state)
-        .values
-        .keys()
-        .copied()
-        .collect::<Vec<_>>();
-
     let video_event_component = SceneCrdtStateProtoComponents::get_video_event_mut(crdt_state);
 
-    for entity_id in video_player_entities {
-        if let Some(video_players) = scene.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
-            if let Some(video_player_data) = video_players.video_player_data.as_mut() {
-                // Poll events from the stream_data_state_receiver
-                loop {
-                    match video_player_data.stream_data_state_receiver.try_recv() {
-                        Ok(StreamStateData::Ready { length }) => {
-                            video_player_data.length = length as f32;
-                            video_event_component.append(
-                                entity_id,
-                                PbVideoEvent {
-                                    timestamp: video_player_data.timestamp,
-                                    tick_number: scene.tick_number,
-                                    current_offset: 0.0,
-                                    video_length: video_player_data.length,
-                                    state: VideoState::VsReady as i32,
-                                },
-                            );
-                        }
-                        Ok(StreamStateData::Playing { position }) => {
-                            video_event_component.append(
-                                entity_id,
-                                PbVideoEvent {
-                                    timestamp: video_player_data.timestamp,
-                                    tick_number: scene.tick_number,
-                                    current_offset: position as f32,
-                                    video_length: video_player_data.length,
-                                    state: VideoState::VsPlaying as i32,
-                                },
-                            );
-                        }
-                        Ok(StreamStateData::Buffering { position }) => {
-                            video_event_component.append(
-                                entity_id,
-                                PbVideoEvent {
-                                    timestamp: video_player_data.timestamp,
-                                    tick_number: scene.tick_number,
-                                    current_offset: position as f32,
-                                    video_length: video_player_data.length,
-                                    state: VideoState::VsBuffering as i32,
-                                },
-                            );
-                        }
-                        Ok(StreamStateData::Seeking {}) => {
-                            video_event_component.append(
-                                entity_id,
-                                PbVideoEvent {
-                                    timestamp: video_player_data.timestamp,
-                                    tick_number: scene.tick_number,
-                                    current_offset: -1.0,
-                                    video_length: video_player_data.length,
-                                    state: VideoState::VsSeeking as i32,
-                                },
-                            );
-                        }
-                        Ok(StreamStateData::Paused { position }) => {
-                            video_event_component.append(
-                                entity_id,
-                                PbVideoEvent {
-                                    timestamp: video_player_data.timestamp,
-                                    tick_number: scene.tick_number,
-                                    current_offset: position as f32,
-                                    video_length: video_player_data.length,
-                                    state: VideoState::VsPaused as i32,
-                                },
-                            );
-                        }
-                        _ => {
-                            break;
-                        }
-                    }
+    for (entity_id, video_player_node) in scene.video_players.iter() {
+        let Some(godot_entity) = scene.godot_dcl_scene.get_godot_entity_node_mut(entity_id) else {
+            continue;
+        };
+        let Some(video_player_data) = godot_entity.video_player_data.as_mut() else {
+            continue;
+        };
 
-                    video_player_data.timestamp += 1;
-                }
-            }
+        // Read current state from the video player node
+        let player = video_player_node.bind();
+        let current_state = player.get_video_state();
+        let current_position = player.get_video_position();
+        let current_length = player.get_video_length();
+        drop(player);
+
+        // Check if state has changed
+        let state_changed = current_state != video_player_data.last_state;
+        let length_changed =
+            current_length > 0.0 && (current_length - video_player_data.last_length).abs() > 0.001;
+
+        if state_changed || length_changed {
+            // Map internal state to SDK VideoState
+            let sdk_state = match current_state {
+                VIDEO_STATE_LOADING => VideoState::VsLoading,
+                VIDEO_STATE_READY => VideoState::VsReady,
+                VIDEO_STATE_PLAYING => VideoState::VsPlaying,
+                VIDEO_STATE_BUFFERING => VideoState::VsBuffering,
+                VIDEO_STATE_SEEKING => VideoState::VsSeeking,
+                VIDEO_STATE_PAUSED => VideoState::VsPaused,
+                _ => VideoState::VsNone,
+            };
+
+            // Emit the video event
+            video_event_component.append(
+                *entity_id,
+                PbVideoEvent {
+                    timestamp: video_player_data.timestamp,
+                    tick_number: scene.tick_number,
+                    current_offset: current_position as f32,
+                    video_length: current_length as f32,
+                    state: sdk_state as i32,
+                },
+            );
+
+            // Update last known state
+            video_player_data.last_state = current_state;
+            video_player_data.last_position = current_position;
+            video_player_data.last_length = current_length;
+            video_player_data.timestamp += 1;
         }
     }
 }
