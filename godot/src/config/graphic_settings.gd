@@ -66,12 +66,12 @@ static func apply_fps_limit():
 		ConfigData.FpsLimitMode.NO_LIMIT:
 			Engine.max_fps = 0
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		ConfigData.FpsLimitMode.FPS_18:
+			Engine.max_fps = 18
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		ConfigData.FpsLimitMode.FPS_30:
 			Engine.max_fps = 30
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		ConfigData.FpsLimitMode.FPS_60:
 			Engine.max_fps = 60
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-		ConfigData.FpsLimitMode.FPS_120:
-			Engine.max_fps = 120
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
