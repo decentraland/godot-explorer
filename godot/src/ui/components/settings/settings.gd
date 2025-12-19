@@ -19,6 +19,7 @@ var _dirty_connected: bool = false
 @onready var container_graphics: Control = %VBoxContainer_Graphics
 @onready var container_advanced: Control = %VBoxContainer_Advanced
 @onready var container_audio: Control = %VBoxContainer_Audio
+@onready var container_account: VBoxContainer = %VBoxContainer_Account
 
 #General items:
 @onready var text_edit_cache_path = %TextEdit_CachePath
@@ -132,6 +133,7 @@ func show_control(control: Control):
 	container_graphics.hide()
 	container_audio.hide()
 	container_advanced.hide()
+	container_account.hide()
 
 	control.show()
 
@@ -447,3 +449,11 @@ func _on_button_general_pressed() -> void:
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
+
+
+func _on_button_account_pressed() -> void:
+	show_control(container_account)
+
+
+func _on_button_delete_account_pressed() -> void:
+	Global.delete_account.emit()
