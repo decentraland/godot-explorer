@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3 uid="uid://blv7r5folt1d5"]
+[gd_scene load_steps=8 format=3 uid="uid://blv7r5folt1d5"]
 
 [ext_resource type="Script" uid="uid://bwfhs05dq8dhm" path="res://src/logic/player/player.gd" id="1_5bfm2"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
 [ext_resource type="PackedScene" uid="uid://qyi7gcf7tphy" path="res://src/logic/player/outline_system.tscn" id="3_sxiuh"]
+[ext_resource type="PackedScene" uid="uid://c3stuckdetector" path="res://src/logic/player/stuck_detector.tscn" id="4_stuck"]
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
@@ -30,6 +31,8 @@ shape = SubResource("CapsuleShape3D_pxti1")
 [node name="camera_mode_area_detector" parent="." instance=ExtResource("2_rco65")]
 collision_layer = 2147483908
 collision_mask = 2147483908
+
+[node name="StuckDetector" parent="." instance=ExtResource("4_stuck")]
 
 [node name="Mount" type="SpringArm3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
