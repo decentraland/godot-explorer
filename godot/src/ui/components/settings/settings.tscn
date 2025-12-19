@@ -12,7 +12,9 @@
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="6_sa1v7"]
 [ext_resource type="PackedScene" uid="uid://b5lfwgmd7h8cj" path="res://src/ui/components/radio_selector/radio_selector.tscn" id="7_u8bs2"]
 [ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="8_aj150"]
+[ext_resource type="Texture2D" uid="uid://bcm628h2i3wnd" path="res://assets/ui/account-icon.svg" id="8_hdct4"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="8_wyn32"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_drkw7"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -90,7 +92,7 @@ hide_on_portrait = true
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 4
+size_flags_vertical = 5
 focus_mode = 0
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
@@ -105,7 +107,7 @@ alignment = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 4
+size_flags_vertical = 5
 focus_mode = 0
 theme = ExtResource("3_hdct4")
 theme_type_variation = &"WearableButton"
@@ -120,7 +122,7 @@ alignment = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 4
+size_flags_vertical = 5
 focus_mode = 0
 theme = ExtResource("3_hdct4")
 theme_type_variation = &"WearableButton"
@@ -135,7 +137,7 @@ alignment = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 4
+size_flags_vertical = 5
 focus_mode = 0
 theme = ExtResource("3_hdct4")
 theme_type_variation = &"WearableButton"
@@ -619,6 +621,7 @@ value = 100.0
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
@@ -820,3 +823,4 @@ hide_on_portrait = true
 [connection signal="item_selected" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]

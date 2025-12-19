@@ -32,6 +32,7 @@ var fade_out_tween: Tween = null
 
 @onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
 @onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
+@onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
 
 @onready var hud_button_backpack: Button = %HudButton_Backpack
 @onready var hud_button_discover: Button = %HudButton_Discover
@@ -47,6 +48,8 @@ func _ready():
 	portrait_button_profile.button_group = btn_group
 	hud_button_discover.pressed.emit()
 	hud_button_discover.button_pressed = true
+
+	account_deletion_pop_up.hide()
 
 	is_in_game = self != get_tree().current_scene
 	get_window().size_changed.connect(self._on_size_changed)
@@ -80,6 +83,7 @@ func _ready():
 	Global.open_discover.connect(show_discover)
 	Global.open_own_profile.connect(show_own_profile)
 	Global.close_menu.connect(close)
+	Global.delete_account.connect(_on_account_delete)
 
 
 func _on_button_close_pressed():
@@ -264,3 +268,8 @@ func _on_portrait_button_settings_pressed() -> void:
 
 func _on_portrait_button_profile_pressed() -> void:
 	show_own_profile()
+
+
+func _on_account_delete() -> void:
+	if account_deletion_pop_up:
+		account_deletion_pop_up.async_start_flow()

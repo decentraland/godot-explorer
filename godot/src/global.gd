@@ -22,6 +22,7 @@ signal open_own_profile
 signal close_menu
 signal friends_request_size_changed(size: int)
 signal close_combo
+signal delete_account
 
 enum CameraMode {
 	FIRST_PERSON = 0,
