@@ -1,9 +1,6 @@
-use std::time::Instant;
+use std::{cell::RefCell, time::Instant};
 
 use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
-
-#[cfg(feature = "use_ffmpeg")]
-use super::components::{audio_stream::update_audio_stream, video_player::update_video_player};
 
 use super::{
     components::{
@@ -25,11 +22,14 @@ use super::{
         realm_info::sync_realm_info,
         text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent,
+        trigger_area::update_trigger_area,
         tween::update_tween,
         ui::scene_ui::update_scene_ui,
+        video_player::update_video_player,
         visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
+    pool_manager::PoolManager,
     rpc_calls::process_rpcs,
     scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
@@ -50,7 +50,7 @@ use crate::{
     },
     godot_classes::dcl_global::DclGlobal,
     scene_runner::components::{
-        avatar_shape::update_avatar_shape_emote_command,
+        audio_stream::update_audio_stream, avatar_shape::update_avatar_shape_emote_command,
         virtual_cameras::update_main_and_virtual_cameras,
     },
 };
@@ -68,6 +68,7 @@ pub fn _process_scene(
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
     ui_canvas_information: &PbUiCanvasInformation,
+    pool_manager: &RefCell<PoolManager>,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
     let Ok(mut crdt_state) = crdt.try_lock() else {
@@ -175,7 +176,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::DeletedEntities => {
-                update_deleted_entities(scene);
+                update_deleted_entities(scene, &mut pool_manager.borrow_mut());
                 false
             }
             SceneUpdateState::Tween => {
@@ -242,12 +243,10 @@ pub fn _process_scene(
                 update_avatar_attach(scene, crdt_state);
                 false
             }
-            #[cfg(feature = "use_ffmpeg")]
             SceneUpdateState::VideoPlayer => {
                 update_video_player(scene, crdt_state, current_parcel_scene_id);
                 false
             }
-            #[cfg(feature = "use_ffmpeg")]
             SceneUpdateState::AudioStream => {
                 update_audio_stream(scene, crdt_state, current_parcel_scene_id);
                 false
@@ -258,6 +257,15 @@ pub fn _process_scene(
             }
             SceneUpdateState::CameraModeArea => {
                 update_camera_mode_area(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::TriggerArea => {
+                update_trigger_area(
+                    scene,
+                    crdt_state,
+                    &mut pool_manager.borrow_mut(),
+                    current_parcel_scene_id,
+                );
                 false
             }
             SceneUpdateState::VirtualCameras => {
@@ -364,6 +372,16 @@ pub fn _process_scene(
                 let results = ui_results.pointer_event_results.drain(0..);
                 for (entity, value) in results {
                     pointer_events_result_component.append(entity, value);
+                }
+
+                // Process trigger area results
+                if !scene.trigger_area_results.is_empty() {
+                    let trigger_area_result_component =
+                        SceneCrdtStateProtoComponents::get_trigger_area_result_mut(crdt_state);
+                    let results = scene.trigger_area_results.drain(0..);
+                    for (entity, value) in results {
+                        trigger_area_result_component.append(entity, value);
+                    }
                 }
 
                 let incoming_comms_message = DclGlobal::singleton()

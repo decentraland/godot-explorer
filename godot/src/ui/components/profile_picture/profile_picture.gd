@@ -14,12 +14,17 @@ const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 
 var border_width: int
 var avatar: DclAvatar
+var connection_status_online = load("res://assets/ui/connection_status_online.svg")
+var connection_status_offline = load("res://assets/ui/connection_status_offline.svg")
 
 @onready var texture_rect_profile: TextureRect = %TextureRect_Profile
 @onready var panel_border: PanelContainer = %Panel_Border
+@onready var texture_rect_status: TextureRect = %TextureRect_Status
+@onready var texture_rect_friendship: TextureRect = %TextureRect_Friendship
 
 
 func _ready() -> void:
+	hide_status()
 	_update_size()
 	if panel_border:
 		_update_border_style()
@@ -85,10 +90,8 @@ func _update_border_style() -> void:
 	panel_border.add_theme_stylebox_override("panel", stylebox_border_panel)
 
 
-func async_update_profile_picture(avatar_ifo: DclAvatar):
-	avatar = avatar_ifo
-	var avatar_name = avatar_ifo.get_avatar_name()
-	var nickname_color = avatar_ifo.get_nickname_color(avatar_name)
+func async_update_profile_picture(data: SocialItemData):
+	var nickname_color = DclAvatar.get_nickname_color(data.name)
 
 	var background_color = nickname_color
 	apply_style(background_color)
@@ -97,27 +100,16 @@ func async_update_profile_picture(avatar_ifo: DclAvatar):
 	if Engine.is_editor_hint():
 		return
 
-	var avatar_data = avatar_ifo.get_avatar_data()
-	if avatar_data == null:
-		printerr("Profile picture: avatar_data is null")
+	if data.profile_picture_url.is_empty():
 		return
 
-	var face256_value = avatar_data.to_godot_dictionary()["snapshots"]["face256"]
-	var hash = ""
-	var url = ""
-	if face256_value.begins_with("http"):
-		var parts = face256_value.split("/")
-		hash = parts[4]
-		url = face256_value
-	else:
-		hash = face256_value
-		url = "https://profile-images.decentraland.org/entities/%s/face.png" % hash
-
-	if hash.is_empty() or url.is_empty():
-		printerr("Profile picture: missing face256 data")
-		return
-
-	var promise = Global.content_provider.fetch_texture_by_url(hash, url)
+	# Use address-based hash for caching, or fallback to avatar_name
+	var texture_hash = (
+		data.address + "_face" if not data.address.is_empty() else data.avatar_name + "_face"
+	)
+	var promise = Global.content_provider.fetch_texture_by_url(
+		texture_hash, data.profile_picture_url
+	)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("profile_picture::_async_download_image promise error: ", result.get_error())
@@ -162,4 +154,27 @@ func _on_gui_input(event: InputEvent) -> void:
 				if avatar.avatar_id == Global.player_identity.get_address_str():
 					explorer.control_menu.show_own_profile()
 				else:
-					Global.open_profile.emit(avatar)
+					Global.open_profile_by_avatar.emit(avatar)
+
+
+func set_online() -> void:
+	texture_rect_status.show()
+	texture_rect_status.texture = connection_status_online
+
+
+func set_offline() -> void:
+	texture_rect_status.show()
+	texture_rect_status.texture = connection_status_offline
+
+
+func set_friend() -> void:
+	texture_rect_friendship.show()
+
+
+func unset_friend() -> void:
+	texture_rect_friendship.hide()
+
+
+func hide_status() -> void:
+	texture_rect_status.hide()
+	texture_rect_friendship.hide()

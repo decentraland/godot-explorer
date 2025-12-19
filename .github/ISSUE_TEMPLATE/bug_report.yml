@@ -1,0 +1,94 @@
+name: Bug report
+description: Report a bug on Decentraland Mobile & Web Clients
+labels: ["bug", "triage"]
+projects: ["decentraland/43"]
+title: "[Bug]: "
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Follow these guidelines for reporting 🐞 bugs:
+        - Write a descriptive title.
+        - Check duplicates at [Open](https://github.com/decentraland/godot-explorer/issues) and [Closed](https://github.com/decentraland/godot-explorer/issues?q=is%3Aissue%20state%3Aclosed).
+        - Only create 1 issue per bug.
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 🕹️Platform
+      description: Which platform are you using?
+      options:
+        - Android
+        - iOS
+        - Web Client
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 🔢App Version
+      description: Which app version? Check on Settings > Account
+      placeholder: v1.0.3
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 📱Device Information
+      description: Specify your device model
+      placeholder: SAMSUNG A53
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 📄Issue description
+      description: |
+        Describe your issue briefly. What doesn't work?
+        You can include images or videos with drag and drop, and format code blocks or logs with <code>```</code> tags, on separate lines before and after the text. (Use <code>```gdscript</code> to add GDScript syntax highlighting.)
+        Please do not add code examples or error messages as screenshots, but as text, this helps searching for issues and testing the code.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: ✅Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 🖼️Screenshots / Media
+      description: |
+        If applicable, add screenshots, screen recordings, or other media to help explain your problem.
+        You can drag and drop images, videos, or GIFs directly into this field.
+      placeholder: Drag & drop or paste images here
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: ▶️Steps to reproduce
+      description: |
+        List steps to reproduce the bug in detail.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: occurrence
+    attributes:
+      label: 👁️Occurrence
+      description: How often does the bug happen?
+      options:
+        - 100% of the time
+        - About 75%
+        - About 50%
+        - Less than 25%
+    validations:
+      required: true

@@ -28,8 +28,8 @@ use crate::tools::benchmark_report::BenchmarkReport;
 
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig, dcl_realm::DclRealm,
-    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
-    portables::DclPortableExperienceController,
+    dcl_social_blacklist::DclSocialBlacklist, dcl_social_service::DclSocialService,
+    dcl_tokio_rpc::DclTokioRpc, portables::DclPortableExperienceController,
 };
 
 #[cfg(target_os = "android")]
@@ -40,6 +40,15 @@ mod android {
     use tracing_subscriber::{self, registry};
 
     pub fn init_logger() {
+        // Configure logging filters for Android
+        // By default, filter everything to WARN level
+        // You can customize specific modules here:
+        // Examples:
+        //   "warn" - only warnings and errors (default)
+        //   "debug" - show debug logs from all modules
+        //   "dclgodot::scene_runner=debug,warn" - debug for scene_runner, warn for others
+        //   "dclgodot::scene_runner=debug,dclgodot::comms=info,warn" - multiple modules
+
         let filter = EnvFilter::new(
             // TODO: Modify this line to change logging levels
             // "warn"  // Only warnings and errors
@@ -121,6 +130,9 @@ pub struct DclGlobal {
     #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
+    #[var]
+    pub social_service: Gd<DclSocialService>,
+
     #[cfg(feature = "use_memory_debugger")]
     #[var]
     pub memory_debugger: Gd<MemoryDebugger>,
@@ -165,6 +177,7 @@ impl INode for DclGlobal {
         let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
+        let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
 
         #[cfg(feature = "use_memory_debugger")]
         let mut memory_debugger: Gd<MemoryDebugger> = MemoryDebugger::new_alloc();
@@ -196,6 +209,7 @@ impl INode for DclGlobal {
         portable_experience_controller.set_name("portable_experience_controller".into());
         network_inspector.set_name("network_inspector".into());
         social_blacklist.set_name("social_blacklist".into());
+        social_service.set_name("social_service".into());
 
         #[cfg(feature = "use_memory_debugger")]
         memory_debugger.set_name("memory_debugger".into());
@@ -253,6 +267,7 @@ impl INode for DclGlobal {
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector,
             social_blacklist,
+            social_service,
 
             #[cfg(feature = "use_memory_debugger")]
             memory_debugger,
@@ -341,6 +356,16 @@ impl DclGlobal {
     #[func]
     pub fn is_production() -> bool {
         env!("GODOT_EXPLORER_VERSION").contains("-prod")
+    }
+
+    #[func]
+    pub fn is_staging() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-staging")
+    }
+
+    #[func]
+    pub fn is_dev() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-dev")
     }
 
     pub fn has_singleton() -> bool {

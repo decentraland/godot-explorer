@@ -681,7 +681,9 @@ static func async_load_wearables(wearable_keys: Array, body_shape_id: String):
 
 	var promises_result: Array = await PromiseUtils.async_all(promises_array)
 	for i in range(promises_result.size()):
-		if promises_result[i] is PromiseError:
+		if not is_instance_valid(promises_result[i]):
+			printerr("Error loading instance invalid ", async_calls_info[i], ":", promises_result)
+		elif promises_result[i] is PromiseError:
 			printerr("Error loading ", async_calls_info[i], ":", promises_result[i].get_error())
 
 	return promises_array

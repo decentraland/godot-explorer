@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=33 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -7,12 +7,16 @@
 [ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="4_64qur"]
 [ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_ck13e"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
+[ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_5g6gd"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
 [ext_resource type="PackedScene" uid="uid://kfsjxah2khkg" path="res://src/ui/components/discover/places/custom_places_generator.tscn" id="7_ehm1e"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="8_t3lcc"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="9_2ra1o"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="9_pwm2g"]
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="10_73ifx"]
 [ext_resource type="Texture2D" uid="uid://cj4xqne10w3ka" path="res://assets/ui/discover/genesis_banner.png" id="11_t2lm2"]
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
@@ -142,7 +146,7 @@ mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_746xu")
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar"]
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
 theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 8
@@ -150,7 +154,6 @@ theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 8
 script = ExtResource("6_b1byu")
 default_margin = 30
-use_top = false
 use_bottom = false
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
@@ -162,6 +165,7 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
 theme_override_font_sizes/font_size = 28
 text = "Discover"
+label_settings = ExtResource("5_q2sj0")
 
 [node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -180,20 +184,39 @@ right_icon = ExtResource("4_64qur")
 
 [node name="Button_SearchBar" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 39)
+custom_minimum_size = Vector2(0, 41)
 layout_mode = 2
-theme_type_variation = &"WhiteButton"
+size_flags_vertical = 4
+theme = ExtResource("6_5g6gd")
+theme_type_variation = &"SnowButton"
 theme_override_font_sizes/font_size = 16
 text = "Search"
 icon = ExtResource("4_64qur")
 
 [node name="Button_ClearFilter" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 41)
 layout_mode = 2
-theme_type_variation = &"WhiteButton"
+size_flags_vertical = 4
+theme = ExtResource("6_5g6gd")
+theme_type_variation = &"SnowButton"
 theme_override_font_sizes/font_size = 16
 text = "Clear filter"
 icon = ExtResource("4_ck13e")
+
+[node name="Button_Close" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 41)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("6_5g6gd")
+theme_type_variation = &"SnowButton"
+theme_override_constants/h_separation = 0
+theme_override_constants/icon_max_width = 10
+theme_override_font_sizes/font_size = 16
+icon = ExtResource("9_g4fdo")
+script = ExtResource("10_73ifx")
+hide_on_portrait = true
 
 [node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -221,6 +244,7 @@ size_flags_vertical = 3
 theme_override_constants/separation = 0
 
 [node name="Banners" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+visible = false
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -243,6 +267,7 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
@@ -316,6 +341,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = 68.0
+offset_right = 64.0
 offset_bottom = 68.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -477,6 +503,7 @@ visible = false
 [connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
 [connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
 [connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]

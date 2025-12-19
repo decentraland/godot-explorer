@@ -208,6 +208,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("staging")
+                        .long("staging")
+                        .help("mark as staging build (affects version string)")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("itest")
                         .long("itest")
                         .help("run integration-tests"),
@@ -276,6 +282,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("staging")
+                        .long("staging")
+                        .help("mark as staging build (affects version string)")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("resource-tracking")
                         .help("enables resource tracking feature")
                         .takes_value(false),
@@ -340,9 +352,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Check dependencies first
             dependencies::check_command_dependencies("run", None)?;
 
-            // Set PROD environment variable if --prod flag is present
+            // Set environment variable based on --prod or --staging flag
             if sm.is_present("prod") {
                 std::env::set_var("DECENTRALAND_PROD_BUILD", "1");
+            } else if sm.is_present("staging") {
+                std::env::set_var("DECENTRALAND_STAGING_BUILD", "1");
             }
 
             let mut build_args: Vec<&str> = sm
@@ -375,6 +389,9 @@ fn main() -> Result<(), anyhow::Error> {
                 && (target == Some("android") || target == Some("ios"))
                 && !sm.is_present("editor");
 
+            // Both --prod and --staging require release profile
+            let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
+
             if should_deploy {
                 let platform = target.unwrap();
 
@@ -388,6 +405,7 @@ fn main() -> Result<(), anyhow::Error> {
                     // Build for Android
                     run::build(
                         sm.is_present("release"),
+                        production_or_staging,
                         build_args.clone(),
                         None,
                         Some(platform),
@@ -411,11 +429,18 @@ fn main() -> Result<(), anyhow::Error> {
                     );
 
                     // 1. Build for host OS first
-                    run::build(sm.is_present("release"), build_args.clone(), None, None)?;
+                    run::build(
+                        sm.is_present("release"),
+                        production_or_staging,
+                        build_args.clone(),
+                        None,
+                        None,
+                    )?;
 
                     // 2. Build for the platform
                     run::build(
                         sm.is_present("release"),
+                        production_or_staging,
                         build_args.clone(),
                         None,
                         Some(platform),
@@ -434,7 +459,13 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             } else {
                 // Normal build (either host OS or just build for target without deploying)
-                run::build(sm.is_present("release"), build_args, None, target)?;
+                run::build(
+                    sm.is_present("release"),
+                    production_or_staging,
+                    build_args,
+                    None,
+                    target,
+                )?;
             }
 
             // Now run
@@ -455,9 +486,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Run version check first
             version_check::run_version_check()?;
 
-            // Set PROD environment variable if --prod flag is present
+            // Set environment variable based on --prod or --staging flag
             if sm.is_present("prod") {
                 std::env::set_var("DECENTRALAND_PROD_BUILD", "1");
+            } else if sm.is_present("staging") {
+                std::env::set_var("DECENTRALAND_STAGING_BUILD", "1");
             }
 
             // Check dependencies first
@@ -484,7 +517,15 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            let result = run::build(sm.is_present("release"), build_args, None, target);
+            // Both --prod and --staging require release profile
+            let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
+            let result = run::build(
+                sm.is_present("release"),
+                production_or_staging,
+                build_args,
+                None,
+                target,
+            );
 
             if result.is_ok() {
                 dependencies::suggest_next_steps("build", target);
@@ -513,7 +554,7 @@ fn main() -> Result<(), anyhow::Error> {
             dependencies::check_command_dependencies("import-assets", None)?;
 
             // Build for host OS first (import-assets needs the library)
-            run::build(false, vec![], None, None)?;
+            run::build(false, false, vec![], None, None)?;
 
             let status = import_assets();
             if !status.success() {
@@ -565,12 +606,21 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     create_dir_all("./coverage")?;
 
     ui::print_section("Running Coverage");
-    cmd!("cargo", "test", "--", "--skip", "auth")
+    let mut test_cmd = cmd!("cargo", "test", "--", "--skip", "auth")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .dir(RUST_LIB_PROJECT_FOLDER)
-        .run()?;
+        .dir(RUST_LIB_PROJECT_FOLDER);
+
+    // Set PROTOC environment variable to use locally installed protoc
+    let protoc_path = helpers::BinPaths::protoc_bin();
+    if protoc_path.exists() {
+        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
+            test_cmd = test_cmd.env("PROTOC", canonical_path.to_string_lossy().to_string());
+        }
+    }
+
+    test_cmd.run()?;
 
     let build_envs: HashMap<String, String> = [
         ("CARGO_INCREMENTAL", "0"),
@@ -581,7 +631,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|(k, v)| (k.to_string(), v.to_string()))
     .collect();
 
-    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 
     run::run(false, true, vec![], false, false)?;
 
@@ -618,7 +668,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 
     run::run(false, false, extra_args, true, false)?;
 
@@ -631,7 +681,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
     run::run(false, false, client_extra_args, false, true)?;
 
     let err = glob::glob("./godot/*.profraw")?
@@ -689,12 +739,22 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     }
 
     println!("=== test build without default features ===");
-    cmd!("cargo", "build", "--no-default-features")
+    let mut no_default_cmd = cmd!("cargo", "build", "--no-default-features")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .dir(RUST_LIB_PROJECT_FOLDER)
-        .run()?;
+        .dir(RUST_LIB_PROJECT_FOLDER);
+
+    // Set PROTOC environment variable to use locally installed protoc
+    let protoc_path = helpers::BinPaths::protoc_bin();
+    if protoc_path.exists() {
+        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
+            no_default_cmd =
+                no_default_cmd.env("PROTOC", canonical_path.to_string_lossy().to_string());
+        }
+    }
+
+    no_default_cmd.run()?;
 
     Ok(())
 }

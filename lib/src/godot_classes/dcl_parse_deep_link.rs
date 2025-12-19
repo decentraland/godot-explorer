@@ -10,6 +10,11 @@ pub struct DclParseDeepLink {
     #[var]
     realm: GString,
 
+    /// Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
+    /// When set, skips lobby and enables preview mode with WebSocket hot reload
+    #[var]
+    preview: GString,
+
     #[var]
     params: Dictionary,
 
@@ -26,6 +31,7 @@ impl IRefCounted for DclParseDeepLink {
             //  Check is_location_defined
             location: Vector2i::MAX,
             realm: GString::new(),
+            preview: GString::new(),
             params: Dictionary::new(),
             signin_identity_id: GString::new(),
         }
@@ -39,6 +45,7 @@ impl DclParseDeepLink {
         let mut return_object = DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
+            preview: GString::new(),
             params: Dictionary::new(),
             signin_identity_id: GString::new(),
         };
@@ -84,6 +91,10 @@ impl DclParseDeepLink {
                 "signin" => {
                     // Handle signin identity ID from deep link `decentraland://open?signin=${identityId}`
                     return_object.signin_identity_id = value.to_string().into();
+                }
+                "preview" => {
+                    // Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
+                    return_object.preview = value.to_string().into();
                 }
                 _ => {}
             }

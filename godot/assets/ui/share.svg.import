@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/share.svg-9dfe514832f9e039af3702a41e5e78f3.dp
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

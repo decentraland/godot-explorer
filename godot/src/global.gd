@@ -5,17 +5,40 @@ signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
-signal open_profile(avatar: DclAvatar)
+signal open_profile_by_avatar(avatar: DclAvatar)
+signal open_profile_by_address(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal deep_link_received
+signal open_chat
+signal open_friends_panel
+signal open_notifications_panel
+signal open_settings
+signal open_backpack
+signal open_discover
+signal open_own_profile
+signal close_menu
+signal friends_request_size_changed(size: int)
+signal close_combo
+signal delete_account
 
 enum CameraMode {
 	FIRST_PERSON = 0,
 	THIRD_PERSON = 1,
 	CINEMATIC = 2,
+}
+
+enum FriendshipStatus {
+	UNKNOWN = -1,
+	REQUEST_SENT = 0,
+	REQUEST_RECEIVED = 1,
+	CANCELED = 2,
+	ACCEPTED = 3,
+	REJECTED = 4,
+	DELETED = 5,
+	NONE = 7
 }
 
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
@@ -27,6 +50,9 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
+
+# Increase this value when optimized assets change (invalidates cache)
+const OPTIMIZED_ASSETS_VERSION: int = 2
 
 ## Global classes (singleton pattern)
 var raycast_debugger: RaycastDebugger
@@ -40,6 +66,8 @@ var nft_frame_loader: NftFrameStyleLoader
 var music_player: MusicPlayer
 
 var preload_assets: PreloadAssets
+
+var locations: Node
 
 var standalone = false
 
@@ -129,6 +157,7 @@ func _ready():
 
 	self.player_identity = PlayerIdentity.new()
 	self.player_identity.set_name("player_identity")
+	self.player_identity.profile_changed.connect(_on_player_profile_changed_sync_events)
 
 	self.testing_tools = TestingTools.new()
 	self.testing_tools.set_name("testing_tool")
@@ -139,6 +168,13 @@ func _ready():
 	if cli.clear_cache_startup:
 		prints("Clear cache startup!")
 		Global.content_provider.clear_cache_folder()
+
+	# Clear cache if optimized assets version changed
+	if config.optimized_assets_version != Global.OPTIMIZED_ASSETS_VERSION:
+		prints("Optimized assets version changed, clearing cache!")
+		Global.content_provider.clear_cache_folder()
+		config.optimized_assets_version = Global.OPTIMIZED_ASSETS_VERSION
+		config.save_to_settings_file()
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -167,10 +203,14 @@ func _ready():
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
 
+	self.locations = load("res://src/helpers_components/locations.gd").new()
+	self.locations.set_name("locations")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
+	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
@@ -510,20 +550,40 @@ func check_deep_link_teleport_to():
 	if Global.is_mobile():
 		var new_deep_link_url: String = ""
 		if DclGodotAndroidPlugin.is_available():
-			new_deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			var args = DclGodotAndroidPlugin.get_deeplink_args()
+			print("[DEEPLINK] Android args: ", args)
+			new_deep_link_url = args.get("data", "")
 		elif DclIosPlugin.is_available():
-			new_deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
+			var args = DclIosPlugin.get_deeplink_args()
+			print("[DEEPLINK] iOS args: ", args)
+			new_deep_link_url = args.get("data", "")
 
-		if new_deep_link_url.is_empty():
+		print("[DEEPLINK] check_deep_link_teleport_to: new_deep_link_url = ", new_deep_link_url)
+
+		if not new_deep_link_url.is_empty():
 			deep_link_url = new_deep_link_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+			print(
+				"[DEEPLINK] Parsed deep_link_obj: location=",
+				deep_link_obj.location,
+				" realm=",
+				deep_link_obj.realm,
+				" preview=",
+				deep_link_obj.preview
+			)
 
 		if Global.deep_link_obj.is_location_defined():
-			var realm = Global.deep_link_obj.realm
+			# Use preview URL as realm if specified, otherwise use realm, otherwise main
+			var realm = Global.deep_link_obj.preview
+			if realm.is_empty():
+				realm = Global.deep_link_obj.realm
 			if realm.is_empty():
 				realm = Realm.MAIN_REALM
 
 			Global.teleport_to(Global.deep_link_obj.location, realm)
+		elif not Global.deep_link_obj.preview.is_empty():
+			# Preview without location - just set realm, don't teleport
+			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
 		elif not Global.deep_link_obj.realm.is_empty():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
 		elif deep_link_url.begins_with("https://decentraland.org/events/event/?id="):
@@ -568,3 +628,8 @@ func _notification(what: int) -> void:
 					deep_link_received.emit.call_deferred()
 
 			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)
+
+
+func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
+	# Sync attended events notifications from server after authentication
+	NotificationsManager.async_sync_attended_events()

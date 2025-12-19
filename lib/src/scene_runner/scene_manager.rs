@@ -32,6 +32,7 @@ use godot::{
     prelude::*,
 };
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
     time::{Duration, Instant},
@@ -40,6 +41,7 @@ use std::{
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
     input::InputState,
+    pool_manager::PoolManager,
     scene::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
         SceneUpdateState,
@@ -105,6 +107,10 @@ pub struct SceneManager {
 
     // Track when pointer was pressed on avatar for click-and-release mechanism
     avatar_pointer_press_time: Option<Instant>,
+
+    // Global pool manager for all scene resources (physics areas, etc.)
+    // Uses RefCell because we need interior mutability while iterating scenes
+    pool_manager: RefCell<PoolManager>,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -504,6 +510,7 @@ impl SceneManager {
                     &self.current_parcel_scene_id,
                     &self.begin_time,
                     &self.ui_canvas_information,
+                    &self.pool_manager,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -548,9 +555,17 @@ impl SceneManager {
             }
         }
 
+        // Periodic pool health check and stats logging (handled by PoolManager)
+        self.pool_manager.borrow_mut().tick();
+
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
             let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+
+            // Cleanup trigger areas and release RIDs back to pool
+            scene
+                .trigger_areas
+                .cleanup(self.pool_manager.borrow_mut().physics_area());
 
             scene.godot_dcl_scene.root_node_ui.queue_free();
             scene.godot_dcl_scene.root_node_3d.queue_free();
@@ -752,33 +767,23 @@ impl SceneManager {
             return None;
         }
 
-        let collider = raycast_result.get("collider")?;
+        // Validate collider is still a valid object before calling methods on it
+        // (object could be freed between raycast and method call during scene loading)
+        let collider_obj: Gd<Object> = raycast_result.get("collider")?.try_to().ok()?;
+        if !collider_obj.is_instance_valid() {
+            return None;
+        }
 
         // The raycast returns the closest hit, so we just need to identify what type it is
         // Priority is naturally handled by distance - closer objects are returned first
 
         // First check if this is a DCL entity (scene object)
-        let has_dcl_entity_id = collider
-            .call(
-                StringName::from("has_meta"),
-                &[Variant::from("dcl_entity_id")],
-            )
-            .booleanize();
+        let has_dcl_entity_id = collider_obj.has_meta("dcl_entity_id".into());
 
         if has_dcl_entity_id {
             // It's a scene entity, return it
-            let dcl_entity_id = collider
-                .call(
-                    StringName::from("get_meta"),
-                    &[Variant::from("dcl_entity_id")],
-                )
-                .to::<i32>();
-            let dcl_scene_id = collider
-                .call(
-                    StringName::from("get_meta"),
-                    &[Variant::from("dcl_scene_id")],
-                )
-                .to::<i32>();
+            let dcl_entity_id = collider_obj.get_meta("dcl_entity_id".into()).to::<i32>();
+            let dcl_scene_id = collider_obj.get_meta("dcl_scene_id".into()).to::<i32>();
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
@@ -797,12 +802,8 @@ impl SceneManager {
         }
 
         // If not a scene entity, check if it's an avatar
-        let is_avatar = collider
-            .call(StringName::from("has_meta"), &[Variant::from("is_avatar")])
-            .booleanize()
-            && collider
-                .call(StringName::from("get_meta"), &[Variant::from("is_avatar")])
-                .booleanize();
+        let is_avatar = collider_obj.has_meta("is_avatar".into())
+            && collider_obj.get_meta("is_avatar".into()).booleanize();
 
         if is_avatar {
             // Check distance for avatar interactions (limit to 10 meters)
@@ -816,19 +817,20 @@ impl SceneManager {
                 // Only allow avatar interaction within the distance limit
                 if distance <= MAX_AVATAR_INTERACTION_DISTANCE {
                     // Walk up the node tree to find the DclAvatar node
-                    let mut node = collider;
-                    loop {
-                        // Try to cast to DclAvatar
-                        if let Ok(avatar) = node.try_to::<Gd<DclAvatar>>() {
-                            return Some(RaycastResult::Avatar(avatar));
-                        }
+                    // First try to cast collider_obj to Node for tree traversal
+                    if let Ok(mut current_node) = collider_obj.clone().try_cast::<Node>() {
+                        loop {
+                            // Try to cast to DclAvatar
+                            if let Ok(avatar) = current_node.clone().try_cast::<DclAvatar>() {
+                                return Some(RaycastResult::Avatar(avatar));
+                            }
 
-                        // Try to get parent
-                        let parent_result = node.call(StringName::from("get_parent"), &[]);
-                        if parent_result.is_nil() {
-                            break;
+                            // Try to get parent
+                            match current_node.get_parent() {
+                                Some(parent) => current_node = parent,
+                                None => break,
+                            }
                         }
-                        node = parent_result;
                     }
                 }
             }
@@ -1146,6 +1148,7 @@ impl INode for SceneManager {
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,
+            pool_manager: RefCell::new(PoolManager::new()),
         }
     }
 
@@ -1168,6 +1171,9 @@ impl INode for SceneManager {
 
     fn physics_process(&mut self, delta: f64) {
         self.scene_runner_update(delta);
+
+        // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
+        // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.
 
         let changed_inputs = self.input_state.get_new_inputs();
         let current_raycast = self.get_current_mouse_entity();
@@ -1226,10 +1232,12 @@ impl INode for SceneManager {
                             };
 
                             if ui_has_focus {
-                                // Emit open_profile signal on the Global singleton
+                                // Emit open_profile_by_avatar signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
-                                    global
-                                        .emit_signal("open_profile".into(), &[avatar.to_variant()]);
+                                    global.emit_signal(
+                                        "open_profile_by_avatar".into(),
+                                        &[avatar.to_variant()],
+                                    );
                                 }
                             }
                         }

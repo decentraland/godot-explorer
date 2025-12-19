@@ -1,0 +1,327 @@
+[gd_scene load_steps=25 format=3 uid="uid://btl8ag3s7oanm"]
+
+[ext_resource type="Script" uid="uid://cmhycf7qy54n5" path="res://src/ui/components/navbar/navbar.gd" id="1_40xfh"]
+[ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="2_1xf7s"]
+[ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="2_5wifw"]
+[ext_resource type="Script" uid="uid://dqervv7c0nbk0" path="res://src/ui/components/friends/friends_button.gd" id="3_lur8b"]
+[ext_resource type="SpriteFrames" uid="uid://gq4877nacgyh" path="res://src/ui/components/friends/friends_animation.tres" id="4_hvf0m"]
+[ext_resource type="Script" uid="uid://cfwp61u2tjxyh" path="res://src/ui/components/notifications/notification_bell_button.gd" id="5_ly2kd"]
+[ext_resource type="SpriteFrames" uid="uid://cahxyogw018tq" path="res://assets/ui/notifications/bell_animation.tres" id="6_fmmda"]
+[ext_resource type="SpriteFrames" uid="uid://pdugkxtvb5a2" path="res://assets/animations/backpack_animation.tres" id="7_hvf0m"]
+[ext_resource type="Script" path="res://src/ui/components/backpack/backpack_button.gd" id="7_ly2kd"]
+[ext_resource type="Script" path="res://src/ui/components/settings/settings_button.gd" id="8_fmmda"]
+[ext_resource type="SpriteFrames" uid="uid://bkr6jgehk1ji0" path="res://assets/animations/settings_animation.tres" id="8_ly2kd"]
+[ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="9_ria76"]
+
+[sub_resource type="Animation" id="Animation_xbtqw"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Control/PanelContainer:size")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(80, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Control/PanelContainer:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0, 0)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_1xf7s"]
+resource_name = "close"
+length = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.1),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Control/PanelContainer:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0, 0), Vector2(0, -500)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_n2t8a"]
+resource_name = "open"
+length = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Control/Control/PanelContainer:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0, -500), Vector2(0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_lur8b"]
+_data = {
+&"RESET": SubResource("Animation_xbtqw"),
+&"close": SubResource("Animation_1xf7s"),
+&"open": SubResource("Animation_n2t8a")
+}
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5wifw"]
+bg_color = Color(0, 0, 0, 0.9019608)
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_ria76"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_650er"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_d3cqe"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_ckthm"]
+resource_local_to_scene = false
+resource_name = "Tabs"
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_voda5"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xbtqw"]
+
+[node name="Navbar" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_40xfh")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+unique_name_in_owner = true
+libraries = {
+&"": SubResource("AnimationLibrary_lur8b")
+}
+autoplay = "close"
+speed_scale = 0.5
+
+[node name="Control" type="Control" parent="."]
+custom_minimum_size = Vector2(120, 100)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -128.0
+offset_right = -8.0
+offset_bottom = 136.0
+grow_horizontal = 0
+
+[node name="Control" type="Control" parent="Control"]
+clip_contents = true
+custom_minimum_size = Vector2(80, 500)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -40.0
+offset_top = 68.0
+offset_right = 40.0
+offset_bottom = 568.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="Control/Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 404.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_5wifw")
+
+[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control/Control/PanelContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="Separator" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_n2t8a")
+
+[node name="HudButton_Friends" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_ria76")
+script = ExtResource("3_lur8b")
+sprite_frames_source = ExtResource("4_hvf0m")
+
+[node name="HudButton_Notifications" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_650er")
+script = ExtResource("5_ly2kd")
+sprite_frames_source = ExtResource("6_fmmda")
+
+[node name="HudButton_Backpack" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_d3cqe")
+script = ExtResource("7_ly2kd")
+sprite_frames_source = ExtResource("7_hvf0m")
+
+[node name="Control" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+
+[node name="Portrait_Button_Profile" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/Control" instance=ExtResource("9_ria76")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.5
+offset_top = -22.5
+offset_right = 22.5
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
+button_group = SubResource("ButtonGroup_ckthm")
+metadata/_edit_group_ = true
+
+[node name="HudButton_Settings" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("2_5wifw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+button_group = SubResource("ButtonGroup_voda5")
+script = ExtResource("8_fmmda")
+sprite_frames_source = ExtResource("8_ly2kd")
+
+[node name="Separator2" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xbtqw")
+
+[node name="Panel_Profile" parent="Control" instance=ExtResource("2_1xf7s")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Button" type="Button" parent="Control"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+toggle_mode = true
+flat = true
+
+[connection signal="pressed" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Control/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_pressed"]
+[connection signal="toggled" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Control/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_toggled"]
+[connection signal="toggled" from="Control/Button" to="." method="_on_button_toggled"]

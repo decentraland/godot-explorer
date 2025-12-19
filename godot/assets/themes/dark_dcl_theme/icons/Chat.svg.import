@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/Chat.svg-fc3ef9a7528d038eff44a29279fab871.dpi
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

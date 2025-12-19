@@ -1,5 +1,8 @@
 extends Button
 
+@onready var texture_rect: TextureRect = %TextureRect
+@onready var animation_player: AnimationPlayer = %AnimationPlayer
+
 
 # gdlint:ignore = async-function-name
 func _ready() -> void:
@@ -17,8 +20,11 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if result is PromiseError:
 		printerr("menu_profile_button::_async_download_image promise error: ", result.get_error())
 		return
-	icon = result.texture
+	texture_rect.texture = result.texture
 
 
 func _on_toggled(toggled_on: bool) -> void:
-	$Highlight.visible = toggled_on
+	if toggled_on:
+		animation_player.play("toggled_on")
+	else:
+		animation_player.play_backwards("toggled_on")

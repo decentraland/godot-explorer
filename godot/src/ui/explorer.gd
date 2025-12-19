@@ -1,7 +1,9 @@
 class_name Explorer
 extends Node
 
+var is_genesis_city: bool
 var player: Node3D = null
+var scene_title: String
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -11,8 +13,6 @@ var debug_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
-
-var debug_map_container: DebugMapContainer = null
 
 var _first_time_refresh_warning = true
 
@@ -34,22 +34,18 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var url_popup = %UrlPopup
 @onready var jump_in_popup = %JumpInPopup
 
-@onready var panel_profile: Panel = %Panel_Profile
-@onready var notification_bell_button: Button = %NotificationBellButton
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
-
+@onready var friends_panel: PanelContainer = %FriendsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
-@onready var control_minimap = %Control_Minimap
 @onready var mobile_ui = %MobileUI
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
 @onready var loading_ui = %Loading
 
-@onready var button_mic = %Button_Mic
 @onready var emote_wheel = %EmoteWheel
 
 @onready var world: Node3D = %world
@@ -66,10 +62,13 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var chat_container: Control = %ChatContainer
 @onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
+@onready var navbar: Control = %Navbar
+@onready var joypad: Control = %Joypad
+@onready var chatbar: Control = %Chatbar
+
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	control_minimap.set_center_position(parcel_position_real)
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
@@ -87,6 +86,10 @@ func get_params_from_cmd():
 	if location_vector == Vector2i.MAX:
 		location_vector = null
 
+	# Preview deeplink takes priority - use it as the realm for hot reload development
+	if not Global.deep_link_obj.preview.is_empty() and realm_string == null:
+		realm_string = Global.deep_link_obj.preview
+
 	if not Global.deep_link_obj.realm.is_empty() and realm_string == null:
 		realm_string = Global.deep_link_obj.realm
 
@@ -99,7 +102,9 @@ func get_params_from_cmd():
 
 
 func _ready():
-	button_mic.visible = false
+	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
+	Global.change_parcel.connect(_on_change_parcel)
+
 	label_version.set_text("v" + DclGlobal.get_version())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
@@ -111,20 +116,28 @@ func _ready():
 	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	# Connect notification bell button
-	notification_bell_button.bell_clicked.connect(_on_notification_bell_clicked)
-	notifications_panel.panel_closed.connect(_on_notifications_panel_closed)
+	Global.open_notifications_panel.connect(_show_notifications_panel)
+	Global.open_chat.connect(_on_global_open_chat)
+	Global.open_discover.connect(_on_discover_open)
+	Global.on_menu_close.connect(_on_menu_close)
+
+	# Connect friends button
+	Global.open_friends_panel.connect(_show_friends_panel)
+
+	navbar.close_all.connect(_close_all_panels)
+	chatbar.share_place.connect(_share_place)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
+
+	# Connect to notification clicks to handle friend request notifications
+	Global.notification_clicked.connect(_on_notification_clicked)
 
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
 
-	if Global.is_xr():
-		player = load("res://src/logic/player/xr_player.tscn").instantiate()
-	else:
-		player = load("res://src/logic/player/player.tscn").instantiate()
+	player = load("res://src/logic/player/player.tscn").instantiate()
 
 	player.set_name("Player")
 	world.add_child(player)
@@ -134,12 +147,6 @@ func _ready():
 		player.vr_screen.set_instantiate_scene(ui_root)
 
 	emote_wheel.avatar_node = player.avatar
-
-	# Add debug map container only if --debug-minimap flag is present
-	if Global.cli.debug_minimap:
-		debug_map_container = load("res://src/ui/components/debug_map/debug_map_container.gd").new()
-		ui_root.add_child(debug_map_container)
-		debug_map_container.set_enabled(true)
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
@@ -151,8 +158,8 @@ func _ready():
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --debug-panel (automatically enabled with --preview)
-	if Global.cli.debug_panel:
+	# --debug-panel (automatically enabled with --preview or preview deeplink)
+	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
 		_on_control_menu_request_debug_panel(true)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -194,7 +201,11 @@ func _ready():
 		self._on_notify_pending_loading_scenes
 	)
 
-	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
+	# Add disconnect handler for reconnection logic
+	var disconnect_handler = (
+		load("res://src/ui/components/disconnect_handler/disconnect_handler.tscn").instantiate()
+	)
+	add_child(disconnect_handler)
 
 	#Global.scene_fetcher.current_position = start_parcel_position
 	Global.scene_fetcher.update_position(start_parcel_position, true)
@@ -218,6 +229,10 @@ func _ready():
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
+	# Initialize social service for non-guest accounts
+	if not Global.player_identity.is_guest:
+		_async_initialize_social_service()
+
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
@@ -232,7 +247,8 @@ func _ready():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	Global.open_profile.connect(_async_open_profile)
+	Global.open_profile_by_address.connect(_async_open_profile_by_address)
+	Global.open_profile_by_avatar.connect(_async_open_profile_by_avatar)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -272,6 +288,12 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 	# Start notifications polling when authenticated
 	print("[Explorer] Player profile changed - starting notifications polling")
 	NotificationsManager.start_polling()
+
+
+func _async_initialize_social_service() -> void:
+	# Initialize the social service with player identity
+	# Note: Subscriptions are now handled by FriendsPanel when it opens/closes
+	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -319,26 +341,10 @@ func _unhandled_input(event):
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				capture_mouse()
 
-		if event is InputEventKey and ui_root.has_focus():
-			if event.pressed and event.keycode == KEY_TAB:
-				if not control_menu.visible:
-					control_menu.show_last()
-					release_mouse()
-
-			if event.pressed and event.keycode == KEY_M:
-				if control_menu.visible:
-					pass
-				else:
-					control_menu.show_map()
-					release_mouse()
-
-			if event.pressed and event.keycode == KEY_ESCAPE:
-				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-					release_mouse()
-
-			#if event.pressed and event.keycode == KEY_ENTER:
-			#	panel_chat.toggle_chat_visibility(true)
-			#	panel_chat.line_edit_command.grab_focus.call_deferred()
+	if event is InputEventKey and ui_root.has_focus():
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				release_mouse()
 
 
 func _on_control_minimap_request_open_map():
@@ -361,15 +367,6 @@ func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
 
 
-func _on_control_menu_toggle_minimap(visibility):
-	control_minimap.visible = visibility
-
-
-func toggle_debug_minimap(enabled: bool):
-	if debug_map_container:
-		debug_map_container.set_enabled(enabled)
-
-
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
 
@@ -390,6 +387,30 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
+func _parse_coordinates(coord_string: String) -> Vector2i:
+	# Remove parentheses if present
+	var cleaned = coord_string.strip_edges()
+	cleaned = cleaned.replace("(", "").replace(")", "")
+
+	# Remove all spaces
+	cleaned = cleaned.replace(" ", "")
+
+	# Split by comma
+	var parts = cleaned.split(",")
+	if parts.size() >= 2:
+		var x_str = parts[0].strip_edges()
+		var y_str = parts[1].strip_edges()
+
+		# Validate and parse integers (including negative values)
+		var int_regex = RegEx.new()
+		int_regex.compile(r"^-?\d+$")
+
+		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
+			return Vector2i(int(x_str), int(y_str))
+
+	return Vector2i(0, 0)
+
+
 func _on_panel_chat_submit_message(message: String):
 	if message.length() == 0:
 		return
@@ -398,12 +419,12 @@ func _on_panel_chat_submit_message(message: String):
 	var command_str := params[0].to_lower()
 	if command_str.begins_with("/"):
 		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-			var comma_params = params[1].split(",")
-			var dest_vector = Vector2i(0, 0)
-			if comma_params.size() > 1:
-				dest_vector = Vector2i(int(comma_params[0]), int(comma_params[1]))
-			elif params.size() > 2:
-				dest_vector = Vector2i(int(params[1]), int(params[2]))
+			# Join all params after the command to handle spaces properly
+			var coord_string = ""
+			if params.size() > 1:
+				coord_string = " ".join(params.slice(1))
+
+			var dest_vector = _parse_coordinates(coord_string)
 
 			Global.on_chat_message.emit(
 				"system",
@@ -454,7 +475,7 @@ func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
 
-	player.async_move_to(position)
+	player.move_to(position)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
 	)
@@ -542,24 +563,6 @@ func hide_menu():
 	release_mouse()
 
 
-func _on_mini_map_pressed():
-	control_menu.show_map()
-	release_mouse()
-
-
-func _on_button_jump_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			Input.action_press("ia_jump")
-		else:
-			Input.action_release("ia_jump")
-
-
-func _on_button_open_chat_pressed():
-	panel_chat.async_start_chat()
-	release_mouse()
-
-
 func set_cursor_position(position: Vector2):
 	if Global.scene_runner.raycast_use_cursor_position:
 		var crosshair_position = position - (label_crosshair.size / 2) - Vector2(0, 1)
@@ -587,14 +590,6 @@ func _on_panel_profile_open_profile():
 	_open_own_profile()
 
 
-func _on_adapter_changed(_voice_chat_enabled, _adapter_str):
-	button_mic.visible = false  # voice_chat_enabled
-
-
-func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
-	pass  # Replace with function body.
-
-
 func _on_button_load_scenes_pressed() -> void:
 	Global.scene_fetcher._bypass_loading_check = true
 	button_load_scenes.hide()
@@ -619,12 +614,13 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 		button_load_scenes.hide()
 
 
-func _async_open_profile(avatar: DclAvatar):
+func _open_profile(dcl_user_profile: DclUserProfile):
 	panel_chat.exit_chat()
-	if avatar == null or not is_instance_valid(avatar):
-		return
+	profile_container.open(dcl_user_profile)
+	release_mouse()
 
-	var user_address = avatar.avatar_id
+
+func _async_open_profile_by_address(user_address: String):
 	var promise = Global.content_provider.fetch_profile(user_address)
 	var result = await PromiseUtils.async_awaiter(promise)
 
@@ -632,9 +628,37 @@ func _async_open_profile(avatar: DclAvatar):
 		printerr("Error getting player profile: ", result.get_error())
 		return
 
-	if result != null:
-		profile_container.open(result)
-	release_mouse()
+	if result != null and result is DclUserProfile:
+		_open_profile(result)
+
+
+func _async_open_profile_by_avatar(avatar: DclAvatar):
+	# Check if it's an Avatar (GDScript class) to access avatar_id
+	if avatar is Avatar:
+		var avatar_instance = avatar as Avatar
+		var avatar_id = avatar_instance.avatar_id
+		if not avatar_id.is_empty():
+			await _async_open_profile_by_address(avatar_id)
+		else:
+			printerr(
+				"_async_open_profile_by_avatar: avatar_id is empty for avatar: ",
+				avatar_instance.name
+			)
+	else:
+		# Try to get avatar_id from metadata if available (fallback)
+		if avatar.has_method("get") and avatar.get("avatar_id") != null:
+			var avatar_id = avatar.get("avatar_id")
+			if avatar_id is String and not avatar_id.is_empty():
+				await _async_open_profile_by_address(avatar_id)
+			else:
+				printerr(
+					"_async_open_profile_by_avatar: avatar is not an Avatar instance and avatar_id is not available"
+				)
+		else:
+			printerr(
+				"_async_open_profile_by_avatar: avatar is not an Avatar instance: ",
+				avatar.get_class()
+			)
 
 
 func _on_control_menu_open_profile() -> void:
@@ -654,9 +678,22 @@ func _get_viewport_scale_factors() -> Vector2:
 	return Vector2(x_factor, y_factor)
 
 
-func _on_panel_chat_on_open_chat() -> void:
+func _on_global_open_chat() -> void:
+	# When coming from Global.open_chat, start chat and handle UI
 	safe_margin_container_hud.hide()
 	chat_container.show()
+	panel_chat.async_start_chat()
+	release_mouse()
+
+
+func _on_panel_chat_on_open_chat() -> void:
+	# When coming from on_open_chat from panel_chat, only handle the UI
+	# DO NOT call async_start_chat() because it's already running (avoids recursion)
+	safe_margin_container_hud.hide()
+	chat_container.show()
+	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
+	if Global.is_mobile():
+		navbar.set_manually_hidden(true)
 
 
 func _on_panel_chat_on_exit_chat() -> void:
@@ -664,6 +701,8 @@ func _on_panel_chat_on_exit_chat() -> void:
 	chat_container.hide()
 	if Global.is_mobile():
 		mobile_ui.show()
+		# Restore navbar visibility when chat closes
+		navbar.set_manually_hidden(false)
 
 
 func _on_change_virtual_keyboard(virtual_keyboard_height: int):
@@ -677,48 +716,68 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 		panel_chat.exit_chat()
 
 
-func _on_notification_bell_clicked() -> void:
-	# Toggle notification panel visibility
+func _show_friends_panel() -> void:
+	if friends_panel.visible:
+		return
+	joypad.hide()
+	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-		notification_bell_button.set_panel_open(false)
-		# On desktop, grab focus back to enable camera controls
-		# On mobile, also capture mouse
-		Global.explorer_grab_focus()
-		if Global.is_mobile():
-			capture_mouse()
-	else:
-		notifications_panel.show_panel()
-		notification_bell_button.set_panel_open(true)
-		# Release focus to prevent camera rotation while panel is open
-		Global.explorer_release_focus()
-		if Global.is_mobile():
-			release_mouse()
-		# Close other panels if needed
-		if control_menu.visible:
-			control_menu.close()
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
+
+
+func _on_friends_panel_closed() -> void:
+	friends_panel.hide_panel()
+	Global.explorer_grab_focus()
+	capture_mouse()
+
+
+func _show_notifications_panel() -> void:
+	if notifications_panel.visible:
+		return
+	joypad.hide()
+	notifications_panel.show_panel()
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
 
 
 func _on_notifications_panel_closed() -> void:
-	notifications_panel.hide()
-	notification_bell_button.set_panel_open(false)
-	# Grab focus back to enable camera controls
+	notifications_panel.hide_panel()
 	Global.explorer_grab_focus()
-	if Global.is_mobile():
-		capture_mouse()
+	capture_mouse()
 
 
-func _on_notification_queued(notification: Dictionary) -> void:
+func _on_notification_queued(notification_d: Dictionary) -> void:
 	# Only show notifications if not loading
 	if not _is_loading:
-		_show_notification_toast(notification)
+		_show_notification_toast(notification_d)
 	else:
 		# Store the notification to show after loading finishes
 		if _pending_notification_toast.is_empty():
-			_pending_notification_toast = notification
+			_pending_notification_toast = notification_d
 
 
-func _show_notification_toast(notification: Dictionary) -> void:
+func _show_notification_toast(notification_d: Dictionary) -> void:
+	# Filter out friend request notifications from blocked users
+	var notif_type = notification_d.get("type", "")
+	if notif_type == "social_service_friendship_request":
+		var sender_address = ""
+		if "metadata" in notification_d and notification_d["metadata"] is Dictionary:
+			var metadata = notification_d["metadata"]
+			if "sender" in metadata and metadata["sender"] is Dictionary:
+				sender_address = metadata["sender"].get("address", "")
+
+		# Skip showing notification if sender is blocked
+		if not sender_address.is_empty() and Global.social_blacklist.is_blocked(sender_address):
+			# Immediately dequeue this notification and try to show next one
+			NotificationsManager.dequeue_notification()
+			return
+
 	# Create and show toast notification
 	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
 	var toast = toast_scene.instantiate()
@@ -728,7 +787,7 @@ func _show_notification_toast(notification: Dictionary) -> void:
 	toast.toast_closed.connect(_on_toast_closed)
 	toast.mark_as_read.connect(_on_toast_mark_as_read)
 
-	toast.async_show_notification(notification)
+	toast.async_show_notification(notification_d)
 
 
 func _on_toast_closed() -> void:
@@ -736,9 +795,9 @@ func _on_toast_closed() -> void:
 	NotificationsManager.dequeue_notification()
 
 
-func _on_toast_mark_as_read(notification: Dictionary) -> void:
+func _on_toast_mark_as_read(notification_d: Dictionary) -> void:
 	# Mark notification as read via drag gesture
-	var notification_id = notification.get("id", "")
+	var notification_id = notification_d.get("id", "")
 	if not notification_id.is_empty():
 		var ids = PackedStringArray([notification_id])
 		NotificationsManager.mark_as_read(ids)
@@ -757,6 +816,23 @@ func _on_loading_finished() -> void:
 		_pending_notification_toast = {}
 
 
+func _on_notification_clicked(notification_d: Dictionary) -> void:
+	# Handle friend request notification clicks - open friends panel on friends tab
+	var notif_type = notification_d.get("type", "")
+
+	if notif_type == "friend_request_received":
+		# Open friends panel on friends tab
+		if not friends_panel.visible:
+			friends_panel.show_panel_on_friends_tab()
+			# Close notifications panel if open
+			if notifications_panel.visible:
+				notifications_panel.hide_panel()
+			# Release focus to prevent camera rotation while panel is open
+			Global.explorer_release_focus()
+			if Global.is_mobile():
+				release_mouse()
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		# Clear badge when app comes to foreground
@@ -766,3 +842,82 @@ func _notification(what: int) -> void:
 		NotificationsManager.force_queue_sync()
 
 		Global.check_deep_link_teleport_to()
+
+
+func _on_emote_wheel_emote_wheel_closed() -> void:
+	virtual_joystick.show()
+
+
+func _on_emote_wheel_emote_wheel_opened() -> void:
+	virtual_joystick.hide()
+
+
+func _close_all_panels():
+	control_menu.close()
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	joypad.show()
+
+
+func _on_discover_open():
+	navbar.close_from_discover_button()
+	joypad.show()
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	navbar.set_manually_hidden(true)
+	control_menu.show_discover()
+	release_mouse()
+
+
+func _on_menu_close():
+	if !navbar.visible:
+		navbar.set_manually_hidden(false)
+		release_mouse()
+
+
+func _extract_short_realm_url(full_url: String) -> String:
+	var url_trimmed = full_url.trim_suffix("/")
+	var parts = url_trimmed.split("/")
+	if parts.size() > 0:
+		return parts[parts.size() - 1]
+	return full_url
+
+
+func _share_place():
+	var msg: String
+	var url: String
+
+	if is_genesis_city:
+		url = (
+			"https://decentraland.org/places/place/?position="
+			+ str(parcel_position[0])
+			+ "."
+			+ str(parcel_position[1])
+		)
+	else:
+		var realm_url = Global.realm.realm_url
+		var short_realm_url = _extract_short_realm_url(realm_url)
+		url = "https://decentraland.org/places/world/?name=" + short_realm_url
+
+	msg = "Join Me At " + scene_title + " following this link " + url
+
+	if Global.is_android():
+		DclGodotAndroidPlugin.share_text(msg)
+	elif Global.is_ios():
+		DclIosPlugin.share_text(msg)
+
+
+func _on_change_scene_id(scene_id: int):
+	is_genesis_city = Realm.is_genesis_city(Global.realm.realm_url)
+	if scene_id == -1:
+		scene_title = ""
+		return
+	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
+	if scene != null:
+		scene_title = scene.scene_entity_definition.get_title()
+	else:
+		scene_title = ""
+
+
+func _on_change_parcel(_position: Vector2i):
+	parcel_position = _position

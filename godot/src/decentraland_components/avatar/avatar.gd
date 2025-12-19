@@ -13,9 +13,15 @@ const WEARABLE_NAME_PREFIX = "__"
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
 
+# Entity info for trigger area detection
+var dcl_entity_id: int = -1
+var is_local_player: bool = false
+
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
+var avatar_ready: bool = false
+var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
@@ -51,6 +57,7 @@ var wearable_promises = null
 
 @onready var avatar_modifier_area_detector = $avatar_modifier_area_detector
 @onready var click_area = $ClickArea
+@onready var trigger_detector = %TriggerDetector
 
 
 func _ready():
@@ -88,6 +95,30 @@ func _ready():
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
 
+	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
+	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
+
+
+## Setup trigger detection for this avatar (local player and remote avatars only).
+## - For local player: entity_id=SceneEntityId.PLAYER (0x10000)
+## - For remote avatars: entity_id=assigned entity from avatar_scene.rs
+func setup_trigger_detection(p_entity_id: int) -> void:
+	dcl_entity_id = p_entity_id
+
+	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
+	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
+
+	# Enable the collision shape
+	trigger_detector.get_node("CollisionShape3D").disabled = false
+
+
+## Remove trigger detection for this avatar (AvatarShapes/scene NPCs only).
+## Called from avatar_shape.rs after the avatar is added to the scene.
+func remove_trigger_detection() -> void:
+	if trigger_detector != null:
+		trigger_detector.queue_free()
+		trigger_detector = null
+
 
 func on_chat_message(address: String, message: String, _timestamp: float):
 	if avatar_id != address:
@@ -101,7 +132,7 @@ func _input(event):
 		var selected = Global.get_selected_avatar()
 		if selected and selected == self and avatar_id:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-				Global.open_profile.emit(self)
+				Global.open_profile_by_avatar.emit(self)
 
 
 func try_show():
@@ -144,6 +175,8 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	avatar_id = profile.get_ethereum_address()
+	has_connected_web3 = profile.has_connected_web3()
+	prints("Async update avatar from profile", avatar_id)
 
 	# Update metadata with the new avatar_id
 	if click_area:
@@ -169,7 +202,7 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 		nickname_ui.nickname = new_avatar_name
 		nickname_ui.tag = ""
 
-	nickname_ui.nickname_color = get_nickname_color(new_avatar_name)
+	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
 	if hide_name:
@@ -437,6 +470,7 @@ func async_load_wearables():
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
+	avatar_ready = true
 	avatar_loaded.emit()
 
 

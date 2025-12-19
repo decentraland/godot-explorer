@@ -113,6 +113,12 @@ layout_mode = 2
 focus_mode = 0
 text = "JS Debugger not available"
 
+[node name="Button_OpenSource" type="Button" parent="TabContainer_DebugPanel/Misc&Debugger"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Open Scene Source Code"
+
 [node name="Label_DebugInfo" type="Label" parent="TabContainer_DebugPanel/Misc&Debugger"]
 visible = false
 layout_mode = 2
@@ -146,5 +152,6 @@ unique_name_in_owner = true
 [connection signal="text_changed" from="TabContainer_DebugPanel/Expression/TextEdit" to="." method="_on_text_edit_text_changed"]
 [connection signal="pressed" from="TabContainer_DebugPanel/Misc&Debugger/Button_ShowNetwork" to="." method="_on_button_show_network_pressed"]
 [connection signal="pressed" from="TabContainer_DebugPanel/Misc&Debugger/Button_DebugJS" to="." method="_on_button_debug_js_pressed"]
+[connection signal="pressed" from="TabContainer_DebugPanel/Misc&Debugger/Button_OpenSource" to="." method="_on_button_open_source_pressed"]
 [connection signal="pressed" from="Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
 [connection signal="index_pressed" from="PopupMenu" to="." method="_on_popup_menu_index_pressed"]

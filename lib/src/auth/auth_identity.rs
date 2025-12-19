@@ -14,6 +14,9 @@ use ethers_core::{types::Signature, utils::hex};
 use ethers_signers::LocalWallet;
 use rand::thread_rng;
 
+/// Auth chain expiration duration: 4 weeks (30 days)
+pub const AUTH_CHAIN_EXPIRATION_SECS: u64 = 30 * 24 * 3600;
+
 pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
     let datetime: DateTime<Utc> = expiration.into();
     let formatted_time = datetime.format("%Y-%m-%dT%H:%M:%S%.3fZ");
@@ -30,7 +33,8 @@ pub async fn try_create_remote_ephemeral(
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
     let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
     let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
-    let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
+    let expiration =
+        std::time::SystemTime::now() + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS);
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
     let request = CreateRequest::from_new_ephemeral(ephemeral_message.as_str());
@@ -48,8 +52,20 @@ pub async fn try_create_remote_ephemeral(
     let signature = Signature::from_str(result)?;
     let chain_id = 1;
 
-    let auth_chain =
-        SimpleAuthChain::new_ephemeral_identity_auth_chain(signer, ephemeral_message, signature);
+    let auth_chain = SimpleAuthChain::new_ephemeral_identity_auth_chain(
+        signer,
+        ephemeral_message.clone(),
+        signature,
+    );
+
+    let expiration_datetime: DateTime<Utc> = expiration.into();
+    tracing::debug!(
+        "Auth chain signed - signer: {:#x}, ephemeral_address: {}, expiration: {}, auth_chain: {:?}",
+        signer,
+        ephemeral_address,
+        expiration_datetime.format("%Y-%m-%dT%H:%M:%S%.3fZ"),
+        auth_chain
+    );
 
     let ephemeral_auth_chain =
         EphemeralAuthChain::new(signer, signing_key_bytes, auth_chain, expiration);
@@ -130,7 +146,8 @@ pub fn create_local_ephemeral(signer_wallet: &LocalWallet) -> EphemeralAuthChain
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
     let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
     let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
-    let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
+    let expiration =
+        std::time::SystemTime::now() + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS);
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
     let signature =
@@ -139,8 +156,17 @@ pub fn create_local_ephemeral(signer_wallet: &LocalWallet) -> EphemeralAuthChain
 
     let auth_chain = SimpleAuthChain::new_ephemeral_identity_auth_chain(
         signer_wallet.address(),
-        ephemeral_message,
+        ephemeral_message.clone(),
         signature,
+    );
+
+    let expiration_datetime: DateTime<Utc> = expiration.into();
+    tracing::debug!(
+        "Local auth chain signed - signer: {:#x}, ephemeral_address: {}, expiration: {}, auth_chain: {:?}",
+        signer_wallet.address(),
+        ephemeral_address,
+        expiration_datetime.format("%Y-%m-%dT%H:%M:%S%.3fZ"),
+        auth_chain
     );
 
     EphemeralAuthChain::new(

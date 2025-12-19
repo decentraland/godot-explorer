@@ -1,48 +1,97 @@
-@tool
-extends Control
-
-@export var text_color = Color.WHITE:
-	set(new_value):
-		%Label_Letter.add_theme_color_override("font_color", new_value)
-		text_color = new_value
-
-@export var text_letter = "E":
-	set(new_value):
-		%Label_Letter.text = new_value
-		%Label_Letter.set_visible(icon == null)
-		text_letter = new_value
-
-@export var icon: Texture2D = null:
-	set(new_value):
-		icon = new_value
-		%MarginContainer_Icon.set_visible(icon != null)
-		%Label_Letter.set_visible(icon == null)
-		%TextureRect_Icon.texture = icon
+extends Button
 
 @export var trigger_action = "ia_primary"
 
-var action_pressed = false
-
-@onready var button_touch_action = %Button_TouchAction
-
-@onready var default_position = button_touch_action.get_position()
-@onready var pressed_position = button_touch_action.get_position() - Vector2(0, 2)
+var _touch_index: int = -1
+var _is_action_active: bool = false  # Tracks if we're actually sending the action
 
 
-func _physics_process(_delta):
-	if not Engine.is_editor_hint():
-		var is_pressed = Input.is_action_pressed(trigger_action)
-		if action_pressed != is_pressed:
-			action_pressed = is_pressed
-			if is_pressed:
-				button_touch_action.set_position(pressed_position)
-			else:
-				button_touch_action.set_position(default_position)
+func _ready() -> void:
+	# Disable toggle_mode for normal button behavior
+	toggle_mode = false
 
 
-func _on_button_touch_action_button_down():
-	Input.action_press(trigger_action)
+func _input(event: InputEvent) -> void:
+	if disabled:
+		return
+
+	if not Global.is_mobile():
+		return
+
+	if event is InputEventScreenTouch:
+		var touch_pos = event.position
+		var is_inside = _is_point_inside_button(touch_pos)
+
+		if event.pressed:
+			if is_inside and _touch_index == -1:
+				_touch_index = event.index
+				_is_action_active = true
+
+				set_pressed_no_signal(true)
+				Input.action_press(trigger_action)
+				_close_combo_menu()
+		else:
+			if event.index == _touch_index:
+				if _is_action_active:
+					Input.action_release(trigger_action)
+					_is_action_active = false
+				set_pressed_no_signal(false)
+				_touch_index = -1
+	elif event is InputEventScreenDrag:
+		if _touch_index == event.index:
+			var touch_pos = event.position
+			var is_inside = _is_point_inside_button(touch_pos)
+
+			if is_inside and not _is_action_active:
+				pass
+			elif not is_inside and _is_action_active:
+				Input.action_release(trigger_action)
+				_is_action_active = false
+				set_pressed_no_signal(false)
 
 
-func _on_button_touch_action_button_up():
-	Input.action_release(trigger_action)
+func _on_gui_input(event: InputEvent) -> void:
+	if disabled:
+		return
+
+	if event is InputEventScreenTouch:
+		var touch_pos = event.position
+		var is_inside = get_rect().has_point(touch_pos)
+
+		if event.pressed and is_inside:
+			if _touch_index == -1:
+				_touch_index = event.index
+				_is_action_active = true
+				set_pressed_no_signal(true)
+				Input.action_press(trigger_action)
+				_close_combo_menu()
+			accept_event()
+		elif not event.pressed and event.index == _touch_index:
+			if _is_action_active:
+				Input.action_release(trigger_action)
+				_is_action_active = false
+			set_pressed_no_signal(false)
+			_touch_index = -1
+			accept_event()
+	elif event is InputEventScreenDrag:
+		if _touch_index == event.index:
+			var touch_pos = event.position
+			var is_inside = get_rect().has_point(touch_pos)
+
+			if is_inside and not _is_action_active:
+				pass
+			elif not is_inside and _is_action_active:
+				Input.action_release(trigger_action)
+				_is_action_active = false
+				set_pressed_no_signal(false)
+
+
+func _is_point_inside_button(point: Vector2) -> bool:
+	var global_rect = Rect2(global_position, size * get_global_transform_with_canvas().get_scale())
+	return global_rect.has_point(point)
+
+
+func _close_combo_menu() -> void:
+	var actions_to_close = ["ia_action_3", "ia_action_4", "ia_action_5", "ia_action_6"]
+	if trigger_action in actions_to_close:
+		Global.close_combo.emit()

@@ -17,12 +17,14 @@ use crate::{
 };
 use godot::{
     engine::{
-        base_material_3d::{Feature, Flags, ShadingMode, Transparency},
+        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode, Transparency},
         MeshInstance3D, StandardMaterial3D,
     },
     global::weakref,
     prelude::*,
 };
+
+use crate::dcl::components::proto_components::sdk::components::MaterialTransparencyMode;
 
 pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -115,8 +117,6 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     godot_material
                 };
 
-                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
-
                 match &dcl_material {
                     DclMaterial::Unlit(unlit) => {
                         godot_material.set_metallic(0.0);
@@ -127,26 +127,57 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material
                             .set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
+
+                        // Handle transparency for unlit materials (auto-detect)
+                        if unlit.diffuse_color.0.a < 1.0 || unlit.texture.is_some() {
+                            godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                        } else {
+                            godot_material.set_transparency(Transparency::DISABLED);
+                        }
                     }
                     DclMaterial::Pbr(pbr) => {
                         godot_material.set_metallic(pbr.metallic.0);
                         godot_material.set_roughness(pbr.roughness.0);
                         godot_material.set_specular(pbr.specular_intensity.0);
 
-                        let emission = pbr
-                            .emissive_color
-                            .0
-                            .clone()
-                            .multiply(pbr.emissive_intensity.0);
-
-                        // In the Mobile renderer, HDR will be capped at 2.0 so we'll have to reduce the energy multiplier to be able to see fluctuations in energy
-                        godot_material.set_emission_energy_multiplier(0.2);
-
-                        // In the same way, godot uses sRGB instead of linear colors.
-                        godot_material.set_emission(emission.to_godot().linear_to_srgb());
+                        godot_material.set_emission(pbr.emissive_color.0.to_godot());
+                        godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
                         godot_material.set_feature(Feature::EMISSION, true);
+
+                        // Use MULTIPLY operator when there's an emissive texture
+                        if pbr.emissive_texture.is_some() {
+                            godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
+                        }
+
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
-                        godot_material.set_albedo(pbr.albedo_color.0.to_godot().linear_to_srgb());
+                        godot_material.set_albedo(pbr.albedo_color.0.to_godot());
+
+                        // Handle transparency mode
+                        match pbr.transparency_mode {
+                            MaterialTransparencyMode::MtmOpaque => {
+                                godot_material.set_transparency(Transparency::DISABLED);
+                            }
+                            MaterialTransparencyMode::MtmAlphaTest => {
+                                godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
+                                godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                            }
+                            MaterialTransparencyMode::MtmAlphaBlend => {
+                                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                            }
+                            MaterialTransparencyMode::MtmAlphaTestAndAlphaBlend => {
+                                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                                godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                            }
+                            MaterialTransparencyMode::MtmAuto => {
+                                // Auto-detect: use alpha blend if albedo has transparency
+                                if pbr.albedo_color.0.a < 1.0 || pbr.texture.is_some() {
+                                    godot_material
+                                        .set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                                } else {
+                                    godot_material.set_transparency(Transparency::DISABLED);
+                                }
+                            }
+                        }
                     }
                 }
                 let mesh_renderer =
@@ -281,12 +312,6 @@ fn check_texture(
         DclSourceTex::AvatarTexture(_user_id) => {
             // TODO: implement load avatar texture
         }
-
-        #[cfg(not(feature = "use_ffmpeg"))]
-        DclSourceTex::VideoTexture(_video_entity_id) => {
-            // TODO: set a texture with a `without-video build` message
-        }
-        #[cfg(feature = "use_ffmpeg")]
         DclSourceTex::VideoTexture(video_entity_id) => {
             if let Some(node) = _scene
                 .godot_dcl_scene

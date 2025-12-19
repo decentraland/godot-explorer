@@ -1,11 +1,14 @@
-[gd_resource type="Theme" load_steps=86 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=96 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
 [ext_resource type="StyleBox" uid="uid://b777qk4p13rau" path="res://assets/themes/white_button_disabled.tres" id="5_kiur2"]
+[ext_resource type="StyleBox" uid="uid://b6vfcd8w860fn" path="res://assets/themes/primary_little.tres" id="6_k33ds"]
 [ext_resource type="Texture2D" uid="uid://trdy0bhdjepr" path="res://assets/themes/icons/checkbox_on.svg" id="6_kiur2"]
+[ext_resource type="StyleBox" uid="uid://sdlkeqkhra6o" path="res://assets/themes/primary_disabled_little.tres" id="6_uv0rg"]
 [ext_resource type="StyleBox" uid="uid://bagpmfxlu8c0l" path="res://assets/themes/style_box_empty.tres" id="7_ls4j2"]
 [ext_resource type="Texture2D" uid="uid://dqckja3hkxjsx" path="res://assets/themes/icons/radio_button_on.svg" id="7_nnut5"]
+[ext_resource type="StyleBox" uid="uid://be370xcdbri0r" path="res://assets/themes/primary_pressed_hover_little.tres" id="7_xiu8x"]
 [ext_resource type="Texture2D" uid="uid://bmqhk7e74vv4y" path="res://assets/ui/switch-on.svg" id="8_ec0gy"]
 [ext_resource type="Texture2D" uid="uid://clajn5iajhqii" path="res://assets/themes/icons/radio_button_off.svg" id="8_kyfa3"]
 [ext_resource type="Texture2D" uid="uid://ban6yfq73wlkr" path="res://assets/themes/icons/checkbox_off.svg" id="9_6dlaa"]
@@ -35,8 +38,11 @@
 [ext_resource type="StyleBox" uid="uid://dseamfrohw1kp" path="res://assets/themes/seconday_pressed_hover.tres" id="33_nnut5"]
 [ext_resource type="StyleBox" uid="uid://3ky70hn3g5de" path="res://assets/themes/box_flat_color/dcl_pink.tres" id="33_x5msw"]
 [ext_resource type="StyleBox" uid="uid://c7yyq5lfqino0" path="res://assets/themes/secondary.tres" id="34_kyfa3"]
+[ext_resource type="StyleBox" uid="uid://p7xigefabmi8" path="res://assets/themes/seconday_pressed_hover_little.tres" id="35_aywie"]
 [ext_resource type="StyleBox" uid="uid://d0dvukscdvxh6" path="res://assets/themes/white_button.tres" id="35_kyfa3"]
 [ext_resource type="StyleBox" uid="uid://bavxw6nd1syyd" path="res://assets/themes/white_pressed_hover.tres" id="35_nnut5"]
+[ext_resource type="StyleBox" uid="uid://cjr732avt4ugw" path="res://assets/themes/secondary_disabled_little.tres" id="35_wftf5"]
+[ext_resource type="StyleBox" uid="uid://crrn6r8naryki" path="res://assets/themes/secondary_little.tres" id="37_k33ds"]
 [ext_resource type="StyleBox" uid="uid://smxgemhwjkrd" path="res://assets/themes/tabs/tab_disabled.tres" id="38_rijel"]
 [ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="38_rt0af"]
 [ext_resource type="StyleBox" uid="uid://uskyptougkeg" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed_hover.tres" id="39_3x5rh"]
@@ -52,6 +58,10 @@
 [ext_resource type="StyleBox" uid="uid://dos4er8sw2ap6" path="res://assets/themes/wearable_secondary_disabled.tres" id="46_jqsp7"]
 [ext_resource type="StyleBox" uid="uid://djspketxj6yml" path="res://assets/themes/wearable_secondary.tres" id="47_ls4j2"]
 [ext_resource type="StyleBox" uid="uid://bjtof22i81o4x" path="res://assets/themes/wearable_secondary_press_hover.tres" id="48_ec0gy"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="51_adyvx"]
+[ext_resource type="StyleBox" uid="uid://bk5rtvwf5rno4" path="res://assets/themes/dcl_theme/touchable_disabled.tres" id="51_b8nvg"]
+[ext_resource type="StyleBox" uid="uid://b66geet5bo5yf" path="res://assets/themes/dcl_theme/touchable_normal.tres" id="52_adyvx"]
+[ext_resource type="StyleBox" uid="uid://cvducxvis7n6e" path="res://assets/themes/dcl_theme/touchable_pressed.tres" id="53_f0x44"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1t6yp"]
 
@@ -292,6 +302,19 @@ Button/styles/hover_pressed_mirrored = ExtResource("29_lmy7p")
 Button/styles/normal = ExtResource("28_fqvpv")
 Button/styles/normal_mirrored = ExtResource("28_fqvpv")
 Button/styles/pressed = ExtResource("29_lmy7p")
+ButtonLittle/base_type = &"Button"
+ButtonLittle/font_sizes/font_size = 15
+ButtonLittle/styles/disabled = ExtResource("6_uv0rg")
+ButtonLittle/styles/disabled_mirrored = ExtResource("6_uv0rg")
+ButtonLittle/styles/focus = ExtResource("7_xiu8x")
+ButtonLittle/styles/hover = ExtResource("7_xiu8x")
+ButtonLittle/styles/hover_mirrored = ExtResource("7_xiu8x")
+ButtonLittle/styles/hover_pressed = ExtResource("7_xiu8x")
+ButtonLittle/styles/hover_pressed_mirrored = ExtResource("7_xiu8x")
+ButtonLittle/styles/normal = ExtResource("6_k33ds")
+ButtonLittle/styles/normal_mirrored = ExtResource("6_k33ds")
+ButtonLittle/styles/pressed = ExtResource("7_xiu8x")
+ButtonLittle/styles/pressed_mirrored = null
 CheckBox/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 CheckBox/colors/font_focus_color = Color(0.184314, 0.176471, 0.196078, 1)
 CheckBox/colors/font_hover_color = Color(0.4, 0.388235, 0.419608, 1)
@@ -448,6 +471,33 @@ SecondaryButton/styles/normal = ExtResource("34_kyfa3")
 SecondaryButton/styles/normal_mirrored = ExtResource("34_kyfa3")
 SecondaryButton/styles/pressed = ExtResource("33_nnut5")
 SecondaryButton/styles/pressed_mirrored = ExtResource("33_nnut5")
+SecondaryLittle/base_type = &"Button"
+SecondaryLittle/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/font_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+SecondaryLittle/colors/font_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/font_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/font_hover_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/icon_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+SecondaryLittle/colors/icon_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/icon_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/icon_hover_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryLittle/constants/icon_max_width = 30
+SecondaryLittle/font_sizes/font_size = 15
+SecondaryLittle/fonts/font = ExtResource("2_lbfoi")
+SecondaryLittle/styles/disabled = ExtResource("35_wftf5")
+SecondaryLittle/styles/disabled_mirrored = ExtResource("35_wftf5")
+SecondaryLittle/styles/focus = ExtResource("35_aywie")
+SecondaryLittle/styles/hover = ExtResource("35_aywie")
+SecondaryLittle/styles/hover_mirrored = ExtResource("35_aywie")
+SecondaryLittle/styles/hover_pressed = ExtResource("35_aywie")
+SecondaryLittle/styles/hover_pressed_mirrored = ExtResource("35_aywie")
+SecondaryLittle/styles/normal = ExtResource("37_k33ds")
+SecondaryLittle/styles/normal_mirrored = ExtResource("37_k33ds")
+SecondaryLittle/styles/pressed = ExtResource("35_aywie")
+SecondaryLittle/styles/pressed_mirrored = ExtResource("35_aywie")
 SnowButton/base_type = &"Button"
 SnowButton/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 SnowButton/colors/font_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
@@ -456,6 +506,9 @@ SnowButton/colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 SnowButton/colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 SnowButton/colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 SnowButton/colors/icon_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
+SnowButton/colors/icon_normal_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SnowButton/colors/icon_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SnowButton/constants/h_separation = 10
 SnowButton/styles/disabled = ExtResource("5_kiur2")
 SnowButton/styles/disabled_mirrored = ExtResource("5_kiur2")
 SnowButton/styles/focus = ExtResource("35_kyfa3")
@@ -507,6 +560,29 @@ TextEdit/colors/selection_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 TextEdit/styles/focus = ExtResource("17_xiu8x")
 TextEdit/styles/normal = ExtResource("18_uv0rg")
 TextEdit/styles/read_only = ExtResource("18_uv0rg")
+TouchableButton/base_type = &"Button"
+TouchableButton/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TouchableButton/colors/font_disabled_color = Color(1, 1, 1, 0.5019608)
+TouchableButton/colors/font_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TouchableButton/colors/font_hover_pressed_color = Color(0, 0, 0, 0.7019608)
+TouchableButton/colors/font_pressed_color = Color(0, 0, 0, 0.7019608)
+TouchableButton/colors/icon_disabled_color = Color(1, 1, 1, 0.5019608)
+TouchableButton/colors/icon_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TouchableButton/colors/icon_hover_pressed_color = Color(0, 0, 0, 0.7019608)
+TouchableButton/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TouchableButton/colors/icon_pressed_color = Color(0, 0, 0, 0.7019608)
+TouchableButton/font_sizes/font_size = 38
+TouchableButton/fonts/font = ExtResource("51_adyvx")
+TouchableButton/styles/disabled = ExtResource("51_b8nvg")
+TouchableButton/styles/disabled_mirrored = ExtResource("51_b8nvg")
+TouchableButton/styles/hover = ExtResource("52_adyvx")
+TouchableButton/styles/hover_mirrored = ExtResource("52_adyvx")
+TouchableButton/styles/hover_pressed = ExtResource("53_f0x44")
+TouchableButton/styles/hover_pressed_mirrored = ExtResource("53_f0x44")
+TouchableButton/styles/normal = ExtResource("52_adyvx")
+TouchableButton/styles/normal_mirrored = ExtResource("52_adyvx")
+TouchableButton/styles/pressed = ExtResource("53_f0x44")
+TouchableButton/styles/pressed_mirrored = ExtResource("53_f0x44")
 Tree/colors/children_hl_line_color = Color(1, 0.180392, 0.333333, 1)
 Tree/colors/custom_button_font_highlight = Color(0.960784, 0.152941, 0.345098, 1)
 Tree/colors/drop_position_color = Color(0.960784, 0.152941, 0.345098, 1)
@@ -545,7 +621,7 @@ WearableButton/colors/icon_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 
 WearableButton/colors/icon_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 WearableButton/colors/icon_normal_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 WearableButton/colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-WearableButton/font_sizes/font_size = 24
+WearableButton/font_sizes/font_size = 18
 WearableButton/fonts/font = ExtResource("42_qnq51")
 WearableButton/styles/disabled = ExtResource("42_t5yfb")
 WearableButton/styles/disabled_mirrored = ExtResource("42_t5yfb")

@@ -101,10 +101,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Build
-        working-directory: lib
-        run: cargo build
-      - name: Copy library
-        run: cp lib/target/debug/libdclgodot.so godot/lib/
+        run: cargo run -- build
 
       - name: Import Assets
         uses: ./.github/actions/import-assets

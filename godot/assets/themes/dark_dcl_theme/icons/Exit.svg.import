@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/Exit.svg-b834dc8a7c5dd05761702508df00f2e9.dpi
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
