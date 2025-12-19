@@ -6,10 +6,9 @@ signal param_changed(param: ConfigParams)
 enum FpsLimitMode {
 	VSYNC = 0,
 	NO_LIMIT = 1,
-	FPS_18 = 2,
-	FPS_30 = 3,
-	FPS_60 = 4,
-	FPS_120 = 5,
+	FPS_30 = 2,
+	FPS_60 = 3,
+	FPS_18 = 4,
 }
 
 enum ConfigParams {
