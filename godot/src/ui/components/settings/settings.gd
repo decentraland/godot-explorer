@@ -117,7 +117,7 @@ func refresh_graphic_settings():
 		radio_selector_windowed.selected = Global.get_config().window_mode
 
 	# Maps limit_fps config to radio_selector_limit_fps index
-	const inverse_limit_fps_mapping: Dictionary[int, int] = {
+	const INVERSE_LIMIT_FPS_MAPPING: Dictionary[int, int] = {
 		ConfigData.FpsLimitMode.VSYNC: 0,
 		ConfigData.FpsLimitMode.NO_LIMIT: 1,
 		ConfigData.FpsLimitMode.FPS_30: 3,
@@ -125,7 +125,7 @@ func refresh_graphic_settings():
 		ConfigData.FpsLimitMode.FPS_18: 2,
 	}
 
-	radio_selector_limit_fps.selected = inverse_limit_fps_mapping[Global.get_config().limit_fps]
+	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING[Global.get_config().limit_fps]
 	radio_selector_texture_quality.selected = Global.get_config().texture_quality
 	radio_selector_skybox.selected = Global.get_config().skybox
 	radio_selector_shadow.selected = Global.get_config().shadow_quality
@@ -322,7 +322,7 @@ func _on_radio_selector_ui_zoom_select_item(_index, item):
 
 func _on_radio_selector_select_item(index, _item):
 	# Maps radio_selector_limit_fps index to limit_fps config
-	const limit_fps_mapping: Dictionary[int, int] = {
+	const LIMIT_FPS_MAPPING: Dictionary[int, int] = {
 		0: ConfigData.FpsLimitMode.VSYNC,
 		1: ConfigData.FpsLimitMode.NO_LIMIT,
 		2: ConfigData.FpsLimitMode.FPS_18,
@@ -330,7 +330,7 @@ func _on_radio_selector_select_item(index, _item):
 		4: ConfigData.FpsLimitMode.FPS_60
 	}
 
-	Global.get_config().limit_fps = limit_fps_mapping[index]
+	Global.get_config().limit_fps = LIMIT_FPS_MAPPING[index]
 	GraphicSettings.apply_fps_limit()
 	Global.get_config().save_to_settings_file()
 
