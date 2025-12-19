@@ -17,12 +17,14 @@ use crate::{
 };
 use godot::{
     engine::{
-        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode},
+        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode, Transparency},
         MeshInstance3D, StandardMaterial3D,
     },
     global::weakref,
     prelude::*,
 };
+
+use crate::dcl::components::proto_components::sdk::components::MaterialTransparencyMode;
 
 pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -125,6 +127,13 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material
                             .set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
+
+                        // Handle transparency for unlit materials (auto-detect)
+                        if unlit.diffuse_color.0.a < 1.0 || unlit.texture.is_some() {
+                            godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                        } else {
+                            godot_material.set_transparency(Transparency::DISABLED);
+                        }
                     }
                     DclMaterial::Pbr(pbr) => {
                         godot_material.set_metallic(pbr.metallic.0);
@@ -142,6 +151,33 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot());
+
+                        // Handle transparency mode
+                        match pbr.transparency_mode {
+                            MaterialTransparencyMode::MtmOpaque => {
+                                godot_material.set_transparency(Transparency::DISABLED);
+                            }
+                            MaterialTransparencyMode::MtmAlphaTest => {
+                                godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
+                                godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                            }
+                            MaterialTransparencyMode::MtmAlphaBlend => {
+                                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                            }
+                            MaterialTransparencyMode::MtmAlphaTestAndAlphaBlend => {
+                                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                                godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                            }
+                            MaterialTransparencyMode::MtmAuto => {
+                                // Auto-detect: use alpha blend if albedo has transparency
+                                if pbr.albedo_color.0.a < 1.0 || pbr.texture.is_some() {
+                                    godot_material
+                                        .set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                                } else {
+                                    godot_material.set_transparency(Transparency::DISABLED);
+                                }
+                            }
+                        }
                     }
                 }
                 let mesh_renderer =

@@ -447,3 +447,7 @@ func _on_button_general_pressed() -> void:
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
+
+
+func _on_button_delete_account_pressed() -> void:
+	Global.delete_account.emit()
