@@ -285,10 +285,11 @@ impl DclUiBackground {
                     DclSourceTex::Texture(texture_hash) => {
                         let global = DclGlobal::singleton();
                         let mut content_provider = global.bind().get_content_provider();
-                        let mut promise = content_provider.bind_mut().fetch_texture_by_hash_original(
-                            GString::from(texture_hash),
-                            DclContentMappingAndUrl::from_ref(content_mapping),
-                        );
+                        let mut promise =
+                            content_provider.bind_mut().fetch_texture_by_hash_original(
+                                GString::from(texture_hash),
+                                DclContentMappingAndUrl::from_ref(content_mapping),
+                            );
 
                         // Use the _original suffix to match the cache key used by fetch_texture_by_hash_original
                         self.waiting_hash = GString::from(format!("{}_original", texture_hash));
