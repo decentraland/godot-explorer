@@ -1,8 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://c7bnh6p6qygxu"]
+[gd_scene load_steps=5 format=3 uid="uid://c7bnh6p6qygxu"]
 
 [ext_resource type="Texture2D" uid="uid://c3tpoj72yuxp4" path="res://src/ui/components/emotes/emote_item.svg" id="1_qctv4"]
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="2_jdnf4"]
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_lei38"]
 
 [sub_resource type="Gradient" id="Gradient_mvm8j"]
 colors = PackedColorArray(1, 1, 1, 0.607843, 1, 1, 1, 0)
@@ -106,29 +105,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -35.0
-offset_top = -31.0
-offset_right = 27.0
-offset_bottom = 31.0
+offset_left = -48.0
+offset_top = -40.0
+offset_right = 32.0
+offset_bottom = 40.0
 grow_horizontal = 2
 grow_vertical = 2
-pivot_offset = Vector2(32, 32)
+pivot_offset = Vector2(40, 40)
 expand_mode = 1
-
-[node name="Label_Number" type="Label" parent="Control_Inner/Background/Inner"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(20, 20)
-layout_mode = 0
-offset_left = 21.1893
-offset_top = 92.703
-offset_right = 41.1893
-offset_bottom = 112.703
-pivot_offset = Vector2(10, 10)
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_fonts/font = ExtResource("3_lei38")
-theme_override_font_sizes/font_size = 14
-text = "0"
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]

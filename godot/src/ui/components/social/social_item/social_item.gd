@@ -337,7 +337,6 @@ func _async_on_button_accept_pressed() -> void:
 	current_friendship_status = Global.FriendshipStatus.ACCEPTED
 	button_add_friend.hide()
 	label_pending_request.hide()
-	_refresh_friends_button_count()
 
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_accepted.emit(social_data.address)
@@ -370,16 +369,8 @@ func _async_on_button_reject_pressed() -> void:
 		current_friendship_status = status
 		_update_button_visibility_from_status()
 
-	_refresh_friends_button_count()
-
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_rejected.emit(social_data.address)
-
-
-func _refresh_friends_button_count() -> void:
-	var explorer = Global.get_explorer()
-	if explorer and explorer.hud_button_friends:
-		explorer.hud_button_friends.refresh_pending_count()
 
 
 func _on_button_jump_in_pressed() -> void:

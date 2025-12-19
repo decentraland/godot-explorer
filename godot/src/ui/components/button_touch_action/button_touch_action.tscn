@@ -1,109 +1,18 @@
-[gd_scene load_steps=5 format=3 uid="uid://nn0iih4xpn2e"]
+[gd_scene load_steps=3 format=3 uid="uid://nn0iih4xpn2e"]
 
-[ext_resource type="Texture2D" uid="uid://dnenlhbcgxgph" path="res://assets/themes/dark_dcl_theme/icons/Ellipse.svg" id="1_57o7r"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_asumd"]
 [ext_resource type="Script" uid="uid://dn3hlhbknm1ej" path="res://src/ui/components/button_touch_action/button_touch_action.gd" id="2_c0jk1"]
-[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="2_h4q5h"]
-[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_nbvik"]
 
-[node name="TouchAction" type="Control"]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 80.0
-offset_bottom = 80.0
+[node name="Button_TouchAction" type="Button"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(65, 65)
+offset_right = 31.0
+offset_bottom = 55.0
+focus_mode = 0
+theme = ExtResource("2_asumd")
+theme_type_variation = &"TouchableButton"
+text = "E"
+icon_alignment = 1
 script = ExtResource("2_c0jk1")
 
-[node name="Button_TouchAction" type="TextureButton" parent="."]
-unique_name_in_owner = true
-modulate = Color(1, 1, 1, 0.501961)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-focus_mode = 0
-texture_normal = ExtResource("1_57o7r")
-ignore_texture_size = true
-stretch_mode = 4
-
-[node name="ShadowOutter" type="TextureRect" parent="Button_TouchAction"]
-self_modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -82.0
-offset_top = -82.0
-offset_right = 2.0
-offset_bottom = 2.0
-grow_horizontal = 0
-grow_vertical = 0
-mouse_filter = 2
-texture = ExtResource("1_57o7r")
-expand_mode = 1
-stretch_mode = 4
-
-[node name="ShadowInner" type="TextureRect" parent="Button_TouchAction"]
-self_modulate = Color(0, 0, 0, 1)
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -78.0
-offset_top = -78.0
-offset_right = -2.0
-offset_bottom = -2.0
-grow_horizontal = 0
-grow_vertical = 0
-mouse_filter = 2
-texture = ExtResource("1_57o7r")
-expand_mode = 1
-stretch_mode = 4
-
-[node name="Label_Letter" type="Label" parent="Button_TouchAction"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_fonts/font = ExtResource("2_h4q5h")
-theme_override_font_sizes/font_size = 32
-text = "E"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="MarginContainer_Icon" type="MarginContainer" parent="Button_TouchAction"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
-
-[node name="TextureRect_Icon" type="TextureRect" parent="Button_TouchAction/MarginContainer_Icon"]
-unique_name_in_owner = true
-layout_mode = 2
-texture = ExtResource("4_nbvik")
-expand_mode = 2
-stretch_mode = 5
-
-[connection signal="button_down" from="Button_TouchAction" to="." method="_on_button_touch_action_button_down"]
-[connection signal="button_up" from="Button_TouchAction" to="." method="_on_button_touch_action_button_up"]
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]

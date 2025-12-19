@@ -13,8 +13,7 @@ const WEARABLE_NAME_PREFIX = "__"
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
 
-# Entity info for trigger area detection (set by avatar_shape.rs for scene avatars)
-var dcl_scene_id: int = -1
+# Entity info for trigger area detection
 var dcl_entity_id: int = -1
 var is_local_player: bool = false
 
@@ -96,24 +95,30 @@ func _ready():
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
 
-	# Trigger detection is setup later via setup_trigger_detection() when entity info is available
+	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
+	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
 
 
-## Setup trigger detection for this avatar.
-## Call this after the avatar is created with the appropriate entity info.
-## - For local player: scene_id=-1, entity_id=SceneEntityId.PLAYER (0x10000)
-## - For remote avatars: scene_id=-1, entity_id=assigned entity from avatar_scene.rs
-## - For scene avatars (NPCs): scene_id and entity_id from the scene
-func setup_trigger_detection(p_scene_id: int, p_entity_id: int) -> void:
-	dcl_scene_id = p_scene_id
+## Setup trigger detection for this avatar (local player and remote avatars only).
+## - For local player: entity_id=SceneEntityId.PLAYER (0x10000)
+## - For remote avatars: entity_id=assigned entity from avatar_scene.rs
+func setup_trigger_detection(p_entity_id: int) -> void:
 	dcl_entity_id = p_entity_id
 
 	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
-	trigger_detector.set_meta("dcl_scene_id", dcl_scene_id)
 	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
 
 	# Enable the collision shape
 	trigger_detector.get_node("CollisionShape3D").disabled = false
+
+
+## Remove trigger detection for this avatar (AvatarShapes/scene NPCs only).
+## Called from avatar_shape.rs after the avatar is added to the scene.
+func remove_trigger_detection() -> void:
+	if trigger_detector != null:
+		trigger_detector.queue_free()
+		trigger_detector = null
+
 
 
 func on_chat_message(address: String, message: String, _timestamp: float):

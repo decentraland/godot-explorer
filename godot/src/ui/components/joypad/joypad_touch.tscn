@@ -1,0 +1,430 @@
+[gd_scene load_steps=17 format=3 uid="uid://dw215hwr2j3k4"]
+
+[ext_resource type="Script" uid="uid://dwlnsnbe4h0b0" path="res://src/ui/components/joypad/joypad.gd" id="1_23uo1"]
+[ext_resource type="Texture2D" uid="uid://bnbrnsg513yhu" path="res://assets/themes/dcl_theme/buttons_textures/press_action_normal.svg" id="2_wah8f"]
+[ext_resource type="Texture2D" uid="uid://cg1ufn54vrvos" path="res://assets/themes/dcl_theme/buttons_textures/press_action_pressed.svg" id="3_i2dww"]
+[ext_resource type="Texture2D" uid="uid://tl33b4xy51lt" path="res://assets/themes/dcl_theme/buttons_textures/jump_action_normal.svg" id="5_ler0b"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_ullkp"]
+[ext_resource type="Texture2D" uid="uid://rn40ptuwsiqj" path="res://assets/themes/dcl_theme/buttons_textures/jump_action_pressed.svg" id="6_nse7k"]
+[ext_resource type="Texture2D" uid="uid://doi4r1nh7rtr7" path="res://assets/themes/dark_dcl_theme/icons/multi_action.svg" id="6_wah8f"]
+[ext_resource type="Texture2D" uid="uid://gg3tyin4nfyw" path="res://assets/themes/dcl_theme/buttons_textures/primary_action_normal2.svg" id="7_cu861"]
+[ext_resource type="Texture2D" uid="uid://bixkfykoglfk2" path="res://assets/themes/dcl_theme/buttons_textures/multi_action_normal.svg" id="7_i2dww"]
+[ext_resource type="Texture2D" uid="uid://187440ei0ex2" path="res://assets/themes/dcl_theme/buttons_textures/primary_action_pressed.svg" id="8_8bvf8"]
+[ext_resource type="Texture2D" uid="uid://b2xskgjh5bhwe" path="res://assets/themes/dcl_theme/buttons_textures/multi_action_pressed.svg" id="8_ler0b"]
+[ext_resource type="Texture2D" uid="uid://bgaad4b4a5oq5" path="res://assets/themes/dcl_theme/buttons_textures/secondary_action_normal2.svg" id="10_opux3"]
+[ext_resource type="Script" uid="uid://dn3hlhbknm1ej" path="res://src/ui/components/button_touch_action/button_touch_action.gd" id="13_wah8f"]
+
+[sub_resource type="Animation" id="Animation_pbx80"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control_ButtonsCenter:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0009999999),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_1t5lc"]
+resource_name = "open_combo"
+length = 0.05
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Control_ButtonsCenter:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0.2)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_dl5qg"]
+_data = {
+&"RESET": SubResource("Animation_pbx80"),
+&"open_combo": SubResource("Animation_1t5lc")
+}
+
+[node name="Joypad" type="Control"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_23uo1")
+
+[node name="Control_ButtonsCenter" type="Control" parent="."]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -170.0
+offset_right = -50.0
+offset_bottom = -50.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(60, 60)
+theme = ExtResource("5_ullkp")
+theme_type_variation = &"TouchableButton"
+
+[node name="Control2" type="Control" parent="Control_ButtonsCenter"]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -120.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Button_Press" type="TouchScreenButton" parent="Control_ButtonsCenter/Control2"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+scale = Vector2(1.2, 1.2)
+texture_normal = ExtResource("2_wah8f")
+texture_pressed = ExtResource("3_i2dww")
+
+[node name="HBoxContainer" type="Control" parent="Control_ButtonsCenter"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = -0.2617994
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="Control_ButtonsCenter/HBoxContainer"]
+custom_minimum_size = Vector2(80, 80)
+anchors_preset = 0
+offset_left = 0.5463552
+offset_top = -0.53306776
+offset_right = 80.54636
+offset_bottom = 79.466934
+rotation = 0.2617994
+pivot_offset = Vector2(40, 40)
+
+[node name="Button_Jump" type="TouchScreenButton" parent="Control_ButtonsCenter/HBoxContainer/Control"]
+unique_name_in_owner = true
+scale = Vector2(0.8000001, 0.8000001)
+texture_normal = ExtResource("5_ler0b")
+texture_pressed = ExtResource("6_nse7k")
+
+[node name="HBoxContainer2" type="Control" parent="Control_ButtonsCenter"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.43633232
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Control2" type="Control" parent="Control_ButtonsCenter/HBoxContainer2"]
+custom_minimum_size = Vector2(80, 80)
+anchors_preset = 0
+offset_right = 80.0
+offset_bottom = 80.0
+rotation = -0.43633232
+pivot_offset = Vector2(40, 40)
+
+[node name="Button_Primary" type="TouchScreenButton" parent="Control_ButtonsCenter/HBoxContainer2/Control2"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+scale = Vector2(0.8000001, 0.8000001)
+texture_normal = ExtResource("7_cu861")
+texture_pressed = ExtResource("8_8bvf8")
+
+[node name="HBoxContainer3" type="Control" parent="Control_ButtonsCenter"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 1.134464
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Button_Combo_Position" type="Button" parent="Control_ButtonsCenter/HBoxContainer3"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0.06666667)
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -1.134464
+pivot_offset = Vector2(40, 40)
+focus_mode = 0
+theme = ExtResource("5_ullkp")
+theme_type_variation = &"TouchableButton"
+theme_override_constants/icon_max_width = 40
+disabled = true
+icon = ExtResource("6_wah8f")
+icon_alignment = 1
+
+[node name="HBoxContainer4" type="Control" parent="Control_ButtonsCenter"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -175.0
+offset_top = -40.0
+offset_right = 175.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 1.8325957
+pivot_offset = Vector2(175, 40)
+mouse_filter = 2
+
+[node name="Control2" type="Control" parent="Control_ButtonsCenter/HBoxContainer4"]
+custom_minimum_size = Vector2(80, 80)
+anchors_preset = 0
+offset_right = 80.0
+offset_bottom = 80.0
+rotation = -1.8325957
+pivot_offset = Vector2(40, 40)
+
+[node name="Button_Secondary" type="TouchScreenButton" parent="Control_ButtonsCenter/HBoxContainer4/Control2"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+scale = Vector2(0.8000001, 0.8000001)
+texture_normal = ExtResource("10_opux3")
+texture_pressed = ExtResource("8_8bvf8")
+
+[node name="Control" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+metadata/_edit_lock_ = true
+
+[node name="Button_Combo" type="TouchScreenButton" parent="Control"]
+unique_name_in_owner = true
+position = Vector2(513, 448)
+texture_normal = ExtResource("7_i2dww")
+texture_pressed = ExtResource("8_ler0b")
+action = "ia_jump"
+
+[node name="HBoxContainer" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.08726646
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+metadata/_edit_lock_ = true
+
+[node name="Control__Action3" type="Control" parent="Control/Button_Combo/HBoxContainer"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+anchors_preset = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -0.08726646
+pivot_offset = Vector2(30, 30)
+theme = ExtResource("5_ullkp")
+theme_type_variation = &"TouchableButton"
+script = ExtResource("13_wah8f")
+trigger_action = "ia_action_3"
+metadata/_edit_lock_ = true
+
+[node name="Button_Action3" type="TouchScreenButton" parent="Control/Button_Combo/HBoxContainer/Control__Action3"]
+scale = Vector2(0.8000001, 0.8000001)
+texture_normal = ExtResource("5_ler0b")
+texture_pressed = ExtResource("6_nse7k")
+
+[node name="HBoxContainer2" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.7853982
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+metadata/_edit_lock_ = true
+
+[node name="Control_Action4" type="Control" parent="Control/Button_Combo/HBoxContainer2"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+anchors_preset = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -0.7853982
+pivot_offset = Vector2(30, 30)
+theme = ExtResource("5_ullkp")
+theme_type_variation = &"TouchableButton"
+script = ExtResource("13_wah8f")
+trigger_action = "ia_action_4"
+metadata/_edit_lock_ = true
+
+[node name="Button_Action4" type="TouchScreenButton" parent="Control/Button_Combo/HBoxContainer2/Control_Action4"]
+scale = Vector2(0.8000001, 0.8000001)
+texture_normal = ExtResource("5_ler0b")
+texture_pressed = ExtResource("6_nse7k")
+
+[node name="HBoxContainer3" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 1.4835298
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+metadata/_edit_lock_ = true
+
+[node name="Control_Action5" type="Control" parent="Control/Button_Combo/HBoxContainer3"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+anchors_preset = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -1.4835298
+pivot_offset = Vector2(30, 30)
+theme = ExtResource("5_ullkp")
+theme_type_variation = &"TouchableButton"
+script = ExtResource("13_wah8f")
+trigger_action = "ia_action_5"
+metadata/_edit_lock_ = true
+
+[node name="Button_Action5" type="TouchScreenButton" parent="Control/Button_Combo/HBoxContainer3/Control_Action5"]
+scale = Vector2(0.8000001, 0.8000001)
+texture_normal = ExtResource("5_ler0b")
+texture_pressed = ExtResource("6_nse7k")
+
+[node name="HBoxContainer4" type="Control" parent="Control/Button_Combo"]
+show_behind_parent = true
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -30.0
+offset_right = 140.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 2.1816616
+pivot_offset = Vector2(140, 30)
+mouse_filter = 2
+metadata/_edit_lock_ = true
+
+[node name="Control_Action6" type="Control" parent="Control/Button_Combo/HBoxContainer4"]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0)
+custom_minimum_size = Vector2(60, 60)
+anchors_preset = 0
+offset_left = 100.0
+offset_right = 160.0
+offset_bottom = 60.0
+grow_horizontal = 0
+grow_vertical = 0
+rotation = -2.1816616
+pivot_offset = Vector2(30, 30)
+theme = ExtResource("5_ullkp")
+theme_type_variation = &"TouchableButton"
+script = ExtResource("13_wah8f")
+trigger_action = "ia_action_6"
+metadata/_edit_lock_ = true
+
+[node name="Button_Action6" type="TouchScreenButton" parent="Control/Button_Combo/HBoxContainer4/Control_Action6"]
+scale = Vector2(0.8000001, 0.8000001)
+texture_normal = ExtResource("5_ler0b")
+texture_pressed = ExtResource("6_nse7k")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+unique_name_in_owner = true
+libraries = {
+&"": SubResource("AnimationLibrary_dl5qg")
+}
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="gui_input" from="Control/Button_Combo/HBoxContainer/Control__Action3" to="Control/Button_Combo/HBoxContainer/Control__Action3" method="_on_gui_input"]
+[connection signal="gui_input" from="Control/Button_Combo/HBoxContainer2/Control_Action4" to="Control/Button_Combo/HBoxContainer2/Control_Action4" method="_on_gui_input"]
+[connection signal="gui_input" from="Control/Button_Combo/HBoxContainer3/Control_Action5" to="Control/Button_Combo/HBoxContainer3/Control_Action5" method="_on_gui_input"]
+[connection signal="gui_input" from="Control/Button_Combo/HBoxContainer4/Control_Action6" to="Control/Button_Combo/HBoxContainer4/Control_Action6" method="_on_gui_input"]
