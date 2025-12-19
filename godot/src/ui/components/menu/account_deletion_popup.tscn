@@ -1,0 +1,366 @@
+[gd_scene load_steps=17 format=3 uid="uid://b3e5xybvamaqr"]
+
+[ext_resource type="Script" uid="uid://cakahsoptay24" path="res://src/ui/components/menu/account_deletion_popup.gd" id="1_fnbls"]
+[ext_resource type="Texture2D" uid="uid://bdjpwpn5lt2yw" path="res://assets/ui/alert.svg" id="2_8nog7"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_fnbls"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_8nr8b"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_8nog7"]
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="5_p3g0a"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="6_0n2jq"]
+[ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="7_0n2jq"]
+[ext_resource type="Texture2D" uid="uid://dolaiq6t1k1wt" path="res://assets/ui/block-symbol.svg" id="8_0n2jq"]
+
+[sub_resource type="Gradient" id="Gradient_kt8ab"]
+offsets = PackedFloat32Array(0.00296736, 1)
+colors = PackedColorArray(0.776471, 0.25098, 0.803922, 1, 0.411765, 0.121569, 0.662745, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sl71o"]
+gradient = SubResource("Gradient_kt8ab")
+fill_to = Vector2(0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_3chh0"]
+font = ExtResource("2_fnbls")
+font_size = 48
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2wy27"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_eeec6"]
+font = ExtResource("3_8nr8b")
+font_size = 33
+
+[sub_resource type="LabelSettings" id="LabelSettings_p3g0a"]
+font = ExtResource("7_0n2jq")
+font_size = 20
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_p3g0a"]
+
+[node name="AccountDeletionPopUp" type="TextureRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_sl71o")
+script = ExtResource("1_fnbls")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 150
+theme_override_constants/margin_top = 100
+theme_override_constants/margin_right = 150
+theme_override_constants/margin_bottom = 100
+
+[node name="ConfirmationDialog" type="VBoxContainer" parent="MarginContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 80
+alignment = 1
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/ConfirmationDialog"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+texture = ExtResource("2_8nog7")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Request Account Deletion?"
+label_settings = SubResource("LabelSettings_3chh0")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 30
+theme_override_styles/separator = SubResource("StyleBoxEmpty_2wy27")
+
+[node name="Label2" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "All your progress, purchases and data will be lost. This action is permanent and cannot be undone."
+label_settings = SubResource("LabelSettings_eeec6")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ConfirmationDialog"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 20
+alignment = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ConfirmationDialog/VBoxContainer"]
+layout_mode = 2
+
+[node name="Control2" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="Button_ConfirmDeleteAccount" type="Button" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("4_8nog7")
+theme_override_font_sizes/font_size = 30
+text = "YES, DELETE"
+
+[node name="Control" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/ConfirmationDialog/VBoxContainer"]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="Button_CancelDeleteAccount" type="Button" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("4_8nog7")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 30
+text = "CANCEL"
+
+[node name="Control2" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="ProcessingScreen" type="VBoxContainer" parent="MarginContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/ProcessingScreen"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Processing"
+label_settings = SubResource("LabelSettings_3chh0")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="TextureProgressBar" parent="MarginContainer/ProcessingScreen" instance=ExtResource("6_0n2jq")]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="DoneDialog" type="VBoxContainer" parent="MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 80
+alignment = 1
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/DoneDialog"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Deletion Requested"
+label_settings = SubResource("LabelSettings_3chh0")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Label2" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "This process can take up to 30d to complete."
+label_settings = SubResource("LabelSettings_eeec6")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Label3" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "We’ll keep you updated on the process through the email address used to register the account."
+label_settings = SubResource("LabelSettings_eeec6")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/DoneDialog"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/DoneDialog/VBoxContainer"]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="Button_Ok" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("4_8nog7")
+theme_override_font_sizes/font_size = 30
+text = "OK"
+
+[node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/DoneDialog/VBoxContainer"]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="Button_CancelDeletion" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("4_8nog7")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 30
+text = "CANCEL DELETION"
+
+[node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 4
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="Label3" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "*If you registered your Decentraland account via a non custodial wallet, there is no data to be removed as we don’t store your data."
+label_settings = SubResource("LabelSettings_p3g0a")
+autowrap_mode = 2
+
+[node name="FailDialog" type="VBoxContainer" parent="MarginContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 80
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/FailDialog"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/FailDialog/VBoxContainer"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+texture = ExtResource("8_0n2jq")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="MarginContainer/FailDialog/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+text = "Ooops... Something
+Went Wrong"
+label_settings = SubResource("LabelSettings_3chh0")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/FailDialog/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+theme_override_styles/separator = SubResource("StyleBoxEmpty_p3g0a")
+
+[node name="Label2" type="Label" parent="MarginContainer/FailDialog/VBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "We couldn’t process your request.
+Please try again later"
+label_settings = SubResource("LabelSettings_eeec6")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/FailDialog"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/FailDialog/VBoxContainer2"]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[node name="Button_Ok" type="Button" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("4_8nog7")
+theme_override_font_sizes/font_size = 30
+text = "OK"
+
+[node name="Control2" type="Control" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_p3g0a")
+hide_on_portrait = true
+
+[connection signal="pressed" from="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer/Button_ConfirmDeleteAccount" to="." method="_async_on_button_confirm_delete_account_pressed"]
+[connection signal="pressed" from="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2/Button_CancelDeleteAccount" to="." method="_on_button_cancel_delete_account_pressed"]
+[connection signal="pressed" from="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer/Button_Ok" to="." method="_on_button_ok_pressed"]
+[connection signal="pressed" from="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2/Button_CancelDeletion" to="." method="_async_on_button_cancel_deletion_pressed"]
+[connection signal="pressed" from="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer/Button_Ok" to="." method="_on_button_ok_pressed"]
