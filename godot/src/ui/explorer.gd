@@ -889,17 +889,20 @@ func _share_place():
 
 	if is_genesis_city:
 		url = (
-			"https://decentraland.org/places/place/?position="
+			"decentraland://open?position="
 			+ str(parcel_position[0])
-			+ "."
+			+ ","
 			+ str(parcel_position[1])
 		)
 	else:
 		var realm_url = Global.realm.realm_url
 		var short_realm_url = _extract_short_realm_url(realm_url)
-		url = "https://decentraland.org/places/world/?name=" + short_realm_url
+		url = "decentraland://open?realm=" + short_realm_url
 
-	msg = "Join Me At " + scene_title + " following this link " + url
+	if scene_title.length() == 0:
+		scene_title = "Decentraland"
+	msg = "📍 Join Me At " + scene_title + " following this link: " + url
+	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
 		DclGodotAndroidPlugin.share_text(msg)
