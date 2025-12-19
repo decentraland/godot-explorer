@@ -133,6 +133,21 @@ text = "Audio"
 icon = ExtResource("6_q1ods")
 alignment = 0
 
+[node name="Button_Account" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 5
+focus_mode = 0
+theme = ExtResource("3_hdct4")
+theme_type_variation = &"WearableButton"
+theme_override_constants/icon_max_width = 25
+toggle_mode = true
+button_group = SubResource("ButtonGroup_jdndg")
+text = "Account"
+icon = ExtResource("8_hdct4")
+alignment = 0
+
 [node name="Button_Developer" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -783,6 +798,31 @@ horizontal_alignment = 1
 layout_mode = 2
 mouse_filter = 2
 
+[node name="VBoxContainer_Account" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme = SubResource("Theme_3h20j")
+theme_type_variation = &"2"
+theme_override_constants/separation = 15
+
+[node name="Button_DeleteAccount" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(300, 80)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("12_sa1v7")
+text = "DELETE ACCOUNT"
+
+[node name="Button_LogOut" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+custom_minimum_size = Vector2(300, 80)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("12_sa1v7")
+disabled = true
+text = "LOG OUT"
+
 [node name="Control" type="Control" parent="ColorRect_Content/SafeMarginContainer/MarginContainer"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
@@ -792,6 +832,7 @@ hide_on_portrait = true
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_General" to="." method="_on_button_general_pressed"]
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
+[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Account" to="." method="_on_button_account_pressed"]
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
 [connection signal="toggled" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer2/Button_ResetAll" to="." method="_on_monitoring_button_toggled"]
 [connection signal="visibility_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
@@ -823,4 +864,4 @@ hide_on_portrait = true
 [connection signal="item_selected" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
-[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
