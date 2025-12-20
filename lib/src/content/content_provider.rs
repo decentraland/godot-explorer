@@ -387,7 +387,6 @@ impl ContentProvider {
             return entry.promise.clone();
         }
 
-        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
@@ -395,7 +394,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
+        let hash_id = file_hash.to_string();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
@@ -503,7 +502,6 @@ impl ContentProvider {
             return entry.promise.clone();
         }
 
-        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
@@ -511,7 +509,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
+        let hash_id = file_hash.to_string();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
