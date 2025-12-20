@@ -120,7 +120,6 @@ func remove_trigger_detection() -> void:
 		trigger_detector = null
 
 
-
 func on_chat_message(address: String, message: String, _timestamp: float):
 	if avatar_id != address:
 		return
