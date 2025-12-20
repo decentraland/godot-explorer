@@ -381,7 +381,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
+        let cache_key = format!("wearable:{}", file_hash);
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }
@@ -417,7 +418,7 @@ impl ContentProvider {
         });
 
         self.cached.insert(
-            file_hash,
+            cache_key,
             ContentEntry {
                 last_access: Instant::now(),
                 promise: promise.clone(),
@@ -496,7 +497,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
+        let cache_key = format!("emote:{}", file_hash);
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }
@@ -532,7 +534,7 @@ impl ContentProvider {
         });
 
         self.cached.insert(
-            file_hash,
+            cache_key,
             ContentEntry {
                 last_access: Instant::now(),
                 promise: promise.clone(),
@@ -907,14 +909,16 @@ impl ContentProvider {
 
     #[func]
     pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        let cache_key = format!("wearable:{}", file_hash);
+        let entry = self.cached.get_mut(&cache_key)?;
         entry.last_access = Instant::now();
         entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
     }
 
     #[func]
     pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        let cache_key = format!("emote:{}", file_hash);
+        let entry = self.cached.get_mut(&cache_key)?;
         entry.last_access = Instant::now();
         entry
             .promise
