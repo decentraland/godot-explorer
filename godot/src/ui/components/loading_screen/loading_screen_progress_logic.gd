@@ -99,11 +99,17 @@ func _physics_process(delta):
 			Global.content_provider.count_loaded_resources() - loaded_resources_offset
 		)
 		var scene_loading_progress = scene_progress / float(scenes_loaded_count)
-		var loading_progress = float(loaded_resources) / float(loading_resources)
+
+		# Handle division by zero: if no resources to load, consider loading complete
+		var loading_progress: float = 1.0
+		if loading_resources > 0:
+			loading_progress = clampf(float(loaded_resources) / float(loading_resources), 0.0, 1.0)
+
 		var current_progress: int = (
 			int(scene_loading_progress * 40.0) + int(loading_progress * 40.0) + 20
 		)
 		loading_screen.set_progress(current_progress)
 
-		if current_progress == 100:
+		# Hide when progress reaches 100 OR when all scenes are fully ready (tick >= 4)
+		if current_progress >= 100 or scene_loading_progress >= 1.0:
 			hide_loading_screen()

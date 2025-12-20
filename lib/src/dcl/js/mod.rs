@@ -47,7 +47,9 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 #[cfg(not(feature = "enable_inspector"))]
 pub struct InspectorServer;
 
-pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
+/// Global map of V8 isolate handles for emergency termination.
+/// Used by scene_manager to force-terminate scenes that don't respond to kill signals.
+pub static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
 
 /// must be called from main thread on linux before any isolates are created
@@ -135,6 +137,15 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
     } else {
         (runtime, None)
     }
+}
+
+/// Helper to send RemoveGodotScene response to the main thread.
+/// This properly notifies the scene manager that the thread is exiting.
+fn send_remove_godot_scene(state: &Rc<RefCell<OpState>>, scene_id: SceneId) {
+    let mut op_state = state.borrow_mut();
+    let logs = op_state.take::<SceneLogs>();
+    let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
+    let _ = sender.send(SceneResponse::RemoveGodotScene(scene_id, logs.0));
 }
 
 // main scene processing thread - constructs an isolate and runs the scene
@@ -286,6 +297,7 @@ pub(crate) fn scene_thread(
     let script = match script {
         Err(e) => {
             tracing::error!("[scene thread {scene_id:?}] script load error: {}", e);
+            send_remove_godot_scene(&state, scene_id);
             return;
         }
         Ok(script) => script,
@@ -294,7 +306,8 @@ pub(crate) fn scene_thread(
     let result =
         rt.block_on(async { run_script(&mut runtime, &script, "onStart", |_| Vec::new()).await });
     if let Err(e) = result {
-        tracing::error!("[scene thread {scene_id:?}] script load running: {}", e);
+        tracing::error!("[scene thread {scene_id:?}] script onStart error: {}", e);
+        send_remove_godot_scene(&state, scene_id);
         return;
     }
 
@@ -357,6 +370,7 @@ pub(crate) fn scene_thread(
                 tracing::error!(
                     "[scene thread {scene_id:?}] too many errors without renderer interaction: shutting down"
                 );
+                break;
             }
         } else if reported_error_filter > 0 {
             reported_error_filter -= 1;
@@ -387,10 +401,7 @@ pub(crate) fn scene_thread(
         state.borrow_mut().try_take::<CommunicatedWithRenderer>();
     }
 
-    let mut op_state = state.borrow_mut();
-    let logs = op_state.take::<SceneLogs>();
-    let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
-    let _ = sender.send(SceneResponse::RemoveGodotScene(scene_id, logs.0));
+    send_remove_godot_scene(&state, scene_id);
     runtime.v8_isolate().terminate_execution();
 
     tracing::info!("exiting from the thread {:?}", scene_id);
