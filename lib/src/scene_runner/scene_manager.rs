@@ -538,8 +538,28 @@ impl SceneManager {
                     } else {
                         let elapsed_from_kill_us = current_time_us - kill_time_us;
                         if elapsed_from_kill_us > 10 * 1e6 as i64 {
-                            // 10 seconds from the kill signal
-                            tracing::error!("timeout killing scene");
+                            // 10 seconds from the kill signal - force terminate V8
+                            tracing::error!(
+                                "timeout killing scene {:?}, forcing V8 termination",
+                                scene_id
+                            );
+
+                            // Use the V8 isolate handle to force-terminate execution
+                            #[cfg(feature = "use_deno")]
+                            {
+                                if let Ok(handles) = crate::dcl::js::VM_HANDLES.lock() {
+                                    if let Some(handle) = handles.get(scene_id) {
+                                        handle.terminate_execution();
+                                        tracing::info!(
+                                            "V8 execution terminated for scene {:?}",
+                                            scene_id
+                                        );
+                                    }
+                                }
+                            }
+
+                            // Mark as dead - thread should exit soon after V8 termination
+                            scene.state = SceneState::Dead;
                         }
                     }
                 }
@@ -583,6 +603,14 @@ impl SceneManager {
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.global_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
+
+            // Clean up VM_HANDLES entry
+            #[cfg(feature = "use_deno")]
+            {
+                if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
+                    handles.remove(scene_id);
+                }
+            }
 
             if scene.dcl_scene.thread_join_handle.is_finished() {
                 if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
