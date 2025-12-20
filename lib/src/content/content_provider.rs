@@ -847,6 +847,141 @@ impl ContentProvider {
         promise
     }
 
+    /// Fetches a texture by hash, bypassing the optimization pipeline.
+    /// This is useful for UI textures that need the original quality.
+    /// Uses a separate cache key (`{hash}_original`) to avoid conflicts with optimized versions.
+    pub fn fetch_texture_by_hash_original(
+        &mut self,
+        file_hash_godot: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let file_hash = file_hash_godot.to_string();
+        let cache_key = format!("{}_original", file_hash);
+
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+
+        // Handle URL-based textures
+        if file_hash.starts_with("http") {
+            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash());
+            let promise =
+                self.fetch_texture_by_url_original(GString::from(new_file_hash), file_hash_godot);
+            self.cached.insert(
+                cache_key,
+                ContentEntry {
+                    last_access: Instant::now(),
+                    promise: promise.clone(),
+                },
+            );
+            return promise;
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+
+        // Create context with Source quality to bypass resize optimization
+        let mut ctx = self.get_context();
+        ctx.texture_quality = TextureQuality::Source;
+
+        let url = format!(
+            "{}{}",
+            content_mapping.bind().get_base_url(),
+            file_hash.clone()
+        );
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        let hash_id = file_hash.clone();
+
+        TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result = load_image_texture(url, hash_id.clone(), ctx).await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &error.to_string());
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cached.insert(
+            cache_key,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    /// Fetches a texture by URL, bypassing the optimization pipeline.
+    /// Uses Source quality to preserve original texture resolution.
+    pub fn fetch_texture_by_url_original(
+        &mut self,
+        file_hash: GString,
+        url: GString,
+    ) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+        if let Some(entry) = self.cached.get_mut(&file_hash) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+        let url = url.to_string();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        // Create context with Source quality to bypass resize optimization
+        let mut content_provider_context = self.get_context();
+        content_provider_context.texture_quality = TextureQuality::Source;
+
+        let sent_file_hash = file_hash.clone();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        #[cfg(feature = "use_resource_tracking")]
+        let hash_id = file_hash.clone();
+        TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &error.to_string());
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
