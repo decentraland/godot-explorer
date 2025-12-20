@@ -121,8 +121,17 @@ func play_emote(id: String):
 
 
 func _play_default_emote(default_emote_id: String) -> bool:
-	var anim_name = "default_emotes/" + default_emote_id
-	if not animation_player.has_animation(anim_name):
+	# Check all embedded animation libraries for the emote
+	var anim_name := ""
+	var libraries := ["default_emotes", "default_actions"]
+
+	for lib in libraries:
+		var candidate = lib + "/" + default_emote_id
+		if animation_player.has_animation(candidate):
+			anim_name = candidate
+			break
+
+	if anim_name.is_empty():
 		printerr(
 			"Emote %s not found from player '%s'" % [default_emote_id, avatar.get_avatar_name()]
 		)
