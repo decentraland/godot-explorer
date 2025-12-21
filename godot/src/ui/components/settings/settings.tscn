@@ -390,7 +390,7 @@ text = "Limit FPS"
 [node name="RadioSelector_LimitFps" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/LimitFps" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
-items = Array[String](["VSync", "No limit", "30 FPS", "60 FPS"])
+items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS"])
 
 [node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
