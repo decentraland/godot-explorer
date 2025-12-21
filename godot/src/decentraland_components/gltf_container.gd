@@ -11,7 +11,6 @@ enum GltfContainerLoadingState {
 const MAX_CONCURRENT_LOADS := 10
 
 var dcl_gltf_hash := ""
-var optimized := false
 
 @onready var timer = $Timer
 
@@ -22,7 +21,19 @@ static var pending_load_queue := []
 
 
 func _ready():
+	# Connect to ContentProvider2 signals
+	if not Global.content_provider2.gltf_ready.is_connected(_async_on_gltf_ready):
+		Global.content_provider2.gltf_ready.connect(_async_on_gltf_ready)
+	if not Global.content_provider2.gltf_error.is_connected(_on_gltf_error):
+		Global.content_provider2.gltf_error.connect(_on_gltf_error)
+
 	self.async_load_gltf.call_deferred()
+
+
+func _exit_tree():
+	# Remove from pending queue if we're being freed
+	if pending_load_queue.has(self):
+		pending_load_queue.erase(self)
 
 
 # Helper to handle finishing a load (success or error)
@@ -31,96 +42,13 @@ func _finish_gltf_load(gltf_hash: String):
 	_process_next_gltf_load()
 
 
-func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
-	self.optimized = true
-
-	# Throttling: If already loading max, queue and return
-	if currently_loading_assets.size() >= MAX_CONCURRENT_LOADS:
-		if not pending_load_queue.has(self):
-			pending_load_queue.append(self)
-		return
-
-	# Add asset to loading list and print
-	if not currently_loading_assets.has(gltf_hash):
-		currently_loading_assets.append(gltf_hash)
-
-	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		printerr(
-			(
-				"Failed to download optimized asset (sceneId=%s gltf_hash=%s)"
-				% [dcl_scene_id, gltf_hash]
-			)
-		)
-		_finish_gltf_load(gltf_hash)
-		return
-
-	var main_tree = get_tree()
-	if not is_instance_valid(main_tree):
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
-		_finish_gltf_load(gltf_hash)
-		return
-
-	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
-	if not FileAccess.file_exists(scene_file + ".remap"):
-		printerr("File %s doesn't exists" % scene_file)
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
-		_finish_gltf_load(gltf_hash)
-		return
-	var err = ResourceLoader.load_threaded_request(scene_file)
-	if err != OK:
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
-		_finish_gltf_load(gltf_hash)
-		return
-
-	var status = ResourceLoader.load_threaded_get_status(scene_file)
-	while status == 1:
-		await main_tree.process_frame
-		status = ResourceLoader.load_threaded_get_status(scene_file)
-
-	var resource = ResourceLoader.load_threaded_get(scene_file)
-	if resource == null:
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
-		_finish_gltf_load(gltf_hash)
-		return
-
-	var gltf_node = resource.instantiate()
-	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
-		gltf_node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
-	)
-	var res_instance = await PromiseUtils.async_awaiter(instance_promise)
-	if res_instance is PromiseError:
-		printerr("Error on fetch gltf: ", res_instance.get_error())
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
-		_finish_gltf_load(gltf_hash)
-		return
-
-	if res_instance == null:
-		printerr("instance_gltf_colliders returned null for hash: ", gltf_hash)
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
-		_finish_gltf_load(gltf_hash)
-		return
-
-	apply_fixes(res_instance)
-	dcl_pending_node = res_instance
-	timer.stop()
-	_finish_gltf_load(gltf_hash)
-
-
 static func _process_next_gltf_load():
 	while currently_loading_assets.size() < MAX_CONCURRENT_LOADS and pending_load_queue.size() > 0:
 		# Prioritize GLTFs from the current scene
 		var idx = -1
 		for i in range(pending_load_queue.size()):
 			var candidate = pending_load_queue[i]
-			if candidate != null and candidate.is_current_scene():
+			if candidate != null and is_instance_valid(candidate) and candidate.is_current_scene():
 				idx = i
 				break
 		var next_gltf = null
@@ -129,8 +57,8 @@ static func _process_next_gltf_load():
 			pending_load_queue.remove_at(idx)
 		else:
 			next_gltf = pending_load_queue.pop_front()
-		if next_gltf != null:
-			next_gltf.async_try_load_gltf_from_local_file(next_gltf.dcl_gltf_hash)
+		if next_gltf != null and is_instance_valid(next_gltf):
+			next_gltf._start_load()
 		else:
 			break
 
@@ -147,52 +75,112 @@ func async_load_gltf():
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
 	var file_hash = content_mapping.get_hash(dcl_gltf_src)
 	self.dcl_gltf_hash = file_hash
+
 	if file_hash.is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
 		timer.stop()
 		return
 
-	# TODO: should we set a timeout?
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	timer.start()
 
-	if Global.content_provider.optimized_asset_exists(file_hash):
-		await async_try_load_gltf_from_local_file(file_hash)
+	# Throttling: If already loading max, queue and return
+	if currently_loading_assets.size() >= MAX_CONCURRENT_LOADS:
+		if not pending_load_queue.has(self):
+			pending_load_queue.append(self)
 		return
 
-	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
-	if promise == null:
-		printerr("Fatal error on fetch gltf: promise == null")
+	_start_load()
+
+
+func _start_load():
+	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+
+	# Add asset to loading list
+	if not currently_loading_assets.has(dcl_gltf_hash):
+		currently_loading_assets.append(dcl_gltf_hash)
+
+	# Request load via ContentProvider2
+	# Note: Colliders are created with mask=0, we set masks after instantiating
+	Global.content_provider2.load_scene_gltf(dcl_gltf_src, content_mapping)
+
+
+# Called when a GLTF is ready to be loaded from disk
+func _async_on_gltf_ready(file_hash: String, scene_path: String):
+	if file_hash != self.dcl_gltf_hash:
+		return  # Not for us
+
+	# Check if we're still valid
+	if not is_instance_valid(self) or not is_inside_tree():
+		_finish_gltf_load(file_hash)
+		return
+
+	var main_tree = get_tree()
+	if not is_instance_valid(main_tree):
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(file_hash)
 		return
 
-	if not promise.is_resolved():
-		await PromiseUtils.async_awaiter(promise)
-
-	var res = promise.get_data()
-	if res is PromiseError:
-		printerr("Error on fetch gltf: ", res.get_error())
+	# Load the scene file using ResourceLoader
+	var err = ResourceLoader.load_threaded_request(scene_path)
+	if err != OK:
+		printerr("Failed to request load for: ", scene_path)
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(file_hash)
 		return
 
-	var resource_locker = res.get_node("ResourceLocker")
-	if is_instance_valid(resource_locker):
-		self.add_child(resource_locker.duplicate())
+	# Wait for load to complete
+	await _async_wait_for_resource_load(scene_path)
 
-	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
-		res, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
+	# Check again if we're still valid after await
+	if not is_instance_valid(self) or not is_inside_tree():
+		_finish_gltf_load(file_hash)
+		return
+
+	# Instantiate the loaded resource
+	var resource = ResourceLoader.load_threaded_get(scene_path)
+	if resource == null:
+		printerr("Failed to load resource: ", scene_path)
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		_finish_gltf_load(file_hash)
+		return
+
+	var gltf_node = resource.instantiate()
+	apply_fixes(gltf_node)
+	# Set collision masks and metadata (colliders are created with mask=0 initially)
+	set_mask_colliders(
+		gltf_node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
-	var res_instance = await PromiseUtils.async_awaiter(instance_promise)
-	if res_instance is PromiseError:
-		printerr("Error on fetch gltf: ", res_instance.get_error())
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
+	dcl_pending_node = gltf_node
+	timer.stop()
+	_finish_gltf_load(file_hash)
+
+
+func _async_wait_for_resource_load(path: String):
+	var main_tree = get_tree()
+	if not is_instance_valid(main_tree):
 		return
 
-	apply_fixes(res_instance)
-	dcl_pending_node = res_instance
+	var status = ResourceLoader.load_threaded_get_status(path)
+	while status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		await main_tree.process_frame
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+		status = ResourceLoader.load_threaded_get_status(path)
+
+
+# Called when a GLTF fails to load
+func _on_gltf_error(file_hash: String, error: String):
+	if file_hash != self.dcl_gltf_hash:
+		return  # Not for us
+
+	printerr("GLTF load error for ", dcl_gltf_src, ": ", error)
+	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+	timer.stop()
+	_finish_gltf_load(file_hash)
 
 
 func apply_fixes(gltf_instance: Node3D):
@@ -208,9 +196,12 @@ func apply_fixes(gltf_instance: Node3D):
 
 	for instance in meshes:
 		var mesh = instance.mesh
+		if mesh == null:
+			continue
 		for idx in range(mesh.get_surface_count()):
 			var material = mesh.surface_get_material(idx)
-			fix_material(material, instance.name)
+			if material is BaseMaterial3D:
+				fix_material(material, instance.name)
 
 
 func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
@@ -251,35 +242,73 @@ func async_deferred_add_child():
 	self.check_animations()
 
 
-func get_animatable_body_3d(mesh_instance: MeshInstance3D):
+func get_static_body_3d(mesh_instance: MeshInstance3D):
 	for maybe_static_body in mesh_instance.get_children():
-		if maybe_static_body is AnimatableBody3D:
+		if maybe_static_body is StaticBody3D:
 			return maybe_static_body
 
 	return null
 
 
+# Set collision masks and metadata on all colliders after instantiating
+func set_mask_colliders(
+	node_to_inspect: Node, visible_cmask: int, invisible_cmask: int, scene_id: int, entity_id: int
+):
+	for node in node_to_inspect.get_children():
+		if node is MeshInstance3D:
+			var static_body_3d = get_static_body_3d(node)
+			if static_body_3d != null:
+				# Check if this is an invisible collider mesh (metadata set during GLTF processing)
+				var invisible_mesh = (
+					static_body_3d.has_meta("invisible_mesh")
+					and static_body_3d.get_meta("invisible_mesh") == true
+				)
+
+				var mask: int = 0
+				if invisible_mesh:
+					mask = invisible_cmask
+				else:
+					mask = visible_cmask
+
+				static_body_3d.set_meta("dcl_col", mask)
+				static_body_3d.set_meta("dcl_scene_id", scene_id)
+				static_body_3d.set_meta("dcl_entity_id", entity_id)
+				static_body_3d.collision_layer = mask
+				static_body_3d.collision_mask = 0
+				if mask == 0:
+					static_body_3d.process_mode = Node.PROCESS_MODE_DISABLED
+				else:
+					static_body_3d.process_mode = Node.PROCESS_MODE_INHERIT
+
+		set_mask_colliders(node, visible_cmask, invisible_cmask, scene_id, entity_id)
+
+
 func update_mask_colliders(node_to_inspect: Node):
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
-			var mask: int = 0
-			if node.visible:
-				mask = dcl_visible_cmask
-			else:
-				mask = dcl_invisible_cmask
+			var static_body_3d = get_static_body_3d(node)
+			if static_body_3d != null:
+				# Check if this is an invisible collider mesh
+				var invisible_mesh = (
+					static_body_3d.has_meta("invisible_mesh")
+					and static_body_3d.get_meta("invisible_mesh") == true
+				)
 
-			var animatable_body_3d = get_animatable_body_3d(node)
-			if animatable_body_3d != null:
-				animatable_body_3d.collision_layer = mask
-				animatable_body_3d.collision_mask = 0
-				animatable_body_3d.set_meta("dcl_col", mask)
-				if mask == 0:
-					animatable_body_3d.process_mode = Node.PROCESS_MODE_DISABLED
+				var mask: int = 0
+				if invisible_mesh:
+					mask = dcl_invisible_cmask
 				else:
-					animatable_body_3d.process_mode = Node.PROCESS_MODE_INHERIT
+					mask = dcl_visible_cmask
 
-		if node is Node:
-			update_mask_colliders(node)
+				static_body_3d.collision_layer = mask
+				static_body_3d.collision_mask = 0
+				static_body_3d.set_meta("dcl_col", mask)
+				if mask == 0:
+					static_body_3d.process_mode = Node.PROCESS_MODE_DISABLED
+				else:
+					static_body_3d.process_mode = Node.PROCESS_MODE_INHERIT
+
+		update_mask_colliders(node)
 
 
 func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_collision_mask):
