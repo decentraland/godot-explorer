@@ -27,7 +27,15 @@ func _ready():
 	if not Global.content_provider2.gltf_error.is_connected(_on_gltf_error):
 		Global.content_provider2.gltf_error.connect(_on_gltf_error)
 
+	# Disable processing (STATIC/KINEMATIC optimization removed)
+	set_process(false)
+
 	self.async_load_gltf.call_deferred()
+
+
+func _process(_delta: float):
+	# Disabled - STATIC/KINEMATIC optimization removed for now
+	set_process(false)
 
 
 func _exit_tree():
@@ -242,10 +250,10 @@ func async_deferred_add_child():
 	self.check_animations()
 
 
-func get_static_body_3d(mesh_instance: MeshInstance3D):
-	for maybe_static_body in mesh_instance.get_children():
-		if maybe_static_body is StaticBody3D:
-			return maybe_static_body
+func get_animatable_body_3d(mesh_instance: MeshInstance3D):
+	for maybe_body in mesh_instance.get_children():
+		if maybe_body is AnimatableBody3D:
+			return maybe_body
 
 	return null
 
@@ -256,12 +264,12 @@ func set_mask_colliders(
 ):
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
-			var static_body_3d = get_static_body_3d(node)
-			if static_body_3d != null:
+			var body_3d = get_animatable_body_3d(node)
+			if body_3d != null:
 				# Check if this is an invisible collider mesh (metadata set during GLTF processing)
 				var invisible_mesh = (
-					static_body_3d.has_meta("invisible_mesh")
-					and static_body_3d.get_meta("invisible_mesh") == true
+					body_3d.has_meta("invisible_mesh")
+					and body_3d.get_meta("invisible_mesh") == true
 				)
 
 				var mask: int = 0
@@ -270,15 +278,15 @@ func set_mask_colliders(
 				else:
 					mask = visible_cmask
 
-				static_body_3d.set_meta("dcl_col", mask)
-				static_body_3d.set_meta("dcl_scene_id", scene_id)
-				static_body_3d.set_meta("dcl_entity_id", entity_id)
-				static_body_3d.collision_layer = mask
-				static_body_3d.collision_mask = 0
+				body_3d.set_meta("dcl_col", mask)
+				body_3d.set_meta("dcl_scene_id", scene_id)
+				body_3d.set_meta("dcl_entity_id", entity_id)
+				body_3d.collision_layer = mask
+				body_3d.collision_mask = 0
 				if mask == 0:
-					static_body_3d.process_mode = Node.PROCESS_MODE_DISABLED
+					body_3d.process_mode = Node.PROCESS_MODE_DISABLED
 				else:
-					static_body_3d.process_mode = Node.PROCESS_MODE_INHERIT
+					body_3d.process_mode = Node.PROCESS_MODE_INHERIT
 
 		set_mask_colliders(node, visible_cmask, invisible_cmask, scene_id, entity_id)
 
@@ -286,12 +294,12 @@ func set_mask_colliders(
 func update_mask_colliders(node_to_inspect: Node):
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
-			var static_body_3d = get_static_body_3d(node)
-			if static_body_3d != null:
+			var body_3d = get_animatable_body_3d(node)
+			if body_3d != null:
 				# Check if this is an invisible collider mesh
 				var invisible_mesh = (
-					static_body_3d.has_meta("invisible_mesh")
-					and static_body_3d.get_meta("invisible_mesh") == true
+					body_3d.has_meta("invisible_mesh")
+					and body_3d.get_meta("invisible_mesh") == true
 				)
 
 				var mask: int = 0
@@ -300,13 +308,13 @@ func update_mask_colliders(node_to_inspect: Node):
 				else:
 					mask = dcl_visible_cmask
 
-				static_body_3d.collision_layer = mask
-				static_body_3d.collision_mask = 0
-				static_body_3d.set_meta("dcl_col", mask)
+				body_3d.collision_layer = mask
+				body_3d.collision_mask = 0
+				body_3d.set_meta("dcl_col", mask)
 				if mask == 0:
-					static_body_3d.process_mode = Node.PROCESS_MODE_DISABLED
+					body_3d.process_mode = Node.PROCESS_MODE_DISABLED
 				else:
-					static_body_3d.process_mode = Node.PROCESS_MODE_INHERIT
+					body_3d.process_mode = Node.PROCESS_MODE_INHERIT
 
 		update_mask_colliders(node)
 
