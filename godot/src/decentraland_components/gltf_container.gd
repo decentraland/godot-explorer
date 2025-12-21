@@ -24,6 +24,8 @@ var _has_static_colliders := false
 static var currently_loading_assets := []
 # Static queue and flag for throttling
 static var pending_load_queue := []
+# Shared debug material for kinematic bodies visualization
+static var _debug_kinematic_material: StandardMaterial3D = null
 
 
 func _ready():
@@ -352,10 +354,6 @@ func update_mask_colliders(node_to_inspect: Node):
 					body_3d.process_mode = Node.PROCESS_MODE_INHERIT
 
 		update_mask_colliders(node)
-
-
-# Shared debug material for kinematic bodies visualization
-static var _debug_kinematic_material: StandardMaterial3D = null
 
 
 static func _get_debug_kinematic_material() -> StandardMaterial3D:
