@@ -26,7 +26,7 @@ use crate::{
 use crate::content::resource_download_tracking::ResourceDownloadTracking;
 
 use super::gltf_loader::load_and_save_gltf;
-use super::scene_saver::{cached_scene_exists, get_scene_path_for_hash};
+use super::scene_saver::get_scene_path_for_hash;
 
 /// Context passed to async operations
 #[derive(Clone)]
@@ -163,22 +163,6 @@ impl ContentProvider2 {
             return true;
         }
 
-        // Check if scene is already cached on disk
-        if cached_scene_exists(&file_hash) {
-            let scene_path = get_scene_path_for_hash(&file_hash);
-            tracing::debug!("GLTF cache HIT: {} -> {}", file_hash, scene_path);
-            // Emit ready signal immediately (deferred to avoid re-entrancy issues)
-            self.base_mut().call_deferred(
-                "emit_gltf_ready".into(),
-                &[
-                    GString::from(&file_hash).to_variant(),
-                    GString::from(&scene_path).to_variant(),
-                ],
-            );
-            return true;
-        }
-        tracing::debug!("GLTF cache MISS: {} - starting async load", file_hash);
-
         // Mark as loading
         self.loading_hashes.insert(file_hash.clone());
 
@@ -194,15 +178,27 @@ impl ContentProvider2 {
         let instance_id = self.base().instance_id();
         let file_hash_clone = file_hash.clone();
 
-        // Spawn async task
+        // Spawn async task - cache check and loading all happens here
         TokioRuntime::spawn(async move {
-            let result = load_and_save_gltf(
-                file_path_str,
-                file_hash_clone.clone(),
-                content_mapping_ref,
-                ctx,
-            )
-            .await;
+            // Check if scene is already cached on disk
+            let scene_path = get_scene_path_for_hash(&ctx.content_folder, &file_hash_clone);
+
+            let result = if ctx.resource_provider.file_exists_by_path(&scene_path).await {
+                // Cache HIT - just touch and return the path
+                tracing::debug!("GLTF cache HIT: {} -> {}", file_hash_clone, scene_path);
+                ctx.resource_provider.touch_file_async(&scene_path).await;
+                Ok(scene_path)
+            } else {
+                // Cache MISS - load, process, and save
+                tracing::debug!("GLTF cache MISS: {} - loading", file_hash_clone);
+                load_and_save_gltf(
+                    file_path_str,
+                    file_hash_clone.clone(),
+                    content_mapping_ref,
+                    ctx,
+                )
+                .await
+            };
 
             // Callback to main thread
             let file_hash_gd = GString::from(&file_hash_clone);
@@ -274,13 +270,14 @@ impl ContentProvider2 {
     /// Check if a scene is cached on disk
     #[func]
     pub fn is_scene_cached(&self, file_hash: GString) -> bool {
-        cached_scene_exists(&file_hash.to_string())
+        let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
+        std::path::Path::new(&scene_path).exists()
     }
 
     /// Get the path where a scene would be cached
     #[func]
     pub fn get_scene_cache_path(&self, file_hash: GString) -> GString {
-        get_scene_path_for_hash(&file_hash.to_string()).into()
+        get_scene_path_for_hash(&self.content_folder, &file_hash.to_string()).into()
     }
 
     /// Check if a hash is currently being loaded
