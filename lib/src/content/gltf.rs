@@ -270,7 +270,7 @@ pub async fn apply_update_set_mask_colliders(
     // These nodes have been removed from the tree and are orphans.
     // queue_free() doesn't work reliably for orphan nodes from background threads
     // because they're not in any SceneTree's deferred deletion queue.
-    for mut node in to_remove_nodes {
+    for node in to_remove_nodes {
         node.free();
     }
 
