@@ -22,14 +22,14 @@ const GENESIS_PLAZA = {
 
 var benchmark_locations = [
 	# Round 1
-	{"name": "Goerli Plaza (1)", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
-	{"name": "Genesis Plaza (1)", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
+	{"name": "Goerli Plaza", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
+	{"name": "Genesis Plaza", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
 	# Round 2
-	{"name": "Goerli Plaza (2)", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
-	{"name": "Genesis Plaza (2)", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
+	{"name": "Goerli Plaza Second", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
+	{"name": "Genesis Plaza Second", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
 	# Round 3
-	{"name": "Goerli Plaza (3)", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
-	{"name": "Genesis Plaza (3)", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
+	{"name": "Goerli Plaza Third", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
+	{"name": "Genesis Plaza Third", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
 ]
 
 var current_location_index = 0
