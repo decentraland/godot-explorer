@@ -266,8 +266,12 @@ pub async fn apply_update_set_mask_colliders(
     //      in the MultipleAnimationController the looping is handled by replaying every time
     //      the animation emits the finished signal
 
+    // Free orphan nodes immediately instead of queue_free()
+    // These nodes have been removed from the tree and are orphans.
+    // queue_free() doesn't work reliably for orphan nodes from background threads
+    // because they're not in any SceneTree's deferred deletion queue.
     for mut node in to_remove_nodes {
-        node.queue_free();
+        node.free();
     }
 
     Ok(Some(gltf_node.to_variant()))
@@ -368,8 +372,8 @@ fn create_colliders(node_to_inspect: Gd<Node>) {
                     )));
 
                     parent.add_child(new_animatable.clone().upcast());
-                    parent.remove_child(static_body_3d.clone().upcast());
 
+                    // Move children before removing from parent, then free
                     for mut body_child in static_body_3d
                         .get_children_ex()
                         .include_internal(true)
@@ -389,6 +393,12 @@ fn create_colliders(node_to_inspect: Gd<Node>) {
                             }
                         }
                     }
+
+                    // Remove the old StaticBody3D from tree and free it immediately
+                    // Use free() instead of queue_free() because orphan nodes from
+                    // background threads don't get properly freed by queue_free()
+                    parent.remove_child(static_body_3d.clone().upcast());
+                    static_body_3d.free();
                 }
             }
         }

@@ -229,6 +229,17 @@ impl BenchmarkReport {
         let node_count = performance.get_monitor(Monitor::OBJECT_NODE_COUNT) as i64;
         let orphan_node_count = performance.get_monitor(Monitor::OBJECT_ORPHAN_NODE_COUNT) as i64;
 
+        // Print orphan nodes for debugging when we have a lot of orphans
+        // Using godot_print! to ensure output goes to Godot's console
+        if orphan_node_count > 1000 {
+            godot::global::godot_print!(
+                "=== ORPHAN NODES DEBUG: {} orphans detected ===",
+                orphan_node_count
+            );
+            godot::engine::Node::print_orphan_nodes();
+            godot::global::godot_print!("=== END ORPHAN NODES DEBUG ===");
+        }
+
         // Rendering
         let fps = performance.get_monitor(Monitor::TIME_FPS) as f64;
         let draw_calls = performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64;

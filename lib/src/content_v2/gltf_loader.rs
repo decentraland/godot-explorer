@@ -400,9 +400,11 @@ fn create_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
                         body_child.set_owner(root_node.clone().upcast());
                     }
 
-                    // Remove the old StaticBody3D
+                    // Remove the old StaticBody3D and free it immediately
+                    // Use free() instead of queue_free() for the same reason as the main node:
+                    // orphan nodes from background threads don't get properly freed by queue_free()
                     parent.remove_child(static_body_3d.clone().upcast());
-                    static_body_3d.queue_free();
+                    static_body_3d.free();
 
                     // Set owner for AnimatableBody3D
                     animatable_body.set_owner(root_node.clone().upcast());
