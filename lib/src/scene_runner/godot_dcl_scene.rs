@@ -310,4 +310,36 @@ impl GodotDclScene {
     pub fn exist_node(&self, entity: &SceneEntityId) -> bool {
         self.entities.contains_key(entity)
     }
+
+    /// Cleanup all entity nodes before scene destruction.
+    /// This clears Rust references but does NOT free nodes - caller must handle that.
+    /// This allows caller to properly remove nodes from tree before freeing.
+    pub fn cleanup(&mut self) {
+        let entity_count = self.entities.len();
+
+        tracing::info!(
+            "GodotDclScene::cleanup - clearing {} entity references",
+            entity_count
+        );
+
+        // Clear the entities map to drop all Gd references
+        // This prevents any dangling references when nodes are freed
+        for (_, entity_node) in self.entities.iter_mut() {
+            entity_node.base_3d.take();
+            entity_node.base_ui.take();
+        }
+        self.entities.clear();
+        self.ui_entities.clear();
+        self.unparented_entities_3d.clear();
+
+        // NOTE: We do NOT call queue_free here - the caller (scene_manager)
+        // will handle removal from tree and freeing to avoid race conditions
+    }
+
+    /// Free the root nodes after they've been removed from the tree.
+    /// This should be called via call_deferred after remove_child completes.
+    pub fn free_root_nodes(&mut self) {
+        self.root_node_3d.queue_free();
+        self.root_node_ui.queue_free();
+    }
 }

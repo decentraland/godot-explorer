@@ -398,8 +398,9 @@ impl AvatarScene {
             self.last_movement_timestamp.remove(&alias);
             self.last_position_index.remove(&alias);
 
+            // Remove from tree first, then queue_free (correct order)
+            self.base_mut().remove_child(avatar.clone().upcast());
             avatar.queue_free();
-            self.base_mut().remove_child(avatar.upcast());
 
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();

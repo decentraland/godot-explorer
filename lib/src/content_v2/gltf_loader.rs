@@ -194,10 +194,34 @@ pub async fn load_and_save_gltf(
     let scene_path = get_scene_path_for_hash(&file_hash);
     save_node_as_scene(node.clone(), &scene_path).map_err(anyhow::Error::msg)?;
 
+    // Count nodes before freeing
+    let node_count = count_nodes(node.clone().upcast());
+    tracing::info!(
+        "GLTF processed: {} with {} nodes, saving to {}",
+        file_hash,
+        node_count,
+        scene_path
+    );
+
     // Free the node since we've saved it to disk
-    node.queue_free();
+    // IMPORTANT: Use free() instead of queue_free() for orphan nodes processed on background threads
+    // queue_free() doesn't work reliably for orphan nodes because:
+    // 1. Orphan nodes aren't in any SceneTree's deferred deletion queue
+    // 2. Background threads may not have access to the main thread's deferred queue
+    // free() immediately destroys the object and all its children, which is safe here
+    // because the node is an orphan (not in scene tree) and we've already saved it to disk
+    node.free();
 
     Ok(scene_path)
+}
+
+/// Count the number of nodes in a tree
+fn count_nodes(node: Gd<Node>) -> i32 {
+    let mut count = 1;
+    for child in node.get_children().iter_shared() {
+        count += count_nodes(child);
+    }
+    count
 }
 
 /// Post-process textures in the node tree

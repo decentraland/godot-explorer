@@ -56,6 +56,12 @@ func _exit_tree():
 	if not dcl_gltf_hash.is_empty() and currently_loading_assets.has(dcl_gltf_hash):
 		currently_loading_assets.erase(dcl_gltf_hash)
 
+	# Disconnect from global signals to prevent callbacks after node is freed
+	if Global.content_provider2.gltf_ready.is_connected(_async_on_gltf_ready):
+		Global.content_provider2.gltf_ready.disconnect(_async_on_gltf_ready)
+	if Global.content_provider2.gltf_error.is_connected(_on_gltf_error):
+		Global.content_provider2.gltf_error.disconnect(_on_gltf_error)
+
 
 # Helper to handle finishing a load (success or error)
 func _finish_gltf_load(gltf_hash: String):

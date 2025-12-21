@@ -472,4 +472,37 @@ impl Scene {
             }
         }
     }
+
+    /// Cleanup all scene resources before destruction.
+    /// This ensures all Godot nodes are properly freed and references are cleared.
+    pub fn cleanup(&mut self) {
+        // Free audio sources
+        for (_, mut audio_source) in self.audio_sources.drain() {
+            audio_source.queue_free();
+        }
+
+        // Free audio streams
+        for (_, mut audio_stream) in self.audio_streams.drain() {
+            audio_stream.queue_free();
+        }
+
+        // Free video players
+        for (_, mut video_player) in self.video_players.drain() {
+            video_player.queue_free();
+        }
+
+        // Virtual camera is RefCounted, no need to queue_free - it's freed when references drop
+        // Just clear it to drop the reference
+        self.virtual_camera.bind_mut().clear();
+
+        // Clear other collections
+        self.gltf_loading.clear();
+        self.materials.clear();
+        self.tweens.clear();
+        self.dup_animator.clear();
+        self.livekit_video_player_entities.clear();
+
+        // Cleanup godot_dcl_scene (frees all entity nodes and root nodes)
+        self.godot_dcl_scene.cleanup();
+    }
 }
