@@ -12,6 +12,11 @@ const MAX_CONCURRENT_LOADS := 10
 
 var dcl_gltf_hash := ""
 
+# Transform change tracking for STATIC -> KINEMATIC mode switching
+var _last_global_transform: Transform3D
+var _transform_change_count := 0
+var _colliders_switched_to_kinematic := false
+
 @onready var timer = $Timer
 
 # Static variable to track currently loading assets
@@ -27,15 +32,36 @@ func _ready():
 	if not Global.content_provider2.gltf_error.is_connected(_on_gltf_error):
 		Global.content_provider2.gltf_error.connect(_on_gltf_error)
 
-	# Disable processing (STATIC/KINEMATIC optimization removed)
+	# Initialize transform tracking (disabled until GLTF is loaded)
+	_last_global_transform = global_transform
 	set_process(false)
 
 	self.async_load_gltf.call_deferred()
 
 
 func _process(_delta: float):
-	# Disabled - STATIC/KINEMATIC optimization removed for now
-	set_process(false)
+	# Skip if already switched to kinematic or no GLTF loaded yet
+	if (
+		_colliders_switched_to_kinematic
+		or dcl_gltf_loading_state != GltfContainerLoadingState.FINISHED
+	):
+		return
+
+	# Check if transform has changed
+	var current_transform = global_transform
+	if current_transform != _last_global_transform:
+		_transform_change_count += 1
+		_last_global_transform = current_transform
+
+		# First transform change is tolerated (initial positioning)
+		# Switch to KINEMATIC after the second change
+		if _transform_change_count >= 2:
+			_colliders_switched_to_kinematic = true
+			var gltf_node = get_gltf_resource()
+			if gltf_node != null:
+				_switch_colliders_to_kinematic(gltf_node)
+			# Stop processing since we've switched
+			set_process(false)
 
 
 func _exit_tree():
@@ -247,6 +273,13 @@ func async_deferred_add_child():
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
 	timer.stop()
 
+	# Initialize transform tracking now that the GLTF is fully loaded
+	# This captures the initial position before any animations/tweens
+	_last_global_transform = global_transform
+	_transform_change_count = 0
+	_colliders_switched_to_kinematic = false
+	set_process(true)
+
 	self.check_animations()
 
 
@@ -259,6 +292,7 @@ func get_animatable_body_3d(mesh_instance: MeshInstance3D):
 
 
 # Set collision masks and metadata on all colliders after instantiating
+# Also sets STATIC mode for better performance (will switch to KINEMATIC if entity moves)
 func set_mask_colliders(
 	node_to_inspect: Node, visible_cmask: int, invisible_cmask: int, scene_id: int, entity_id: int
 ):
@@ -287,6 +321,12 @@ func set_mask_colliders(
 					body_3d.process_mode = Node.PROCESS_MODE_DISABLED
 				else:
 					body_3d.process_mode = Node.PROCESS_MODE_INHERIT
+					# Set STATIC mode for better performance
+					# Will switch to KINEMATIC if entity moves (detected in _process)
+					PhysicsServer3D.body_set_mode(
+						body_3d.get_rid(), PhysicsServer3D.BODY_MODE_STATIC
+					)
+					body_3d.set_meta("dcl_static_mode", true)
 
 		set_mask_colliders(node, visible_cmask, invisible_cmask, scene_id, entity_id)
 
@@ -319,6 +359,21 @@ func update_mask_colliders(node_to_inspect: Node):
 		update_mask_colliders(node)
 
 
+# Switch all colliders from STATIC to KINEMATIC mode
+# Called when the entity moves (after the 2nd transform change)
+func _switch_colliders_to_kinematic(node_to_inspect: Node):
+	for node in node_to_inspect.get_children():
+		if node is MeshInstance3D:
+			var body_3d = get_animatable_body_3d(node)
+			if body_3d != null and body_3d.has_meta("dcl_static_mode"):
+				# Switch to KINEMATIC mode via PhysicsServer3D
+				PhysicsServer3D.body_set_mode(
+					body_3d.get_rid(), PhysicsServer3D.BODY_MODE_KINEMATIC
+				)
+				body_3d.remove_meta("dcl_static_mode")
+		_switch_colliders_to_kinematic(node)
+
+
 func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_collision_mask):
 	var gltf_node = self.get_gltf_resource()
 	if self.dcl_gltf_src != new_gltf:
@@ -328,6 +383,12 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 		self.dcl_gltf_src = new_gltf
 		dcl_visible_cmask = visible_meshes_collision_mask
 		dcl_invisible_cmask = invisible_meshes_collision_mask
+
+		# Reset transform tracking for new GLTF
+		_transform_change_count = 0
+		_colliders_switched_to_kinematic = false
+		_last_global_transform = global_transform
+		set_process(false)  # Will be re-enabled when GLTF finishes loading
 
 		if gltf_node != null:
 			remove_child(gltf_node)
