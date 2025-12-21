@@ -6,36 +6,18 @@
 
 //! Scene saving utilities for content_v2
 //!
-//! Provides functions to save Node3D as PackedScene to disk
-//! and manage the glbs cache directory.
+//! Provides functions to save Node3D as PackedScene to disk.
+//! Scenes are stored in the same cache folder as other content,
+//! using the hash as filename with .scn extension.
 
-use godot::classes::{DirAccess, PackedScene, ResourceSaver};
+use godot::classes::{PackedScene, ResourceSaver};
 use godot::prelude::*;
-
-/// The base path for cached GLTF scenes
-pub const GLBS_CACHE_PATH: &str = "user://content/glbs/";
-
-/// Ensures the glbs cache directory exists
-///
-/// Creates `user://content/glbs/` if it doesn't exist.
-/// Returns the path to the directory.
-pub fn ensure_glbs_directory() -> Result<String, String> {
-    let mut dir =
-        DirAccess::open("user://".into()).ok_or("Cannot access user:// directory".to_string())?;
-
-    let err = dir.make_dir_recursive("content/glbs".into());
-    if err != godot::global::Error::OK && err != godot::global::Error::ERR_ALREADY_EXISTS {
-        return Err(format!("Failed to create glbs directory: {:?}", err));
-    }
-
-    Ok(GLBS_CACHE_PATH.to_string())
-}
 
 /// Saves a Node3D as a PackedScene to the specified file path
 ///
 /// # Arguments
 /// * `node` - The Node3D to save
-/// * `file_path` - The full path to save to (e.g., "user://content/glbs/hash.tscn")
+/// * `file_path` - The full path to save to (e.g., "/path/to/cache/hash.scn")
 ///
 /// # Returns
 /// * `Ok(())` on success
@@ -59,13 +41,11 @@ pub fn save_node_as_scene(node: Gd<Node3D>, file_path: &str) -> Result<(), Strin
     Ok(())
 }
 
-/// Gets the full path for a cached GLTF scene by its hash
-pub fn get_scene_path_for_hash(hash: &str) -> String {
-    format!("{}{}.scn", GLBS_CACHE_PATH, hash)
-}
-
-/// Checks if a cached scene exists for the given hash
-pub fn cached_scene_exists(hash: &str) -> bool {
-    let path = get_scene_path_for_hash(hash);
-    godot::classes::FileAccess::file_exists(path.into())
+/// Gets the absolute path for a cached GLTF scene by its hash
+///
+/// # Arguments
+/// * `content_folder` - The cache folder path (e.g., "/path/to/cache/")
+/// * `hash` - The content hash
+pub fn get_scene_path_for_hash(content_folder: &str, hash: &str) -> String {
+    format!("{}{}.scn", content_folder, hash)
 }

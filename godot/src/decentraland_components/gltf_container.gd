@@ -11,7 +11,7 @@ enum GltfContainerLoadingState {
 const MAX_CONCURRENT_LOADS := 10
 
 # Debug: Set to true to paint meshes red when switching from STATIC to KINEMATIC
-const DEBUG_PAINT_KINEMATIC_BODIES := true
+const DEBUG_PAINT_KINEMATIC_BODIES := false
 
 var dcl_gltf_hash := ""
 

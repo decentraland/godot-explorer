@@ -32,7 +32,7 @@ use crate::content::{
 };
 
 use super::content_provider::ContentProvider2Context;
-use super::scene_saver::{ensure_glbs_directory, get_scene_path_for_hash, save_node_as_scene};
+use super::scene_saver::{get_scene_path_for_hash, save_node_as_scene};
 
 /// Thread safety guard for Godot API access
 pub struct GodotThreadSafetyGuard {
@@ -78,9 +78,6 @@ pub async fn load_and_save_gltf(
     content_mapping: ContentMappingAndUrlRef,
     ctx: ContentProvider2Context,
 ) -> Result<String, anyhow::Error> {
-    // Ensure the output directory exists
-    let _dir = ensure_glbs_directory().map_err(anyhow::Error::msg)?;
-
     // Download the main GLTF file
     let base_path = Arc::new(get_base_dir(&file_path));
     let url = format!("{}{}", content_mapping.base_url, file_hash);
@@ -146,71 +143,89 @@ pub async fn load_and_save_gltf(
         .await
         .ok_or(anyhow::Error::msg("Failed to acquire thread safety guard"))?;
 
-    // Load the GLTF using Godot
-    let mut new_gltf = GltfDocument::new_gd();
-    let mut new_gltf_state = GltfState::new_gd();
+    // Process GLTF using Godot (all Godot objects are scoped here to drop before await)
+    let (scene_path, file_size) = {
+        // Load the GLTF using Godot
+        let mut new_gltf = GltfDocument::new_gd();
+        let mut new_gltf_state = GltfState::new_gd();
 
-    let mappings = Dictionary::from_iter(
-        dependencies_hash
-            .iter()
-            .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
-    );
+        let mappings = Dictionary::from_iter(
+            dependencies_hash
+                .iter()
+                .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
+        );
 
-    new_gltf_state.set_additional_data("base_path".into(), "some".to_variant());
-    new_gltf_state.set_additional_data("mappings".into(), mappings.to_variant());
+        new_gltf_state.set_additional_data("base_path".into(), "some".to_variant());
+        new_gltf_state.set_additional_data("mappings".into(), mappings.to_variant());
 
-    let err = new_gltf
-        .append_from_file_ex(
-            GString::from(absolute_file_path.as_str()),
-            new_gltf_state.clone(),
-        )
-        .base_path(GString::from(ctx.content_folder.as_str()))
-        .flags(0)
-        .done();
+        let err = new_gltf
+            .append_from_file_ex(
+                GString::from(absolute_file_path.as_str()),
+                new_gltf_state.clone(),
+            )
+            .base_path(GString::from(ctx.content_folder.as_str()))
+            .flags(0)
+            .done();
 
-    if err != godot::global::Error::OK {
-        return Err(anyhow::Error::msg(format!("Error loading gltf: {:?}", err)));
-    }
+        if err != godot::global::Error::OK {
+            return Err(anyhow::Error::msg(format!("Error loading gltf: {:?}", err)));
+        }
 
-    let node = new_gltf
-        .generate_scene(new_gltf_state)
-        .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
+        let node = new_gltf
+            .generate_scene(new_gltf_state)
+            .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
 
-    // Post-process textures
-    let max_size = ctx.texture_quality.to_max_size();
-    post_import_process(node.clone(), max_size);
+        // Post-process textures
+        let max_size = ctx.texture_quality.to_max_size();
+        post_import_process(node.clone(), max_size);
 
-    // Cast to Node3D and rotate
-    let mut node = node
-        .try_cast::<Node3D>()
-        .map_err(|err| anyhow::Error::msg(format!("Error casting to Node3D: {err}")))?;
-    node.rotate_y(std::f32::consts::PI);
+        // Cast to Node3D and rotate
+        let mut node = node
+            .try_cast::<Node3D>()
+            .map_err(|err| anyhow::Error::msg(format!("Error casting to Node3D: {err}")))?;
+        node.rotate_y(std::f32::consts::PI);
 
-    // Create colliders (with mask=0 initially - will be set by gltf_container.gd after loading)
-    let root_node = node.clone();
-    create_colliders(node.clone().upcast(), root_node.clone());
+        // Create colliders (with mask=0 initially - will be set by gltf_container.gd after loading)
+        let root_node = node.clone();
+        create_colliders(node.clone().upcast(), root_node.clone());
 
-    // Save the processed scene to disk
-    let scene_path = get_scene_path_for_hash(&file_hash);
-    save_node_as_scene(node.clone(), &scene_path).map_err(anyhow::Error::msg)?;
+        // Save the processed scene to disk (in the same cache folder as other content)
+        let scene_path = get_scene_path_for_hash(&ctx.content_folder, &file_hash);
+        save_node_as_scene(node.clone(), &scene_path).map_err(anyhow::Error::msg)?;
 
-    // Count nodes before freeing
-    let node_count = count_nodes(node.clone().upcast());
-    tracing::info!(
-        "GLTF processed: {} with {} nodes, saving to {}",
-        file_hash,
-        node_count,
-        scene_path
-    );
+        // Get file size synchronously (std::fs is fine here, it's just a stat call)
+        let file_size = std::fs::metadata(&scene_path)
+            .map(|m| m.len() as i64)
+            .unwrap_or(0);
 
-    // Free the node since we've saved it to disk
-    // IMPORTANT: Use free() instead of queue_free() for orphan nodes processed on background threads
-    // queue_free() doesn't work reliably for orphan nodes because:
-    // 1. Orphan nodes aren't in any SceneTree's deferred deletion queue
-    // 2. Background threads may not have access to the main thread's deferred queue
-    // free() immediately destroys the object and all its children, which is safe here
-    // because the node is an orphan (not in scene tree) and we've already saved it to disk
-    node.free();
+        // Count nodes before freeing
+        let node_count = count_nodes(node.clone().upcast());
+        tracing::info!(
+            "GLTF processed: {} with {} nodes, saved to {} ({} bytes)",
+            file_hash,
+            node_count,
+            scene_path,
+            file_size
+        );
+
+        // Free the node since we've saved it to disk
+        // IMPORTANT: Use free() instead of queue_free() for orphan nodes processed on background threads
+        // queue_free() doesn't work reliably for orphan nodes because:
+        // 1. Orphan nodes aren't in any SceneTree's deferred deletion queue
+        // 2. Background threads may not have access to the main thread's deferred queue
+        // free() immediately destroys the object and all its children, which is safe here
+        // because the node is an orphan (not in scene tree) and we've already saved it to disk
+        node.free();
+
+        (scene_path, file_size)
+    };
+    // All Godot objects are now dropped, safe to await
+
+    // Register the saved scene in resource_provider for cache management
+    // This ensures LRU eviction works correctly for .scn files
+    ctx.resource_provider
+        .register_local_file(&scene_path, file_size)
+        .await;
 
     Ok(scene_path)
 }
