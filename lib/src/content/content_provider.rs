@@ -1507,3 +1507,10 @@ impl ContentProvider {
         Ok(())
     }
 }
+
+impl ContentProvider {
+    /// Get the resource provider for sharing with other systems (like ContentProvider2)
+    pub fn get_resource_provider(&self) -> Arc<ResourceProvider> {
+        self.resource_provider.clone()
+    }
+}
