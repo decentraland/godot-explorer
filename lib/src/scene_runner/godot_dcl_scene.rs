@@ -339,6 +339,19 @@ impl GodotDclScene {
     /// Free the root nodes after they've been removed from the tree.
     /// This should be called via call_deferred after remove_child completes.
     pub fn free_root_nodes(&mut self) {
+        let child_count_3d = self.root_node_3d.get_child_count();
+        let in_tree_3d = self.root_node_3d.is_inside_tree();
+        let child_count_ui = self.root_node_ui.get_child_count();
+        let in_tree_ui = self.root_node_ui.is_inside_tree();
+
+        tracing::info!(
+            "free_root_nodes: 3D root has {} children, in_tree={}, UI root has {} children, in_tree={}",
+            child_count_3d,
+            in_tree_3d,
+            child_count_ui,
+            in_tree_ui
+        );
+
         self.root_node_3d.queue_free();
         self.root_node_ui.queue_free();
     }

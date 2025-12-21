@@ -166,6 +166,7 @@ impl ContentProvider2 {
         // Check if scene is already cached on disk
         if cached_scene_exists(&file_hash) {
             let scene_path = get_scene_path_for_hash(&file_hash);
+            tracing::debug!("GLTF cache HIT: {} -> {}", file_hash, scene_path);
             // Emit ready signal immediately (deferred to avoid re-entrancy issues)
             self.base_mut().call_deferred(
                 "emit_gltf_ready".into(),
@@ -176,6 +177,7 @@ impl ContentProvider2 {
             );
             return true;
         }
+        tracing::debug!("GLTF cache MISS: {} - starting async load", file_hash);
 
         // Mark as loading
         self.loading_hashes.insert(file_hash.clone());

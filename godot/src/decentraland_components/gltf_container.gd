@@ -18,6 +18,9 @@ var dcl_gltf_hash := ""
 # Track if GLTF has colliders that need STATIC->KINEMATIC optimization
 var _has_static_colliders := false
 
+# Track if we're already processing a gltf_ready signal (to prevent duplicate coroutines)
+var _processing_gltf_signal := false
+
 @onready var timer = $Timer
 
 # Static variable to track currently loading assets
@@ -85,6 +88,10 @@ static func _process_next_gltf_load():
 		else:
 			next_gltf = pending_load_queue.pop_front()
 		if next_gltf != null and is_instance_valid(next_gltf):
+			# Skip if already finished (might have received signal early from another container)
+			var state = next_gltf.dcl_gltf_loading_state
+			if state == GltfContainerLoadingState.FINISHED or state == GltfContainerLoadingState.FINISHED_WITH_ERROR:
+				continue
 			next_gltf._start_load()
 		else:
 			break
@@ -123,6 +130,9 @@ func async_load_gltf():
 func _start_load():
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
+	# Reset signal processing flag for new load
+	_processing_gltf_signal = false
+
 	# Add asset to loading list
 	if not currently_loading_assets.has(dcl_gltf_hash):
 		currently_loading_assets.append(dcl_gltf_hash)
@@ -136,6 +146,16 @@ func _start_load():
 func _async_on_gltf_ready(file_hash: String, scene_path: String):
 	if file_hash != self.dcl_gltf_hash:
 		return  # Not for us
+
+	# Prevent double-processing: if we've already finished or are processing, ignore duplicate signals
+	# This can happen when multiple containers request the same cached hash
+	if dcl_gltf_loading_state == GltfContainerLoadingState.FINISHED:
+		return
+	if _processing_gltf_signal:
+		return  # Already processing a signal (in the middle of await)
+
+	# Mark that we're processing to block duplicate signals during await
+	_processing_gltf_signal = true
 
 	# Check if we're still valid
 	if not is_instance_valid(self) or not is_inside_tree():
@@ -185,6 +205,8 @@ func _async_on_gltf_ready(file_hash: String, scene_path: String):
 	dcl_pending_node = gltf_node
 	timer.stop()
 	_finish_gltf_load(file_hash)
+	# Add the GLTF node to the tree (deferred to avoid issues during async loading)
+	self.async_deferred_add_child.call_deferred()
 
 
 func _async_wait_for_resource_load(path: String):
@@ -247,13 +269,17 @@ func async_deferred_add_child():
 	var new_gltf_node = dcl_pending_node
 	dcl_pending_node = null
 
+	# Guard: if pending node was already consumed or never set, skip
+	# This can happen with duplicate signal emissions for cached GLTFs
+	if new_gltf_node == null:
+		return
+
 	# Corner case, when the scene is unloaded before the gltf is loaded
 	if not is_inside_tree():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
 		# Free orphan node that was never added to tree
-		if new_gltf_node != null:
-			new_gltf_node.queue_free()
+		new_gltf_node.queue_free()
 		return
 
 	var main_tree = get_tree()
@@ -261,8 +287,7 @@ func async_deferred_add_child():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
 		# Free orphan node that was never added to tree
-		if new_gltf_node != null:
-			new_gltf_node.queue_free()
+		new_gltf_node.queue_free()
 		return
 
 	add_child(new_gltf_node)
@@ -419,6 +444,7 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 
 		# Reset transform tracking in Rust for new GLTF
 		_has_static_colliders = false
+		_processing_gltf_signal = false
 		self.reset_transform_tracking()
 
 		if gltf_node != null:

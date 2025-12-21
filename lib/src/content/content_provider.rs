@@ -384,9 +384,12 @@ impl ContentProvider {
         let cache_key = format!("wearable:{}", file_hash);
         if let Some(entry) = self.cached.get_mut(&cache_key) {
             entry.last_access = Instant::now();
+            tracing::debug!("Wearable cache HIT: {}", file_hash);
             return entry.promise.clone();
         }
 
+        tracing::debug!("Wearable cache MISS: {} - loading", file_hash);
+        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
