@@ -15,11 +15,8 @@ const DEBUG_PAINT_KINEMATIC_BODIES := true
 
 var dcl_gltf_hash := ""
 
-# Transform change tracking for STATIC -> KINEMATIC mode switching
-var _last_global_transform: Transform3D
-var _transform_change_count := 0
-var _colliders_switched_to_kinematic := false
-var _has_static_colliders := false  # True if GLTF has colliders that need tracking
+# Track if GLTF has colliders that need STATIC->KINEMATIC optimization
+var _has_static_colliders := false
 
 @onready var timer = $Timer
 
@@ -36,42 +33,26 @@ func _ready():
 	if not Global.content_provider2.gltf_error.is_connected(_on_gltf_error):
 		Global.content_provider2.gltf_error.connect(_on_gltf_error)
 
-	# Initialize transform tracking (disabled until GLTF is loaded)
-	_last_global_transform = global_transform
-	set_process(false)
+	# Connect to switch_to_kinematic signal (emitted by Rust when entity moves)
+	if not self.switch_to_kinematic.is_connected(_on_switch_to_kinematic):
+		self.switch_to_kinematic.connect(_on_switch_to_kinematic)
 
 	self.async_load_gltf.call_deferred()
-
-
-func _process(_delta: float):
-	# Skip if already switched to kinematic or no GLTF loaded yet
-	if (
-		_colliders_switched_to_kinematic
-		or dcl_gltf_loading_state != GltfContainerLoadingState.FINISHED
-	):
-		return
-
-	# Check if transform has changed
-	var current_transform = global_transform
-	if current_transform != _last_global_transform:
-		_transform_change_count += 1
-		_last_global_transform = current_transform
-
-		# First transform change is tolerated (initial positioning)
-		# Switch to KINEMATIC after the second change
-		if _transform_change_count >= 2:
-			_colliders_switched_to_kinematic = true
-			var gltf_node = get_gltf_resource()
-			if gltf_node != null:
-				_switch_colliders_to_kinematic(gltf_node)
-			# Stop processing since we've switched
-			set_process(false)
 
 
 func _exit_tree():
 	# Remove from pending queue if we're being freed
 	if pending_load_queue.has(self):
 		pending_load_queue.erase(self)
+
+	# Free pending node if it exists (orphan node that was never added to tree)
+	if dcl_pending_node != null:
+		dcl_pending_node.queue_free()
+		dcl_pending_node = null
+
+	# Remove from currently loading assets to allow re-loading if this hash is used again
+	if not dcl_gltf_hash.is_empty() and currently_loading_assets.has(dcl_gltf_hash):
+		currently_loading_assets.erase(dcl_gltf_hash)
 
 
 # Helper to handle finishing a load (success or error)
@@ -262,12 +243,18 @@ func async_deferred_add_child():
 	if not is_inside_tree():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		# Free orphan node that was never added to tree
+		if new_gltf_node != null:
+			new_gltf_node.queue_free()
 		return
 
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		# Free orphan node that was never added to tree
+		if new_gltf_node != null:
+			new_gltf_node.queue_free()
 		return
 
 	add_child(new_gltf_node)
@@ -278,13 +265,10 @@ func async_deferred_add_child():
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
 	timer.stop()
 
-	# Only enable transform tracking if we have static colliders that might need
-	# to switch to kinematic mode. This skips per-frame overhead for GLTFs without colliders.
+	# Enable transform tracking in Rust if we have static colliders
+	# Transform checking is done in Rust for better per-frame performance
 	if _has_static_colliders:
-		_last_global_transform = global_transform
-		_transform_change_count = 0
-		_colliders_switched_to_kinematic = false
-		set_process(true)
+		self.enable_transform_tracking()
 
 	self.check_animations()
 
@@ -388,6 +372,13 @@ static func _get_debug_kinematic_material() -> StandardMaterial3D:
 	return _debug_kinematic_material
 
 
+# Signal handler: called by Rust when entity has moved enough to require kinematic mode
+func _on_switch_to_kinematic():
+	var gltf_node = get_gltf_resource()
+	if gltf_node != null:
+		_switch_colliders_to_kinematic(gltf_node)
+
+
 # Switch all colliders from STATIC to KINEMATIC mode
 # Called when the entity moves (after the 2nd transform change)
 func _switch_colliders_to_kinematic(node_to_inspect: Node):
@@ -422,12 +413,9 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 		dcl_visible_cmask = visible_meshes_collision_mask
 		dcl_invisible_cmask = invisible_meshes_collision_mask
 
-		# Reset transform tracking for new GLTF
-		_transform_change_count = 0
-		_colliders_switched_to_kinematic = false
+		# Reset transform tracking in Rust for new GLTF
 		_has_static_colliders = false
-		_last_global_transform = global_transform
-		set_process(false)  # Will be re-enabled when GLTF finishes loading (if has colliders)
+		self.reset_transform_tracking()
 
 		if gltf_node != null:
 			remove_child(gltf_node)
