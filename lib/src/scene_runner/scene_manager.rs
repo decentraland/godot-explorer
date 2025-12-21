@@ -587,22 +587,17 @@ impl SceneManager {
                 .trigger_areas
                 .cleanup(self.pool_manager.borrow_mut().physics_area());
 
-            scene.godot_dcl_scene.root_node_ui.queue_free();
-            scene.godot_dcl_scene.root_node_3d.queue_free();
+            // Cleanup Rust references first (doesn't free nodes yet)
+            scene.cleanup();
 
-            self.base_mut()
-                .remove_child(scene.godot_dcl_scene.root_node_3d.upcast());
-
-            let node_ui = scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>();
-
-            if node_ui.get_parent().is_some() {
-                self.base_ui.remove_child(node_ui);
-            }
+            // Free root nodes - queue_free handles both removal from tree and freeing
+            // This is safer than manually calling remove_child + queue_free separately
+            // because queue_free schedules everything atomically for end of frame
+            scene.godot_dcl_scene.free_root_nodes();
 
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.global_scene_ids.retain(|x| x != scene_id);
-            self.scenes.remove(scene_id);
 
             // Clean up VM_HANDLES entry
             #[cfg(feature = "use_deno")]
@@ -934,8 +929,11 @@ impl SceneManager {
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: false });
 
             // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
-            self.base_ui
-                .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+            // Use call_deferred to avoid "Parent node is busy" errors during rapid scene transitions
+            self.base_ui.call_deferred(
+                "remove_child".into(),
+                &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
+            );
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
