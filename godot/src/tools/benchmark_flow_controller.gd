@@ -231,7 +231,7 @@ func handle_explorer_scene(_scene):
 		log_message("✓ Moving to next location: %s at %s" % [next_loc.name, next_loc.pos])
 		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		current_stage = ""  # Reset to allow re-handling after teleport
-		await get_tree().create_timer(2.0).timeout
+		await get_tree().create_timer(4.0).timeout
 		Global.teleport_to(next_loc.pos, next_loc.realm)
 	else:
 		# All locations tested - finalize
