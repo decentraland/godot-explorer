@@ -260,6 +260,44 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
+    /// Force cleanup of all resolved cache entries.
+    /// This immediately frees Node3D resources and clears the cache.
+    /// Use between benchmark runs to ensure clean state.
+    #[func]
+    pub fn force_clean_cache(&mut self) -> i32 {
+        let mut cleaned_count = 0;
+
+        self.cached.retain(|_hash_id, entry| {
+            if !entry.promise.bind().is_resolved() {
+                // Keep unresolved promises
+                return true;
+            }
+
+            let data = entry.promise.bind().get_data();
+
+            // Free Node3D resources
+            if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
+                #[cfg(feature = "use_resource_tracking")]
+                report_resource_deleted(_hash_id);
+                node_3d.queue_free();
+                cleaned_count += 1;
+                return false;
+            }
+
+            // Remove RefCounted resources (textures, audio, etc.)
+            if Gd::<RefCounted>::try_from_variant(&data).is_ok() {
+                cleaned_count += 1;
+                return false;
+            }
+
+            // Keep other entries
+            true
+        });
+
+        tracing::info!("force_clean_cache: cleaned {} entries", cleaned_count);
+        cleaned_count
+    }
+
     #[func]
     pub fn fetch_optimized_asset_with_dependencies(&mut self, file_hash: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();

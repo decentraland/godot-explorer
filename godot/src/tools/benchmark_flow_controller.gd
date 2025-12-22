@@ -230,6 +230,11 @@ func handle_explorer_scene(_scene):
 		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		log_message("✓ Moving to next location: %s at %s" % [next_loc.name, next_loc.pos])
 		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+		# Force cleanup of content provider cache before next scene
+		var cleaned = Global.content_provider.force_clean_cache()
+		log_message("✓ Cleaned %d cached resources" % cleaned)
+
 		current_stage = ""  # Reset to allow re-handling after teleport
 		await get_tree().create_timer(4.0).timeout
 		Global.teleport_to(next_loc.pos, next_loc.realm)
