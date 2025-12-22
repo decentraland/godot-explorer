@@ -65,7 +65,7 @@ jobs:
         run: |
           export DISPLAY=:99
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
-          cargo run -- run --no-default-features --features use_deno,use_memory_debugger -- --benchmark-report 2>&1 | tee benchmark_run.log
+          cargo run -- run --no-default-features --features use_deno,use_memory_debugger -- --benchmark-report --only-no-optimized 2>&1 | tee benchmark_run.log
 
       - name: Collect Benchmark Results
         if: always()

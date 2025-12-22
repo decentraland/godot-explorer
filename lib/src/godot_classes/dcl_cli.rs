@@ -75,6 +75,10 @@ pub struct DclCli {
     pub developer_mode: bool,
     #[var(get)]
     pub help_requested: bool,
+    #[var(get)]
+    pub only_optimized: bool,
+    #[var(get)]
+    pub only_no_optimized: bool,
 
     // Arguments with values
     #[var(get)]
@@ -262,6 +266,20 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Maintenance".to_string(),
             },
+            // Asset Loading
+            ArgDefinition {
+                name: "--only-optimized".to_string(),
+                description: "Only load optimized assets (skip scenes without optimized assets)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Asset Loading".to_string(),
+            },
+            ArgDefinition {
+                name: "--only-no-optimized".to_string(),
+                description: "Only load non-optimized assets (ignore optimized assets)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Asset Loading".to_string(),
+            },
         ]
     }
 
@@ -377,6 +395,8 @@ impl INode for DclCli {
         let benchmark_report = args_map.contains_key("--benchmark-report");
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
+        let only_optimized = args_map.contains_key("--only-optimized");
+        let only_no_optimized = args_map.contains_key("--only-no-optimized");
 
         // Extract arguments with values
         let realm = args_map
@@ -433,6 +453,8 @@ impl INode for DclCli {
             fixed_skybox_time,
             developer_mode,
             help_requested,
+            only_optimized,
+            only_no_optimized,
             realm,
             location,
             scene_input_file,
