@@ -559,6 +559,11 @@ func async_load_scene(
 		pass  # Scene optimization skipped (XR/testing mode)
 	elif download_res is PromiseError:
 		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
+		# --only-optimized: Skip scene if it's not optimized
+		if Global.cli.only_optimized:
+			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
+			loaded_scenes.erase(scene_entity_id)
+			return PromiseUtils.resolved(false)
 	else:
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
 		if not ok:
