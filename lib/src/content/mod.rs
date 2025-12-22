@@ -9,6 +9,7 @@ pub mod profile;
 #[cfg(feature = "use_resource_tracking")]
 pub mod resource_download_tracking;
 pub mod resource_provider;
+mod scene_saver;
 pub mod semaphore_ext;
 pub mod texture;
 mod thread_safety;

@@ -18,7 +18,6 @@ pub mod av;
 pub mod avatars;
 pub mod comms;
 pub mod content;
-pub mod content_v2;
 pub mod dcl;
 pub mod godot_classes;
 pub mod http_request;
