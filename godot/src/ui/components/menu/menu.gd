@@ -46,7 +46,7 @@ func _ready():
 	hud_button_discover.button_group = btn_group
 	hud_button_settings.button_group = btn_group
 	portrait_button_profile.button_group = btn_group
-	hud_button_discover.pressed.emit()
+	Global.open_discover.emit()
 	hud_button_discover.button_pressed = true
 
 	account_deletion_pop_up.hide()
@@ -117,7 +117,6 @@ func show_settings():
 
 func show_own_profile():
 	select_profile_screen()
-	portrait_button_profile.toggled.emit(true)
 	_open()
 
 
@@ -267,7 +266,7 @@ func _on_portrait_button_settings_pressed() -> void:
 
 
 func _on_portrait_button_profile_pressed() -> void:
-	show_own_profile()
+	pass
 
 
 func _on_account_delete() -> void:
