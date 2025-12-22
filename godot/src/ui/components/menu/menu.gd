@@ -265,10 +265,6 @@ func _on_portrait_button_settings_pressed() -> void:
 	show_settings()
 
 
-func _on_portrait_button_profile_pressed() -> void:
-	pass
-
-
 func _on_account_delete() -> void:
 	if account_deletion_pop_up:
 		account_deletion_pop_up.async_start_flow()

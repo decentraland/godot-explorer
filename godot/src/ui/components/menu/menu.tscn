@@ -260,4 +260,3 @@ visible = false
 layout_mode = 1
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_pressed"]
