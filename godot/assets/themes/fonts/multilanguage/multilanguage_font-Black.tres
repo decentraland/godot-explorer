@@ -1,0 +1,14 @@
+[gd_resource type="FontVariation" load_steps=4 format=3 uid="uid://otorn4yc6y7h"]
+
+[ext_resource type="FontFile" uid="uid://cyfm2g5dxx24m" path="res://assets/themes/fonts/inter/Inter-Black.ttf" id="1_ftuy4"]
+[ext_resource type="FontFile" uid="uid://dfx6banyqu12e" path="res://assets/themes/fonts/nato_sc/NotoSansSC-VariableFont_wght.ttf" id="2_jl730"]
+
+[sub_resource type="FontVariation" id="FontVariation_i31fy"]
+base_font = ExtResource("2_jl730")
+variation_opentype = {
+2003265652: 900
+}
+
+[resource]
+fallbacks = Array[Font]([SubResource("FontVariation_i31fy")])
+base_font = ExtResource("1_ftuy4")

@@ -1,0 +1,14 @@
+[gd_resource type="FontVariation" load_steps=4 format=3 uid="uid://bamip0f5oua6y"]
+
+[ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="1_ueipe"]
+[ext_resource type="FontFile" uid="uid://dfx6banyqu12e" path="res://assets/themes/fonts/nato_sc/NotoSansSC-VariableFont_wght.ttf" id="2_up515"]
+
+[sub_resource type="FontVariation" id="FontVariation_55mfy"]
+base_font = ExtResource("2_up515")
+variation_opentype = {
+2003265652: 300
+}
+
+[resource]
+fallbacks = Array[Font]([SubResource("FontVariation_55mfy")])
+base_font = ExtResource("1_ueipe")
