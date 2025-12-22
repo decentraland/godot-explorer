@@ -1,0 +1,14 @@
+[gd_resource type="FontVariation" load_steps=4 format=3 uid="uid://djcnib8jybvn5"]
+
+[ext_resource type="FontFile" uid="uid://cq6ic0h44rpms" path="res://assets/themes/fonts/inter/Inter-ExtraLight.ttf" id="1_kycub"]
+[ext_resource type="FontFile" uid="uid://dfx6banyqu12e" path="res://assets/themes/fonts/nato_sc/NotoSansSC-VariableFont_wght.ttf" id="2_fylyd"]
+
+[sub_resource type="FontVariation" id="FontVariation_wkovr"]
+base_font = ExtResource("2_fylyd")
+variation_opentype = {
+2003265652: 200
+}
+
+[resource]
+fallbacks = Array[Font]([SubResource("FontVariation_wkovr")])
+base_font = ExtResource("1_kycub")
