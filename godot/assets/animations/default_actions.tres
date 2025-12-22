@@ -1,7 +1,8 @@
-[gd_resource type="AnimationLibrary" load_steps=17 format=3 uid="uid://cgx3ab1bmo3io"]
+[gd_resource type="AnimationLibrary" load_steps=18 format=3 uid="uid://cgx3ab1bmo3io"]
 
 [ext_resource type="Animation" uid="uid://bm1jb4qn17t8u" path="res://assets/animations/emotes/buttonDown.tres" id="1_buttondown"]
 [ext_resource type="Animation" uid="uid://budkg056rh0o8" path="res://assets/animations/emotes/buttonFront.tres" id="2_buttonfront"]
+[ext_resource type="Animation" uid="uid://7s83a87bbvyr" path="res://assets/animations/emotes/crafting.tres" id="3_524kp"]
 [ext_resource type="Animation" uid="uid://u5acyavb2siq" path="res://assets/animations/emotes/getHit.tres" id="3_gethit"]
 [ext_resource type="Animation" uid="uid://btn05n3gn1xsh" path="res://assets/animations/emotes/knockOut.tres" id="4_knockout"]
 [ext_resource type="Animation" uid="uid://cthqpxj43gq22" path="res://assets/animations/emotes/lever.tres" id="5_lever"]
@@ -21,6 +22,7 @@
 _data = {
 &"buttonDown": ExtResource("1_buttondown"),
 &"buttonFront": ExtResource("2_buttonfront"),
+&"crafting": ExtResource("3_524kp"),
 &"getHit": ExtResource("3_gethit"),
 &"knockOut": ExtResource("4_knockout"),
 &"lever": ExtResource("5_lever"),

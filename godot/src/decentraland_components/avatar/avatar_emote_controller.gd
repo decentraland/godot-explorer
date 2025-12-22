@@ -33,6 +33,7 @@ class EmoteItemData:
 	var prop_anim_name: String = ""
 	var file_hash: String = ""
 	var armature_prop: Node3D = null
+	var prop_animation_player: AnimationPlayer = null
 
 	var from_scene: bool
 	var looping: bool
@@ -42,13 +43,15 @@ class EmoteItemData:
 		_default_anim_name: String,
 		_prop_anim_name: String,
 		_file_hash: String,
-		_armature_prop: Node3D
+		_armature_prop: Node3D,
+		_prop_animation_player: AnimationPlayer = null
 	):
 		urn = _urn
 		default_anim_name = _default_anim_name
 		prop_anim_name = _prop_anim_name
 		file_hash = _file_hash
 		armature_prop = _armature_prop
+		prop_animation_player = _prop_animation_player
 
 
 var loaded_emotes_by_urn: Dictionary
@@ -86,6 +89,12 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	assert(animation_mix_emote_node.get_node("A") != null)
 	assert(animation_mix_emote_node.get_node("B") != null)
 
+	# Set safe default animations to avoid errors when AnimationTree processes
+	# The default "AFK" in tscn may not exist in the animation player
+	animation_single_emote_node.animation = "idle/Anim"
+	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
+	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+
 	# Idle Anim Duplication (so it makes mutable and non-shared-reference)
 	var idle_animation_library = animation_player.get_animation_library("idle")
 	idle_animation_library = idle_animation_library.duplicate(false)
@@ -112,7 +121,15 @@ func stop_emote():
 func play_emote(id: String):
 	var triggered: bool = false
 	if not id.begins_with("urn"):
-		triggered = _play_default_emote(id)
+		# Check if it's a utility action (local) or base emote (remote)
+		if Emotes.is_emote_utility(id):
+			triggered = _play_utility_emote(id)
+		elif Emotes.is_emote_default(id):
+			# Base emotes are loaded remotely, play via URN
+			var urn = Emotes.get_base_emote_urn(id)
+			triggered = _play_loaded_emote(urn)
+		else:
+			printerr("Unknown emote: %s" % id)
 	else:
 		triggered = _play_loaded_emote(id)
 
@@ -120,27 +137,23 @@ func play_emote(id: String):
 		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop)
 
 
-func _play_default_emote(default_emote_id: String) -> bool:
-	# Check all embedded animation libraries for the emote
-	var anim_name := ""
-	var libraries := ["default_emotes", "default_actions"]
-
-	for lib in libraries:
-		var candidate = lib + "/" + default_emote_id
-		if animation_player.has_animation(candidate):
-			anim_name = candidate
-			break
-
-	if anim_name.is_empty():
+func _play_utility_emote(utility_emote_id: String) -> bool:
+	# Utility emotes are local animations from default_actions library
+	var anim_name = "default_actions/" + utility_emote_id
+	if not animation_player.has_animation(anim_name):
 		printerr(
-			"Emote %s not found from player '%s'" % [default_emote_id, avatar.get_avatar_name()]
+			"Utility emote %s not found from player '%s'"
+			% [utility_emote_id, avatar.get_avatar_name()]
 		)
 		return false
 
 	animation_single_emote_node.animation = anim_name
 	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
-	if pb.get_current_node() == "Emote":
+	var cur_node = pb.get_current_node()
+	if cur_node == "Emote":
 		pb.start("Emote", true)
+	else:
+		pb.travel("Emote")
 
 	playing_single = true
 	playing_mixed = false
@@ -149,59 +162,154 @@ func _play_default_emote(default_emote_id: String) -> bool:
 
 
 func _play_loaded_emote(emote_urn: String) -> bool:
+	print("_play_loaded_emote: ", emote_urn)
 	if not _has_emote(emote_urn):
 		printerr("Emote %s not found from player '%s'" % [emote_urn, avatar.get_avatar_name()])
 		return false
 
 	var emote_item_data: EmoteItemData = loaded_emotes_by_urn[emote_urn]
+	print("  emote_item_data.default_anim_name: ", emote_item_data.default_anim_name)
+
+	# Validate animation name exists
+	if emote_item_data.default_anim_name.is_empty():
+		printerr("Emote %s has no animation" % emote_urn)
+		return false
 
 	if emote_item_data.from_scene:
 		playing_loop = emote_item_data.looping
 	else:
 		var emote_data = Global.content_provider.get_wearable(emote_item_data.urn)
 		if emote_data == null:
+			print("  ERROR: emote_data is null for URN: ", emote_item_data.urn)
 			return false
 		playing_loop = emote_data.get_emote_loop()
 
-	playing_single = emote_item_data.prop_anim_name.is_empty()
-	playing_mixed = not playing_single
+	# Reset avatar state before playing new emote
+	_hide_all_props()
+	_reset_skeleton_to_rest_pose()
 
-	# Single Animation
-	if playing_single:
-		animation_single_emote_node.animation = "emotes/" + emote_item_data.default_anim_name
-		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
-		if pb.get_current_node() == "Emote":
-			pb.start("Emote", true)
-	elif playing_mixed:
-		animation_mix_emote_node.get_node("A").animation = (
-			"emotes/" + emote_item_data.default_anim_name
-		)
-		animation_mix_emote_node.get_node("B").animation = (
-			"emotes/" + emote_item_data.prop_anim_name
-		)
+	playing_single = true
+	playing_mixed = false
 
-		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
-		if pb.get_current_node() == "Emote_Mix":
-			pb.start("Emote_Mix", true)
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+
+	# Play merged animation (avatar + prop tracks combined) through AnimationTree
+	var anim_path = "emotes/" + emote_item_data.default_anim_name
+	print("  anim_path: ", anim_path)
+	print("  has_animation: ", animation_player.has_animation(anim_path))
+	if not animation_player.has_animation(anim_path):
+		printerr("Animation not found in player: %s" % anim_path)
+		return false
+
+	var anim = animation_player.get_animation(anim_path)
+	print("  animation length: ", anim.length, " tracks: ", anim.get_track_count())
+	# Print first 5 track paths to verify they match skeleton
+	for i in range(min(5, anim.get_track_count())):
+		print("    track[", i, "]: ", anim.track_get_path(i))
+
+	animation_single_emote_node.animation = anim_path
+	var cur_node = pb.get_current_node()
+	print("  cur_node: ", cur_node, " -> starting Emote")
+	print("  animation_tree.active: ", animation_tree.active)
+	print("  animation_tree.process_mode: ", animation_tree.process_mode)
+
+	# Ensure animation tree is active
+	if not animation_tree.active:
+		print("  WARNING: AnimationTree was inactive, activating...")
+		animation_tree.active = true
+
+	# Ensure state machine is initialized - if current_node is empty, it hasn't started
+	var cur_state = pb.get_current_node()
+	if cur_state.is_empty():
+		print("  WARNING: State machine not initialized, starting with Idle first")
+		pb.start("Idle", true)
+		# Need to wait a frame for state machine to initialize
+		# Use call_deferred to retry the play
+		_deferred_play_emote.call_deferred(emote_urn)
+		return true
+
+	# Use travel() to follow state machine transitions, then start() to restart if already there
+	if pb.get_current_node() == "Emote":
+		pb.start("Emote", true)
+	else:
+		pb.travel("Emote")
+
+	# Debug: check state after start
+	print("  after start - current_node: ", pb.get_current_node())
+	print("  after start - is_playing: ", pb.is_playing())
+	print("  after start - play_pos: ", pb.get_current_play_position())
+	print("  animation_player.root_node: ", animation_player.root_node)
+	print("  animation_tree.anim_player: ", animation_tree.anim_player)
+
+	print("  SUCCESS playing emote")
 	return true
 
 
-func async_play_emote(emote_urn: String) -> void:
-	if not emote_urn.begins_with("urn"):
-		play_emote(emote_urn)
+func _deferred_play_emote(emote_urn: String):
+	# Called after state machine is initialized, retry the play
+	print("  _deferred_play_emote: retrying ", emote_urn)
+	play_emote(emote_urn)
+
+
+func _hide_all_props():
+	# Hide all prop armatures to ensure clean state before playing new emote
+	for child in avatar.get_children():
+		if child.name.begins_with("Armature_Prop"):
+			child.hide()
+
+
+func _reset_skeleton_to_rest_pose():
+	# Reset skeleton bones to rest pose to clear any transforms from previous emotes
+	# (e.g., head scale from "head explode" emote)
+	var armature = avatar.get_node_or_null("Armature")
+	if armature == null:
+		print("  WARNING: No Armature found for skeleton reset")
 		return
+
+	var skeleton = armature.get_node_or_null("Skeleton3D")
+	if skeleton == null:
+		print("  WARNING: No Skeleton3D found for skeleton reset")
+		return
+
+	print("  Resetting skeleton with ", skeleton.get_bone_count(), " bones")
+	for i in range(skeleton.get_bone_count()):
+		skeleton.reset_bone_pose(i)
+
+
+func async_play_emote(emote_id_or_urn: String) -> void:
+	print("async_play_emote called with: ", emote_id_or_urn)
+	var emote_urn: String = emote_id_or_urn
+
+	# Handle non-URN emote IDs
+	if not emote_id_or_urn.begins_with("urn"):
+		# Utility emotes are local, play directly
+		if Emotes.is_emote_utility(emote_id_or_urn):
+			print("  -> Playing utility emote: ", emote_id_or_urn)
+			play_emote(emote_id_or_urn)
+			return
+		# Base emotes need to be converted to URN for remote fetch
+		elif Emotes.is_emote_default(emote_id_or_urn):
+			emote_urn = Emotes.get_base_emote_urn(emote_id_or_urn)
+			print("  -> Converted to URN: ", emote_urn)
+		else:
+			printerr("Unknown emote: %s" % emote_id_or_urn)
+			return
 
 	# Does it need to be loaded?
 	if _has_emote(emote_urn):
+		print("  -> Emote already loaded, playing: ", emote_urn)
 		play_emote(emote_urn)
 		return
 
+	print("  -> Loading emote: ", emote_urn)
 	if emote_urn.contains("scene-emote"):
 		await _async_load_scene_emote(emote_urn)
 	else:
 		await _async_load_emote(emote_urn)
 
-	play_emote(emote_urn)
+	print("  -> Emote loaded, now playing: ", emote_urn)
+	# Use call_deferred to ensure playback happens on main thread after async loading
+	play_emote.call_deferred(emote_urn)
 
 
 func _async_load_emote(emote_urn: String):
@@ -261,28 +369,83 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 	if _has_emote(urn):
 		return
 
+	print("Loading emote GLTF: ", urn, " hash=", file_hash)
+	print("  armature_prop: ", obj.armature_prop)
+	print("  default_animation: ", obj.default_animation)
+	print("  prop_animation: ", obj.prop_animation)
+
 	var armature_prop: Node3D = null
+
 	if obj.armature_prop != null:
+		print("  armature_prop.name: ", obj.armature_prop.name)
 		if not avatar.has_node(NodePath(obj.armature_prop.name)):
 			armature_prop = obj.armature_prop.duplicate()
 			avatar.add_child(armature_prop)
+			print("  Added armature_prop as child: ", armature_prop.name)
 
 			var track_id = idle_anim.add_track(Animation.TYPE_VALUE)
 			idle_anim.track_set_path(track_id, NodePath(armature_prop.name + ":visible"))
 			idle_anim.track_insert_key(track_id, 0.0, false)
+		else:
+			print("  armature_prop already exists in avatar, skipping")
+			armature_prop = avatar.get_node(NodePath(obj.armature_prop.name))
 
-	var emote_item_data = EmoteItemData.new(urn, "", "", file_hash, armature_prop)
-	if obj.default_animation != null:
-		emotes_animation_library.add_animation(
-			obj.default_animation.get_name(), obj.default_animation
-		)
-		emote_item_data.default_anim_name = obj.default_animation.get_name()
-
+	# Debug: print animation track info
 	if obj.prop_animation != null:
-		emotes_animation_library.add_animation(obj.prop_animation.get_name(), obj.prop_animation)
-		emote_item_data.prop_anim_name = obj.prop_animation.get_name()
+		print("  prop_animation tracks:")
+		for i in range(obj.prop_animation.get_track_count()):
+			print("    Track ", i, ": ", obj.prop_animation.track_get_path(i))
+
+	var emote_item_data = EmoteItemData.new(urn, "", "", file_hash, armature_prop, null)
+
+	if obj.default_animation != null:
+		var anim_name = obj.default_animation.get_name()
+		if anim_name.is_empty():
+			anim_name = "emote_" + file_hash.substr(0, 8)
+
+		# If we have both avatar and prop animations, merge them into one
+		var final_animation: Animation
+		if obj.prop_animation != null:
+			final_animation = _merge_animations(obj.default_animation, obj.prop_animation)
+			print("  Merged avatar + prop animations into single animation")
+		else:
+			final_animation = obj.default_animation
+
+		if not emotes_animation_library.has_animation(anim_name):
+			emotes_animation_library.add_animation(anim_name, final_animation)
+		emote_item_data.default_anim_name = anim_name
+		print("Loaded emote animation: ", urn, " -> emotes/", anim_name)
 
 	loaded_emotes_by_urn[urn] = emote_item_data
+
+
+func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animation:
+	# Create a new animation that combines both avatar and prop tracks
+	var merged = avatar_anim.duplicate()
+
+	# Use the longer duration
+	if prop_anim.length > merged.length:
+		merged.length = prop_anim.length
+
+	# Copy all tracks from prop animation to merged animation
+	for i in range(prop_anim.get_track_count()):
+		var track_path = prop_anim.track_get_path(i)
+		var track_type = prop_anim.track_get_type(i)
+
+		# Add the track
+		var new_track_idx = merged.add_track(track_type)
+		merged.track_set_path(new_track_idx, track_path)
+		merged.track_set_interpolation_type(new_track_idx, prop_anim.track_get_interpolation_type(i))
+
+		# Copy all keys
+		var key_count = prop_anim.track_get_key_count(i)
+		for k in range(key_count):
+			var time = prop_anim.track_get_key_time(i, k)
+			var value = prop_anim.track_get_key_value(i, k)
+			var transition = prop_anim.track_get_key_transition(i, k)
+			merged.track_insert_key(new_track_idx, time, value, transition)
+
+	return merged
 
 
 func clean_unused_emotes():

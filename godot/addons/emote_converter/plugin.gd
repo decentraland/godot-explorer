@@ -5,40 +5,11 @@ const EMOTES_PATH = "res://assets/no-export/emotes/"
 const ANIMATIONS_OUTPUT_PATH = "res://assets/animations/emotes/"
 const LIBRARIES_OUTPUT_PATH = "res://assets/animations/"
 
-# Base emotes (original 10 default slot emotes)
-const BASE_EMOTES = {
-	"Clapping_Particles.glb": "clap",
-	"M_Dance.glb": "dance",
-	"M_Fist_Pump.glb": "fistpump",
-	"Hands_In_Air_Particles.glb": "handsair",
-	"M_Head_Explode.glb": "headexplode",
-	"Kiss_Particles.glb": "kiss",
-	"Money_Particles.glb": "money",
-	"Raise_Hand.glb": "raiseHand",
-	"Shrug.glb": "shrug",
-	"Wave_Male.glb": "wave",
-}
-
-# Extended base emotes (additional emotes from avatar-assets)
-const EXTENDED_EMOTES = {
-	"Disco.glb": "disco",
-	"Cry_Particles.glb": "cry",
-	"M_Dab.glb": "dab",
-	"Dont_See.glb": "dontsee",
-	"Hammer.glb": "hammer",
-	"HoHoHo_Particles.glb": "hohoho",
-	"Robot.glb": "robot",
-	"Snowfall_Particles.glb": "snowfall",
-	"Tektonik.glb": "tektonik",
-	"Tik.glb": "tik",
-	"Confetti_Popper.glb": "confettipopper",
-	"Crafting.glb": "crafting",
-}
-
-# Utility/action emotes (triggered by scenes)
-const ACTION_EMOTES = {
+# Default actions (utility animations triggered by scenes)
+const DEFAULT_ACTIONS = {
 	"Button_45.glb": "buttonDown",
 	"Button_Front.glb": "buttonFront",
+	"Crafting.glb": "crafting",
 	"Get_Hit.glb": "getHit",
 	"KO.glb": "knockOut",
 	"Lever.glb": "lever",
@@ -65,7 +36,7 @@ func _exit_tree():
 
 
 func _convert_all_emotes():
-	print("=== Converting ALL GLB animations to .tres ===")
+	print("=== Converting Action GLB animations to .tres ===")
 	print("")
 
 	# Create output directory if it doesn't exist
@@ -73,39 +44,27 @@ func _convert_all_emotes():
 	if dir and not dir.dir_exists("emotes"):
 		dir.make_dir("emotes")
 
-	# Step 1: Convert all GLBs to individual .tres files
-	var base_results = _convert_emote_group(BASE_EMOTES, "Base Emotes")
-	var extended_results = _convert_emote_group(EXTENDED_EMOTES, "Extended Emotes")
-	var action_results = _convert_emote_group(ACTION_EMOTES, "Action Emotes")
+	# Convert all action GLBs to individual .tres files
+	var action_results = _convert_emote_group(DEFAULT_ACTIONS, "Default Actions")
 
 	print("")
-	print("=== Generating Animation Libraries ===")
+	print("=== Generating Animation Library ===")
 	print("")
 
-	# Step 2: Generate animation libraries that reference the .tres files
+	# Generate animation library that references the .tres files
 	var lib_success = 0
 	var lib_failed = 0
 
-	# Merge BASE_EMOTES and EXTENDED_EMOTES into a single default_emotes library
-	var all_emotes = {}
-	all_emotes.merge(BASE_EMOTES)
-	all_emotes.merge(EXTENDED_EMOTES)
-
-	if _generate_animation_library("default_emotes", all_emotes):
-		lib_success += 1
-	else:
-		lib_failed += 1
-
-	if _generate_animation_library("default_actions", ACTION_EMOTES):
+	if _generate_animation_library("default_actions", DEFAULT_ACTIONS):
 		lib_success += 1
 	else:
 		lib_failed += 1
 
 	print("")
 	print("=== Conversion Complete ===")
-	print("Animations converted: %d" % (base_results[0] + extended_results[0] + action_results[0]))
-	print("Animations skipped: %d" % (base_results[1] + extended_results[1] + action_results[1]))
-	print("Animations failed: %d" % (base_results[2] + extended_results[2] + action_results[2]))
+	print("Animations converted: %d" % action_results[0])
+	print("Animations skipped: %d" % action_results[1])
+	print("Animations failed: %d" % action_results[2])
 	print("Libraries generated: %d" % lib_success)
 	print("Libraries failed: %d" % lib_failed)
 
@@ -113,10 +72,8 @@ func _convert_all_emotes():
 	get_editor_interface().get_resource_filesystem().scan()
 
 	# Show result popup
-	var total_converted = base_results[0] + extended_results[0] + action_results[0]
-	var total_skipped = base_results[1] + extended_results[1] + action_results[1]
-	var total_failed = base_results[2] + extended_results[2] + action_results[2]
-	var message = """Conversion complete!
+	var message = (
+		"""Conversion complete!
 
 Animations:
   Converted: %d
@@ -128,9 +85,10 @@ Libraries:
   Failed: %d
 
 Output:
-  - default_emotes.tres (22 emotes)
-  - default_actions.tres (16 action emotes)""" % [total_converted, total_skipped, total_failed, lib_success, lib_failed]
-	OS.alert(message, "Emote Converter")
+  - default_actions.tres (%d actions)"""
+		% [action_results[0], action_results[1], action_results[2], lib_success, lib_failed, DEFAULT_ACTIONS.size()]
+	)
+	OS.alert(message, "Action Emote Converter")
 
 
 func _convert_emote_group(emote_map: Dictionary, group_name: String) -> Array:
@@ -231,9 +189,9 @@ func _generate_animation_library(lib_name: String, emote_map: Dictionary) -> boo
 	if error == OK:
 		print("  Success: %d animations (%d missing)" % [added, missing])
 		return true
-	else:
-		print("  ERROR: Failed to save library (error %d)" % error)
-		return false
+
+	print("  ERROR: Failed to save library (error %d)" % error)
+	return false
 
 
 # Fix animation bone paths from node hierarchy format to Skeleton3D bone format

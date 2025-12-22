@@ -1,6 +1,8 @@
 class_name Emotes
 extends RefCounted
 
+const BASE_EMOTES_URN_PREFIX = "urn:decentraland:off-chain:base-emotes:"
+
 # Base emotes from avatar-assets repository
 const DEFAULT_EMOTE_NAMES = {
 	# Original 10 default slot emotes
@@ -26,13 +28,13 @@ const DEFAULT_EMOTE_NAMES = {
 	"tektonik": "Tektonik",
 	"tik": "Tik",
 	"confettipopper": "Confetti Popper",
-	"crafting": "Crafting",
 }
 
 # Utility/game emotes (triggered by scenes, no thumbnails)
 const UTILITY_EMOTE_NAMES = {
 	"buttonDown": "Button Down",
 	"buttonFront": "Button Front",
+	"crafting": "Crafting",
 	"getHit": "Get Hit",
 	"knockOut": "Knock Out",
 	"lever": "Lever",
@@ -67,4 +69,23 @@ static func get_emote_name(urn_or_id: String) -> String:
 		return DEFAULT_EMOTE_NAMES[urn_or_id]
 	if UTILITY_EMOTE_NAMES.has(urn_or_id):
 		return UTILITY_EMOTE_NAMES[urn_or_id]
+	# Check if it's a base emote URN
+	if urn_or_id.begins_with(BASE_EMOTES_URN_PREFIX):
+		var emote_id = get_base_emote_id_from_urn(urn_or_id)
+		if DEFAULT_EMOTE_NAMES.has(emote_id):
+			return DEFAULT_EMOTE_NAMES[emote_id]
 	return urn_or_id
+
+
+static func get_base_emote_urn(emote_id: String) -> String:
+	return BASE_EMOTES_URN_PREFIX + emote_id
+
+
+static func get_base_emote_id_from_urn(urn: String) -> String:
+	if urn.begins_with(BASE_EMOTES_URN_PREFIX):
+		return urn.substr(BASE_EMOTES_URN_PREFIX.length())
+	return urn
+
+
+static func is_base_emote_urn(urn: String) -> bool:
+	return urn.begins_with(BASE_EMOTES_URN_PREFIX)
