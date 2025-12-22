@@ -39,12 +39,10 @@ use crate::godot_classes::dcl_resource_tracker::{
 
 use super::{
     audio::load_audio,
-    gltf::{
-        apply_update_set_mask_colliders, load_gltf_emote, load_gltf_scene_content,
-        load_gltf_wearable, DclEmoteGltf,
-    },
+    gltf::{load_and_save_scene_gltf, load_gltf_emote, load_gltf_wearable, DclEmoteGltf},
     profile::{prepare_request_requirements, request_lambda_profile},
     resource_provider::ResourceProvider,
+    scene_saver::get_scene_path_for_hash,
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
     video::download_video,
@@ -54,6 +52,9 @@ use super::{
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
 
+// DEPRECATED: The promise-based cache system is being phased out for scene GLTF loading.
+// ContentProvider2 uses file-based caching for non-optimized assets.
+// This cache is still used for textures, audio, wearables, profiles, optimized assets, etc.
 #[derive(Clone)]
 pub struct ContentEntry {
     promise: Gd<Promise>,
@@ -88,6 +89,7 @@ struct ImageSize {
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct ContentProvider {
+    base: Base<Node>,
     content_folder: Arc<String>,
     resource_provider: Arc<ResourceProvider>,
     #[cfg(feature = "use_resource_tracking")]
@@ -108,6 +110,8 @@ pub struct ContentProvider {
     // Set of optimized hashes that we know that exists...
     optimized_assets: HashSet<String>,
     optimized_original_size: HashMap<String, ImageSize>,
+    // Set of scene GLTF hashes currently being loaded (to prevent duplicate loads)
+    loading_scene_hashes: HashSet<String>,
 }
 
 #[derive(Clone)]
@@ -121,11 +125,22 @@ pub struct ContentProviderContext {
 
 unsafe impl Send for ContentProviderContext {}
 
+/// Context for scene GLTF loading (simpler than ContentProviderContext)
+#[derive(Clone)]
+pub struct SceneGltfContext {
+    pub content_folder: Arc<String>,
+    pub resource_provider: Arc<ResourceProvider>,
+    pub godot_single_thread: Arc<Semaphore>,
+    pub texture_quality: TextureQuality,
+}
+
+unsafe impl Send for SceneGltfContext {}
+
 const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v2";
 
 #[godot_api]
 impl INode for ContentProvider {
-    fn init(_base: Base<Node>) -> Self {
+    fn init(base: Base<Node>) -> Self {
         let content_folder = Arc::new(format!(
             "{}/content/",
             godot::engine::Os::singleton().get_user_data_dir()
@@ -135,6 +150,7 @@ impl INode for ContentProvider {
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
 
         Self {
+            base,
             resource_provider: Arc::new(ResourceProvider::new(
                 content_folder.clone().as_str(),
                 2048 * 1000 * 1000,
@@ -167,11 +183,13 @@ impl INode for ContentProvider {
             }),
             optimized_assets: HashSet::default(),
             optimized_original_size: HashMap::default(),
+            loading_scene_hashes: HashSet::new(),
         }
     }
     fn ready(&mut self) {}
     fn exit_tree(&mut self) {
         self.cached.clear();
+        self.loading_scene_hashes.clear();
         tracing::info!("ContentProvider::exit_tree");
     }
 
@@ -260,6 +278,201 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
+    // =========================================================================
+    // Scene GLTF Loading Signals (for non-optimized assets)
+    // =========================================================================
+
+    /// Signal emitted when a scene GLTF is ready to be loaded from disk
+    ///
+    /// Parameters:
+    /// - file_hash: The hash of the GLTF file
+    /// - scene_path: The path to the saved .scn file
+    #[signal]
+    fn scene_gltf_ready(file_hash: GString, scene_path: GString);
+
+    /// Signal emitted when a scene GLTF fails to load
+    ///
+    /// Parameters:
+    /// - file_hash: The hash of the GLTF file
+    /// - error: Error message
+    #[signal]
+    fn scene_gltf_error(file_hash: GString, error: GString);
+
+    // =========================================================================
+    // Scene GLTF Loading Functions (for non-optimized assets)
+    // =========================================================================
+
+    /// Request to load a scene GLTF (for non-optimized assets)
+    ///
+    /// This will either:
+    /// - Emit scene_gltf_ready immediately if the scene is already cached
+    /// - Start async loading and emit scene_gltf_ready/scene_gltf_error when done
+    ///
+    /// Note: Colliders are created with mask=0. Caller should set masks after instantiating.
+    ///
+    /// Returns true if the load was started, false if already loading
+    #[func]
+    pub fn load_scene_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> bool {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                // Emit error signal
+                self.base_mut().emit_signal(
+                    "scene_gltf_error".into(),
+                    &[
+                        GString::from("").to_variant(),
+                        GString::from(format!(
+                            "File not found in content mapping: {}",
+                            file_path_str
+                        ))
+                        .to_variant(),
+                    ],
+                );
+                return false;
+            }
+        };
+
+        // Check if already loading this hash - caller should wait for signal
+        if self.loading_scene_hashes.contains(&file_hash) {
+            // Return true because the load is in progress and signal will be emitted
+            return true;
+        }
+
+        // Mark as loading
+        self.loading_scene_hashes.insert(file_hash.clone());
+
+        // Create context for async operation
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+        };
+
+        // Get instance ID for callback
+        let instance_id = self.base().instance_id();
+        let file_hash_clone = file_hash.clone();
+
+        // Spawn async task - cache check and loading all happens here
+        TokioRuntime::spawn(async move {
+            // Check if scene is already cached on disk
+            let scene_path = get_scene_path_for_hash(&ctx.content_folder, &file_hash_clone);
+
+            let result = if ctx.resource_provider.file_exists_by_path(&scene_path).await {
+                // Cache HIT - just touch and return the path
+                tracing::debug!(
+                    "Scene GLTF cache HIT: {} -> {}",
+                    file_hash_clone,
+                    scene_path
+                );
+                ctx.resource_provider.touch_file_async(&scene_path).await;
+                Ok(scene_path)
+            } else {
+                // Cache MISS - load, process, and save
+                tracing::debug!("Scene GLTF cache MISS: {} - loading", file_hash_clone);
+                load_and_save_scene_gltf(
+                    file_path_str,
+                    file_hash_clone.clone(),
+                    content_mapping_ref,
+                    ctx,
+                )
+                .await
+            };
+
+            // Callback to main thread
+            let file_hash_gd = GString::from(&file_hash_clone);
+            match result {
+                Ok(scene_path) => {
+                    let scene_path_gd = GString::from(&scene_path);
+                    if let Ok(mut provider) =
+                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
+                    {
+                        provider.call_deferred(
+                            "on_scene_gltf_load_complete".into(),
+                            &[
+                                file_hash_gd.to_variant(),
+                                scene_path_gd.to_variant(),
+                                GString::from("").to_variant(),
+                            ],
+                        );
+                    }
+                }
+                Err(e) => {
+                    let error_msg = GString::from(e.to_string());
+                    if let Ok(mut provider) =
+                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
+                    {
+                        provider.call_deferred(
+                            "on_scene_gltf_load_complete".into(),
+                            &[
+                                file_hash_gd.to_variant(),
+                                GString::from("").to_variant(),
+                                error_msg.to_variant(),
+                            ],
+                        );
+                    }
+                }
+            }
+        });
+
+        true
+    }
+
+    /// Internal callback when scene GLTF load completes (called via call_deferred)
+    #[func]
+    fn on_scene_gltf_load_complete(
+        &mut self,
+        file_hash: GString,
+        scene_path: GString,
+        error: GString,
+    ) {
+        let hash_str = file_hash.to_string();
+        self.loading_scene_hashes.remove(&hash_str);
+
+        if error.is_empty() {
+            self.base_mut().emit_signal(
+                "scene_gltf_ready".into(),
+                &[file_hash.to_variant(), scene_path.to_variant()],
+            );
+        } else {
+            self.base_mut().emit_signal(
+                "scene_gltf_error".into(),
+                &[file_hash.to_variant(), error.to_variant()],
+            );
+        }
+    }
+
+    /// Check if a scene is cached on disk
+    #[func]
+    pub fn is_scene_cached(&self, file_hash: GString) -> bool {
+        let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
+        std::path::Path::new(&scene_path).exists()
+    }
+
+    /// Get the path where a scene would be cached
+    #[func]
+    pub fn get_scene_cache_path(&self, file_hash: GString) -> GString {
+        get_scene_path_for_hash(&self.content_folder, &file_hash.to_string()).into()
+    }
+
+    /// Check if a hash is currently being loaded
+    #[func]
+    pub fn is_scene_loading(&self, file_hash: GString) -> bool {
+        self.loading_scene_hashes.contains(&file_hash.to_string())
+    }
+
+    // =========================================================================
+    // Cache Management
+    // =========================================================================
+
     /// Force cleanup of all resolved cache entries.
     /// This immediately frees Node3D resources and clears the cache.
     /// Use between benchmark runs to ensure clean state.
@@ -298,6 +511,9 @@ impl ContentProvider {
         cleaned_count
     }
 
+    // DEPRECATED: The promise/cache pattern here is being phased out.
+    // This function still loads pre-baked optimized assets via ResourceLoader,
+    // but the promise-based caching will be removed in favor of direct loading.
     #[func]
     pub fn fetch_optimized_asset_with_dependencies(&mut self, file_hash: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
@@ -469,64 +685,6 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn fetch_scene_gltf(
-        &mut self,
-        file_path: GString,
-        content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Promise> {
-        let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
-            return Promise::from_rejected(format!("File not found: {}", file_path));
-        };
-
-        if let Some(entry) = self.cached.get_mut(file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
-        }
-
-        let file_hash = file_hash.clone();
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_file_path = file_path.to_string();
-        let content_provider_context = self.get_context();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result =
-                load_gltf_scene_content(gltf_file_path, content_mapping, content_provider_context)
-                    .await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
-
-        promise
-    }
-
-    #[func]
     pub fn fetch_emote_gltf(
         &mut self,
         file_path: GString,
@@ -579,34 +737,6 @@ impl ContentProvider {
                 promise: promise.clone(),
             },
         );
-
-        promise
-    }
-
-    #[func]
-    pub fn instance_gltf_colliders(
-        &mut self,
-        gltf_node: Gd<Node>,
-        dcl_visible_cmask: i32,
-        dcl_invisible_cmask: i32,
-        dcl_scene_id: i32,
-        dcl_entity_id: i32,
-    ) -> Gd<Promise> {
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_node_instance_id = gltf_node.instance_id();
-        let content_provider_context = self.get_context();
-        TokioRuntime::spawn(async move {
-            let result = apply_update_set_mask_colliders(
-                gltf_node_instance_id,
-                dcl_visible_cmask,
-                dcl_invisible_cmask,
-                dcl_scene_id,
-                dcl_entity_id,
-                content_provider_context,
-            )
-            .await;
-            then_promise(get_promise, result);
-        });
 
         promise
     }

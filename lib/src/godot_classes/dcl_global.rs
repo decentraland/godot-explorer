@@ -11,7 +11,6 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
-    content_v2::ContentProvider2,
     dcl::common::set_scene_log_enabled,
     godot_classes::dcl_avatar::DclAvatar,
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
@@ -167,8 +166,6 @@ pub struct DclGlobal {
     pub player_identity: Gd<DclPlayerIdentity>,
     #[var]
     pub content_provider: Gd<ContentProvider>,
-    #[var]
-    pub content_provider2: Gd<ContentProvider2>,
     #[var(get)]
     pub http_requester: Gd<RustHttpQueueRequester>,
     #[var]
@@ -250,7 +247,6 @@ impl INode for DclGlobal {
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
         let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
-        let mut content_provider2: Gd<ContentProvider2> = ContentProvider2::new_alloc();
 
         #[cfg(feature = "use_memory_debugger")]
         let mut memory_debugger: Gd<MemoryDebugger> = MemoryDebugger::new_alloc();
@@ -279,7 +275,6 @@ impl INode for DclGlobal {
         player_identity.set_name("player_identity".into());
         testing_tools.set_name("testing_tool".into());
         content_provider.set_name("content_provider".into());
-        content_provider2.set_name("content_provider2".into());
         portable_experience_controller.set_name("portable_experience_controller".into());
         network_inspector.set_name("network_inspector".into());
         social_blacklist.set_name("social_blacklist".into());
@@ -334,7 +329,6 @@ impl INode for DclGlobal {
             dcl_tokio_rpc,
             player_identity,
             content_provider,
-            content_provider2,
             http_requester: RustHttpQueueRequester::new_gd(),
             config,
             ethereum_provider: Arc::new(EthereumProvider::new()),

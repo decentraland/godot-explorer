@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-//! Scene saving utilities for content_v2
+//! Scene saving utilities
 //!
 //! Provides functions to save Node3D as PackedScene to disk.
 //! Scenes are stored in the same cache folder as other content,

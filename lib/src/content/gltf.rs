@@ -8,10 +8,11 @@ use godot::{
         CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture,
         MeshInstance3D, Node, Node3D, StaticBody3D,
     },
-    obj::{EngineEnum, Gd, InstanceId},
+    obj::{EngineEnum, Gd, NewAlloc},
     prelude::*,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio::sync::Semaphore;
 
 use crate::{content::texture::resize_image, godot_classes::resource_locker::ResourceLocker};
 
@@ -19,8 +20,11 @@ use crate::{content::texture::resize_image, godot_classes::resource_locker::Reso
 use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
 
 use super::{
-    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
-    file_string::get_base_dir, texture::create_compressed_texture,
+    content_mapping::ContentMappingAndUrlRef,
+    content_provider::{ContentProviderContext, SceneGltfContext},
+    file_string::get_base_dir,
+    scene_saver::{get_scene_path_for_hash, save_node_as_scene},
+    texture::create_compressed_texture,
     thread_safety::GodotSingleThreadSafety,
 };
 
@@ -194,16 +198,6 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
     }
 }
 
-pub async fn load_gltf_scene_content(
-    file_path: String,
-    content_mapping: ContentMappingAndUrlRef,
-    ctx: ContentProviderContext,
-) -> Result<Option<Variant>, anyhow::Error> {
-    let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
-    create_colliders(node.clone().upcast());
-    Ok(Some(node.to_variant()))
-}
-
 pub async fn load_gltf_wearable(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
@@ -227,54 +221,6 @@ pub async fn load_gltf_emote(
     let (gltf_node, _thread_safe_check) =
         internal_load_gltf(file_path, content_mapping, ctx).await?;
     Ok(add_animation_from_obj(&file_hash, gltf_node).map(|emote| emote.to_variant()))
-}
-
-pub async fn apply_update_set_mask_colliders(
-    gltf_node_instance_id: InstanceId,
-    dcl_visible_cmask: i32,
-    dcl_invisible_cmask: i32,
-    dcl_scene_id: i32,
-    dcl_entity_id: i32,
-    ctx: ContentProviderContext,
-) -> Result<Option<Variant>, anyhow::Error> {
-    let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
-        .await
-        .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
-
-    let mut to_remove_nodes = Vec::new();
-    let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
-    let gltf_node = gltf_node
-        .duplicate_ex()
-        .flags(8)
-        .done()
-        .ok_or(anyhow::Error::msg("unable to duplicate gltf node"))?;
-
-    update_set_mask_colliders(
-        gltf_node.clone(),
-        dcl_visible_cmask,
-        dcl_invisible_cmask,
-        dcl_scene_id,
-        dcl_entity_id,
-        &mut to_remove_nodes,
-    );
-
-    // TODO: Check if remove this logic is needed
-    //      animation duplication is no longer needed for MultipleAnimationController.
-    // duplicate_animation_resources(gltf_node.clone());
-
-    //  The duplication was done because the loop property could be modified
-    //      in the MultipleAnimationController the looping is handled by replaying every time
-    //      the animation emits the finished signal
-
-    // Free orphan nodes immediately instead of queue_free()
-    // These nodes have been removed from the tree and are orphans.
-    // queue_free() doesn't work reliably for orphan nodes from background threads
-    // because they're not in any SceneTree's deferred deletion queue.
-    for node in to_remove_nodes {
-        node.free();
-    }
-
-    Ok(Some(gltf_node.to_variant()))
 }
 
 async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
@@ -327,142 +273,6 @@ async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Err
     }
 
     Ok(dependencies)
-}
-
-fn get_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<StaticBody3D>> {
-    for maybe_static_body in mesh_instance.get_children().iter_shared() {
-        if let Ok(static_body_3d) = maybe_static_body.try_cast::<StaticBody3D>() {
-            return Some(static_body_3d);
-        }
-    }
-    None
-}
-
-fn create_colliders(node_to_inspect: Gd<Node>) {
-    for child in node_to_inspect.get_children().iter_shared() {
-        if let Ok(mut mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
-            let invisible_mesh = mesh_instance_3d
-                .get_name()
-                .to_string()
-                .to_lowercase()
-                .contains("collider");
-
-            if invisible_mesh {
-                mesh_instance_3d.set_visible(false);
-            }
-
-            let mut static_body_3d = get_collider(&mesh_instance_3d);
-            if static_body_3d.is_none() {
-                mesh_instance_3d.create_trimesh_collision();
-                static_body_3d = get_collider(&mesh_instance_3d);
-            }
-
-            if let Some(mut static_body_3d) = static_body_3d {
-                if let Some(mut parent) = static_body_3d.get_parent() {
-                    let mut new_animatable = AnimatableBody3D::new_alloc();
-                    new_animatable.set_sync_to_physics(false);
-                    new_animatable.set_process_mode(ProcessMode::DISABLED);
-                    new_animatable.set_meta("dcl_col".into(), 0.to_variant());
-                    new_animatable.set_meta("invisible_mesh".into(), invisible_mesh.to_variant());
-                    new_animatable.set_collision_layer(0);
-                    new_animatable.set_collision_mask(0);
-                    new_animatable.set_name(GString::from(format!(
-                        "{}_colgen",
-                        mesh_instance_3d.get_name()
-                    )));
-
-                    parent.add_child(new_animatable.clone().upcast());
-
-                    // Move children before removing from parent, then free
-                    for mut body_child in static_body_3d
-                        .get_children_ex()
-                        .include_internal(true)
-                        .done()
-                        .iter_shared()
-                    {
-                        static_body_3d.remove_child(body_child.clone());
-                        body_child.call("set_owner".into(), &[Variant::nil()]);
-                        new_animatable.add_child(body_child.clone());
-                        if let Ok(collision_shape_3d) = body_child.try_cast::<CollisionShape3D>() {
-                            if let Some(shape) = collision_shape_3d.get_shape() {
-                                if let Ok(mut concave_polygon_shape_3d) =
-                                    shape.try_cast::<ConcavePolygonShape3D>()
-                                {
-                                    concave_polygon_shape_3d.set_backface_collision_enabled(true);
-                                }
-                            }
-                        }
-                    }
-
-                    // Remove the old StaticBody3D from tree and free it immediately
-                    // Use free() instead of queue_free() because orphan nodes from
-                    // background threads don't get properly freed by queue_free()
-                    parent.remove_child(static_body_3d.clone().upcast());
-                    static_body_3d.free();
-                }
-            }
-        }
-
-        create_colliders(child);
-    }
-}
-
-fn update_set_mask_colliders(
-    mut node_to_inspect: Gd<Node>,
-    dcl_visible_cmask: i32,
-    dcl_invisible_cmask: i32,
-    dcl_scene_id: i32,
-    dcl_entity_id: i32,
-    to_remove_nodes: &mut Vec<Gd<Node>>,
-) {
-    for child in node_to_inspect.get_children().iter_shared() {
-        if let Ok(mut node) = child.clone().try_cast::<AnimatableBody3D>() {
-            let invisible_mesh = node.has_meta("invisible_mesh".into())
-                && node
-                    .get_meta("invisible_mesh".into())
-                    .try_to::<bool>()
-                    .unwrap_or_default();
-
-            let mask = if invisible_mesh {
-                dcl_invisible_cmask
-            } else {
-                dcl_visible_cmask
-            };
-
-            if !node.has_meta("dcl_scene_id".into()) {
-                let Some(mut resolved_node) = node.duplicate_ex().flags(8).done() else {
-                    continue;
-                };
-
-                resolved_node.set_name(GString::from(format!("{}_instanced", node.get_name())));
-                resolved_node.set_meta("dcl_scene_id".into(), dcl_scene_id.to_variant());
-                resolved_node.set_meta("dcl_entity_id".into(), dcl_entity_id.to_variant());
-
-                node_to_inspect.add_child(resolved_node.clone().upcast());
-                to_remove_nodes.push(node.clone().upcast());
-
-                node = resolved_node.cast();
-            }
-
-            node.set_meta("dcl_col".into(), mask.to_variant());
-            node.set_collision_layer(mask as u32);
-            node.set_collision_mask(0);
-            if mask == 0 {
-                node.set_process_mode(ProcessMode::DISABLED);
-            } else {
-                node.set_process_mode(ProcessMode::INHERIT);
-            }
-        }
-
-        update_set_mask_colliders(
-            child,
-            dcl_visible_cmask,
-            dcl_invisible_cmask,
-            dcl_scene_id,
-            dcl_entity_id,
-            to_remove_nodes,
-        )
-    }
 }
 
 // TODO: maybe remove
@@ -652,4 +462,300 @@ pub struct DclEmoteGltf {
     default_animation: Option<Gd<Animation>>,
     #[var]
     prop_animation: Option<Gd<Animation>>,
+}
+
+// ============================================================================
+// Scene GLTF Loading (for ContentProvider scene loading)
+// ============================================================================
+
+/// Thread safety guard for Godot API access
+pub struct GodotThreadSafetyGuard {
+    _guard: tokio::sync::OwnedSemaphorePermit,
+}
+
+impl GodotThreadSafetyGuard {
+    pub async fn acquire(godot_single_thread: &Arc<Semaphore>) -> Option<Self> {
+        let guard = godot_single_thread.clone().acquire_owned().await.ok()?;
+        set_thread_safety_checks_enabled(false);
+        Some(Self { _guard: guard })
+    }
+}
+
+impl Drop for GodotThreadSafetyGuard {
+    fn drop(&mut self) {
+        set_thread_safety_checks_enabled(true);
+    }
+}
+
+fn set_thread_safety_checks_enabled(enabled: bool) {
+    let mut temp_script =
+        godot::engine::load::<godot::engine::Script>("res://src/logic/thread_safety.gd");
+    temp_script.call(
+        "set_thread_safety_checks_enabled".into(),
+        &[enabled.to_variant()],
+    );
+}
+
+/// Load and save a scene GLTF to disk
+///
+/// This function:
+/// 1. Downloads the GLTF and its dependencies
+/// 2. Loads it into Godot
+/// 3. Processes textures
+/// 4. Creates colliders (with mask=0 - caller sets masks after instantiating)
+/// 5. Saves the processed scene to disk
+///
+/// Returns the path to the saved scene file on success
+pub async fn load_and_save_scene_gltf(
+    file_path: String,
+    file_hash: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: SceneGltfContext,
+) -> Result<String, anyhow::Error> {
+    // Download the main GLTF file
+    let base_path = Arc::new(get_base_dir(&file_path));
+    let url = format!("{}{}", content_mapping.base_url, file_hash);
+    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+
+    ctx.resource_provider
+        .fetch_resource(url, file_hash.clone(), absolute_file_path.clone())
+        .await
+        .map_err(anyhow::Error::msg)?;
+
+    // Get dependencies from the GLTF file
+    let dependencies = get_dependencies(&absolute_file_path)
+        .await?
+        .into_iter()
+        .map(|dep| {
+            let full_path = if base_path.is_empty() {
+                dep.clone()
+            } else {
+                format!("{}/{}", base_path, dep)
+            };
+            let item = content_mapping.get_hash(full_path.as_str()).cloned();
+            (dep, item)
+        })
+        .collect::<Vec<(String, Option<String>)>>();
+
+    // Check all dependencies are available
+    if dependencies.iter().any(|(_, hash)| hash.is_none()) {
+        return Err(anyhow::Error::msg(
+            "There are some missing dependencies in the gltf",
+        ));
+    }
+
+    let dependencies_hash: Vec<(String, String)> = dependencies
+        .into_iter()
+        .map(|(file_path, hash)| (file_path, hash.unwrap()))
+        .collect();
+
+    // Download all dependencies in parallel
+    let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
+        let ctx = ctx.clone();
+        let content_mapping = content_mapping.clone();
+        async move {
+            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
+            ctx.resource_provider
+                .fetch_resource(url, dependency_file_hash.clone(), absolute_file_path)
+                .await
+                .map_err(|e| format!("Dependency {} failed: {:?}", dependency_file_hash, e))
+        }
+    });
+
+    let result = futures_util::future::join_all(futures).await;
+    if result.iter().any(|res| res.is_err()) {
+        let errors: Vec<String> = result.into_iter().filter_map(|res| res.err()).collect();
+        return Err(anyhow::Error::msg(format!(
+            "Error downloading gltf dependencies: {}",
+            errors.join("\n")
+        )));
+    }
+
+    // Acquire thread safety guard for Godot API access
+    let _thread_guard = GodotThreadSafetyGuard::acquire(&ctx.godot_single_thread)
+        .await
+        .ok_or(anyhow::Error::msg("Failed to acquire thread safety guard"))?;
+
+    // Process GLTF using Godot (all Godot objects are scoped here to drop before await)
+    let (scene_path, file_size) = {
+        // Load the GLTF using Godot
+        let mut new_gltf = GltfDocument::new_gd();
+        let mut new_gltf_state = GltfState::new_gd();
+
+        let mappings = Dictionary::from_iter(
+            dependencies_hash
+                .iter()
+                .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
+        );
+
+        new_gltf_state.set_additional_data("base_path".into(), "some".to_variant());
+        new_gltf_state.set_additional_data("mappings".into(), mappings.to_variant());
+
+        let err = new_gltf
+            .append_from_file_ex(
+                GString::from(absolute_file_path.as_str()),
+                new_gltf_state.clone(),
+            )
+            .base_path(GString::from(ctx.content_folder.as_str()))
+            .flags(0)
+            .done();
+
+        if err != godot::global::Error::OK {
+            return Err(anyhow::Error::msg(format!("Error loading gltf: {:?}", err)));
+        }
+
+        let node = new_gltf
+            .generate_scene(new_gltf_state)
+            .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
+
+        // Post-process textures
+        let max_size = ctx.texture_quality.to_max_size();
+        post_import_process(node.clone(), max_size);
+
+        // Cast to Node3D and rotate
+        let mut node = node
+            .try_cast::<Node3D>()
+            .map_err(|err| anyhow::Error::msg(format!("Error casting to Node3D: {err}")))?;
+        node.rotate_y(std::f32::consts::PI);
+
+        // Create colliders (with mask=0 initially - will be set by gltf_container.gd after loading)
+        let root_node = node.clone();
+        create_scene_colliders(node.clone().upcast(), root_node.clone());
+
+        // Save the processed scene to disk (in the same cache folder as other content)
+        let scene_path = get_scene_path_for_hash(&ctx.content_folder, &file_hash);
+        save_node_as_scene(node.clone(), &scene_path).map_err(anyhow::Error::msg)?;
+
+        // Get file size synchronously (std::fs is fine here, it's just a stat call)
+        let file_size = std::fs::metadata(&scene_path)
+            .map(|m| m.len() as i64)
+            .unwrap_or(0);
+
+        // Count nodes before freeing
+        let node_count = count_nodes(node.clone().upcast());
+        tracing::info!(
+            "GLTF processed: {} with {} nodes, saved to {} ({} bytes)",
+            file_hash,
+            node_count,
+            scene_path,
+            file_size
+        );
+
+        // Free the node since we've saved it to disk
+        // IMPORTANT: Use free() instead of queue_free() for orphan nodes processed on background threads
+        node.free();
+
+        (scene_path, file_size)
+    };
+    // All Godot objects are now dropped, safe to await
+
+    // Register the saved scene in resource_provider for cache management
+    ctx.resource_provider
+        .register_local_file(&scene_path, file_size)
+        .await;
+
+    Ok(scene_path)
+}
+
+/// Count the number of nodes in a tree
+fn count_nodes(node: Gd<Node>) -> i32 {
+    let mut count = 1;
+    for child in node.get_children().iter_shared() {
+        count += count_nodes(child);
+    }
+    count
+}
+
+/// Get the StaticBody3D collider from a MeshInstance3D (created by create_trimesh_collision)
+fn get_static_body_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<StaticBody3D>> {
+    for maybe_static_body in mesh_instance.get_children().iter_shared() {
+        if let Ok(static_body_3d) = maybe_static_body.try_cast::<StaticBody3D>() {
+            return Some(static_body_3d);
+        }
+    }
+    None
+}
+
+/// Create colliders for all mesh instances in a scene GLTF
+/// Note: Colliders are created with mask=0 (disabled) and no scene_id/entity_id.
+/// The masks and metadata should be set by the caller after instantiating the scene.
+fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
+    for child in node_to_inspect.get_children().iter_shared() {
+        if let Ok(mut mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
+            let invisible_mesh = mesh_instance_3d
+                .get_name()
+                .to_string()
+                .to_lowercase()
+                .contains("collider");
+
+            if invisible_mesh {
+                mesh_instance_3d.set_visible(false);
+            }
+
+            // First check if there's already a StaticBody3D (created by create_trimesh_collision)
+            let mut static_body_3d = get_static_body_collider(&mesh_instance_3d);
+            if static_body_3d.is_none() {
+                mesh_instance_3d.create_trimesh_collision();
+                static_body_3d = get_static_body_collider(&mesh_instance_3d);
+            }
+
+            if let Some(mut static_body_3d) = static_body_3d {
+                // Create AnimatableBody3D to replace StaticBody3D
+                let mut animatable_body = AnimatableBody3D::new_alloc();
+                animatable_body.set_sync_to_physics(false);
+                animatable_body.set_process_mode(ProcessMode::DISABLED);
+                animatable_body.set_meta("dcl_col".into(), 0.to_variant());
+                animatable_body.set_meta("invisible_mesh".into(), invisible_mesh.to_variant());
+                animatable_body.set_collision_layer(0);
+                animatable_body.set_collision_mask(0);
+                animatable_body.set_name(GString::from(format!(
+                    "{}_colgen",
+                    mesh_instance_3d.get_name()
+                )));
+
+                // Get the parent to add the new body
+                if let Some(mut parent) = static_body_3d.get_parent() {
+                    parent.add_child(animatable_body.clone().upcast());
+
+                    // Move collision shapes from StaticBody3D to AnimatableBody3D
+                    for mut body_child in static_body_3d
+                        .get_children_ex()
+                        .include_internal(true)
+                        .done()
+                        .iter_shared()
+                    {
+                        static_body_3d.remove_child(body_child.clone());
+                        body_child.call("set_owner".into(), &[godot::builtin::Variant::nil()]);
+                        animatable_body.add_child(body_child.clone());
+
+                        // Enable backface collision for concave shapes
+                        if let Ok(collision_shape_3d) =
+                            body_child.clone().try_cast::<CollisionShape3D>()
+                        {
+                            if let Some(shape) = collision_shape_3d.get_shape() {
+                                if let Ok(mut concave_polygon_shape_3d) =
+                                    shape.try_cast::<ConcavePolygonShape3D>()
+                                {
+                                    concave_polygon_shape_3d.set_backface_collision_enabled(true);
+                                }
+                            }
+                        }
+
+                        // Set owner to root so it gets saved with PackedScene
+                        body_child.set_owner(root_node.clone().upcast());
+                    }
+
+                    // Remove the old StaticBody3D and free it immediately
+                    parent.remove_child(static_body_3d.clone().upcast());
+                    static_body_3d.free();
+
+                    // Set owner for AnimatableBody3D
+                    animatable_body.set_owner(root_node.clone().upcast());
+                }
+            }
+        }
+
+        create_scene_colliders(child, root_node.clone());
+    }
 }

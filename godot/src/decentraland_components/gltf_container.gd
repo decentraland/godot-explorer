@@ -30,8 +30,8 @@ static var _debug_kinematic_material: StandardMaterial3D = null
 
 
 func _ready():
-	Global.content_provider2.gltf_ready.connect(_on_gltf_ready)
-	Global.content_provider2.gltf_error.connect(_on_gltf_error)
+	Global.content_provider.scene_gltf_ready.connect(_on_gltf_ready)
+	Global.content_provider.scene_gltf_error.connect(_on_gltf_error)
 	self.switch_to_kinematic.connect(_on_switch_to_kinematic)
 	self.async_load_gltf.call_deferred()
 
@@ -50,14 +50,14 @@ func _exit_tree():
 		currently_loading_assets.erase(dcl_gltf_hash)
 
 	# Disconnect signals
-	Global.content_provider2.gltf_ready.disconnect(_on_gltf_ready)
-	Global.content_provider2.gltf_error.disconnect(_on_gltf_error)
+	Global.content_provider.scene_gltf_ready.disconnect(_on_gltf_ready)
+	Global.content_provider.scene_gltf_error.disconnect(_on_gltf_error)
 
 
 #region Loading Flow
 # Two loading paths:
 # 1. Optimized: Pre-baked scenes from res://glbs/ (loaded via ResourceLoader)
-# 2. ContentProvider2: Runtime-processed scenes from user://content/glbs/ (signal-based)
+# 2. Runtime: Runtime-processed scenes from user://content/<hash>.scn (signal-based)
 #
 # Both paths share:
 # - Throttling via currently_loading_assets and pending_load_queue
@@ -81,9 +81,9 @@ func async_load_gltf():
 	# Check CLI flags for asset loading mode
 	var has_optimized = Global.content_provider.optimized_asset_exists(file_hash)
 
-	# --only-no-optimized: Always use ContentProvider2, ignore optimized assets
+	# --only-no-optimized: Always use runtime processing, ignore optimized assets
 	if Global.cli.only_no_optimized:
-		_start_content_provider2_load()
+		_start_runtime_gltf_load()
 		return
 
 	# --only-optimized: Only use optimized path, skip if not optimized
@@ -101,8 +101,8 @@ func async_load_gltf():
 		await _async_load_optimized_asset(file_hash)
 		return
 
-	# Fall back to ContentProvider2 (runtime processing to user://content/glbs/)
-	_start_content_provider2_load()
+	# Fall back to runtime processing (saves to user://content/<hash>.scn)
+	_start_runtime_gltf_load()
 
 
 ## Optimized Asset Loading Path
@@ -139,9 +139,9 @@ func _async_load_optimized_asset(gltf_hash: String):
 	_async_add_gltf_to_tree.call_deferred(gltf_node)
 
 
-## ContentProvider2 Loading Path
-## Runtime-processed scenes saved to user://content/glbs/<hash>.scn
-func _start_content_provider2_load():
+## Runtime GLTF Loading Path
+## Runtime-processed scenes saved to user://content/<hash>.scn
+func _start_runtime_gltf_load():
 	self.optimized = false
 
 	# Throttle: queue if at max concurrent loads
@@ -154,7 +154,7 @@ func _start_content_provider2_load():
 		currently_loading_assets.append(dcl_gltf_hash)
 
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
-	Global.content_provider2.load_scene_gltf(dcl_gltf_src, content_mapping)
+	Global.content_provider.load_scene_gltf(dcl_gltf_src, content_mapping)
 
 
 # gdlint:ignore = async-function-name
@@ -187,7 +187,6 @@ func _on_gltf_error(file_hash: String, error: String):
 
 
 #endregion
-
 
 #region Shared Loading Logic
 
@@ -287,7 +286,7 @@ static func _process_next_in_queue():
 		if next_gltf.optimized:
 			next_gltf._async_load_optimized_asset(next_gltf.dcl_gltf_hash)
 		else:
-			next_gltf._start_content_provider2_load()
+			next_gltf._start_runtime_gltf_load()
 
 
 static func _pop_next_from_queue():
@@ -312,7 +311,6 @@ func is_current_scene() -> bool:
 
 
 #endregion
-
 
 #region Post-processing
 
@@ -350,7 +348,6 @@ func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
 
 
 #endregion
-
 
 #region Legacy / Unused
 # Note: async_deferred_add_child is no longer used in the new loading flow
@@ -399,7 +396,6 @@ func async_deferred_add_child():
 
 
 #endregion
-
 
 #region Collider Management
 
@@ -532,7 +528,6 @@ func _switch_colliders_to_kinematic(node_to_inspect: Node):
 
 #endregion
 
-
 #region GLTF Changes
 
 
@@ -574,6 +569,5 @@ func change_gltf(
 func _on_timer_timeout():
 	printerr("GLTF loading timeout: ", dcl_gltf_src)
 	_finish_with_error()
-
 
 #endregion
