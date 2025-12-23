@@ -12,7 +12,8 @@ func _ready():
 	collision_mask = 0xFFFFFFFF  # Detect all layers so we can track colliders after disabling CL_PHYSICS
 	monitoring = true
 	monitorable = false
-	body_exited.connect(_on_body_exited)
+	if not body_exited.is_connected(_on_body_exited):
+		body_exited.connect(_on_body_exited)
 
 
 ## Called after teleport to detect overlapping colliders
