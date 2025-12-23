@@ -241,14 +241,56 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 	print("  animation_player.root_node: ", animation_player.root_node)
 	print("  animation_tree.anim_player: ", animation_tree.anim_player)
 
+	# Reset retry counter on success
+	_deferred_retry_count = 0
 	print("  SUCCESS playing emote")
 	return true
 
 
+var _deferred_retry_count: int = 0
+const MAX_DEFERRED_RETRIES: int = 3
+
 func _deferred_play_emote(emote_urn: String):
 	# Called after state machine is initialized, retry the play
-	print("  _deferred_play_emote: retrying ", emote_urn)
+	_deferred_retry_count += 1
+	if _deferred_retry_count > MAX_DEFERRED_RETRIES:
+		print("  _deferred_play_emote: max retries reached, forcing play")
+		_deferred_retry_count = 0
+		_force_play_emote(emote_urn)
+		return
+	print("  _deferred_play_emote: retrying ", emote_urn, " (attempt ", _deferred_retry_count, ")")
 	play_emote(emote_urn)
+
+
+func _force_play_emote(emote_urn: String):
+	# Force play when state machine won't initialize (e.g., avatar hidden in backpack)
+	if not _has_emote(emote_urn):
+		return
+
+	var emote_item_data: EmoteItemData = loaded_emotes_by_urn[emote_urn]
+	if emote_item_data.default_anim_name.is_empty():
+		return
+
+	var anim_path = "emotes/" + emote_item_data.default_anim_name
+	if not animation_player.has_animation(anim_path):
+		return
+
+	# Reset state and play directly via AnimationPlayer
+	_hide_all_props()
+	_reset_skeleton_to_rest_pose()
+
+	# Set up the animation node
+	animation_single_emote_node.animation = anim_path
+
+	# Force the state machine to the Emote state
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+	pb.start("Emote", true)
+
+	playing_single = true
+	playing_mixed = false
+	playing_loop = false
+
+	print("  _force_play_emote: forced playback of ", emote_urn)
 
 
 func _hide_all_props():
@@ -313,20 +355,40 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 
 
 func _async_load_emote(emote_urn: String):
+	print("[EMOTE DEBUG] _async_load_emote: ", emote_urn)
+	print("[EMOTE DEBUG]   body_shape: ", avatar.avatar_data.get_body_shape())
+	print("[EMOTE DEBUG]   profile_content_url: ", Global.realm.get_profile_content_url())
+
 	await WearableRequest.async_fetch_emote(emote_urn)
+	print("[EMOTE DEBUG]   WearableRequest.async_fetch_emote completed")
 
 	var emote_content_promises = async_fetch_emote(emote_urn, avatar.avatar_data.get_body_shape())
+	print("[EMOTE DEBUG]   emote_content_promises count: ", emote_content_promises.size())
 	await PromiseUtils.async_all(emote_content_promises)
+	print("[EMOTE DEBUG]   PromiseUtils.async_all completed")
 
 	var emote = Global.content_provider.get_wearable(emote_urn)
 	if emote == null:
-		printerr("Error loading emote " + emote_urn)
+		printerr("[EMOTE DEBUG] ERROR: emote is null for URN: " + emote_urn)
 		return
+	print("[EMOTE DEBUG]   emote loaded: ", emote.get_display_name())
 
 	var file_hash = Wearables.get_item_main_file_hash(emote, avatar.avatar_data.get_body_shape())
+	print("[EMOTE DEBUG]   file_hash: ", file_hash)
+	if file_hash.is_empty():
+		printerr("[EMOTE DEBUG] ERROR: file_hash is empty for emote: ", emote_urn)
+		return
+
 	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
-	if obj != null:
-		load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
+	if obj == null:
+		printerr("[EMOTE DEBUG] ERROR: get_emote_gltf_from_hash returned null for hash: ", file_hash)
+		return
+	print("[EMOTE DEBUG]   obj (DclEmoteGltf) loaded successfully")
+	print("[EMOTE DEBUG]   obj.default_animation: ", obj.default_animation)
+	print("[EMOTE DEBUG]   obj.prop_animation: ", obj.prop_animation)
+	print("[EMOTE DEBUG]   obj.armature_prop: ", obj.armature_prop)
+
+	load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 
 func _async_load_scene_emote(urn: String):
@@ -400,8 +462,10 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 
 	if obj.default_animation != null:
 		var anim_name = obj.default_animation.get_name()
+		print("[EMOTE DEBUG]   original anim_name from GLTF: '", anim_name, "'")
 		if anim_name.is_empty():
 			anim_name = "emote_" + file_hash.substr(0, 8)
+			print("[EMOTE DEBUG]   anim_name was empty, generated: ", anim_name)
 
 		# If we have both avatar and prop animations, merge them into one
 		var final_animation: Animation
@@ -411,10 +475,15 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 		else:
 			final_animation = obj.default_animation
 
+		print("[EMOTE DEBUG]   final_animation length: ", final_animation.length, " tracks: ", final_animation.get_track_count())
+
 		if not emotes_animation_library.has_animation(anim_name):
 			emotes_animation_library.add_animation(anim_name, final_animation)
 		emote_item_data.default_anim_name = anim_name
 		print("Loaded emote animation: ", urn, " -> emotes/", anim_name)
+	else:
+		printerr("[EMOTE DEBUG] ERROR: obj.default_animation is NULL for emote: ", urn)
+		printerr("[EMOTE DEBUG]   This emote will not play! Animation was not extracted from GLTF.")
 
 	loaded_emotes_by_urn[urn] = emote_item_data
 

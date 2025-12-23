@@ -193,7 +193,8 @@ func _on_profile_changed(new_profile: DclUserProfile):
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
 	mutable_avatar.set_emotes(emotes_urns)
-	request_update_avatar = true
+	# Don't trigger request_update_avatar - emotes are loaded separately by the emote controller
+	# and don't require reloading the avatar mesh/wearables
 
 
 func _physics_process(_delta):
