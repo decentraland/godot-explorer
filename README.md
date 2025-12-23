@@ -123,6 +123,17 @@ cargo run -- build --target ios
 cargo run -- export --target ios
 ```
 
+#### Triggering iOS CI Builds on PRs
+
+iOS builds are skipped by default on PRs to save CI resources. To trigger an iOS build on your PR:
+
+```bash
+# Add the build-ios-internal label to your PR
+gh pr edit --add-label "build-ios-internal"
+```
+
+The label is automatically removed after the build completes. On `main` branch, iOS builds always run.
+
 ## 🧪 Testing
 
 ```bash

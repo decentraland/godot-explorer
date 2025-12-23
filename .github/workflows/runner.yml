@@ -42,11 +42,12 @@ jobs:
   ios-build:
     name: 🍏 iOS
     needs: static-checks
-    # Skip iOS build if PR has 'without-ios' label
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'without-ios') }}
+    # On main/release: always build. On PRs: only build if 'build-ios-internal' label is present
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'build-ios-internal') }}
     uses: ./.github/workflows/ios_builds.yml
     secrets:
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   linux-build:
     name: 🐧 Linux

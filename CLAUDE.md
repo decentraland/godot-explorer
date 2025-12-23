@@ -142,16 +142,23 @@ cargo run -- export --target ios
    ```bash
    # First install Android tools and dependencies
    cargo run -- install --targets android
-   
+
    # Build for Android
    cargo run -- build --target android
-   
+
    # Export APK or AAB (keystore is automatically generated and configured)
    cargo run -- export --target android --format apk --release
-   
+
    # Or use Docker (for CI/CD):
    docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
    ```
+
+4. **Triggering iOS CI builds on PRs**:
+   iOS builds are skipped by default on PRs to save CI resources. To trigger an iOS build:
+   ```bash
+   gh pr edit --add-label "build-ios-internal"
+   ```
+   The label is automatically removed after the build completes. On `main` branch, iOS builds always run.
 
 ## Important Notes
 
