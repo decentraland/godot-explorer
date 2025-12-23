@@ -295,21 +295,27 @@ func _force_play_emote(emote_urn: String):
 
 func _hide_all_props():
 	# Hide all prop armatures to ensure clean state before playing new emote
+	if not is_instance_valid(avatar):
+		return
 	for child in avatar.get_children():
-		if child.name.begins_with("Armature_Prop"):
+		if is_instance_valid(child) and child.name.begins_with("Armature_Prop"):
 			child.hide()
 
 
 func _reset_skeleton_to_rest_pose():
 	# Reset skeleton bones to rest pose to clear any transforms from previous emotes
 	# (e.g., head scale from "head explode" emote)
+	# Note: Only reset if avatar is valid and not being freed
+	if not is_instance_valid(avatar):
+		return
+
 	var armature = avatar.get_node_or_null("Armature")
-	if armature == null:
+	if armature == null or not is_instance_valid(armature):
 		print("  WARNING: No Armature found for skeleton reset")
 		return
 
 	var skeleton = armature.get_node_or_null("Skeleton3D")
-	if skeleton == null:
+	if skeleton == null or not is_instance_valid(skeleton):
 		print("  WARNING: No Skeleton3D found for skeleton reset")
 		return
 
@@ -436,6 +442,17 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 	print("  default_animation: ", obj.default_animation)
 	print("  prop_animation: ", obj.prop_animation)
 
+	# IMPORTANT: Temporarily deactivate AnimationTree while modifying animations
+	# This prevents crashes when the AnimationMixer tries to access animations being modified
+	var was_active = animation_tree.active
+	animation_tree.active = false
+
+	# Reset all animation nodes to safe defaults before modifying the library
+	# This prevents "!has_animation" errors when reactivating the tree
+	animation_single_emote_node.animation = "idle/Anim"
+	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
+	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+
 	var armature_prop: Node3D = null
 
 	if obj.armature_prop != null:
@@ -487,6 +504,9 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 
 	loaded_emotes_by_urn[urn] = emote_item_data
 
+	# Reactivate AnimationTree after modifications are complete
+	animation_tree.active = was_active
+
 
 func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animation:
 	# Create a new animation that combines both avatar and prop tracks
@@ -523,6 +543,18 @@ func clean_unused_emotes():
 		func(urn): return not emotes.has(urn)
 	)
 
+	if to_delete_emote_urns.is_empty():
+		return
+
+	# Temporarily deactivate AnimationTree while modifying animations
+	var was_active = animation_tree.active
+	animation_tree.active = false
+
+	# Reset all animation nodes to safe defaults before modifying the library
+	animation_single_emote_node.animation = "idle/Anim"
+	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
+	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+
 	for urn in to_delete_emote_urns:
 		var emote_item_data: EmoteItemData = loaded_emotes_by_urn[urn]
 
@@ -536,6 +568,9 @@ func clean_unused_emotes():
 			emote_item_data.armature_prop.queue_free()
 
 		loaded_emotes_by_urn.erase(urn)
+
+	# Reactivate AnimationTree
+	animation_tree.active = was_active
 
 
 func play_emote_audio(file_hash: String):
