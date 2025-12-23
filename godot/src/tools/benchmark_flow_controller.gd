@@ -279,7 +279,7 @@ func collect_explorer_metrics(current_pos: Vector2i, location_name: String):
 	resource_data["material_rid_count"] = material_rid_map.size()
 
 	# Collect metrics
-	var test_name = "4_Explorer_" + str(current_pos) + "_" + location_name.replace(" ", "_")
+	var test_name = "4_Explorer_" + location_name.replace(" ", "_")
 	var location = str(current_pos)
 	var realm = Global.realm.get_realm_string()
 

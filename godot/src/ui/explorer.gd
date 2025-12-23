@@ -125,6 +125,7 @@ func _ready():
 	Global.open_friends_panel.connect(_show_friends_panel)
 
 	navbar.close_all.connect(_close_all_panels)
+	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
 
 	# Connect to NotificationsManager queue signals
@@ -620,6 +621,11 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 	release_mouse()
 
 
+func _open_friends_panel() -> void:
+	Global.close_menu.emit()
+	Global.open_friends_panel.emit()
+
+
 func _async_open_profile_by_address(user_address: String):
 	var promise = Global.content_provider.fetch_profile(user_address)
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -889,17 +895,20 @@ func _share_place():
 
 	if is_genesis_city:
 		url = (
-			"https://decentraland.org/places/place/?position="
+			"decentraland://open?position="
 			+ str(parcel_position[0])
-			+ "."
+			+ ","
 			+ str(parcel_position[1])
 		)
 	else:
 		var realm_url = Global.realm.realm_url
 		var short_realm_url = _extract_short_realm_url(realm_url)
-		url = "https://decentraland.org/places/world/?name=" + short_realm_url
+		url = "decentraland://open?realm=" + short_realm_url
 
-	msg = "Join Me At " + scene_title + " following this link " + url
+	if scene_title.length() == 0:
+		scene_title = "Decentraland"
+	msg = "📍 Join Me At " + scene_title + " following this link: " + url
+	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
 		DclGodotAndroidPlugin.share_text(msg)

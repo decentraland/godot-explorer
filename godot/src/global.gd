@@ -120,6 +120,12 @@ func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
 
 
+## Vibrate handheld device
+func send_haptic_feedback() -> void:
+	if is_mobile():
+		Input.vibrate_handheld(20)
+
+
 func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:

@@ -8,7 +8,7 @@ enum FpsLimitMode {
 	NO_LIMIT = 1,
 	FPS_30 = 2,
 	FPS_60 = 3,
-	FPS_120 = 4,
+	FPS_18 = 4,
 }
 
 enum ConfigParams {
