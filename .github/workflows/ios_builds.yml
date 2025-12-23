@@ -25,6 +25,13 @@ jobs:
     runs-on: warp-macos-14-arm64-6x
     timeout-minutes: 35
     steps:
+      - name: Remove build-ios-internal label
+        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'build-ios-internal') }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "build-ios-internal"
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref || github.event.pull_request.head.sha || github.sha }}
@@ -151,10 +158,3 @@ jobs:
         if: always()
         run: |
           rm -f ~/.ssh/deploy_key
-
-      - name: Remove build-ios-internal label
-        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'build-ios-internal') }}
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "build-ios-internal"
