@@ -6,10 +6,6 @@ on:
         description: 'Branch or commit to build'
         required: false
         default: 'main'
-  workflow_call:
-    secrets:
-      DEPLOY_SSH_KEY:
-        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
@@ -25,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.inputs.ref || github.sha }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -78,12 +74,7 @@ jobs:
 
       - name: Deploy iOS exports to mobile deploy pipeline
         run: |
-          # Determine branch name based on event type
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BRANCH_NAME="PR-${{ github.event.pull_request.number }}-${{ github.head_ref || github.ref_name }}"
-          else
-            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
-          fi
+          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
           echo "Deploying to branch: $BRANCH_NAME"
 
           # Clone the target repository using SSH

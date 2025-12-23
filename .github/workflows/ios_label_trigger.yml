@@ -4,8 +4,8 @@ on:
     types: [labeled]
 
 jobs:
-  remove-label:
-    name: Remove Label
+  trigger-ios-build:
+    name: Trigger iOS Build
     runs-on: ubuntu-latest
     if: ${{ github.event.label.name == 'build-ios-internal' }}
     steps:
@@ -15,10 +15,10 @@ jobs:
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
 
-  ios-build:
-    name: 🍏 iOS
-    needs: remove-label
-    if: ${{ github.event.label.name == 'build-ios-internal' }}
-    uses: ./.github/workflows/ios_builds.yml
-    secrets:
-      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Trigger iOS build workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run ios_builds.yml --repo ${{ github.repository }} --ref ${{ github.event.pull_request.head.ref }}
+          echo "✅ iOS build triggered for branch: ${{ github.event.pull_request.head.ref }}"
+          echo "📍 View at: https://github.com/${{ github.repository }}/actions/workflows/ios_builds.yml"
