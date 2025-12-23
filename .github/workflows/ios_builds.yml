@@ -30,7 +30,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "build-ios-internal"
+          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
 
       - uses: actions/checkout@v4
         with:
