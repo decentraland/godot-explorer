@@ -98,6 +98,7 @@ public:
     void avPlayerSetVolume(int player_id, float volume);
     float avPlayerGetVolume(int player_id);
     void avPlayerSetLooping(int player_id, bool loop);
+    void avPlayerSetPlaybackRate(int player_id, float rate);
     bool avPlayerHasNewPixelBuffer(int player_id);
     uint64_t avPlayerAcquireIOSurfacePtr(int player_id);
     String avPlayerGetInfo(int player_id);

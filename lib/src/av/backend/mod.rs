@@ -10,7 +10,7 @@ pub enum BackendType {
     LiveKit,
     /// ExoPlayer backend for Android platform (regular videos)
     ExoPlayer,
-    /// AVPlayer backend for iOS platform (future)
+    /// AVPlayer backend for iOS platform
     AVPlayer,
     /// No-op backend when no video playback is available
     #[default]

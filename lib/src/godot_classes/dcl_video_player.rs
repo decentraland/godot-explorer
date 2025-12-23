@@ -153,6 +153,20 @@ impl DclVideoPlayer {
             .call("_backend_set_looping".into(), &[looping.to_variant()]);
     }
 
+    /// Seek to a specific position in seconds
+    #[func]
+    pub fn backend_seek(&mut self, position: f32) {
+        self.base_mut()
+            .call("_backend_seek".into(), &[position.to_variant()]);
+    }
+
+    /// Set the playback rate (1.0 = normal speed)
+    #[func]
+    pub fn backend_set_playback_rate(&mut self, rate: f32) {
+        self.base_mut()
+            .call("_backend_set_playback_rate".into(), &[rate.to_variant()]);
+    }
+
     /// Dispose the backend and clean up resources
     #[func]
     pub fn backend_dispose(&mut self) {

@@ -89,6 +89,8 @@ pub fn update_video_player(
                 let dcl_volume = next_value.volume.unwrap_or(1.0).clamp(0.0, 1.0);
                 let playing = next_value.playing.unwrap_or(true);
                 let looping = next_value.r#loop.unwrap_or(false);
+                let position = next_value.position;
+                let playback_rate = next_value.playback_rate.map(|r| r.clamp(0.1, 10.0));
 
                 let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
@@ -108,13 +110,20 @@ pub fn update_video_player(
                     VideoUpdateMode::OnlyChangeValues => {
                         // Just update playback parameters on existing player
                         if let Some(mut video_player_node) = get_video_player_node(&node_3d) {
-                            update_video_player_params(
-                                &mut video_player_node,
-                                dcl_volume,
-                                muted_by_current_scene,
-                                playing,
-                                looping,
-                            );
+                            if let Some(video_player_data) =
+                                godot_entity_node.video_player_data.as_mut()
+                            {
+                                update_video_player_params(
+                                    &mut video_player_node,
+                                    video_player_data,
+                                    dcl_volume,
+                                    muted_by_current_scene,
+                                    playing,
+                                    looping,
+                                    position,
+                                    playback_rate,
+                                );
+                            }
                         }
                     }
 
@@ -318,12 +327,16 @@ fn initialize_video_player(
 }
 
 /// Update playback parameters on an existing video player
+#[allow(clippy::too_many_arguments)]
 fn update_video_player_params(
     video_player_node: &mut Gd<DclVideoPlayer>,
+    video_player_data: &mut VideoPlayerData,
     volume: f32,
     muted: bool,
     playing: bool,
     looping: bool,
+    position: Option<f32>,
+    playback_rate: Option<f32>,
 ) {
     // Set volume and mute state (actual volume application handled by GDScript _process)
     video_player_node.bind_mut().set_volume(volume);
@@ -336,6 +349,39 @@ fn update_video_player_params(
     }
 
     video_player_node.bind_mut().backend_set_looping(looping);
+
+    // Handle seek when position is explicitly set and changed
+    // None means "don't change", only Some(value) triggers seek
+    if let Some(requested_position) = position {
+        // Only seek if position has changed significantly from last requested position
+        let position_diff = (requested_position - video_player_data.last_requested_position).abs();
+        if position_diff > 0.1 {
+            tracing::debug!(
+                "Video player seeking to {:.2}s (was {:.2}s)",
+                requested_position,
+                video_player_data.last_requested_position
+            );
+            video_player_node
+                .bind_mut()
+                .backend_seek(requested_position);
+            video_player_data.last_requested_position = requested_position;
+        }
+    }
+
+    // Handle playback rate changes
+    // None means "don't change", only Some(value) triggers rate change
+    if let Some(rate) = playback_rate {
+        let rate_diff = (rate - video_player_data.last_playback_rate).abs();
+        if rate_diff > 0.01 {
+            tracing::debug!(
+                "Video player setting playback rate to {:.2} (was {:.2})",
+                rate,
+                video_player_data.last_playback_rate
+            );
+            video_player_node.bind_mut().backend_set_playback_rate(rate);
+            video_player_data.last_playback_rate = rate;
+        }
+    }
 }
 
 /// Poll video state from all video players and generate CRDT events on state changes

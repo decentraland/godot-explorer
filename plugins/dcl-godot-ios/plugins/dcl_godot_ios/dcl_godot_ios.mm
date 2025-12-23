@@ -192,6 +192,7 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("avPlayerSetVolume", "player_id", "volume"), &DclGodotiOS::avPlayerSetVolume);
     ClassDB::bind_method(D_METHOD("avPlayerGetVolume", "player_id"), &DclGodotiOS::avPlayerGetVolume);
     ClassDB::bind_method(D_METHOD("avPlayerSetLooping", "player_id", "loop"), &DclGodotiOS::avPlayerSetLooping);
+    ClassDB::bind_method(D_METHOD("avPlayerSetPlaybackRate", "player_id", "rate"), &DclGodotiOS::avPlayerSetPlaybackRate);
     ClassDB::bind_method(D_METHOD("avPlayerHasNewPixelBuffer", "player_id"), &DclGodotiOS::avPlayerHasNewPixelBuffer);
     ClassDB::bind_method(D_METHOD("avPlayerAcquireIOSurfacePtr", "player_id"), &DclGodotiOS::avPlayerAcquireIOSurfacePtr);
     ClassDB::bind_method(D_METHOD("avPlayerGetInfo", "player_id"), &DclGodotiOS::avPlayerGetInfo);
@@ -1297,6 +1298,15 @@ void DclGodotiOS::avPlayerSetLooping(int player_id, bool loop) {
     auto it = avPlayers.find(player_id);
     if (it != avPlayers.end()) {
         [it->second setIsLooping:loop];
+    }
+    #endif
+}
+
+void DclGodotiOS::avPlayerSetPlaybackRate(int player_id, float rate) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second setPlaybackRate:rate];
     }
     #endif
 }

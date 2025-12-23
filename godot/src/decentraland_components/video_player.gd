@@ -24,6 +24,9 @@ const VIDEO_STATE_ERROR = 7
 const LIVEKIT_BUFFERING_THRESHOLD: float = 2.0  # seconds without frames = buffering
 const LIVEKIT_STOPPED_THRESHOLD: float = 10.0  # seconds without frames = stopped/paused
 
+# Debouncing for play/pause to prevent rapid toggle issues
+const PLAY_PAUSE_DEBOUNCE_MS: float = 100.0
+
 var current_backend: BackendType = BackendType.NOOP
 var exo_player: Node = null  # ExoPlayer child node when using ExoPlayer backend
 var av_player: Node = null  # AVPlayer child node when using AVPlayer backend
@@ -33,6 +36,10 @@ var _is_looping: bool = false
 
 # Volume tracking for efficient updates
 var _last_effective_volume: float = -1.0  # -1 means uninitialized
+
+# Play/pause debouncing state
+var _last_play_pause_time: float = 0.0
+var _pending_play_state: int = -1  # -1=none, 0=pause, 1=play
 
 
 # Called from Rust DclVideoPlayer::init_backend
@@ -72,7 +79,7 @@ func _init_livekit_backend():
 
 
 func _async_init_exo_player_backend():
-	if OS.get_name() != "Android":
+	if not Global.is_android():
 		push_warning("ExoPlayer backend only available on Android, falling back to Noop")
 		current_backend = BackendType.NOOP
 		_init_noop_backend()
@@ -95,6 +102,8 @@ func _async_init_exo_player_backend():
 	if not exo_player.init_texture(640, 360):
 		push_error("VideoPlayer: Failed to initialize ExoPlayer texture")
 		video_state = VIDEO_STATE_ERROR
+		exo_player.queue_free()
+		exo_player = null
 		return
 
 	# Set the video source
@@ -109,6 +118,8 @@ func _async_init_exo_player_backend():
 	if not success:
 		push_error("VideoPlayer: Failed to set ExoPlayer source: ", _source)
 		video_state = VIDEO_STATE_ERROR
+		exo_player.queue_free()
+		exo_player = null
 		return
 
 	exo_player.set_looping(_is_looping)
@@ -117,95 +128,88 @@ func _async_init_exo_player_backend():
 		exo_player.play()
 
 
-func _async_fetch_and_set_local_source():
-	# This is a local file reference, need to fetch it first
+## Fetch local video file and return the absolute file path
+## Returns empty string on error (video_state will be set to ERROR)
+func _async_fetch_local_video() -> String:
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 	var file_hash = content_mapping.get_hash(_source)
 
 	if file_hash.is_empty():
 		push_error("VideoPlayer: Could not find hash for local file: ", _source)
 		video_state = VIDEO_STATE_ERROR
-		return
+		return ""
 
 	var promise = Global.content_provider.fetch_video(file_hash, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
 		printerr("VideoPlayer: Error fetching video: ", res.get_error())
 		video_state = VIDEO_STATE_ERROR
-		return
+		return ""
 
 	var local_video_path = "user://content/" + file_hash
-	var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
+	return local_video_path.replace("user:/", OS.get_user_data_dir())
 
-	if exo_player:
-		var success = exo_player.set_source_local(absolute_file_path)
-		if not success:
-			push_error("VideoPlayer: Failed to set ExoPlayer local source: ", absolute_file_path)
-			video_state = VIDEO_STATE_ERROR
-			return
 
-		exo_player.set_looping(_is_looping)
-		if _is_playing:
-			exo_player.play()
+## Ensure file has extension for AVPlayer (which needs it to determine format)
+## Returns the path with extension (may create a copy if needed)
+func _ensure_file_has_extension(absolute_file_path: String) -> String:
+	var extension = _source.get_extension()
+	if extension.is_empty():
+		return absolute_file_path
+
+	var path_with_ext = absolute_file_path + "." + extension
+	var user_path_with_ext = "user://content/" + absolute_file_path.get_file() + "." + extension
+
+	# Check if file with extension already exists
+	if FileAccess.file_exists(user_path_with_ext):
+		return path_with_ext
+
+	# Create a copy with extension
+	# TODO: Optimize by using hard links or storing with extension originally
+	var err = DirAccess.copy_absolute(absolute_file_path, path_with_ext)
+	if err == OK:
+		return path_with_ext
+
+	push_warning("VideoPlayer: Failed to create file with extension, trying without: ", err)
+	return absolute_file_path
+
+
+## Apply local source to a native player (ExoPlayer or AVPlayer)
+func _apply_local_source_to_player(player: Node, absolute_file_path: String, player_name: String):
+	if not player:
+		return
+
+	var success = player.set_source_local(absolute_file_path)
+	if not success:
+		push_error(
+			"VideoPlayer: Failed to set %s local source: %s" % [player_name, absolute_file_path]
+		)
+		video_state = VIDEO_STATE_ERROR
+		return
+
+	player.set_looping(_is_looping)
+	if _is_playing:
+		player.play()
+
+
+func _async_fetch_and_set_local_source():
+	var absolute_file_path = await _async_fetch_local_video()
+	if absolute_file_path.is_empty():
+		return
+	_apply_local_source_to_player(exo_player, absolute_file_path, "ExoPlayer")
 
 
 func _async_fetch_and_set_local_source_av_player():
-	# This is a local file reference, need to fetch it first
-	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
-	var file_hash = content_mapping.get_hash(_source)
-
-	if file_hash.is_empty():
-		push_error("VideoPlayer: Could not find hash for local file: ", _source)
-		video_state = VIDEO_STATE_ERROR
+	var absolute_file_path = await _async_fetch_local_video()
+	if absolute_file_path.is_empty():
 		return
-
-	var promise = Global.content_provider.fetch_video(file_hash, content_mapping)
-	var res = await PromiseUtils.async_awaiter(promise)
-	if res is PromiseError:
-		printerr("VideoPlayer: Error fetching video: ", res.get_error())
-		video_state = VIDEO_STATE_ERROR
-		return
-
-	# Get the file extension from the original source (AVPlayer needs it to determine format)
-	var extension = _source.get_extension()
-	var local_video_path = "user://content/" + file_hash
-	var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
-
-	# If the source has an extension, create a copy with extension for AVPlayer
-	# AVPlayer needs the file extension to determine the video format
-	# TODO: Optimize by using hard links or storing with extension originally
-	if not extension.is_empty():
-		var path_with_ext = absolute_file_path + "." + extension
-		var user_path_with_ext = "user://content/" + file_hash + "." + extension
-		# Check if we need to create a copy with extension
-		if FileAccess.file_exists(user_path_with_ext):
-			absolute_file_path = path_with_ext
-		else:
-			var err = DirAccess.copy_absolute(absolute_file_path, path_with_ext)
-			if err == OK:
-				print("VideoPlayer: Created file copy with extension: ", path_with_ext)
-				absolute_file_path = path_with_ext
-			else:
-				push_warning(
-					"VideoPlayer: Failed to create file with extension, trying without: ", err
-				)
-
-	print("VideoPlayer: AVPlayer local source path: ", absolute_file_path)
-
-	if av_player:
-		var success = av_player.set_source_local(absolute_file_path)
-		if not success:
-			push_error("VideoPlayer: Failed to set AVPlayer local source: ", absolute_file_path)
-			video_state = VIDEO_STATE_ERROR
-			return
-
-		av_player.set_looping(_is_looping)
-		if _is_playing:
-			av_player.play()
+	# AVPlayer needs file extension to determine video format
+	absolute_file_path = _ensure_file_has_extension(absolute_file_path)
+	_apply_local_source_to_player(av_player, absolute_file_path, "AVPlayer")
 
 
 func _async_init_av_player_backend():
-	if OS.get_name() != "iOS":
+	if not Global.is_ios():
 		push_warning("AVPlayer backend only available on iOS, falling back to Noop")
 		current_backend = BackendType.NOOP
 		_init_noop_backend()
@@ -228,6 +232,8 @@ func _async_init_av_player_backend():
 	if not av_player.init_texture(640, 360):
 		push_error("VideoPlayer: Failed to initialize AVPlayer texture")
 		video_state = VIDEO_STATE_ERROR
+		av_player.queue_free()
+		av_player = null
 		return
 
 	# Set the video source
@@ -242,6 +248,8 @@ func _async_init_av_player_backend():
 	if not success:
 		push_error("VideoPlayer: Failed to set AVPlayer source: ", _source)
 		video_state = VIDEO_STATE_ERROR
+		av_player.queue_free()
+		av_player = null
 		return
 
 	av_player.set_looping(_is_looping)
@@ -258,8 +266,32 @@ func _init_noop_backend():
 
 
 func _process(_delta):
+	# Skip processing for NOOP backend (no video playback)
+	if current_backend == BackendType.NOOP:
+		return
+
+	# Process any pending debounced play/pause commands
+	_process_pending_play_state()
+
 	_update_effective_volume()
 	_update_video_state()
+
+
+## Process pending play/pause commands after debounce period
+func _process_pending_play_state():
+	if _pending_play_state < 0:
+		return
+
+	var current_time = Time.get_ticks_msec()
+	if current_time - _last_play_pause_time < PLAY_PAUSE_DEBOUNCE_MS:
+		return
+
+	# Apply the pending state
+	if _pending_play_state == 1:
+		_apply_play()
+	else:
+		_apply_pause()
+	_pending_play_state = -1
 
 
 ## Calculate and apply effective volume for each backend
@@ -277,44 +309,41 @@ func _update_effective_volume():
 			pass
 
 
-## ExoPlayer bypasses Godot's audio system, so we calculate full effective volume
-func _update_exo_player_volume():
-	if not exo_player:
-		return
+## Calculate effective volume for native players (ExoPlayer/AVPlayer)
+## Native players bypass Godot's audio system, so we must apply all volume levels
+func _calculate_native_effective_volume() -> float:
+	if dcl_muted:
+		return 0.0
+	var config = Global.get_config()
+	var master_volume: float = config.audio_general_volume / 100.0
+	var scene_volume: float = config.audio_scene_volume / 100.0
+	return master_volume * scene_volume * dcl_volume
 
-	var effective_volume: float = 0.0
 
-	if not dcl_muted:
-		var config = Global.get_config()
-		var master_volume: float = config.audio_general_volume / 100.0
-		var scene_volume: float = config.audio_scene_volume / 100.0
-		effective_volume = master_volume * scene_volume * dcl_volume
+## Update volume for native player (ExoPlayer or AVPlayer)
+## Returns true if volume was updated, false if skipped (no change or no player)
+func _update_native_player_volume(player: Node) -> bool:
+	if not player:
+		return false
+
+	var effective_volume: float = _calculate_native_effective_volume()
 
 	if absf(effective_volume - _last_effective_volume) < 0.001:
-		return
+		return false
 
 	_last_effective_volume = effective_volume
-	exo_player.set_volume(effective_volume)
+	player.set_volume(effective_volume)
+	return true
+
+
+## ExoPlayer bypasses Godot's audio system, so we calculate full effective volume
+func _update_exo_player_volume():
+	_update_native_player_volume(exo_player)
 
 
 ## AVPlayer bypasses Godot's audio system, so we calculate full effective volume
 func _update_av_player_volume():
-	if not av_player:
-		return
-
-	var effective_volume: float = 0.0
-
-	if not dcl_muted:
-		var config = Global.get_config()
-		var master_volume: float = config.audio_general_volume / 100.0
-		var scene_volume: float = config.audio_scene_volume / 100.0
-		effective_volume = master_volume * scene_volume * dcl_volume
-
-	if absf(effective_volume - _last_effective_volume) < 0.001:
-		return
-
-	_last_effective_volume = effective_volume
-	av_player.set_volume(effective_volume)
+	_update_native_player_volume(av_player)
 
 
 ## LiveKit uses Godot's AudioStreamPlayer which goes through audio buses
@@ -422,6 +451,19 @@ func _update_livekit_state():
 
 # Backend control methods called from Rust
 func _backend_play():
+	# Debounce rapid play/pause toggles to prevent video player issues
+	var current_time = Time.get_ticks_msec()
+	if current_time - _last_play_pause_time < PLAY_PAUSE_DEBOUNCE_MS:
+		# Defer the play command - will be applied after debounce period
+		_pending_play_state = 1
+		return
+
+	_last_play_pause_time = current_time
+	_pending_play_state = -1
+	_apply_play()
+
+
+func _apply_play():
 	_is_playing = true
 	match current_backend:
 		BackendType.EXO_PLAYER:
@@ -437,6 +479,19 @@ func _backend_play():
 
 
 func _backend_pause():
+	# Debounce rapid play/pause toggles to prevent video player issues
+	var current_time = Time.get_ticks_msec()
+	if current_time - _last_play_pause_time < PLAY_PAUSE_DEBOUNCE_MS:
+		# Defer the pause command - will be applied after debounce period
+		_pending_play_state = 0
+		return
+
+	_last_play_pause_time = current_time
+	_pending_play_state = -1
+	_apply_pause()
+
+
+func _apply_pause():
 	_is_playing = false
 	match current_backend:
 		BackendType.EXO_PLAYER:
@@ -460,6 +515,34 @@ func _backend_set_looping(looping: bool):
 		BackendType.AV_PLAYER:
 			if av_player:
 				av_player.set_looping(looping)
+		_:
+			pass
+
+
+func _backend_seek(position_sec: float):
+	match current_backend:
+		BackendType.EXO_PLAYER:
+			if exo_player:
+				exo_player.set_position(position_sec)
+		BackendType.AV_PLAYER:
+			if av_player:
+				av_player.set_position(position_sec)
+		BackendType.LIVEKIT:
+			pass  # LiveKit is a live stream, seeking not supported
+		_:
+			pass
+
+
+func _backend_set_playback_rate(rate: float):
+	match current_backend:
+		BackendType.EXO_PLAYER:
+			if exo_player:
+				exo_player.set_playback_rate(rate)
+		BackendType.AV_PLAYER:
+			if av_player:
+				av_player.set_playback_rate(rate)
+		BackendType.LIVEKIT:
+			pass  # LiveKit is a live stream, playback rate not supported
 		_:
 			pass
 

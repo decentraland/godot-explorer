@@ -40,6 +40,7 @@
 @property (nonatomic) BOOL hasReceivedFirstFrame;
 @property (nonatomic) CMTime lastFrameTime;
 @property (nonatomic) float volumeLevel;
+@property (nonatomic) float playbackRate;
 
 @end
 
@@ -58,6 +59,7 @@
         _isPlaying = NO;
         _isLooping = NO;
         _volumeLevel = 1.0f;
+        _playbackRate = 1.0f;
         _videoSizeChanged = NO;
         _hasReceivedFirstFrame = NO;
         _lastFrameTime = kCMTimeZero;
@@ -295,9 +297,11 @@
 
 - (void)play {
     if (_player) {
-        [_player play];
+        // Use rate instead of play to preserve playback speed
+        // [_player play] resets rate to 1.0
+        _player.rate = _playbackRate;
         _isPlaying = YES;
-        NSLog(@"[AVPlayerWrapper] Play");
+        NSLog(@"[AVPlayerWrapper] Play at rate: %f", _playbackRate);
     }
 }
 
@@ -343,6 +347,16 @@
         }
     }
     return 0.0f;
+}
+
+- (void)setPlaybackRate:(float)rate {
+    float clampedRate = fmaxf(0.1f, fminf(10.0f, rate));
+    _playbackRate = clampedRate;
+    // Only apply rate if currently playing (rate=0 means paused in AVPlayer)
+    if (_player && _isPlaying) {
+        _player.rate = clampedRate;
+    }
+    NSLog(@"[AVPlayerWrapper] setPlaybackRate: %f (isPlaying: %d)", clampedRate, _isPlaying);
 }
 
 - (void)setVolume:(float)volume {

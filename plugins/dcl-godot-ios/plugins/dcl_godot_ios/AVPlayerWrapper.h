@@ -57,6 +57,9 @@
 - (float)getPosition;
 - (float)getDuration;
 
+// Playback rate (1.0 = normal speed)
+- (void)setPlaybackRate:(float)rate;
+
 // State queries
 - (BOOL)hasVideoSizeChanged;
 - (void)clearVideoSizeChangedFlag;

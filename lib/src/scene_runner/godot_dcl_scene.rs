@@ -57,6 +57,12 @@ pub struct VideoPlayerData {
     pub last_position: f64,
     /// Last known video length in seconds
     pub last_length: f64,
+
+    // Last requested values from CRDT - used to detect changes
+    /// Last requested position (for seeking)
+    pub last_requested_position: f32,
+    /// Last requested playback rate
+    pub last_playback_rate: f32,
 }
 
 impl VideoPlayerData {
@@ -69,6 +75,8 @@ impl VideoPlayerData {
             last_state: 0, // VIDEO_STATE_NONE
             last_position: 0.0,
             last_length: -1.0,
+            last_requested_position: 0.0,
+            last_playback_rate: 1.0,
         }
     }
 
@@ -86,6 +94,8 @@ impl VideoPlayerData {
             last_state: 0, // VIDEO_STATE_NONE
             last_position: 0.0,
             last_length: -1.0,
+            last_requested_position: 0.0,
+            last_playback_rate: 1.0,
         }
     }
 }

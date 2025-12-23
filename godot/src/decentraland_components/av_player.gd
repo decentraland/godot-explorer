@@ -16,6 +16,9 @@ extends Node
 ## Emitted when the video size changes and the texture has been resized
 signal video_size_changed(width: int, height: int)
 
+# Debug logging - set to true for verbose output during development
+const DEBUG_LOGGING: bool = false
+
 # Plugin reference
 var plugin: Object = null
 
@@ -211,6 +214,15 @@ func set_looping(loop: bool) -> void:
 	plugin.avPlayerSetLooping(player_id, loop)
 
 
+## Set playback rate (1.0 = normal speed)
+func set_playback_rate(rate: float) -> void:
+	if not plugin or player_id <= 0:
+		push_error("AVPlayer: Player not initialized")
+		return
+
+	plugin.avPlayerSetPlaybackRate(player_id, clamp(rate, 0.1, 10.0))
+
+
 ## Get player information for debugging
 func get_player_info() -> String:
 	if not plugin or player_id <= 0:
@@ -268,25 +280,26 @@ func _update_texture_gpu() -> bool:
 	_frame_count += 1
 
 	# Debug: log first few frames and when IOSurface pointer changes
-	if _frame_count <= 5 or iosurface_ptr != _last_iosurface_ptr:
+	if DEBUG_LOGGING and (_frame_count <= 5 or iosurface_ptr != _last_iosurface_ptr):
 		print(
 			(
 				"AVPlayer: Frame #%d, IOSurface=0x%x, size=%dx%d"
 				% [_frame_count, iosurface_ptr, video_width, video_height]
 			)
 		)
-		_last_iosurface_ptr = iosurface_ptr
+	_last_iosurface_ptr = iosurface_ptr
 
 	# Debug: log first frame after reinitialization
 	if _waiting_for_first_frame:
 		_waiting_for_first_frame = false
 		_frames_after_reinit += 1
-		print(
-			(
-				"AVPlayer: First frame received after reinit #%d (iosurface=0x%x)"
-				% [_frames_after_reinit, iosurface_ptr]
+		if DEBUG_LOGGING:
+			print(
+				(
+					"AVPlayer: First frame received after reinit #%d (iosurface=0x%x)"
+					% [_frames_after_reinit, iosurface_ptr]
+				)
 			)
-		)
 
 	# Update the ExternalTexture with the new IOSurface
 	# This passes the IOSurfaceRef to Godot's Metal renderer
@@ -297,12 +310,13 @@ func _update_texture_gpu() -> bool:
 ## Reinitialize the surface and texture with new dimensions
 ## Called automatically when video size changes
 func _reinitialize_surface(new_width: int, new_height: int) -> void:
-	print(
-		(
-			"AVPlayer: Reinitializing surface from %dx%d to %dx%d"
-			% [video_width, video_height, new_width, new_height]
+	if DEBUG_LOGGING:
+		print(
+			(
+				"AVPlayer: Reinitializing surface from %dx%d to %dx%d"
+				% [video_width, video_height, new_width, new_height]
+			)
 		)
-	)
 
 	# Set flag to prevent texture updates during transition
 	# This prevents grey flickering from invalid/stale buffers

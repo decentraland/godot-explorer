@@ -28,7 +28,7 @@ func _ready():
 	player = ExoPlayer.new()
 	add_child(player)
 
-	# Initialize texture with HD resolution
+	# Initialize texture with placeholder size (will be resized when video loads)
 	player.init_texture(100, 100)
 
 	# Set the texture on the video rect immediately

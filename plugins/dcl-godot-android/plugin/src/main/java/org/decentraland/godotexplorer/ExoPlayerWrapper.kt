@@ -547,6 +547,14 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
         }
     }
 
+    fun setPlaybackRate(rate: Float) {
+        val clampedRate = rate.coerceIn(0.1f, 10f)
+        Log.d(TAG, "setPlaybackRate: rate=$clampedRate")
+        runOnMainThreadAsync {
+            player?.setPlaybackSpeed(clampedRate)
+        }
+    }
+
     private fun cleanupSurface() {
         try {
 

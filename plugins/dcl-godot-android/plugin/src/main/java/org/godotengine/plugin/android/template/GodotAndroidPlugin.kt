@@ -1214,6 +1214,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     @UsedByGodot
+    fun exoPlayerSetPlaybackRate(playerId: Int, rate: Float) {
+        exoPlayers[playerId]?.setPlaybackRate(rate)
+    }
+
+    @UsedByGodot
     fun exoPlayerGetInfo(playerId: Int): String {
         return exoPlayers[playerId]?.getPlayerInfo() ?: "Player not found"
     }

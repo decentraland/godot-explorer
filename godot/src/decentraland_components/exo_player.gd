@@ -16,6 +16,9 @@ extends Node
 ## Emitted when the video size changes and the texture has been resized
 signal video_size_changed(width: int, height: int)
 
+# Debug logging - set to true for verbose output during development
+const DEBUG_LOGGING: bool = false
+
 # Plugin reference
 var plugin: Object = null
 
@@ -24,8 +27,6 @@ var player_id: int = -1
 
 # GPU mode: ExternalTexture for zero-copy GPU rendering
 var external_texture: ExternalTexture = null
-
-var video_image: Image = null
 
 # Video properties
 var video_width: int = 0
@@ -213,6 +214,15 @@ func set_looping(loop: bool) -> void:
 	plugin.exoPlayerSetLooping(player_id, loop)
 
 
+## Set playback rate (1.0 = normal speed)
+func set_playback_rate(rate: float) -> void:
+	if not plugin or player_id <= 0:
+		push_error("ExoPlayer: Player not initialized")
+		return
+
+	plugin.exoPlayerSetPlaybackRate(player_id, clamp(rate, 0.1, 10.0))
+
+
 ## Get player information for debugging
 func get_player_info() -> String:
 	if not plugin or player_id <= 0:
@@ -269,12 +279,13 @@ func _update_texture_gpu() -> bool:
 	if _waiting_for_first_frame:
 		_waiting_for_first_frame = false
 		_frames_after_reinit += 1
-		print(
-			(
-				"ExoPlayer: First frame received after reinit #%d (buffer=0x%x)"
-				% [_frames_after_reinit, hw_buffer_ptr]
+		if DEBUG_LOGGING:
+			print(
+				(
+					"ExoPlayer: First frame received after reinit #%d (buffer=0x%x)"
+					% [_frames_after_reinit, hw_buffer_ptr]
+				)
 			)
-		)
 
 	# Update the ExternalTexture with the new hardware buffer
 	# This passes the AHardwareBuffer* to Godot's Vulkan renderer
@@ -285,12 +296,13 @@ func _update_texture_gpu() -> bool:
 ## Reinitialize the surface and texture with new dimensions
 ## Called automatically when video size changes
 func _reinitialize_surface(new_width: int, new_height: int) -> void:
-	print(
-		(
-			"ExoPlayer: Reinitializing surface from %dx%d to %dx%d"
-			% [video_width, video_height, new_width, new_height]
+	if DEBUG_LOGGING:
+		print(
+			(
+				"ExoPlayer: Reinitializing surface from %dx%d to %dx%d"
+				% [video_width, video_height, new_width, new_height]
+			)
 		)
-	)
 
 	# Set flag to prevent texture updates during transition
 	# This prevents grey flickering from invalid/stale buffers
