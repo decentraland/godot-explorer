@@ -13,7 +13,7 @@ use super::{
         billboard::update_billboard,
         camera_mode_area::update_camera_mode_area,
         gltf_container::{sync_gltf_loading_state, update_gltf_container},
-        material::update_material,
+        material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
@@ -199,6 +199,8 @@ pub fn _process_scene(
             }
             SceneUpdateState::Material => {
                 update_material(scene, crdt_state);
+                // Update video textures separately (needs mutable access to video_players)
+                update_video_material_textures(scene);
                 false
             }
             SceneUpdateState::TextShape => {

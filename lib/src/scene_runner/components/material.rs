@@ -312,19 +312,100 @@ fn check_texture(
         DclSourceTex::AvatarTexture(_user_id) => {
             // TODO: implement load avatar texture
         }
-        DclSourceTex::VideoTexture(video_entity_id) => {
-            if let Some(node) = _scene
-                .godot_dcl_scene
-                .get_godot_entity_node(video_entity_id)
-            {
-                if let Some(data) = &node.video_player_data {
-                    material.set_texture(param, data.video_sink.texture.clone().upcast());
-                    return true;
-                }
-            }
+        DclSourceTex::VideoTexture(_video_entity_id) => {
+            // Video textures need special handling:
+            // - LiveKit: uses dcl_texture (ImageTexture) which is updated from Rust
+            // - ExoPlayer: uses ExternalTexture from GDScript, accessed via get_backend_texture()
+            //
+            // We return false here to keep the material "dirty" so video textures
+            // are re-applied each frame. This ensures texture changes (video frames,
+            // ExoPlayer texture resize) are reflected in the material.
+            //
+            // The actual texture binding happens in update_video_material_textures()
+            // which is called after the main material loop.
             return false;
         }
     }
 
     true
+}
+
+/// Update video textures on materials.
+/// This is called separately from check_texture because video textures need mutable access
+/// to video_players to call get_backend_texture(), which would conflict with the material
+/// iteration loop.
+pub fn update_video_material_textures(scene: &mut Scene) {
+    // Collect video texture bindings we need to update
+    // Format: (material weak_ref, texture_param, video_entity_id)
+    let mut video_texture_updates: Vec<(
+        Variant,
+        godot::engine::base_material_3d::TextureParam,
+        crate::dcl::components::SceneEntityId,
+    )> = Vec::new();
+
+    for (_entity, item) in scene.materials.iter() {
+        if !item.waiting_textures {
+            continue;
+        }
+
+        let material_ref = item.weak_ref.call("get_ref", &[]);
+        if material_ref.is_nil() {
+            continue;
+        }
+
+        // Check each texture in the material for video textures
+        let textures_to_check: Vec<(
+            godot::engine::base_material_3d::TextureParam,
+            &Option<DclTexture>,
+        )> = match &item.dcl_mat {
+            DclMaterial::Unlit(unlit) => {
+                vec![(
+                    godot::engine::base_material_3d::TextureParam::ALBEDO,
+                    &unlit.texture,
+                )]
+            }
+            DclMaterial::Pbr(pbr) => {
+                vec![
+                    (
+                        godot::engine::base_material_3d::TextureParam::ALBEDO,
+                        &pbr.texture,
+                    ),
+                    (
+                        godot::engine::base_material_3d::TextureParam::NORMAL,
+                        &pbr.bump_texture,
+                    ),
+                    (
+                        godot::engine::base_material_3d::TextureParam::EMISSION,
+                        &pbr.emissive_texture,
+                    ),
+                ]
+            }
+        };
+
+        for (param, dcl_texture) in textures_to_check {
+            if let Some(tex) = dcl_texture {
+                if let DclSourceTex::VideoTexture(video_entity_id) = &tex.source {
+                    video_texture_updates.push((material_ref.clone(), param, *video_entity_id));
+                }
+            }
+        }
+    }
+
+    // Now apply the video textures (we can mutably borrow video_players here)
+    for (material_ref, param, video_entity_id) in video_texture_updates {
+        if let Some(video_player) = scene.video_players.get_mut(&video_entity_id) {
+            let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
+
+            // Try get_backend_texture first (works for ExoPlayer's ExternalTexture)
+            let backend_texture = video_player.bind_mut().get_backend_texture();
+            if let Some(texture) = backend_texture {
+                material.set_texture(param, texture.upcast());
+            } else {
+                // Fallback to dcl_texture (works for LiveKit's ImageTexture)
+                if let Some(texture) = video_player.bind().get_dcl_texture() {
+                    material.set_texture(param, texture.upcast());
+                }
+            }
+        }
+    }
 }

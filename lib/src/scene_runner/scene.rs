@@ -411,13 +411,26 @@ impl Scene {
     }
 
     pub fn process_livekit_video_frame(&mut self, width: u32, height: u32, data: &[u8]) {
+        use crate::godot_classes::dcl_video_player::VIDEO_STATE_PLAYING;
+        use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
+        use godot::engine::Time;
+
+        let current_time = Time::singleton().get_ticks_msec() as f64 / 1000.0;
+
         // Send video frames to all registered livekit video players
-        for entity_id in &self.livekit_video_player_entities {
-            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(entity_id) {
+        for entity_id in self.livekit_video_player_entities.clone() {
+            // Update the texture
+            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
                 if let Some(vp_data) = &mut node.video_player_data {
-                    use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
-                    update_video_texture_from_livekit(&mut vp_data.video_sink, width, height, data);
+                    update_video_texture_from_livekit(vp_data, width, height, data);
                 }
+            }
+
+            // Update video player state to PLAYING when receiving frames
+            if let Some(video_player) = self.video_players.get_mut(&entity_id) {
+                video_player.set("video_state".into(), VIDEO_STATE_PLAYING.to_variant());
+                video_player.set("video_length".into(), (-1.0_f64).to_variant());
+                video_player.set("last_frame_time".into(), current_time.to_variant());
             }
         }
     }
