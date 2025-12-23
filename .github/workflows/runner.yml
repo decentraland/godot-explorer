@@ -42,8 +42,8 @@ jobs:
   ios-build:
     name: 🍏 iOS
     needs: static-checks
-    # On main/release: always build. On PRs: only build if 'build-ios-internal' label is present
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'build-ios-internal') }}
+    # Only build if 'build-ios-internal' label is present. Use manual workflow dispatch for main builds.
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'build-ios-internal') }}
     uses: ./.github/workflows/ios_builds.yml
     secrets:
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}

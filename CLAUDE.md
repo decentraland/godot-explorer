@@ -153,12 +153,16 @@ cargo run -- export --target ios
    docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
    ```
 
-4. **Triggering iOS CI builds on PRs**:
-   iOS builds are skipped by default on PRs to save CI resources. To trigger an iOS build:
+4. **Triggering iOS CI builds**:
+   iOS builds are skipped by default to save CI resources. To trigger an iOS build:
    ```bash
+   # On a PR: add the build-ios-internal label
    gh pr edit --add-label "build-ios-internal"
+
+   # Manual trigger: use the GitHub Actions UI or gh CLI
+   gh workflow run "🍏 iOS" --ref main
    ```
-   The label is automatically removed after the build completes. On `main` branch, iOS builds always run.
+   The label is automatically removed after the build completes on PRs.
 
 ## Important Notes
 

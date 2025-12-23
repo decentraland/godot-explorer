@@ -1,5 +1,11 @@
 name: 🍏 iOS
 on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or commit to build'
+        required: false
+        default: 'main'
   workflow_call:
     secrets:
       DEPLOY_SSH_KEY:
@@ -21,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.inputs.ref || github.event.pull_request.head.sha || github.sha }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -64,9 +70,11 @@ jobs:
           git lfs install
 
       - name: Setup SSH for deployment
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
@@ -75,6 +83,8 @@ jobs:
           # Determine branch name based on event type
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BRANCH_NAME="PR-${{ github.event.pull_request.number }}-${{ github.head_ref || github.ref_name }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BRANCH_NAME="${{ github.event.inputs.ref }}"
           else
             BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
           fi
