@@ -71,6 +71,21 @@ var idle_anim: Animation
 var animation_single_emote_node: AnimationNodeAnimation
 var animation_mix_emote_node: AnimationNodeBlendTree
 
+# Guard to prevent concurrent modifications to animation system
+var _is_modifying_animations: bool = false
+var _queued_emote_urn: String = ""
+
+# Cooldown to prevent rapid emote spam that can crash the animation system
+const EMOTE_COOLDOWN_SECONDS: float = 0.5
+var _last_emote_time: float = 0.0
+
+# Lock to prevent concurrent async emote loading
+var _is_loading_emote: bool = false
+
+# Track prop visibility nodes that need to be hidden on idle
+# This avoids modifying idle_anim at runtime which can crash the mixer
+var _prop_armature_names: Array[String] = []
+
 
 func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree: AnimationTree):
 	# Core dependencies from avatar
@@ -119,6 +134,17 @@ func stop_emote():
 
 
 func play_emote(id: String):
+	# If animation system is being modified, queue this request
+	if _is_modifying_animations:
+		print("  play_emote: animations being modified, queueing: ", id)
+		_queued_emote_urn = id
+		return
+
+	# Ensure animation tree is active before playing
+	if not animation_tree.active:
+		print("  play_emote: animation tree not active, activating...")
+		animation_tree.active = true
+
 	var triggered: bool = false
 	if not id.begins_with("urn"):
 		# Check if it's a utility action (local) or base emote (remote)
@@ -297,6 +323,14 @@ func _hide_all_props():
 	# Hide all prop armatures to ensure clean state before playing new emote
 	if not is_instance_valid(avatar):
 		return
+
+	# Use tracked prop names instead of iterating all children
+	for prop_name in _prop_armature_names:
+		var prop = avatar.get_node_or_null(NodePath(prop_name))
+		if prop != null and is_instance_valid(prop):
+			prop.hide()
+
+	# Also hide any legacy props (fallback for props added before tracking)
 	for child in avatar.get_children():
 		if is_instance_valid(child) and child.name.begins_with("Armature_Prop"):
 			child.hide()
@@ -326,6 +360,19 @@ func _reset_skeleton_to_rest_pose():
 
 func async_play_emote(emote_id_or_urn: String) -> void:
 	print("async_play_emote called with: ", emote_id_or_urn)
+
+	# Cooldown check to prevent rapid emote spam
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
+		print("  -> Cooldown active, ignoring")
+		return
+	_last_emote_time = current_time
+
+	# Prevent concurrent async loading operations
+	if _is_loading_emote:
+		print("  -> Already loading an emote, ignoring")
+		return
+
 	var emote_urn: String = emote_id_or_urn
 
 	# Handle non-URN emote IDs
@@ -349,11 +396,20 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 		play_emote(emote_urn)
 		return
 
+	# Set loading lock
+	_is_loading_emote = true
+
 	print("  -> Loading emote: ", emote_urn)
 	if emote_urn.contains("scene-emote"):
 		await _async_load_scene_emote(emote_urn)
 	else:
 		await _async_load_emote(emote_urn)
+
+	# Wait a frame for any deferred calls (load_emote_from_dcl_emote_gltf) to complete
+	await avatar.get_tree().process_frame
+
+	# Clear loading lock
+	_is_loading_emote = false
 
 	print("  -> Emote loaded, now playing: ", emote_urn)
 	# Use call_deferred to ensure playback happens on main thread after async loading
@@ -394,7 +450,8 @@ func _async_load_emote(emote_urn: String):
 	print("[EMOTE DEBUG]   obj.prop_animation: ", obj.prop_animation)
 	print("[EMOTE DEBUG]   obj.armature_prop: ", obj.armature_prop)
 
-	load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
+	# Use call_deferred to ensure animation modifications happen on main thread
+	load_emote_from_dcl_emote_gltf.call_deferred(emote_urn, obj, file_hash)
 
 
 func _async_load_scene_emote(urn: String):
@@ -422,7 +479,10 @@ func _async_load_scene_emote(urn: String):
 
 	#var obj = Global.content_provider.get_emote_gltf_from_hash(emote_scene_urn.glb_hash)
 	if obj != null:
-		load_emote_from_dcl_emote_gltf(urn, obj, emote_scene_urn.glb_hash)
+		# Use call_deferred to ensure animation modifications happen on main thread
+		load_emote_from_dcl_emote_gltf.call_deferred(urn, obj, emote_scene_urn.glb_hash)
+		# Wait a frame for the deferred call to execute before checking
+		await avatar.get_tree().process_frame
 		if _has_emote(urn):
 			loaded_emotes_by_urn[urn].looping = emote_scene_urn.looping
 			loaded_emotes_by_urn[urn].from_scene = true
@@ -442,10 +502,16 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 	print("  default_animation: ", obj.default_animation)
 	print("  prop_animation: ", obj.prop_animation)
 
-	# IMPORTANT: Temporarily deactivate AnimationTree while modifying animations
+	# Set guard to prevent concurrent operations
+	_is_modifying_animations = true
+
+	# IMPORTANT: Stop all animation processing while modifying animations
 	# This prevents crashes when the AnimationMixer tries to access animations being modified
-	var was_active = animation_tree.active
+	var was_tree_active = animation_tree.active
 	animation_tree.active = false
+
+	# Also stop AnimationPlayer to ensure no iteration over animations
+	animation_player.stop()
 
 	# Reset all animation nodes to safe defaults before modifying the library
 	# This prevents "!has_animation" errors when reactivating the tree
@@ -460,11 +526,13 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 		if not avatar.has_node(NodePath(obj.armature_prop.name)):
 			armature_prop = obj.armature_prop.duplicate()
 			avatar.add_child(armature_prop)
+			armature_prop.hide()  # Start hidden
 			print("  Added armature_prop as child: ", armature_prop.name)
 
-			var track_id = idle_anim.add_track(Animation.TYPE_VALUE)
-			idle_anim.track_set_path(track_id, NodePath(armature_prop.name + ":visible"))
-			idle_anim.track_insert_key(track_id, 0.0, false)
+			# Track the prop name for hiding during idle - DON'T modify idle_anim at runtime
+			# Modifying idle_anim while animation system could access it causes crashes
+			if not _prop_armature_names.has(armature_prop.name):
+				_prop_armature_names.append(armature_prop.name)
 		else:
 			print("  armature_prop already exists in avatar, skipping")
 			armature_prop = avatar.get_node(NodePath(obj.armature_prop.name))
@@ -485,12 +553,13 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 			print("[EMOTE DEBUG]   anim_name was empty, generated: ", anim_name)
 
 		# If we have both avatar and prop animations, merge them into one
+		# Always duplicate the animation to avoid sharing references between avatar instances
 		var final_animation: Animation
 		if obj.prop_animation != null:
 			final_animation = _merge_animations(obj.default_animation, obj.prop_animation)
 			print("  Merged avatar + prop animations into single animation")
 		else:
-			final_animation = obj.default_animation
+			final_animation = obj.default_animation.duplicate()
 
 		print("[EMOTE DEBUG]   final_animation length: ", final_animation.length, " tracks: ", final_animation.get_track_count())
 
@@ -504,8 +573,27 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 
 	loaded_emotes_by_urn[urn] = emote_item_data
 
-	# Reactivate AnimationTree after modifications are complete
+	# Reactivate animation system after modifications are complete
+	# Do this via call_deferred to ensure all modifications are fully applied
+	# before the animation system starts processing again
+	_reactivate_animation_system.call_deferred(was_tree_active)
+
+
+func _reactivate_animation_system(was_active: bool):
+	# Reactivate animation system after modifications
+	# This is called via call_deferred to ensure all changes are applied
 	animation_tree.active = was_active
+
+	# Clear the modification guard
+	_is_modifying_animations = false
+
+	# Process any queued emote request
+	if not _queued_emote_urn.is_empty():
+		var queued = _queued_emote_urn
+		_queued_emote_urn = ""
+		print("  Processing queued emote: ", queued)
+		# Use another deferred call to ensure tree is fully ready
+		play_emote.call_deferred(queued)
 
 
 func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animation:
@@ -546,9 +634,13 @@ func clean_unused_emotes():
 	if to_delete_emote_urns.is_empty():
 		return
 
-	# Temporarily deactivate AnimationTree while modifying animations
-	var was_active = animation_tree.active
+	# Set guard to prevent concurrent operations
+	_is_modifying_animations = true
+
+	# Stop all animation processing while modifying animations
+	var was_tree_active = animation_tree.active
 	animation_tree.active = false
+	animation_player.stop()
 
 	# Reset all animation nodes to safe defaults before modifying the library
 	animation_single_emote_node.animation = "idle/Anim"
@@ -564,13 +656,19 @@ func clean_unused_emotes():
 			emotes_animation_library.remove_animation(emote_item_data.prop_anim_name)
 
 		if emote_item_data.armature_prop != null:
+			# Remove from tracked props
+			var prop_name = emote_item_data.armature_prop.name
+			var prop_idx = _prop_armature_names.find(prop_name)
+			if prop_idx >= 0:
+				_prop_armature_names.remove_at(prop_idx)
+
 			avatar.remove_child(emote_item_data.armature_prop)
 			emote_item_data.armature_prop.queue_free()
 
 		loaded_emotes_by_urn.erase(urn)
 
-	# Reactivate AnimationTree
-	animation_tree.active = was_active
+	# Reactivate animation system via deferred call
+	_reactivate_animation_system.call_deferred(was_tree_active)
 
 
 func play_emote_audio(file_hash: String):
@@ -639,6 +737,8 @@ func process(idle: bool):
 		if not idle:
 			playing_single = false
 			playing_mixed = false
+			# Hide props when interrupted
+			_hide_all_props()
 		else:
 			var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 			var cur_node: StringName = pb.get_current_node()
@@ -651,3 +751,5 @@ func process(idle: bool):
 					else:
 						playing_single = false
 						playing_mixed = false
+						# Hide props when emote ends
+						_hide_all_props()
