@@ -193,11 +193,15 @@ void DclGodotiOS::open_auth_url(String url) {
         callbackURLScheme:callbackScheme
         completionHandler:^(NSURL * _Nullable callbackURL, NSError * _Nullable error) {
             if (callbackURL) {
-                printf("Authentication completed with callback URL: %s\n", callbackURL.absoluteString.UTF8String);
-                // Forward the callback URL to Godot if needed
+                NSLog(@"[DEEPLINK] ASWebAuthenticationSession completed with callback URL: %@", callbackURL.absoluteString);
+                // Only forward if the callback URL has the decentraland:// scheme
+                if ([callbackURL.scheme isEqualToString:@"decentraland"]) {
+                    DclGodotiOS::emit_deeplink_received(String::utf8(callbackURL.absoluteString.UTF8String));
+                } else {
+                    NSLog(@"[DEEPLINK] Ignoring callback URL with unexpected scheme: %@", callbackURL.scheme);
+                }
             } else if (error) {
-                printf("Authentication failed with error: %s\n", error.localizedDescription.UTF8String);
-                // Forward the error to Godot if needed
+                NSLog(@"[DEEPLINK] ASWebAuthenticationSession failed with error: %@", error.localizedDescription);
             }
 
             // Release the authSession and remove the auth window

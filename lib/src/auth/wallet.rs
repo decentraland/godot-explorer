@@ -148,14 +148,30 @@ impl SimpleAuthChain {
             ]
         })
     }
+
+    /// Creates a SimpleAuthChain from a vector of ChainLinks.
+    /// Used when receiving auth chain from external sources (e.g., mobile auth flow).
+    pub fn from_chain_links(links: Vec<ChainLink>) -> Self {
+        Self(links)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChainLink {
     #[serde(rename = "type")]
-    ty: String,
-    payload: String,
-    signature: String,
+    pub ty: String,
+    pub payload: String,
+    pub signature: String,
+}
+
+impl ChainLink {
+    pub fn new(ty: String, payload: String, signature: String) -> Self {
+        Self {
+            ty,
+            payload,
+            signature,
+        }
+    }
 }
 
 // convert string -> Address
