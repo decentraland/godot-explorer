@@ -6,12 +6,6 @@ on:
         description: 'Branch or commit to build'
         required: false
         default: 'main'
-  workflow_call:
-    secrets:
-      DEPLOY_SSH_KEY:
-        required: true
-      GH_TOKEN:
-        required: false
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
@@ -25,16 +19,9 @@ jobs:
     runs-on: warp-macos-14-arm64-6x
     timeout-minutes: 35
     steps:
-      - name: Remove build-ios-internal label
-        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'build-ios-internal') }}
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
-
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.inputs.ref || github.sha }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -87,15 +74,7 @@ jobs:
 
       - name: Deploy iOS exports to mobile deploy pipeline
         run: |
-          # Determine branch name based on event type
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BRANCH_NAME="PR-${{ github.event.pull_request.number }}-${{ github.head_ref || github.ref_name }}"
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BRANCH_NAME="${{ github.event.inputs.ref }}"
-          else
-            BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
-          fi
-
+          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
           echo "Deploying to branch: $BRANCH_NAME"
 
           # Clone the target repository using SSH

@@ -1,0 +1,22 @@
+name: 🏷️ iOS Label Trigger
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  check-label:
+    name: Check iOS Build Label
+    runs-on: ubuntu-latest
+    if: ${{ github.event.label.name == 'build-ios-internal' }}
+    steps:
+      - name: Remove build-ios-internal label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
+
+      - name: Trigger iOS build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run "🍏 iOS" --repo ${{ github.repository }} --ref ${{ github.event.pull_request.head.ref }}
