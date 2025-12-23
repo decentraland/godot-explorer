@@ -477,6 +477,11 @@ func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 
 
 func has_changes():
+	# Check both profile changes AND avatar changes
+	# Avatar is a clone, so changes to mutable_avatar don't affect mutable_profile directly
+	var original_avatar = current_profile.get_avatar()
+	if not original_avatar.equal(mutable_avatar):
+		return true
 	return not current_profile.equal(mutable_profile)
 
 
