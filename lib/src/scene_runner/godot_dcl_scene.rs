@@ -18,7 +18,8 @@ use std::{
 };
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
-use crate::av::backend::{AudioSink, VideoSink};
+use crate::av::backend::{AudioSink, BackendType};
+use godot::engine::ImageTexture;
 
 pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, GodotEntityNode>,
@@ -36,11 +37,67 @@ pub struct GodotDclScene {
 
     pub ui_results: Rc<RefCell<UiResults>>,
 }
+
+/// Video player data for CRDT event tracking.
+/// State is polled from the video player node each frame.
 pub struct VideoPlayerData {
-    pub video_sink: VideoSink,
-    pub audio_sink: AudioSink,
+    /// The video source URL
+    pub source: String,
+    /// The backend type being used
+    pub backend_type: BackendType,
+    /// Texture for LiveKit video frames (only used for LiveKit backend)
+    pub texture: Option<Gd<ImageTexture>>,
+    /// Event timestamp counter for CRDT events
     pub timestamp: u32,
-    pub length: f32,
+
+    // Last known state - used to detect changes and generate events
+    /// Last known video state (matches VIDEO_STATE_* constants in dcl_video_player.rs)
+    pub last_state: i32,
+    /// Last known video position in seconds
+    pub last_position: f64,
+    /// Last known video length in seconds
+    pub last_length: f64,
+
+    // Last requested values from CRDT - used to detect changes
+    /// Last requested position (for seeking)
+    pub last_requested_position: f32,
+    /// Last requested playback rate
+    pub last_playback_rate: f32,
+}
+
+impl VideoPlayerData {
+    pub fn new(source: String, backend_type: BackendType) -> Self {
+        Self {
+            source,
+            backend_type,
+            texture: None,
+            timestamp: 0,
+            last_state: 0, // VIDEO_STATE_NONE
+            last_position: 0.0,
+            last_length: -1.0,
+            last_requested_position: 0.0,
+            last_playback_rate: 1.0,
+        }
+    }
+
+    /// Create VideoPlayerData with a texture (for LiveKit backend)
+    pub fn new_with_texture(
+        source: String,
+        backend_type: BackendType,
+        texture: Gd<ImageTexture>,
+    ) -> Self {
+        Self {
+            source,
+            backend_type,
+            texture: Some(texture),
+            timestamp: 0,
+            last_state: 0, // VIDEO_STATE_NONE
+            last_position: 0.0,
+            last_length: -1.0,
+            last_requested_position: 0.0,
+            last_playback_rate: 1.0,
+        }
+    }
 }
 
 pub struct UiNode {

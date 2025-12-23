@@ -1,0 +1,144 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqmxj3vn8nwwb"]
+
+[ext_resource type="Script" uid="uid://c1dybtiquo8vx" path="res://examples/exo_player_test.gd" id="1_test"]
+
+[node name="ExoPlayerTest" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_test")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "ExoPlayer Test Scene"
+horizontal_alignment = 1
+
+[node name="VideoRect" type="TextureRect" parent="VBoxContainer"]
+custom_minimum_size = Vector2(640, 360)
+layout_mode = 2
+size_flags_vertical = 3
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Controls" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="PlayButton" type="Button" parent="VBoxContainer/Controls"]
+layout_mode = 2
+text = "Play"
+
+[node name="PauseButton" type="Button" parent="VBoxContainer/Controls"]
+layout_mode = 2
+text = "Pause"
+
+[node name="StopButton" type="Button" parent="VBoxContainer/Controls"]
+layout_mode = 2
+text = "Stop"
+
+[node name="URLInput" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/URLInput"]
+layout_mode = 2
+text = "URL:"
+
+[node name="URLLineEdit" type="LineEdit" parent="VBoxContainer/URLInput"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Enter video URL (http/https)"
+
+[node name="LoadButton" type="Button" parent="VBoxContainer/URLInput"]
+layout_mode = 2
+text = "Load"
+
+[node name="LocalInput" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/LocalInput"]
+layout_mode = 2
+text = "Local File:"
+
+[node name="PathLineEdit" type="LineEdit" parent="VBoxContainer/LocalInput"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Enter local file path"
+
+[node name="LoadLocalButton" type="Button" parent="VBoxContainer/LocalInput"]
+layout_mode = 2
+text = "Load Local"
+
+[node name="Slider" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/Slider"]
+layout_mode = 2
+text = "Position:"
+
+[node name="PositionSlider" type="HSlider" parent="VBoxContainer/Slider"]
+layout_mode = 2
+size_flags_horizontal = 3
+step = 0.1
+
+[node name="TimeLabel" type="Label" parent="VBoxContainer/Slider"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "00:00 / 00:00"
+
+[node name="Volume" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/Volume"]
+layout_mode = 2
+text = "Volume:"
+
+[node name="VolumeSlider" type="HSlider" parent="VBoxContainer/Volume"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="VolumeLabel" type="Label" parent="VBoxContainer/Volume"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "100%"
+
+[node name="Options" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="LoopCheckBox" type="CheckBox" parent="VBoxContainer/Options"]
+layout_mode = 2
+text = "Loop"
+
+[node name="InfoButton" type="Button" parent="VBoxContainer/Options"]
+layout_mode = 2
+text = "Show Info"
+
+[node name="InfoLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "Player info will appear here"
+
+[connection signal="pressed" from="VBoxContainer/Controls/PlayButton" to="." method="_on_play_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/Controls/PauseButton" to="." method="_on_pause_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/Controls/StopButton" to="." method="_on_stop_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/URLInput/LoadButton" to="." method="_on_load_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/LocalInput/LoadLocalButton" to="." method="_on_load_local_button_pressed"]
+[connection signal="value_changed" from="VBoxContainer/Slider/PositionSlider" to="." method="_on_position_slider_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/Volume/VolumeSlider" to="." method="_on_volume_slider_value_changed"]
+[connection signal="toggled" from="VBoxContainer/Options/LoopCheckBox" to="." method="_on_loop_check_box_toggled"]
+[connection signal="pressed" from="VBoxContainer/Options/InfoButton" to="." method="_on_info_button_pressed"]
