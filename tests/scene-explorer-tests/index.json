@@ -1,0 +1,24 @@
+{
+  "scenes": [
+    "52,-52-raycast",
+    "52,-54-transform",
+    "52,-56-billboard",
+    "52,-58-camera-mode",
+    "52,-60-engine-info",
+    "52,-62-gltf-container",
+    "52,-64-visibility",
+    "52,-66-mesh-renderer",
+    "52,-68-avatar-attach",
+    "54,-52-material",
+    "54,-54-text-shape",
+    "54,-58-ui-background",
+    "54,-60-ui-text",
+    "54,-62-avatar-shape",
+    "54,-64-ui-button",
+    "54,-66-ui-dropdown",
+    "54,-68-nft-shape"
+  ],
+  "disabled": [
+    "54,-56-video-player"
+  ]
+}

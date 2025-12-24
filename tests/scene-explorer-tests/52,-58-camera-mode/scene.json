@@ -1,0 +1,35 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "CameraMode Unit Test",
+    "description": "CameraMode unit test",
+    "navmapThumbnail": "images/scene-thumbnail.png",
+    "favicon": "favicon_asset"
+  },
+  "owner": "",
+  "contact": {
+    "name": "Seba",
+    "email": ""
+  },
+  "main": "bin/game.js",
+  "tags": [],
+  "scene": {
+    "parcels": ["52,-58"],
+    "base": "52,-58"
+  },
+  "spawnPoints": [
+    {
+      "name": "spawn1",
+      "position": { "x": 1, "y": 1, "z": 1 },
+      "cameraTarget": { "x": 8, "y": 2, "z": 16 },
+      "default": true
+    }
+  ],
+  "requiredPermissions": [
+    "ALLOW_TO_TRIGGER_AVATAR_EMOTE",
+    "ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"
+  ],
+  "featureToggles": {},
+  "name": "mode-testing"
+}

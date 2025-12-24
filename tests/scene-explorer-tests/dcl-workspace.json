@@ -1,0 +1,22 @@
+{
+  "folders": [
+    { "path": "52,-52-raycast" },
+    { "path": "52,-54-transform" },
+    { "path": "52,-56-billboard" },
+    { "path": "52,-58-camera-mode" },
+    { "path": "52,-60-engine-info" },
+    { "path": "52,-62-gltf-container" },
+    { "path": "52,-64-visibility" },
+    { "path": "52,-66-mesh-renderer" },
+    { "path": "52,-68-avatar-attach" },
+    { "path": "54,-52-material" },
+    { "path": "54,-54-text-shape" },
+    { "path": "54,-56-video-player" },
+    { "path": "54,-58-ui-background" },
+    { "path": "54,-60-ui-text" },
+    { "path": "54,-62-avatar-shape" },
+    { "path": "54,-64-ui-button" },
+    { "path": "54,-66-ui-dropdown" },
+    { "path": "54,-68-nft-shape" }
+  ]
+}
