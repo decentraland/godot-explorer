@@ -253,7 +253,7 @@ jobs:
           fi
 
       - name: Update PR Comment - Failure
-        if: failure() && github.event.inputs.pr_number != ''
+        if: failure() && !cancelled() && github.event.inputs.pr_number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

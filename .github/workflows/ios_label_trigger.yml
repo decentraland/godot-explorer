@@ -20,6 +20,37 @@ jobs:
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
 
+      - name: Cancel previous iOS builds for this branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get in-progress iOS workflow runs for this branch
+          IN_PROGRESS_RUNS=$(gh run list \
+            --workflow=ios_builds.yml \
+            --repo ${{ github.repository }} \
+            --branch ${{ github.event.pull_request.head.ref }} \
+            --status in_progress \
+            --json databaseId \
+            --jq '.[].databaseId')
+
+          # Also check for queued runs
+          QUEUED_RUNS=$(gh run list \
+            --workflow=ios_builds.yml \
+            --repo ${{ github.repository }} \
+            --branch ${{ github.event.pull_request.head.ref }} \
+            --status queued \
+            --json databaseId \
+            --jq '.[].databaseId')
+
+          ALL_RUNS="$IN_PROGRESS_RUNS $QUEUED_RUNS"
+
+          for RUN_ID in $ALL_RUNS; do
+            if [ -n "$RUN_ID" ]; then
+              echo "Cancelling run: $RUN_ID"
+              gh run cancel $RUN_ID --repo ${{ github.repository }} || true
+            fi
+          done
+
       - name: Trigger iOS build workflow
         id: trigger
         env:
