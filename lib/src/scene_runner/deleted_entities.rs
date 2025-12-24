@@ -64,21 +64,6 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
             }
         }
 
-        // Clean up trigger area - unregister from monitor and release back to pool
-        if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {
-            unregister_trigger_area(instance.area_rid);
-            let pool = pools.physics_area();
-            pool.release_area(instance.area_rid);
-            match instance.mesh_type {
-                TriggerAreaMeshType::TamtBox => {
-                    pool.release_box_shape(instance.shape_rid);
-                }
-                TriggerAreaMeshType::TamtSphere => {
-                    pool.release_sphere_shape(instance.shape_rid);
-                }
-            }
-        }
-
         scene.pointer_events_result = scene
             .pointer_events_result
             .drain(..)
