@@ -25,7 +25,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run ios_builds.yml --repo ${{ github.repository }} --ref ${{ github.event.pull_request.head.ref }}
+          gh workflow run ios_builds.yml \
+            --repo ${{ github.repository }} \
+            --ref ${{ github.event.pull_request.head.ref }} \
+            -f ref=${{ github.event.pull_request.head.ref }} \
+            -f pr_number=${{ github.event.pull_request.number }}
           echo "✅ iOS build triggered for branch: ${{ github.event.pull_request.head.ref }}"
 
           # Wait for the workflow run to appear
