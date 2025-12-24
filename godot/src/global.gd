@@ -19,7 +19,9 @@ signal open_settings
 signal open_backpack
 signal open_discover
 signal open_own_profile
+signal open_navbar_silently
 signal close_menu
+signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account

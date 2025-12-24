@@ -110,16 +110,19 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 	var link = metadata.get("link", "")
 	if link.is_empty():
 		printerr("[Discover] Event notification missing link in metadata")
+		_on_error_loading_notification()
 		return
 
 	# Parse event ID from URL query parameter
 	var event_id = _extract_event_id_from_url(link)
 	if event_id.is_empty():
 		printerr("[Discover] Could not extract event ID from link: ", link)
+		_on_error_loading_notification()
 		return
 
 	# Fetch event data and show event details
 	_async_handle_event_notification(event_id)
+	return
 
 
 func _extract_event_id_from_url(url: String) -> String:
@@ -146,12 +149,14 @@ func _async_handle_event_notification(event_id: String) -> void:
 
 	if response is PromiseError:
 		printerr("[Discover] Failed to fetch event data: ", response.get_error())
+		_on_error_loading_notification()
 		return
 
 	var json: Dictionary = response.get_string_response_as_json()
 
 	if not json.has("data"):
 		printerr("[Discover] Invalid event response format")
+		_on_error_loading_notification()
 		return
 
 	var event_data = json["data"]
@@ -162,3 +167,6 @@ func _async_handle_event_notification(event_id: String) -> void:
 
 func _on_button_close_pressed() -> void:
 	Global.close_menu.emit()
+
+func _on_error_loading_notification() -> void:
+	Global.close_navbar.emit()

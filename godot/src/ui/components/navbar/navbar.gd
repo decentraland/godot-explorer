@@ -28,6 +28,9 @@ func _ready() -> void:
 	# Ensure there's always a pressed button at startup
 	# The ButtonGroup with allow_unpress = false ensures one is always pressed
 
+	Global.close_navbar.connect(_on_navbar_close)
+	Global.open_navbar_silently.connect(_on_navbar_open_silently)
+
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
 
@@ -57,6 +60,11 @@ func _on_size_changed():
 	visible = window_size.x > window_size.y
 
 
+func _on_navbar_close() -> void:
+	close_from_discover_button()
+	close_all.emit()
+
+
 func _on_button_toggled(toggled_on: bool) -> void:
 	Global.send_haptic_feedback()
 	if toggled_on:
@@ -80,6 +88,12 @@ func _on_portrait_button_profile_toggled(toggled_on: bool) -> void:
 func close_from_discover_button():
 	button.set_pressed_no_signal(false)
 	animation_player.play("close")
+
+
+func _on_navbar_open_silently() -> void:
+	if not button.button_pressed:
+		button.set_pressed_no_signal(true)
+		animation_player.play("open")
 
 
 func set_manually_hidden(is_hidden: bool) -> void:

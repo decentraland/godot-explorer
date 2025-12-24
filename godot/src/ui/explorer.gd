@@ -826,7 +826,10 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 	# Handle friend request notification clicks - open friends panel on friends tab
 	var notif_type = notification_d.get("type", "")
 
-	if notif_type == "friend_request_received":
+	if [
+			"social_service_friendship_request",
+			"social_service_friendship_accepted"
+		].has(notif_type):
 		# Open friends panel on friends tab
 		if not friends_panel.visible:
 			friends_panel.show_panel_on_friends_tab()
@@ -837,6 +840,7 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			Global.explorer_release_focus()
 			if Global.is_mobile():
 				release_mouse()
+			joypad.hide()
 
 
 func _notification(what: int) -> void:
