@@ -4,6 +4,7 @@ use super::{
     proto_components::{
         common::{
             texture_union::Tex, Color3, Color4, TextureFilterMode, TextureUnion, TextureWrapMode,
+            Vector2,
         },
         sdk::components::{pb_material, MaterialTransparencyMode},
     },
@@ -92,6 +93,33 @@ impl Eq for RoundedColor3 {
     fn assert_receiver_is_total_eq(&self) {}
 }
 
+#[derive(Clone)]
+pub struct RoundedVector2(pub Vector2);
+
+impl std::hash::Hash for RoundedVector2 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        RoundedFloat(self.0.x).hash(state);
+        RoundedFloat(self.0.y).hash(state);
+    }
+}
+
+impl PartialEq for RoundedVector2 {
+    fn eq(&self, other: &Self) -> bool {
+        RoundedFloat(self.0.x) == RoundedFloat(other.0.x)
+            && RoundedFloat(self.0.y) == RoundedFloat(other.0.y)
+    }
+}
+
+impl Eq for RoundedVector2 {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+impl Default for RoundedVector2 {
+    fn default() -> Self {
+        Self(Vector2 { x: 0.0, y: 0.0 })
+    }
+}
+
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub enum DclSourceTex {
     Texture(String),
@@ -105,11 +133,27 @@ impl Default for DclSourceTex {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq, Default)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct DclTexture {
     pub wrap_mode: TextureWrapMode,
     pub filter_mode: TextureFilterMode,
     pub source: DclSourceTex,
+    /// UV offset, default = (0, 0). Only applies to main texture in PbrMaterial/UnlitMaterial.
+    pub offset: RoundedVector2,
+    /// UV tiling/scale, default = (1, 1). Only applies to main texture in PbrMaterial/UnlitMaterial.
+    pub tiling: RoundedVector2,
+}
+
+impl Default for DclTexture {
+    fn default() -> Self {
+        Self {
+            wrap_mode: TextureWrapMode::TwmClamp,
+            filter_mode: TextureFilterMode::TfmBilinear,
+            source: DclSourceTex::default(),
+            offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
+            tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
+        }
+    }
 }
 
 impl From<&TextureUnion> for Option<DclTexture> {
@@ -152,17 +196,32 @@ impl From<&TextureUnion> for Option<DclTexture> {
 
         match value.tex.as_ref()? {
             Tex::Texture(texture) => {
-                //some
+                // Only Texture type has offset and tiling fields
+                let offset = texture
+                    .offset
+                    .as_ref()
+                    .map(|v| RoundedVector2(v.clone()))
+                    .unwrap_or_else(|| RoundedVector2(Vector2 { x: 0.0, y: 0.0 }));
+                let tiling = texture
+                    .tiling
+                    .as_ref()
+                    .map(|v| RoundedVector2(v.clone()))
+                    .unwrap_or_else(|| RoundedVector2(Vector2 { x: 1.0, y: 1.0 }));
+
                 Some(DclTexture {
                     wrap_mode,
                     filter_mode,
                     source: DclSourceTex::Texture(texture.src.clone()),
+                    offset,
+                    tiling,
                 })
             }
             Tex::AvatarTexture(avatar_texture) => Some(DclTexture {
                 wrap_mode,
                 filter_mode,
                 source: DclSourceTex::AvatarTexture(avatar_texture.user_id.clone()),
+                offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
+                tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
             }),
             Tex::VideoTexture(video_texture) => Some(DclTexture {
                 wrap_mode,
@@ -170,6 +229,8 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 source: DclSourceTex::VideoTexture(SceneEntityId::from_i32(
                     video_texture.video_player_entity as i32,
                 )),
+                offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
+                tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
             }),
             Tex::UiTexture(_) => todo!("UI Texture not implemented"),
         }
@@ -233,6 +294,7 @@ pub struct DclPbrMaterial {
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum DclMaterial {
     Unlit(DclUnlitMaterial),
     Pbr(DclPbrMaterial),
