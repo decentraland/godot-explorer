@@ -4,6 +4,12 @@ on:
     secrets:
       DEPLOY_SSH_KEY:
         required: true
+      SENTRY_AUTH_TOKEN:
+        required: false
+      SENTRY_ORG:
+        required: false
+      SENTRY_PROJECT:
+        required: false
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
@@ -54,6 +60,54 @@ jobs:
 
       - name: Export
         run: cargo run -- export --target ios
+
+      - name: Build Xcode project with dSYM generation
+        run: |
+          echo "Building Xcode project to generate Release dSYMs..."
+
+          # The export creates an Xcode project at exports/
+          XCODE_PROJECT=$(find exports -name "*.xcodeproj" -type d | head -1)
+
+          if [ -z "$XCODE_PROJECT" ]; then
+            echo "Error: Xcode project not found in exports/"
+            exit 1
+          fi
+
+          echo "Found Xcode project: $XCODE_PROJECT"
+
+          # Build with Release configuration to generate dSYMs
+          # This will create dSYMs that match the release binary
+          # Note: Build may fail due to entitlements/code signing but dSYMs will still be generated
+          set +e
+          xcodebuild build \
+            -project "$XCODE_PROJECT" \
+            -scheme decentraland-godot-client \
+            -configuration Release \
+            -derivedDataPath "build/ios/DerivedData" \
+            -sdk iphoneos \
+            DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            ENABLE_BITCODE=NO
+
+          BUILD_EXIT_CODE=$?
+          set -e
+
+          if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            echo "⚠️  Build exited with code $BUILD_EXIT_CODE (likely due to entitlements)"
+            echo "Checking if dSYMs were still generated..."
+          fi
+
+          # Verify dSYMs were created
+          DSYM_COUNT=$(find build/ios/DerivedData -name "*.dSYM" -type d 2>/dev/null | wc -l)
+
+          if [ "$DSYM_COUNT" -gt 0 ]; then
+            echo "✅ Successfully generated $DSYM_COUNT dSYM file(s)"
+          else
+            echo "❌ No dSYM files found"
+            exit 1
+          fi
 
       # Deploy to godot-mobile-deploy-pipeline
       - name: Install Git LFS
@@ -139,3 +193,68 @@ jobs:
         if: always()
         run: |
           rm -f ~/.ssh/deploy_key
+      # Upload iOS debug symbols (dSYM) to Sentry for production builds
+      - name: Upload iOS dSYMs to Sentry
+        if: success()
+        run: |
+          EXPLORER_VERSION=$(cargo run -- explorer-version)
+          echo "Explorer version: $EXPLORER_VERSION"
+
+          # Check if this is a production build (no -dev suffix)
+          if [[ ! "$EXPLORER_VERSION" =~ -dev$ ]]; then
+            echo "Production build detected, uploading dSYMs to Sentry..."
+            RELEASE_NAME="org.decentraland.godotexplorer@$EXPLORER_VERSION"
+            echo "Release name: $RELEASE_NAME"
+
+            # Install sentry-cli
+            curl -sL https://sentry.io/get-cli/ | bash
+
+            # Find dSYMs from the Release build we just created
+            echo "Searching for Release dSYMs..."
+
+            DSYM_FILES=$(find build/ios/DerivedData -name "*.dSYM" -type d 2>/dev/null || true)
+
+            if [ -n "$DSYM_FILES" ]; then
+              echo "Found dSYM files:"
+              echo "$DSYM_FILES"
+
+              # Get the directory containing the dSYMs
+              DSYM_DIR=$(dirname $(echo "$DSYM_FILES" | head -1))
+              echo "dSYMs located at: $DSYM_DIR"
+              ls -la "$DSYM_DIR"
+
+              # Create Sentry release and associate commits
+              sentry-cli releases new "$RELEASE_NAME" \
+                --org ${{ secrets.SENTRY_ORG }} \
+                --project ${{ secrets.SENTRY_PROJECT }} \
+                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+              sentry-cli releases set-commits "$RELEASE_NAME" --auto \
+                --org ${{ secrets.SENTRY_ORG }} \
+                --project ${{ secrets.SENTRY_PROJECT }} \
+                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+              # Upload all dSYM files found
+              sentry-cli upload-dif \
+                --org ${{ secrets.SENTRY_ORG }} \
+                --project ${{ secrets.SENTRY_PROJECT }} \
+                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+                --include-sources \
+                --wait \
+                "$DSYM_DIR"
+
+              # Finalize the release
+              sentry-cli releases finalize "$RELEASE_NAME" \
+                --org ${{ secrets.SENTRY_ORG }} \
+                --project ${{ secrets.SENTRY_PROJECT }} \
+                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+              echo "iOS dSYMs uploaded successfully to release: $RELEASE_NAME"
+            else
+              echo "Warning: dSYMs not found at $ARCHIVE_PATH/dSYMs"
+              echo "Searching for dSYMs in exports folder..."
+              find exports -name "*.dSYM" -type d
+            fi
+          else
+            echo "Development build detected (-dev suffix), skipping Sentry upload"
+          fi
