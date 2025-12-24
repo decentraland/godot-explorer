@@ -254,6 +254,11 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 		_deferred_play_emote.call_deferred(emote_urn)
 		return true
 
+	# Set the emote condition BEFORE travel - the transition requires this condition
+	# (avatar.gd's _process() also sets this, but too late for immediate travel)
+	animation_tree.set("parameters/conditions/emote", true)
+	animation_tree.set("parameters/conditions/nemote", false)
+
 	# Use travel() to follow state machine transitions, then start() to restart if already there
 	if pb.get_current_node() == "Emote":
 		pb.start("Emote", true)
@@ -307,6 +312,10 @@ func _force_play_emote(emote_urn: String):
 
 	# Set up the animation node
 	animation_single_emote_node.animation = anim_path
+
+	# Set the emote conditions for the state machine
+	animation_tree.set("parameters/conditions/emote", true)
+	animation_tree.set("parameters/conditions/nemote", false)
 
 	# Force the state machine to the Emote state
 	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
@@ -525,6 +534,15 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 		print("  armature_prop.name: ", obj.armature_prop.name)
 		if not avatar.has_node(NodePath(obj.armature_prop.name)):
 			armature_prop = obj.armature_prop.duplicate()
+
+			# Stop and remove any AnimationPlayer on the prop to prevent independent animation
+			# The prop animation should be controlled by the avatar's AnimationTree via merged tracks
+			var prop_anim_player = armature_prop.get_node_or_null("AnimationPlayer")
+			if prop_anim_player != null:
+				prop_anim_player.stop()
+				prop_anim_player.queue_free()
+				print("  Removed AnimationPlayer from prop")
+
 			avatar.add_child(armature_prop)
 			armature_prop.hide()  # Start hidden
 			print("  Added armature_prop as child: ", armature_prop.name)
