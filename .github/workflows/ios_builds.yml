@@ -1,5 +1,9 @@
 name: 🍏 iOS
 on:
+  push:
+    branches:
+      - main
+      - release
   workflow_dispatch:
     inputs:
       ref:
@@ -137,3 +141,73 @@ jobs:
         if: always()
         run: |
           rm -f ~/.ssh/deploy_key
+
+      - name: Notify Slack on Success
+        if: success()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHA:0:7}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
+          TRIGGERED_BY="${{ github.actor }}"
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": {
+                  \"type\": \"plain_text\",
+                  \"text\": \"🍏 iOS Build Ready\",
+                  \"emoji\": true
+                }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Branch:*\n\`${BRANCH_NAME}\`\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Deploy Repo:*\n<${DEPLOY_REPO_URL}|godot-mobile-deploy-pipeline>\"
+                  }
+                ]
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  {
+                    \"type\": \"button\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \"View Workflow\",
+                      \"emoji\": true
+                    },
+                    \"url\": \"${WORKFLOW_URL}\"
+                  },
+                  {
+                    \"type\": \"button\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \"View Artifacts\",
+                      \"emoji\": true
+                    },
+                    \"url\": \"${DEPLOY_REPO_URL}\"
+                  }
+                ]
+              }
+            ]
+          }" "$SLACK_WEBHOOK_URL"
