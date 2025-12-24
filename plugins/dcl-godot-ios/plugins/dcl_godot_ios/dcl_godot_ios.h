@@ -12,13 +12,17 @@
 @class CalendarEventDelegate;
 @class UNUserNotificationCenter;
 @class NotificationDatabase;
+@class AVPlayerWrapper;
 #else
 typedef void ASWebAuthenticationSession;
 typedef void WebKitAuthenticationDelegate;
 typedef void CalendarEventDelegate;
 typedef void UNUserNotificationCenter;
 typedef void NotificationDatabase;
+typedef void AVPlayerWrapper;
 #endif
+
+#include <map>
 
 class DclGodotiOS : public Object {
     GDCLASS(DclGodotiOS, Object);
@@ -30,6 +34,10 @@ class DclGodotiOS : public Object {
     WebKitAuthenticationDelegate *authDelegate;
     CalendarEventDelegate *calendarDelegate;
     NotificationDatabase *notificationDatabase;
+
+    // AVPlayer management
+    std::map<int, AVPlayerWrapper*> avPlayers;
+    int nextAvPlayerId;
 
 public:
 	static String receivedUrl;
@@ -68,6 +76,32 @@ public:
     bool os_schedule_notification(String notification_id, String title, String body, int delay_seconds);
     bool os_cancel_notification(String notification_id);
     PackedStringArray os_get_scheduled_ids();
+
+    // AVPlayer API - Hardware-accelerated video playback with zero-copy GPU textures
+    int createAVPlayer();
+    void avPlayerRelease(int player_id);
+    int avPlayerInitSurface(int player_id, int width, int height);
+    bool avPlayerSetSourceUrl(int player_id, String url);
+    bool avPlayerSetSourceLocal(int player_id, String file_path);
+    void avPlayerPlay(int player_id);
+    void avPlayerPause(int player_id);
+    void avPlayerStop(int player_id);
+    void avPlayerSetPosition(int player_id, float position_sec);
+    float avPlayerGetPosition(int player_id);
+    float avPlayerGetDuration(int player_id);
+    bool avPlayerIsPlaying(int player_id);
+    int avPlayerGetVideoWidth(int player_id);
+    int avPlayerGetVideoHeight(int player_id);
+    bool avPlayerHasVideoSizeChanged(int player_id);
+    int avPlayerGetTextureWidth(int player_id);
+    int avPlayerGetTextureHeight(int player_id);
+    void avPlayerSetVolume(int player_id, float volume);
+    float avPlayerGetVolume(int player_id);
+    void avPlayerSetLooping(int player_id, bool loop);
+    void avPlayerSetPlaybackRate(int player_id, float rate);
+    bool avPlayerHasNewPixelBuffer(int player_id);
+    uint64_t avPlayerAcquireIOSurfacePtr(int player_id);
+    String avPlayerGetInfo(int player_id);
 
     // Called from Objective-C when a deeplink is received
     static void emit_deeplink_received(String url);

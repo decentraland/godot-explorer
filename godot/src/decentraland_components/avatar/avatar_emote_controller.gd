@@ -399,12 +399,9 @@ func _async_load_emote(emote_urn: String):
 		return
 
 	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
-	if obj == null:
-		printerr("Error: get_emote_gltf_from_hash returned null for hash: ", file_hash)
-		return
-
-	# Use call_deferred to ensure animation modifications happen on main thread
-	load_emote_from_dcl_emote_gltf.call_deferred(emote_urn, obj, file_hash)
+	if obj is DclEmoteGltf:
+		# Use call_deferred to ensure animation modifications happen on main thread
+		load_emote_from_dcl_emote_gltf.call_deferred(emote_urn, obj, file_hash)
 
 
 func _async_load_scene_emote(urn: String):
@@ -431,7 +428,7 @@ func _async_load_scene_emote(urn: String):
 	# await PromiseUtils.async_awaiter(audio_promise)
 
 	#var obj = Global.content_provider.get_emote_gltf_from_hash(emote_scene_urn.glb_hash)
-	if obj != null:
+	if obj is DclEmoteGltf:
 		# Use call_deferred to ensure animation modifications happen on main thread
 		load_emote_from_dcl_emote_gltf.call_deferred(urn, obj, emote_scene_urn.glb_hash)
 		# Wait a frame for the deferred call to execute before checking
