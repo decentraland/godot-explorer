@@ -247,6 +247,7 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 	if notif_type in ["reward_assignment", "reward_in_progress"]:
 		# Open the backpack to show the reward
 		show_backpack()
+		Global.open_navbar_silently.emit()
 
 
 func _on_deep_link_received() -> void:
