@@ -46,6 +46,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     // ExoPlayer management
     private val exoPlayers = mutableMapOf<Int, org.decentraland.godotexplorer.ExoPlayerWrapper>()
     private var nextPlayerId = 1
+    // Track players that were playing before app went to background
+    private val playersPlayingBeforeBackground = mutableSetOf<Int>()
+    // Handler for debounced resume
+    private val resumeHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var pendingResumeRunnable: Runnable? = null
     // Notification database instance
     private var notificationDatabase: NotificationDatabase? = null
 
@@ -65,6 +70,49 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         activity?.let {
             notificationDatabase = NotificationDatabase(it.applicationContext)
             Log.d(pluginName, "Notification database initialized")
+        }
+    }
+
+    override fun onMainPause() {
+        super.onMainPause()
+        Log.d(pluginName, "onMainPause: pausing all playing ExoPlayers")
+
+        // Cancel any pending resume
+        pendingResumeRunnable?.let { resumeHandler.removeCallbacks(it) }
+        pendingResumeRunnable = null
+
+        // Remember which players were playing and pause them
+        playersPlayingBeforeBackground.clear()
+        for ((playerId, player) in exoPlayers) {
+            if (player.isPlaying()) {
+                Log.d(pluginName, "Pausing ExoPlayer $playerId for background")
+                playersPlayingBeforeBackground.add(playerId)
+                player.pause()
+            }
+        }
+    }
+
+    override fun onMainResume() {
+        super.onMainResume()
+        Log.d(pluginName, "onMainResume: scheduling resume for ${playersPlayingBeforeBackground.size} ExoPlayers")
+
+        // Cancel any existing pending resume
+        pendingResumeRunnable?.let { resumeHandler.removeCallbacks(it) }
+
+        // Debounce resume by 500ms to let the app stabilize
+        if (playersPlayingBeforeBackground.isNotEmpty()) {
+            pendingResumeRunnable = Runnable {
+                Log.d(pluginName, "Resuming ${playersPlayingBeforeBackground.size} ExoPlayers after debounce")
+                for (playerId in playersPlayingBeforeBackground) {
+                    exoPlayers[playerId]?.let { player ->
+                        Log.d(pluginName, "Resuming ExoPlayer $playerId")
+                        player.play()
+                    }
+                }
+                playersPlayingBeforeBackground.clear()
+                pendingResumeRunnable = null
+            }
+            resumeHandler.postDelayed(pendingResumeRunnable!!, RESUME_DEBOUNCE_MS)
         }
     }
 
@@ -1083,6 +1131,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     companion object {
         private const val CALENDAR_PERMISSION_REQUEST_CODE = 1001
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
+        // Debounce delay before resuming video playback after app returns to foreground
+        private const val RESUME_DEBOUNCE_MS = 500L
     }
 
 
