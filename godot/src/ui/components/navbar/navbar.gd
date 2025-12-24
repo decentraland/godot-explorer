@@ -106,10 +106,14 @@ func close_from_discover_button():
 
 
 func _on_navbar_open_silently_on_backpack() -> void:
+	open_navbar_silently()
+	set_button_pressed(BUTTON.BACKPACK)
+
+
+func open_navbar_silently() -> void:
 	if not button.button_pressed:
 		button.set_pressed_no_signal(true)
 		animation_player.play("open")
-	set_button_pressed(BUTTON.BACKPACK)
 
 
 func set_manually_hidden(is_hidden: bool) -> void:

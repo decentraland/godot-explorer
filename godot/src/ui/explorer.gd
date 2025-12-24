@@ -830,6 +830,7 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 		# Open friends panel on friends tab
 		if not friends_panel.visible:
 			friends_panel.show_panel_on_friends_tab()
+			navbar.open_navbar_silently()
 			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
 			# Close notifications panel if open
 			if notifications_panel.visible:
