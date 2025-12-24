@@ -3,6 +3,11 @@ on:
   pull_request:
     types: [labeled]
 
+permissions:
+  pull-requests: write
+  contents: read
+  actions: write
+
 jobs:
   trigger-ios-build:
     name: Trigger iOS Build
@@ -16,9 +21,47 @@ jobs:
           gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
 
       - name: Trigger iOS build workflow
+        id: trigger
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run ios_builds.yml --repo ${{ github.repository }} --ref ${{ github.event.pull_request.head.ref }}
           echo "✅ iOS build triggered for branch: ${{ github.event.pull_request.head.ref }}"
-          echo "📍 View at: https://github.com/${{ github.repository }}/actions/workflows/ios_builds.yml"
+
+          # Wait for the workflow run to appear
+          sleep 5
+
+          # Get the most recent run ID for the iOS workflow on this branch
+          RUN_ID=$(gh run list --workflow=ios_builds.yml --repo ${{ github.repository }} --branch ${{ github.event.pull_request.head.ref }} --limit 1 --json databaseId --jq '.[0].databaseId')
+
+          if [ -n "$RUN_ID" ]; then
+            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            echo "📍 Workflow Run ID: $RUN_ID"
+          else
+            echo "⚠️ Could not retrieve workflow run ID"
+          fi
+
+      - name: Prepare iOS Build Report Update
+        env:
+          RUN_ID: ${{ steps.trigger.outputs.run_id }}
+        run: |
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}"
+
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "### 🍏 iOS Build Triggered"
+            echo ""
+            echo "🔗 **iOS Workflow**: [View iOS build](${WORKFLOW_URL})"
+            echo ""
+            echo "📍 **Branch**: \`${{ github.event.pull_request.head.ref }}\`"
+            echo ""
+            echo "🔄 **Triggered**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          } > ios-build-report.md
+
+      - name: Update Build Report with iOS Status
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: build-report-ios
+          path: ios-build-report.md
