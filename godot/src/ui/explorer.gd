@@ -125,6 +125,7 @@ func _ready():
 	Global.open_friends_panel.connect(_show_friends_panel)
 
 	navbar.close_all.connect(_close_all_panels)
+	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
 
 	# Connect to NotificationsManager queue signals
@@ -618,6 +619,11 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 	panel_chat.exit_chat()
 	profile_container.open(dcl_user_profile)
 	release_mouse()
+
+
+func _open_friends_panel() -> void:
+	Global.close_menu.emit()
+	Global.open_friends_panel.emit()
 
 
 func _async_open_profile_by_address(user_address: String):

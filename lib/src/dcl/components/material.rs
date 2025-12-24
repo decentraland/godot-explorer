@@ -132,15 +132,15 @@ impl From<&TextureUnion> for Option<DclTexture> {
         };
         let filter_mode = match texture {
             Tex::Texture(texture) => *texture
-                .wrap_mode
+                .filter_mode
                 .as_ref()
                 .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
             Tex::AvatarTexture(avatar_texture) => *avatar_texture
-                .wrap_mode
+                .filter_mode
                 .as_ref()
                 .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
             Tex::VideoTexture(video_texture) => *video_texture
-                .wrap_mode
+                .filter_mode
                 .as_ref()
                 .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
             Tex::UiTexture(_) => todo!("UI Texture not implemented"),
@@ -271,7 +271,7 @@ impl Default for DclPbrMaterial {
             reflectivity_color: RoundedColor3(Color3::white()),
             transparency_mode: MaterialTransparencyMode::MtmAuto,
             metallic: RoundedFloat(0.5),
-            roughness: RoundedFloat(0.0),
+            roughness: RoundedFloat(0.5),
             specular_intensity: RoundedFloat(1.0),
             emissive_intensity: RoundedFloat(2.0),
             direct_intensity: RoundedFloat(1.0),

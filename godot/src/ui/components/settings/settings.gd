@@ -264,15 +264,18 @@ func refresh_zooms():
 	var selected_index: int = -1
 	var i: int = 0
 	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	radio_selector_ui_zoom.clear()
 
+	var new_items: Array[String] = []
 	for ui_zoom_option in options.keys():
-		radio_selector_ui_zoom.items.push_back(ui_zoom_option)
+		new_items.push_back(ui_zoom_option)
 		if options[ui_zoom_option] == get_window().content_scale_factor:
 			selected_index = i
 		i += 1
 	if selected_index == -1:
 		selected_index = i - 1
+
+	# Assign items array to trigger _refresh_list() and create children
+	radio_selector_ui_zoom.items = new_items
 	radio_selector_ui_zoom.selected = selected_index
 
 

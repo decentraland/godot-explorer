@@ -58,9 +58,9 @@ func _on_size_changed():
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
+	Global.send_haptic_feedback()
 	if toggled_on:
 		animation_player.play("open")
-		hud_button_friends.pressed.emit()
 		hud_button_friends.button_pressed = true
 		navbar_opened.emit()
 	else:

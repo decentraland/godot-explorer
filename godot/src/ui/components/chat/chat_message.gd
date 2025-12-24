@@ -64,6 +64,19 @@ func _configure_richtext_theme(richtext_label: RichTextLabel) -> void:
 	custom_theme.set_stylebox("normal", "LinkButton", link_style)
 	richtext_label.theme = custom_theme
 
+	const MULTILINGUAL_REGULAR := preload(
+		"res://assets/themes/fonts/multilanguage/multilanguage_font-Regular.tres"
+	)
+	const MULTILINGUAL_BOLD := preload(
+		"res://assets/themes/fonts/multilanguage/multilanguage_font-Bold.tres"
+	)
+
+	richtext_label.add_theme_font_override("normal_font", MULTILINGUAL_REGULAR)
+	richtext_label.add_theme_font_override("bold_font", MULTILINGUAL_BOLD)
+	richtext_label.add_theme_font_override("bold_italics_font", MULTILINGUAL_BOLD)
+	richtext_label.add_theme_font_override("italics_font", MULTILINGUAL_REGULAR)
+	richtext_label.add_theme_font_override("mono_font", MULTILINGUAL_REGULAR)
+
 
 func _update_compact_view() -> void:
 	if (

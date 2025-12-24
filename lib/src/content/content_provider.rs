@@ -381,12 +381,12 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
+        let cache_key = format!("wearable:{}", file_hash);
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
-        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
@@ -394,7 +394,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
+        let hash_id = file_hash.to_string();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
@@ -417,7 +417,7 @@ impl ContentProvider {
         });
 
         self.cached.insert(
-            file_hash,
+            cache_key,
             ContentEntry {
                 last_access: Instant::now(),
                 promise: promise.clone(),
@@ -496,12 +496,12 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
+        let cache_key = format!("emote:{}", file_hash);
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
-        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
@@ -509,7 +509,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
+        let hash_id = file_hash.to_string();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
@@ -532,7 +532,7 @@ impl ContentProvider {
         });
 
         self.cached.insert(
-            file_hash,
+            cache_key,
             ContentEntry {
                 last_access: Instant::now(),
                 promise: promise.clone(),
@@ -1042,14 +1042,16 @@ impl ContentProvider {
 
     #[func]
     pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        let cache_key = format!("wearable:{}", file_hash);
+        let entry = self.cached.get_mut(&cache_key)?;
         entry.last_access = Instant::now();
         entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
     }
 
     #[func]
     pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        let cache_key = format!("emote:{}", file_hash);
+        let entry = self.cached.get_mut(&cache_key)?;
         entry.last_access = Instant::now();
         entry
             .promise

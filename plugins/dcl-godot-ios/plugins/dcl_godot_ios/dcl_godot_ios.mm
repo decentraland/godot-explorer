@@ -1,5 +1,6 @@
 #include "dcl_godot_ios.h"
 #include "NotificationDatabase.h"
+#include "AVPlayerWrapper.h"
 #include "core/version.h"
 #import <SafariServices/SafariServices.h>
 #import <AuthenticationServices/AuthenticationServices.h>
@@ -169,6 +170,32 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("os_schedule_notification", "notification_id", "title", "body", "delay_seconds"), &DclGodotiOS::os_schedule_notification);
     ClassDB::bind_method(D_METHOD("os_cancel_notification", "notification_id"), &DclGodotiOS::os_cancel_notification);
     ClassDB::bind_method(D_METHOD("os_get_scheduled_ids"), &DclGodotiOS::os_get_scheduled_ids);
+
+    // AVPlayer API
+    ClassDB::bind_method(D_METHOD("createAVPlayer"), &DclGodotiOS::createAVPlayer);
+    ClassDB::bind_method(D_METHOD("avPlayerRelease", "player_id"), &DclGodotiOS::avPlayerRelease);
+    ClassDB::bind_method(D_METHOD("avPlayerInitSurface", "player_id", "width", "height"), &DclGodotiOS::avPlayerInitSurface);
+    ClassDB::bind_method(D_METHOD("avPlayerSetSourceUrl", "player_id", "url"), &DclGodotiOS::avPlayerSetSourceUrl);
+    ClassDB::bind_method(D_METHOD("avPlayerSetSourceLocal", "player_id", "file_path"), &DclGodotiOS::avPlayerSetSourceLocal);
+    ClassDB::bind_method(D_METHOD("avPlayerPlay", "player_id"), &DclGodotiOS::avPlayerPlay);
+    ClassDB::bind_method(D_METHOD("avPlayerPause", "player_id"), &DclGodotiOS::avPlayerPause);
+    ClassDB::bind_method(D_METHOD("avPlayerStop", "player_id"), &DclGodotiOS::avPlayerStop);
+    ClassDB::bind_method(D_METHOD("avPlayerSetPosition", "player_id", "position_sec"), &DclGodotiOS::avPlayerSetPosition);
+    ClassDB::bind_method(D_METHOD("avPlayerGetPosition", "player_id"), &DclGodotiOS::avPlayerGetPosition);
+    ClassDB::bind_method(D_METHOD("avPlayerGetDuration", "player_id"), &DclGodotiOS::avPlayerGetDuration);
+    ClassDB::bind_method(D_METHOD("avPlayerIsPlaying", "player_id"), &DclGodotiOS::avPlayerIsPlaying);
+    ClassDB::bind_method(D_METHOD("avPlayerGetVideoWidth", "player_id"), &DclGodotiOS::avPlayerGetVideoWidth);
+    ClassDB::bind_method(D_METHOD("avPlayerGetVideoHeight", "player_id"), &DclGodotiOS::avPlayerGetVideoHeight);
+    ClassDB::bind_method(D_METHOD("avPlayerHasVideoSizeChanged", "player_id"), &DclGodotiOS::avPlayerHasVideoSizeChanged);
+    ClassDB::bind_method(D_METHOD("avPlayerGetTextureWidth", "player_id"), &DclGodotiOS::avPlayerGetTextureWidth);
+    ClassDB::bind_method(D_METHOD("avPlayerGetTextureHeight", "player_id"), &DclGodotiOS::avPlayerGetTextureHeight);
+    ClassDB::bind_method(D_METHOD("avPlayerSetVolume", "player_id", "volume"), &DclGodotiOS::avPlayerSetVolume);
+    ClassDB::bind_method(D_METHOD("avPlayerGetVolume", "player_id"), &DclGodotiOS::avPlayerGetVolume);
+    ClassDB::bind_method(D_METHOD("avPlayerSetLooping", "player_id", "loop"), &DclGodotiOS::avPlayerSetLooping);
+    ClassDB::bind_method(D_METHOD("avPlayerSetPlaybackRate", "player_id", "rate"), &DclGodotiOS::avPlayerSetPlaybackRate);
+    ClassDB::bind_method(D_METHOD("avPlayerHasNewPixelBuffer", "player_id"), &DclGodotiOS::avPlayerHasNewPixelBuffer);
+    ClassDB::bind_method(D_METHOD("avPlayerAcquireIOSurfacePtr", "player_id"), &DclGodotiOS::avPlayerAcquireIOSurfacePtr);
+    ClassDB::bind_method(D_METHOD("avPlayerGetInfo", "player_id"), &DclGodotiOS::avPlayerGetInfo);
 
     // Signal emitted when a deeplink URL is received
     ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
@@ -1067,6 +1094,254 @@ PackedStringArray DclGodotiOS::os_get_scheduled_ids() {
     return result;
 }
 
+// =============================================================================
+// AVPLAYER API - Hardware-accelerated video playback with zero-copy GPU textures
+// =============================================================================
+
+int DclGodotiOS::createAVPlayer() {
+    #if TARGET_OS_IOS
+    int playerId = nextAvPlayerId++;
+    AVPlayerWrapper *player = [[AVPlayerWrapper alloc] initWithId:playerId];
+    avPlayers[playerId] = player;
+    printf("Created AVPlayer with ID: %d\n", playerId);
+    return playerId;
+    #else
+    return -1;
+    #endif
+}
+
+void DclGodotiOS::avPlayerRelease(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        AVPlayerWrapper *player = it->second;
+        [player releasePlayer];
+        avPlayers.erase(it);
+        printf("Released AVPlayer with ID: %d\n", player_id);
+    }
+    #endif
+}
+
+int DclGodotiOS::avPlayerInitSurface(int player_id, int width, int height) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second initializeSurfaceWithWidth:width height:height];
+    }
+    #endif
+    return 0;
+}
+
+bool DclGodotiOS::avPlayerSetSourceUrl(int player_id, String url) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        NSString *ns_url = [NSString stringWithUTF8String:url.utf8().get_data()];
+        return [it->second setSourceURL:ns_url];
+    }
+    #endif
+    return false;
+}
+
+bool DclGodotiOS::avPlayerSetSourceLocal(int player_id, String file_path) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        NSString *ns_path = [NSString stringWithUTF8String:file_path.utf8().get_data()];
+        return [it->second setSourceLocal:ns_path];
+    }
+    #endif
+    return false;
+}
+
+void DclGodotiOS::avPlayerPlay(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second play];
+    }
+    #endif
+}
+
+void DclGodotiOS::avPlayerPause(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second pause];
+    }
+    #endif
+}
+
+void DclGodotiOS::avPlayerStop(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second stop];
+    }
+    #endif
+}
+
+void DclGodotiOS::avPlayerSetPosition(int player_id, float position_sec) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second setPosition:position_sec];
+    }
+    #endif
+}
+
+float DclGodotiOS::avPlayerGetPosition(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second getPosition];
+    }
+    #endif
+    return 0.0f;
+}
+
+float DclGodotiOS::avPlayerGetDuration(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second getDuration];
+    }
+    #endif
+    return 0.0f;
+}
+
+bool DclGodotiOS::avPlayerIsPlaying(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second isPlaying];
+    }
+    #endif
+    return false;
+}
+
+int DclGodotiOS::avPlayerGetVideoWidth(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second videoWidth];
+    }
+    #endif
+    return 0;
+}
+
+int DclGodotiOS::avPlayerGetVideoHeight(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second videoHeight];
+    }
+    #endif
+    return 0;
+}
+
+bool DclGodotiOS::avPlayerHasVideoSizeChanged(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        BOOL changed = [it->second hasVideoSizeChanged];
+        if (changed) {
+            [it->second clearVideoSizeChangedFlag];
+        }
+        return changed;
+    }
+    #endif
+    return false;
+}
+
+int DclGodotiOS::avPlayerGetTextureWidth(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second textureWidth];
+    }
+    #endif
+    return 0;
+}
+
+int DclGodotiOS::avPlayerGetTextureHeight(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second textureHeight];
+    }
+    #endif
+    return 0;
+}
+
+void DclGodotiOS::avPlayerSetVolume(int player_id, float volume) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second setVolume:volume];
+    }
+    #endif
+}
+
+float DclGodotiOS::avPlayerGetVolume(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second volume];
+    }
+    #endif
+    return 1.0f;
+}
+
+void DclGodotiOS::avPlayerSetLooping(int player_id, bool loop) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second setIsLooping:loop];
+    }
+    #endif
+}
+
+void DclGodotiOS::avPlayerSetPlaybackRate(int player_id, float rate) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        [it->second setPlaybackRate:rate];
+    }
+    #endif
+}
+
+bool DclGodotiOS::avPlayerHasNewPixelBuffer(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second hasNewPixelBuffer];
+    }
+    #endif
+    return false;
+}
+
+uint64_t DclGodotiOS::avPlayerAcquireIOSurfacePtr(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        return [it->second acquireIOSurfacePtr];
+    }
+    #endif
+    return 0;
+}
+
+String DclGodotiOS::avPlayerGetInfo(int player_id) {
+    #if TARGET_OS_IOS
+    auto it = avPlayers.find(player_id);
+    if (it != avPlayers.end()) {
+        NSString *info = [it->second getPlayerInfo];
+        return String([info UTF8String]);
+    }
+    #endif
+    return "Player not found";
+}
+
 DclGodotiOS *DclGodotiOS::get_singleton() {
     return instance;
 }
@@ -1076,11 +1351,13 @@ DclGodotiOS::DclGodotiOS() {
     authSession = nullptr;
     authDelegate = nullptr;
     calendarDelegate = nullptr;
+    nextAvPlayerId = 1;
 
     #if TARGET_OS_IOS
     // Initialize notification database
     notificationDatabase = [[NotificationDatabase alloc] init];
     printf("Notification database initialized\n");
+    printf("AVPlayer API initialized\n");
     #else
     notificationDatabase = nullptr;
     #endif
@@ -1093,6 +1370,12 @@ DclGodotiOS::~DclGodotiOS() {
     calendarDelegate = nullptr;
 
     #if TARGET_OS_IOS
+    // Cleanup AVPlayer instances
+    for (auto& pair : avPlayers) {
+        [pair.second releasePlayer];
+    }
+    avPlayers.clear();
+
     if (notificationDatabase) {
         notificationDatabase = nullptr;
     }

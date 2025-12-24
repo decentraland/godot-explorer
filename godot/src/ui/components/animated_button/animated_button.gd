@@ -25,9 +25,6 @@ func _ready() -> void:
 
 
 func _on_pressed() -> void:
-	# Haptic feedback on mobile
-	if Global.is_mobile():
-		Input.vibrate_handheld(20)  # 20ms subtle vibration
 	# Track metric: notification menu opened
 	var metric_name = _get_button_metric_name()
 	if metric_name != "":

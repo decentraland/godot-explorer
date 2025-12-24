@@ -21,6 +21,7 @@ func _connect_update_signals() -> void:
 func _on_button_clicked() -> void:
 	Global.close_menu.emit()
 	Global.open_notifications_panel.emit()
+	Global.send_haptic_feedback()
 
 
 func _get_button_metric_name() -> String:
