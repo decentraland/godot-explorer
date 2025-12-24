@@ -123,6 +123,20 @@ cargo run -- build --target ios
 cargo run -- export --target ios
 ```
 
+#### Triggering iOS CI Builds
+
+iOS builds are skipped by default to save CI resources. To trigger an iOS build:
+
+```bash
+# On a PR: add the build-ios-internal label
+gh pr edit --add-label "build-ios-internal"
+
+# Manual trigger: use the GitHub Actions UI or gh CLI
+gh workflow run "🍏 iOS" --ref main
+```
+
+The label is automatically removed after the build completes on PRs.
+
 ## 🧪 Testing
 
 ```bash
