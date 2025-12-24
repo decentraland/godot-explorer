@@ -168,5 +168,6 @@ func _async_handle_event_notification(event_id: String) -> void:
 func _on_button_close_pressed() -> void:
 	Global.close_menu.emit()
 
+
 func _on_error_loading_notification() -> void:
 	Global.close_navbar.emit()

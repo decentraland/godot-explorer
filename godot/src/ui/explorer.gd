@@ -826,13 +826,11 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 	# Handle friend request notification clicks - open friends panel on friends tab
 	var notif_type = notification_d.get("type", "")
 
-	if [
-			"social_service_friendship_request",
-			"social_service_friendship_accepted"
-		].has(notif_type):
+	if ["social_service_friendship_request", "social_service_friendship_accepted"].has(notif_type):
 		# Open friends panel on friends tab
 		if not friends_panel.visible:
 			friends_panel.show_panel_on_friends_tab()
+			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
 			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()

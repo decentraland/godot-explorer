@@ -4,6 +4,8 @@ signal close_all
 signal close_only_panels
 signal navbar_opened
 
+enum BUTTON { FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
+
 var _manually_hidden: bool = false
 
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
@@ -29,7 +31,7 @@ func _ready() -> void:
 	# The ButtonGroup with allow_unpress = false ensures one is always pressed
 
 	Global.close_navbar.connect(_on_navbar_close)
-	Global.open_navbar_silently.connect(_on_navbar_open_silently)
+	Global.open_navbar_silently.connect(_on_navbar_open_silently_on_backpack)
 
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -69,11 +71,24 @@ func _on_button_toggled(toggled_on: bool) -> void:
 	Global.send_haptic_feedback()
 	if toggled_on:
 		animation_player.play("open")
-		hud_button_friends.button_pressed = true
+		set_button_pressed(BUTTON.FRIENDS)
 		navbar_opened.emit()
 	else:
 		animation_player.play("close")
 		close_all.emit()
+
+
+## Set a button as pressed
+func set_button_pressed(button_to_press: BUTTON) -> void:
+	match button_to_press:
+		BUTTON.FRIENDS:
+			hud_button_friends.button_pressed = true
+		BUTTON.NOTIFICATIONS:
+			hud_button_notifications.button_pressed = true
+		BUTTON.BACKPACK:
+			hud_button_backpack.button_pressed = true
+		BUTTON.SETTINGS:
+			hud_button_settings.button_pressed = true
 
 
 func capture_mouse():
@@ -90,10 +105,11 @@ func close_from_discover_button():
 	animation_player.play("close")
 
 
-func _on_navbar_open_silently() -> void:
+func _on_navbar_open_silently_on_backpack() -> void:
 	if not button.button_pressed:
 		button.set_pressed_no_signal(true)
 		animation_player.play("open")
+	set_button_pressed(BUTTON.BACKPACK)
 
 
 func set_manually_hidden(is_hidden: bool) -> void:
