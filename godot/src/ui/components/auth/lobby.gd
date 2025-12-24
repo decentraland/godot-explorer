@@ -372,7 +372,7 @@ func _on_button_enter_as_guest_pressed():
 
 func _show_avatar_preview():
 	avatar_preview.show()
-	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
+	avatar_preview.avatar.emote_controller.async_play_emote("raiseHand")
 
 
 # gdlint:ignore = async-function-name
@@ -406,7 +406,7 @@ func _check_button_finish():
 		label_error.text = line_edit_choose_name.error_message
 		button_next.disabled = true
 		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
-			avatar_preview.avatar.emote_controller.play_emote("shrug")
+			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
 			_playing = "shrug"
 		panel_container_error_border.self_modulate = Color.RED
 	else:
@@ -417,7 +417,7 @@ func _check_button_finish():
 			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
 			or _playing != "clap"
 		):
-			avatar_preview.avatar.emote_controller.play_emote("clap")
+			avatar_preview.avatar.emote_controller.async_play_emote("clap")
 			_playing = "clap"
 		panel_container_error_border.self_modulate = Color.TRANSPARENT
 
@@ -427,9 +427,9 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 		if event.pressed:
 			if not avatar_preview.avatar.emote_controller.is_playing():
 				if line_edit_choose_name.text.contains("dancer"):
-					avatar_preview.avatar.emote_controller.play_emote("dance")
+					avatar_preview.avatar.emote_controller.async_play_emote("dance")
 				else:
-					avatar_preview.avatar.emote_controller.play_emote("wave")
+					avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
 
 func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:

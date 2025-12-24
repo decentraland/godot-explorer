@@ -564,6 +564,8 @@ func async_queue_local_notification(
 	image_url: String = "",
 	deep_link_data: String = ""
 ) -> bool:
+	if !Global.is_android() and !Global.is_ios():
+		return false
 	if notification_id.is_empty():
 		push_error("Queue notification: notification_id cannot be empty")
 		return false

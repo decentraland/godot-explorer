@@ -73,7 +73,9 @@ pub async fn request_wearables(
     for pointer in entity_pointers.iter_mut() {
         match ItemEntityDefinition::from_json_ex(ipfs_content_base_url.clone(), pointer.take()) {
             Ok(wearable_data) => {
-                wearable_map.insert(wearable_data.id.clone(), Arc::new(wearable_data));
+                // Use lowercase id as key to match get_wearable() lookup which also lowercases
+                let id_lower = wearable_data.id.to_lowercase();
+                wearable_map.insert(id_lower, Arc::new(wearable_data));
             }
             Err(e) => {
                 tracing::error!("Error parsing wearable data: {:?}", e);

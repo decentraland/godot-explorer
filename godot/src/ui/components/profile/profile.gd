@@ -352,9 +352,9 @@ func _unset_avatar_loading(current: int):
 	v_box_container_content.show()
 	_on_stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
-		avatar_preview_landscape.avatar.emote_controller.play_emote("wave")
+		avatar_preview_landscape.avatar.emote_controller.async_play_emote("wave")
 	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
-		avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
+		avatar_preview_portrait.avatar.emote_controller.async_play_emote("wave")
 	_update_elements_visibility()
 	# Only update buttons for block/mute, not friendship buttons yet
 	# Friendship buttons will be updated after _async_check_friendship_status() completes
@@ -432,10 +432,10 @@ func _on_emote_pressed(urn: String) -> void:
 	avatar_preview_portrait.reset_avatar_rotation()
 	avatar_preview_landscape.avatar.emote_controller.stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
-		avatar_preview_landscape.avatar.emote_controller.play_emote(urn)
+		avatar_preview_landscape.avatar.emote_controller.async_play_emote(urn)
 	avatar_preview_portrait.avatar.emote_controller.stop_emote()
 	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
-		avatar_preview_portrait.avatar.emote_controller.play_emote(urn)
+		avatar_preview_portrait.avatar.emote_controller.async_play_emote(urn)
 
 
 func _on_stop_emote() -> void:

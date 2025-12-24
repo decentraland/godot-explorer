@@ -114,6 +114,8 @@ func _on_emote_item_play_emote(_emote_urn: String):
 	avatar.async_play_emote(_emote_urn)
 	var emote_urns = avatar.avatar_data.get_emotes()
 	emote_urns[current_selected_index] = _emote_urn
+	# Update both the avatar's data (for display) and emit signal (for profile saving)
+	avatar.avatar_data.set_emotes(emote_urns)
 	set_new_emotes.emit(emote_urns)
 	_on_avatar_loaded()
 
