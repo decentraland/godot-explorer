@@ -98,10 +98,7 @@ pub async fn prepare_deploy_profile(
     // add images
     if has_new_snapshots {
         if let Some(snapshots) = profile.content.avatar.snapshots {
-            let content_folder = format!(
-                "{}/content/",
-                Os::singleton().get_user_data_dir()
-            );
+            let content_folder = format!("{}/content/", Os::singleton().get_user_data_dir());
             let body_path = format!("{}{}", content_folder, snapshots.body);
             let face_path = format!("{}{}", content_folder, snapshots.face256);
             form_data.add_file(snapshots.body, body_path);

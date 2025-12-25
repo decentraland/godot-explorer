@@ -3,12 +3,7 @@ use crate::{
     avatars::item::ItemEntityDefinition,
     http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
 };
-use godot::{
-    builtin::Variant,
-    meta::ToGodot,
-    obj::Gd,
-    prelude::*,
-};
+use godot::{builtin::Variant, meta::ToGodot, obj::Gd, prelude::*};
 use serde::Serialize;
 use std::{collections::HashMap, sync::Arc};
 

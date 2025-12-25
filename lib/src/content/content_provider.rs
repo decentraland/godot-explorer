@@ -750,7 +750,7 @@ impl ContentProvider {
         //  https://github.com/decentraland/godot-explorer/issues/363
         if file_hash.starts_with("http") {
             // get file_hash from url
-            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash());
+            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
             let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
             self.cached.insert(
                 file_hash,
@@ -863,7 +863,7 @@ impl ContentProvider {
 
         // Handle URL-based textures
         if file_hash.starts_with("http") {
-            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash());
+            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash_u32());
             let promise =
                 self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
             self.cached.insert(
@@ -1132,7 +1132,7 @@ impl ContentProvider {
         let data = target_meshes
             .iter_shared()
             .map(|dict| {
-                let dict = dict.try_to::<Dictionary>().ok()?;
+                let dict = dict.try_to::<VarDictionary>().ok()?;
                 let mesh = dict.get("mesh")?.try_to::<Gd<Mesh>>().ok()?;
                 let n = dict.get("n")?.try_to::<i32>().ok()?;
 

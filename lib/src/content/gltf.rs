@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use godot::{
-    builtin::{Dictionary, GString, VarArray, Variant},
+    builtin::{GString, VarArray, Variant},
     classes::{
         animation::TrackType,
         base_material_3d::TextureParam,

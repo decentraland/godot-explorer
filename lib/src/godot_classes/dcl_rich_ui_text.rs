@@ -35,10 +35,8 @@ impl IRichTextLabel for DclRichUiText {
             .add_theme_font_override("bold_font", &font.get_font_bold_resource());
         self.base_mut()
             .add_theme_font_override("italics_font", &font.get_font_italic_resource());
-        self.base_mut().add_theme_font_override(
-            "bold_italics_font",
-            &font.get_font_bold_italic_resource(),
-        );
+        self.base_mut()
+            .add_theme_font_override("bold_italics_font", &font.get_font_bold_italic_resource());
         self.base_mut().set_use_bbcode(true);
 
         // Configure to behave like Label in terms of layout:
@@ -62,18 +60,12 @@ impl IRichTextLabel for DclRichUiText {
 #[godot_api]
 impl DclRichUiText {
     pub fn change_value(&mut self, new_value: &PbUiText, converted_text: &str) {
-        self.base_mut().add_theme_font_size_override(
-            "normal_font_size",
-            new_value.font_size.unwrap_or(10),
-        );
-        self.base_mut().add_theme_font_size_override(
-            "bold_font_size",
-            new_value.font_size.unwrap_or(10),
-        );
-        self.base_mut().add_theme_font_size_override(
-            "italics_font_size",
-            new_value.font_size.unwrap_or(10),
-        );
+        self.base_mut()
+            .add_theme_font_size_override("normal_font_size", new_value.font_size.unwrap_or(10));
+        self.base_mut()
+            .add_theme_font_size_override("bold_font_size", new_value.font_size.unwrap_or(10));
+        self.base_mut()
+            .add_theme_font_size_override("italics_font_size", new_value.font_size.unwrap_or(10));
         self.base_mut().add_theme_font_size_override(
             "bold_italics_font_size",
             new_value.font_size.unwrap_or(10),

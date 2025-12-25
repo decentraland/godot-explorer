@@ -121,23 +121,18 @@ impl DclUiBackground {
 
         println!("face256_url: {}", face256_url);
 
-        let mut promise = content_provider.bind_mut().fetch_texture_by_url(
-            snapshots.face256.to_godot(),
-            face256_url.to_godot(),
-        );
+        let mut promise = content_provider
+            .bind_mut()
+            .fetch_texture_by_url(snapshots.face256.to_godot(), face256_url.to_godot());
 
         self.waiting_hash = GString::from(snapshots.face256.as_str());
 
         if !promise.bind().is_resolved() {
-            promise.connect(
-                "on_resolved",
-                &self.base().callable("_on_texture_loaded"),
-            );
+            promise.connect("on_resolved", &self.base().callable("_on_texture_loaded"));
         }
 
         self.first_texture_load_shot = true;
-        self.base_mut()
-            .call_deferred("_on_texture_loaded", &[]);
+        self.base_mut().call_deferred("_on_texture_loaded", &[]);
     }
 
     #[func]
@@ -189,18 +184,14 @@ impl DclUiBackground {
                         )
                     };
 
-                self.base_mut().set_patch_margin(
-                    godot::builtin::Side::BOTTOM,
-                    patch_margin_bottom as i32,
-                );
+                self.base_mut()
+                    .set_patch_margin(godot::builtin::Side::BOTTOM, patch_margin_bottom as i32);
                 self.base_mut()
                     .set_patch_margin(godot::builtin::Side::LEFT, patch_margin_left as i32);
                 self.base_mut()
                     .set_patch_margin(godot::builtin::Side::TOP, patch_margin_top as i32);
-                self.base_mut().set_patch_margin(
-                    godot::builtin::Side::RIGHT,
-                    patch_margin_right as i32,
-                );
+                self.base_mut()
+                    .set_patch_margin(godot::builtin::Side::RIGHT, patch_margin_right as i32);
 
                 // TODO: should be TILE or STRETCH?
                 self.base_mut().set_h_axis_stretch_mode(
@@ -303,8 +294,7 @@ impl DclUiBackground {
                         }
 
                         self.first_texture_load_shot = true;
-                        self.base_mut()
-                            .call_deferred("_on_texture_loaded", &[]);
+                        self.base_mut().call_deferred("_on_texture_loaded", &[]);
                     }
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture

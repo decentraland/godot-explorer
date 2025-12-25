@@ -55,14 +55,18 @@ use super::{
 pub struct SceneManager {
     base: Base<Node>,
 
+    #[var]
     base_ui: Gd<DclUiControl>,
+
     ui_canvas_information: PbUiCanvasInformation,
     interactable_area: Rect2i,
 
     scenes: HashMap<SceneId, Scene>,
 
+    #[var]
     player_avatar_node: Gd<Node3D>,
 
+    #[var]
     player_body_node: Gd<Node3D>,
 
     #[var]
@@ -96,6 +100,7 @@ pub struct SceneManager {
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
 
+    #[var]
     pointer_tooltips: VarArray,
 
     // Track avatar under crosshair
@@ -215,12 +220,22 @@ impl SceneManager {
             self.base_ui.clone(),
         );
 
-        self.base_mut()
-            .add_child(&new_scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());
+        self.base_mut().add_child(
+            &new_scene
+                .godot_dcl_scene
+                .root_node_3d
+                .clone()
+                .upcast::<Node>(),
+        );
 
         if let SceneType::Global(_) = scene_type {
-            self.base_ui
-                .add_child(&new_scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            self.base_ui.add_child(
+                &new_scene
+                    .godot_dcl_scene
+                    .root_node_ui
+                    .clone()
+                    .upcast::<Node>(),
+            );
         }
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
@@ -798,8 +813,8 @@ impl SceneManager {
         }
 
         // If not a scene entity, check if it's an avatar
-        let is_avatar = collider_obj.has_meta("is_avatar")
-            && collider_obj.get_meta("is_avatar").booleanize();
+        let is_avatar =
+            collider_obj.has_meta("is_avatar") && collider_obj.get_meta("is_avatar").booleanize();
 
         if is_avatar {
             // Check distance for avatar interactions (limit to 10 meters)
@@ -1151,8 +1166,7 @@ impl INode for SceneManager {
     fn ready(&mut self) {
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
 
-        self.base_ui
-            .connect("resized", &callable_on_ui_resize);
+        self.base_ui.connect("resized", &callable_on_ui_resize);
         self.base_ui.set_name("scenes_ui");
         self.ui_canvas_information = self.create_ui_canvas_information();
 
@@ -1198,8 +1212,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed", &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
 
                 // Handle pointer press/release on avatar for profile opening
@@ -1257,8 +1270,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed", &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
             }
         }
@@ -1333,18 +1345,14 @@ impl INode for SceneManager {
         // Add avatar profile tooltip if there's an avatar under crosshair
         if let Some(RaycastResult::Avatar(_)) = &current_raycast {
             let mut profile_dict = VarDictionary::new();
-            profile_dict.set(
-                "text_pet_down",
-                "View profile",
-            );
+            profile_dict.set("text_pet_down", "View profile");
             profile_dict.set("action", "ia_pointer");
             tooltips.push(&profile_dict.to_variant());
         }
 
         if self.pointer_tooltips != tooltips {
             self.pointer_tooltips = tooltips;
-            self.base_mut()
-                .emit_signal("pointer_tooltip_changed", &[]);
+            self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
         if let Some(current_camera_node) =

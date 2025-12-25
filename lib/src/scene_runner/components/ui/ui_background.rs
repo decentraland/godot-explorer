@@ -32,9 +32,7 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 .unwrap();
 
             if value.is_none() {
-                if let Some(mut node) = existing_ui_background
-                    .base_control
-                    .get_node_or_null("bkg")
+                if let Some(mut node) = existing_ui_background.base_control.get_node_or_null("bkg")
                 {
                     node.queue_free();
                     existing_ui_background.base_control.remove_child(&node);
@@ -47,24 +45,22 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
             let value = value.as_ref().unwrap();
 
-            let mut existing_ui_background_control = if let Some(node) = existing_ui_background
-                .base_control
-                .get_node_or_null("bkg")
-            {
-                node.cast::<DclUiBackground>()
-            } else {
-                let mut node: Gd<DclUiBackground> = DclUiBackground::new_alloc();
-                node.set_name("bkg");
-                node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
+            let mut existing_ui_background_control =
+                if let Some(node) = existing_ui_background.base_control.get_node_or_null("bkg") {
+                    node.cast::<DclUiBackground>()
+                } else {
+                    let mut node: Gd<DclUiBackground> = DclUiBackground::new_alloc();
+                    node.set_name("bkg");
+                    node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
 
-                existing_ui_background
-                    .base_control
-                    .add_child(&node.clone().upcast::<Node>());
-                existing_ui_background
-                    .base_control
-                    .move_child(&node.clone().upcast::<Node>(), 0);
-                node
-            };
+                    existing_ui_background
+                        .base_control
+                        .add_child(&node.clone().upcast::<Node>());
+                    existing_ui_background
+                        .base_control
+                        .move_child(&node.clone().upcast::<Node>(), 0);
+                    node
+                };
 
             existing_ui_background_control
                 .bind_mut()

@@ -1,6 +1,9 @@
 use std::{cell::RefCell, time::Instant};
 
-use godot::{obj::Singleton, prelude::{varray, Callable, GString, ToGodot, Transform3D, VarArray}};
+use godot::{
+    obj::Singleton,
+    prelude::{varray, Callable, ToGodot, Transform3D},
+};
 
 use super::{
     components::{

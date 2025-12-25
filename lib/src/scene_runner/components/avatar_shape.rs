@@ -15,11 +15,11 @@ use godot::{classes::Node, prelude::*};
 
 #[allow(dead_code)]
 trait ToDictionaryColorObject {
-    fn to_dictionary_color_object(&self) -> Dictionary;
+    fn to_dictionary_color_object(&self) -> VarDictionary;
 }
 
 impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color3 {
-    fn to_dictionary_color_object(&self) -> Dictionary {
+    fn to_dictionary_color_object(&self) -> VarDictionary {
         let mut dictionary = VarDictionary::new();
         dictionary.set("r", self.r);
         dictionary.set("g", self.g);
@@ -31,7 +31,7 @@ impl ToDictionaryColorObject for crate::dcl::components::proto_components::commo
     }
 }
 impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color4 {
-    fn to_dictionary_color_object(&self) -> Dictionary {
+    fn to_dictionary_color_object(&self) -> VarDictionary {
         let mut dictionary = VarDictionary::new();
         dictionary.set("r", self.r);
         dictionary.set("g", self.g);
@@ -159,9 +159,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 continue;
             };
 
-            let Some(mut avatar_node) =
-                node_3d.try_get_node_as::<Node>("AvatarShape")
-            else {
+            let Some(mut avatar_node) = node_3d.try_get_node_as::<Node>("AvatarShape") else {
                 continue;
             };
 

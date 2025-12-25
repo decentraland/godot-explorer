@@ -233,10 +233,7 @@ fn get_raycast_hit(
     let collider = raycast_result.get("collider")?;
 
     let has_dcl_entity_id = collider
-        .call(
-            "has_meta",
-            &[Variant::from("dcl_entity_id")],
-        )
+        .call("has_meta", &[Variant::from("dcl_entity_id")])
         .booleanize();
 
     // Note here, if the collider is not in the scene, it stops all query type
@@ -245,16 +242,10 @@ fn get_raycast_hit(
     }
 
     let dcl_entity_id = collider
-        .call(
-            "get_meta",
-            &[Variant::from("dcl_entity_id")],
-        )
+        .call("get_meta", &[Variant::from("dcl_entity_id")])
         .to::<i32>();
     let dcl_scene_id = collider
-        .call(
-            "get_meta",
-            &[Variant::from("dcl_scene_id")],
-        )
+        .call("get_meta", &[Variant::from("dcl_scene_id")])
         .to::<i32>();
 
     if dcl_scene_id != scene.scene_id.0 {

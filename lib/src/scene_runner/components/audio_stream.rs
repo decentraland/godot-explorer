@@ -10,7 +10,10 @@ use crate::{
     godot_classes::dcl_audio_stream::DclAudioStream,
     scene_runner::scene::{Scene, SceneType},
 };
-use godot::{classes::{AudioStream, AudioStreamGenerator, AudioStreamPlayer}, prelude::*};
+use godot::{
+    classes::{AudioStream, AudioStreamGenerator, AudioStreamPlayer},
+    prelude::*,
+};
 enum AudioUpdateMode {
     OnlyChangeValues,
     ChangeAudio,
@@ -125,7 +128,8 @@ pub fn update_audio_stream(
                         audio_stream_node.set_name("AudioStream");
 
                         let audio_stream_generator = AudioStreamGenerator::new_gd();
-                        audio_stream_node.set_stream(&audio_stream_generator.upcast::<AudioStream>());
+                        audio_stream_node
+                            .set_stream(&audio_stream_generator.upcast::<AudioStream>());
 
                         node_3d.add_child(&audio_stream_node.clone().upcast::<Node>());
                         audio_stream_node.play();

@@ -62,7 +62,7 @@ impl IRefCounted for DclContentMappingAndUrl {
 #[godot_api]
 impl DclContentMappingAndUrl {
     #[func]
-    fn from_values(base_url: GString, dict: Dictionary) -> Gd<DclContentMappingAndUrl> {
+    fn from_values(base_url: GString, dict: VarDictionary) -> Gd<DclContentMappingAndUrl> {
         let mut value = ContentMappingAndUrl::new();
 
         value.base_url = base_url.to_string();

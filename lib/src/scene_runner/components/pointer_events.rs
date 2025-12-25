@@ -30,7 +30,7 @@ impl crate::dcl::components::proto_components::sdk::components::common::RaycastH
     pub fn from_godot_raycast(
         scene_position: godot::prelude::Vector3,
         raycast_from: godot::prelude::Vector3,
-        raycast_result: &godot::prelude::Dictionary,
+        raycast_result: &godot::prelude::VarDictionary,
         entity_id: Option<u32>,
     ) -> Option<Self> {
         let global_origin = raycast_from - scene_position;

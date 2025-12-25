@@ -125,8 +125,7 @@ impl DclUiControl {
 
             let callable_on_gui_input = self.base().callable("_on_gui_input").clone();
             if connect {
-                self.base_mut()
-                    .connect("gui_input", &callable_on_gui_input);
+                self.base_mut().connect("gui_input", &callable_on_gui_input);
             } else {
                 self.base_mut()
                     .disconnect("gui_input", &callable_on_gui_input);

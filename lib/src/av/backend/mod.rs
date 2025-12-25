@@ -1,4 +1,7 @@
-use godot::{classes::{AudioStreamPlayer, ImageTexture}, prelude::*};
+use godot::{
+    classes::{AudioStreamPlayer, ImageTexture},
+    prelude::*,
+};
 
 use super::stream_processor::{AVCommand, StreamStateData};
 

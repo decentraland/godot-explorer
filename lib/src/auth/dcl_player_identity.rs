@@ -212,10 +212,7 @@ impl DclPlayerIdentity {
                 }
                 Err(err) => {
                     tracing::error!("error getting wallet {:?}", err);
-                    this.call_deferred(
-                        "_error_getting_wallet",
-                        &["Unknown error".to_variant()],
-                    );
+                    this.call_deferred("_error_getting_wallet", &["Unknown error".to_variant()]);
                 }
             }
         });
@@ -231,7 +228,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn try_recover_account(&mut self, dict: Dictionary) -> bool {
+    fn try_recover_account(&mut self, dict: VarDictionary) -> bool {
         let Some(account_address) = dict.get("account_address") else {
             return false;
         };
@@ -274,7 +271,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn get_recover_account_to(&self, mut dict: Dictionary) -> bool {
+    fn get_recover_account_to(&self, mut dict: VarDictionary) -> bool {
         if self.wallet.is_none() || self.ephemeral_auth_chain.is_none() {
             return false;
         }

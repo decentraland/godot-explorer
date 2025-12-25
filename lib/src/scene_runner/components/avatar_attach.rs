@@ -50,10 +50,7 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     &Variant::from(new_value.avatar_id.unwrap_or_default()),
                 );
 
-                avatar_attach_node.set(
-                    "attach_point",
-                    &Variant::from(new_value.anchor_point_id),
-                );
+                avatar_attach_node.set("attach_point", &Variant::from(new_value.anchor_point_id));
 
                 avatar_attach_node.set_name("AvatarAttach");
 

@@ -693,7 +693,7 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
-    pub fn get_desired_scenes(&self) -> Dictionary {
+    pub fn get_desired_scenes(&self) -> VarDictionary {
         let mut dict = VarDictionary::new();
         let mut loadable_scenes = VarArray::new();
         let mut keep_alive_scenes = VarArray::new();

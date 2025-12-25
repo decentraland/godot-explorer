@@ -4,7 +4,11 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::{NewAlloc, Singleton}, prelude::Gd, prelude::ToGodot};
+use godot::{
+    obj::{NewAlloc, Singleton},
+    prelude::Gd,
+    prelude::ToGodot,
+};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},

@@ -33,10 +33,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .unwrap();
 
             if value.is_none() {
-                if let Some(mut node) = existing_ui_text
-                    .base_control
-                    .get_node_or_null("text")
-                {
+                if let Some(mut node) = existing_ui_text.base_control.get_node_or_null("text") {
                     node.queue_free();
                     existing_ui_text.base_control.remove_child(&node);
                 }
@@ -50,9 +47,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let text_str = value.value.as_str();
             let conversion_result = convert_unity_to_godot(text_str);
 
-            let existing_node = existing_ui_text
-                .base_control
-                .get_node_or_null("text");
+            let existing_node = existing_ui_text.base_control.get_node_or_null("text");
 
             // Determine if we need to swap the control type
             // Only swap when Modified and current node is not DclRichUiText

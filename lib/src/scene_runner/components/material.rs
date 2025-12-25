@@ -180,14 +180,13 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         }
                     }
                 }
-                let mesh_renderer =
-                    node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
+                let mesh_renderer = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
                 if let Some(mut mesh_renderer) = mesh_renderer {
-                    mesh_renderer.set_surface_override_material(0, &godot_material.upcast::<Material>());
+                    mesh_renderer
+                        .set_surface_override_material(0, &godot_material.upcast::<Material>());
                 }
             } else {
-                let mesh_renderer =
-                    node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
+                let mesh_renderer = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
 
                 if let Some(mut mesh_renderer) = mesh_renderer {
                     mesh_renderer.call(

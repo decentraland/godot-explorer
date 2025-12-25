@@ -235,7 +235,8 @@ impl GodotDclScene {
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_3d.is_none() {
             let mut new_node_3d = DclNodeEntity3d::new_alloc(*entity);
-            self.root_node_3d.add_child(&new_node_3d.clone().upcast::<Node>());
+            self.root_node_3d
+                .add_child(&new_node_3d.clone().upcast::<Node>());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
                 let mut player_collider_filter = godot::tools::load::<PackedScene>(
@@ -266,10 +267,7 @@ impl GodotDclScene {
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_ui.is_none() {
             let mut new_node_ui = DclUiControl::new_alloc();
-            new_node_ui.set_name(&format!(
-                "e{:?}_{:?}",
-                entity.number, entity.version
-            ));
+            new_node_ui.set_name(&format!("e{:?}_{:?}", entity.number, entity.version));
             new_node_ui
                 .bind_mut()
                 .set_pointer_events(&godot_entity_node.pointer_events);
@@ -278,7 +276,8 @@ impl GodotDclScene {
                 .set_ui_result(self.ui_results.clone());
             new_node_ui.bind_mut().set_dcl_entity_id(entity.as_i32());
 
-            self.root_node_ui.add_child(&new_node_ui.clone().upcast::<Node>());
+            self.root_node_ui
+                .add_child(&new_node_ui.clone().upcast::<Node>());
             godot_entity_node.base_ui = Some(UiNode {
                 base_control: new_node_ui,
                 ui_transform: UiTransform::default(),

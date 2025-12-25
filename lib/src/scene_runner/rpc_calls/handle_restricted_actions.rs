@@ -13,7 +13,7 @@ use godot::{
     classes::Os,
     meta::ToGodot,
     obj::Singleton,
-    prelude::{GString, PackedScene, Variant, Vector2i, Vector3},
+    prelude::{PackedScene, Variant, Vector2i, Vector3},
 };
 use http::Uri;
 
@@ -231,10 +231,7 @@ pub fn move_player_to(
 
             let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
             let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
-            explorer_node.call(
-                "avatar_look_at_independent",
-                &[Variant::from(avatar_pos)],
-            );
+            explorer_node.call("avatar_look_at_independent", &[Variant::from(avatar_pos)]);
         }
         (Some(avatar), None) => {
             // Only avatar target: avatar looks at it

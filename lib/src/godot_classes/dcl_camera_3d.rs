@@ -1,4 +1,7 @@
-use godot::{classes::{Camera3D, ICamera3D}, prelude::*};
+use godot::{
+    classes::{Camera3D, ICamera3D},
+    prelude::*,
+};
 #[derive(GodotClass)]
 #[class(init, base=Camera3D)]
 pub struct DclCamera3D {

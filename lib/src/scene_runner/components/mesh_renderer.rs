@@ -97,8 +97,7 @@ pub fn update_mesh_renderer(
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing =
-                node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
+            let existing = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
 
             if new_value.is_none() {
                 if let Some(mut mesh_renderer_node) = existing {
