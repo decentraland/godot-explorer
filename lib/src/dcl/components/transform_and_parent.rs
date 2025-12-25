@@ -15,7 +15,7 @@ impl DclTransformAndParent {
 
     pub fn to_godot_transform_3d(&self) -> godot::prelude::Transform3D {
         godot::prelude::Transform3D {
-            basis: godot::prelude::Basis::from_quat(godot::prelude::Quaternion {
+            basis: godot::prelude::Basis::from_quaternion(godot::prelude::Quaternion {
                 x: self.rotation.x,
                 y: self.rotation.y,
                 z: -self.rotation.z,
@@ -32,7 +32,7 @@ impl DclTransformAndParent {
 
     pub fn to_godot_transform_3d_without_scaled(&self) -> godot::prelude::Transform3D {
         godot::prelude::Transform3D {
-            basis: godot::prelude::Basis::from_quat(godot::prelude::Quaternion {
+            basis: godot::prelude::Basis::from_quaternion(godot::prelude::Quaternion {
                 x: self.rotation.x,
                 y: self.rotation.y,
                 z: -self.rotation.z,

@@ -75,7 +75,7 @@ impl DclAvatarWireFormat {
     fn get_wearables(&self) -> PackedStringArray {
         let mut wearables = PackedStringArray::new();
         for wearable in self.inner.wearables.iter() {
-            wearables.push(GString::from(wearable));
+            wearables.push(&GString::from(wearable));
         }
         wearables
     }
@@ -102,7 +102,7 @@ impl DclAvatarWireFormat {
     fn get_snapshots_face_hash(&self) -> GString {
         self.inner.snapshots.as_ref().map_or_else(
             || GString::from(""),
-            |snapshots| GString::from(snapshots.face256.clone()),
+            |snapshots| snapshots.face256.clone().to_godot(),
         )
     }
 
@@ -114,7 +114,7 @@ impl DclAvatarWireFormat {
             .and_then(|snapshots| snapshots.face_url.as_ref())
             .map_or_else(
                 || GString::from(""),
-                |face_url| GString::from(face_url.clone()),
+                |face_url| face_url.clone().to_godot(),
             )
     }
 
@@ -135,7 +135,7 @@ impl DclAvatarWireFormat {
             .and_then(|snapshots| snapshots.body_url.as_ref())
             .map_or_else(
                 || GString::from(""),
-                |body_url| GString::from(body_url.clone()),
+                |body_url| body_url.clone().to_godot(),
             )
     }
 
@@ -216,7 +216,7 @@ impl DclAvatarWireFormat {
     #[func]
     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclAvatarWireFormat> {
         // 1) stringify the Godot Dictionary → JSON5-ish string
-        let json_str = godot::engine::Json::stringify(dictionary.to_variant()).to_string();
+        let json_str = godot::classes::Json::stringify(&dictionary.to_variant()).to_string();
 
         // 2) parse with json5 (tolerant of trailing commas)
         let avatar: AvatarWireFormat = json5::from_str(&json_str).unwrap_or_default();
@@ -228,7 +228,7 @@ impl DclAvatarWireFormat {
     #[func]
     pub fn to_godot_dictionary(&self) -> Dictionary {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
-        let value = godot::engine::Json::parse_string(value.into());
+        let value = godot::classes::Json::parse_string(&value);
         value.to::<Dictionary>()
     }
 }

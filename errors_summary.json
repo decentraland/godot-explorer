@@ -1,0 +1,294 @@
+{
+  "total_entries": 75,
+  "total_errors": 49,
+  "total_warnings": 26,
+  "files_by_count": [
+    {
+      "file": "src/scene_runner/components/video_player.rs",
+      "total": 6,
+      "errors": 6,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/update_scene.rs",
+      "total": 5,
+      "errors": 5,
+      "warnings": 0
+    },
+    {
+      "file": "src/avatars/dcl_user_profile.rs",
+      "total": 4,
+      "errors": 0,
+      "warnings": 4
+    },
+    {
+      "file": "src/scene_runner/components/avatar_shape.rs",
+      "total": 4,
+      "errors": 1,
+      "warnings": 3
+    },
+    {
+      "file": "src/scene_runner/scene.rs",
+      "total": 4,
+      "errors": 4,
+      "warnings": 0
+    },
+    {
+      "file": "src/auth/dcl_player_identity.rs",
+      "total": 3,
+      "errors": 0,
+      "warnings": 3
+    },
+    {
+      "file": "src/avatars/avatar_type.rs",
+      "total": 3,
+      "errors": 0,
+      "warnings": 3
+    },
+    {
+      "file": "src/content/content_provider.rs",
+      "total": 3,
+      "errors": 0,
+      "warnings": 3
+    },
+    {
+      "file": "src/scene_runner/components/mesh_renderer.rs",
+      "total": 3,
+      "errors": 3,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+      "total": 3,
+      "errors": 3,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/billboard.rs",
+      "total": 2,
+      "errors": 2,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/ui/scene_ui.rs",
+      "total": 2,
+      "errors": 2,
+      "warnings": 0
+    },
+    {
+      "file": "src/content/gltf.rs",
+      "total": 2,
+      "errors": 0,
+      "warnings": 2
+    },
+    {
+      "file": "src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs",
+      "total": 2,
+      "errors": 0,
+      "warnings": 2
+    },
+    {
+      "file": "src/scene_runner/components/material.rs",
+      "total": 2,
+      "errors": 2,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/nft_shape.rs",
+      "total": 2,
+      "errors": 2,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/transform_and_parent.rs",
+      "total": 2,
+      "errors": 2,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/ui/ui_text.rs",
+      "total": 2,
+      "errors": 2,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/godot_dcl_scene.rs",
+      "total": 2,
+      "errors": 2,
+      "warnings": 0
+    },
+    {
+      "file": "src/content/content_mapping.rs",
+      "total": 1,
+      "errors": 0,
+      "warnings": 1
+    },
+    {
+      "file": "src/realm/scene_entity_coordinator.rs",
+      "total": 1,
+      "errors": 0,
+      "warnings": 1
+    },
+    {
+      "file": "src/scene_runner/components/pointer_events.rs",
+      "total": 1,
+      "errors": 0,
+      "warnings": 1
+    },
+    {
+      "file": "src/scene_runner/components/camera_mode_area.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/raycast.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/text_shape.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/trigger_area.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/ui/ui_background.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/ui/ui_dropdown.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/components/ui/ui_input.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/deleted_entities.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/input.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/object_pool.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/rpc_calls/mod.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    {
+      "file": "src/scene_runner/scene_manager.rs",
+      "total": 1,
+      "errors": 1,
+      "warnings": 0
+    }
+  ],
+  "codes_by_count": [
+    {
+      "code": "warning",
+      "count": 26,
+      "affected_files": [
+        "src/auth/dcl_player_identity.rs",
+        "src/avatars/avatar_type.rs",
+        "src/avatars/dcl_user_profile.rs",
+        "src/content/content_mapping.rs",
+        "src/content/content_provider.rs",
+        "src/content/gltf.rs",
+        "src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs",
+        "src/realm/scene_entity_coordinator.rs",
+        "src/scene_runner/components/avatar_shape.rs",
+        "src/scene_runner/components/pointer_events.rs"
+      ]
+    },
+    {
+      "code": "error[E0277]",
+      "count": 15,
+      "affected_files": [
+        "src/scene_runner/components/mesh_renderer.rs",
+        "src/scene_runner/components/transform_and_parent.rs",
+        "src/scene_runner/components/trigger_area.rs",
+        "src/scene_runner/components/ui/ui_background.rs",
+        "src/scene_runner/components/ui/ui_dropdown.rs",
+        "src/scene_runner/components/ui/ui_input.rs",
+        "src/scene_runner/components/ui/ui_text.rs",
+        "src/scene_runner/components/video_player.rs",
+        "src/scene_runner/deleted_entities.rs",
+        "src/scene_runner/rpc_calls/handle_restricted_actions.rs"
+      ]
+    },
+    {
+      "code": "error[E0283]",
+      "count": 14,
+      "affected_files": [
+        "src/scene_runner/components/camera_mode_area.rs",
+        "src/scene_runner/components/material.rs",
+        "src/scene_runner/components/mesh_renderer.rs",
+        "src/scene_runner/components/nft_shape.rs",
+        "src/scene_runner/godot_dcl_scene.rs",
+        "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+        "src/scene_runner/rpc_calls/mod.rs",
+        "src/scene_runner/scene.rs",
+        "src/scene_runner/scene_manager.rs"
+      ]
+    },
+    {
+      "code": "error[E0308]",
+      "count": 8,
+      "affected_files": [
+        "src/scene_runner/components/avatar_shape.rs",
+        "src/scene_runner/components/video_player.rs",
+        "src/scene_runner/object_pool.rs",
+        "src/scene_runner/scene.rs",
+        "src/scene_runner/update_scene.rs"
+      ]
+    },
+    {
+      "code": "error[E0271]",
+      "count": 7,
+      "affected_files": [
+        "src/scene_runner/components/raycast.rs",
+        "src/scene_runner/components/text_shape.rs",
+        "src/scene_runner/input.rs",
+        "src/scene_runner/update_scene.rs"
+      ]
+    },
+    {
+      "code": "error[E0412]",
+      "count": 4,
+      "affected_files": [
+        "src/scene_runner/components/billboard.rs",
+        "src/scene_runner/components/ui/scene_ui.rs"
+      ]
+    },
+    {
+      "code": "error",
+      "count": 1,
+      "affected_files": []
+    }
+  ]
+}

@@ -12,15 +12,15 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{
+    classes::{
         mesh::PrimitiveType, AnimatableBody3D, ArrayMesh, BoxShape3D, CollisionShape3D,
-        CylinderShape3D, SphereShape3D,
+        CylinderShape3D, Shape3D, SphereShape3D,
     },
     prelude::*,
 };
 use num_traits::Zero;
 
-fn build_cylinder_arrays(radius_top: f32, radius_bottom: f32) -> VariantArray {
+fn build_cylinder_arrays(radius_top: f32, radius_bottom: f32) -> VarArray {
     let mut uvs_array = PackedVector2Array::new();
     let mut vertices_array = PackedVector3Array::new();
     let mut normals_array = PackedVector3Array::new();
@@ -198,12 +198,12 @@ fn build_cylinder_arrays(radius_top: f32, radius_bottom: f32) -> VariantArray {
         cnt += 1;
     }
 
-    let mut ret = VariantArray::new();
-    ret.resize(13, &VariantArray::new().to_variant());
-    ret.set(0, vertices_array.to_variant());
-    ret.set(1, normals_array.to_variant());
-    ret.set(4, uvs_array.to_variant());
-    ret.set(12, triangles_array.to_variant());
+    let mut ret = VarArray::new();
+    ret.resize(13, &VarArray::new().to_variant());
+    ret.set(0, &vertices_array.to_variant());
+    ret.set(1, &normals_array.to_variant());
+    ret.set(4, &uvs_array.to_variant());
+    ret.set(12, &triangles_array.to_variant());
     ret
 }
 
@@ -237,7 +237,7 @@ pub fn create_or_update_mesh(
                         .unwrap_or(BoxShape3D::new_gd()),
                     None => BoxShape3D::new_gd(),
                 };
-                box_shape.upcast()
+                box_shape.upcast::<Shape3D>()
             }
             pb_mesh_collider::Mesh::Sphere(_sphere_mesh) => {
                 let sphere_mesh = match current_shape {
@@ -246,7 +246,7 @@ pub fn create_or_update_mesh(
                         .unwrap_or(SphereShape3D::new_gd()),
                     None => SphereShape3D::new_gd(),
                 };
-                sphere_mesh.upcast()
+                sphere_mesh.upcast::<Shape3D>()
             }
             pb_mesh_collider::Mesh::Cylinder(cylinder_mesh_value) => {
                 let mut array_mesh = ArrayMesh::new_gd();
@@ -254,9 +254,9 @@ pub fn create_or_update_mesh(
                     cylinder_mesh_value.radius_top.unwrap_or(0.5),
                     cylinder_mesh_value.radius_bottom.unwrap_or(0.5),
                 );
-                array_mesh.add_surface_from_arrays(PrimitiveType::TRIANGLES, arrays);
+                array_mesh.add_surface_from_arrays(PrimitiveType::TRIANGLES, &arrays);
                 if let Some(new_shape) = array_mesh.create_trimesh_shape() {
-                    new_shape.upcast()
+                    new_shape.upcast::<Shape3D>()
                 } else {
                     let mut cylinder_shape = match current_shape {
                         Some(current_shape) => current_shape
@@ -270,7 +270,7 @@ pub fn create_or_update_mesh(
                         * 0.5;
                     cylinder_shape.set_radius(radius);
                     cylinder_shape.set_height(1.0);
-                    cylinder_shape.upcast()
+                    cylinder_shape.upcast::<Shape3D>()
                 }
             }
             pb_mesh_collider::Mesh::Plane(_plane_mesh) => {
@@ -281,7 +281,7 @@ pub fn create_or_update_mesh(
                     None => BoxShape3D::new_gd(),
                 };
                 box_shape.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.0));
-                box_shape.upcast()
+                box_shape.upcast::<Shape3D>()
             }
             pb_mesh_collider::Mesh::Gltf(_) => {
                 // TODO: Implement Gltf
@@ -295,11 +295,11 @@ pub fn create_or_update_mesh(
                     .unwrap_or(BoxShape3D::new_gd()),
                 None => BoxShape3D::new_gd(),
             };
-            box_shape.upcast()
+            box_shape.upcast::<Shape3D>()
         }
     };
 
-    collision_shape.set_shape(godot_shape);
+    collision_shape.set_shape(&godot_shape);
     animatable_body_3d.set_collision_layer(collision_mask);
     animatable_body_3d.set_collision_mask(0);
 }
@@ -321,12 +321,12 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
             let new_value = new_value.value.clone();
             let existing =
-                node_3d.try_get_node_as::<AnimatableBody3D>(NodePath::from("MeshCollider"));
+                node_3d.try_get_node_as::<AnimatableBody3D>("MeshCollider");
 
             if new_value.is_none() {
                 if let Some(mut mesh_collider_node) = existing {
                     mesh_collider_node.queue_free();
-                    node_3d.remove_child(mesh_collider_node.upcast());
+                    node_3d.remove_child(&mesh_collider_node.upcast::<Node>());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut animatable_body_3d, add_to_base) = match existing {
@@ -334,8 +334,8 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     None => {
                         let mut body = AnimatableBody3D::new_alloc();
 
-                        body.set("sync_to_physics".into(), Variant::from(false));
-                        body.add_child(CollisionShape3D::new_alloc().upcast());
+                        body.set("sync_to_physics", &Variant::from(false));
+                        body.add_child(&CollisionShape3D::new_alloc().upcast::<Node>());
 
                         (body, true)
                     }
@@ -344,13 +344,13 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 create_or_update_mesh(&mut animatable_body_3d, &new_value);
 
                 if add_to_base {
-                    animatable_body_3d.set_name(GString::from("MeshCollider"));
+                    animatable_body_3d.set_name("MeshCollider");
                     animatable_body_3d
-                        .set_meta("dcl_entity_id".into(), (entity.as_i32()).to_variant());
+                        .set_meta("dcl_entity_id", &(entity.as_i32()).to_variant());
                     animatable_body_3d
-                        .set_meta("dcl_scene_id".into(), (scene.scene_id.0).to_variant());
+                        .set_meta("dcl_scene_id", &(scene.scene_id.0).to_variant());
 
-                    node_3d.add_child(animatable_body_3d.upcast());
+                    node_3d.add_child(&animatable_body_3d.upcast::<Node>());
                 }
             }
         }

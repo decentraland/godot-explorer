@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 
 use godot::builtin::Callable;
-use godot::engine::PhysicsServer3D;
+use godot::classes::PhysicsServer3D;
+use godot::obj::Singleton;
 use godot::prelude::Rid;
 
 /// Generic object pool for reusing allocated resources
@@ -100,7 +101,7 @@ impl PhysicsAreaPool {
     pub fn release_area(&mut self, rid: Rid) {
         let mut server = PhysicsServer3D::singleton();
         // Clear monitor callback to prevent stale events
-        server.area_set_monitor_callback(rid, Callable::invalid());
+        server.area_set_monitor_callback(rid, &Callable::invalid());
         server.area_clear_shapes(rid);
         server.area_set_space(rid, Rid::Invalid);
         self.areas.release(rid);

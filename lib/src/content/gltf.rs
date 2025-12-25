@@ -1,13 +1,17 @@
 use std::{collections::HashMap, sync::Arc};
 
 use godot::{
-    builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
-    engine::{
-        animation::TrackType, base_material_3d::TextureParam, global::Error, node::ProcessMode,
+    builtin::{Dictionary, GString, VarArray, Variant},
+    classes::{
+        animation::TrackType,
+        base_material_3d::TextureParam,
+        node::{DuplicateFlags, ProcessMode},
         AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D,
         CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture,
         MeshInstance3D, Node, Node3D, StaticBody3D,
     },
+    global::Error,
+    meta::ToGodot,
     obj::{EngineEnum, Gd, InstanceId},
     prelude::*,
 };
@@ -111,21 +115,20 @@ pub async fn internal_load_gltf(
     let mut new_gltf = GltfDocument::new_gd();
     let mut new_gltf_state = GltfState::new_gd();
 
-    let mappings = Dictionary::from_iter(
+    let mappings = VarDictionary::from_iter(
         dependencies_hash
             .iter()
             .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
     );
 
-    new_gltf_state.set_additional_data("base_path".into(), "some".to_variant());
-    new_gltf_state.set_additional_data("mappings".into(), mappings.to_variant());
+    new_gltf_state.set_additional_data("base_path", &"some".to_variant());
+    new_gltf_state.set_additional_data("mappings", &mappings.to_variant());
 
+    let file_path = GString::from(absolute_file_path.as_str());
+    let base_path = GString::from(ctx.content_folder.as_str());
     let err = new_gltf
-        .append_from_file_ex(
-            GString::from(absolute_file_path.as_str()),
-            new_gltf_state.clone(),
-        )
-        .base_path(GString::from(ctx.content_folder.as_str()))
+        .append_from_file_ex(&file_path, &new_gltf_state.clone())
+        .base_path(&base_path)
         .flags(0)
         .done();
 
@@ -138,7 +141,7 @@ pub async fn internal_load_gltf(
     }
 
     let node = new_gltf
-        .generate_scene(new_gltf_state)
+        .generate_scene(&new_gltf_state)
         .ok_or(anyhow::Error::msg(
             "Error loading gltf when generating scene".to_string(),
         ))?;
@@ -176,9 +179,9 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                                             if std::env::consts::OS == "ios" {
                                                 let texture =
                                                     create_compressed_texture(&mut image, max_size);
-                                                base_material.set_texture(texture_param, texture);
+                                                base_material.set_texture(texture_param, &texture);
                                             } else if resize_image(&mut image, max_size) {
-                                                texture_image.set_image(image);
+                                                texture_image.set_image(&image);
                                             }
                                         }
                                     }
@@ -245,7 +248,7 @@ pub async fn apply_update_set_mask_colliders(
     let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
     let gltf_node = gltf_node
         .duplicate_ex()
-        .flags(8)
+        .flags(godot::classes::node::DuplicateFlags::USE_INSTANTIATION)
         .done()
         .ok_or(anyhow::Error::msg("unable to duplicate gltf node"))?;
 
@@ -358,17 +361,14 @@ fn create_colliders(node_to_inspect: Gd<Node>) {
                     let mut new_animatable = AnimatableBody3D::new_alloc();
                     new_animatable.set_sync_to_physics(false);
                     new_animatable.set_process_mode(ProcessMode::DISABLED);
-                    new_animatable.set_meta("dcl_col".into(), 0.to_variant());
-                    new_animatable.set_meta("invisible_mesh".into(), invisible_mesh.to_variant());
+                    new_animatable.set_meta("dcl_col", &0.to_variant());
+                    new_animatable.set_meta("invisible_mesh", &invisible_mesh.to_variant());
                     new_animatable.set_collision_layer(0);
                     new_animatable.set_collision_mask(0);
-                    new_animatable.set_name(GString::from(format!(
-                        "{}_colgen",
-                        mesh_instance_3d.get_name()
-                    )));
+                    new_animatable.set_name(&format!("{}_colgen", mesh_instance_3d.get_name()));
 
-                    parent.add_child(new_animatable.clone().upcast());
-                    parent.remove_child(static_body_3d.clone().upcast());
+                    parent.add_child(&new_animatable.clone().upcast::<Node>());
+                    parent.remove_child(&static_body_3d.clone().upcast::<Node>());
 
                     for mut body_child in static_body_3d
                         .get_children_ex()
@@ -376,9 +376,9 @@ fn create_colliders(node_to_inspect: Gd<Node>) {
                         .done()
                         .iter_shared()
                     {
-                        static_body_3d.remove_child(body_child.clone());
-                        body_child.call("set_owner".into(), &[Variant::nil()]);
-                        new_animatable.add_child(body_child.clone());
+                        static_body_3d.remove_child(&body_child.clone());
+                        body_child.call("set_owner", &[Variant::nil()]);
+                        new_animatable.add_child(&body_child.clone());
                         if let Ok(collision_shape_3d) = body_child.try_cast::<CollisionShape3D>() {
                             if let Some(shape) = collision_shape_3d.get_shape() {
                                 if let Ok(mut concave_polygon_shape_3d) =
@@ -407,9 +407,9 @@ fn update_set_mask_colliders(
 ) {
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mut node) = child.clone().try_cast::<AnimatableBody3D>() {
-            let invisible_mesh = node.has_meta("invisible_mesh".into())
+            let invisible_mesh = node.has_meta("invisible_mesh")
                 && node
-                    .get_meta("invisible_mesh".into())
+                    .get_meta("invisible_mesh")
                     .try_to::<bool>()
                     .unwrap_or_default();
 
@@ -419,22 +419,26 @@ fn update_set_mask_colliders(
                 dcl_visible_cmask
             };
 
-            if !node.has_meta("dcl_scene_id".into()) {
-                let Some(mut resolved_node) = node.duplicate_ex().flags(8).done() else {
+            if !node.has_meta("dcl_scene_id") {
+                let Some(mut resolved_node) = node
+                    .duplicate_ex()
+                    .flags(DuplicateFlags::USE_INSTANTIATION)
+                    .done()
+                else {
                     continue;
                 };
 
-                resolved_node.set_name(GString::from(format!("{}_instanced", node.get_name())));
-                resolved_node.set_meta("dcl_scene_id".into(), dcl_scene_id.to_variant());
-                resolved_node.set_meta("dcl_entity_id".into(), dcl_entity_id.to_variant());
+                resolved_node.set_name(&format!("{}_instanced", node.get_name()));
+                resolved_node.set_meta("dcl_scene_id", &dcl_scene_id.to_variant());
+                resolved_node.set_meta("dcl_entity_id", &dcl_entity_id.to_variant());
 
-                node_to_inspect.add_child(resolved_node.clone().upcast());
-                to_remove_nodes.push(node.clone().upcast());
+                node_to_inspect.add_child(&resolved_node.clone().upcast::<Node>());
+                to_remove_nodes.push(node.clone().upcast::<Node>());
 
                 node = resolved_node.cast();
             }
 
-            node.set_meta("dcl_col".into(), mask.to_variant());
+            node.set_meta("dcl_col", &mask.to_variant());
             node.set_collision_layer(mask as u32);
             node.set_collision_mask(0);
             if mask == 0 {
@@ -467,7 +471,7 @@ fn _duplicate_animation_resources(gltf_node: Gd<Node>) {
     let animation_libraries = animation_player.get_animation_library_list();
     for animation_library_name in animation_libraries.iter_shared() {
         let Some(animation_library) =
-            animation_player.get_animation_library(animation_library_name.clone())
+            animation_player.get_animation_library(&animation_library_name.clone())
         else {
             tracing::error!("animation library not found");
             continue;
@@ -476,11 +480,11 @@ fn _duplicate_animation_resources(gltf_node: Gd<Node>) {
         let mut new_animations = HashMap::new();
         let animations = animation_library.get_animation_list();
         for animation_name in animations.iter_shared() {
-            let Some(animation) = animation_player.get_animation(animation_name.clone()) else {
+            let Some(animation) = animation_player.get_animation(&animation_name.clone()) else {
                 continue;
             };
 
-            let Some(dup_animation) = animation.duplicate_ex().subresources(true).done() else {
+            let Some(dup_animation) = animation.duplicate_ex().deep(true).done() else {
                 tracing::error!("Error duplicating animation {:?}", animation_name);
                 continue;
             };
@@ -489,19 +493,20 @@ fn _duplicate_animation_resources(gltf_node: Gd<Node>) {
 
         let mut new_animation_library = AnimationLibrary::new_gd();
         for new_animation in new_animations {
-            new_animation_library.add_animation(new_animation.0, new_animation.1.cast());
+            let this_animation = new_animation.1.cast::<Animation>();
+            new_animation_library.add_animation(&new_animation.0, &this_animation);
         }
         new_animation_libraries.insert(animation_library_name, new_animation_library);
     }
 
     // remove current animation library
     for animation_library_name in animation_libraries.iter_shared() {
-        animation_player.remove_animation_library(animation_library_name);
+        animation_player.remove_animation_library(&animation_library_name);
     }
 
     // add new animation library
     for new_animation_library in new_animation_libraries {
-        animation_player.add_animation_library(new_animation_library.0, new_animation_library.1);
+        animation_player.add_animation_library(&new_animation_library.0, &new_animation_library.1);
     }
 }
 
@@ -522,7 +527,7 @@ fn get_last_16_alphanumeric(input: &str) -> String {
 
 fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<Gd<DclEmoteGltf>> {
     let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash.as_str());
-    let armature_prop = gltf_node.find_child("Armature_Prop".into());
+    let armature_prop = gltf_node.find_child("Armature_Prop");
 
     let anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
 
@@ -531,7 +536,7 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
     let armature_prop = armature_prop
         .and_then(|v| v.clone().try_cast::<Node3D>().ok())
         .map(|mut node| {
-            node.set_name(format!("Armature_Prop_{}", anim_sufix_from_hash).into());
+            node.set_name(&format!("Armature_Prop_{}", anim_sufix_from_hash));
             node.rotate_y(std::f32::consts::PI);
             node
         });
@@ -569,9 +574,9 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
         }
     }
 
-    let mut play_emote_audio_args = VariantArray::new();
-    play_emote_audio_args.push(file_hash.to_variant());
-    let play_emote_audio_call = Dictionary::from_iter([
+    let mut play_emote_audio_args = VarArray::new();
+    play_emote_audio_args.push(&file_hash.to_variant());
+    let play_emote_audio_call = VarDictionary::from_iter([
         ("method", "_play_emote_audio".to_variant()),
         ("args", play_emote_audio_args.to_variant()),
     ]);
@@ -579,16 +584,16 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
     let mut audio_added = false;
 
     for animation_key in anim_list.iter() {
-        let Some(mut anim) = anim_player.get_animation(animation_key.into()) else {
+        let Some(mut anim) = anim_player.get_animation(animation_key) else {
             continue;
         };
 
         if default_anim_key.as_ref() == Some(animation_key) {
             default_animation = Some(anim.clone());
-            anim.set_name(anim_sufix_from_hash.to_string().into())
+            anim.set_name(&anim_sufix_from_hash.to_godot())
         } else if prop_anim_key.as_ref() == Some(animation_key) {
             prop_animation = Some(anim.clone());
-            anim.set_name(format!("{anim_sufix_from_hash}_prop").into())
+            anim.set_name(&format!("{anim_sufix_from_hash}_prop"))
         }
 
         for track_idx in 0..anim.get_track_count() {
@@ -596,12 +601,12 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
             if !track_path.contains("Skeleton3D") {
                 let last_track_name = track_path.split('/').next_back().unwrap_or_default();
                 let new_track_path = format!("Armature/Skeleton3D:{}", last_track_name);
-                anim.track_set_path(track_idx, new_track_path.into());
+                anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
             }
             if track_path.contains("Armature_Prop/Skeleton3D") {
                 let track_subname = track_path.split(':').next_back().unwrap_or_default();
                 let new_track_path = format!("{armature_prefix}{track_subname}");
-                anim.track_set_path(track_idx, new_track_path.into());
+                anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
             }
         }
 
@@ -609,19 +614,19 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
             let new_track_prop = anim.add_track(TrackType::VALUE);
             anim.track_set_path(
                 new_track_prop,
-                format!("Armature_Prop_{}:visible", anim_sufix_from_hash).into(),
+                &format!("Armature_Prop_{}:visible", anim_sufix_from_hash),
             );
-            anim.track_insert_key(new_track_prop, 0.0, true.to_variant());
+            anim.track_insert_key(new_track_prop, 0.0, &true.to_variant());
         }
 
         if !audio_added {
             audio_added = true;
             let new_track_audio = anim.add_track(TrackType::METHOD);
-            anim.track_set_path(new_track_audio, ".".into());
+            anim.track_set_path(new_track_audio, ".");
             anim.track_insert_key(
                 new_track_audio,
                 0.0,
-                play_emote_audio_call.clone().to_variant(),
+                &play_emote_audio_call.clone().to_variant(),
             );
         }
     }

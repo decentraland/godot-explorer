@@ -11,7 +11,7 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
-use godot::prelude::*;
+use godot::{classes::Node, prelude::*};
 
 #[allow(dead_code)]
 trait ToDictionaryColorObject {
@@ -20,24 +20,24 @@ trait ToDictionaryColorObject {
 
 impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color3 {
     fn to_dictionary_color_object(&self) -> Dictionary {
-        let mut dictionary = Dictionary::new();
+        let mut dictionary = VarDictionary::new();
         dictionary.set("r", self.r);
         dictionary.set("g", self.g);
         dictionary.set("b", self.b);
         dictionary.set("a", 1.0);
-        let mut ret_dictionary = Dictionary::new();
+        let mut ret_dictionary = VarDictionary::new();
         ret_dictionary.set("color", dictionary);
         ret_dictionary
     }
 }
 impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color4 {
     fn to_dictionary_color_object(&self) -> Dictionary {
-        let mut dictionary = Dictionary::new();
+        let mut dictionary = VarDictionary::new();
         dictionary.set("r", self.r);
         dictionary.set("g", self.g);
         dictionary.set("b", self.b);
         dictionary.set("a", self.a);
-        let mut ret_dictionary = Dictionary::new();
+        let mut ret_dictionary = VarDictionary::new();
         ret_dictionary.set("color", dictionary);
         ret_dictionary
     }
@@ -69,12 +69,12 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"));
+            let existing = node_3d.try_get_node_as::<Node>("AvatarShape");
 
             if new_value.is_none() {
                 if let Some(mut avatar_node) = existing {
                     avatar_node.queue_free();
-                    node_3d.remove_child(avatar_node);
+                    node_3d.remove_child(&avatar_node);
                 }
             } else if let Some(new_value) = new_value {
                 let avatar_name = new_value.name.unwrap_or("NPC".into());
@@ -112,25 +112,25 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
-                        "async_update_avatar".into(),
+                        "async_update_avatar",
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
-                    let mut new_avatar_shape = godot::engine::load::<PackedScene>(
+                    let mut new_avatar_shape = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )
                     .instantiate()
                     .unwrap();
 
-                    new_avatar_shape.set("skip_process".into(), true.to_variant());
-                    new_avatar_shape.set_name(GString::from("AvatarShape"));
-                    node_3d.add_child(new_avatar_shape.clone().upcast());
+                    new_avatar_shape.set("skip_process", &true.to_variant());
+                    new_avatar_shape.set_name("AvatarShape");
+                    node_3d.add_child(&new_avatar_shape.clone().upcast::<Node>());
 
                     // Remove trigger detection for AvatarShapes - scene NPCs should not trigger areas
-                    new_avatar_shape.call("remove_trigger_detection".into(), &[]);
+                    new_avatar_shape.call("remove_trigger_detection", &[]);
 
                     new_avatar_shape.call_deferred(
-                        "async_update_avatar".into(),
+                        "async_update_avatar",
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 }
@@ -160,7 +160,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
             };
 
             let Some(mut avatar_node) =
-                node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"))
+                node_3d.try_get_node_as::<Node>("AvatarShape")
             else {
                 continue;
             };
@@ -183,7 +183,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 emote.emote_urn.clone()
             };
 
-            avatar_node.call_deferred("async_play_emote".into(), &[urn.to_variant()]);
+            avatar_node.call_deferred("async_play_emote", &[urn.to_variant()]);
         }
     }
 }

@@ -78,7 +78,7 @@ impl DclContentMappingAndUrl {
 
     #[func]
     pub fn get_base_url(&self) -> GString {
-        self.inner.base_url.to_string().into()
+        self.inner.base_url.to_godot()
     }
 
     #[func]

@@ -10,7 +10,9 @@ use crate::{
 };
 
 use godot::{
-    builtin::meta::ToGodot,
+    classes::Os,
+    meta::ToGodot,
+    obj::Singleton,
     prelude::{GString, PackedScene, Variant, Vector2i, Vector3},
 };
 use http::Uri;
@@ -43,12 +45,12 @@ pub fn change_realm(
     let mut realm_node = get_realm_node(scene);
 
     let confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
             .instantiate()
             .expect("ConfirmDialog instantiate error");
 
     // Setup confirm dialog
-    dialog_stack.add_child(confirm_dialog.clone());
+    dialog_stack.add_child(&confirm_dialog.clone());
 
     // Setup confirm Dialog
     let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
@@ -61,7 +63,7 @@ pub fn change_realm(
     );
 
     // clone data that is going to the callback
-    let to = GString::from(to);
+    let to = to.to_godot();
     let response = response.clone();
 
     confirm_dialog.setup(
@@ -71,7 +73,7 @@ pub fn change_realm(
         "No thanks",
         move |ok| {
             if ok {
-                realm_node.call("async_set_realm".into(), &[Variant::from(to)]);
+                realm_node.call("async_set_realm", &[Variant::from(to)]);
                 response.send(Ok(()));
             } else {
                 response.send(Err("User rejected to change realm".to_string()));
@@ -96,12 +98,12 @@ pub fn open_external_url(
     let mut dialog_stack = get_dialog_stack_node(scene);
 
     let confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
             .instantiate()
             .expect("ConfirmDialog instantiate error");
 
     // Setup confirm dialog
-    dialog_stack.add_child(confirm_dialog.clone());
+    dialog_stack.add_child(&confirm_dialog.clone());
 
     // Setup confirm Dialog
     let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
@@ -115,7 +117,7 @@ pub fn open_external_url(
 
     // clone data that is going to the callback
     let response = response.clone();
-    let godot_url = GString::from(url.to_string());
+    let godot_url = url.to_string().to_godot();
 
     confirm_dialog.setup(
         "Open External URL",
@@ -124,7 +126,7 @@ pub fn open_external_url(
         "No thanks",
         move |ok| {
             if ok {
-                godot::engine::Os::singleton().shell_open(godot_url);
+                Os::singleton().shell_open(&godot_url);
                 response.send(Ok(()));
             } else {
                 response.send(Err("User rejected to open the url".to_string()));
@@ -149,14 +151,14 @@ pub fn open_nft_dialog(
     let mut dialog_stack = get_dialog_stack_node(scene);
 
     let mut confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/nft_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/nft_dialog.tscn")
             .instantiate()
             .expect("NftDialog instantiate error");
 
     // Setup confirm dialog
-    dialog_stack.add_child(confirm_dialog.clone());
+    dialog_stack.add_child(&confirm_dialog.clone());
 
-    confirm_dialog.call("async_load_nft".into(), &[urn.to_variant()]);
+    confirm_dialog.call("async_load_nft", &[urn.to_variant()]);
 
     response.send(Ok(()));
 }
@@ -210,7 +212,7 @@ pub fn move_player_to(
     // Set player position
     let position_target = Vector3::new(position_target.x, position_target.y, -position_target.z);
     explorer_node.call(
-        "move_to".into(),
+        "move_to",
         &[Variant::from(position_target), true.to_variant()],
     );
 
@@ -225,12 +227,12 @@ pub fn move_player_to(
             // Then avatar_look_at_independent (sets avatar to face avatar target relative to player)
             let camera_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
             let camera_pos = Vector3::new(camera_pos.x, camera_pos.y, -camera_pos.z);
-            explorer_node.call("camera_look_at".into(), &[Variant::from(camera_pos)]);
+            explorer_node.call("camera_look_at", &[Variant::from(camera_pos)]);
 
             let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
             let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
             explorer_node.call(
-                "avatar_look_at_independent".into(),
+                "avatar_look_at_independent",
                 &[Variant::from(avatar_pos)],
             );
         }
@@ -238,13 +240,13 @@ pub fn move_player_to(
             // Only avatar target: avatar looks at it
             let target_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
             let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
-            explorer_node.call("player_look_at".into(), &[Variant::from(target_pos)]);
+            explorer_node.call("player_look_at", &[Variant::from(target_pos)]);
         }
         (None, Some(camera)) => {
             // Only camera target: backward compatibility (both avatar and camera look at it)
             let target_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
             let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
-            explorer_node.call("player_look_at".into(), &[Variant::from(target_pos)]);
+            explorer_node.call("player_look_at", &[Variant::from(target_pos)]);
         }
         (None, None) => {
             // No targets: do nothing
@@ -272,11 +274,11 @@ pub fn teleport_to(
 
     // TODO: We should implement a new Dialog, that shows the thumbnail of the destination
     let confirm_dialog =
-        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
             .instantiate()
             .expect("ConfirmDialog instantiate error");
 
-    dialog_stack.add_child(confirm_dialog.clone());
+    dialog_stack.add_child(&confirm_dialog.clone());
 
     // Setup confirm Dialog
     let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
@@ -298,7 +300,7 @@ pub fn teleport_to(
         move |ok| {
             if ok {
                 let mut explorer_node = explorer_node.clone();
-                explorer_node.call("teleport_to".into(), &[Variant::from(target_parcel)]);
+                explorer_node.call("teleport_to", &[Variant::from(target_parcel)]);
 
                 response.send(Ok(()));
             } else {
@@ -316,7 +318,7 @@ pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id:
     }
 
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("async_play_emote".into(), &[emote_id.to_variant()]);
+    avatar_node.call("async_play_emote", &[emote_id.to_variant()]);
 
     // Broadcast emote to other players via comms
     DclGlobal::singleton()
@@ -345,7 +347,7 @@ pub fn trigger_scene_emote(
 
     let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("async_play_emote".into(), &[urn.to_variant()]);
+    avatar_node.call("async_play_emote", &[urn.to_variant()]);
 
     DclGlobal::singleton()
         .bind()

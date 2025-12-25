@@ -9,7 +9,8 @@ use std::{
 
 use futures_util::future::try_join_all;
 use godot::{
-    engine::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
+    classes::{AudioStream, Material, Mesh, Os, ResourceLoader, Texture2D},
+    obj::Singleton,
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -126,10 +127,7 @@ const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com
 #[godot_api]
 impl INode for ContentProvider {
     fn init(_base: Base<Node>) -> Self {
-        let content_folder = Arc::new(format!(
-            "{}/content/",
-            godot::engine::Os::singleton().get_user_data_dir()
-        ));
+        let content_folder = Arc::new(format!("{}/content/", Os::singleton().get_user_data_dir()));
 
         #[cfg(feature = "use_resource_tracking")]
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
@@ -231,7 +229,7 @@ impl INode for ContentProvider {
                     let data = entry.promise.bind().get_data();
                     if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
                         if let Some(resource_locker) =
-                            node_3d.get_node_or_null(NodePath::from("ResourceLocker"))
+                            node_3d.get_node_or_null(&NodePath::from("ResourceLocker"))
                         {
                             if let Ok(resource_locker) =
                                 resource_locker.try_cast::<ResourceLocker>()
@@ -579,7 +577,7 @@ impl ContentProvider {
         let file_hash = content_mapping.bind().get_hash(file_path);
         let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
 
-        self.fetch_file_by_url(file_hash, url.into_godot())
+        self.fetch_file_by_url(file_hash, GString::from(url.as_str()))
     }
 
     #[func]
@@ -753,7 +751,7 @@ impl ContentProvider {
         if file_hash.starts_with("http") {
             // get file_hash from url
             let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash());
-            let promise = self.fetch_texture_by_url(GString::from(new_file_hash), file_hash_godot);
+            let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
             self.cached.insert(
                 file_hash,
                 ContentEntry {
@@ -782,13 +780,13 @@ impl ContentProvider {
                 )
                 .await;
 
-                let godot_path = format!("res://content/{}", hash_id).to_godot();
+                let godot_path = format!("res://content/{}", hash_id);
 
                 let resource = ResourceLoader::singleton()
-                    .load(godot_path.clone())
+                    .load(&GString::from(godot_path.as_str()))
                     .unwrap();
 
-                let texture = resource.cast::<godot::engine::Texture2D>();
+                let texture = resource.cast::<godot::classes::Texture2D>();
                 let image = texture.get_image().unwrap();
 
                 let original_size = if let Some(original_size) = original_size {
@@ -867,7 +865,7 @@ impl ContentProvider {
         if file_hash.starts_with("http") {
             let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash());
             let promise =
-                self.fetch_texture_by_url_original(GString::from(new_file_hash), file_hash_godot);
+                self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
             self.cached.insert(
                 cache_key,
                 ContentEntry {
@@ -1130,7 +1128,7 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn duplicate_materials(&mut self, target_meshes: VariantArray) -> Gd<Promise> {
+    pub fn duplicate_materials(&mut self, target_meshes: VarArray) -> Gd<Promise> {
         let data = target_meshes
             .iter_shared()
             .map(|dict| {
@@ -1158,7 +1156,7 @@ impl ContentProvider {
                         continue;
                     };
 
-                    mesh.surface_set_material(i, new_material.cast::<Material>());
+                    mesh.surface_set_material(i, &new_material.cast::<Material>());
                 }
             }
 
@@ -1173,7 +1171,7 @@ impl ContentProvider {
     #[func]
     pub fn fetch_wearables(
         &mut self,
-        wearables: VariantArray,
+        wearables: VarArray,
         content_base_url: GString,
     ) -> Array<Gd<Promise>> {
         let mut promise_ids = HashSet::new();
@@ -1493,9 +1491,9 @@ impl ContentProvider {
         // 4. Load what was listed
         for hash_to_load in &hashes_to_load {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
-            let zip_path = format!("user://content/{}", hash_zip).to_godot();
-            let result = godot::engine::ProjectSettings::singleton()
-                .load_resource_pack_ex(zip_path.clone())
+            let zip_path = &format!("user://content/{}", hash_zip);
+            let result = godot::classes::ProjectSettings::singleton()
+                .load_resource_pack_ex(zip_path)
                 .replace_files(false)
                 .done();
 

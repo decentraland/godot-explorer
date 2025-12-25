@@ -68,9 +68,9 @@ impl RustHttpQueueRequester {
     pub fn request_json(
         &self,
         url: GString,
-        method: godot::engine::http_client::Method,
+        method: godot::classes::http_client::Method,
         body: GString,
-        headers: Dictionary,
+        headers: VarDictionary,
     ) -> Gd<Promise> {
         let body = match body.to_string().as_str() {
             "" => None,
@@ -83,9 +83,9 @@ impl RustHttpQueueRequester {
     pub fn request_json_bin(
         &self,
         url: GString,
-        method: godot::engine::http_client::Method,
+        method: godot::classes::http_client::Method,
         body: PackedByteArray,
-        headers: Dictionary,
+        headers: VarDictionary,
     ) -> Gd<Promise> {
         self._request_json(url, method, Some(body.to_vec()), headers)
     }
@@ -95,20 +95,20 @@ impl RustHttpQueueRequester {
     fn _request_json(
         &self,
         url: GString,
-        method: godot::engine::http_client::Method,
+        method: godot::classes::http_client::Method,
         body: Option<Vec<u8>>,
-        headers: Dictionary,
+        headers: VarDictionary,
     ) -> Gd<Promise> {
         // tracing::info!("Requesting json: {:?}", url.to_string());
 
         let method = match method {
-            godot::engine::http_client::Method::GET => http::Method::GET,
-            godot::engine::http_client::Method::POST => http::Method::POST,
-            godot::engine::http_client::Method::PUT => http::Method::PUT,
-            godot::engine::http_client::Method::DELETE => http::Method::DELETE,
-            godot::engine::http_client::Method::PATCH => http::Method::PATCH,
-            godot::engine::http_client::Method::HEAD => http::Method::HEAD,
-            godot::engine::http_client::Method::OPTIONS => http::Method::OPTIONS,
+            godot::classes::http_client::Method::GET => http::Method::GET,
+            godot::classes::http_client::Method::POST => http::Method::POST,
+            godot::classes::http_client::Method::PUT => http::Method::PUT,
+            godot::classes::http_client::Method::DELETE => http::Method::DELETE,
+            godot::classes::http_client::Method::PATCH => http::Method::PATCH,
+            godot::classes::http_client::Method::HEAD => http::Method::HEAD,
+            godot::classes::http_client::Method::OPTIONS => http::Method::OPTIONS,
             _ => http::Method::GET,
         };
 

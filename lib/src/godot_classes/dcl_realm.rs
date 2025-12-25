@@ -7,7 +7,7 @@ pub struct DclRealm {
     camera_mode: i32,
 
     #[var]
-    realm_about: Dictionary,
+    realm_about: VarDictionary,
     #[var]
     realm_url: GString,
     #[var]
@@ -19,9 +19,9 @@ pub struct DclRealm {
     #[var]
     network_id: i32,
     #[var]
-    realm_scene_urns: Array<Dictionary>,
+    realm_scene_urns: Array<VarDictionary>,
     #[var]
-    realm_global_scene_urns: Array<Dictionary>,
+    realm_global_scene_urns: Array<VarDictionary>,
     #[var]
     realm_city_loader_content_base_url: GString,
 

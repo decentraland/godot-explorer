@@ -1,4 +1,4 @@
-use godot::{obj::NewAlloc, prelude::Gd};
+use godot::{classes::Node, obj::NewAlloc, prelude::Gd};
 
 use crate::{
     dcl::{
@@ -34,10 +34,10 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if value.is_none() {
                 if let Some(mut node) = existing_ui_input
                     .base_control
-                    .get_node_or_null("input".into())
+                    .get_node_or_null("input")
                 {
                     node.queue_free();
-                    existing_ui_input.base_control.remove_child(node);
+                    existing_ui_input.base_control.remove_child(&node);
                 }
                 existing_ui_input.text_size = None;
                 continue;
@@ -46,24 +46,24 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let value = value.as_ref().unwrap();
             if let Some(node) = existing_ui_input
                 .base_control
-                .get_node_or_null("input".into())
+                .get_node_or_null("input")
             {
                 let mut existing_ui_input_control = node.cast::<DclUiInput>();
                 existing_ui_input_control.bind_mut().change_value(value);
                 existing_ui_input.text_size = Some(existing_ui_input_control.get_size());
             } else {
                 let mut node: Gd<DclUiInput> = DclUiInput::new_alloc();
-                node.set_name("input".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                node.set_name("input");
+                node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
 
                 node.bind_mut().set_dcl_entity_id(entity.as_i32());
 
                 existing_ui_input
                     .base_control
-                    .add_child(node.clone().upcast());
+                    .add_child(&node.clone().upcast::<Node>());
                 existing_ui_input
                     .base_control
-                    .move_child(node.clone().upcast(), 1);
+                    .move_child(&node.clone().upcast::<Node>(), 1);
 
                 node.bind_mut().change_value(value);
                 existing_ui_input.text_size = Some(node.get_size());

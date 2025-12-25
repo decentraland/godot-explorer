@@ -1,11 +1,11 @@
 use std::{cell::RefCell, rc::Rc, sync::atomic::Ordering};
 
 use godot::{
-    engine::{
+    classes::{
         control::{FocusMode, MouseFilter},
-        global::MouseButton,
         Control, IControl, InputEvent, InputEventMouseButton,
     },
+    global::MouseButton,
     prelude::*,
 };
 
@@ -126,10 +126,10 @@ impl DclUiControl {
             let callable_on_gui_input = self.base().callable("_on_gui_input").clone();
             if connect {
                 self.base_mut()
-                    .connect("gui_input".into(), callable_on_gui_input);
+                    .connect("gui_input", &callable_on_gui_input);
             } else {
                 self.base_mut()
-                    .disconnect("gui_input".into(), callable_on_gui_input);
+                    .disconnect("gui_input", &callable_on_gui_input);
             }
             self.update_mouse_filter();
         }

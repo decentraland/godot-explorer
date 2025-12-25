@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use godot::{
-    builtin::{meta::ToGodot, StringName},
-    engine::{
-        AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
-        AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer, AnimationTree,
-        IAnimationTree, Node3D,
+    builtin::StringName,
+    classes::{
+        Animation, AnimationNode, AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2,
+        AnimationNodeBlendTree, AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer,
+        AnimationRootNode, AnimationTree, IAnimationTree, Node, Node3D,
     },
+    meta::ToGodot,
     obj::{Base, Gd, NewGd, WithBaseField},
     prelude::{godot_api, GodotClass},
 };
@@ -45,7 +46,7 @@ impl IAnimationTree for MultipleAnimationController {
         // connect animation_finished
         let callable = self.base().callable("_animation_finished");
         self.base_mut()
-            .connect("animation_finished".into(), callable);
+            .connect("animation_finished", &callable);
     }
 }
 
@@ -90,7 +91,7 @@ impl MultipleAnimationController {
             }
 
             for (param, value) in [a.0, a.1].iter().flatten() {
-                self.base_mut().set(param.clone(), value.clone());
+                self.base_mut().set(param, value);
             }
         } else {
             tracing::error!("finished animation {} not found!", anim_name);
@@ -193,7 +194,7 @@ impl MultipleAnimationController {
         }
 
         for (param, value) in changes {
-            self.base_mut().set(param, value);
+            self.base_mut().set(&param, &value);
         }
     }
 
@@ -226,7 +227,7 @@ impl MultipleAnimationController {
                 ));
                 self.current_time.remove(&anim.clip);
             } else {
-                let time = self.base().get(anim_state.time_param_ref_str.clone());
+                let time = self.base().get(&anim_state.time_param_ref_str);
                 if let Ok(time) = time.try_to::<f32>() {
                     if time > 0.0 {
                         self.current_time.insert(anim.clip.clone(), time);
@@ -238,7 +239,7 @@ impl MultipleAnimationController {
         }
 
         for (param, value) in changes {
-            self.base_mut().set(param, value);
+            self.base_mut().set(&param, &value);
         }
 
         let playing_index_values = self
@@ -264,19 +265,19 @@ impl MultipleAnimationController {
             let anim_item = AnimationItem {
                 index,
                 value: (*anim).clone(),
-                anim_name_node: format!("anim_{}", index).into(),
-                blend_param_ref_str: format!("parameters/blend_{}/blend_amount", index).into(),
-                speed_param_ref_str: format!("parameters/sanim_{}/scale", index).into(),
-                time_param_ref_str: format!("parameters/tanim_{}/seek_request", index).into(),
+                anim_name_node: StringName::from(&format!("anim_{}", index)),
+                blend_param_ref_str: StringName::from(&format!("parameters/blend_{}/blend_amount", index)),
+                speed_param_ref_str: StringName::from(&format!("parameters/sanim_{}/scale", index)),
+                time_param_ref_str: StringName::from(&format!("parameters/tanim_{}/seek_request", index)),
             };
 
             self.base_mut().set(
-                anim_item.speed_param_ref_str.clone(),
-                anim.speed.unwrap_or(1.0).to_variant(),
+                &anim_item.speed_param_ref_str,
+                &anim.speed.unwrap_or(1.0).to_variant(),
             );
             self.base_mut().set(
-                anim_item.blend_param_ref_str.clone(),
-                anim.weight.unwrap_or(1.0).to_variant(),
+                &anim_item.blend_param_ref_str,
+                &anim.weight.unwrap_or(1.0).to_variant(),
             );
 
             let playing_time = if let Some(playing_time) = self.current_time.remove(&anim.clip) {
@@ -293,8 +294,8 @@ impl MultipleAnimationController {
             };
 
             self.base_mut().set(
-                anim_item.time_param_ref_str.clone(),
-                playing_time.to_variant(),
+                &anim_item.time_param_ref_str,
+                &playing_time.to_variant(),
             );
 
             let mut anim_node = self
@@ -302,28 +303,28 @@ impl MultipleAnimationController {
                 .get_tree_root()
                 .expect("Failed to get tree root")
                 .cast::<AnimationNodeBlendTree>()
-                .get_node(anim_item.anim_name_node.clone())
+                .get_node(&anim_item.anim_name_node)
                 .expect("Failed to get node")
                 .cast::<AnimationNodeAnimation>();
 
-            anim_node.set_animation(anim.clip.clone().into());
+            anim_node.set_animation(&StringName::from(&anim.clip));
 
             self.playing_anims.insert(anim.clip.clone(), anim_item);
         }
 
         // Finally set dummy animation to not used slots
         for anim in available_index {
-            let anim_name_node = format!("anim_{}", anim).into();
+            let anim_name_node = StringName::from(&format!("anim_{}", anim));
             let mut anim_node = self
                 .base()
                 .get_tree_root()
                 .expect("Failed to get tree root")
                 .cast::<AnimationNodeBlendTree>()
-                .get_node(anim_name_node)
+                .get_node(&anim_name_node)
                 .expect("Failed to get node")
                 .cast::<AnimationNodeAnimation>();
 
-            anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
+            anim_node.set_animation(DUMMY_ANIMATION_NAME);
         }
     }
 
@@ -336,7 +337,7 @@ impl MultipleAnimationController {
         // Ensure the tree root is set
         if self.base().get_tree_root().is_none() {
             self.base_mut()
-                .set_tree_root(AnimationNodeBlendTree::new_gd().upcast());
+                .set_tree_root(&AnimationNodeBlendTree::new_gd().upcast::<AnimationRootNode>());
         }
 
         let mut tree = self
@@ -352,71 +353,71 @@ impl MultipleAnimationController {
             let time_anim_node = AnimationNodeTimeSeek::new_gd();
             let speed_anim_node = AnimationNodeTimeScale::new_gd();
 
-            anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
-            dummy_anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
+            anim_node.set_animation(DUMMY_ANIMATION_NAME);
+            dummy_anim_node.set_animation(DUMMY_ANIMATION_NAME);
 
-            tree.add_node(format!("tanim_{}", i).into(), time_anim_node.upcast());
-            tree.add_node(format!("danim_{}", i).into(), dummy_anim_node.upcast());
-            tree.add_node(format!("sanim_{}", i).into(), speed_anim_node.upcast());
-            tree.add_node(format!("blend_{}", i).into(), blend_anim_node.upcast());
-            tree.add_node(format!("anim_{}", i).into(), anim_node.upcast());
+            tree.add_node(&format!("tanim_{}", i), &time_anim_node.upcast::<AnimationNode>());
+            tree.add_node(&format!("danim_{}", i), &dummy_anim_node.upcast::<AnimationNode>());
+            tree.add_node(&format!("sanim_{}", i), &speed_anim_node.upcast::<AnimationNode>());
+            tree.add_node(&format!("blend_{}", i), &blend_anim_node.upcast::<AnimationNode>());
+            tree.add_node(&format!("anim_{}", i), &anim_node.upcast::<AnimationNode>());
 
             tree.connect_node(
-                format!("tanim_{}", i).into(),
+                &format!("tanim_{}", i),
                 0,
-                format!("anim_{}", i).into(),
+                &format!("anim_{}", i),
             );
             tree.connect_node(
-                format!("sanim_{}", i).into(),
+                &format!("sanim_{}", i),
                 0,
-                format!("tanim_{}", i).into(),
+                &format!("tanim_{}", i),
             );
             tree.connect_node(
-                format!("blend_{}", i).into(),
+                &format!("blend_{}", i),
                 0,
-                format!("danim_{}", i).into(),
+                &format!("danim_{}", i),
             );
             tree.connect_node(
-                format!("blend_{}", i).into(),
+                &format!("blend_{}", i),
                 1,
-                format!("sanim_{}", i).into(),
+                &format!("sanim_{}", i),
             );
 
             self.base_mut().set(
-                format!("parameters/blend_{}/blend_amount", i).into(),
-                1_f32.to_variant(),
+                &format!("parameters/blend_{}/blend_amount", i),
+                &1_f32.to_variant(),
             );
 
             if i < n - 1 {
                 let add_node = AnimationNodeAdd2::new_gd();
-                tree.add_node(format!("add_{}", i).into(), add_node.upcast());
+                tree.add_node(&format!("add_{}", i), &add_node.upcast::<AnimationNode>());
             }
         }
 
         for i in first_new_index..(n - 1) {
             if i == 0 {
-                tree.connect_node("add_0".into(), 0, "blend_0".into());
-                tree.connect_node("add_0".into(), 1, "blend_1".into());
+                tree.connect_node("add_0", 0, "blend_0");
+                tree.connect_node("add_0", 1, "blend_1");
             } else {
                 tree.connect_node(
-                    format!("add_{}", i).into(),
+                    &format!("add_{}", i),
                     0,
-                    format!("add_{}", i - 1).into(),
+                    &format!("add_{}", i - 1),
                 );
                 tree.connect_node(
-                    format!("add_{}", i).into(),
+                    &format!("add_{}", i),
                     1,
-                    format!("blend_{}", i + 1).into(),
+                    &format!("blend_{}", i + 1),
                 );
             }
 
             self.base_mut().set(
-                format!("parameters/add_{}/add_amount", i).into(),
-                1_f32.to_variant(),
+                &format!("parameters/add_{}/add_amount", i),
+                &1_f32.to_variant(),
             );
         }
 
-        tree.connect_node("output".into(), 0, format!("add_{}", n - 2).into());
+        tree.connect_node("output", 0, &format!("add_{}", n - 2));
         self.current_capacity = n;
     }
 }
@@ -436,24 +437,24 @@ fn create_and_add_multiple_animation_controller(
             .iter()
             .map(|anim_clip| {
                 let anim = anim_player
-                    .get_animation(StringName::from(anim_clip))
+                    .get_animation(&StringName::from(anim_clip))
                     .unwrap();
                 let anim_duration = anim.get_length();
                 (anim_clip.to_string(), anim_duration)
             })
             .collect(),
     );
-    anim_builder.set_name(MULTIPLE_ANIMATION_CONTROLLER_NAME.into());
+    anim_builder.set_name(MULTIPLE_ANIMATION_CONTROLLER_NAME);
 
-    if !anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
+    if !anim_player.has_animation(DUMMY_ANIMATION_NAME) {
         anim_player
-            .get_animation_library("".into())
+            .get_animation_library("")
             .unwrap()
-            .add_animation(DUMMY_ANIMATION_NAME.into(), Default::default());
+            .add_animation(DUMMY_ANIMATION_NAME, &Animation::new_gd());
     }
 
-    gltf_node.add_child(anim_builder.clone().upcast());
-    anim_builder.set_animation_player("../AnimationPlayer".into());
+    gltf_node.add_child(&anim_builder.clone().upcast::<Node>());
+    anim_builder.set_animation_player("../AnimationPlayer");
 
     Some(anim_builder)
 }

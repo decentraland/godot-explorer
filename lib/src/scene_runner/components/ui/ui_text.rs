@@ -1,4 +1,4 @@
-use godot::{obj::NewAlloc, prelude::Gd};
+use godot::{classes::Node, obj::NewAlloc, prelude::Gd};
 
 use crate::{
     dcl::{
@@ -35,10 +35,10 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if value.is_none() {
                 if let Some(mut node) = existing_ui_text
                     .base_control
-                    .get_node_or_null("text".into())
+                    .get_node_or_null("text")
                 {
                     node.queue_free();
-                    existing_ui_text.base_control.remove_child(node);
+                    existing_ui_text.base_control.remove_child(&node);
                 }
                 existing_ui_text.text_size = None;
                 continue;
@@ -52,7 +52,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             let existing_node = existing_ui_text
                 .base_control
-                .get_node_or_null("text".into());
+                .get_node_or_null("text");
 
             // Determine if we need to swap the control type
             // Only swap when Modified and current node is not DclRichUiText
@@ -66,7 +66,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if should_swap_control {
                 if let Some(node) = existing_node.as_ref() {
                     node.clone().queue_free();
-                    existing_ui_text.base_control.remove_child(node.clone());
+                    existing_ui_text.base_control.remove_child(&node.clone());
                 }
             }
 
@@ -77,15 +77,15 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     #[allow(clippy::unnecessary_unwrap)] // clippy is not taking the two brnaches
                     let mut rich_text_control = if should_swap_control || existing_node.is_none() {
                         let mut new_node: Gd<DclRichUiText> = DclRichUiText::new_alloc();
-                        new_node.set_name("text".into());
+                        new_node.set_name("text");
                         new_node
-                            .set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                            .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
                         existing_ui_text
                             .base_control
-                            .add_child(new_node.clone().upcast());
+                            .add_child(&new_node.clone().upcast::<Node>());
                         existing_ui_text
                             .base_control
-                            .move_child(new_node.clone().upcast(), 1);
+                            .move_child(&new_node.clone().upcast::<Node>(), 1);
                         new_node
                     } else {
                         existing_node.unwrap().cast::<DclRichUiText>()
@@ -117,16 +117,16 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         None => {
                             // Create new DclUiText
                             let mut new_node: Gd<DclUiText> = DclUiText::new_alloc();
-                            new_node.set_name("text".into());
+                            new_node.set_name("text");
                             new_node.set_anchors_preset(
-                                godot::engine::control::LayoutPreset::FULL_RECT,
+                                godot::classes::control::LayoutPreset::FULL_RECT,
                             );
                             existing_ui_text
                                 .base_control
-                                .add_child(new_node.clone().upcast());
+                                .add_child(&new_node.clone().upcast::<Node>());
                             existing_ui_text
                                 .base_control
-                                .move_child(new_node.clone().upcast(), 1);
+                                .move_child(&new_node.clone().upcast::<Node>(), 1);
                             new_node.bind_mut().change_value(value);
                             existing_ui_text.text_size = Some(new_node.get_minimum_size());
                         }

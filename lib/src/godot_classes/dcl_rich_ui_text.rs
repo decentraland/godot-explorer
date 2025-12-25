@@ -1,9 +1,6 @@
 use godot::{
-    engine::{
-        control::LayoutPreset,
-        global::{HorizontalAlignment, VerticalAlignment},
-        IRichTextLabel, RichTextLabel,
-    },
+    classes::{control::LayoutPreset, IRichTextLabel, RichTextLabel},
+    global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
 
@@ -33,14 +30,14 @@ impl IRichTextLabel for DclRichUiText {
         let font = self.current_font;
 
         self.base_mut()
-            .add_theme_font_override("normal_font".into(), font.get_font_resource());
+            .add_theme_font_override("normal_font", &font.get_font_resource());
         self.base_mut()
-            .add_theme_font_override("bold_font".into(), font.get_font_bold_resource());
+            .add_theme_font_override("bold_font", &font.get_font_bold_resource());
         self.base_mut()
-            .add_theme_font_override("italics_font".into(), font.get_font_italic_resource());
+            .add_theme_font_override("italics_font", &font.get_font_italic_resource());
         self.base_mut().add_theme_font_override(
-            "bold_italics_font".into(),
-            font.get_font_bold_italic_resource(),
+            "bold_italics_font",
+            &font.get_font_bold_italic_resource(),
         );
         self.base_mut().set_use_bbcode(true);
 
@@ -66,19 +63,19 @@ impl IRichTextLabel for DclRichUiText {
 impl DclRichUiText {
     pub fn change_value(&mut self, new_value: &PbUiText, converted_text: &str) {
         self.base_mut().add_theme_font_size_override(
-            "normal_font_size".into(),
+            "normal_font_size",
             new_value.font_size.unwrap_or(10),
         );
         self.base_mut().add_theme_font_size_override(
-            "bold_font_size".into(),
+            "bold_font_size",
             new_value.font_size.unwrap_or(10),
         );
         self.base_mut().add_theme_font_size_override(
-            "italics_font_size".into(),
+            "italics_font_size",
             new_value.font_size.unwrap_or(10),
         );
         self.base_mut().add_theme_font_size_override(
-            "bold_italics_font_size".into(),
+            "bold_italics_font_size",
             new_value.font_size.unwrap_or(10),
         );
 
@@ -105,11 +102,11 @@ impl DclRichUiText {
         let outline_width = new_value.outline_width.unwrap_or(0.0) as i32;
 
         self.base_mut()
-            .add_theme_color_override("default_color".into(), font_color);
+            .add_theme_color_override("default_color", font_color);
         self.base_mut()
-            .add_theme_color_override("font_outline_color".into(), outline_font_color);
+            .add_theme_color_override("font_outline_color", outline_font_color);
         self.base_mut()
-            .add_theme_constant_override("outline_size".into(), outline_width);
+            .add_theme_constant_override("outline_size", outline_width);
 
         let text_align = new_value
             .text_align
@@ -168,45 +165,45 @@ impl DclRichUiText {
         // RichTextLabel supports both horizontal and vertical alignment
         // Use call() method to ensure compatibility across Godot versions
         self.base_mut().call(
-            "set_horizontal_alignment".into(),
+            "set_horizontal_alignment",
             &[godot::prelude::Variant::from(hor_align.ord())],
         );
         self.base_mut().call(
-            "set_vertical_alignment".into(),
+            "set_vertical_alignment",
             &[godot::prelude::Variant::from(vert_align.ord())],
         );
         self.base_mut().call(
-            "set_justification_flags".into(),
+            "set_justification_flags",
             &[godot::prelude::Variant::from(0)],
         );
 
         // Set justification flags to NONE (no text justification, just alignment)
         // self.base_mut().set_justification_flags(
-        //     godot::engine::text_server::JustificationFlag::JUSTIFICATION_NONE,
+        //     godot::classes::text_server::JustificationFlag::JUSTIFICATION_NONE,
         // );
 
         // Set the BBCode text with converted Unity tags to Godot BBCode
-        self.base_mut().set_text(converted_text.into());
+        self.base_mut().set_text(converted_text);
 
         if new_value.font() != self.current_font {
             self.current_font = new_value.font();
             let new_font_resource = self.current_font.get_font_resource();
             self.base_mut()
-                .add_theme_font_override("normal_font".into(), new_font_resource.clone());
+                .add_theme_font_override("normal_font", &new_font_resource.clone());
             self.base_mut()
-                .add_theme_font_override("bold_font".into(), new_font_resource.clone());
+                .add_theme_font_override("bold_font", &new_font_resource.clone());
             self.base_mut()
-                .add_theme_font_override("italics_font".into(), new_font_resource.clone());
+                .add_theme_font_override("italics_font", &new_font_resource.clone());
             self.base_mut()
-                .add_theme_font_override("bold_italics_font".into(), new_font_resource);
+                .add_theme_font_override("bold_italics_font", &new_font_resource);
         }
 
         if new_value.text_wrap_compat() == TextWrap::TwWrap {
             self.base_mut()
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::WORD_SMART);
+                .set_autowrap_mode(godot::classes::text_server::AutowrapMode::WORD_SMART);
         } else {
             self.base_mut()
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::OFF);
+                .set_autowrap_mode(godot::classes::text_server::AutowrapMode::OFF);
         }
 
         // Note: RichTextLabel has some differences from Label:

@@ -1,5 +1,6 @@
 use godot::{
-    engine::{performance::Monitor, Os, Performance},
+    classes::{performance::Monitor, Os, Performance},
+    obj::Singleton,
     prelude::*,
 };
 
@@ -95,7 +96,7 @@ impl INode for MemoryDebugger {
         if self.scene_manager_path.is_none() {
             if let Some(parent) = self.base().get_parent() {
                 // Try to find scene_runner as a sibling (both are children of Global)
-                let scene_runner_node = parent.get_node_or_null("scene_runner".into());
+                let scene_runner_node = parent.get_node_or_null("scene_runner");
                 if let Some(node) = scene_runner_node {
                     self.scene_manager_path = Some(node);
                     tracing::info!("MemoryDebugger: Automatically found scene_runner");

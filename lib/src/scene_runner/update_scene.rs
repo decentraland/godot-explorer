@@ -1,6 +1,6 @@
 use std::{cell::RefCell, time::Instant};
 
-use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
+use godot::{obj::Singleton, prelude::{varray, Callable, GString, ToGodot, Transform3D, VarArray}};
 
 use super::{
     components::{
@@ -166,12 +166,13 @@ pub fn _process_scene(
             SceneUpdateState::PrintLogs => {
                 // enable logs
                 for log in &scene.current_dirty.logs {
-                    let mut arguments = VariantArray::new();
-                    arguments.push((scene.scene_id.0).to_variant());
-                    arguments.push((log.level as i32).to_variant());
-                    arguments.push((log.timestamp as f32).to_variant());
-                    arguments.push(GString::from(&log.message).to_variant());
-                    console.callv(arguments);
+                    let arguments = varray![
+                        scene.scene_id.0,
+                        log.level as i32,
+                        log.timestamp as f32,
+                        log.message.to_godot()
+                    ];
+                    console.callv(&arguments);
                 }
                 false
             }
@@ -294,7 +295,7 @@ pub fn _process_scene(
                     scene
                         .godot_dcl_scene
                         .root_node_3d
-                        .call_deferred("emit_signal".into(), &["tree_changed".to_variant()]);
+                        .call_deferred("emit_signal", &["tree_changed".to_variant()]);
                     scene.godot_dcl_scene.hierarchy_changed_3d = false;
                 }
 
@@ -353,8 +354,8 @@ pub fn _process_scene(
                                 .map(|v| v.is_pointer_locked)
                         });
 
-                let is_pointer_locked = godot::prelude::Input::singleton().get_mouse_mode()
-                    == godot::engine::input::MouseMode::CAPTURED;
+                let is_pointer_locked = godot::classes::Input::singleton().get_mouse_mode()
+                    == godot::classes::input::MouseMode::CAPTURED;
                 if maybe_is_pointer_locked != Some(is_pointer_locked) {
                     let pointer_lock_component = PbPointerLock { is_pointer_locked };
                     SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)

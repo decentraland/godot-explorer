@@ -1,6 +1,7 @@
 use std::io::Read;
 
 use anyhow::anyhow;
+use godot::{classes::Os, obj::Singleton};
 
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
@@ -99,7 +100,7 @@ pub async fn prepare_deploy_profile(
         if let Some(snapshots) = profile.content.avatar.snapshots {
             let content_folder = format!(
                 "{}/content/",
-                godot::engine::Os::singleton().get_user_data_dir()
+                Os::singleton().get_user_data_dir()
             );
             let body_path = format!("{}{}", content_folder, snapshots.body);
             let face_path = format!("{}{}", content_folder, snapshots.face256);

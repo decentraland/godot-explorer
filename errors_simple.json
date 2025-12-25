@@ -1,0 +1,677 @@
+[
+  {
+    "index": 0,
+    "type": "warning",
+    "code": "",
+    "description": "dclgodot@0.43.0: Using commit hash: 9808e88 (from git log)",
+    "file": "",
+    "line": 0,
+    "column": 0
+  },
+  {
+    "index": 1,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/billboard.rs",
+    "line": 94,
+    "column": 77
+  },
+  {
+    "index": 2,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/billboard.rs",
+    "line": 108,
+    "column": 77
+  },
+  {
+    "index": 3,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/ui/scene_ui.rs",
+    "line": 121,
+    "column": 77
+  },
+  {
+    "index": 4,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/ui/scene_ui.rs",
+    "line": 310,
+    "column": 56
+  },
+  {
+    "index": 5,
+    "type": "warning",
+    "code": "",
+    "description": "unused import: `Dictionary`",
+    "file": "src/content/gltf.rs",
+    "line": 4,
+    "column": 15
+  },
+  {
+    "index": 6,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/auth/dcl_player_identity.rs",
+    "line": 234,
+    "column": 45
+  },
+  {
+    "index": 7,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/auth/dcl_player_identity.rs",
+    "line": 277,
+    "column": 48
+  },
+  {
+    "index": 8,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/auth/dcl_player_identity.rs",
+    "line": 234,
+    "column": 45
+  },
+  {
+    "index": 9,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/avatar_type.rs",
+    "line": 217,
+    "column": 46
+  },
+  {
+    "index": 10,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/avatar_type.rs",
+    "line": 229,
+    "column": 42
+  },
+  {
+    "index": 11,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/avatar_type.rs",
+    "line": 232,
+    "column": 20
+  },
+  {
+    "index": 12,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 2,
+    "column": 22
+  },
+  {
+    "index": 13,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 115,
+    "column": 46
+  },
+  {
+    "index": 14,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 121,
+    "column": 42
+  },
+  {
+    "index": 15,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 124,
+    "column": 20
+  },
+  {
+    "index": 16,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/content/content_mapping.rs",
+    "line": 65,
+    "column": 45
+  },
+  {
+    "index": 17,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/content/content_provider.rs",
+    "line": 1133,
+    "column": 42
+  },
+  {
+    "index": 18,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/content/gltf.rs",
+    "line": 4,
+    "column": 15
+  },
+  {
+    "index": 19,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs",
+    "line": 10,
+    "column": 28
+  },
+  {
+    "index": 20,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs",
+    "line": 14,
+    "column": 23
+  },
+  {
+    "index": 21,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/realm/scene_entity_coordinator.rs",
+    "line": 696,
+    "column": 41
+  },
+  {
+    "index": 22,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 18,
+    "column": 45
+  },
+  {
+    "index": 23,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 22,
+    "column": 45
+  },
+  {
+    "index": 24,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 34,
+    "column": 45
+  },
+  {
+    "index": 25,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/pointer_events.rs",
+    "line": 33,
+    "column": 42
+  },
+  {
+    "index": 26,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated method `godot::prelude::GString::hash`: renamed to `hash_u32`",
+    "file": "src/content/content_provider.rs",
+    "line": 753,
+    "column": 72
+  },
+  {
+    "index": 27,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated method `godot::prelude::GString::hash`: renamed to `hash_u32`",
+    "file": "src/content/content_provider.rs",
+    "line": 866,
+    "column": 81
+  },
+  {
+    "index": 28,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 125,
+    "column": 66
+  },
+  {
+    "index": 29,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/camera_mode_area.rs",
+    "line": 72,
+    "column": 68
+  },
+  {
+    "index": 30,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/material.rs",
+    "line": 186,
+    "column": 84
+  },
+  {
+    "index": 31,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/material.rs",
+    "line": 305,
+    "column": 59
+  },
+  {
+    "index": 32,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Mesh>>>` parameter",
+    "file": "src/scene_runner/components/mesh_renderer.rs",
+    "line": 67,
+    "column": 36
+  },
+  {
+    "index": 33,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/mesh_renderer.rs",
+    "line": 106,
+    "column": 62
+  },
+  {
+    "index": 34,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/mesh_renderer.rs",
+    "line": 126,
+    "column": 57
+  },
+  {
+    "index": 35,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/nft_shape.rs",
+    "line": 57,
+    "column": 61
+  },
+  {
+    "index": 36,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/nft_shape.rs",
+    "line": 62,
+    "column": 38
+  },
+  {
+    "index": 37,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Rid as ToGodot>::Pass == ByRef`",
+    "file": "src/scene_runner/components/raycast.rs",
+    "line": 189,
+    "column": 26
+  },
+  {
+    "index": 38,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<GString as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/components/text_shape.rs",
+    "line": 86,
+    "column": 35
+  },
+  {
+    "index": 39,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::prelude::Node>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/transform_and_parent.rs",
+    "line": 147,
+    "column": 34
+  },
+  {
+    "index": 40,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::prelude::Node>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/transform_and_parent.rs",
+    "line": 168,
+    "column": 38
+  },
+  {
+    "index": 41,
+    "type": "error",
+    "code": "E0277",
+    "description": "passing type `std::result::Result<godot::prelude::Variant, _>` to Godot requires `ToGodot` trait, which is usually provided by the library",
+    "file": "src/scene_runner/components/trigger_area.rs",
+    "line": 295,
+    "column": 5
+  },
+  {
+    "index": 42,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_background.rs",
+    "line": 65,
+    "column": 33
+  },
+  {
+    "index": 43,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_dropdown.rs",
+    "line": 65,
+    "column": 33
+  },
+  {
+    "index": 44,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_input.rs",
+    "line": 66,
+    "column": 33
+  },
+  {
+    "index": 45,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_text.rs",
+    "line": 88,
+    "column": 41
+  },
+  {
+    "index": 46,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_text.rs",
+    "line": 129,
+    "column": 45
+  },
+  {
+    "index": 47,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 298,
+    "column": 51
+  },
+  {
+    "index": 48,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 493,
+    "column": 88
+  },
+  {
+    "index": 49,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 495,
+    "column": 27
+  },
+  {
+    "index": 50,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 496,
+    "column": 24
+  },
+  {
+    "index": 51,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 500,
+    "column": 75
+  },
+  {
+    "index": 52,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 501,
+    "column": 24
+  },
+  {
+    "index": 53,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/deleted_entities.rs",
+    "line": 21,
+    "column": 34
+  },
+  {
+    "index": 54,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/godot_dcl_scene.rs",
+    "line": 238,
+    "column": 62
+  },
+  {
+    "index": 55,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/godot_dcl_scene.rs",
+    "line": 281,
+    "column": 62
+  },
+  {
+    "index": 56,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<StringName as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/input.rs",
+    "line": 52,
+    "column": 61
+  },
+  {
+    "index": 57,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/object_pool.rs",
+    "line": 104,
+    "column": 47
+  },
+  {
+    "index": 58,
+    "type": "error",
+    "code": "E0277",
+    "description": "the trait bound `godot::prelude::GString: From<&&str>` is not satisfied",
+    "file": "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+    "line": 66,
+    "column": 14
+  },
+  {
+    "index": 59,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+    "line": 215,
+    "column": 19
+  },
+  {
+    "index": 60,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+    "line": 235,
+    "column": 46
+  },
+  {
+    "index": 61,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/rpc_calls/mod.rs",
+    "line": 108,
+    "column": 46
+  },
+  {
+    "index": 62,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/scene.rs",
+    "line": 431,
+    "column": 57
+  },
+  {
+    "index": 63,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/scene.rs",
+    "line": 432,
+    "column": 58
+  },
+  {
+    "index": 64,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/scene.rs",
+    "line": 433,
+    "column": 61
+  },
+  {
+    "index": 65,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/scene.rs",
+    "line": 455,
+    "column": 42
+  },
+  {
+    "index": 66,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/scene_manager.rs",
+    "line": 1234,
+    "column": 66
+  },
+  {
+    "index": 67,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 170,
+    "column": 36
+  },
+  {
+    "index": 68,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 171,
+    "column": 36
+  },
+  {
+    "index": 69,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 172,
+    "column": 36
+  },
+  {
+    "index": 70,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 173,
+    "column": 36
+  },
+  {
+    "index": 71,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 174,
+    "column": 35
+  },
+  {
+    "index": 72,
+    "type": "warning",
+    "code": "",
+    "description": "`dclgodot` (lib) generated 30 warnings (7 duplicates)",
+    "file": "",
+    "line": 0,
+    "column": 0
+  },
+  {
+    "index": 73,
+    "type": "warning",
+    "code": "",
+    "description": "dclgodot@0.43.0: Using commit hash: 9808e88 (from git log)",
+    "file": "",
+    "line": 0,
+    "column": 0
+  },
+  {
+    "index": 74,
+    "type": "error",
+    "code": "",
+    "description": "could not compile `dclgodot` (lib) due to 48 previous errors; 30 warnings emitted",
+    "file": "",
+    "line": 0,
+    "column": 0
+  }
+]

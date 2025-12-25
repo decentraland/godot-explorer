@@ -5,7 +5,7 @@ use std::{
 };
 
 use godot::{
-    engine::text_server::{JustificationFlag, LineBreakFlag},
+    classes::{text_server::{JustificationFlag, LineBreakFlag}, Node},
     obj::Gd,
 };
 
@@ -60,8 +60,8 @@ const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
 ];
 
 enum ContextNode {
-    UiText(bool, Gd<godot::engine::Label>),
-    UiRichText(bool, Gd<godot::engine::RichTextLabel>),
+    UiText(bool, Gd<godot::classes::Label>),
+    UiRichText(bool, Gd<godot::classes::RichTextLabel>),
 }
 
 fn update_layout(
@@ -118,7 +118,7 @@ fn update_layout(
                     ui_node
                         .base_control
                         .clone()
-                        .reparent(new_parent.base_control.clone().upcast());
+                        .reparent(&new_parent.base_control.clone().upcast::<Node>());
                 }
             }
 
@@ -128,7 +128,7 @@ fn update_layout(
 
             if let Some(ui_text_control) = ui_node
                 .base_control
-                .try_get_node_as::<godot::engine::Label>("text")
+                .try_get_node_as::<godot::classes::Label>("text")
             {
                 let text_wrapping = if let Some(ui_text) = ui_text_components
                     .get(entity)
@@ -147,7 +147,7 @@ fn update_layout(
 
             if let Some(ui_text_control) = ui_node
                 .base_control
-                .try_get_node_as::<godot::engine::RichTextLabel>("text")
+                .try_get_node_as::<godot::classes::RichTextLabel>("text")
             {
                 let text_wrapping = if let Some(ui_text) = ui_text_components
                     .get(entity)
@@ -191,7 +191,7 @@ fn update_layout(
             size,
             |size, available, _node_id, node_context, _style| match node_context {
                 Some(ContextNode::UiText(wrapping, text_node)) => {
-                    let Some(font) = text_node.get_theme_font("font".into()) else {
+                    let Some(font) = text_node.get_theme_font("font") else {
                         return taffy::Size::ZERO;
                     };
                     let line_width = match size.width {
@@ -203,9 +203,10 @@ fn update_layout(
                         },
                     };
 
-                    let font_size = text_node.get_theme_font_size("font_size".into());
+                    let font_size = text_node.get_theme_font_size("font_size");
+                    let text = text_node.get_text();
                     let font_rect = if *wrapping {
-                        font.get_multiline_string_size_ex(text_node.get_text())
+                        font.get_multiline_string_size_ex(&text)
                             .max_lines(-1)
                             .width(line_width)
                             .font_size(font_size)
@@ -214,7 +215,7 @@ fn update_layout(
                             .brk_flags(LineBreakFlag::WORD_BOUND | LineBreakFlag::MANDATORY)
                             .done()
                     } else {
-                        font.get_string_size_ex(text_node.get_text())
+                        font.get_string_size_ex(&text)
                             .width(line_width)
                             .alignment(text_node.get_horizontal_alignment())
                             .justification_flags(JustificationFlag::NONE)
@@ -243,7 +244,7 @@ fn update_layout(
                     taffy::Size { width, height }
                 }
                 Some(ContextNode::UiRichText(wrapping, rich_text_node)) => {
-                    let Some(font) = rich_text_node.get_theme_font("normal_font".into()) else {
+                    let Some(font) = rich_text_node.get_theme_font("normal_font") else {
                         return taffy::Size::ZERO;
                     };
                     let line_width = match size.width {
@@ -255,9 +256,10 @@ fn update_layout(
                         },
                     };
 
-                    let font_size = rich_text_node.get_theme_font_size("normal_font_size".into());
+                    let font_size = rich_text_node.get_theme_font_size("normal_font_size");
+                    let rich_text = rich_text_node.get_text();
                     let font_rect = if *wrapping {
-                        font.get_multiline_string_size_ex(rich_text_node.get_text())
+                        font.get_multiline_string_size_ex(&rich_text)
                             .max_lines(-1)
                             .width(line_width)
                             .font_size(font_size)
@@ -265,7 +267,7 @@ fn update_layout(
                             .brk_flags(LineBreakFlag::WORD_BOUND | LineBreakFlag::MANDATORY)
                             .done()
                     } else {
-                        font.get_string_size_ex(rich_text_node.get_text())
+                        font.get_string_size_ex(&rich_text)
                             .width(line_width)
                             .justification_flags(JustificationFlag::NONE)
                             .font_size(font_size)
@@ -305,7 +307,7 @@ fn update_layout(
 
         if let Some(parent) = godot_dcl_scene.get_node_or_null_ui(&ui_node.ui_transform.parent) {
             parent.base_control.clone().move_child(
-                ui_node.base_control.clone().upcast(),
+                &ui_node.base_control.clone().upcast::<Node>(),
                 parent_node.1 + parent.control_offset(),
             );
             parent_node.1 += 1;

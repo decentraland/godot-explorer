@@ -1,4 +1,4 @@
-use godot::{engine::ImageTexture, prelude::*};
+use godot::{classes::{AudioStreamPlayer, ImageTexture}, prelude::*};
 
 use super::{AudioSink, VideoSink};
 

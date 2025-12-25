@@ -1,0 +1,1542 @@
+[
+  {
+    "index": 0,
+    "type": "warning",
+    "code": "",
+    "description": "dclgodot@0.43.0: Using commit hash: 9808e88 (from git log)",
+    "file": "",
+    "line": 0,
+    "column": 0,
+    "notes": [],
+    "helps": [],
+    "code_context": [],
+    "raw_block": "warning: dclgodot@0.43.0: Using commit hash: 9808e88 (from git log)\n   Compiling dclgodot v0.43.0 (/Users/leandro/github/godot-explorer/lib)"
+  },
+  {
+    "index": 1,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/billboard.rs",
+    "line": 94,
+    "column": 77,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      ".add_child(&scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());",
+      "^^^^ not found in this scope"
+    ],
+    "raw_block": "error[E0412]: cannot find type `Node` in this scope\n  --> src/scene_runner/components/billboard.rs:94:77\n   |\n94 |             .add_child(&scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());\n   |                                                                             ^^^^ not found in this scope\n   |\nhelp: consider importing one of these structs\n   |\n71 +     use crate::Node;\n   |\n71 +     use godot::classes::Node;\n   |"
+  },
+  {
+    "index": 2,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/billboard.rs",
+    "line": 108,
+    "column": 77,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      ".add_child(&scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());",
+      "^^^^ not found in this scope"
+    ],
+    "raw_block": "error[E0412]: cannot find type `Node` in this scope\n   --> src/scene_runner/components/billboard.rs:108:77\n    |\n108 |             .add_child(&scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());\n    |                                                                             ^^^^ not found in this scope\n    |\nhelp: consider importing one of these structs\n    |\n 71 +     use crate::Node;\n    |\n 71 +     use godot::classes::Node;\n    |"
+  },
+  {
+    "index": 3,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/ui/scene_ui.rs",
+    "line": 121,
+    "column": 77,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      ".reparent(&new_parent.base_control.clone().upcast::<Node>());",
+      "^^^^ not found in this scope"
+    ],
+    "raw_block": "error[E0412]: cannot find type `Node` in this scope\n   --> src/scene_runner/components/ui/scene_ui.rs:121:77\n    |\n121 |                         .reparent(&new_parent.base_control.clone().upcast::<Node>());\n    |                                                                             ^^^^ not found in this scope\n    |\nhelp: consider importing one of these structs\n    |\n  1 + use crate::Node;\n    |\n  1 + use godot::classes::Node;\n    |"
+  },
+  {
+    "index": 4,
+    "type": "error",
+    "code": "E0412",
+    "description": "cannot find type `Node` in this scope",
+    "file": "src/scene_runner/components/ui/scene_ui.rs",
+    "line": 310,
+    "column": 56,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "&ui_node.base_control.clone().upcast::<Node>(),",
+      "^^^^ not found in this scope"
+    ],
+    "raw_block": "error[E0412]: cannot find type `Node` in this scope\n   --> src/scene_runner/components/ui/scene_ui.rs:310:56\n    |\n310 |                 &ui_node.base_control.clone().upcast::<Node>(),\n    |                                                        ^^^^ not found in this scope\n    |\nhelp: consider importing one of these structs\n    |\n  1 + use crate::Node;\n    |\n  1 + use godot::classes::Node;\n    |"
+  },
+  {
+    "index": 5,
+    "type": "warning",
+    "code": "",
+    "description": "unused import: `Dictionary`",
+    "file": "src/content/gltf.rs",
+    "line": 4,
+    "column": 15,
+    "notes": [
+      "`#[warn(unused_imports)]` on by default"
+    ],
+    "helps": [],
+    "code_context": [
+      "builtin::{Dictionary, GString, VarArray, Variant},",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: unused import: `Dictionary`\n --> src/content/gltf.rs:4:15\n  |\n4 |     builtin::{Dictionary, GString, VarArray, Variant},\n  |               ^^^^^^^^^^\n  |\n  = note: `#[warn(unused_imports)]` on by default"
+  },
+  {
+    "index": 6,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/auth/dcl_player_identity.rs",
+    "line": 234,
+    "column": 45,
+    "notes": [
+      "`#[warn(deprecated)]` on by default"
+    ],
+    "helps": [],
+    "code_context": [
+      "fn try_recover_account(&mut self, dict: Dictionary) -> bool {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/auth/dcl_player_identity.rs:234:45\n    |\n234 |     fn try_recover_account(&mut self, dict: Dictionary) -> bool {\n    |                                             ^^^^^^^^^^\n    |\n    = note: `#[warn(deprecated)]` on by default"
+  },
+  {
+    "index": 7,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/auth/dcl_player_identity.rs",
+    "line": 277,
+    "column": 48,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "fn get_recover_account_to(&self, mut dict: Dictionary) -> bool {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/auth/dcl_player_identity.rs:277:48\n    |\n277 |     fn get_recover_account_to(&self, mut dict: Dictionary) -> bool {\n    |                                                ^^^^^^^^^^"
+  },
+  {
+    "index": 8,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/auth/dcl_player_identity.rs",
+    "line": 234,
+    "column": 45,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "fn try_recover_account(&mut self, dict: Dictionary) -> bool {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/auth/dcl_player_identity.rs:234:45\n    |\n234 |     fn try_recover_account(&mut self, dict: Dictionary) -> bool {\n    |                                             ^^^^^^^^^^"
+  },
+  {
+    "index": 9,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/avatar_type.rs",
+    "line": 217,
+    "column": 46,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclAvatarWireFormat> {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/avatars/avatar_type.rs:217:46\n    |\n217 |     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclAvatarWireFormat> {\n    |                                              ^^^^^^^^^^"
+  },
+  {
+    "index": 10,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/avatar_type.rs",
+    "line": 229,
+    "column": 42,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "pub fn to_godot_dictionary(&self) -> Dictionary {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/avatars/avatar_type.rs:229:42\n    |\n229 |     pub fn to_godot_dictionary(&self) -> Dictionary {\n    |                                          ^^^^^^^^^^"
+  },
+  {
+    "index": 11,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/avatar_type.rs",
+    "line": 232,
+    "column": 20,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "value.to::<Dictionary>()",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/avatars/avatar_type.rs:232:20\n    |\n232 |         value.to::<Dictionary>()\n    |                    ^^^^^^^^^^"
+  },
+  {
+    "index": 12,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 2,
+    "column": 22,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "builtin::{Array, Dictionary, GString},",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n --> src/avatars/dcl_user_profile.rs:2:22\n  |\n2 |     builtin::{Array, Dictionary, GString},\n  |                      ^^^^^^^^^^"
+  },
+  {
+    "index": 13,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 115,
+    "column": 46,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclUserProfile> {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/avatars/dcl_user_profile.rs:115:46\n    |\n115 |     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclUserProfile> {\n    |                                              ^^^^^^^^^^"
+  },
+  {
+    "index": 14,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 121,
+    "column": 42,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "pub fn to_godot_dictionary(&self) -> Dictionary {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/avatars/dcl_user_profile.rs:121:42\n    |\n121 |     pub fn to_godot_dictionary(&self) -> Dictionary {\n    |                                          ^^^^^^^^^^"
+  },
+  {
+    "index": 15,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/avatars/dcl_user_profile.rs",
+    "line": 124,
+    "column": 20,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "value.to::<Dictionary>()",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/avatars/dcl_user_profile.rs:124:20\n    |\n124 |         value.to::<Dictionary>()\n    |                    ^^^^^^^^^^"
+  },
+  {
+    "index": 16,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/content/content_mapping.rs",
+    "line": 65,
+    "column": 45,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "fn from_values(base_url: GString, dict: Dictionary) -> Gd<DclContentMappingAndUrl> {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n  --> src/content/content_mapping.rs:65:45\n   |\n65 |     fn from_values(base_url: GString, dict: Dictionary) -> Gd<DclContentMappingAndUrl> {\n   |                                             ^^^^^^^^^^"
+  },
+  {
+    "index": 17,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/content/content_provider.rs",
+    "line": 1133,
+    "column": 42,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "let dict = dict.try_to::<Dictionary>().ok()?;",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n    --> src/content/content_provider.rs:1133:42\n     |\n1133 |                 let dict = dict.try_to::<Dictionary>().ok()?;\n     |                                          ^^^^^^^^^^"
+  },
+  {
+    "index": 18,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/content/gltf.rs",
+    "line": 4,
+    "column": 15,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "builtin::{Dictionary, GString, VarArray, Variant},",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n --> src/content/gltf.rs:4:15\n  |\n4 |     builtin::{Dictionary, GString, VarArray, Variant},\n  |               ^^^^^^^^^^"
+  },
+  {
+    "index": 19,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs",
+    "line": 10,
+    "column": 28,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "let via = via.to::<Dictionary>();",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n  --> src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs:10:28\n   |\n10 |         let via = via.to::<Dictionary>();\n   |                            ^^^^^^^^^^"
+  },
+  {
+    "index": 20,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs",
+    "line": 14,
+    "column": 23,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      ".to::<Dictionary>()",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n  --> src/godot_classes/rpc_sender/take_and_compare_snapshot_response.rs:14:23\n   |\n14 |                 .to::<Dictionary>()\n   |                       ^^^^^^^^^^"
+  },
+  {
+    "index": 21,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/realm/scene_entity_coordinator.rs",
+    "line": 696,
+    "column": 41,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "pub fn get_desired_scenes(&self) -> Dictionary {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n   --> src/realm/scene_entity_coordinator.rs:696:41\n    |\n696 |     pub fn get_desired_scenes(&self) -> Dictionary {\n    |                                         ^^^^^^^^^^"
+  },
+  {
+    "index": 22,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 18,
+    "column": 45,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "fn to_dictionary_color_object(&self) -> Dictionary;",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n  --> src/scene_runner/components/avatar_shape.rs:18:45\n   |\n18 |     fn to_dictionary_color_object(&self) -> Dictionary;\n   |                                             ^^^^^^^^^^"
+  },
+  {
+    "index": 23,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 22,
+    "column": 45,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "fn to_dictionary_color_object(&self) -> Dictionary {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n  --> src/scene_runner/components/avatar_shape.rs:22:45\n   |\n22 |     fn to_dictionary_color_object(&self) -> Dictionary {\n   |                                             ^^^^^^^^^^"
+  },
+  {
+    "index": 24,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 34,
+    "column": 45,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "fn to_dictionary_color_object(&self) -> Dictionary {",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n  --> src/scene_runner/components/avatar_shape.rs:34:45\n   |\n34 |     fn to_dictionary_color_object(&self) -> Dictionary {\n   |                                             ^^^^^^^^^^"
+  },
+  {
+    "index": 25,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.",
+    "file": "src/scene_runner/components/pointer_events.rs",
+    "line": 33,
+    "column": 42,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "raycast_result: &godot::prelude::Dictionary,",
+      "^^^^^^^^^^"
+    ],
+    "raw_block": "warning: use of deprecated type alias `godot::prelude::Dictionary`: Renamed to `VarDictionary`; `Dictionary` will be reserved for typed dictionaries in the future.\n  --> src/scene_runner/components/pointer_events.rs:33:42\n   |\n33 |         raycast_result: &godot::prelude::Dictionary,\n   |                                          ^^^^^^^^^^"
+  },
+  {
+    "index": 26,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated method `godot::prelude::GString::hash`: renamed to `hash_u32`",
+    "file": "src/content/content_provider.rs",
+    "line": 753,
+    "column": 72,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "let new_file_hash = format!(\"hashed_{:x}\", file_hash_godot.hash());",
+      "^^^^"
+    ],
+    "raw_block": "warning: use of deprecated method `godot::prelude::GString::hash`: renamed to `hash_u32`\n   --> src/content/content_provider.rs:753:72\n    |\n753 |             let new_file_hash = format!(\"hashed_{:x}\", file_hash_godot.hash());\n    |                                                                        ^^^^"
+  },
+  {
+    "index": 27,
+    "type": "warning",
+    "code": "",
+    "description": "use of deprecated method `godot::prelude::GString::hash`: renamed to `hash_u32`",
+    "file": "src/content/content_provider.rs",
+    "line": 866,
+    "column": 81,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "let new_file_hash = format!(\"hashed_{:x}_original\", file_hash_godot.hash());",
+      "^^^^"
+    ],
+    "raw_block": "warning: use of deprecated method `godot::prelude::GString::hash`: renamed to `hash_u32`\n   --> src/content/content_provider.rs:866:81\n    |\n866 |             let new_file_hash = format!(\"hashed_{:x}_original\", file_hash_godot.hash());\n    |                                                                                 ^^^^"
+  },
+  {
+    "index": 28,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/components/avatar_shape.rs",
+    "line": 125,
+    "column": 66,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "new_avatar_shape.set(&\"skip_process\".into(), true.to_variant());",
+      "---                         ^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`",
+      "|",
+      "arguments to this method are incorrect",
+      "pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {",
+      "^^^",
+      "new_avatar_shape.set(&\"skip_process\".into(), &true.to_variant());",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/components/avatar_shape.rs:125:66\n    |\n125 |                     new_avatar_shape.set(&\"skip_process\".into(), true.to_variant());\n    |                                      ---                         ^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`\n    |                                      |\n    |                                      arguments to this method are incorrect\n    |\nnote: method defined here\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:171:16\n    |\n171 |         pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {\n    |                ^^^\nhelp: consider borrowing here\n    |\n125 |                     new_avatar_shape.set(&\"skip_process\".into(), &true.to_variant());\n    |                                                                  +"
+  },
+  {
+    "index": 29,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/camera_mode_area.rs",
+    "line": 72,
+    "column": 68,
+    "notes": [
+      "this error originates in the macro `::godot::private::class_macros::inherit_from_Area3D__ensure_class_exists` which comes from the expansion of the derive macro `GodotClass` (in Nightly builds, run with -Z macro-backtrace for more info)"
+    ],
+    "helps": [],
+    "code_context": [
+      "node_3d.add_child(&camera_mode_area_3d.clone().upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "#[derive(GodotClass)]",
+      "^^^^^^^^^^",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "node_3d.add_child(&camera_mode_area_3d.clone().upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/components/camera_mode_area.rs:72:68\n    |\n 72 |                     node_3d.add_child(&camera_mode_area_3d.clone().upcast());\n    |                                                                    ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\nnote: multiple `impl`s satisfying `DclCameraModeArea3D: Inherits<_>` found\n   --> src/godot_classes/dcl_camera_mode_area_3d.rs:4:10\n    |\n  4 | #[derive(GodotClass)]\n    |          ^^^^^^^^^^\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\n    = note: this error originates in the macro `::godot::private::class_macros::inherit_from_Area3D__ensure_class_exists` which comes from the expansion of the derive macro `GodotClass` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: consider specifying the generic argument\n    |\n 72 |                     node_3d.add_child(&camera_mode_area_3d.clone().upcast::<Base>());\n    |                                                                          ++++++++"
+  },
+  {
+    "index": 30,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/material.rs",
+    "line": 186,
+    "column": 84,
+    "notes": [
+      "multiple `impl`s satisfying `godot::classes::StandardMaterial3D: Inherits<_>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "mesh_renderer.set_surface_override_material(0, &godot_material.upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "mesh_renderer.set_surface_override_material(0, &godot_material.upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/components/material.rs:186:84\n    |\n186 |                     mesh_renderer.set_surface_override_material(0, &godot_material.upcast());\n    |                                                                                    ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\n    = note: multiple `impl`s satisfying `godot::classes::StandardMaterial3D: Inherits<_>` found in the `godot_core` crate:\n            - impl Inherits<godot::classes::BaseMaterial3D> for godot::classes::StandardMaterial3D;\n            - impl Inherits<godot::classes::Material> for godot::classes::StandardMaterial3D;\n            - impl Inherits<godot::prelude::Object> for godot::classes::StandardMaterial3D;\n            - impl Inherits<godot::prelude::RefCounted> for godot::classes::StandardMaterial3D;\n            - impl Inherits<godot::prelude::Resource> for godot::classes::StandardMaterial3D;\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\nhelp: consider specifying the generic argument\n    |\n186 |                     mesh_renderer.set_surface_override_material(0, &godot_material.upcast::<Base>());\n    |                                                                                          ++++++++"
+  },
+  {
+    "index": 31,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/material.rs",
+    "line": 305,
+    "column": 59,
+    "notes": [
+      "multiple `impl`s satisfying `godot::classes::Texture2D: Inherits<_>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "material.set_texture(param, &resource.upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "material.set_texture(param, &resource.upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/components/material.rs:305:59\n    |\n305 |                     material.set_texture(param, &resource.upcast());\n    |                                                           ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\n    = note: multiple `impl`s satisfying `godot::classes::Texture2D: Inherits<_>` found in the `godot_core` crate:\n            - impl Inherits<godot::classes::Texture> for godot::classes::Texture2D;\n            - impl Inherits<godot::prelude::Object> for godot::classes::Texture2D;\n            - impl Inherits<godot::prelude::RefCounted> for godot::classes::Texture2D;\n            - impl Inherits<godot::prelude::Resource> for godot::classes::Texture2D;\n            - impl<T> Inherits<T> for T\n              where T: godot::prelude::GodotClass;\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\nhelp: consider specifying the generic argument\n    |\n305 |                     material.set_texture(param, &resource.upcast::<Base>());\n    |                                                                 ++++++++"
+  },
+  {
+    "index": 32,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Mesh>>>` parameter",
+    "file": "src/scene_runner/components/mesh_renderer.rs",
+    "line": 67,
+    "column": 36,
+    "notes": [
+      "if you pass by value, consider borrowing instead.",
+      "GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.",
+      "see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html"
+    ],
+    "helps": [
+      "the following other types implement trait `AsArg<T>`:"
+    ],
+    "code_context": [
+      "mesh_instance.set_mesh(box_mesh.upcast());",
+      "-------- ^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Mesh>>>` is not implemented for `godot::prelude::Gd<_>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn set_mesh(&mut self, mesh: impl AsArg < Option < Gd < crate::classes::Mesh >> >,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `MeshInstance3D::set_mesh`"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Mesh>>>` parameter\n   --> src/scene_runner/components/mesh_renderer.rs:67:36\n    |\n 67 |             mesh_instance.set_mesh(box_mesh.upcast());\n    |                           -------- ^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Mesh>>>` is not implemented for `godot::prelude::Gd<_>`\n    |                           |\n    |                           required by a bound introduced by this call\n    |\n    = note: if you pass by value, consider borrowing instead.\n    = note: GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.\n    = note: see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html\n    = help: the following other types implement trait `AsArg<T>`:\n              `&godot::prelude::Gd<T>` implements `AsArg<godot::prelude::Gd<Base>>`\n              `&godot::prelude::Gd<T>` implements `AsArg<std::option::Option<godot::prelude::Gd<Base>>>`\nnote: required by a bound in `godot::classes::MeshInstance3D::set_mesh`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/mesh_instance_3d.rs:160:47\n    |\n160 |         pub fn set_mesh(&mut self, mesh: impl AsArg < Option < Gd < crate::classes::Mesh >> >,) {\n    |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `MeshInstance3D::set_mesh`"
+  },
+  {
+    "index": 33,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/mesh_renderer.rs",
+    "line": 106,
+    "column": 62,
+    "notes": [
+      "multiple `impl`s satisfying `godot::classes::MeshInstance3D: Inherits<_>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "node_3d.remove_child(&mesh_renderer_node.upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "node_3d.remove_child(&mesh_renderer_node.upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/components/mesh_renderer.rs:106:62\n    |\n106 |                     node_3d.remove_child(&mesh_renderer_node.upcast());\n    |                                                              ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\n    = note: multiple `impl`s satisfying `godot::classes::MeshInstance3D: Inherits<_>` found in the `godot_core` crate:\n            - impl Inherits<godot::classes::GeometryInstance3D> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::classes::VisualInstance3D> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::prelude::Node3D> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::prelude::Node> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::prelude::Object> for godot::classes::MeshInstance3D;\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\nhelp: consider specifying the generic argument\n    |\n106 |                     node_3d.remove_child(&mesh_renderer_node.upcast::<Base>());\n    |                                                                    ++++++++"
+  },
+  {
+    "index": 34,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/mesh_renderer.rs",
+    "line": 126,
+    "column": 57,
+    "notes": [
+      "multiple `impl`s satisfying `godot::classes::MeshInstance3D: Inherits<_>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "node_3d.add_child(&mesh_instance_3d.upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "node_3d.add_child(&mesh_instance_3d.upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/components/mesh_renderer.rs:126:57\n    |\n126 |                     node_3d.add_child(&mesh_instance_3d.upcast());\n    |                                                         ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\n    = note: multiple `impl`s satisfying `godot::classes::MeshInstance3D: Inherits<_>` found in the `godot_core` crate:\n            - impl Inherits<godot::classes::GeometryInstance3D> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::classes::VisualInstance3D> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::prelude::Node3D> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::prelude::Node> for godot::classes::MeshInstance3D;\n            - impl Inherits<godot::prelude::Object> for godot::classes::MeshInstance3D;\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\nhelp: consider specifying the generic argument\n    |\n126 |                     node_3d.add_child(&mesh_instance_3d.upcast::<Base>());\n    |                                                               ++++++++"
+  },
+  {
+    "index": 35,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/nft_shape.rs",
+    "line": 57,
+    "column": 61,
+    "notes": [
+      "multiple `impl`s satisfying `godot::prelude::Node: Inherits<_>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "node_3d.add_child(&nft_shape_3d.clone().upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "node_3d.add_child(&nft_shape_3d.clone().upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/components/nft_shape.rs:57:61\n    |\n 57 |                     node_3d.add_child(&nft_shape_3d.clone().upcast());\n    |                                                             ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\n    = note: multiple `impl`s satisfying `godot::prelude::Node: Inherits<_>` found in the `godot_core` crate:\n            - impl Inherits<godot::prelude::Object> for godot::prelude::Node;\n            - impl<T> Inherits<T> for T\n              where T: godot::prelude::GodotClass;\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\nhelp: consider specifying the generic argument\n    |\n 57 |                     node_3d.add_child(&nft_shape_3d.clone().upcast::<Base>());\n    |                                                                   ++++++++"
+  },
+  {
+    "index": 36,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/components/nft_shape.rs",
+    "line": 62,
+    "column": 38,
+    "notes": [
+      "multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "nft_shape_3d.call(",
+      "---- required by a bound introduced by this call",
+      "\"async_load_nft\".into(),",
+      "^^^^",
+      "pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {",
+      "^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/components/nft_shape.rs:62:38\n    |\n 61 |                 nft_shape_3d.call(\n    |                              ---- required by a bound introduced by this call\n 62 |                     \"async_load_nft\".into(),\n    |                                      ^^^^\n    |\n    = note: multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:\n            - impl AsArg<godot::prelude::StringName> for &std::string::String;\n            - impl AsArg<godot::prelude::StringName> for &str;\n            - impl<T> AsArg<T> for &T\n              where <T as godot::prelude::ToGodot>::Pass == ByRef, T: godot::prelude::ToGodot;\n            - impl<T> AsArg<T> for meta::args::cow_arg::CowArg<'_, T>\n              where T: godot::prelude::ToGodot;\nnote: required by a bound in `godot::prelude::Object::call`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:390:45\n    |\n390 |         pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {\n    |                                             ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`\nhelp: try using a fully qualified path to specify the expected types\n    |\n 62 -                     \"async_load_nft\".into(),\n 62 +                     <&str as Into<T>>::into(\"async_load_nft\"),\n    |\nhelp: consider removing this method call, as the receiver has type `&'static str` and `&'static str: AsArg<godot::prelude::StringName>` trivially holds\n    |\n 62 -                     \"async_load_nft\".into(),\n 62 +                     \"async_load_nft\",\n    |"
+  },
+  {
+    "index": 37,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Rid as ToGodot>::Pass == ByRef`",
+    "file": "src/scene_runner/components/raycast.rs",
+    "line": 189,
+    "column": 26,
+    "notes": [
+      "required for `&godot::prelude::Rid` to implement `AsArg<godot::prelude::Rid>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "arr.push(&rid);",
+      "---- ^^^^ expected `ByRef`, found `ByValue`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn push(&mut self, value: impl AsArg<T>) {",
+      "^^^^^^^^ required by this bound in `Array::<T>::push`"
+    ],
+    "raw_block": "error[E0271]: type mismatch resolving `<Rid as ToGodot>::Pass == ByRef`\n   --> src/scene_runner/components/raycast.rs:189:26\n    |\n189 |                 arr.push(&rid);\n    |                     ---- ^^^^ expected `ByRef`, found `ByValue`\n    |                     |\n    |                     required by a bound introduced by this call\n    |\n    = note: required for `&godot::prelude::Rid` to implement `AsArg<godot::prelude::Rid>`\nnote: required by a bound in `godot::prelude::Array::<T>::push`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/builtin/collections/array.rs:353:40\n    |\n353 |     pub fn push(&mut self, value: impl AsArg<T>) {\n    |                                        ^^^^^^^^ required by this bound in `Array::<T>::push`"
+  },
+  {
+    "index": 38,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<GString as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/components/text_shape.rs",
+    "line": 86,
+    "column": 35,
+    "notes": [
+      "required for `godot::prelude::GString` to implement `AsArg<godot::prelude::GString>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "label_3d.set_text(GString::from(&display_text));",
+      "-------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn set_text(&mut self, text: impl AsArg < GString >,) {",
+      "^^^^^^^^^^^^^^^^^ required by this bound in `Label3D::set_text`"
+    ],
+    "raw_block": "error[E0271]: type mismatch resolving `<GString as ToGodot>::Pass == ByValue`\n   --> src/scene_runner/components/text_shape.rs:86:35\n    |\n 86 |                 label_3d.set_text(GString::from(&display_text));\n    |                          -------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`\n    |                          |\n    |                          required by a bound introduced by this call\n    |\n    = note: required for `godot::prelude::GString` to implement `AsArg<godot::prelude::GString>`\nnote: required by a bound in `godot::classes::Label3D::set_text`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/label_3d.rs:232:47\n    |\n232 |         pub fn set_text(&mut self, text: impl AsArg < GString >,) {\n    |                                               ^^^^^^^^^^^^^^^^^ required by this bound in `Label3D::set_text`"
+  },
+  {
+    "index": 39,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::prelude::Node>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/transform_and_parent.rs",
+    "line": 147,
+    "column": 34,
+    "notes": [
+      "the trait bound `Gd<Node>: AsArg<Option<Gd<Node>>>` is not satisfied",
+      "the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-631966501704759210.txt'",
+      "consider using `--verbose` to print the full type name to the console"
+    ],
+    "helps": [],
+    "code_context": [
+      ".reparent_ex(root_node.clone())",
+      "----------- ^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<godot::prelude::Node>`",
+      "|",
+      "required by a bound introduced by this call",
+      "...f, new_parent: impl AsArg < Option < Gd < crate::classes::Node >> > + 'a,) -> ExReparent < 'a > {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::reparent_ex`",
+      ".reparent_ex(&root_node.clone())",
+      "+"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<godot::prelude::Node>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/components/transform_and_parent.rs:147:34\n    |\n147 |                     .reparent_ex(root_node.clone())\n    |                      ----------- ^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<godot::prelude::Node>`\n    |                      |\n    |                      required by a bound introduced by this call\n    |\n    = note: the trait bound `Gd<Node>: AsArg<Option<Gd<Node>>>` is not satisfied\nnote: required by a bound in `godot::prelude::Node::reparent_ex`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:285:67\n    |\n285 | ...f, new_parent: impl AsArg < Option < Gd < crate::classes::Node >> > + 'a,) -> ExReparent < 'a > {\n    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::reparent_ex`\n    = note: the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-631966501704759210.txt'\n    = note: consider using `--verbose` to print the full type name to the console\nhelp: consider borrowing here\n    |\n147 |                     .reparent_ex(&root_node.clone())\n    |                                  +"
+  },
+  {
+    "index": 40,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::prelude::Node>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/transform_and_parent.rs",
+    "line": 168,
+    "column": 38,
+    "notes": [
+      "the trait bound `Gd<Node>: AsArg<Option<Gd<Node>>>` is not satisfied",
+      "the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-631966501704759210.txt'",
+      "consider using `--verbose` to print the full type name to the console"
+    ],
+    "helps": [],
+    "code_context": [
+      ".reparent_ex(parent_node)",
+      "----------- ^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<godot::prelude::Node>`",
+      "|",
+      "required by a bound introduced by this call",
+      "...f, new_parent: impl AsArg < Option < Gd < crate::classes::Node >> > + 'a,) -> ExReparent < 'a > {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::reparent_ex`",
+      ".reparent_ex(&parent_node)",
+      "+"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<godot::prelude::Node>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/components/transform_and_parent.rs:168:38\n    |\n168 |                         .reparent_ex(parent_node)\n    |                          ----------- ^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<godot::prelude::Node>`\n    |                          |\n    |                          required by a bound introduced by this call\n    |\n    = note: the trait bound `Gd<Node>: AsArg<Option<Gd<Node>>>` is not satisfied\nnote: required by a bound in `godot::prelude::Node::reparent_ex`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:285:67\n    |\n285 | ...f, new_parent: impl AsArg < Option < Gd < crate::classes::Node >> > + 'a,) -> ExReparent < 'a > {\n    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::reparent_ex`\n    = note: the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-631966501704759210.txt'\n    = note: consider using `--verbose` to print the full type name to the console\nhelp: consider borrowing here\n    |\n168 |                         .reparent_ex(&parent_node)\n    |                                      +"
+  },
+  {
+    "index": 41,
+    "type": "error",
+    "code": "E0277",
+    "description": "passing type `std::result::Result<godot::prelude::Variant, _>` to Godot requires `ToGodot` trait, which is usually provided by the library",
+    "file": "src/scene_runner/components/trigger_area.rs",
+    "line": 295,
+    "column": 5,
+    "notes": [
+      "ToGodot is implemented for built-in types (i32, Vector2, GString, \u2026). For objects, use Gd<T> instead of T.",
+      "if you really need a custom representation (for non-class types), implement ToGodot manually or use #[derive(GodotConvert)].",
+      "see also: https://godot-rust.github.io/docs/gdext/master/godot/meta"
+    ],
+    "helps": [
+      "the following other types implement trait `godot::prelude::ToGodot`:"
+    ],
+    "code_context": [
+      "/     Callable::from_fn(\"trigger_body_monitor\", move |args: &[&Variant]| {",
+      "|         if args.len() >= 5 {",
+      "|             let status = args[0].to::<i64>();",
+      "|             let body_rid = args[1].to::<Rid>();",
+      "|         Ok(Variant::nil())",
+      "|     })",
+      "|______^ the trait `godot::prelude::ToGodot` is not implemented for `std::result::Result<godot::prelude::Variant, _>`",
+      "pub fn from_fn<R, F, S>(name: S, rust_function: F) -> Self",
+      "------- required by a bound in this associated function",
+      "where",
+      "R: ToGodot,",
+      "^^^^^^^ required by this bound in `Callable::from_fn`"
+    ],
+    "raw_block": "error[E0277]: passing type `std::result::Result<godot::prelude::Variant, _>` to Godot requires `ToGodot` trait, which is usually provided by the library\n   --> src/scene_runner/components/trigger_area.rs:295:5\n    |\n295 | /     Callable::from_fn(\"trigger_body_monitor\", move |args: &[&Variant]| {\n296 | |         if args.len() >= 5 {\n297 | |             let status = args[0].to::<i64>();\n298 | |             let body_rid = args[1].to::<Rid>();\n...   |\n311 | |         Ok(Variant::nil())\n312 | |     })\n    | |______^ the trait `godot::prelude::ToGodot` is not implemented for `std::result::Result<godot::prelude::Variant, _>`\n    |\n    = note: ToGodot is implemented for built-in types (i32, Vector2, GString, \u2026). For objects, use Gd<T> instead of T.\n    = note: if you really need a custom representation (for non-class types), implement ToGodot manually or use #[derive(GodotConvert)].\n    = note: see also: https://godot-rust.github.io/docs/gdext/master/godot/meta\n    = help: the following other types implement trait `godot::prelude::ToGodot`:\n              &[T]\n              &str\n              ()\n              *const CaretInfo\n              *const Glyph\n              *const ObjectId\n              *const PhysicsServer2DExtensionMotionResult\n              *const PhysicsServer2DExtensionRayResult\n            and 803 others\nnote: required by a bound in `godot::prelude::Callable::from_fn`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/builtin/callable.rs:162:12\n    |\n160 |     pub fn from_fn<R, F, S>(name: S, rust_function: F) -> Self\n    |            ------- required by a bound in this associated function\n161 |     where\n162 |         R: ToGodot,\n    |            ^^^^^^^ required by this bound in `Callable::from_fn`"
+  },
+  {
+    "index": 42,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_background.rs",
+    "line": 65,
+    "column": 33,
+    "notes": [
+      "if you pass by value, consider borrowing instead.",
+      "GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.",
+      "see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html"
+    ],
+    "helps": [
+      "the following other types implement trait `AsArg<T>`:"
+    ],
+    "code_context": [
+      ".move_child(node.clone().upcast(), 0);",
+      "---------- ^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/components/ui/ui_background.rs:65:33\n    |\n 65 |                     .move_child(node.clone().upcast(), 0);\n    |                      ---------- ^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`\n    |                      |\n    |                      required by a bound introduced by this call\n    |\n    = note: if you pass by value, consider borrowing instead.\n    = note: GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.\n    = note: see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html\n    = help: the following other types implement trait `AsArg<T>`:\n              `&godot::prelude::Gd<T>` implements `AsArg<godot::prelude::Gd<Base>>`\n              `&godot::prelude::Gd<T>` implements `AsArg<std::option::Option<godot::prelude::Gd<Base>>>`\nnote: required by a bound in `godot::prelude::Node::move_child`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:531:55\n    |\n531 |         pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {\n    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+  },
+  {
+    "index": 43,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_dropdown.rs",
+    "line": 65,
+    "column": 33,
+    "notes": [
+      "if you pass by value, consider borrowing instead.",
+      "GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.",
+      "see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html"
+    ],
+    "helps": [
+      "the following other types implement trait `AsArg<T>`:"
+    ],
+    "code_context": [
+      ".move_child(node.clone().upcast(), 1);",
+      "---------- ^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/components/ui/ui_dropdown.rs:65:33\n    |\n 65 |                     .move_child(node.clone().upcast(), 1);\n    |                      ---------- ^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`\n    |                      |\n    |                      required by a bound introduced by this call\n    |\n    = note: if you pass by value, consider borrowing instead.\n    = note: GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.\n    = note: see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html\n    = help: the following other types implement trait `AsArg<T>`:\n              `&godot::prelude::Gd<T>` implements `AsArg<godot::prelude::Gd<Base>>`\n              `&godot::prelude::Gd<T>` implements `AsArg<std::option::Option<godot::prelude::Gd<Base>>>`\nnote: required by a bound in `godot::prelude::Node::move_child`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:531:55\n    |\n531 |         pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {\n    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+  },
+  {
+    "index": 44,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_input.rs",
+    "line": 66,
+    "column": 33,
+    "notes": [
+      "if you pass by value, consider borrowing instead.",
+      "GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.",
+      "see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html"
+    ],
+    "helps": [
+      "the following other types implement trait `AsArg<T>`:"
+    ],
+    "code_context": [
+      ".move_child(node.clone().upcast(), 1);",
+      "---------- ^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/components/ui/ui_input.rs:66:33\n    |\n 66 |                     .move_child(node.clone().upcast(), 1);\n    |                      ---------- ^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`\n    |                      |\n    |                      required by a bound introduced by this call\n    |\n    = note: if you pass by value, consider borrowing instead.\n    = note: GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.\n    = note: see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html\n    = help: the following other types implement trait `AsArg<T>`:\n              `&godot::prelude::Gd<T>` implements `AsArg<godot::prelude::Gd<Base>>`\n              `&godot::prelude::Gd<T>` implements `AsArg<std::option::Option<godot::prelude::Gd<Base>>>`\nnote: required by a bound in `godot::prelude::Node::move_child`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:531:55\n    |\n531 |         pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {\n    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+  },
+  {
+    "index": 45,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_text.rs",
+    "line": 88,
+    "column": 41,
+    "notes": [
+      "if you pass by value, consider borrowing instead.",
+      "GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.",
+      "see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html"
+    ],
+    "helps": [
+      "the following other types implement trait `AsArg<T>`:"
+    ],
+    "code_context": [
+      "...                   .move_child(new_node.clone().upcast(), 1);",
+      "---------- ^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/components/ui/ui_text.rs:88:41\n    |\n 88 | ...                   .move_child(new_node.clone().upcast(), 1);\n    |                        ---------- ^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`\n    |                        |\n    |                        required by a bound introduced by this call\n    |\n    = note: if you pass by value, consider borrowing instead.\n    = note: GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.\n    = note: see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html\n    = help: the following other types implement trait `AsArg<T>`:\n              `&godot::prelude::Gd<T>` implements `AsArg<godot::prelude::Gd<Base>>`\n              `&godot::prelude::Gd<T>` implements `AsArg<std::option::Option<godot::prelude::Gd<Base>>>`\nnote: required by a bound in `godot::prelude::Node::move_child`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:531:55\n    |\n531 |         pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {\n    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+  },
+  {
+    "index": 46,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/components/ui/ui_text.rs",
+    "line": 129,
+    "column": 45,
+    "notes": [
+      "if you pass by value, consider borrowing instead.",
+      "GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.",
+      "see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html"
+    ],
+    "helps": [
+      "the following other types implement trait `AsArg<T>`:"
+    ],
+    "code_context": [
+      "...                   .move_child(new_node.clone().upcast(), 1);",
+      "---------- ^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/components/ui/ui_text.rs:129:45\n    |\n129 | ...                   .move_child(new_node.clone().upcast(), 1);\n    |                        ---------- ^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`\n    |                        |\n    |                        required by a bound introduced by this call\n    |\n    = note: if you pass by value, consider borrowing instead.\n    = note: GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.\n    = note: see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html\n    = help: the following other types implement trait `AsArg<T>`:\n              `&godot::prelude::Gd<T>` implements `AsArg<godot::prelude::Gd<Base>>`\n              `&godot::prelude::Gd<T>` implements `AsArg<std::option::Option<godot::prelude::Gd<Base>>>`\nnote: required by a bound in `godot::prelude::Node::move_child`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:531:55\n    |\n531 |         pub fn move_child(&mut self, child_node: impl AsArg < Option < Gd < crate::classes::Node >> >, to_index: i32,) {\n    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::move_child`"
+  },
+  {
+    "index": 47,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 298,
+    "column": 51,
+    "notes": [
+      "the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied",
+      "the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'",
+      "consider using `--verbose` to print the full type name to the console"
+    ],
+    "helps": [],
+    "code_context": [
+      "let texture = ImageTexture::create_from_image(image).expect(\"couldn't create video texture\");",
+      "------------------------------- ^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`",
+      "|",
+      "required by a bound introduced by this call",
+      "...(image: impl AsArg < Option < Gd < crate::classes::Image >> >,) -> Option < Gd < crate::classes::ImageTexture > > {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::create_from_image`",
+      "let texture = ImageTexture::create_from_image(&image).expect(\"couldn't create video texture\");",
+      "+"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter\n   --> src/scene_runner/components/video_player.rs:298:51\n    |\n298 |     let texture = ImageTexture::create_from_image(image).expect(\"couldn't create video texture\");\n    |                   ------------------------------- ^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`\n    |                   |\n    |                   required by a bound introduced by this call\n    |\n    = note: the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied\nnote: required by a bound in `godot::classes::ImageTexture::create_from_image`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/image_texture.rs:150:46\n    |\n150 | ...(image: impl AsArg < Option < Gd < crate::classes::Image >> >,) -> Option < Gd < crate::classes::ImageTexture > > {\n    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::create_from_image`\n    = note: the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'\n    = note: consider using `--verbose` to print the full type name to the console\nhelp: consider borrowing here\n    |\n298 |     let texture = ImageTexture::create_from_image(&image).expect(\"couldn't create video texture\");\n    |                                                   +"
+  },
+  {
+    "index": 48,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 493,
+    "column": 88,
+    "notes": [
+      "expected reference `&PackedArray<_>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, data_arr)",
+      "----------------------- arguments to this function are incorrect           ^^^^^^^^ expected `&PackedArray<u8>`, found `PackedArray<u8>`",
+      "...   pub fn create_from_data(width: i32, height: i32, use_mipmaps: bool, format: crate::classes::image::Format, data: &PackedByteArray,)...",
+      "^^^^^^^^^^^^^^^^",
+      "Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, &data_arr)",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/components/video_player.rs:493:88\n    |\n493 |             Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, data_arr)\n    |             ----------------------- arguments to this function are incorrect           ^^^^^^^^ expected `&PackedArray<u8>`, found `PackedArray<u8>`\n    |\n    = note: expected reference `&PackedArray<_>`\n                  found struct `PackedArray<_>`\nnote: associated function defined here\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/image.rs:340:16\n    |\n340 | ...   pub fn create_from_data(width: i32, height: i32, use_mipmaps: bool, format: crate::classes::image::Format, data: &PackedByteArray,)...\n    |              ^^^^^^^^^^^^^^^^\nhelp: consider borrowing here\n    |\n493 |             Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, &data_arr)\n    |                                                                                        +"
+  },
+  {
+    "index": 49,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 495,
+    "column": 27,
+    "notes": [
+      "the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied",
+      "the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'",
+      "consider using `--verbose` to print the full type name to the console"
+    ],
+    "helps": [],
+    "code_context": [
+      "texture.set_image(image.clone());",
+      "--------- ^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn set_image(&mut self, image: impl AsArg < Option < Gd < crate::classes::Image >> >,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::set_image`",
+      "texture.set_image(&image.clone());",
+      "+"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter\n   --> src/scene_runner/components/video_player.rs:495:27\n    |\n495 |         texture.set_image(image.clone());\n    |                 --------- ^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`\n    |                 |\n    |                 required by a bound introduced by this call\n    |\n    = note: the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied\nnote: required by a bound in `godot::classes::ImageTexture::set_image`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/image_texture.rs:168:49\n    |\n168 |         pub fn set_image(&mut self, image: impl AsArg < Option < Gd < crate::classes::Image >> >,) {\n    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::set_image`\n    = note: the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'\n    = note: consider using `--verbose` to print the full type name to the console\nhelp: consider borrowing here\n    |\n495 |         texture.set_image(&image.clone());\n    |                           +"
+  },
+  {
+    "index": 50,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 496,
+    "column": 24,
+    "notes": [
+      "the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied",
+      "the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'",
+      "consider using `--verbose` to print the full type name to the console"
+    ],
+    "helps": [],
+    "code_context": [
+      "texture.update(image);",
+      "------ ^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn update(&mut self, image: impl AsArg < Option < Gd < crate::classes::Image >> >,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::update`",
+      "texture.update(&image);",
+      "+"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter\n   --> src/scene_runner/components/video_player.rs:496:24\n    |\n496 |         texture.update(image);\n    |                 ------ ^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`\n    |                 |\n    |                 required by a bound introduced by this call\n    |\n    = note: the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied\nnote: required by a bound in `godot::classes::ImageTexture::update`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/image_texture.rs:177:46\n    |\n177 |         pub fn update(&mut self, image: impl AsArg < Option < Gd < crate::classes::Image >> >,) {\n    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::update`\n    = note: the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'\n    = note: consider using `--verbose` to print the full type name to the console\nhelp: consider borrowing here\n    |\n496 |         texture.update(&image);\n    |                        +"
+  },
+  {
+    "index": 51,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 500,
+    "column": 75,
+    "notes": [
+      "expected reference `&PackedArray<_>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "image.set_data(width as i32, height as i32, false, Format::RGBA8, data_arr);",
+      "-------- arguments to this method are incorrect             ^^^^^^^^ expected `&PackedArray<u8>`, found `PackedArray<u8>`",
+      "...   pub fn set_data(&mut self, width: i32, height: i32, use_mipmaps: bool, format: crate::classes::image::Format, data: &PackedByteArra...",
+      "^^^^^^^^",
+      "image.set_data(width as i32, height as i32, false, Format::RGBA8, &data_arr);",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/components/video_player.rs:500:75\n    |\n500 |         image.set_data(width as i32, height as i32, false, Format::RGBA8, data_arr);\n    |               -------- arguments to this method are incorrect             ^^^^^^^^ expected `&PackedArray<u8>`, found `PackedArray<u8>`\n    |\n    = note: expected reference `&PackedArray<_>`\n                  found struct `PackedArray<_>`\nnote: method defined here\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/image.rs:349:16\n    |\n349 | ...   pub fn set_data(&mut self, width: i32, height: i32, use_mipmaps: bool, format: crate::classes::image::Format, data: &PackedByteArra...\n    |              ^^^^^^^^\nhelp: consider borrowing here\n    |\n500 |         image.set_data(width as i32, height as i32, false, Format::RGBA8, &data_arr);\n    |                                                                           +"
+  },
+  {
+    "index": 52,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter",
+    "file": "src/scene_runner/components/video_player.rs",
+    "line": 501,
+    "column": 24,
+    "notes": [
+      "the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied",
+      "the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'",
+      "consider using `--verbose` to print the full type name to the console"
+    ],
+    "helps": [],
+    "code_context": [
+      "texture.update(image);",
+      "------ ^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn update(&mut self, image: impl AsArg < Option < Gd < crate::classes::Image >> >,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::update`",
+      "texture.update(&image);",
+      "+"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<godot::classes::Image>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` parameter\n   --> src/scene_runner/components/video_player.rs:501:24\n    |\n501 |         texture.update(image);\n    |                 ------ ^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::classes::Image>>>` is not implemented for `godot::prelude::Gd<godot::classes::Image>`\n    |                 |\n    |                 required by a bound introduced by this call\n    |\n    = note: the trait bound `Gd<Image>: AsArg<Option<Gd<Image>>>` is not satisfied\nnote: required by a bound in `godot::classes::ImageTexture::update`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/image_texture.rs:177:46\n    |\n177 |         pub fn update(&mut self, image: impl AsArg < Option < Gd < crate::classes::Image >> >,) {\n    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ImageTexture::update`\n    = note: the full name for the type has been written to '/Users/leandro/github/godot-explorer/lib/target/debug/deps/dclgodot.long-type-3085818642324645201.txt'\n    = note: consider using `--verbose` to print the full type name to the console\nhelp: consider borrowing here\n    |\n501 |         texture.update(&image);\n    |                        +"
+  },
+  {
+    "index": 53,
+    "type": "error",
+    "code": "E0277",
+    "description": "Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter",
+    "file": "src/scene_runner/deleted_entities.rs",
+    "line": 21,
+    "column": 34,
+    "notes": [
+      "if you pass by value, consider borrowing instead.",
+      "GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.",
+      "see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html"
+    ],
+    "helps": [
+      "the following other types implement trait `AsArg<T>`:"
+    ],
+    "code_context": [
+      ".reparent_ex(godot_dcl_scene.root_node_3d.clone().upcast())",
+      "----------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`",
+      "|",
+      "required by a bound introduced by this call",
+      "...f, new_parent: impl AsArg < Option < Gd < crate::classes::Node >> > + 'a,) -> ExReparent < 'a > {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::reparent_ex`"
+    ],
+    "raw_block": "error[E0277]: Argument of type `godot::prelude::Gd<_>` cannot be passed to an `impl AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` parameter\n   --> src/scene_runner/deleted_entities.rs:21:34\n    |\n 21 |                     .reparent_ex(godot_dcl_scene.root_node_3d.clone().upcast())\n    |                      ----------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `AsArg<std::option::Option<godot::prelude::Gd<godot::prelude::Node>>>` is not implemented for `godot::prelude::Gd<_>`\n    |                      |\n    |                      required by a bound introduced by this call\n    |\n    = note: if you pass by value, consider borrowing instead.\n    = note: GString/StringName/NodePath aren't implicitly convertible for performance reasons; use their `arg()` method.\n    = note: see also `AsArg` docs: https://godot-rust.github.io/docs/gdext/master/godot/meta/trait.AsArg.html\n    = help: the following other types implement trait `AsArg<T>`:\n              `&godot::prelude::Gd<T>` implements `AsArg<godot::prelude::Gd<Base>>`\n              `&godot::prelude::Gd<T>` implements `AsArg<std::option::Option<godot::prelude::Gd<Base>>>`\nnote: required by a bound in `godot::prelude::Node::reparent_ex`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/node.rs:285:67\n    |\n285 | ...f, new_parent: impl AsArg < Option < Gd < crate::classes::Node >> > + 'a,) -> ExReparent < 'a > {\n    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Node::reparent_ex`"
+  },
+  {
+    "index": 54,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/godot_dcl_scene.rs",
+    "line": 238,
+    "column": 62,
+    "notes": [
+      "and another `impl` found in the `godot_core` crate:",
+      "this error originates in the macro `::godot::private::class_macros::inherit_from_Node3D__ensure_class_exists` which comes from the expansion of the derive macro `GodotClass` (in Nightly builds, run with -Z macro-backtrace for more info)"
+    ],
+    "helps": [],
+    "code_context": [
+      "self.root_node_3d.add_child(&new_node_3d.clone().upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "#[derive(GodotClass)]",
+      "^^^^^^^^^^",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "self.root_node_3d.add_child(&new_node_3d.clone().upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/godot_dcl_scene.rs:238:62\n    |\n238 |             self.root_node_3d.add_child(&new_node_3d.clone().upcast());\n    |                                                              ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\nnote: multiple `impl`s satisfying `DclNodeEntity3d: Inherits<_>` found\n   --> src/godot_classes/dcl_node_entity_3d.rs:5:10\n    |\n  5 | #[derive(GodotClass)]\n    |          ^^^^^^^^^^\n    = note: and another `impl` found in the `godot_core` crate:\n            - impl<T> Inherits<T> for T\n              where T: godot::prelude::GodotClass;\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\n    = note: this error originates in the macro `::godot::private::class_macros::inherit_from_Node3D__ensure_class_exists` which comes from the expansion of the derive macro `GodotClass` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: consider specifying the generic argument\n    |\n238 |             self.root_node_3d.add_child(&new_node_3d.clone().upcast::<Base>());\n    |                                                                    ++++++++"
+  },
+  {
+    "index": 55,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/godot_dcl_scene.rs",
+    "line": 281,
+    "column": 62,
+    "notes": [
+      "and another `impl` found in the `godot_core` crate:",
+      "this error originates in the macro `::godot::private::class_macros::inherit_from_Control__ensure_class_exists` which comes from the expansion of the derive macro `GodotClass` (in Nightly builds, run with -Z macro-backtrace for more info)"
+    ],
+    "helps": [],
+    "code_context": [
+      "self.root_node_ui.add_child(&new_node_ui.clone().upcast());",
+      "^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`",
+      "#[derive(GodotClass)]",
+      "^^^^^^^^^^",
+      "pub fn upcast<Base>(self) -> Gd<Base>",
+      "------ required by a bound in this associated function",
+      "T: Inherits<Base>,",
+      "^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`",
+      "self.root_node_ui.add_child(&new_node_ui.clone().upcast::<Base>());",
+      "++++++++"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/godot_dcl_scene.rs:281:62\n    |\n281 |             self.root_node_ui.add_child(&new_node_ui.clone().upcast());\n    |                                                              ^^^^^^ cannot infer type of the type parameter `Base` declared on the method `upcast`\n    |\nnote: multiple `impl`s satisfying `DclUiControl: Inherits<_>` found\n   --> src/godot_classes/dcl_ui_control.rs:26:10\n    |\n 26 | #[derive(GodotClass)]\n    |          ^^^^^^^^^^\n    = note: and another `impl` found in the `godot_core` crate:\n            - impl<T> Inherits<T> for T\n              where T: godot::prelude::GodotClass;\nnote: required by a bound in `godot::prelude::Gd::<T>::upcast`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/obj/gd.rs:380:12\n    |\n377 |     pub fn upcast<Base>(self) -> Gd<Base>\n    |            ------ required by a bound in this associated function\n...\n380 |         T: Inherits<Base>,\n    |            ^^^^^^^^^^^^^^ required by this bound in `Gd::<T>::upcast`\n    = note: this error originates in the macro `::godot::private::class_macros::inherit_from_Control__ensure_class_exists` which comes from the expansion of the derive macro `GodotClass` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: consider specifying the generic argument\n    |\n281 |             self.root_node_ui.add_child(&new_node_ui.clone().upcast::<Base>());\n    |                                                                    ++++++++"
+  },
+  {
+    "index": 56,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<StringName as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/input.rs",
+    "line": 52,
+    "column": 61,
+    "notes": [
+      "required for `godot::prelude::StringName` to implement `AsArg<godot::prelude::StringName>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "let current_state = input.is_action_pressed(action_string.clone());",
+      "----------------- ^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn is_action_pressed(&self, action: impl AsArg < StringName >,) -> bool {",
+      "^^^^^^^^^^^^^^^^^^^^ required by this bound in `Input::is_action_pressed`"
+    ],
+    "raw_block": "error[E0271]: type mismatch resolving `<StringName as ToGodot>::Pass == ByValue`\n  --> src/scene_runner/input.rs:52:61\n   |\n52 |                 let current_state = input.is_action_pressed(action_string.clone());\n   |                                           ----------------- ^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`\n   |                                           |\n   |                                           required by a bound introduced by this call\n   |\n   = note: required for `godot::prelude::StringName` to implement `AsArg<godot::prelude::StringName>`\nnote: required by a bound in `godot::classes::Input::is_action_pressed`\n  --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/input.rs:88:54\n   |\n88 |         pub fn is_action_pressed(&self, action: impl AsArg < StringName >,) -> bool {\n   |                                                      ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Input::is_action_pressed`"
+  },
+  {
+    "index": 57,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/object_pool.rs",
+    "line": 104,
+    "column": 47,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "server.area_set_monitor_callback(rid, Callable::invalid());",
+      "-------------------------      ^^^^^^^^^^^^^^^^^^^ expected `&Callable`, found `Callable`",
+      "|",
+      "arguments to this method are incorrect",
+      "pub fn area_set_monitor_callback(&mut self, area: Rid, callback: &Callable,) {",
+      "^^^^^^^^^^^^^^^^^^^^^^^^^",
+      "server.area_set_monitor_callback(rid, &Callable::invalid());",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/object_pool.rs:104:47\n    |\n104 |         server.area_set_monitor_callback(rid, Callable::invalid());\n    |                -------------------------      ^^^^^^^^^^^^^^^^^^^ expected `&Callable`, found `Callable`\n    |                |\n    |                arguments to this method are incorrect\n    |\nnote: method defined here\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/physics_server_3d.rs:419:16\n    |\n419 |         pub fn area_set_monitor_callback(&mut self, area: Rid, callback: &Callable,) {\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^^\nhelp: consider borrowing here\n    |\n104 |         server.area_set_monitor_callback(rid, &Callable::invalid());\n    |                                               +"
+  },
+  {
+    "index": 58,
+    "type": "error",
+    "code": "E0277",
+    "description": "the trait bound `godot::prelude::GString: From<&&str>` is not satisfied",
+    "file": "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+    "line": 66,
+    "column": 14,
+    "notes": [],
+    "helps": [
+      "the following other types implement trait `From<T>`:"
+    ],
+    "code_context": [
+      "let to = GString::from(&to);",
+      "^^^^^^^ the trait `From<&&str>` is not implemented for `godot::prelude::GString`"
+    ],
+    "raw_block": "error[E0277]: the trait bound `godot::prelude::GString: From<&&str>` is not satisfied\n  --> src/scene_runner/rpc_calls/handle_restricted_actions.rs:66:14\n   |\n66 |     let to = GString::from(&to);\n   |              ^^^^^^^ the trait `From<&&str>` is not implemented for `godot::prelude::GString`\n   |\n   = help: the following other types implement trait `From<T>`:\n             `godot::prelude::GString` implements `From<&[char]>`\n             `godot::prelude::GString` implements `From<&godot::prelude::NodePath>`\n             `godot::prelude::GString` implements `From<&godot::prelude::StringName>`\n             `godot::prelude::GString` implements `From<&std::string::String>`\n             `godot::prelude::GString` implements `From<&str>`"
+  },
+  {
+    "index": 59,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+    "line": 215,
+    "column": 19,
+    "notes": [
+      "multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "explorer_node.call(",
+      "---- required by a bound introduced by this call",
+      "\"move_to\".into(),",
+      "^^^^",
+      "pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {",
+      "^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/rpc_calls/handle_restricted_actions.rs:215:19\n    |\n214 |     explorer_node.call(\n    |                   ---- required by a bound introduced by this call\n215 |         \"move_to\".into(),\n    |                   ^^^^\n    |\n    = note: multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:\n            - impl AsArg<godot::prelude::StringName> for &std::string::String;\n            - impl AsArg<godot::prelude::StringName> for &str;\n            - impl<T> AsArg<T> for &T\n              where <T as godot::prelude::ToGodot>::Pass == ByRef, T: godot::prelude::ToGodot;\n            - impl<T> AsArg<T> for meta::args::cow_arg::CowArg<'_, T>\n              where T: godot::prelude::ToGodot;\nnote: required by a bound in `godot::prelude::Object::call`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:390:45\n    |\n390 |         pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {\n    |                                             ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`\nhelp: try using a fully qualified path to specify the expected types\n    |\n215 -         \"move_to\".into(),\n215 +         <&str as Into<T>>::into(\"move_to\"),\n    |\nhelp: consider removing this method call, as the receiver has type `&'static str` and `&'static str: AsArg<godot::prelude::StringName>` trivially holds\n    |\n215 -         \"move_to\".into(),\n215 +         \"move_to\",\n    |"
+  },
+  {
+    "index": 60,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/rpc_calls/handle_restricted_actions.rs",
+    "line": 235,
+    "column": 46,
+    "notes": [
+      "multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "explorer_node.call(",
+      "---- required by a bound introduced by this call",
+      "\"avatar_look_at_independent\".into(),",
+      "^^^^",
+      "pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {",
+      "^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/rpc_calls/handle_restricted_actions.rs:235:46\n    |\n234 |             explorer_node.call(\n    |                           ---- required by a bound introduced by this call\n235 |                 \"avatar_look_at_independent\".into(),\n    |                                              ^^^^\n    |\n    = note: multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:\n            - impl AsArg<godot::prelude::StringName> for &std::string::String;\n            - impl AsArg<godot::prelude::StringName> for &str;\n            - impl<T> AsArg<T> for &T\n              where <T as godot::prelude::ToGodot>::Pass == ByRef, T: godot::prelude::ToGodot;\n            - impl<T> AsArg<T> for meta::args::cow_arg::CowArg<'_, T>\n              where T: godot::prelude::ToGodot;\nnote: required by a bound in `godot::prelude::Object::call`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:390:45\n    |\n390 |         pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {\n    |                                             ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`\nhelp: try using a fully qualified path to specify the expected types\n    |\n235 -                 \"avatar_look_at_independent\".into(),\n235 +                 <&str as Into<T>>::into(\"avatar_look_at_independent\"),\n    |\nhelp: consider removing this method call, as the receiver has type `&'static str` and `&'static str: AsArg<godot::prelude::StringName>` trivially holds\n    |\n235 -                 \"avatar_look_at_independent\".into(),\n235 +                 \"avatar_look_at_independent\",\n    |"
+  },
+  {
+    "index": 61,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/rpc_calls/mod.rs",
+    "line": 108,
+    "column": 46,
+    "notes": [
+      "multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "DclGlobal::singleton().call_deferred(",
+      "------------- required by a bound introduced by this call",
+      "\"async_get_texture_size\".into(),",
+      "^^^^",
+      "pub fn call_deferred(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {",
+      "^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call_deferred`"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/rpc_calls/mod.rs:108:46\n    |\n107 |                 DclGlobal::singleton().call_deferred(\n    |                                        ------------- required by a bound introduced by this call\n108 |                     \"async_get_texture_size\".into(),\n    |                                              ^^^^\n    |\n    = note: multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:\n            - impl AsArg<godot::prelude::StringName> for &std::string::String;\n            - impl AsArg<godot::prelude::StringName> for &str;\n            - impl<T> AsArg<T> for &T\n              where <T as godot::prelude::ToGodot>::Pass == ByRef, T: godot::prelude::ToGodot;\n            - impl<T> AsArg<T> for meta::args::cow_arg::CowArg<'_, T>\n              where T: godot::prelude::ToGodot;\nnote: required by a bound in `godot::prelude::Object::call_deferred`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:408:54\n    |\n408 |         pub fn call_deferred(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {\n    |                                                      ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call_deferred`\nhelp: try using a fully qualified path to specify the expected types\n    |\n108 -                     \"async_get_texture_size\".into(),\n108 +                     <&str as Into<T>>::into(\"async_get_texture_size\"),\n    |\nhelp: consider removing this method call, as the receiver has type `&'static str` and `&'static str: AsArg<godot::prelude::StringName>` trivially holds\n    |\n108 -                     \"async_get_texture_size\".into(),\n108 +                     \"async_get_texture_size\",\n    |"
+  },
+  {
+    "index": 62,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/scene.rs",
+    "line": 431,
+    "column": 57,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "video_player.set(&\"video_state\".into(), VIDEO_STATE_PLAYING.to_variant());",
+      "---                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`",
+      "|",
+      "arguments to this method are incorrect",
+      "pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {",
+      "^^^",
+      "video_player.set(&\"video_state\".into(), &VIDEO_STATE_PLAYING.to_variant());",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/scene.rs:431:57\n    |\n431 |                 video_player.set(&\"video_state\".into(), VIDEO_STATE_PLAYING.to_variant());\n    |                              ---                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`\n    |                              |\n    |                              arguments to this method are incorrect\n    |\nnote: method defined here\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:171:16\n    |\n171 |         pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {\n    |                ^^^\nhelp: consider borrowing here\n    |\n431 |                 video_player.set(&\"video_state\".into(), &VIDEO_STATE_PLAYING.to_variant());\n    |                                                         +"
+  },
+  {
+    "index": 63,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/scene.rs",
+    "line": 432,
+    "column": 58,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "video_player.set(&\"video_length\".into(), (-1.0_f64).to_variant());",
+      "---                         ^^^^^^^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`",
+      "|",
+      "arguments to this method are incorrect",
+      "pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {",
+      "^^^",
+      "video_player.set(&\"video_length\".into(), &(-1.0_f64).to_variant());",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/scene.rs:432:58\n    |\n432 |                 video_player.set(&\"video_length\".into(), (-1.0_f64).to_variant());\n    |                              ---                         ^^^^^^^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`\n    |                              |\n    |                              arguments to this method are incorrect\n    |\nnote: method defined here\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:171:16\n    |\n171 |         pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {\n    |                ^^^\nhelp: consider borrowing here\n    |\n432 |                 video_player.set(&\"video_length\".into(), &(-1.0_f64).to_variant());\n    |                                                          +"
+  },
+  {
+    "index": 64,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/scene.rs",
+    "line": 433,
+    "column": 61,
+    "notes": [],
+    "helps": [],
+    "code_context": [
+      "video_player.set(&\"last_frame_time\".into(), current_time.to_variant());",
+      "---                            ^^^^^^^^^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`",
+      "|",
+      "arguments to this method are incorrect",
+      "pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {",
+      "^^^",
+      "video_player.set(&\"last_frame_time\".into(), &current_time.to_variant());",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/scene.rs:433:61\n    |\n433 |                 video_player.set(&\"last_frame_time\".into(), current_time.to_variant());\n    |                              ---                            ^^^^^^^^^^^^^^^^^^^^^^^^^ expected `&Variant`, found `Variant`\n    |                              |\n    |                              arguments to this method are incorrect\n    |\nnote: method defined here\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:171:16\n    |\n171 |         pub fn set(&mut self, property: impl AsArg < StringName >, value: &Variant,) {\n    |                ^^^\nhelp: consider borrowing here\n    |\n433 |                 video_player.set(&\"last_frame_time\".into(), &current_time.to_variant());\n    |                                                             +"
+  },
+  {
+    "index": 65,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/scene.rs",
+    "line": 455,
+    "column": 42,
+    "notes": [
+      "multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "video_player.call(",
+      "---- required by a bound introduced by this call",
+      "\"init_livekit_audio\".into(),",
+      "^^^^",
+      "pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {",
+      "^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n   --> src/scene_runner/scene.rs:455:42\n    |\n454 |                 video_player.call(\n    |                              ---- required by a bound introduced by this call\n455 |                     \"init_livekit_audio\".into(),\n    |                                          ^^^^\n    |\n    = note: multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:\n            - impl AsArg<godot::prelude::StringName> for &std::string::String;\n            - impl AsArg<godot::prelude::StringName> for &str;\n            - impl<T> AsArg<T> for &T\n              where <T as godot::prelude::ToGodot>::Pass == ByRef, T: godot::prelude::ToGodot;\n            - impl<T> AsArg<T> for meta::args::cow_arg::CowArg<'_, T>\n              where T: godot::prelude::ToGodot;\nnote: required by a bound in `godot::prelude::Object::call`\n   --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:390:45\n    |\n390 |         pub fn call(&mut self, method: impl AsArg < StringName >, varargs: &[Variant]) -> Variant {\n    |                                             ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::call`\nhelp: try using a fully qualified path to specify the expected types\n    |\n455 -                     \"init_livekit_audio\".into(),\n455 +                     <&str as Into<T>>::into(\"init_livekit_audio\"),\n    |\nhelp: consider removing this method call, as the receiver has type `&'static str` and `&'static str: AsArg<godot::prelude::StringName>` trivially holds\n    |\n455 -                     \"init_livekit_audio\".into(),\n455 +                     \"init_livekit_audio\",\n    |"
+  },
+  {
+    "index": 66,
+    "type": "error",
+    "code": "E0283",
+    "description": "type annotations needed",
+    "file": "src/scene_runner/scene_manager.rs",
+    "line": 1234,
+    "column": 66,
+    "notes": [
+      "multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:"
+    ],
+    "helps": [],
+    "code_context": [
+      "...                   global.emit_signal(",
+      "----------- required by a bound introduced by this call",
+      "...                       \"open_profile_by_avatar\".into(),",
+      "^^^^",
+      "pub fn emit_signal(&mut self, signal: impl AsArg < StringName >, varargs: &[Variant]) -> crate::global::Error {",
+      "^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::emit_signal`"
+    ],
+    "raw_block": "error[E0283]: type annotations needed\n    --> src/scene_runner/scene_manager.rs:1234:66\n     |\n1233 | ...                   global.emit_signal(\n     |                              ----------- required by a bound introduced by this call\n1234 | ...                       \"open_profile_by_avatar\".into(),\n     |                                                    ^^^^\n     |\n     = note: multiple `impl`s satisfying `_: AsArg<godot::prelude::StringName>` found in the `godot_core` crate:\n             - impl AsArg<godot::prelude::StringName> for &std::string::String;\n             - impl AsArg<godot::prelude::StringName> for &str;\n             - impl<T> AsArg<T> for &T\n               where <T as godot::prelude::ToGodot>::Pass == ByRef, T: godot::prelude::ToGodot;\n             - impl<T> AsArg<T> for meta::args::cow_arg::CowArg<'_, T>\n               where T: godot::prelude::ToGodot;\nnote: required by a bound in `godot::prelude::Object::emit_signal`\n    --> /Users/leandro/github/godot-explorer/lib/target/debug/build/godot-core-79a0462ae6dcedb0/out/classes/object.rs:372:52\n     |\n 372 |         pub fn emit_signal(&mut self, signal: impl AsArg < StringName >, varargs: &[Variant]) -> crate::global::Error {\n     |                                                    ^^^^^^^^^^^^^^^^^^^^ required by this bound in `Object::emit_signal`\nhelp: try using a fully qualified path to specify the expected types\n     |\n1234 -                                         \"open_profile_by_avatar\".into(),\n1234 +                                         <&str as Into<T>>::into(\"open_profile_by_avatar\"),\n     |\nhelp: consider removing this method call, as the receiver has type `&'static str` and `&'static str: AsArg<godot::prelude::StringName>` trivially holds\n     |\n1234 -                                         \"open_profile_by_avatar\".into(),\n1234 +                                         \"open_profile_by_avatar\",\n     |"
+  },
+  {
+    "index": 67,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 170,
+    "column": 36,
+    "notes": [
+      "required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "arguments.push((scene.scene_id.0).to_variant());",
+      "---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn push(&mut self, value: impl AsArg<T>) {",
+      "^^^^^^^^ required by this bound in `Array::<T>::push`"
+    ],
+    "raw_block": "error[E0271]: type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`\n   --> src/scene_runner/update_scene.rs:170:36\n    |\n170 |                     arguments.push((scene.scene_id.0).to_variant());\n    |                               ---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`\n    |                               |\n    |                               required by a bound introduced by this call\n    |\n    = note: required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`\nnote: required by a bound in `godot::prelude::Array::<T>::push`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/builtin/collections/array.rs:353:40\n    |\n353 |     pub fn push(&mut self, value: impl AsArg<T>) {\n    |                                        ^^^^^^^^ required by this bound in `Array::<T>::push`"
+  },
+  {
+    "index": 68,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 171,
+    "column": 36,
+    "notes": [
+      "required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "arguments.push((log.level as i32).to_variant());",
+      "---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn push(&mut self, value: impl AsArg<T>) {",
+      "^^^^^^^^ required by this bound in `Array::<T>::push`"
+    ],
+    "raw_block": "error[E0271]: type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`\n   --> src/scene_runner/update_scene.rs:171:36\n    |\n171 |                     arguments.push((log.level as i32).to_variant());\n    |                               ---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`\n    |                               |\n    |                               required by a bound introduced by this call\n    |\n    = note: required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`\nnote: required by a bound in `godot::prelude::Array::<T>::push`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/builtin/collections/array.rs:353:40\n    |\n353 |     pub fn push(&mut self, value: impl AsArg<T>) {\n    |                                        ^^^^^^^^ required by this bound in `Array::<T>::push`"
+  },
+  {
+    "index": 69,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 172,
+    "column": 36,
+    "notes": [
+      "required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "arguments.push((log.timestamp as f32).to_variant());",
+      "---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn push(&mut self, value: impl AsArg<T>) {",
+      "^^^^^^^^ required by this bound in `Array::<T>::push`"
+    ],
+    "raw_block": "error[E0271]: type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`\n   --> src/scene_runner/update_scene.rs:172:36\n    |\n172 |                     arguments.push((log.timestamp as f32).to_variant());\n    |                               ---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`\n    |                               |\n    |                               required by a bound introduced by this call\n    |\n    = note: required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`\nnote: required by a bound in `godot::prelude::Array::<T>::push`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/builtin/collections/array.rs:353:40\n    |\n353 |     pub fn push(&mut self, value: impl AsArg<T>) {\n    |                                        ^^^^^^^^ required by this bound in `Array::<T>::push`"
+  },
+  {
+    "index": 70,
+    "type": "error",
+    "code": "E0271",
+    "description": "type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 173,
+    "column": 36,
+    "notes": [
+      "required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "arguments.push(GString::from(&log.message).to_variant());",
+      "---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`",
+      "|",
+      "required by a bound introduced by this call",
+      "pub fn push(&mut self, value: impl AsArg<T>) {",
+      "^^^^^^^^ required by this bound in `Array::<T>::push`"
+    ],
+    "raw_block": "error[E0271]: type mismatch resolving `<Variant as ToGodot>::Pass == ByValue`\n   --> src/scene_runner/update_scene.rs:173:36\n    |\n173 |                     arguments.push(GString::from(&log.message).to_variant());\n    |                               ---- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ByValue`, found `ByRef`\n    |                               |\n    |                               required by a bound introduced by this call\n    |\n    = note: required for `godot::prelude::Variant` to implement `AsArg<godot::prelude::Variant>`\nnote: required by a bound in `godot::prelude::Array::<T>::push`\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/builtin/collections/array.rs:353:40\n    |\n353 |     pub fn push(&mut self, value: impl AsArg<T>) {\n    |                                        ^^^^^^^^ required by this bound in `Array::<T>::push`"
+  },
+  {
+    "index": 71,
+    "type": "error",
+    "code": "E0308",
+    "description": "mismatched types",
+    "file": "src/scene_runner/update_scene.rs",
+    "line": 174,
+    "column": 35,
+    "notes": [
+      "expected reference `&godot::prelude::Array<_>`"
+    ],
+    "helps": [],
+    "code_context": [
+      "console.callv(arguments);",
+      "----- ^^^^^^^^^ expected `&Array<Variant>`, found `Array<Variant>`",
+      "|",
+      "arguments to this method are incorrect",
+      "pub fn callv(&self, arguments: &VarArray) -> Variant {",
+      "^^^^^",
+      "console.callv(&arguments);",
+      "+"
+    ],
+    "raw_block": "error[E0308]: mismatched types\n   --> src/scene_runner/update_scene.rs:174:35\n    |\n174 |                     console.callv(arguments);\n    |                             ----- ^^^^^^^^^ expected `&Array<Variant>`, found `Array<Variant>`\n    |                             |\n    |                             arguments to this method are incorrect\n    |\n    = note: expected reference `&godot::prelude::Array<_>`\n                  found struct `godot::prelude::Array<_>`\nnote: method defined here\n   --> /Users/leandro/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/godot-core-0.4.5/src/builtin/callable.rs:384:12\n    |\n384 |     pub fn callv(&self, arguments: &VarArray) -> Variant {\n    |            ^^^^^\nhelp: consider borrowing here\n    |\n174 |                     console.callv(&arguments);\n    |                                   +\n\nSome errors have detailed explanations: E0271, E0277, E0283, E0308, E0412.\nFor more information about an error, try `rustc --explain E0271`."
+  },
+  {
+    "index": 72,
+    "type": "warning",
+    "code": "",
+    "description": "`dclgodot` (lib) generated 30 warnings (7 duplicates)",
+    "file": "",
+    "line": 0,
+    "column": 0,
+    "notes": [],
+    "helps": [],
+    "code_context": [],
+    "raw_block": "warning: `dclgodot` (lib) generated 30 warnings (7 duplicates)"
+  },
+  {
+    "index": 73,
+    "type": "warning",
+    "code": "",
+    "description": "dclgodot@0.43.0: Using commit hash: 9808e88 (from git log)",
+    "file": "",
+    "line": 0,
+    "column": 0,
+    "notes": [],
+    "helps": [],
+    "code_context": [],
+    "raw_block": "warning: dclgodot@0.43.0: Using commit hash: 9808e88 (from git log)"
+  },
+  {
+    "index": 74,
+    "type": "error",
+    "code": "",
+    "description": "could not compile `dclgodot` (lib) due to 48 previous errors; 30 warnings emitted",
+    "file": "",
+    "line": 0,
+    "column": 0,
+    "notes": [],
+    "helps": [],
+    "code_context": [],
+    "raw_block": "error: could not compile `dclgodot` (lib) due to 48 previous errors; 30 warnings emitted"
+  }
+]
