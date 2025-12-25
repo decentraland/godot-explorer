@@ -18,7 +18,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D},
+    classes::{PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D},
     prelude::*,
 };
 
@@ -113,7 +113,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
                     Vector3::new(local_direction.x, local_direction.y, -local_direction.z);
 
                 quaternion_multiply_vector(
-                    &node_3d.get_global_transform().basis.to_quat(),
+                    &node_3d.get_global_transform().basis.get_quaternion(),
                     &local_direction,
                 )
             }
@@ -159,7 +159,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
     if let Some(mut global) = DclGlobal::try_singleton() {
         let id: i64 = node_3d.instance_id().to_i64();
         global.call_deferred(
-            "add_raycast".into(),
+            "add_raycast",
             &[
                 Variant::from(id),
                 Variant::from(1.0),
@@ -187,7 +187,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
 
                 let mut arr = raycast_query.get_exclude();
                 arr.push(rid);
-                raycast_query.set_exclude(arr);
+                raycast_query.set_exclude(&arr);
 
                 // Limitation up to 10 hitss
                 counter += 1;
@@ -229,14 +229,11 @@ fn get_raycast_hit(
     mut space: Gd<PhysicsDirectSpaceState3D>,
     raycast_query: Gd<PhysicsRayQueryParameters3D>,
 ) -> Option<(RaycastHit, Rid)> {
-    let raycast_result = space.intersect_ray(raycast_query.clone());
+    let raycast_result = space.intersect_ray(&raycast_query);
     let collider = raycast_result.get("collider")?;
 
     let has_dcl_entity_id = collider
-        .call(
-            StringName::from("has_meta"),
-            &[Variant::from("dcl_entity_id")],
-        )
+        .call("has_meta", &[Variant::from("dcl_entity_id")])
         .booleanize();
 
     // Note here, if the collider is not in the scene, it stops all query type
@@ -245,16 +242,10 @@ fn get_raycast_hit(
     }
 
     let dcl_entity_id = collider
-        .call(
-            StringName::from("get_meta"),
-            &[Variant::from("dcl_entity_id")],
-        )
+        .call("get_meta", &[Variant::from("dcl_entity_id")])
         .to::<i32>();
     let dcl_scene_id = collider
-        .call(
-            StringName::from("get_meta"),
-            &[Variant::from("dcl_scene_id")],
-        )
+        .call("get_meta", &[Variant::from("dcl_scene_id")])
         .to::<i32>();
 
     if dcl_scene_id != scene.scene_id.0 {

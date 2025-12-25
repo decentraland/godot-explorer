@@ -1,4 +1,7 @@
-use godot::{engine::ImageTexture, prelude::*};
+use godot::{
+    classes::{AudioStreamPlayer, ImageTexture},
+    prelude::*,
+};
 
 use super::stream_processor::{AVCommand, StreamStateData};
 
@@ -71,7 +74,7 @@ pub struct VideoSink {
 pub fn av_sinks(
     source: String,
     texture: Option<Gd<ImageTexture>>,
-    audio_stream_player: Gd<godot::prelude::AudioStreamPlayer>,
+    audio_stream_player: Gd<AudioStreamPlayer>,
     playing: bool,
     repeat: bool,
     wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,

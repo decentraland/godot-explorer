@@ -10,7 +10,10 @@ use crate::{
     godot_classes::dcl_audio_stream::DclAudioStream,
     scene_runner::scene::{Scene, SceneType},
 };
-use godot::{engine::AudioStreamGenerator, prelude::*};
+use godot::{
+    classes::{AudioStream, AudioStreamGenerator, AudioStreamPlayer},
+    prelude::*,
+};
 enum AudioUpdateMode {
     OnlyChangeValues,
     ChangeAudio,
@@ -67,7 +70,7 @@ pub fn update_audio_stream(
                             .expect("audio_stream_data not found in node");
 
                         let mut audio_stream_node = node_3d
-                            .get_node_or_null("AudioStream".into())
+                            .get_node_or_null("AudioStream")
                             .expect("enters on change audio branch but a AudioStream wasn't found there")
                             .try_cast::<DclAudioStream>()
                             .expect("the expected AudioStream wasn't a DclAudioStream");
@@ -94,7 +97,7 @@ pub fn update_audio_stream(
                                 .try_send(AVCommand::Dispose);
                         }
 
-                        let mut audio_stream_node = node_3d.get_node_or_null("AudioStream".into()).expect(
+                        let mut audio_stream_node = node_3d.get_node_or_null("AudioStream").expect(
                             "enters on change audio branch but a AudioStream wasn't found there",
                         ).try_cast::<DclAudioStream>().expect("the expected AudioStream wasn't a DclAudioStream");
 
@@ -115,19 +118,20 @@ pub fn update_audio_stream(
                         godot_entity_node.audio_stream = Some((next_value.url.clone(), audio_sink));
                     }
                     AudioUpdateMode::FirstSpawnAudio => {
-                        let mut audio_stream_node = godot::engine::load::<PackedScene>(
+                        let mut audio_stream_node = godot::tools::load::<PackedScene>(
                             "res://src/decentraland_components/audio_stream.tscn",
                         )
                         .instantiate()
                         .unwrap()
                         .cast::<DclAudioStream>();
 
-                        audio_stream_node.set_name("AudioStream".into());
+                        audio_stream_node.set_name("AudioStream");
 
                         let audio_stream_generator = AudioStreamGenerator::new_gd();
-                        audio_stream_node.set_stream(audio_stream_generator.upcast());
+                        audio_stream_node
+                            .set_stream(&audio_stream_generator.upcast::<AudioStream>());
 
-                        node_3d.add_child(audio_stream_node.clone().upcast());
+                        node_3d.add_child(&audio_stream_node.clone().upcast::<Node>());
                         audio_stream_node.play();
 
                         audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);

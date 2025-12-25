@@ -1,6 +1,7 @@
 use godot::{
-    builtin::{meta::ToGodot, PackedByteArray, Variant},
-    engine::{AudioStream, AudioStreamMp3, AudioStreamOggVorbis, AudioStreamWav},
+    builtin::{PackedByteArray, Variant},
+    classes::{AudioStream, AudioStreamMp3, AudioStreamOggVorbis, AudioStreamWav},
+    meta::ToGodot,
     obj::{Gd, NewGd},
 };
 
@@ -44,13 +45,13 @@ pub async fn load_audio(
     let audio_stream: Option<Gd<AudioStream>> = match extension.as_str() {
         ".wav" => {
             let mut audio_stream = AudioStreamWav::new_gd();
-            audio_stream.set_data(bytes);
+            audio_stream.set_data(&bytes);
             Some(audio_stream.upcast())
         }
-        ".ogg" => AudioStreamOggVorbis::load_from_buffer(bytes).map(|value| value.upcast()),
+        ".ogg" => AudioStreamOggVorbis::load_from_buffer(&bytes).map(|value| value.upcast()),
         ".mp3" => {
             let mut audio_stream = AudioStreamMp3::new_gd();
-            audio_stream.set_data(bytes);
+            audio_stream.set_data(&bytes);
             Some(audio_stream.upcast())
         }
         _ => None,

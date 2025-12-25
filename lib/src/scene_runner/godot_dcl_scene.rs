@@ -19,7 +19,7 @@ use std::{
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
 use crate::av::backend::{AudioSink, BackendType};
-use godot::engine::ImageTexture;
+use godot::classes::ImageTexture;
 
 pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, GodotEntityNode>,
@@ -155,7 +155,7 @@ impl GodotDclScene {
         root_node_3d.set_position(scene_entity_definition.get_godot_3d_position());
 
         let mut root_node_ui_control = DclUiControl::new_alloc();
-        root_node_ui_control.set_name(GString::from(format!("ui_scene_id_{:?}", scene_id.0)));
+        root_node_ui_control.set_name(&format!("ui_scene_id_{:?}", scene_id.0));
 
         let root_node_ui = UiNode {
             base_control: root_node_ui_control.clone(),
@@ -235,19 +235,20 @@ impl GodotDclScene {
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_3d.is_none() {
             let mut new_node_3d = DclNodeEntity3d::new_alloc(*entity);
-            self.root_node_3d.add_child(new_node_3d.clone().upcast());
+            self.root_node_3d
+                .add_child(&new_node_3d.clone().upcast::<Node>());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
-                let mut player_collider_filter = godot::engine::load::<PackedScene>(
+                let mut player_collider_filter = godot::tools::load::<PackedScene>(
                     "res://src/decentraland_components/player_collider_filter.tscn",
                 )
                 .instantiate()
                 .expect("player_collider_filter scene is valid")
                 .cast::<Node>();
-                player_collider_filter.set_name("PlayerColliderFilter".into());
+                player_collider_filter.set_name("PlayerColliderFilter");
 
-                new_node_3d.add_child(player_collider_filter.clone());
-                player_collider_filter.call("init_player_collider_filter".into(), &[]);
+                new_node_3d.add_child(&player_collider_filter.clone());
+                player_collider_filter.call("init_player_collider_filter", &[]);
             }
             godot_entity_node.base_3d = Some(new_node_3d.upcast());
         }
@@ -266,10 +267,7 @@ impl GodotDclScene {
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_ui.is_none() {
             let mut new_node_ui = DclUiControl::new_alloc();
-            new_node_ui.set_name(GString::from(format!(
-                "e{:?}_{:?}",
-                entity.number, entity.version
-            )));
+            new_node_ui.set_name(&format!("e{:?}_{:?}", entity.number, entity.version));
             new_node_ui
                 .bind_mut()
                 .set_pointer_events(&godot_entity_node.pointer_events);
@@ -278,7 +276,8 @@ impl GodotDclScene {
                 .set_ui_result(self.ui_results.clone());
             new_node_ui.bind_mut().set_dcl_entity_id(entity.as_i32());
 
-            self.root_node_ui.add_child(new_node_ui.clone().upcast());
+            self.root_node_ui
+                .add_child(&new_node_ui.clone().upcast::<Node>());
             godot_entity_node.base_ui = Some(UiNode {
                 base_control: new_node_ui,
                 ui_transform: UiTransform::default(),

@@ -19,7 +19,7 @@ pub struct DclSceneNode {
 #[godot_api]
 impl DclSceneNode {
     #[signal]
-    pub fn tree_changed(&self) {}
+    fn tree_changed();
 
     pub fn new_alloc(scene_id: i32, is_global: bool) -> Gd<Self> {
         let mut obj = Gd::from_init_fn(|_base| {
@@ -33,7 +33,7 @@ impl DclSceneNode {
                 gltf_loading_count: 0,
             }
         });
-        obj.set_name(GString::from(format!("scene_id_{:?}", scene_id.clone())));
+        obj.set_name(&format!("scene_id_{:?}", scene_id.clone()));
         obj
     }
 

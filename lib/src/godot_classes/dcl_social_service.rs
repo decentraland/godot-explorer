@@ -698,7 +698,7 @@ impl DclSocialService {
                 tracing::warn!(
                     "Friendship updates stream ended - emitting subscription_dropped signal"
                 );
-                node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
+                node.call_deferred("emit_signal", &["subscription_dropped".to_variant()]);
             }
         }
     }
@@ -710,7 +710,7 @@ impl DclSocialService {
                     let address = friend.address.clone();
                     let msg = req.message.clone().unwrap_or_default();
                     node.call_deferred(
-                        "emit_signal".into(),
+                        "emit_signal",
                         &[
                             "friendship_request_received".to_variant(),
                             address.to_variant(),
@@ -723,7 +723,7 @@ impl DclSocialService {
                 if let Some(user) = accept.user {
                     let address = user.address.clone();
                     node.call_deferred(
-                        "emit_signal".into(),
+                        "emit_signal",
                         &[
                             "friendship_request_accepted".to_variant(),
                             address.to_variant(),
@@ -735,7 +735,7 @@ impl DclSocialService {
                 if let Some(user) = reject.user {
                     let address = user.address.clone();
                     node.call_deferred(
-                        "emit_signal".into(),
+                        "emit_signal",
                         &[
                             "friendship_request_rejected".to_variant(),
                             address.to_variant(),
@@ -747,7 +747,7 @@ impl DclSocialService {
                 if let Some(user) = delete.user {
                     let address = user.address.clone();
                     node.call_deferred(
-                        "emit_signal".into(),
+                        "emit_signal",
                         &["friendship_deleted".to_variant(), address.to_variant()],
                     );
                 }
@@ -756,7 +756,7 @@ impl DclSocialService {
                 if let Some(user) = cancel.user {
                     let address = user.address.clone();
                     node.call_deferred(
-                        "emit_signal".into(),
+                        "emit_signal",
                         &[
                             "friendship_request_cancelled".to_variant(),
                             address.to_variant(),
@@ -814,7 +814,7 @@ impl DclSocialService {
                                 let address = friend.address.clone();
                                 let status = update.status;
                                 node.call_deferred(
-                                    "emit_signal".into(),
+                                    "emit_signal",
                                     &[
                                         "friend_connectivity_updated".to_variant(),
                                         address.to_variant(),
@@ -838,7 +838,7 @@ impl DclSocialService {
                 tracing::warn!(
                     "Connectivity updates stream ended - emitting subscription_dropped signal"
                 );
-                node.call_deferred("emit_signal".into(), &["subscription_dropped".to_variant()]);
+                node.call_deferred("emit_signal", &["subscription_dropped".to_variant()]);
             }
         }
     }
@@ -899,18 +899,18 @@ impl DclSocialService {
             Ok(friends) => {
                 let mut array = Array::new();
                 for (address, name, has_claimed_name, profile_picture_url) in friends {
-                    let mut dict = Dictionary::new();
+                    let mut dict = VarDictionary::new();
                     dict.set("address", address);
                     dict.set("name", name);
                     dict.set("has_claimed_name", has_claimed_name);
                     dict.set("profile_picture_url", profile_picture_url);
-                    array.push(dict.to_variant());
+                    array.push(&dict.to_variant());
                 }
                 promise.bind_mut().resolve_with_data(array.to_variant());
             }
             Err(e) => {
                 tracing::error!("get_friends failed: {}", e);
-                promise.bind_mut().reject(e.into());
+                promise.bind_mut().reject(e.as_str().into())
             }
         }
     }
@@ -929,20 +929,20 @@ impl DclSocialService {
                 for (address, name, has_claimed_name, profile_picture_url, message, created_at) in
                     requests
                 {
-                    let mut dict = Dictionary::new();
+                    let mut dict = VarDictionary::new();
                     dict.set("address", address);
                     dict.set("name", name);
                     dict.set("has_claimed_name", has_claimed_name);
                     dict.set("profile_picture_url", profile_picture_url);
                     dict.set("message", message);
                     dict.set("created_at", created_at);
-                    array.push(dict.to_variant());
+                    array.push(&dict.to_variant());
                 }
                 promise.bind_mut().resolve_with_data(array.to_variant());
             }
             Err(e) => {
                 tracing::error!("get_requests failed: {}", e);
-                promise.bind_mut().reject(e.into());
+                promise.bind_mut().reject(e.as_str().into());
             }
         }
     }
@@ -957,13 +957,13 @@ impl DclSocialService {
 
         match result {
             Ok((status, message)) => {
-                let mut dict = Dictionary::new();
+                let mut dict = VarDictionary::new();
                 dict.set("status", status);
                 dict.set("message", message);
                 promise.bind_mut().resolve_with_data(dict.to_variant());
             }
             Err(e) => {
-                promise.bind_mut().reject(e.into());
+                promise.bind_mut().reject(GString::from(e.as_str()));
             }
         }
     }
@@ -982,7 +982,7 @@ impl DclSocialService {
             }
             Err(e) => {
                 tracing::error!("Social service operation failed: {}", e);
-                promise.bind_mut().reject(e.into());
+                promise.bind_mut().reject(GString::from(e.as_str()));
             }
         }
     }

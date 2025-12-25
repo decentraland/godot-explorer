@@ -1,10 +1,6 @@
 use godot::{
-    engine::{
-        control::LayoutPreset,
-        global::{HorizontalAlignment, VerticalAlignment},
-        text_server::JustificationFlag,
-        ILabel, Label,
-    },
+    classes::{control::LayoutPreset, text_server::JustificationFlag, ILabel, Label},
+    global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
 
@@ -33,7 +29,7 @@ impl ILabel for DclUiText {
     fn ready(&mut self) {
         let new_font_resource = self.current_font.get_font_resource();
         self.base_mut()
-            .add_theme_font_override("font".into(), new_font_resource);
+            .add_theme_font_override("font", &new_font_resource);
     }
 }
 
@@ -41,7 +37,7 @@ impl ILabel for DclUiText {
 impl DclUiText {
     pub fn change_value(&mut self, new_value: &PbUiText) {
         self.base_mut()
-            .add_theme_font_size_override("font_size".into(), new_value.font_size.unwrap_or(10));
+            .add_theme_font_size_override("font_size", new_value.font_size.unwrap_or(10));
         let font_color = new_value
             .color
             .as_ref()
@@ -65,13 +61,13 @@ impl DclUiText {
         let outline_width = new_value.outline_width.unwrap_or(0.0) as i32;
 
         self.base_mut()
-            .add_theme_color_override("font_color".into(), font_color);
+            .add_theme_color_override("font_color", font_color);
         self.base_mut()
-            .add_theme_color_override("font_outline_color".into(), outline_font_color);
+            .add_theme_color_override("font_outline_color", outline_font_color);
         self.base_mut()
-            .add_theme_constant_override("outline_size".into(), outline_width);
+            .add_theme_constant_override("outline_size", outline_width);
         self.base_mut()
-            .add_theme_constant_override("line_spacing".into(), 0);
+            .add_theme_constant_override("line_spacing", 0);
 
         let text_align = new_value
             .text_align
@@ -130,7 +126,7 @@ impl DclUiText {
         self.base_mut().set_vertical_alignment(vert_align);
         self.base_mut().set_horizontal_alignment(hor_align);
         self.base_mut()
-            .set_text(clone_removing_tags(new_value.value.as_str()).into());
+            .set_text(&clone_removing_tags(new_value.value.as_str()).to_godot());
         self.base_mut()
             .set_justification_flags(JustificationFlag::NONE);
 
@@ -138,15 +134,15 @@ impl DclUiText {
             self.current_font = new_value.font();
             let new_font_resource = self.current_font.get_font_resource();
             self.base_mut()
-                .add_theme_font_override("font".into(), new_font_resource);
+                .add_theme_font_override("font", &new_font_resource);
         }
 
         if new_value.text_wrap_compat() == TextWrap::TwWrap {
             self.base_mut()
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::WORD_SMART);
+                .set_autowrap_mode(godot::classes::text_server::AutowrapMode::WORD_SMART);
         } else {
             self.base_mut()
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::OFF);
+                .set_autowrap_mode(godot::classes::text_server::AutowrapMode::OFF);
         }
     }
 }

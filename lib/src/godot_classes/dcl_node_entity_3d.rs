@@ -14,7 +14,7 @@ impl DclNodeEntity3d {
     pub fn new_alloc(entity_id: SceneEntityId) -> Gd<Self> {
         let entity_id = entity_id.as_i32();
         let mut obj = Gd::from_init_fn(|_base| DclNodeEntity3d { _base, entity_id });
-        obj.set_name(GString::from(format!("e{:x}", entity_id)));
+        obj.set_name(&format!("e{:x}", entity_id));
         obj
     }
 

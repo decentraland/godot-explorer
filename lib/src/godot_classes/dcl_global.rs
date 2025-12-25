@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use godot::{
-    engine::{node::ProcessMode, Engine},
+    classes::{node::ProcessMode, Engine, Os},
+    obj::Singleton,
     prelude::*,
 };
 
@@ -265,29 +266,29 @@ impl INode for DclGlobal {
         let mut portable_experience_controller: Gd<DclPortableExperienceController> =
             DclPortableExperienceController::new_alloc();
 
-        tokio_runtime.set_name("tokio_runtime".into());
-        scene_runner.set_name("scene_runner".into());
+        tokio_runtime.set_name("tokio_runtime");
+        scene_runner.set_name("scene_runner");
         scene_runner.set_process_mode(ProcessMode::DISABLED);
-        comms.set_name("comms".into());
-        avatars.set_name("avatar_scene".into());
-        realm.set_name("realm".into());
-        dcl_tokio_rpc.set_name("dcl_tokio_rpc".into());
-        player_identity.set_name("player_identity".into());
-        testing_tools.set_name("testing_tool".into());
-        content_provider.set_name("content_provider".into());
-        portable_experience_controller.set_name("portable_experience_controller".into());
-        network_inspector.set_name("network_inspector".into());
-        social_blacklist.set_name("social_blacklist".into());
-        social_service.set_name("social_service".into());
+        comms.set_name("comms");
+        avatars.set_name("avatar_scene");
+        realm.set_name("realm");
+        dcl_tokio_rpc.set_name("dcl_tokio_rpc");
+        player_identity.set_name("player_identity");
+        testing_tools.set_name("testing_tool");
+        content_provider.set_name("content_provider");
+        portable_experience_controller.set_name("portable_experience_controller");
+        network_inspector.set_name("network_inspector");
+        social_blacklist.set_name("social_blacklist");
+        social_service.set_name("social_service");
 
         #[cfg(feature = "use_memory_debugger")]
-        memory_debugger.set_name("memory_debugger".into());
+        memory_debugger.set_name("memory_debugger");
 
         #[cfg(feature = "use_memory_debugger")]
-        benchmark_report.set_name("benchmark_report".into());
+        benchmark_report.set_name("benchmark_report");
 
-        metrics.set_name("metrics".into());
-        cli.set_name("cli".into());
+        metrics.set_name("metrics");
+        cli.set_name("cli");
 
         // Use CLI singleton for parsing
         let (testing_scene_mode, preview_mode, developer_mode, fixed_skybox_time, force_mobile) = {
@@ -303,7 +304,7 @@ impl INode for DclGlobal {
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
-        let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into()) || force_mobile;
+        let is_mobile = Os::singleton().has_feature("mobile") || force_mobile;
         let is_android = std::env::consts::OS == "android";
         let is_ios = std::env::consts::OS == "ios";
 
@@ -403,11 +404,11 @@ impl DclGlobal {
                 let root = tree.get_root();
                 if let Some(root) = root {
                     // Try to find the explorer node
-                    let explorer = root.get_node_or_null(NodePath::from("explorer"));
+                    let explorer = root.get_node_or_null("explorer");
                     if let Some(mut explorer) = explorer {
                         // Call ui_has_focus if it exists
-                        if explorer.has_method("ui_has_focus".into()) {
-                            return explorer.call("ui_has_focus".into(), &[]).to::<bool>();
+                        if explorer.has_method("ui_has_focus") {
+                            return explorer.call("ui_has_focus", &[]).to::<bool>();
                         }
                     }
                 }
@@ -444,7 +445,7 @@ impl DclGlobal {
         let Some(root) = main_loop.cast::<SceneTree>().get_root() else {
             return false;
         };
-        root.has_node("Global".into())
+        root.has_node("Global")
     }
 
     pub fn try_singleton() -> Option<Gd<Self>> {
@@ -452,7 +453,7 @@ impl DclGlobal {
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
-            .get_node_or_null("Global".into())?
+            .get_node_or_null("Global")?
             .try_cast::<Self>();
         res.ok()
     }

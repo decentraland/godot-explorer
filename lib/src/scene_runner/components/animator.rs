@@ -15,7 +15,7 @@ fn get_gltf_container(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<DclG
     godot_entity_node
         .base_3d
         .as_ref()?
-        .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"))
+        .try_get_node_as::<DclGltfContainer>("GltfContainer")
 }
 
 pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {

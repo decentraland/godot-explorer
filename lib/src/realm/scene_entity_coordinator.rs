@@ -693,22 +693,22 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
-    pub fn get_desired_scenes(&self) -> Dictionary {
-        let mut dict = Dictionary::new();
-        let mut loadable_scenes = VariantArray::new();
-        let mut keep_alive_scenes = VariantArray::new();
-        let mut empty_parcels = VariantArray::new();
+    pub fn get_desired_scenes(&self) -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        let mut loadable_scenes = VarArray::new();
+        let mut keep_alive_scenes = VarArray::new();
+        let mut empty_parcels = VarArray::new();
 
         for loadable_scene in self.get_loadable_scenes().iter() {
-            loadable_scenes.push(Variant::from(GString::from(loadable_scene)));
+            loadable_scenes.push(&Variant::from(loadable_scene.as_str()));
         }
 
         for keep_alive_scene in self.get_keep_alive_scenes().iter() {
-            keep_alive_scenes.push(Variant::from(GString::from(keep_alive_scene)));
+            keep_alive_scenes.push(&Variant::from(keep_alive_scene.as_str()));
         }
 
         for empty_parcel in self.get_empty_parcels().iter() {
-            empty_parcels.push(Variant::from(GString::from(empty_parcel)));
+            empty_parcels.push(&Variant::from(empty_parcel.as_str()));
         }
 
         dict.set(GString::from("loadable_scenes"), loadable_scenes);
@@ -732,7 +732,7 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
-    pub fn set_fixed_desired_entities_urns(&mut self, entities: VariantArray) {
+    pub fn set_fixed_desired_entities_urns(&mut self, entities: VarArray) {
         let entities = entities
             .iter_shared()
             .map(|entity| entity.to_string())
@@ -741,7 +741,7 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
-    pub fn set_fixed_desired_entities_global_urns(&mut self, entities: VariantArray) {
+    pub fn set_fixed_desired_entities_global_urns(&mut self, entities: VarArray) {
         let entities = entities
             .iter_shared()
             .map(|entity| entity.to_string())

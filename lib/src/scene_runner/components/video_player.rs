@@ -25,7 +25,7 @@ use crate::{
 /// Position change threshold in seconds - emit event if position changes by more than this
 const POSITION_CHANGE_THRESHOLD: f64 = 0.5;
 use godot::{
-    engine::{image::Format, Image, ImageTexture},
+    classes::{image::Format, Image, ImageTexture, Node},
     prelude::*,
 };
 
@@ -273,7 +273,7 @@ pub fn update_video_player(
 /// Get an existing VideoPlayer node from a parent node
 fn get_video_player_node(parent: &Gd<Node3D>) -> Option<Gd<DclVideoPlayer>> {
     parent
-        .get_node_or_null("VideoPlayer".into())
+        .get_node_or_null("VideoPlayer")
         .and_then(|n| n.try_cast::<DclVideoPlayer>().ok())
 }
 
@@ -285,20 +285,20 @@ fn get_or_create_video_player_node(parent: &mut Gd<Node3D>, scene_id: i32) -> Gd
 
     // Create new video player node from scene
     let mut video_player_node =
-        godot::engine::load::<PackedScene>("res://src/decentraland_components/video_player.tscn")
+        godot::tools::load::<PackedScene>("res://src/decentraland_components/video_player.tscn")
             .instantiate()
             .expect("Failed to instantiate video_player.tscn")
             .cast::<DclVideoPlayer>();
 
     video_player_node.bind_mut().set_dcl_scene_id(scene_id);
-    video_player_node.set_name("VideoPlayer".into());
+    video_player_node.set_name("VideoPlayer");
 
     // Create initial placeholder texture for LiveKit (will be updated by video frames)
     let image = Image::create(8, 8, false, Format::RGBA8).expect("couldn't create video image");
-    let texture = ImageTexture::create_from_image(image).expect("couldn't create video texture");
+    let texture = ImageTexture::create_from_image(&image).expect("couldn't create video texture");
     video_player_node.bind_mut().set_dcl_texture(Some(texture));
 
-    parent.add_child(video_player_node.clone().upcast());
+    parent.add_child(&video_player_node.clone().upcast::<Node>());
 
     video_player_node
 }
@@ -474,8 +474,8 @@ pub fn update_video_texture_from_livekit(
     data: &[u8],
 ) {
     use crate::content::packed_array::PackedByteArrayFromVec;
-    use godot::engine::image::Format;
-    use godot::engine::Image;
+    use godot::classes::image::Format;
+    use godot::classes::Image;
     use godot::prelude::PackedByteArray;
 
     let Some(texture) = &mut video_player_data.texture else {
@@ -490,14 +490,14 @@ pub fn update_video_texture_from_livekit(
     if current_size.x != width as f32 || current_size.y != height as f32 {
         // Create new image with new dimensions
         let image =
-            Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, data_arr)
+            Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, &data_arr)
                 .unwrap();
-        texture.set_image(image.clone());
-        texture.update(image);
+        texture.set_image(&image);
+        texture.update(&image);
     } else {
         // Update existing texture in-place
         let mut image = texture.get_image().unwrap();
-        image.set_data(width as i32, height as i32, false, Format::RGBA8, data_arr);
-        texture.update(image);
+        image.set_data(width as i32, height as i32, false, Format::RGBA8, &data_arr);
+        texture.update(&image);
     }
 }

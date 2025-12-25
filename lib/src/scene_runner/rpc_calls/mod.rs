@@ -1,7 +1,7 @@
 mod handle_restricted_actions;
 mod portables;
 
-use godot::{builtin::meta::ToGodot, obj::NewGd};
+use godot::{meta::ToGodot, obj::NewGd};
 
 use crate::{
     content::content_mapping::DclContentMappingAndUrl,
@@ -105,7 +105,7 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                     DclContentMappingAndUrl::from_ref(scene.content_mapping.clone());
 
                 DclGlobal::singleton().call_deferred(
-                    "async_get_texture_size".into(),
+                    "async_get_texture_size",
                     &[
                         content_mapping.to_variant(),
                         src.to_variant(),

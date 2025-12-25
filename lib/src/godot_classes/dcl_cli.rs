@@ -1,4 +1,5 @@
-use godot::engine::{Engine, Node, Os, SceneTree};
+use godot::classes::{Engine, Node, Os, SceneTree};
+use godot::obj::Singleton;
 use godot::prelude::*;
 use std::collections::HashMap;
 
@@ -528,7 +529,7 @@ impl DclCli {
             help.push('\n');
         }
 
-        GString::from(help)
+        GString::from(&help)
     }
 
     #[func]
@@ -542,7 +543,7 @@ impl DclCli {
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
-            .get_node_or_null("DclCli".into())?
+            .get_node_or_null("DclCli")?
             .try_cast::<Self>();
         res.ok()
     }

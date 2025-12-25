@@ -35,7 +35,7 @@ pub struct Promise {
 #[godot_api]
 impl Promise {
     #[signal]
-    pub fn on_resolved(&self) {}
+    fn on_resolved();
 
     #[func]
     pub fn resolve(&mut self) {
@@ -44,7 +44,7 @@ impl Promise {
         }
         self.resolved = true;
         self.base_mut()
-            .call_deferred("emit_signal".into(), &["on_resolved".to_variant()]);
+            .call_deferred("emit_signal", &["on_resolved".to_variant()]);
     }
 
     #[func]
@@ -101,7 +101,7 @@ impl Promise {
 
     pub fn from_rejected(reason: String) -> Gd<Self> {
         let mut data = PromiseError::new_alloc();
-        data.bind_mut().error_description = GString::from(reason);
+        data.bind_mut().error_description = GString::from(&reason);
 
         Gd::from_init_fn(|base| Self {
             resolved: true,

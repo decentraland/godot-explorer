@@ -5,7 +5,7 @@ pub mod transform_and_parent;
 
 use std::hash::Hash;
 
-use godot::{engine::global::PropertyHint, prelude::*, register::property::PropertyHintInfo};
+use godot::{global::PropertyHint, meta::PropertyHintInfo, prelude::*};
 
 #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Debug, Clone, Copy, Default)]
 pub struct SceneEntityId {
@@ -28,7 +28,7 @@ impl Var for SceneEntityId {
 }
 
 impl Export for SceneEntityId {
-    fn default_export_info() -> PropertyHintInfo {
+    fn export_hint() -> PropertyHintInfo {
         PropertyHintInfo {
             hint: PropertyHint::NONE,
             hint_string: "Entity ID in the owner scene".into(),

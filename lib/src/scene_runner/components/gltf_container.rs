@@ -43,12 +43,12 @@ pub fn update_gltf_container(
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("GltfContainer"));
+            let existing = node_3d.try_get_node_as::<Node>("GltfContainer");
 
             if new_value.is_none() {
                 if let Some(mut gltf_node) = existing {
                     gltf_node.queue_free();
-                    node_3d.remove_child(gltf_node);
+                    node_3d.remove_child(&gltf_node);
                     scene.gltf_loading.remove(entity);
                 }
             } else if let Some(new_value) = new_value {
@@ -59,7 +59,7 @@ pub fn update_gltf_container(
 
                 if let Some(mut gltf_node) = existing {
                     gltf_node.call(
-                        "change_gltf".into(),
+                        "change_gltf",
                         &[
                             new_value.src.to_variant(),
                             visible_meshes_collision_mask.to_variant(),
@@ -69,7 +69,7 @@ pub fn update_gltf_container(
                     scene.gltf_loading.insert(*entity);
                 } else {
                     // TODO: preload this resource
-                    let mut new_gltf = godot::engine::load::<PackedScene>(
+                    let mut new_gltf = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/gltf_container.tscn",
                     )
                     .instantiate()
@@ -77,15 +77,15 @@ pub fn update_gltf_container(
                     .cast::<DclGltfContainer>();
 
                     let mut new_gltf_ref = new_gltf.bind_mut();
-                    new_gltf_ref.set_dcl_gltf_src(GString::from(new_value.src));
+                    new_gltf_ref.set_dcl_gltf_src(new_value.src.to_godot());
                     new_gltf_ref.set_dcl_scene_id(scene_id);
                     new_gltf_ref.set_dcl_entity_id(entity.as_i32());
                     new_gltf_ref.set_dcl_visible_cmask(visible_meshes_collision_mask);
                     new_gltf_ref.set_dcl_invisible_cmask(invisible_meshes_collision_mask);
                     drop(new_gltf_ref);
 
-                    new_gltf.set_name(GString::from("GltfContainer"));
-                    node_3d.add_child(new_gltf.clone().upcast());
+                    new_gltf.set_name("GltfContainer");
+                    node_3d.add_child(&new_gltf.clone().upcast::<Node>());
 
                     scene.gltf_loading.insert(*entity);
                 }
@@ -126,11 +126,11 @@ pub fn sync_gltf_loading_state(
         let gltf_node = godot_dcl_scene
             .ensure_node_3d(entity)
             .1
-            .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"));
+            .try_get_node_as::<DclGltfContainer>("GltfContainer");
 
         if let Some(mut gltf_node) = gltf_node.clone() {
             if gltf_node.bind().get_dcl_pending_node().is_some() {
-                gltf_node.call("async_deferred_add_child".into(), &[]);
+                gltf_node.call("async_deferred_add_child", &[]);
             }
         }
 

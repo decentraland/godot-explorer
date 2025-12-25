@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use ethers_core::types::{Signature, H160};
-use godot::{engine::WebSocketPeer, prelude::*};
+use godot::{classes::WebSocketPeer, prelude::*};
 use prost::Message;
 use tracing::error;
 
@@ -103,7 +103,7 @@ impl WebSocketRoom {
 
         Self {
             ws_peer: WebSocketPeer::new_gd(),
-            ws_url: GString::from(ws_url),
+            ws_url: GString::from(&ws_url),
             state: WsRoomState::Connecting,
             player_address: ephemeral_auth_chain.signer(),
             ephemeral_auth_chain,
@@ -165,7 +165,7 @@ impl WebSocketRoom {
         }
 
         let buf = PackedByteArray::from_iter(buf);
-        matches!(self.ws_peer.send(buf), godot::engine::global::Error::OK)
+        matches!(self.ws_peer.send(&buf), godot::global::Error::OK)
     }
 
     fn _poll(&mut self) {
@@ -176,18 +176,18 @@ impl WebSocketRoom {
 
         match self.state.clone() {
             WsRoomState::Connecting => match ws_state {
-                godot::engine::web_socket_peer::State::CLOSED => {
+                godot::classes::web_socket_peer::State::CLOSED => {
                     if (Instant::now() - self.last_try_to_connect).as_secs()
                         > RECONNECT_INTERVAL_SECS
                     {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
-                            v.push(GString::from("rfc5"));
+                            v.push(&GString::from("rfc5"));
                             v
                         };
 
-                        peer.set("supported_protocols".into(), ws_protocols.to_variant());
-                        peer.call("connect_to_url".into(), &[self.ws_url.clone().to_variant()]);
+                        peer.set("supported_protocols", &ws_protocols.to_variant());
+                        peer.call("connect_to_url", &[self.ws_url.clone().to_variant()]);
 
                         self.last_try_to_connect = Instant::now();
                         self.peer_identities.clear();
@@ -195,13 +195,13 @@ impl WebSocketRoom {
                         self.signature = None;
                     }
                 }
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self.state = WsRoomState::Connected;
                 }
                 _ => {}
             },
             WsRoomState::Connected => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self._send(
                         WsPacket {
                             message: Some(ws_packet::Message::PeerIdentification(
@@ -220,7 +220,7 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::IdentMessageSent => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             ws_packet::Message::ChallengeMessage(challenge_msg) => {
@@ -275,7 +275,7 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::ChallengeMessageSent => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             ws_packet::Message::WelcomeMessage(welcome_msg) => {
@@ -296,7 +296,7 @@ impl WebSocketRoom {
                                 for (alias, peer) in self.peer_identities.iter() {
                                     self.avatars.bind_mut().add_avatar(
                                         *alias,
-                                        GString::from(format!("{:#x}", peer.address)),
+                                        GString::from(&format!("{:#x}", peer.address)),
                                     );
 
                                     // Send PeerJoined event to MessageProcessor
@@ -328,7 +328,7 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::WelcomeMessageReceived => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self._handle_messages();
                 }
                 _ => {
@@ -342,8 +342,8 @@ impl WebSocketRoom {
         let mut peer = self.ws_peer.clone();
         peer.close();
         match peer.get_ready_state() {
-            godot::engine::web_socket_peer::State::OPEN
-            | godot::engine::web_socket_peer::State::CONNECTING => {
+            godot::classes::web_socket_peer::State::OPEN
+            | godot::classes::web_socket_peer::State::CONNECTING => {
                 peer.close();
             }
             _ => {}
@@ -364,7 +364,7 @@ impl WebSocketRoom {
                         self.peer_identities.insert(peer.alias, Peer::new(h160));
                         self.avatars
                             .bind_mut()
-                            .add_avatar(peer.alias, GString::from(format!("{:#x}", h160)));
+                            .add_avatar(peer.alias, GString::from(&format!("{:#x}", h160)));
 
                         // Send PeerJoined event to MessageProcessor
                         if let Some(sender) = &self.message_processor_sender {

@@ -1,3 +1,4 @@
+use godot::{classes::Os, obj::Singleton};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -31,7 +32,7 @@ pub struct SegmentEventCommonExplorerFields {
 
 impl SegmentEventCommonExplorerFields {
     pub fn new(session_id: String) -> Self {
-        let dcl_renderer_type = format!("dao-godot-{}", godot::engine::Os::singleton().get_name());
+        let dcl_renderer_type = format!("dao-godot-{}", Os::singleton().get_name());
 
         Self {
             dcl_eth_address: "unauthenticated".into(),

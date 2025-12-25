@@ -1,5 +1,5 @@
 use crate::av::backend::BackendType;
-use godot::engine::ImageTexture;
+use godot::classes::{AudioStreamPlayer, ImageTexture};
 use godot::prelude::*;
 
 /// Video state constants (matching GDScript and SDK VideoState)
@@ -113,7 +113,7 @@ impl DclVideoPlayer {
         // Call the GDScript implementation to actually initialize the backend
         // Note: We use source.clone() above and pass source here to avoid borrow issues
         self.base_mut().call(
-            "_init_backend_impl".into(),
+            "_init_backend_impl",
             &[
                 backend_type.to_variant(),
                 source.to_variant(),
@@ -137,48 +137,48 @@ impl DclVideoPlayer {
     /// Send a play command to the backend
     #[func]
     pub fn backend_play(&mut self) {
-        self.base_mut().call("_backend_play".into(), &[]);
+        self.base_mut().call("_backend_play", &[]);
     }
 
     /// Send a pause command to the backend
     #[func]
     pub fn backend_pause(&mut self) {
-        self.base_mut().call("_backend_pause".into(), &[]);
+        self.base_mut().call("_backend_pause", &[]);
     }
 
     /// Set the looping state on the backend
     #[func]
     pub fn backend_set_looping(&mut self, looping: bool) {
         self.base_mut()
-            .call("_backend_set_looping".into(), &[looping.to_variant()]);
+            .call("_backend_set_looping", &[looping.to_variant()]);
     }
 
     /// Seek to a specific position in seconds
     #[func]
     pub fn backend_seek(&mut self, position: f32) {
         self.base_mut()
-            .call("_backend_seek".into(), &[position.to_variant()]);
+            .call("_backend_seek", &[position.to_variant()]);
     }
 
     /// Set the playback rate (1.0 = normal speed)
     #[func]
     pub fn backend_set_playback_rate(&mut self, rate: f32) {
         self.base_mut()
-            .call("_backend_set_playback_rate".into(), &[rate.to_variant()]);
+            .call("_backend_set_playback_rate", &[rate.to_variant()]);
     }
 
     /// Dispose the backend and clean up resources
     #[func]
     pub fn backend_dispose(&mut self) {
-        self.base_mut().call("_backend_dispose".into(), &[]);
+        self.base_mut().call("_backend_dispose", &[]);
         self.backend_type = BackendType::Noop;
     }
 
     /// Get the texture from the backend (for ExoPlayer this comes from ExternalTexture)
     /// Note: This needs &mut self because Godot's call() requires mutable access
     #[func]
-    pub fn get_backend_texture(&mut self) -> Option<Gd<godot::engine::Texture2D>> {
-        let result = self.base_mut().call("_get_backend_texture".into(), &[]);
-        result.try_to::<Gd<godot::engine::Texture2D>>().ok()
+    pub fn get_backend_texture(&mut self) -> Option<Gd<godot::classes::Texture2D>> {
+        let result = self.base_mut().call("_get_backend_texture", &[]);
+        result.try_to::<Gd<godot::classes::Texture2D>>().ok()
     }
 }

@@ -148,12 +148,12 @@ impl DclPortableExperienceController {
     }
 
     #[func]
-    pub fn get_portable_experience_list(&self) -> Array<Dictionary> {
+    pub fn get_portable_experience_list(&self) -> Array<VarDictionary> {
         self.portable_experiences
             .iter()
             .filter(|(_, pe)| matches!(pe.state, PortableExperienceState::Running(_)))
             .map(|(_, portable_experience)| {
-                let mut item = Dictionary::new();
+                let mut item = VarDictionary::new();
                 item.set("pid", portable_experience.pid.clone());
                 match portable_experience.state {
                     PortableExperienceState::Running(scene_id)
@@ -187,7 +187,7 @@ impl DclPortableExperienceController {
         for (_, portable_experience) in self.portable_experiences.iter_mut() {
             if let PortableExperienceState::SpawnRequested = portable_experience.state {
                 portable_experience.state = PortableExperienceState::Spawning;
-                ret.push(GString::from(&portable_experience.pid));
+                ret.push(&GString::from(portable_experience.pid.as_str()));
             }
         }
         ret
@@ -199,7 +199,7 @@ impl DclPortableExperienceController {
         for (_, portable_experience) in self.portable_experiences.iter_mut() {
             if let PortableExperienceState::KillRequested(scene_id) = portable_experience.state {
                 portable_experience.state = PortableExperienceState::Killing(scene_id);
-                ret.push(GString::from(&portable_experience.pid));
+                ret.push(&GString::from(portable_experience.pid.as_str()));
             }
         }
         ret
@@ -223,7 +223,7 @@ impl DclPortableExperienceController {
             return GString::default();
         };
 
-        let ret = GString::from(portable_experience.0);
+        let ret = portable_experience.0.to_godot();
         if portable_experience.1.persistent {
             match portable_experience.1.state.clone() {
                 PortableExperienceState::Killing(_) => {
