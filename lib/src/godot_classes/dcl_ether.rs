@@ -15,7 +15,7 @@ impl DclEther {
         if address.len() == 42 && address.starts_with("0x") {
             let start = &address[0..6]; // First four characters after "0x"
             let end = &address[address.len() - 4..]; // Last four characters
-            GString::from(format!("{}...{}", start, end))
+            GString::from(format!("{}...{}", start, end).as_str())
         } else {
             GString::from("Invalid address")
         }
