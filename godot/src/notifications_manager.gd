@@ -34,7 +34,6 @@ const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
-	"event_created",  # Events: New event created
 	"events_starts_soon",  # Events: Event starts soon
 	"events_started",  # Events: Event has started
 	"reward_assignment",  # Rewards: Reward assigned/received
