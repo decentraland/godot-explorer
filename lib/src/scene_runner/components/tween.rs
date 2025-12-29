@@ -330,7 +330,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         basis
                     };
 
-                    transform.rotation = basis.to_quat();
+                    transform.rotation = basis.get_quaternion();
                 }
 
                 transform.translation = start + ((end - start) * ease_value);

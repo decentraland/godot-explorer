@@ -4,7 +4,11 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
+use godot::{
+    obj::{NewAlloc, Singleton},
+    prelude::Gd,
+    prelude::ToGodot,
+};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -435,7 +439,7 @@ impl Scene {
     pub fn process_livekit_video_frame(&mut self, width: u32, height: u32, data: &[u8]) {
         use crate::godot_classes::dcl_video_player::VIDEO_STATE_PLAYING;
         use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
-        use godot::engine::Time;
+        use godot::classes::Time;
 
         let current_time = Time::singleton().get_ticks_msec() as f64 / 1000.0;
 
@@ -450,9 +454,9 @@ impl Scene {
 
             // Update video player state to PLAYING when receiving frames
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
-                video_player.set("video_state".into(), VIDEO_STATE_PLAYING.to_variant());
-                video_player.set("video_length".into(), (-1.0_f64).to_variant());
-                video_player.set("last_frame_time".into(), current_time.to_variant());
+                video_player.set("video_state", &VIDEO_STATE_PLAYING.to_variant());
+                video_player.set("video_length", &(-1.0_f64).to_variant());
+                video_player.set("last_frame_time", &current_time.to_variant());
             }
         }
     }
@@ -474,7 +478,7 @@ impl Scene {
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
                 video_player.call(
-                    "init_livekit_audio".into(),
+                    "init_livekit_audio",
                     &[
                         sample_rate.to_variant(),
                         num_channels.to_variant(),
@@ -490,7 +494,7 @@ impl Scene {
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
                 // Call the stream_buffer method on the video player (GDScript)
-                video_player.call("stream_buffer".into(), &[frame.to_variant()]);
+                video_player.call("stream_buffer", &[frame.to_variant()]);
             }
         }
     }
