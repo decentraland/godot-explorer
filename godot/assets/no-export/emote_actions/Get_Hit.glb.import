@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://cxghuef24cc4u"
-path="res://.godot/imported/Get_Hit.glb-fb144d92c17c65c70f84abe6ec360a99.res"
+path="res://.godot/imported/Get_Hit.glb-a052921d23e275647fdff514a6aec60e.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Get_Hit.glb"
-dest_files=["res://.godot/imported/Get_Hit.glb-fb144d92c17c65c70f84abe6ec360a99.res"]
+source_file="res://assets/no-export/emote_actions/Get_Hit.glb"
+dest_files=["res://.godot/imported/Get_Hit.glb-a052921d23e275647fdff514a6aec60e.res"]
 
 [params]
 

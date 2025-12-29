@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://x0cgnt852mt7"
-path="res://.godot/imported/Swing_DoubleHanded.glb-d1272f780f8d675aa706775e592134fa.res"
+path="res://.godot/imported/Swing_DoubleHanded.glb-fb695df8bb1856f5b49a0658e4e7eb76.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Swing_DoubleHanded.glb"
-dest_files=["res://.godot/imported/Swing_DoubleHanded.glb-d1272f780f8d675aa706775e592134fa.res"]
+source_file="res://assets/no-export/emote_actions/Swing_DoubleHanded.glb"
+dest_files=["res://.godot/imported/Swing_DoubleHanded.glb-fb695df8bb1856f5b49a0658e4e7eb76.res"]
 
 [params]
 

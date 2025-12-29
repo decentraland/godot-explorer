@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://bfr024bjcc6su"
-path="res://.godot/imported/SittingGround_v01.glb-a67dfa0253b04ec75b189b034ab0e4c5.res"
+path="res://.godot/imported/SittingGround_v01.glb-649ef7963ba151ebb49bd81e7ddb277c.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/SittingGround_v01.glb"
-dest_files=["res://.godot/imported/SittingGround_v01.glb-a67dfa0253b04ec75b189b034ab0e4c5.res"]
+source_file="res://assets/no-export/emote_actions/SittingGround_v01.glb"
+dest_files=["res://.godot/imported/SittingGround_v01.glb-649ef7963ba151ebb49bd81e7ddb277c.res"]
 
 [params]
 

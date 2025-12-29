@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://bliwbwawh81qo"
-path="res://.godot/imported/Lever.glb-91a2a4e673425e1ccf4043a84112ca49.res"
+path="res://.godot/imported/Lever.glb-3c74dc63c69d05ba87303a18e99c4cd3.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Lever.glb"
-dest_files=["res://.godot/imported/Lever.glb-91a2a4e673425e1ccf4043a84112ca49.res"]
+source_file="res://assets/no-export/emote_actions/Lever.glb"
+dest_files=["res://.godot/imported/Lever.glb-3c74dc63c69d05ba87303a18e99c4cd3.res"]
 
 [params]
 

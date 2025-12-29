@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://cu1iw34myccse"
-path="res://.godot/imported/Push.glb-979d318a4ddf9278f997092999a71920.res"
+path="res://.godot/imported/Push.glb-1908776dcb601092429637bddb9695bf.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Push.glb"
-dest_files=["res://.godot/imported/Push.glb-979d318a4ddf9278f997092999a71920.res"]
+source_file="res://assets/no-export/emote_actions/Push.glb"
+dest_files=["res://.godot/imported/Push.glb-1908776dcb601092429637bddb9695bf.res"]
 
 [params]
 
