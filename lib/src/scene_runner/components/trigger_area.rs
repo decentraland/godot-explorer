@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
-use godot::{engine::PhysicsServer3D, prelude::*};
+use godot::{classes::PhysicsServer3D, obj::Singleton, prelude::*};
 use once_cell::sync::Lazy;
 
 use crate::{
@@ -123,7 +123,7 @@ fn handle_body_monitor_event(
         // Check if this is an avatar (has CL_PLAYER layer)
         let is_avatar = object
             .clone()
-            .try_cast::<godot::engine::CollisionObject3D>()
+            .try_cast::<godot::classes::CollisionObject3D>()
             .ok()
             .map(|co| (co.get_collision_layer() & CL_PLAYER) != 0)
             .unwrap_or(false);
@@ -131,15 +131,15 @@ fn handle_body_monitor_event(
         if is_avatar {
             // Avatar detection (local player or remote avatar)
             // AvatarShapes (scene NPCs) don't have trigger detection enabled, so they can't reach here
-            if !object.has_meta("dcl_entity_id".into()) {
+            if !object.has_meta("dcl_entity_id") {
                 return;
             }
-            let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
+            let dcl_entity_id = object.get_meta("dcl_entity_id").to::<i32>();
             (SceneEntityId::from_i32(dcl_entity_id), CL_PLAYER)
-        } else if object.has_meta("dcl_entity_id".into()) {
+        } else if object.has_meta("dcl_entity_id") {
             // Regular DCL scene entity (not avatar)
-            let dcl_entity_id = object.get_meta("dcl_entity_id".into()).to::<i32>();
-            let dcl_scene_id = object.get_meta("dcl_scene_id".into()).to::<i32>();
+            let dcl_entity_id = object.get_meta("dcl_entity_id").to::<i32>();
+            let dcl_scene_id = object.get_meta("dcl_scene_id").to::<i32>();
 
             // Only accept entities from the same scene
             if dcl_scene_id != scene_id.0 {
@@ -224,7 +224,7 @@ impl TriggerAreaState {
         for (_, instance) in self.instances.drain() {
             unregister_trigger_area(instance.area_rid);
             // Clear monitor callback before freeing to prevent stale events
-            physics_server.area_set_monitor_callback(instance.area_rid, Callable::invalid());
+            physics_server.area_set_monitor_callback(instance.area_rid, &Callable::invalid());
             physics_server.free_rid(instance.area_rid);
             physics_server.free_rid(instance.shape_rid);
         }
@@ -308,7 +308,7 @@ fn create_monitor_callback(area_rid: Rid) -> Callable {
                 local_shape_idx,
             );
         }
-        Ok(Variant::nil())
+        Variant::nil()
     })
 }
 
@@ -379,7 +379,7 @@ fn check_scene_active(scene: &mut Scene, current_parcel_scene_id: &SceneId) {
             }
 
             // Disable physics monitoring
-            physics_server.area_set_monitor_callback(instance.area_rid, Callable::invalid());
+            physics_server.area_set_monitor_callback(instance.area_rid, &Callable::invalid());
             instance.is_active = false;
         }
     } else if !was_active && is_active {
@@ -393,7 +393,7 @@ fn check_scene_active(scene: &mut Scene, current_parcel_scene_id: &SceneId) {
         for instance in scene.trigger_areas.instances.values_mut() {
             // Re-enable physics monitoring (will auto-fire ENTERs for overlapping bodies)
             let callback = create_monitor_callback(instance.area_rid);
-            physics_server.area_set_monitor_callback(instance.area_rid, callback);
+            physics_server.area_set_monitor_callback(instance.area_rid, &callback);
             instance.is_active = true;
         }
     }
@@ -572,12 +572,12 @@ fn create_or_update_trigger_area(
         let shape_rid = match mesh_type {
             TriggerAreaMeshType::TamtBox => {
                 let rid = pool.acquire_box_shape();
-                physics_server.shape_set_data(rid, Vector3::new(0.5, 0.5, 0.5).to_variant());
+                physics_server.shape_set_data(rid, &Vector3::new(0.5, 0.5, 0.5).to_variant());
                 rid
             }
             TriggerAreaMeshType::TamtSphere => {
                 let rid = pool.acquire_sphere_shape();
-                physics_server.shape_set_data(rid, (0.5_f32).to_variant());
+                physics_server.shape_set_data(rid, &(0.5_f32).to_variant());
                 rid
             }
         };
@@ -596,7 +596,7 @@ fn create_or_update_trigger_area(
         // Only set up monitor callback if active
         if is_active {
             let callback = create_monitor_callback(area_rid);
-            physics_server.area_set_monitor_callback(area_rid, callback);
+            physics_server.area_set_monitor_callback(area_rid, &callback);
         }
 
         tracing::debug!(
@@ -679,10 +679,10 @@ fn build_trigger_result(
     trigger_layers: u32,
 ) -> PbTriggerAreaResult {
     let triggered_pos = triggered_transform.origin - scene_pos;
-    let triggered_rot = triggered_transform.basis.to_quat();
+    let triggered_rot = triggered_transform.basis.get_quaternion();
 
     let trigger_pos = trigger_transform.origin - scene_pos;
-    let trigger_rot = trigger_transform.basis.to_quat();
+    let trigger_rot = trigger_transform.basis.get_quaternion();
 
     PbTriggerAreaResult {
         triggered_entity: triggered_entity.as_i32() as u32,

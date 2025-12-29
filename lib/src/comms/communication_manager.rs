@@ -200,7 +200,7 @@ impl INode for CommunicationManager {
     }
 
     fn ready(&mut self) {
-        self.base_mut().call_deferred("init_rs".into(), &[]);
+        self.base_mut().call_deferred("init_rs", &[]);
     }
 
     fn process(&mut self, _dt: f64) {
@@ -228,14 +228,18 @@ impl INode for CommunicationManager {
 
                 if player_identity.bind().try_get_address().is_some() {
                     let var = adapter_url.to_variant();
-                    self.base_mut()
-                        .call_deferred("change_adapter".into(), &[var]);
+                    self.base_mut().call_deferred("change_adapter", &[var]);
                 }
             }
             CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
                 SignedLoginPollStatus::Pending => {}
                 SignedLoginPollStatus::Complete(response) => {
-                    self.change_adapter(response.fixed_adapter.unwrap_or("offline".into()).into());
+                    self.change_adapter(
+                        response
+                            .fixed_adapter
+                            .unwrap_or_else(|| "offline".to_string())
+                            .to_godot(),
+                    );
                 }
                 SignedLoginPollStatus::Error(e) => {
                     tracing::info!("Error in signed login: {:?}", e);
@@ -254,7 +258,7 @@ impl INode for CommunicationManager {
                 if !chats.is_empty() {
                     let chats_variant_array = get_chat_array(chats);
                     self.base_mut()
-                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                        .emit_signal("chat_message", &[chats_variant_array.to_variant()]);
                 }
 
                 if !adapter_polling_ok {
@@ -308,7 +312,7 @@ impl INode for CommunicationManager {
         // Handle chat signals after borrowing is done
         for chats_variant_array in chat_signals {
             self.base_mut()
-                .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                .emit_signal("chat_message", &[chats_variant_array.to_variant()]);
         }
 
         // Handle outgoing messages after borrowing is done
@@ -354,7 +358,7 @@ impl INode for CommunicationManager {
             }
 
             self.base_mut()
-                .emit_signal("disconnected".into(), &[reason_code.to_variant()]);
+                .emit_signal("disconnected", &[reason_code.to_variant()]);
         }
 
         // Poll main room (if active)
@@ -389,7 +393,7 @@ impl CommunicationManager {
 
         let voice_chat_enabled = self.voice_chat_enabled.to_variant();
         self.base_mut().emit_signal(
-            "on_adapter_changed".into(),
+            "on_adapter_changed",
             &[voice_chat_enabled, "fallback".to_variant()],
         );
 
@@ -572,15 +576,15 @@ impl CommunicationManager {
 #[godot_api]
 impl CommunicationManager {
     #[signal]
-    fn chat_message(chats: VariantArray) {}
+    fn chat_message(chats: VarArray);
 
     #[signal]
-    fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString) {}
+    fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
 
     /// Signal emitted when disconnected from the server
     /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other
     #[signal]
-    fn disconnected(reason: i32) {}
+    fn disconnected(reason: i32);
 
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
@@ -885,8 +889,10 @@ impl CommunicationManager {
 
     #[func]
     pub fn send_emote(&mut self, emote_urn: GString) -> bool {
-        let timestamp = godot::engine::Time::singleton().get_unix_time_from_system() * 1000.0;
-        self.send_chat(format!("␐{} {}", emote_urn, timestamp).into());
+        let timestamp = godot::classes::Time::singleton().get_unix_time_from_system() * 1000.0;
+        self.send_chat(GString::from(
+            format!("␐{} {}", emote_urn, timestamp).as_str(),
+        ));
 
         self.last_emote_incremental_id += 1;
 
@@ -916,15 +922,15 @@ impl CommunicationManager {
 
     #[func]
     fn init_rs(&mut self) {
-        DclGlobal::singleton().bind().get_realm().connect(
-            "realm_changed".into(),
-            self.base().callable("_on_realm_changed"),
-        );
+        DclGlobal::singleton()
+            .bind()
+            .get_realm()
+            .connect("realm_changed", &self.base().callable("_on_realm_changed"));
 
         let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
         player_identity.connect(
-            "profile_changed".into(),
-            self.base().callable("_on_profile_changed"),
+            "profile_changed",
+            &self.base().callable("_on_profile_changed"),
         );
 
         // Connect to social blacklist changes
@@ -932,16 +938,16 @@ impl CommunicationManager {
         let global_bind = global.bind();
         let mut social_blacklist = global_bind.social_blacklist.clone();
         social_blacklist.connect(
-            "blacklist_changed".into(),
-            self.base().callable("on_blacklist_changed"),
+            "blacklist_changed",
+            &self.base().callable("on_blacklist_changed"),
         );
 
         #[cfg(feature = "use_livekit")]
         {
             let mut scene_runner = DclGlobal::singleton().bind().get_scene_runner();
             scene_runner.connect(
-                "on_change_scene_id".into(),
-                self.base().callable("_on_change_scene_id"),
+                "on_change_scene_id",
+                &self.base().callable("_on_change_scene_id"),
             );
         }
 
@@ -954,20 +960,19 @@ impl CommunicationManager {
 
     #[func]
     fn _on_profile_changed(&mut self, _: Variant) {
-        self.base_mut()
-            .call_deferred("_on_update_profile".into(), &[]);
+        self.base_mut().call_deferred("_on_update_profile", &[]);
     }
 
     #[func]
     fn _on_realm_changed(&mut self) {
         self.base_mut()
-            .call_deferred("_on_realm_changed_deferred".into(), &[]);
+            .call_deferred("_on_realm_changed_deferred", &[]);
     }
 
     fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GString>)> {
         let realm = DclGlobal::singleton().bind().get_realm();
-        let realm_about = Dictionary::from_variant(&realm.get("realm_about".into()));
-        let comms = Dictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
+        let realm_about = VarDictionary::from_variant(&realm.get("realm_about"));
+        let comms = VarDictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
         let comms_protocol = String::from_variant(&comms.get(StringName::from("protocol"))?);
 
         let comms_fixed_adapter = if comms.contains_key("fixedAdapter") {
@@ -1011,7 +1016,7 @@ impl CommunicationManager {
         let comms_fixed_adapter = comms_fixed_adapter.map(|s| {
             let s = s.to_string();
             if let Some(stripped) = s.strip_prefix("fixed-adapter:") {
-                GString::from(stripped.to_string())
+                stripped.to_string().to_godot()
             } else {
                 s.to_godot()
             }
@@ -1066,7 +1071,7 @@ impl CommunicationManager {
         }
 
         let comms_fixed_adapter_str = comms_fixed_adapter.unwrap().to_string();
-        self.change_adapter(comms_fixed_adapter_str.into());
+        self.change_adapter(comms_fixed_adapter_str.to_godot());
     }
 
     #[func]
@@ -1133,7 +1138,7 @@ impl CommunicationManager {
                 let realm_url = DclGlobal::singleton()
                     .bind()
                     .get_realm()
-                    .get("realm_url".into())
+                    .get("realm_url")
                     .to_string();
                 let Ok(origin) = Uri::try_from(&realm_url) else {
                     tracing::warn!("failed to parse origin comms_address as a uri: {realm_url}");
@@ -1228,7 +1233,7 @@ impl CommunicationManager {
 
         let voice_chat_enabled = self.voice_chat_enabled.to_variant();
         self.base_mut().emit_signal(
-            "on_adapter_changed".into(),
+            "on_adapter_changed",
             &[voice_chat_enabled, comms_fixed_adapter_gstr.to_variant()],
         );
     }
@@ -1612,16 +1617,16 @@ async fn get_scene_adapter(
     Ok(gatekeeper_response.adapter)
 }
 
-fn get_chat_array(chats: Vec<(H160, rfc4::Chat)>) -> VariantArray {
-    let mut chats_variant_array = VariantArray::new();
+fn get_chat_array(chats: Vec<(H160, rfc4::Chat)>) -> VarArray {
+    let mut chats_variant_array = VarArray::new();
     for (address, chat) in chats {
-        let mut chat_arr = VariantArray::new();
+        let mut chat_arr = VarArray::new();
         let address = format!("{:#x}", address);
-        chat_arr.push(address.to_variant());
-        chat_arr.push(chat.timestamp.to_variant());
-        chat_arr.push(chat.message.to_variant());
+        chat_arr.push(&address.to_variant());
+        chat_arr.push(&chat.timestamp.to_variant());
+        chat_arr.push(&chat.message.to_variant());
 
-        chats_variant_array.push(chat_arr.to_variant());
+        chats_variant_array.push(&chat_arr.to_variant());
     }
     chats_variant_array
 }

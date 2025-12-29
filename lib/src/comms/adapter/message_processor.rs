@@ -603,7 +603,7 @@ impl MessageProcessor {
                 let mut avatar_scene_ref = self.avatars.clone();
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene
-                    .add_avatar(new_alias, GString::from(format!("{:#x}", message.address)));
+                    .add_avatar(new_alias, GString::from(&format!("{:#x}", message.address)));
 
                 // If the user is blocked, hide the avatar immediately
                 if self.cached_blocked.contains(&message.address) {

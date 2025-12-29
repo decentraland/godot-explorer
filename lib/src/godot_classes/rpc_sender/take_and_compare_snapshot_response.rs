@@ -7,11 +7,11 @@ use crate::{
 
 impl TakeAndCompareSnapshotResponse {
     fn try_from_variant(via: &Variant) -> Option<Self> {
-        let via = via.to::<Dictionary>();
+        let via = via.to::<VarDictionary>();
         let stored_snapshot_found = via.get("stored_snapshot_found")?.to::<bool>();
         let grey_pixel_diff = via.get("grey_pixel_diff").map(|grey| GreyPixelDiffResult {
             similarity: grey
-                .to::<Dictionary>()
+                .to::<VarDictionary>()
                 .get("similarity")
                 .expect("similarity")
                 .to::<f64>(),
