@@ -150,8 +150,8 @@ jobs:
         run: |
           rm -f ~/.ssh/deploy_key
 
-      - name: Notify Slack on Success
-        if: success()
+      - name: Notify Slack on Failure
+        if: failure() && !cancelled()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
@@ -160,7 +160,6 @@ jobs:
           COMMIT_SHORT="${COMMIT_SHA:0:7}"
           COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
           TRIGGERED_BY="${{ github.actor }}"
 
           curl -X POST -H 'Content-type: application/json' --data "{
@@ -169,7 +168,7 @@ jobs:
                 \"type\": \"header\",
                 \"text\": {
                   \"type\": \"plain_text\",
-                  \"text\": \"🍏 iOS Build Ready\",
+                  \"text\": \"❌ iOS Build Failed\",
                   \"emoji\": true
                 }
               },
@@ -187,10 +186,6 @@ jobs:
                   {
                     \"type\": \"mrkdwn\",
                     \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\"
-                  },
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"*Deploy Repo:*\n<${DEPLOY_REPO_URL}|godot-mobile-deploy-pipeline>\"
                   }
                 ]
               },
@@ -201,19 +196,11 @@ jobs:
                     \"type\": \"button\",
                     \"text\": {
                       \"type\": \"plain_text\",
-                      \"text\": \"View Workflow\",
+                      \"text\": \"View Logs\",
                       \"emoji\": true
                     },
+                    \"style\": \"danger\",
                     \"url\": \"${WORKFLOW_URL}\"
-                  },
-                  {
-                    \"type\": \"button\",
-                    \"text\": {
-                      \"type\": \"plain_text\",
-                      \"text\": \"View Artifacts\",
-                      \"emoji\": true
-                    },
-                    \"url\": \"${DEPLOY_REPO_URL}\"
                   }
                 ]
               }
