@@ -2,7 +2,7 @@
 extends EditorPlugin
 
 const EMOTES_PATH = "res://assets/no-export/emote_actions/"
-const ANIMATIONS_OUTPUT_PATH = "res://assets/animations/emotes/"
+const ANIMATIONS_OUTPUT_PATH = "res://assets/animations/emote_actions/"
 const LIBRARIES_OUTPUT_PATH = "res://assets/animations/"
 
 # Default actions (utility animations triggered by scenes)
