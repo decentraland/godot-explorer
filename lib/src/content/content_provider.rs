@@ -907,8 +907,15 @@ impl ContentProvider {
         let prop_animation =
             anim_player.get_animation(&StringName::from(&format!("{}_prop", hash_suffix)));
 
-        // Free the loaded scene root (we only need the extracted data)
-        // Note: armature_prop and animations are Resources/Nodes that survive freeing the root
+        // Remove armature_prop from root before freeing (so it survives)
+        // Animations are Resources, they survive independently
+        if let Some(ref mut prop) = armature_prop {
+            if let Some(mut parent) = prop.get_parent() {
+                parent.remove_child(&prop.clone().upcast::<Node>());
+            }
+        }
+
+        // Free the loaded scene root
         root.free();
 
         Some(build_dcl_emote_gltf(
