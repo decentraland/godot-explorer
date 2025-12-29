@@ -519,10 +519,11 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 	_reactivate_animation_system.call_deferred(was_tree_active)
 
 
-func _reactivate_animation_system(was_active: bool):
+func _reactivate_animation_system(_was_active: bool):
 	# Reactivate animation system after modifications
 	# This is called via call_deferred to ensure all changes are applied
-	animation_tree.active = was_active
+	# Always set to true - the tree should be active for animations to play
+	animation_tree.active = true
 
 	# Clear the modification guard
 	_is_modifying_animations = false

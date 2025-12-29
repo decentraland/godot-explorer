@@ -847,6 +847,7 @@ autoplay = "Idle"
 [node name="AnimationTree" type="AnimationTree" parent="."]
 callback_mode_discrete = 1
 tree_root = SubResource("AnimationNodeStateMachine_dvr6n")
+active = true
 anim_player = NodePath("../AnimationPlayer")
 parameters/conditions/emix = false
 parameters/conditions/emote = false
