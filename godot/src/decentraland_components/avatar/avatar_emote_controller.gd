@@ -54,6 +54,10 @@ class EmoteItemData:
 		prop_animation_player = _prop_animation_player
 
 
+# Cooldown to prevent rapid emote spam that can crash the animation system
+const EMOTE_COOLDOWN_SECONDS: float = 0.5
+const MAX_DEFERRED_RETRIES: int = 3
+
 var loaded_emotes_by_urn: Dictionary
 
 var playing_single: bool = false
@@ -75,8 +79,6 @@ var animation_mix_emote_node: AnimationNodeBlendTree
 var _is_modifying_animations: bool = false
 var _queued_emote_urn: String = ""
 
-# Cooldown to prevent rapid emote spam that can crash the animation system
-const EMOTE_COOLDOWN_SECONDS: float = 0.5
 var _last_emote_time: float = 0.0
 
 # Lock to prevent concurrent async emote loading
@@ -85,6 +87,8 @@ var _is_loading_emote: bool = false
 # Track prop visibility nodes that need to be hidden on idle
 # This avoids modifying idle_anim at runtime which can crash the mixer
 var _prop_armature_names: Array[String] = []
+
+var _deferred_retry_count: int = 0
 
 
 func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree: AnimationTree):
@@ -251,9 +255,6 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 	return true
 
 
-var _deferred_retry_count: int = 0
-const MAX_DEFERRED_RETRIES: int = 3
-
 func _deferred_play_emote(emote_urn: String):
 	# Called after state machine is initialized, retry the play
 	_deferred_retry_count += 1
@@ -353,7 +354,7 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 			play_emote(emote_id_or_urn)
 			return
 		# Base emotes need to be converted to URN for remote fetch
-		elif Emotes.is_emote_default(emote_id_or_urn):
+		if Emotes.is_emote_default(emote_id_or_urn):
 			emote_urn = Emotes.get_base_emote_urn(emote_id_or_urn)
 		else:
 			printerr("Unknown emote: %s" % emote_id_or_urn)

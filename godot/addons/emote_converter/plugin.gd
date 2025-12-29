@@ -86,7 +86,14 @@ Libraries:
 
 Output:
   - default_actions.tres (%d actions)"""
-		% [action_results[0], action_results[1], action_results[2], lib_success, lib_failed, DEFAULT_ACTIONS.size()]
+		% [
+			action_results[0],
+			action_results[1],
+			action_results[2],
+			lib_success,
+			lib_failed,
+			DEFAULT_ACTIONS.size()
+		]
 	)
 	OS.alert(message, "Action Emote Converter")
 
