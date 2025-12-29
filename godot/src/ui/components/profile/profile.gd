@@ -352,9 +352,9 @@ func _unset_avatar_loading(current: int):
 	v_box_container_content.show()
 	_on_stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
-		avatar_preview_landscape.avatar.emote_controller.play_emote("wave")
+		avatar_preview_landscape.avatar.emote_controller.async_play_emote("wave")
 	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
-		avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
+		avatar_preview_portrait.avatar.emote_controller.async_play_emote("wave")
 	_update_elements_visibility()
 	# Only update buttons for block/mute, not friendship buttons yet
 	# Friendship buttons will be updated after _async_check_friendship_status() completes
@@ -432,10 +432,10 @@ func _on_emote_pressed(urn: String) -> void:
 	avatar_preview_portrait.reset_avatar_rotation()
 	avatar_preview_landscape.avatar.emote_controller.stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
-		avatar_preview_landscape.avatar.emote_controller.play_emote(urn)
+		avatar_preview_landscape.avatar.emote_controller.async_play_emote(urn)
 	avatar_preview_portrait.avatar.emote_controller.stop_emote()
 	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
-		avatar_preview_portrait.avatar.emote_controller.play_emote(urn)
+		avatar_preview_portrait.avatar.emote_controller.async_play_emote(urn)
 
 
 func _on_stop_emote() -> void:
@@ -659,8 +659,13 @@ func _async_refresh_equipped_items() -> void:
 
 	if not emotes.is_empty():
 		for emote in emotes:
+			# Convert short emote IDs to full URNs for lookup
+			var emote_urn = emote.urn
+			if not emote_urn.begins_with("urn") and Emotes.is_emote_default(emote_urn):
+				emote_urn = Emotes.get_base_emote_urn(emote_urn)
+
 			var emote_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(
-				emote.urn
+				emote_urn
 			)
 			if emote_definition != null:
 				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
@@ -670,17 +675,6 @@ func _async_refresh_equipped_items() -> void:
 				emote_item.set_as_emote(emote.urn)
 				emote_item.emote_pressed.connect(_on_emote_pressed)
 				emote_item.stop_emote.connect(_on_stop_emote)
-			else:
-				if Emotes.is_emote_default(emote.urn):
-					var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
-					h_flow_container_equipped_wearables.add_child(emote_item)
-					emote_item.button_group = equipped_button_group
-					emote_item.set_base_emote(emote.urn)
-					emote_item.emote_pressed.connect(_on_emote_pressed)
-					emote_item.stop_emote.connect(_on_stop_emote)
-
-	else:
-		printerr("Error getting emotes")
 
 
 func _on_button_add_link_pressed() -> void:

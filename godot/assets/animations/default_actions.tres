@@ -1,0 +1,40 @@
+[gd_resource type="AnimationLibrary" load_steps=18 format=3 uid="uid://cgx3ab1bmo3io"]
+
+[ext_resource type="Animation" uid="uid://bm1jb4qn17t8u" path="res://assets/animations/emotes/buttonDown.tres" id="1_buttondown"]
+[ext_resource type="Animation" uid="uid://budkg056rh0o8" path="res://assets/animations/emotes/buttonFront.tres" id="2_buttonfront"]
+[ext_resource type="Animation" uid="uid://7s83a87bbvyr" path="res://assets/animations/emotes/crafting.tres" id="3_524kp"]
+[ext_resource type="Animation" uid="uid://u5acyavb2siq" path="res://assets/animations/emotes/getHit.tres" id="3_gethit"]
+[ext_resource type="Animation" uid="uid://btn05n3gn1xsh" path="res://assets/animations/emotes/knockOut.tres" id="4_knockout"]
+[ext_resource type="Animation" uid="uid://cthqpxj43gq22" path="res://assets/animations/emotes/lever.tres" id="5_lever"]
+[ext_resource type="Animation" uid="uid://bwgqadevqv6ym" path="res://assets/animations/emotes/openChest.tres" id="6_openchest"]
+[ext_resource type="Animation" uid="uid://bmre8irfv5lkn" path="res://assets/animations/emotes/openDoor.tres" id="7_opendoor"]
+[ext_resource type="Animation" uid="uid://cu56i8axkytrn" path="res://assets/animations/emotes/punch.tres" id="8_punch"]
+[ext_resource type="Animation" uid="uid://cnriuwtyr0rlh" path="res://assets/animations/emotes/push.tres" id="9_push"]
+[ext_resource type="Animation" uid="uid://bhjnl16bvsods" path="res://assets/animations/emotes/sittingChair1.tres" id="10_sittingchair1"]
+[ext_resource type="Animation" uid="uid://chl8myl5mns37" path="res://assets/animations/emotes/sittingChair2.tres" id="11_sittingchair2"]
+[ext_resource type="Animation" uid="uid://plrq5ud012o4" path="res://assets/animations/emotes/sittingGround1.tres" id="12_sittingground1"]
+[ext_resource type="Animation" uid="uid://cojfioo2g30sn" path="res://assets/animations/emotes/sittingGround2.tres" id="13_sittingground2"]
+[ext_resource type="Animation" uid="uid://cs6g4gvongbjc" path="res://assets/animations/emotes/swingWeaponOneHand.tres" id="14_swingonehand"]
+[ext_resource type="Animation" uid="uid://qg7o0iihf0jr" path="res://assets/animations/emotes/swingWeaponTwoHands.tres" id="15_swingtwohand"]
+[ext_resource type="Animation" uid="uid://bsabx4xnf6u8" path="res://assets/animations/emotes/throw.tres" id="16_throw"]
+
+[resource]
+_data = {
+&"buttonDown": ExtResource("1_buttondown"),
+&"buttonFront": ExtResource("2_buttonfront"),
+&"crafting": ExtResource("3_524kp"),
+&"getHit": ExtResource("3_gethit"),
+&"knockOut": ExtResource("4_knockout"),
+&"lever": ExtResource("5_lever"),
+&"openChest": ExtResource("6_openchest"),
+&"openDoor": ExtResource("7_opendoor"),
+&"punch": ExtResource("8_punch"),
+&"push": ExtResource("9_push"),
+&"sittingChair1": ExtResource("10_sittingchair1"),
+&"sittingChair2": ExtResource("11_sittingchair2"),
+&"sittingGround1": ExtResource("12_sittingground1"),
+&"sittingGround2": ExtResource("13_sittingground2"),
+&"swingWeaponOneHand": ExtResource("14_swingonehand"),
+&"swingWeaponTwoHands": ExtResource("15_swingtwohand"),
+&"throw": ExtResource("16_throw")
+}

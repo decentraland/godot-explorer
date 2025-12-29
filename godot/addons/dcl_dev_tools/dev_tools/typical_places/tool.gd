@@ -306,9 +306,7 @@ func _add_new_place():
 			new_name = "%s %d" % [base_name, counter]
 			counter += 1
 
-	places[new_name] = {
-		"coords": Vector2i(int(x_input.value), int(y_input.value))
-	}
+	places[new_name] = {"coords": Vector2i(int(x_input.value), int(y_input.value))}
 	if realm_input.text.strip_edges() != "":
 		places[new_name]["realm"] = realm_input.text.strip_edges()
 
