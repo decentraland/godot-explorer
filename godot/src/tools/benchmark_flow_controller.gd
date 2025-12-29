@@ -354,8 +354,8 @@ func wait_for_loading_with_timeout(timeout_seconds: float):
 			if all_ready:
 				log_message("  All scenes ready (max tick: %d)" % max_tick)
 				return
-			else:
-				log_message("  Waiting for scenes... (max tick: %d)" % max_tick)
+
+			log_message("  Waiting for scenes... (max tick: %d)" % max_tick)
 
 		await get_tree().create_timer(0.5).timeout
 
