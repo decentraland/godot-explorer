@@ -25,7 +25,7 @@ use crate::{
     tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
 };
 use godot::{
-    engine::{
+    classes::{
         control::{LayoutPreset, MouseFilter},
         PhysicsRayQueryParameters3D,
     },
@@ -57,15 +57,16 @@ pub struct SceneManager {
 
     #[var]
     base_ui: Gd<DclUiControl>,
+
     ui_canvas_information: PbUiCanvasInformation,
     interactable_area: Rect2i,
 
     scenes: HashMap<SceneId, Scene>,
 
-    #[export]
+    #[var]
     player_avatar_node: Gd<Node3D>,
 
-    #[export]
+    #[var]
     player_body_node: Gd<Node3D>,
 
     #[var]
@@ -99,8 +100,8 @@ pub struct SceneManager {
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
 
-    #[export]
-    pointer_tooltips: VariantArray,
+    #[var]
+    pointer_tooltips: VarArray,
 
     // Track avatar under crosshair
     last_avatar_under_crosshair: Option<Gd<DclAvatar>>,
@@ -123,10 +124,10 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 #[godot_api]
 impl SceneManager {
     #[signal]
-    fn scene_spawned(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_spawned(scene_id: i32, entity_id: GString);
 
     #[signal]
-    fn scene_killed(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_killed(scene_id: i32, entity_id: GString);
 
     // Testing a comment for the API
     #[func]
@@ -219,12 +220,22 @@ impl SceneManager {
             self.base_ui.clone(),
         );
 
-        self.base_mut()
-            .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
+        self.base_mut().add_child(
+            &new_scene
+                .godot_dcl_scene
+                .root_node_3d
+                .clone()
+                .upcast::<Node>(),
+        );
 
         if let SceneType::Global(_) = scene_type {
-            self.base_ui
-                .add_child(new_scene.godot_dcl_scene.root_node_ui.clone().upcast());
+            self.base_ui.add_child(
+                &new_scene
+                    .godot_dcl_scene
+                    .root_node_ui
+                    .clone()
+                    .upcast::<Node>(),
+            );
         }
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
@@ -238,7 +249,7 @@ impl SceneManager {
         self.compute_scene_distance();
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &[
                 "scene_spawned".to_variant(),
                 signal_data.0 .0.to_variant(),
@@ -315,7 +326,7 @@ impl SceneManager {
     #[func]
     fn get_scene_title(&self, scene_id: i32) -> GString {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
-            return GString::from(scene.scene_entity_definition.get_title());
+            return scene.scene_entity_definition.get_title().to_godot();
         }
         GString::default()
     }
@@ -323,7 +334,7 @@ impl SceneManager {
     #[func]
     pub fn get_scene_entity_id(&self, scene_id: i32) -> GString {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
-            return GString::from(scene.scene_entity_definition.id.clone());
+            return scene.scene_entity_definition.id.clone().to_godot();
         }
         GString::default()
     }
@@ -426,7 +437,7 @@ impl SceneManager {
             None => (player_global_transform, 0),
         };
 
-        let frames_count = godot::engine::Engine::singleton().get_physics_frames();
+        let frames_count = godot::classes::Engine::singleton().get_physics_frames();
 
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,
@@ -621,7 +632,7 @@ impl SceneManager {
             }
 
             self.base_mut().emit_signal(
-                "scene_killed".into(),
+                "scene_killed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
         }
@@ -633,12 +644,12 @@ impl SceneManager {
             match self.main_receiver_from_thread.try_recv() {
                 Ok(response) => match response {
                     SceneResponse::Error(scene_id, msg) => {
-                        let mut arguments = VariantArray::new();
-                        arguments.push((scene_id.0).to_variant());
-                        arguments.push((SceneLogLevel::SystemError as i32).to_variant());
-                        arguments.push(self.total_time_seconds_time.to_variant());
-                        arguments.push(GString::from(&msg).to_variant());
-                        self.console.callv(arguments);
+                        let mut arguments = VarArray::new();
+                        arguments.push(&(scene_id.0).to_variant());
+                        arguments.push(&(SceneLogLevel::SystemError as i32).to_variant());
+                        arguments.push(&self.total_time_seconds_time.to_variant());
+                        arguments.push(&msg.to_godot().to_variant());
+                        self.console.callv(&arguments);
                     }
                     SceneResponse::Ok {
                         scene_id,
@@ -681,12 +692,12 @@ impl SceneManager {
                         }
                         // enable logs
                         for log in &logs {
-                            let mut arguments = VariantArray::new();
-                            arguments.push(scene_id.0.to_variant());
-                            arguments.push((log.level as i32).to_variant());
-                            arguments.push((log.timestamp as f32).to_variant());
-                            arguments.push(GString::from(&log.message).to_variant());
-                            self.console.callv(arguments);
+                            let mut arguments = VarArray::new();
+                            arguments.push(&scene_id.0.to_variant());
+                            arguments.push(&(log.level as i32).to_variant());
+                            arguments.push(&(log.timestamp as f32).to_variant());
+                            arguments.push(&log.message.to_godot().to_variant());
+                            self.console.callv(&arguments);
                         }
                     }
 
@@ -714,13 +725,13 @@ impl SceneManager {
                                 + offset;
 
                         let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
-                        if testing_tools.has_method("async_take_and_compare_snapshot".into()) {
+                        if testing_tools.has_method("async_take_and_compare_snapshot") {
                             let mut dcl_rpc_sender: Gd<DclRpcSenderTakeAndCompareSnapshotResponse> =
                                 DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
                             dcl_rpc_sender.bind_mut().set_sender(response);
 
                             testing_tools.call_deferred(
-                                "async_take_and_compare_snapshot".into(),
+                                "async_take_and_compare_snapshot",
                                 &[
                                     scene_id.0.to_variant(),
                                     src_stored_snapshot.to_variant(),
@@ -729,7 +740,7 @@ impl SceneManager {
                                     screeshot_size.to_variant(),
                                     method
                                         .to_godot_from_json()
-                                        .unwrap_or(Dictionary::new().to_variant())
+                                        .unwrap_or(VarDictionary::new().to_variant())
                                         .to_variant(),
                                     dcl_rpc_sender.to_variant(),
                                 ],
@@ -783,7 +794,7 @@ impl SceneManager {
         // Need to collide with areas for avatars (they use Area3D)
         self.cached_raycast_query.set_collide_with_areas(true);
 
-        let raycast_result = space.intersect_ray(self.cached_raycast_query.clone());
+        let raycast_result = space.intersect_ray(&self.cached_raycast_query.clone());
 
         // Check if we hit anything at all
         if !raycast_result.contains_key("collider") {
@@ -801,12 +812,12 @@ impl SceneManager {
         // Priority is naturally handled by distance - closer objects are returned first
 
         // First check if this is a DCL entity (scene object)
-        let has_dcl_entity_id = collider_obj.has_meta("dcl_entity_id".into());
+        let has_dcl_entity_id = collider_obj.has_meta("dcl_entity_id");
 
         if has_dcl_entity_id {
             // It's a scene entity, return it
-            let dcl_entity_id = collider_obj.get_meta("dcl_entity_id".into()).to::<i32>();
-            let dcl_scene_id = collider_obj.get_meta("dcl_scene_id".into()).to::<i32>();
+            let dcl_entity_id = collider_obj.get_meta("dcl_entity_id").to::<i32>();
+            let dcl_scene_id = collider_obj.get_meta("dcl_scene_id").to::<i32>();
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
@@ -825,8 +836,8 @@ impl SceneManager {
         }
 
         // If not a scene entity, check if it's an avatar
-        let is_avatar = collider_obj.has_meta("is_avatar".into())
-            && collider_obj.get_meta("is_avatar".into()).booleanize();
+        let is_avatar =
+            collider_obj.has_meta("is_avatar") && collider_obj.get_meta("is_avatar").booleanize();
 
         if is_avatar {
             // Check distance for avatar interactions (limit to 10 meters)
@@ -864,11 +875,11 @@ impl SceneManager {
     }
 
     #[signal]
-    fn pointer_tooltip_changed() {}
+    fn pointer_tooltip_changed();
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
-        let window_size: Vector2i = godot::engine::DisplayServer::singleton().window_get_size();
+        let window_size: Vector2i = godot::classes::DisplayServer::singleton().window_get_size();
 
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
@@ -914,7 +925,7 @@ impl SceneManager {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(false);
-                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+                audio_source_node.call("apply_audio_props", &[false.to_variant()]);
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(true);
@@ -931,7 +942,7 @@ impl SceneManager {
             // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
             // Use call_deferred to avoid "Parent node is busy" errors during rapid scene transitions
             self.base_ui.call_deferred(
-                "remove_child".into(),
+                "remove_child",
                 &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
             );
         }
@@ -940,7 +951,7 @@ impl SceneManager {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(true);
-                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+                audio_source_node.call("apply_audio_props", &[false.to_variant()]);
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(false);
@@ -955,17 +966,17 @@ impl SceneManager {
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: true });
 
             self.base_ui
-                .add_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+                .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
-            .emit_signal("on_change_scene_id".into(), &[scene_id]);
+            .emit_signal("on_change_scene_id", &[scene_id]);
     }
 
     #[signal]
-    fn on_change_scene_id(scene_id: i32) {}
+    fn on_change_scene_id(scene_id: i32);
 
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
@@ -1021,9 +1032,9 @@ impl SceneManager {
     }
 
     #[func]
-    pub fn get_scene_tests_result(&self, scene_id: i32) -> Dictionary {
+    pub fn get_scene_tests_result(&self, scene_id: i32) -> VarDictionary {
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
-            return Dictionary::default();
+            return VarDictionary::default();
         };
 
         let test_total = scene.scene_tests.len() as u32;
@@ -1073,7 +1084,7 @@ impl SceneManager {
             );
         }
 
-        let mut dict = Dictionary::default();
+        let mut dict = VarDictionary::default();
         dict.set("text", text.to_variant());
         dict.set("text_detail_failed", text_detail_failed.to_variant());
         dict.set("total", test_total.to_variant());
@@ -1161,7 +1172,7 @@ impl INode for SceneManager {
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
-            pointer_tooltips: VariantArray::new(),
+            pointer_tooltips: VarArray::new(),
             interactable_area: Rect2i::from_components(
                 0,
                 0,
@@ -1181,9 +1192,8 @@ impl INode for SceneManager {
     fn ready(&mut self) {
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
 
-        self.base_ui
-            .connect("resized".into(), callable_on_ui_resize);
-        self.base_ui.set_name("scenes_ui".into());
+        self.base_ui.connect("resized", &callable_on_ui_resize);
+        self.base_ui.set_name("scenes_ui");
         self.ui_canvas_information = self.create_ui_canvas_information();
 
         // Initialize cached viewport center
@@ -1228,8 +1238,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
 
                 // Handle pointer press/release on avatar for profile opening
@@ -1261,7 +1270,7 @@ impl INode for SceneManager {
                                 // Emit open_profile_by_avatar signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
                                     global.emit_signal(
-                                        "open_profile_by_avatar".into(),
+                                        "open_profile_by_avatar",
                                         &[avatar.to_variant()],
                                     );
                                 }
@@ -1287,8 +1296,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut()
-                        .emit_signal("pointer_tooltip_changed".into(), &[]);
+                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
                 }
             }
         }
@@ -1300,7 +1308,7 @@ impl INode for SceneManager {
             &current_pointer_raycast_result,
         );
 
-        let mut tooltips = VariantArray::new();
+        let mut tooltips = VarArray::new();
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
@@ -1322,7 +1330,7 @@ impl INode for SceneManager {
                             pointer_event.event_type == PointerEventType::PetDown as i32;
                         if is_pet_up || is_pet_down {
                             let text = if let Some(text) = info.hover_text.as_ref() {
-                                GString::from(text)
+                                text.to_godot()
                             } else {
                                 GString::from("Interact")
                             };
@@ -1330,7 +1338,7 @@ impl INode for SceneManager {
                             let input_action_gstr = GString::from(input_action.as_str_name());
 
                             let dict = tooltips.iter_shared().find_map(|tooltip| {
-                                let dictionary = tooltip.to::<Dictionary>();
+                                let dictionary = tooltip.to::<VarDictionary>();
                                 dictionary.get("action").and_then(|action| {
                                     if action.to_string() == input_action_gstr.to_string() {
                                         Some(dictionary.clone())
@@ -1341,18 +1349,18 @@ impl INode for SceneManager {
                             });
 
                             let exists = dict.is_some();
-                            let mut dict = dict.unwrap_or_else(Dictionary::new);
+                            let mut dict = dict.unwrap_or_else(VarDictionary::new);
 
                             if is_pet_down {
-                                dict.set(StringName::from("text_pet_down"), text);
+                                dict.set("text_pet_down", text.clone());
                             } else if is_pet_up {
-                                dict.set(StringName::from("text_pet_up"), text);
+                                dict.set("text_pet_up", text.clone());
                             }
 
-                            dict.set(StringName::from("action"), input_action_gstr);
+                            dict.set("action", input_action_gstr.clone());
 
                             if !exists {
-                                tooltips.push(dict.to_variant());
+                                tooltips.push(&dict.to_variant());
                             }
                         }
                     }
@@ -1362,19 +1370,15 @@ impl INode for SceneManager {
 
         // Add avatar profile tooltip if there's an avatar under crosshair
         if let Some(RaycastResult::Avatar(_)) = &current_raycast {
-            let mut profile_dict = Dictionary::new();
-            profile_dict.set(
-                StringName::from("text_pet_down"),
-                GString::from("View profile"),
-            );
-            profile_dict.set(StringName::from("action"), GString::from("ia_pointer"));
-            tooltips.push(profile_dict.to_variant());
+            let mut profile_dict = VarDictionary::new();
+            profile_dict.set("text_pet_down", "View profile");
+            profile_dict.set("action", "ia_pointer");
+            tooltips.push(&profile_dict.to_variant());
         }
 
         if self.pointer_tooltips != tooltips {
-            self.set_pointer_tooltips(tooltips);
-            self.base_mut()
-                .emit_signal("pointer_tooltip_changed".into(), &[]);
+            self.pointer_tooltips = tooltips;
+            self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
         if let Some(current_camera_node) =

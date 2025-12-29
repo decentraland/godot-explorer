@@ -1,9 +1,8 @@
-use godot::{engine::node::InternalMode, prelude::*};
+use godot::{classes::node::InternalMode, prelude::*};
 
 #[derive(GodotClass)]
 #[class(init, base=Node)]
 pub struct ResourceLocker {
-    #[export]
     reference: Gd<Resource>,
 
     base: Base<Node>,
@@ -13,7 +12,7 @@ pub struct ResourceLocker {
 impl ResourceLocker {
     #[func]
     pub fn attach_to(mut node: Gd<Node>) {
-        if node.has_node(NodePath::from("ResourceLocker")) {
+        if node.has_node("ResourceLocker") {
             tracing::error!("You cannot attach two times ResourceLocker to a Node");
             return;
         }
@@ -24,10 +23,10 @@ impl ResourceLocker {
         });
 
         let instance_id = resource_locker.bind().reference.instance_id().to_variant();
-        resource_locker.set_name("ResourceLocker".to_godot());
-        resource_locker.set_meta(StringName::from("instance_id"), instance_id);
+        resource_locker.set_name("ResourceLocker");
+        resource_locker.set_meta("instance_id", &instance_id);
 
-        node.add_child_ex(resource_locker.upcast())
+        node.add_child_ex(&resource_locker.upcast::<Node>())
             .internal(InternalMode::FRONT)
             .done();
     }

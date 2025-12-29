@@ -103,9 +103,7 @@ impl RequestResponse {
         let response = self.response_data.as_ref().unwrap();
 
         match response {
-            ResponseEnum::String(string) => {
-                godot::engine::Json::parse_string(GString::from(string))
-            }
+            ResponseEnum::String(string) => godot::classes::Json::parse_string(string),
             _ => Variant::default(),
         }
     }
@@ -115,24 +113,24 @@ impl RequestResponse {
         let response = self.response_data.as_ref().unwrap();
 
         match response {
-            ResponseEnum::String(string) => Variant::from(GString::from(string)),
+            ResponseEnum::String(string) => Variant::from(string.as_str()),
             ResponseEnum::Json(json) => {
                 if let Ok(result) = json {
-                    Variant::from(GString::from(result.to_string()))
+                    Variant::from(result.to_string().as_str())
                 } else {
                     Variant::nil()
                 }
             }
             ResponseEnum::ToFile(path) => {
                 if let Ok(result) = path {
-                    Variant::from(GString::from(result))
+                    Variant::from(result.as_str())
                 } else {
                     Variant::nil()
                 }
             }
             ResponseEnum::Bytes(bytes) => {
                 if let Ok(result) = String::from_utf8(bytes.to_vec()) {
-                    Variant::from(GString::from(result))
+                    Variant::from(result.as_str())
                 } else {
                     Variant::nil()
                 }
@@ -157,7 +155,7 @@ impl RequestResponseError {
 
     #[func]
     pub fn get_error_message(&self) -> GString {
-        GString::from(self.error_message.clone())
+        self.error_message.clone().as_str().into()
     }
 }
 
@@ -177,15 +175,15 @@ pub fn send_result_to_promise(
                     let mut rejected = false;
                     if let Ok(status_code) = http::StatusCode::from_u16(status_code as u16) {
                         if let Some(reason) = status_code.canonical_reason() {
-                            promise.reject(reason.into());
+                            promise.reject(GString::from(reason));
                             rejected = true;
                         }
                     }
                     if !rejected {
-                        promise.reject("unknown reason".into());
+                        promise.reject(GString::from("unknown reason"));
                     }
                 } else {
-                    promise.reject(GString::from(payload.to_string()));
+                    promise.reject(payload.to_string().as_str().into());
                 }
             } else {
                 promise.resolve_with_data(Variant::from(Gd::from_object(response)));

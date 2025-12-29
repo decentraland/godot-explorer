@@ -59,7 +59,8 @@
 //! - BenchmarkReport node must be instantiated in the scene tree
 
 use godot::{
-    engine::{performance::Monitor, Os, Performance},
+    classes::{performance::Monitor, Os, Performance},
+    obj::Singleton,
     prelude::*,
 };
 
@@ -171,7 +172,7 @@ impl INode for BenchmarkReport {
         // Automatically find and set the scene_manager_path if not already set
         if self.scene_manager_path.is_none() {
             if let Some(parent) = self.base().get_parent() {
-                let scene_runner_node = parent.get_node_or_null("scene_runner".into());
+                let scene_runner_node = parent.get_node_or_null("scene_runner");
                 if let Some(node) = scene_runner_node {
                     self.scene_manager_path = Some(node);
                     tracing::info!("BenchmarkReport: Automatically found scene_runner");
@@ -253,7 +254,7 @@ impl BenchmarkReport {
             self.get_mobile_metrics();
 
         // Create dictionary with metrics
-        let mut dict = Dictionary::new();
+        let mut dict = VarDictionary::new();
         dict.set("test_name", test_name.to_variant());
         dict.set("timestamp", self.get_timestamp().to_variant());
         dict.set("location", location.to_variant());
@@ -319,7 +320,7 @@ impl BenchmarkReport {
         test_name: GString,
         location: GString,
         realm: GString,
-        resource_data: Dictionary,
+        resource_data: VarDictionary,
     ) {
         let performance = Performance::singleton();
 
@@ -427,7 +428,7 @@ impl BenchmarkReport {
                 tracing::error!("Failed to save individual report: {:?}", e);
             }
 
-            GString::from(markdown)
+            GString::from(&markdown)
         } else {
             GString::from("No metrics collected yet")
         }
@@ -448,7 +449,7 @@ impl BenchmarkReport {
             tracing::error!("Failed to save summary report: {:?}", e);
         }
 
-        GString::from(markdown)
+        GString::from(&markdown)
     }
 
     /// Generate single consolidated report with all test results
@@ -478,7 +479,7 @@ impl BenchmarkReport {
     // Helper methods
 
     fn get_timestamp(&self) -> String {
-        let time_dict = godot::engine::Time::singleton().get_datetime_dict_from_system();
+        let time_dict = godot::classes::Time::singleton().get_datetime_dict_from_system();
         format!(
             "{:04}-{:02}-{:02}_{:02}-{:02}-{:02}",
             time_dict.get("year").unwrap().to::<i32>(),

@@ -15,8 +15,7 @@ const DEBUG_PAINT_KINEMATIC_BODIES := false
 
 var dcl_gltf_hash := ""
 var optimized := false
-
-# Track if GLTF has colliders that need STATIC->KINEMATIC optimization
+# Track if this GLTF has static colliders (for STATIC->KINEMATIC optimization)
 var _has_static_colliders := false
 
 @onready var timer = $Timer
@@ -32,6 +31,7 @@ static var _debug_kinematic_material: StandardMaterial3D = null
 func _ready():
 	Global.content_provider.scene_gltf_ready.connect(_on_gltf_ready)
 	Global.content_provider.scene_gltf_error.connect(_on_gltf_error)
+	# Connect to switch_to_kinematic signal from Rust
 	self.switch_to_kinematic.connect(_on_switch_to_kinematic)
 	self.async_load_gltf.call_deferred()
 

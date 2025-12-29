@@ -31,12 +31,12 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
 
             let new_value = new_value.value.clone();
 
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarModifierArea"));
+            let existing = node_3d.try_get_node_as::<Node>("AvatarModifierArea");
 
             if new_value.is_none() {
                 if let Some(mut avatar_modifier_area_node) = existing {
                     avatar_modifier_area_node.queue_free();
-                    node_3d.remove_child(avatar_modifier_area_node);
+                    node_3d.remove_child(&avatar_modifier_area_node);
                 }
             } else if let Some(new_value) = new_value {
                 let area = new_value
@@ -46,7 +46,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 let exclude_ids = new_value
                     .exclude_ids
                     .into_iter()
-                    .map(GString::from)
+                    .map(|s| s.to_godot())
                     .collect();
 
                 if let Some(avatar_modifier_area_node) = existing {
@@ -63,7 +63,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                         .bind_mut()
                         .set_exclude_ids(exclude_ids);
                 } else {
-                    let mut avatar_modifier_area = godot::engine::load::<PackedScene>(
+                    let mut avatar_modifier_area = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar_modifier_area.tscn",
                     )
                     .instantiate()
@@ -77,8 +77,8 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                         .bind_mut()
                         .set_avatar_modifiers(modifiers);
                     avatar_modifier_area.bind_mut().set_exclude_ids(exclude_ids);
-                    avatar_modifier_area.set_name(GString::from("AvatarModifierArea"));
-                    node_3d.add_child(avatar_modifier_area.clone().upcast());
+                    avatar_modifier_area.set_name("AvatarModifierArea");
+                    node_3d.add_child(&avatar_modifier_area.clone().upcast::<Node>());
                 }
             }
         }

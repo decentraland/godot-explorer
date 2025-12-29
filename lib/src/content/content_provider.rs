@@ -9,7 +9,8 @@ use std::{
 
 use futures_util::future::try_join_all;
 use godot::{
-    engine::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
+    classes::{AudioStream, Material, Mesh, Os, ResourceLoader, Texture2D},
+    obj::Singleton,
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -141,10 +142,7 @@ const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com
 #[godot_api]
 impl INode for ContentProvider {
     fn init(base: Base<Node>) -> Self {
-        let content_folder = Arc::new(format!(
-            "{}/content/",
-            godot::engine::Os::singleton().get_user_data_dir()
-        ));
+        let content_folder = Arc::new(format!("{}/content/", Os::singleton().get_user_data_dir()));
 
         #[cfg(feature = "use_resource_tracking")]
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
@@ -249,7 +247,7 @@ impl INode for ContentProvider {
                     let data = entry.promise.bind().get_data();
                     if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
                         if let Some(resource_locker) =
-                            node_3d.get_node_or_null(NodePath::from("ResourceLocker"))
+                            node_3d.get_node_or_null(&NodePath::from("ResourceLocker"))
                         {
                             if let Ok(resource_locker) =
                                 resource_locker.try_cast::<ResourceLocker>()
@@ -325,15 +323,15 @@ impl ContentProvider {
             Some(hash) => hash.clone(),
             None => {
                 // Emit error signal
+                let error_msg = format!(
+                    "File not found in content mapping: {}",
+                    file_path_str
+                );
                 self.base_mut().emit_signal(
-                    "scene_gltf_error".into(),
+                    "scene_gltf_error",
                     &[
                         GString::from("").to_variant(),
-                        GString::from(format!(
-                            "File not found in content mapping: {}",
-                            file_path_str
-                        ))
-                        .to_variant(),
+                        GString::from(error_msg.as_str()).to_variant(),
                     ],
                 );
                 return false;
@@ -396,7 +394,7 @@ impl ContentProvider {
                         Gd::<ContentProvider>::try_from_instance_id(instance_id)
                     {
                         provider.call_deferred(
-                            "on_scene_gltf_load_complete".into(),
+                            "on_scene_gltf_load_complete",
                             &[
                                 file_hash_gd.to_variant(),
                                 scene_path_gd.to_variant(),
@@ -406,12 +404,13 @@ impl ContentProvider {
                     }
                 }
                 Err(e) => {
-                    let error_msg = GString::from(e.to_string());
+                    let error_str = e.to_string();
+                    let error_msg = GString::from(error_str.as_str());
                     if let Ok(mut provider) =
                         Gd::<ContentProvider>::try_from_instance_id(instance_id)
                     {
                         provider.call_deferred(
-                            "on_scene_gltf_load_complete".into(),
+                            "on_scene_gltf_load_complete",
                             &[
                                 file_hash_gd.to_variant(),
                                 GString::from("").to_variant(),
@@ -439,12 +438,12 @@ impl ContentProvider {
 
         if error.is_empty() {
             self.base_mut().emit_signal(
-                "scene_gltf_ready".into(),
+                "scene_gltf_ready",
                 &[file_hash.to_variant(), scene_path.to_variant()],
             );
         } else {
             self.base_mut().emit_signal(
-                "scene_gltf_error".into(),
+                "scene_gltf_error",
                 &[file_hash.to_variant(), error.to_variant()],
             );
         }
@@ -460,7 +459,8 @@ impl ContentProvider {
     /// Get the path where a scene would be cached
     #[func]
     pub fn get_scene_cache_path(&self, file_hash: GString) -> GString {
-        get_scene_path_for_hash(&self.content_folder, &file_hash.to_string()).into()
+        let path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
+        GString::from(path.as_str())
     }
 
     /// Check if a hash is currently being loaded
@@ -750,7 +750,7 @@ impl ContentProvider {
         let file_hash = content_mapping.bind().get_hash(file_path);
         let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
 
-        self.fetch_file_by_url(file_hash, url.into_godot())
+        self.fetch_file_by_url(file_hash, GString::from(url.as_str()))
     }
 
     #[func]
@@ -923,8 +923,8 @@ impl ContentProvider {
         //  https://github.com/decentraland/godot-explorer/issues/363
         if file_hash.starts_with("http") {
             // get file_hash from url
-            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash());
-            let promise = self.fetch_texture_by_url(GString::from(new_file_hash), file_hash_godot);
+            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
+            let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
             self.cached.insert(
                 file_hash,
                 ContentEntry {
@@ -953,13 +953,13 @@ impl ContentProvider {
                 )
                 .await;
 
-                let godot_path = format!("res://content/{}", hash_id).to_godot();
+                let godot_path = format!("res://content/{}", hash_id);
 
                 let resource = ResourceLoader::singleton()
-                    .load(godot_path.clone())
+                    .load(&GString::from(godot_path.as_str()))
                     .unwrap();
 
-                let texture = resource.cast::<godot::engine::Texture2D>();
+                let texture = resource.cast::<godot::classes::Texture2D>();
                 let image = texture.get_image().unwrap();
 
                 let original_size = if let Some(original_size) = original_size {
@@ -1036,9 +1036,9 @@ impl ContentProvider {
 
         // Handle URL-based textures
         if file_hash.starts_with("http") {
-            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash());
+            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash_u32());
             let promise =
-                self.fetch_texture_by_url_original(GString::from(new_file_hash), file_hash_godot);
+                self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
             self.cached.insert(
                 cache_key,
                 ContentEntry {
@@ -1301,11 +1301,11 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn duplicate_materials(&mut self, target_meshes: VariantArray) -> Gd<Promise> {
+    pub fn duplicate_materials(&mut self, target_meshes: VarArray) -> Gd<Promise> {
         let data = target_meshes
             .iter_shared()
             .map(|dict| {
-                let dict = dict.try_to::<Dictionary>().ok()?;
+                let dict = dict.try_to::<VarDictionary>().ok()?;
                 let mesh = dict.get("mesh")?.try_to::<Gd<Mesh>>().ok()?;
                 let n = dict.get("n")?.try_to::<i32>().ok()?;
 
@@ -1329,7 +1329,7 @@ impl ContentProvider {
                         continue;
                     };
 
-                    mesh.surface_set_material(i, new_material.cast::<Material>());
+                    mesh.surface_set_material(i, &new_material.cast::<Material>());
                 }
             }
 
@@ -1344,7 +1344,7 @@ impl ContentProvider {
     #[func]
     pub fn fetch_wearables(
         &mut self,
-        wearables: VariantArray,
+        wearables: VarArray,
         content_base_url: GString,
     ) -> Array<Gd<Promise>> {
         let mut promise_ids = HashSet::new();
@@ -1664,9 +1664,9 @@ impl ContentProvider {
         // 4. Load what was listed
         for hash_to_load in &hashes_to_load {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
-            let zip_path = format!("user://content/{}", hash_zip).to_godot();
-            let result = godot::engine::ProjectSettings::singleton()
-                .load_resource_pack_ex(zip_path.clone())
+            let zip_path = &format!("user://content/{}", hash_zip);
+            let result = godot::classes::ProjectSettings::singleton()
+                .load_resource_pack_ex(zip_path)
                 .replace_files(false)
                 .done();
 

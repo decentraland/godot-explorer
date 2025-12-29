@@ -1,5 +1,6 @@
 use godot::{
-    builtin::{meta::ToGodot, Array, Dictionary, GString},
+    builtin::{Array, GString, VarDictionary},
+    meta::ToGodot,
     obj::Gd,
     prelude::*,
 };
@@ -40,7 +41,7 @@ impl DclUserProfile {
 
     #[func]
     fn get_base_url(&self) -> GString {
-        GString::from(self.inner.base_url.clone())
+        self.inner.base_url.clone().to_godot()
     }
 
     #[func]
@@ -50,7 +51,7 @@ impl DclUserProfile {
 
     #[func]
     fn get_name(&self) -> GString {
-        GString::from(self.inner.content.name.clone())
+        self.inner.content.name.clone().to_godot()
     }
 
     #[func]
@@ -60,12 +61,12 @@ impl DclUserProfile {
 
     #[func]
     fn get_description(&self) -> GString {
-        GString::from(self.inner.content.description.clone())
+        self.inner.content.description.clone().to_godot()
     }
 
     #[func]
     fn get_ethereum_address(&self) -> GString {
-        GString::from(self.inner.content.eth_address.clone())
+        GString::from(&self.inner.content.eth_address)
     }
 
     #[func]
@@ -111,16 +112,16 @@ impl DclUserProfile {
     }
 
     #[func]
-    pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclUserProfile> {
-        let value = godot::engine::Json::stringify(dictionary.to_variant());
+    pub fn from_godot_dictionary(dictionary: VarDictionary) -> Gd<DclUserProfile> {
+        let value = godot::classes::Json::stringify(&dictionary.to_variant());
         DclUserProfile::from_gd(json5::from_str(value.to_string().as_str()).unwrap_or_default())
     }
 
     #[func]
-    pub fn to_godot_dictionary(&self) -> Dictionary {
+    pub fn to_godot_dictionary(&self) -> VarDictionary {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
-        let value = godot::engine::Json::parse_string(value.into());
-        value.to::<Dictionary>()
+        let value = godot::classes::Json::parse_string(&value);
+        value.to::<VarDictionary>()
     }
 
     #[func]
@@ -128,7 +129,7 @@ impl DclUserProfile {
         let mut arr = Array::new();
         if let Some(blocked) = &self.inner.content.blocked {
             for addr in blocked {
-                arr.push(GString::from(addr.as_str()));
+                arr.push(&GString::from(addr.as_str()));
             }
         }
         arr
@@ -139,7 +140,7 @@ impl DclUserProfile {
         let mut arr = Array::new();
         if let Some(muted) = &self.inner.content.muted {
             for addr in muted {
-                arr.push(GString::from(addr.as_str()));
+                arr.push(&GString::from(addr.as_str()));
             }
         }
         arr
@@ -355,7 +356,7 @@ impl DclUserProfile {
         let mut arr = Array::new();
         if let Some(interests) = &self.inner.content.interests {
             for interest in interests {
-                arr.push(GString::from(interest.as_str()));
+                arr.push(&GString::from(interest.as_str()));
             }
         }
         arr
@@ -401,7 +402,7 @@ impl DclUserProfile {
 
     #[func]
     fn get_user_id(&self) -> GString {
-        GString::from(self.inner.content.get_user_id())
+        GString::from(&self.inner.content.get_user_id())
     }
 
     #[func]
@@ -415,21 +416,21 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_links(&self) -> Array<Dictionary> {
+    fn get_links(&self) -> Array<VarDictionary> {
         let mut arr = Array::new();
         if let Some(links) = &self.inner.content.links {
             for link in links {
-                let mut dict = Dictionary::new();
+                let mut dict = VarDictionary::new();
                 dict.set("title", link.title.clone());
                 dict.set("url", link.url.clone());
-                arr.push(dict);
+                arr.push(&dict);
             }
         }
         arr
     }
 
     #[func]
-    fn set_links(&mut self, links_array: Array<Dictionary>) {
+    fn set_links(&mut self, links_array: Array<VarDictionary>) {
         let links_vec: Vec<ProfileLink> = links_array
             .iter_shared()
             .filter_map(|dict| {
