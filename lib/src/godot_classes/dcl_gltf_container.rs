@@ -130,12 +130,13 @@ impl DclGltfContainer {
     }
 
     /// Reset transform tracking state (e.g., when loading a new GLTF)
+    /// Resets counters and signal state, but keeps tracking enabled if it was
     #[func]
     pub fn reset_transform_tracking(&mut self) {
+        self.last_global_transform = self.base().get_global_transform();
         self.transform_change_count = 0;
-        self.transform_tracking_enabled = false;
         self.kinematic_signal_emitted = false;
-        self.base_mut().set_process(false);
+        // Keep transform_tracking_enabled and process as they were
     }
 
     #[func]

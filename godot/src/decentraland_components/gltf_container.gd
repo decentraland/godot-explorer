@@ -303,7 +303,7 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 		dcl_visible_cmask = visible_meshes_collision_mask
 		dcl_invisible_cmask = invisible_meshes_collision_mask
 		_has_static_colliders = false
-		self.reset_transform_tracking()
+		self.disable_transform_tracking()  # Disable until new GLTF loads
 
 		if gltf_node != null:
 			remove_child(gltf_node)
