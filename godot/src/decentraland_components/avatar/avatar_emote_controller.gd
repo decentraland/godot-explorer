@@ -375,8 +375,18 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 	else:
 		await _async_load_emote(emote_urn)
 
+	# Avatar may have been removed from tree during async load
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		_is_loading_emote = false
+		return
+
 	# Wait a frame for any deferred calls (load_emote_from_dcl_emote_gltf) to complete
 	await avatar.get_tree().process_frame
+
+	# Check again after waiting
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		_is_loading_emote = false
+		return
 
 	# Clear loading lock
 	_is_loading_emote = false
