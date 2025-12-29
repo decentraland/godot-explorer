@@ -100,18 +100,10 @@ impl SceneEntityDefinition {
 
         self.get_godot_3d_position()
             + Vector3::new(
-                godot::engine::utilities::randf_range(
-                    bounding_box.0.x as f64,
-                    bounding_box.1.x as f64,
-                ) as f32,
-                godot::engine::utilities::randf_range(
-                    bounding_box.0.y as f64,
-                    bounding_box.1.y as f64,
-                ) as f32,
-                -godot::engine::utilities::randf_range(
-                    bounding_box.0.z as f64,
-                    bounding_box.1.z as f64,
-                ) as f32,
+                godot::global::randf_range(bounding_box.0.x as f64, bounding_box.1.x as f64) as f32,
+                godot::global::randf_range(bounding_box.0.y as f64, bounding_box.1.y as f64) as f32,
+                -godot::global::randf_range(bounding_box.0.z as f64, bounding_box.1.z as f64)
+                    as f32,
             )
     }
 }

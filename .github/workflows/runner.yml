@@ -39,14 +39,9 @@ jobs:
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
-  ios-build:
-    name: 🍏 iOS
-    needs: static-checks
-    # Skip iOS build if PR has 'without-ios' label
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'without-ios') }}
-    uses: ./.github/workflows/ios_builds.yml
-    secrets:
-      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+  # iOS builds are triggered separately via:
+  # - Label 'build-ios-internal' on PRs (see ios_label_trigger.yml)
+  # - Manual workflow dispatch (see ios_builds.yml)
 
   linux-build:
     name: 🐧 Linux

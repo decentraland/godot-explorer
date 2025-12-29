@@ -1,4 +1,4 @@
-use godot::{engine::ConfigFile, prelude::*};
+use godot::{classes::ConfigFile, prelude::*};
 
 #[derive(Clone, Var, GodotConvert, Export, PartialEq, Debug)]
 #[godot(via=i32)]
@@ -55,11 +55,11 @@ pub struct DclConfig {
 impl IRefCounted for DclConfig {
     fn init(base: Base<RefCounted>) -> Self {
         let mut settings_file: Gd<ConfigFile> = ConfigFile::new_gd();
-        settings_file.load(DclConfig::get_settings_file_path());
+        settings_file.load(&DclConfig::get_settings_file_path());
 
         let texture_quality = settings_file
-            .get_value_ex("config".to_godot(), "texture_quality".to_godot())
-            .default(Variant::from(TextureQuality::Medium.to_i32()))
+            .get_value_ex("config", "texture_quality")
+            .default(&Variant::from(TextureQuality::Medium.to_i32()))
             .done();
         let texture_quality = texture_quality
             .try_to::<i32>()
@@ -82,10 +82,10 @@ impl DclConfig {
 
     pub fn static_get_texture_quality() -> TextureQuality {
         let mut settings_file: Gd<ConfigFile> = ConfigFile::new_gd();
-        settings_file.load(DclConfig::get_settings_file_path());
+        settings_file.load(&DclConfig::get_settings_file_path());
         let texture_quality = settings_file
-            .get_value_ex("config".to_godot(), "texture_quality".to_godot())
-            .default(Variant::from(TextureQuality::Medium.to_i32()))
+            .get_value_ex("config", "texture_quality")
+            .default(&Variant::from(TextureQuality::Medium.to_i32()))
             .done();
 
         let texture_quality = texture_quality
