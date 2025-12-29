@@ -170,8 +170,10 @@ func _play_utility_emote(utility_emote_id: String) -> bool:
 	var anim_name = "default_actions/" + utility_emote_id
 	if not animation_player.has_animation(anim_name):
 		printerr(
-			"Utility emote %s not found from player '%s'"
-			% [utility_emote_id, avatar.get_avatar_name()]
+			(
+				"Utility emote %s not found from player '%s'"
+				% [utility_emote_id, avatar.get_avatar_name()]
+			)
 		)
 		return false
 
@@ -549,7 +551,9 @@ func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animatio
 		# Add the track
 		var new_track_idx = merged.add_track(track_type)
 		merged.track_set_path(new_track_idx, track_path)
-		merged.track_set_interpolation_type(new_track_idx, prop_anim.track_get_interpolation_type(i))
+		merged.track_set_interpolation_type(
+			new_track_idx, prop_anim.track_get_interpolation_type(i)
+		)
 
 		# Copy all keys
 		var key_count = prop_anim.track_get_key_count(i)
