@@ -226,7 +226,13 @@ pub async fn load_gltf_emote(
         internal_load_gltf(file_path, content_mapping, ctx).await?;
 
     let result = process_emote_animations(&file_hash, &gltf_node).map(
-        |(armature_prop, default_animation, prop_animation)| {
+        |(mut armature_prop, default_animation, prop_animation)| {
+            // Remove armature_prop from gltf_node before freeing (so it survives)
+            if let Some(ref mut prop) = armature_prop {
+                if let Some(mut parent) = prop.get_parent() {
+                    parent.remove_child(&prop.clone().upcast::<Node>());
+                }
+            }
             build_dcl_emote_gltf(armature_prop, default_animation, prop_animation).to_variant()
         },
     );
