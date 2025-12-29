@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use godot::{
     builtin::Basis,
-    engine::{BaseMaterial3D, MeshInstance3D, Node3D},
+    classes::{BaseMaterial3D, MeshInstance3D, Node3D},
     prelude::*,
 };
 
