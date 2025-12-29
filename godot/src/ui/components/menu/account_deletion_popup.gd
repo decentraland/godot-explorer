@@ -1,6 +1,6 @@
 extends TextureRect
 
-const DELETION_API_URL = "https://mobile-bff.decentraland.zone/deletion"
+const DELETION_API_URL = "https://mobile-bff.decentraland.org/deletion"
 
 @onready var confirmation_dialog: VBoxContainer = %ConfirmationDialog
 @onready var processing_screen: VBoxContainer = %ProcessingScreen
