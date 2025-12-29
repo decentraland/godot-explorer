@@ -408,6 +408,56 @@ Scene GLTFs have colliders created during processing:
 | `lib/src/content/audio.rs` | Audio loading |
 | `godot/src/decentraland_components/gltf_container.gd` | Scene GLTF component |
 
+## Avatar Wearable Loading
+
+Avatar wearables have two loading paths:
+
+### 1. Promise-Based API (Current for Avatars)
+
+Used by `avatar.gd` for loading avatar wearables:
+
+```gdscript
+# In avatar.gd async_fetch_wearables_dependencies
+wearable_promises = await Wearables.async_load_wearables(...)
+# Then later in async_load_wearables
+var obj = Global.content_provider.get_gltf_from_hash(file_hash)
+```
+
+This flow:
+- Uses `fetch_wearable_gltf()` which loads in background thread
+- Keeps the loaded Node3D in memory cache (not disk)
+- Uses `duplicate()` to create copies for each avatar
+
+### 2. Signal-Based API (Available but unused for avatars)
+
+The disk-caching signal-based API exists for wearables:
+
+```gdscript
+# Start loading
+Global.content_provider.load_wearable_gltf(file_path, content_mapping)
+# Wait for signal
+await Global.content_provider.wearable_gltf_ready
+# Load from disk using ResourceLoader
+ResourceLoader.load_threaded_request(scene_path)
+```
+
+### Future Improvement: Threaded Avatar Wearable Loading
+
+Currently, avatar wearables can cause minor hiccups because:
+1. The Promise-based flow doesn't use disk caching
+2. Wearables are loaded from network even if cached on disk
+
+To improve this, the avatar loading could be refactored to:
+1. Use `load_wearable_gltf()` (signal-based, saves to disk)
+2. Wait for `wearable_gltf_ready` signal with scene_path
+3. Use `ResourceLoader.load_threaded_request()` for non-blocking disk loading
+4. Instantiate and add to avatar
+
+This is a complex refactor because:
+- Need to track multiple wearable loads in parallel
+- Need to maintain backward compatibility
+- Avatar loading has complex dependencies (textures, emotes, etc.)
+
 ## Debugging
 
 Enable detailed logging:
