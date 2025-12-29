@@ -1,7 +1,5 @@
 extends AnimatedButton
 
-signal bell_clicked
-
 
 func _get_unread_count() -> int:
 	var notifications = NotificationsManager.get_notifications()
@@ -21,7 +19,9 @@ func _connect_update_signals() -> void:
 
 
 func _on_button_clicked() -> void:
-	bell_clicked.emit()
+	Global.close_menu.emit()
+	Global.open_notifications_panel.emit()
+	Global.send_haptic_feedback()
 
 
 func _get_button_metric_name() -> String:

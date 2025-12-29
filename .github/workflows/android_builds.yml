@@ -13,6 +13,10 @@ on:
       SENTRY_PROJECT:
         required: true
 
+permissions:
+  pull-requests: write
+  contents: read
+
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
   cancel-in-progress: true
@@ -151,3 +155,53 @@ jobs:
           else
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
           fi
+
+      # Build Report Comment
+      - name: Prepare Build Report
+        if: github.event_name == 'pull_request' && always()
+        run: |
+          ARTIFACTS_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Determine build status
+          if [ "${{ job.status }}" = "success" ]; then
+            ANDROID_STATUS="✅ Success"
+            APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
+            AAB_LINK="[📦 Download AAB](${ARTIFACTS_URL}/artifacts)"
+            SYMBOLS_LINK="[🔧 Debug Symbols](${ARTIFACTS_URL}/artifacts)"
+          else
+            ANDROID_STATUS="❌ Failed"
+            APK_LINK="Build failed"
+            AAB_LINK="Build failed"
+            SYMBOLS_LINK="Build failed"
+          fi
+
+          {
+            echo "## 📦 Build Report"
+            echo ""
+            echo "### 🤖 Android"
+            echo ""
+            echo "| Artifact | Status |"
+            echo "|----------|--------|"
+            echo "| APK | ${APK_LINK} |"
+            echo "| AAB | ${AAB_LINK} |"
+            echo "| Debug Symbols | ${SYMBOLS_LINK} |"
+            echo ""
+            echo "**Build Status**: ${ANDROID_STATUS}"
+            echo ""
+            echo "### 🍏 iOS"
+            echo ""
+            echo "> iOS builds are triggered manually. Add the \`build-ios-internal\` label to trigger an iOS build."
+            echo ""
+            echo "---"
+            echo ""
+            echo "🔗 **Workflow Run**: [View logs](${ARTIFACTS_URL})"
+            echo ""
+            echo "🔄 **Updated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          } > build-report.md
+
+      - name: Comment PR with Build Report
+        if: github.event_name == 'pull_request' && always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: build-report
+          path: build-report.md

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use godot::{
-    engine::{node::ProcessMode, Engine},
+    classes::{node::ProcessMode, Engine, Os},
+    obj::Singleton,
     prelude::*,
 };
 
@@ -56,7 +57,8 @@ mod android {
             // "debug"  // Debug, info, warnings and errors (shows all debug logs)
             // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
             // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
-            "info", // Info, warnings and errors
+            "dclgodot::scene_runner::components::video_player=debug", // Debug for scene_runner, info for comms, warn for everything else
+                                                                      // "info", // Info, warnings and errors
         );
 
         let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
@@ -66,6 +68,71 @@ mod android {
             .with_filter(filter);
 
         registry().with(android_layer).init();
+    }
+}
+
+#[cfg(target_os = "ios")]
+mod ios {
+    use tracing_subscriber::filter::EnvFilter;
+    use tracing_subscriber::fmt::format::Writer;
+    use tracing_subscriber::fmt::{self, FormatEvent, FormatFields};
+    use tracing_subscriber::registry::LookupSpan;
+
+    /// Custom formatter that includes target in the message for iOS
+    /// Format: [LEVEL] [target] message
+    struct IosFormatter;
+
+    impl<S, N> FormatEvent<S, N> for IosFormatter
+    where
+        S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+        N: for<'a> FormatFields<'a> + 'static,
+    {
+        fn format_event(
+            &self,
+            ctx: &fmt::FmtContext<'_, S, N>,
+            mut writer: Writer<'_>,
+            event: &tracing::Event<'_>,
+        ) -> std::fmt::Result {
+            let metadata = event.metadata();
+            let level = metadata.level();
+            let target = metadata.target();
+
+            // Format: [LEVEL] [target] message
+            write!(writer, "[{}] [{}] ", level, target)?;
+
+            // Write the event fields (the actual message)
+            ctx.field_format().format_fields(writer.by_ref(), event)?;
+
+            writeln!(writer)
+        }
+    }
+
+    pub fn init_logger() {
+        // Configure logging filters for iOS
+        // By default, filter everything to WARN level
+        // You can customize specific modules here:
+        // Examples:
+        //   "warn" - only warnings and errors (default)
+        //   "debug" - show debug logs from all modules
+        //   "dclgodot::scene_runner=debug,warn" - debug for scene_runner, warn for others
+        //   "dclgodot::scene_runner=debug,dclgodot::comms=info,warn" - multiple modules
+
+        let filter = EnvFilter::new(
+            // TODO: Modify this line to change logging levels
+            // "warn"  // Only warnings and errors
+            // "debug"  // Debug, info, warnings and errors (shows all debug logs)
+            // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
+            // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
+            "warn,dclgodot::scene_runner::components::video_player=debug", // Debug for video_player, warn for everything else
+        );
+
+        // Use custom formatter that explicitly includes target in every message
+        // This ensures the module path is visible even when iOS strips formatting
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_ansi(false) // Disable ANSI color codes
+            .event_format(IosFormatter)
+            .init();
     }
 }
 
@@ -159,7 +226,10 @@ impl INode for DclGlobal {
         #[cfg(target_os = "android")]
         android::init_logger();
 
-        #[cfg(not(target_os = "android"))]
+        #[cfg(target_os = "ios")]
+        ios::init_logger();
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let _ = tracing_subscriber::fmt::try_init();
 
         tracing::info!(
@@ -196,29 +266,29 @@ impl INode for DclGlobal {
         let mut portable_experience_controller: Gd<DclPortableExperienceController> =
             DclPortableExperienceController::new_alloc();
 
-        tokio_runtime.set_name("tokio_runtime".into());
-        scene_runner.set_name("scene_runner".into());
+        tokio_runtime.set_name("tokio_runtime");
+        scene_runner.set_name("scene_runner");
         scene_runner.set_process_mode(ProcessMode::DISABLED);
-        comms.set_name("comms".into());
-        avatars.set_name("avatar_scene".into());
-        realm.set_name("realm".into());
-        dcl_tokio_rpc.set_name("dcl_tokio_rpc".into());
-        player_identity.set_name("player_identity".into());
-        testing_tools.set_name("testing_tool".into());
-        content_provider.set_name("content_provider".into());
-        portable_experience_controller.set_name("portable_experience_controller".into());
-        network_inspector.set_name("network_inspector".into());
-        social_blacklist.set_name("social_blacklist".into());
-        social_service.set_name("social_service".into());
+        comms.set_name("comms");
+        avatars.set_name("avatar_scene");
+        realm.set_name("realm");
+        dcl_tokio_rpc.set_name("dcl_tokio_rpc");
+        player_identity.set_name("player_identity");
+        testing_tools.set_name("testing_tool");
+        content_provider.set_name("content_provider");
+        portable_experience_controller.set_name("portable_experience_controller");
+        network_inspector.set_name("network_inspector");
+        social_blacklist.set_name("social_blacklist");
+        social_service.set_name("social_service");
 
         #[cfg(feature = "use_memory_debugger")]
-        memory_debugger.set_name("memory_debugger".into());
+        memory_debugger.set_name("memory_debugger");
 
         #[cfg(feature = "use_memory_debugger")]
-        benchmark_report.set_name("benchmark_report".into());
+        benchmark_report.set_name("benchmark_report");
 
-        metrics.set_name("metrics".into());
-        cli.set_name("cli".into());
+        metrics.set_name("metrics");
+        cli.set_name("cli");
 
         // Use CLI singleton for parsing
         let (testing_scene_mode, preview_mode, developer_mode, fixed_skybox_time, force_mobile) = {
@@ -234,7 +304,7 @@ impl INode for DclGlobal {
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
-        let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into()) || force_mobile;
+        let is_mobile = Os::singleton().has_feature("mobile") || force_mobile;
         let is_android = std::env::consts::OS == "android";
         let is_ios = std::env::consts::OS == "ios";
 
@@ -334,11 +404,11 @@ impl DclGlobal {
                 let root = tree.get_root();
                 if let Some(root) = root {
                     // Try to find the explorer node
-                    let explorer = root.get_node_or_null(NodePath::from("explorer"));
+                    let explorer = root.get_node_or_null("explorer");
                     if let Some(mut explorer) = explorer {
                         // Call ui_has_focus if it exists
-                        if explorer.has_method("ui_has_focus".into()) {
-                            return explorer.call("ui_has_focus".into(), &[]).to::<bool>();
+                        if explorer.has_method("ui_has_focus") {
+                            return explorer.call("ui_has_focus", &[]).to::<bool>();
                         }
                     }
                 }
@@ -375,7 +445,7 @@ impl DclGlobal {
         let Some(root) = main_loop.cast::<SceneTree>().get_root() else {
             return false;
         };
-        root.has_node("Global".into())
+        root.has_node("Global")
     }
 
     pub fn try_singleton() -> Option<Gd<Self>> {
@@ -383,7 +453,7 @@ impl DclGlobal {
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
-            .get_node_or_null("Global".into())?
+            .get_node_or_null("Global")?
             .try_cast::<Self>();
         res.ok()
     }

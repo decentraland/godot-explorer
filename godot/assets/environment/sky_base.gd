@@ -1,13 +1,28 @@
 class_name SkyBase
 extends Node
 
-# Time origins for sun and moon (normalized 0.0-1.0)
-const SUN_ORIGIN = 0.32  # ~7:40 AM
-const MOON_ORIGIN = 0.82  # ~7:40 PM
+# Day/night phase timing constants (normalized 0.0-1.0)
+# Sun is active for 70% of the day (0.15-0.85), moon for 30% (0.85-0.15 wrapping)
+const SUNRISE_START = 0.12  # Dawn begins
+const SUNRISE_END = 0.15  # Sun fully up, moon down
+const SUNSET_START = 0.85  # Dusk begins
+const SUNSET_END = 0.88  # Moon fully up, sun down
+
+# Derived constants for phase durations
+const SUN_PHASE_DURATION = SUNSET_START - SUNRISE_END  # 0.7 (70% of day)
+const MOON_PHASE_DURATION = 1.0 - SUN_PHASE_DURATION  # 0.3 (30% of day)
+
+# Transition fade window (how far before/after phase change to fade light)
+const TRANSITION_FADE_MARGIN = 0.03
 
 # Horizon colors for transitions
 @export var moon_horizon_color := Color("#ff7534")  # Orange
 @export var sun_horizon_color := Color("#8f0025")  # Deep red
+
+# External gradient resources for time-of-day lighting
+@export var directional_light_gradient: Gradient
+@export var ambient_light_gradient: Gradient
+@export var fog_color_gradient: Gradient
 
 var last_time := 0.0
 
@@ -25,10 +40,6 @@ var initial_moon_transform: Transform3D
 @onready var initial_sun_color = main_light.light_color
 
 @onready var sky_material = world_environment.environment.sky.sky_material
-@onready
-var day_fog_color = sky_material.get_shader_parameter("clouds_gradient_day").gradient.colors[0]
-@onready
-var night_fog_color = sky_material.get_shader_parameter("clouds_gradient_night").gradient.colors[0]
 
 
 func _ready():
@@ -71,38 +82,6 @@ func _on_loading_finished():
 	tween.tween_property(main_light, "light_energy", initial_sun_energy, 1.0)
 
 
-# Determine if we're in sun or moon phase
-func get_phase_blend(normalized_time: float) -> float:
-	# Returns 0.0 for full sun, 1.0 for full moon
-	# Transitions happen around dawn (0.07) and dusk (0.57)
-	var cycle = fmod(normalized_time + 0.5 - SUN_ORIGIN, 1.0)
-
-	# Sun is dominant from 0.0 to 0.5, moon from 0.5 to 1.0
-	if cycle < 0.5:
-		return 0.0  # Sun phase
-	return 1.0  # Moon phase
-
-
-# Get the transition factor (0.0 = full brightness, 1.0 = transitioning/faded)
-func get_transition_fade(normalized_time: float) -> float:
-	# Calculate angular position for both sun and moon
-	var sun_time = 1.0 + normalized_time
-	var sun_angle = clamp(((sun_time - SUN_ORIGIN) - floor(sun_time - SUN_ORIGIN)) * 2.0, 0.0, 1.0)
-
-	var moon_time = 1.0 + normalized_time
-	var moon_angle = clamp(
-		((moon_time - MOON_ORIGIN) - floor(moon_time - MOON_ORIGIN)) * 2.0, 0.0, 1.0
-	)
-
-	# Near horizon = high fade value (close to 0 or 1)
-	# Overhead = low fade value (close to 0.5)
-	var sun_fade = 1.0 - (smoothstep(0.0, 0.15, sun_angle) * smoothstep(1.0, 0.85, sun_angle))
-	var moon_fade = 1.0 - (smoothstep(0.0, 0.15, moon_angle) * smoothstep(1.0, 0.85, moon_angle))
-
-	# Return the minimum (we want to fade when either is transitioning)
-	return min(sun_fade, moon_fade)
-
-
 func _process(_delta: float) -> void:
 	var skybox_time = Global.skybox_time.get_normalized_time()
 
@@ -110,45 +89,42 @@ func _process(_delta: float) -> void:
 	var sun_angle: float
 	var moon_angle: float
 
-	# Sun phase: 0.25 (sunrise) -> 0.5 (noon) -> 0.75 (sunset)
-	if skybox_time >= 0.25 and skybox_time < 0.75:
-		# Map 0.25-0.75 to 0.0-1.0
-		sun_angle = (skybox_time - 0.25) / 0.5
+	# Sun phase: SUNRISE_END -> noon -> SUNSET_START
+	if skybox_time >= SUNRISE_END and skybox_time < SUNSET_START:
+		sun_angle = (skybox_time - SUNRISE_END) / SUN_PHASE_DURATION
 	else:
 		sun_angle = 0.0  # Below horizon
 
-	# Moon phase: 0.75 (moonrise) -> 0.0 (midnight) -> 0.25 (moonset)
-	if skybox_time >= 0.75:
-		# Map 0.75-1.0 to 0.0-0.5
-		moon_angle = (skybox_time - 0.75) / 0.5
-	elif skybox_time < 0.25:
-		# Map 0.0-0.25 to 0.5-1.0
-		moon_angle = 0.5 + (skybox_time / 0.5)
+	# Moon phase: SUNSET_START -> midnight -> SUNRISE_END (wraps around)
+	if skybox_time >= SUNSET_START:
+		# Rising half: SUNSET_START to 1.0 maps to 0.0-0.5
+		moon_angle = (skybox_time - SUNSET_START) / MOON_PHASE_DURATION
+	elif skybox_time < SUNRISE_END:
+		# Setting half: 0.0 to SUNRISE_END maps to 0.5-1.0
+		moon_angle = 0.5 + (skybox_time / MOON_PHASE_DURATION)
 	else:
 		moon_angle = 0.0  # Below horizon
 
 	# Calculate blend factor between sun and moon (0.0 = full sun, 1.0 = full moon)
-	# Smooth transition during dusk (0.7-0.8) and dawn (0.2-0.3)
 	var sun_to_moon_blend: float
-	if skybox_time < 0.2:
-		# Early morning - full moon
+	if skybox_time < SUNRISE_START:
+		# Deep night - full moon
 		sun_to_moon_blend = 1.0
-	elif skybox_time < 0.3:
+	elif skybox_time < SUNRISE_END:
 		# Dawn transition - moon to sun
-		sun_to_moon_blend = 1.0 - smoothstep(0.2, 0.3, skybox_time)
-	elif skybox_time < 0.7:
+		sun_to_moon_blend = 1.0 - smoothstep(SUNRISE_START, SUNRISE_END, skybox_time)
+	elif skybox_time < SUNSET_START:
 		# Day - full sun
 		sun_to_moon_blend = 0.0
-	elif skybox_time < 0.8:
+	elif skybox_time < SUNSET_END:
 		# Dusk transition - sun to moon
-		sun_to_moon_blend = smoothstep(0.7, 0.8, skybox_time)
+		sun_to_moon_blend = smoothstep(SUNSET_START, SUNSET_END, skybox_time)
 	else:
 		# Night - full moon
 		sun_to_moon_blend = 1.0
 
 	# Determine which phase we're in (snap, not blend for rotation/transform)
-	# Switch happens at the very end/start of transitions when light is almost off
-	var is_sun_phase = skybox_time >= 0.25 and skybox_time < 0.75
+	var is_sun_phase = skybox_time >= SUNRISE_END and skybox_time < SUNSET_START
 
 	# Rotation/transform: snap to sun or moon (no blending)
 	var current_angle: float
@@ -168,17 +144,16 @@ func _process(_delta: float) -> void:
 	# Calculate brightness based on angle (0=horizon, 0.5=overhead, 1.0=horizon)
 	var t = smoothstep(0.0, 0.2, current_angle) * smoothstep(1.0, 0.8, current_angle)
 
-	# Fade light to zero near phase transitions (0.25 and 0.75) to hide rotation snap
-	# Sharper fade with less time fully off
+	# Fade light to zero near phase transitions to hide rotation snap
 	var transition_fade = 1.0
-	if skybox_time >= 0.24 and skybox_time < 0.26:
-		# Dawn transition - quick fade out/in around 0.25
-		var dist = abs(skybox_time - 0.25)
-		transition_fade = smoothstep(0.0, 0.01, dist)  # Sharper: 0.01 instead of 0.02
-	elif skybox_time >= 0.74 and skybox_time < 0.76:
-		# Dusk transition - quick fade out/in around 0.75
-		var dist = abs(skybox_time - 0.75)
-		transition_fade = smoothstep(0.0, 0.01, dist)  # Sharper: 0.01 instead of 0.02
+	if skybox_time >= SUNRISE_START and skybox_time < SUNRISE_END + TRANSITION_FADE_MARGIN:
+		# Dawn transition - fade centered around SUNRISE_END
+		var dist = abs(skybox_time - SUNRISE_END)
+		transition_fade = smoothstep(0.0, TRANSITION_FADE_MARGIN, dist)
+	elif skybox_time >= SUNSET_START - TRANSITION_FADE_MARGIN and skybox_time < SUNSET_END:
+		# Dusk transition - fade centered around SUNSET_START
+		var dist = abs(skybox_time - SUNSET_START)
+		transition_fade = smoothstep(0.0, TRANSITION_FADE_MARGIN, dist)
 
 	# Apply transformations
 	main_light.visible = transition_fade > 0.01
@@ -191,31 +166,18 @@ func _process(_delta: float) -> void:
 
 	main_light.light_color = lerp(current_horizon_color, current_color, t)
 
-	# Dynamic ambient light - boost when it's night OR near horizon
-	# Base: 0.6 (increased from 0.05 for brighter appearance)
-	var base_ambient = 0.6
-
-	# Calculate horizon factor (0.0 = zenith, 1.0 = horizon)
-	var horizon_factor = 0.0
-	if current_angle < 0.3:
-		# Rising - approaching horizon
-		horizon_factor = 1.0 - smoothstep(0.0, 0.3, current_angle)
-	elif current_angle > 0.7:
-		# Setting - approaching horizon
-		horizon_factor = smoothstep(0.7, 1.0, current_angle)
-
-	# Boost ambient when night OR horizon (use max to get OR behavior)
-	var night_factor = sun_to_moon_blend  # 0.0 = day, 1.0 = night
-	var boost_factor = max(night_factor, horizon_factor)  # OR: take whichever is higher
-
-	var ambient_boost = boost_factor * 0.4  # Up to 0.4 extra (increased from 0.15)
-	var ambient_energy = base_ambient + ambient_boost
-	world_environment.environment.ambient_light_energy = ambient_energy
-
-	# Update fog color based on time of day
+	# Update colors based on time of day using gradients
 	if last_time != skybox_time:
 		last_time = skybox_time
-		var fog_cycle = skybox_time + .43
-		fog_cycle -= floor(fog_cycle)
-		var blend = sin(fog_cycle * PI)
-		world_environment.environment.fog_light_color = day_fog_color.lerp(night_fog_color, blend)
+
+		if directional_light_gradient:
+			var gradient_color = directional_light_gradient.sample(skybox_time)
+			main_light.light_color = main_light.light_color.lerp(gradient_color, 0.5)
+
+		if ambient_light_gradient:
+			world_environment.environment.ambient_light_color = ambient_light_gradient.sample(
+				skybox_time
+			)
+
+		if fog_color_gradient:
+			world_environment.environment.fog_light_color = fog_color_gradient.sample(skybox_time)

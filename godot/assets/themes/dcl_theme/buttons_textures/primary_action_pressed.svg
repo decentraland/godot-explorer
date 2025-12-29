@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100"
+   height="100"
+   viewBox="0 0 100 100"
+   fill="none"
+   version="1.1"
+   id="svg2"
+   sodipodi:docname="primary_action_pressed.svg"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="namedview2"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     showgrid="true"
+     inkscape:zoom="6.465"
+     inkscape:cx="36.813612"
+     inkscape:cy="62.722351"
+     inkscape:window-width="2560"
+     inkscape:window-height="1511"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2">
+    <inkscape:grid
+       id="grid3"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="1"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       enabled="true"
+       visible="true" />
+  </sodipodi:namedview>
+  <circle
+     cx="50"
+     cy="50"
+     r="47"
+     fill="white"
+     stroke="#A524B3"
+     stroke-width="6"
+     id="circle1" />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Inter;-inkscape-font-specification:Inter;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:3.74023;fill:#ffffff"
+     x="38.205723"
+     y="33.333332"
+     id="text2"><tspan
+       x="38.205723"
+       y="33.333332"
+       id="tspan1">1</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:Inter;-inkscape-font-specification:Inter;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;inline-size:38.4401;fill:#4c4c4c;fill-opacity:1"
+     x="58.761414"
+     y="84.909058"
+     id="text3"
+     transform="translate(-28.109282,-17.4545)"><tspan
+       x="58.761414"
+       y="84.909058"
+       id="tspan4"><tspan
+         style="text-align:center;baseline-shift:baseline;text-anchor:middle"
+         id="tspan2">E</tspan></tspan></text>
+</svg>

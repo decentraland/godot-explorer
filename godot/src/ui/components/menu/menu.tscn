@@ -1,67 +1,23 @@
-[gd_scene load_steps=43 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=28 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
 [ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
-[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_66uy4"]
 [ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
-[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="4_lblvr"]
-[ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="5_ili3w"]
-[ext_resource type="Shader" uid="uid://ctbwfwlyggrm0" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
-[ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="6_hwdsi"]
-[ext_resource type="Texture2D" uid="uid://dpbvomx45a2bu" path="res://assets/ui/nav-bar-icons/map-off.svg" id="7_n821n"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
-[ext_resource type="Texture2D" uid="uid://3w81orc6dom3" path="res://assets/ui/nav-bar-icons/backpack-off.svg" id="8_dg57i"]
-[ext_resource type="Script" uid="uid://b1cexory4fl5b" path="res://src/ui/components/menu_navbar_button/menu_navbar_button.gd" id="8_xlada"]
-[ext_resource type="Texture2D" uid="uid://3hwotq2y3fji" path="res://assets/ui/nav-bar-icons/settings-off.svg" id="9_7nnp3"]
-[ext_resource type="PackedScene" uid="uid://ijchr0b1hj8w" path="res://src/ui/components/menu/menu_profile_button.tscn" id="9_kexs4"]
-[ext_resource type="Texture2D" uid="uid://in6jrkrtptfk" path="res://assets/ui/nav-bar-icons/explorer-on.svg" id="9_vk6hq"]
-[ext_resource type="Texture2D" uid="uid://b6o2c0qb56axv" path="res://assets/ui/nav-bar-icons/map-on.svg" id="11_3grpy"]
-[ext_resource type="Texture2D" uid="uid://ie2f054vn7kc" path="res://src/ui/components/auth/images/magic.svg" id="11_hi4c1"]
-[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="12_dymeh"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_rk6dl"]
-[ext_resource type="Texture2D" uid="uid://6imcvlsym60g" path="res://assets/ui/nav-bar-icons/backpack-on.svg" id="13_42arv"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="13_likvk"]
-[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="15_ej6rb"]
-[ext_resource type="Texture2D" uid="uid://btbdt48fn6ys1" path="res://assets/ui/nav-bar-icons/settings-on.svg" id="15_rnulk"]
+[ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/components/discover/discover_button.gd" id="13_2fqoa"]
+[ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="15_0o5gq"]
+[ext_resource type="SpriteFrames" uid="uid://dixfuphroeh3a" path="res://assets/animations/discover_animation.tres" id="15_rdch8"]
+[ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/components/backpack/backpack_button.gd" id="16_p7nyr"]
 [ext_resource type="Texture2D" uid="uid://k7ufueequ8k0" path="res://assets/ui/backpack/backpack-bg.png" id="17_8btb2"]
+[ext_resource type="SpriteFrames" uid="uid://pdugkxtvb5a2" path="res://assets/animations/backpack_animation.tres" id="17_iib41"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="17_tc0me"]
+[ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/components/settings/settings_button.gd" id="18_3id7u"]
 [ext_resource type="PackedScene" uid="uid://cuduuu2b4u4bn" path="res://src/ui/components/profile_settings/profile_settings.tscn" id="18_x0kg3"]
+[ext_resource type="SpriteFrames" uid="uid://bkr6jgehk1ji0" path="res://assets/animations/settings_animation.tres" id="19_j150v"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="22_1kuym"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
-[ext_resource type="PackedScene" uid="uid://c7xids68ikyt4" path="res://src/ui/components/map_satellite/map_satellite.tscn" id="25_53o0i"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5emsx"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_dm3ec"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oex5x"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.262745, 0.25098, 0.290196, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_60djt"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(0.168627, 0.160784, 0.188235, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wmgho"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
-shader = ExtResource("5_k4wpn")
-shader_parameter/strength = 0.9
-shader_parameter/speed = 0.025
-shader_parameter/angle = 0.0
+[ext_resource type="PackedScene" uid="uid://b3e5xybvamaqr" path="res://src/ui/components/menu/account_deletion_popup.tscn" id="31_kkhkt"]
 
 [sub_resource type="Gradient" id="Gradient_6v8vt"]
 colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0.945098, 1)
@@ -72,9 +28,15 @@ gradient = SubResource("Gradient_6v8vt")
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_080im"]
 bg_color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
+[sub_resource type="ButtonGroup" id="ButtonGroup_rdch8"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_7v87b"]
+
 [sub_resource type="ButtonGroup" id="ButtonGroup_udswp"]
 resource_local_to_scene = false
 resource_name = "Tabs"
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_0o5gq"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4hsmp"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -108,253 +70,9 @@ mouse_force_pass_scroll_events = false
 theme = ExtResource("1_ji0pe")
 theme_override_constants/separation = 0
 
-[node name="TopNavbar_Landscape" type="VBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 0
-script = ExtResource("22_1kuym")
-hide_on_portrait = true
-
-[node name="ColorRect_Landscape_Top_SafeArea" type="ColorRect" parent="VBoxContainer/TopNavbar_Landscape"]
-unique_name_in_owner = true
-layout_mode = 2
-color = Color(0.0862745, 0.0784314, 0.105882, 1)
-
-[node name="ColorRect_Header" type="ColorRect" parent="VBoxContainer/TopNavbar_Landscape"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-color = Color(0.0862745, 0.0784314, 0.105882, 1)
-
-[node name="SafeMarginContainer" type="MarginContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("4_lblvr")
-use_top = false
-use_bottom = false
-
-[node name="HBoxContainer_Header" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 0
-alignment = 1
-
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
-layout_mode = 2
-theme_override_constants/separation = 20
-theme_override_styles/separator = SubResource("StyleBoxEmpty_5emsx")
-
-[node name="HBoxContainer_LeftSide" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
-custom_minimum_size = Vector2(350, 0)
-layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide"]
-layout_mode = 2
-alignment = 1
-
-[node name="HBoxContainer_Logo" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 2
-alignment = 1
-
-[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
-custom_minimum_size = Vector2(28, 28)
-layout_mode = 2
-texture = ExtResource("3_66uy4")
-expand_mode = 2
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_dm3ec")
-
-[node name="Label" type="Label" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
-layout_mode = 2
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("13_likvk")
-theme_override_font_sizes/font_size = 18
-text = "Decentraland"
-vertical_alignment = 1
-
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_oex5x")
-
-[node name="Label2" type="Label" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/PanelContainer"]
-layout_mode = 2
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("13_likvk")
-theme_override_font_sizes/font_size = 12
-text = "MOBILE ALPHA"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 2
-alignment = 1
-
-[node name="Button_Discover" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 80)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 44
-toggle_mode = true
-button_group = ExtResource("5_ili3w")
-text = "DISCOVER"
-icon = ExtResource("6_hwdsi")
-flat = true
-icon_alignment = 1
-vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("9_vk6hq")
-metadata/disable_ui_sounds = true
-
-[node name="Button_Map" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 80)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 44
-toggle_mode = true
-button_group = ExtResource("5_ili3w")
-text = "GENESIS MAP"
-icon = ExtResource("7_n821n")
-flat = true
-icon_alignment = 1
-vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("11_3grpy")
-metadata/disable_ui_sounds = true
-
-[node name="Button_Backpack" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 80)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 44
-toggle_mode = true
-button_group = ExtResource("5_ili3w")
-text = "BACKPACK"
-icon = ExtResource("8_dg57i")
-flat = true
-icon_alignment = 1
-vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("13_42arv")
-metadata/disable_ui_sounds = true
-
-[node name="Button_Settings" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 80)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 44
-toggle_mode = true
-button_group = ExtResource("5_ili3w")
-text = "SETTINGS"
-icon = ExtResource("9_7nnp3")
-flat = true
-icon_alignment = 1
-vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("15_rnulk")
-metadata/disable_ui_sounds = true
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
-custom_minimum_size = Vector2(350, 0)
-layout_mode = 2
-theme_override_constants/separation = 10
-alignment = 2
-
-[node name="Button_MagicWallet" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(52, 52)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme = ExtResource("12_dymeh")
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 60
-theme_override_font_sizes/font_size = 12
-theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
-text = "Wallet"
-icon = ExtResource("11_hi4c1")
-
-[node name="MenuProfileButton" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer" instance=ExtResource("9_kexs4")]
-layout_mode = 2
-button_group = ExtResource("5_ili3w")
-metadata/disable_ui_sounds = true
-
-[node name="Button_Close" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer"]
-custom_minimum_size = Vector2(52, 52)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme = ExtResource("12_dymeh")
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
-icon = ExtResource("12_rk6dl")
-icon_alignment = 1
-expand_icon = true
-
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
-layout_mode = 2
-theme_override_constants/separation = 20
-theme_override_styles/separator = SubResource("StyleBoxEmpty_wmgho")
-
-[node name="ColorRect_Separator" type="ColorRect" parent="VBoxContainer/TopNavbar_Landscape"]
-material = SubResource("ShaderMaterial_t4bn8")
-custom_minimum_size = Vector2(0, 3)
-layout_mode = 2
-
 [node name="ColorRect_Portrait_Top_SafeArea" type="ColorRect" parent="VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
@@ -363,30 +81,6 @@ show_behind_parent = true
 layout_mode = 2
 size_flags_vertical = 3
 texture = SubResource("GradientTexture2D_8oh0n")
-
-[node name="TextEffect" type="Control" parent="VBoxContainer/ColorRect_Background"]
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_right = 200.0
-grow_vertical = 2
-
-[node name="LabelMenu" type="Label" parent="VBoxContainer/ColorRect_Background/TextEffect"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_top = 620.0
-offset_right = 600.0
-offset_bottom = 204.0
-grow_vertical = 2
-rotation = -1.5708
-theme_override_colors/font_color = Color(1, 1, 1, 0.0705882)
-theme_override_fonts/font = ExtResource("15_ej6rb")
-theme_override_font_sizes/font_size = 140
-text = "DISCOVER"
-horizontal_alignment = 1
-clip_text = true
 
 [node name="Menus" type="Control" parent="VBoxContainer/ColorRect_Background"]
 layout_mode = 1
@@ -398,18 +92,13 @@ grow_vertical = 2
 
 [node name="Control_Discover" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("4_5qyiw")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("3_1stdy")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 offset_bottom = 19.0
-
-[node name="Control_MapSatellite" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("25_53o0i")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
 
 [node name="Control_Backpack" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("8_d38wp")]
 unique_name_in_owner = true
@@ -447,127 +136,69 @@ layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 
 [node name="BottomBar_Portrait" type="PanelContainer" parent="VBoxContainer"]
-visible = false
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_080im")
 script = ExtResource("22_1kuym")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/BottomBar_Portrait"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/BottomBar_Portrait"]
+layout_mode = 2
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/BottomBar_Portrait/MarginContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer"]
+[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 2
+theme_override_constants/separation = 50
 alignment = 1
 
-[node name="Portrait_Button_Discover" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
+[node name="HudButton_Discover" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 100)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 80
-toggle_mode = true
-button_group = SubResource("ButtonGroup_udswp")
-text = "DISCOVER"
-icon = ExtResource("6_hwdsi")
-flat = true
+button_group = SubResource("ButtonGroup_rdch8")
 icon_alignment = 1
 vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("9_vk6hq")
-metadata/disable_ui_sounds = true
+script = ExtResource("13_2fqoa")
+sprite_frames_source = ExtResource("15_rdch8")
+sprite_frames_scale = Vector2(1, 1)
 
-[node name="Portrait_Button_Map" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
+[node name="HudButton_Backpack" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 100)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 80
-toggle_mode = true
-button_group = SubResource("ButtonGroup_udswp")
-text = "GENESIS MAP"
-icon = ExtResource("7_n821n")
-flat = true
+button_group = SubResource("ButtonGroup_7v87b")
 icon_alignment = 1
 vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("11_3grpy")
-metadata/disable_ui_sounds = true
+script = ExtResource("16_p7nyr")
+sprite_frames_source = ExtResource("17_iib41")
+sprite_frames_scale = Vector2(1, 1)
 
-[node name="Portrait_Button_Backpack" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
+[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 100)
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+button_group = SubResource("ButtonGroup_udswp")
+
+[node name="HudButton_Settings" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 80
-toggle_mode = true
-button_group = SubResource("ButtonGroup_udswp")
-text = "BACKPACK"
-icon = ExtResource("8_dg57i")
-flat = true
+button_group = SubResource("ButtonGroup_0o5gq")
 icon_alignment = 1
 vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("13_42arv")
-metadata/disable_ui_sounds = true
+script = ExtResource("18_3id7u")
+sprite_frames_source = ExtResource("19_j150v")
+sprite_frames_scale = Vector2(1, 1)
 
-[node name="Portrait_Button_Settings" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 100)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/icon_max_width = 80
-toggle_mode = true
-button_group = SubResource("ButtonGroup_udswp")
-text = "SETTINGS"
-icon = ExtResource("9_7nnp3")
-flat = true
-icon_alignment = 1
-vertical_icon_alignment = 0
-expand_icon = true
-script = ExtResource("8_xlada")
-button_pressed_icon = ExtResource("15_rnulk")
-metadata/disable_ui_sounds = true
-
-[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
-unique_name_in_owner = true
-layout_mode = 2
-button_group = SubResource("ButtonGroup_udswp")
-
-[node name="ColorRect_Portrait_Bottom_SafeArea" type="ColorRect" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer"]
+[node name="ColorRect_Portrait_Bottom_SafeArea" type="ColorRect" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 color = Color(0.0862745, 0.0784314, 0.105882, 1)
@@ -624,18 +255,8 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_odvpn")
 layout_mode = 2
 size_flags_horizontal = 4
 
+[node name="AccountDeletionPopUp" parent="." instance=ExtResource("31_kkhkt")]
+visible = false
+layout_mode = 1
+
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
-[connection signal="toggled" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_toggled"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer/Button_MagicWallet" to="." method="_on_button_magic_wallet_pressed"]
-[connection signal="open_menu_profile" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer/MenuProfileButton" to="." method="_on_menu_profile_button_open_menu_profile"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Discover" to="." method="_on_button_discover_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Map" to="." method="_on_button_map_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Backpack" to="." method="_on_button_backpack_pressed"]
-[connection signal="toggled" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Backpack" to="." method="_on_button_backpack_toggled"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Settings" to="." method="_on_button_settings_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Profile" to="." method="_on_menu_profile_button_open_menu_profile"]

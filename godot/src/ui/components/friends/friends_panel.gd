@@ -75,6 +75,7 @@ func _ready() -> void:
 
 	# Connect to list size changes to update counts
 	request_list.size_changed.connect(_update_dropdown_visibility)
+	request_list.size_changed.connect(_update_badge_visibility_on_navbar)
 	online_list.size_changed.connect(_update_dropdown_visibility)
 	offline_list.size_changed.connect(_update_dropdown_visibility)
 
@@ -297,6 +298,10 @@ func _update_dropdown_visibility() -> void:
 		v_box_container_no_service.hide()
 		v_box_container_no_friends.hide()
 		friends_list.show()
+
+
+func _update_badge_visibility_on_navbar() -> void:
+	Global.friends_request_size_changed.emit(request_list.list_size)
 
 
 func _on_load_error(_error_message: String) -> void:

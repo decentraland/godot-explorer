@@ -1,8 +1,13 @@
-use crate::dcl::components::SceneEntityId;
+use crate::dcl::components::{
+    proto_components::sdk::components::TriggerAreaMeshType, SceneEntityId,
+};
+use godot::classes::Node;
 
-use super::scene::Scene;
+use super::{
+    components::trigger_area::unregister_trigger_area, pool_manager::PoolManager, scene::Scene,
+};
 
-pub fn update_deleted_entities(scene: &mut Scene) {
+pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
     if scene.current_dirty.entities.died.is_empty() {
         return;
     }
@@ -14,7 +19,7 @@ pub fn update_deleted_entities(scene: &mut Scene) {
         if died.contains(&node.computed_parent_3d) && *entity_id != node.computed_parent_3d {
             if let Some(node_3d) = node.base_3d.as_mut() {
                 node_3d
-                    .reparent_ex(godot_dcl_scene.root_node_3d.clone().upcast())
+                    .reparent_ex(&godot_dcl_scene.root_node_3d.clone().upcast::<Node>())
                     .keep_global_transform(false)
                     .done();
             }
@@ -42,6 +47,21 @@ pub fn update_deleted_entities(scene: &mut Scene) {
         scene.dup_animator.remove(deleted_entity);
         scene.gltf_loading.remove(deleted_entity);
         scene.continuos_raycast.remove(deleted_entity);
+
+        // Clean up trigger area - unregister from monitor and release back to pool
+        if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {
+            unregister_trigger_area(instance.area_rid);
+            let pool = pools.physics_area();
+            pool.release_area(instance.area_rid);
+            match instance.mesh_type {
+                TriggerAreaMeshType::TamtBox => {
+                    pool.release_box_shape(instance.shape_rid);
+                }
+                TriggerAreaMeshType::TamtSphere => {
+                    pool.release_sphere_shape(instance.shape_rid);
+                }
+            }
+        }
 
         scene.pointer_events_result = scene
             .pointer_events_result

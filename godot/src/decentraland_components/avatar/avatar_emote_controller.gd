@@ -208,7 +208,7 @@ func _async_load_emote(emote_urn: String):
 
 	var file_hash = Wearables.get_item_main_file_hash(emote, avatar.avatar_data.get_body_shape())
 	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
-	if obj != null:
+	if obj is DclEmoteGltf:
 		load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 
@@ -236,7 +236,7 @@ func _async_load_scene_emote(urn: String):
 	# await PromiseUtils.async_awaiter(audio_promise)
 
 	#var obj = Global.content_provider.get_emote_gltf_from_hash(emote_scene_urn.glb_hash)
-	if obj != null:
+	if obj is DclEmoteGltf:
 		load_emote_from_dcl_emote_gltf(urn, obj, emote_scene_urn.glb_hash)
 		if _has_emote(urn):
 			loaded_emotes_by_urn[urn].looping = emote_scene_urn.looping

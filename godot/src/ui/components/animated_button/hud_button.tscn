@@ -21,19 +21,19 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
 toggle_mode = true
+flat = true
 
 [node name="Badge_Container" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -28.0
-offset_top = -4.0
-offset_right = 4.0
-offset_bottom = 20.0
-grow_horizontal = 0
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 2.0
+offset_top = 1.0
+offset_right = 34.0
+offset_bottom = 25.0
+grow_horizontal = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 
@@ -48,6 +48,7 @@ theme_override_constants/margin_bottom = 2
 [node name="Label_Badge" type="Label" parent="Badge_Container/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 4
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
 text = "1"

@@ -12,6 +12,17 @@ signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal deep_link_received
+signal open_chat
+signal open_friends_panel
+signal open_notifications_panel
+signal open_settings
+signal open_backpack
+signal open_discover
+signal open_own_profile
+signal close_menu
+signal friends_request_size_changed(size: int)
+signal close_combo
+signal delete_account
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -39,6 +50,9 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
+
+# Increase this value when optimized assets change (invalidates cache)
+const OPTIMIZED_ASSETS_VERSION: int = 2
 
 ## Global classes (singleton pattern)
 var raycast_debugger: RaycastDebugger
@@ -106,6 +120,12 @@ func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
 
 
+## Vibrate handheld device
+func send_haptic_feedback() -> void:
+	if is_mobile():
+		Input.vibrate_handheld(20)
+
+
 func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
@@ -154,6 +174,13 @@ func _ready():
 	if cli.clear_cache_startup:
 		prints("Clear cache startup!")
 		Global.content_provider.clear_cache_folder()
+
+	# Clear cache if optimized assets version changed
+	if config.optimized_assets_version != Global.OPTIMIZED_ASSETS_VERSION:
+		prints("Optimized assets version changed, clearing cache!")
+		Global.content_provider.clear_cache_folder()
+		config.optimized_assets_version = Global.OPTIMIZED_ASSETS_VERSION
+		config.save_to_settings_file()
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -546,15 +573,23 @@ func check_deep_link_teleport_to():
 				"[DEEPLINK] Parsed deep_link_obj: location=",
 				deep_link_obj.location,
 				" realm=",
-				deep_link_obj.realm
+				deep_link_obj.realm,
+				" preview=",
+				deep_link_obj.preview
 			)
 
 		if Global.deep_link_obj.is_location_defined():
-			var realm = Global.deep_link_obj.realm
+			# Use preview URL as realm if specified, otherwise use realm, otherwise main
+			var realm = Global.deep_link_obj.preview
+			if realm.is_empty():
+				realm = Global.deep_link_obj.realm
 			if realm.is_empty():
 				realm = Realm.MAIN_REALM
 
 			Global.teleport_to(Global.deep_link_obj.location, realm)
+		elif not Global.deep_link_obj.preview.is_empty():
+			# Preview without location - just set realm, don't teleport
+			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
 		elif not Global.deep_link_obj.realm.is_empty():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
 		elif deep_link_url.begins_with("https://decentraland.org/events/event/?id="):

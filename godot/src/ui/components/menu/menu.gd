@@ -20,34 +20,37 @@ var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
-@onready var color_rect_header = %ColorRect_Header
 
 @onready var control_discover = %Control_Discover
 @onready var control_settings = %Control_Settings
-@onready var control_map_satellite: Control = %Control_MapSatellite
 @onready var control_backpack: Backpack = %Control_Backpack
 @onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
 
-@onready var button_discover = %Button_Discover
-@onready var button_map = %Button_Map
-@onready var button_backpack = %Button_Backpack
-@onready var button_settings = %Button_Settings
 @onready var control_deploying_profile = %Control_DeployingProfile
 
-@onready var portrait_button_discover: Button = %Portrait_Button_Discover
-@onready var portrait_button_map: Button = %Portrait_Button_Map
-@onready var portrait_button_backpack: Button = %Portrait_Button_Backpack
-@onready var portrait_button_settings: Button = %Portrait_Button_Settings
 @onready var portrait_button_profile: Button = %Portrait_Button_Profile
 
-@onready var button_magic_wallet = %Button_MagicWallet
-
-@onready var color_rect_landscape_top_safe_area: ColorRect = %ColorRect_Landscape_Top_SafeArea
 @onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
 @onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
+@onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
+
+@onready var hud_button_backpack: Button = %HudButton_Backpack
+@onready var hud_button_discover: Button = %HudButton_Discover
+@onready var hud_button_settings: Button = %HudButton_Settings
 
 
 func _ready():
+	var btn_group = ButtonGroup.new()
+	btn_group.allow_unpress = false
+	hud_button_backpack.button_group = btn_group
+	hud_button_discover.button_group = btn_group
+	hud_button_settings.button_group = btn_group
+	portrait_button_profile.button_group = btn_group
+	Global.open_discover.emit()
+	hud_button_discover.button_pressed = true
+
+	account_deletion_pop_up.hide()
+
 	is_in_game = self != get_tree().current_scene
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -65,106 +68,55 @@ func _ready():
 		Global.metrics.track_screen_viewed(current_screen_name, "")
 		Global.metrics.flush()
 
-	button_discover.set_pressed(true)
-	portrait_button_discover.set_pressed(true)
 	selected_node = control_discover
-	control_map_satellite.hide()
 	control_settings.hide()
 	control_discover.show()
 	control_backpack.hide()
 	control_profile_settings.hide()
-	control_map_satellite.jump_to.connect(_jump_to)
 
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
-	# Leave it, because we can open a browser with the Magic Wallet
-	button_magic_wallet.visible = false
-
 	Global.deep_link_received.connect(_on_deep_link_received)
-
-
-func _unhandled_input(event):
-	if event is InputEventKey and visible:
-		if event.pressed and event.keycode == KEY_TAB:
-			pressed_index = group.get_pressed_button().get_index()
-			buttons_quantity = group.get_buttons().size() - 1
-
-			if pressed_index < buttons_quantity:
-				group.get_buttons()[pressed_index + 1].set_pressed(true)
-				group.get_buttons()[pressed_index + 1].emit_signal("pressed")
-			else:
-				#change index to 0 to include "Control Discover"
-				group.get_buttons()[1].set_pressed(true)
-				group.get_buttons()[1].emit_signal("pressed")
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			_async_request_hide_menu()
-		if event.pressed and event.keycode == KEY_M:
-			if selected_node == control_map_satellite:
-				_async_request_hide_menu()
-			else:
-				show_map()
-		if event.pressed and event.keycode == KEY_P:
-			if selected_node == control_settings:
-				_async_request_hide_menu()
-			else:
-				_on_button_settings_pressed()
+	Global.open_settings.connect(show_settings)
+	Global.open_backpack.connect(show_backpack)
+	Global.open_discover.connect(show_discover)
+	Global.open_own_profile.connect(show_own_profile)
+	Global.close_menu.connect(close)
+	Global.delete_account.connect(_on_account_delete)
 
 
 func _on_button_close_pressed():
 	_async_request_hide_menu()
 
 
-func _jump_to(parcel: Vector2i):
-	jump_to.emit(parcel)
-
-
 func close():
-	color_rect_header.hide()
 	var tween_m = create_tween()
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
 	tween_h.tween_callback(hide).set_delay(0.3)
-
-
-func show_last():
-	self.show()
-	self.grab_focus()
-	var tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.3).set_ease(Tween.EASE_IN_OUT)
-	color_rect_header.show()
+	if selected_node == control_backpack:
+		_async_deploy_if_has_changes()
 
 
 func show_discover():
-	select_discover_screen(false)
-	button_discover.set_pressed(true)
-	_open()
-
-
-func show_map():
-	select_map_screen(false)
-	button_map.set_pressed(true)
+	select_discover_screen()
+	hud_button_discover.toggled.emit(true)
 	_open()
 
 
 func show_backpack():
-	select_backpack_screen(false)
-	button_backpack.set_pressed(true)
+	select_backpack_screen()
 	_open()
 
 
 func show_settings():
-	select_settings_screen(false)
-	button_settings.set_pressed(true)
+	select_settings_screen()
 	_open()
 
 
 func show_own_profile():
-	select_profile_screen(false)
-	button_settings.set_pressed(false)
-	button_backpack.set_pressed(false)
-	button_map.set_pressed(false)
-	button_discover.set_pressed(false)
+	select_profile_screen()
 	_open()
 
 
@@ -173,15 +125,10 @@ func _open():
 		show()
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
-	color_rect_header.show()
 
 
 func _on_control_settings_toggle_fps_visibility(visibility):
 	emit_signal("toggle_fps", visibility)
-
-
-func _on_control_settings_toggle_map_visibility(visibility):
-	emit_signal("toggle_minimap", visibility)
 
 
 func _on_control_settings_toggle_ram_usage_visibility(visibility):
@@ -192,12 +139,6 @@ func select_settings_screen(play_sfx: bool = true):
 	current_screen_name = ("SETTINGS" if Global.is_orientation_portrait() else "SETTINGS_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
 	select_node(control_settings, play_sfx)
-
-
-func select_map_screen(play_sfx: bool = true):
-	current_screen_name = "MAP" if Global.is_orientation_portrait() else "MAP_IN_GAME"
-	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_map_satellite, play_sfx)
 
 
 func select_discover_screen(play_sfx: bool = true):
@@ -225,26 +166,6 @@ func select_node(node: Node, play_sfx: bool = true):
 
 		if play_sfx:
 			UiSounds.play_sound("generic_button_press")
-
-
-func _on_button_settings_pressed():
-	select_settings_screen()
-
-
-func _on_button_map_pressed():
-	select_map_screen()
-
-
-func _on_button_discover_pressed():
-	select_discover_screen()
-
-
-func _on_button_backpack_pressed():
-	select_backpack_screen()
-
-
-func _on_menu_profile_button_open_menu_profile():
-	select_profile_screen()
 
 
 func fade_in(node: Control):
@@ -297,15 +218,6 @@ func _on_button_backpack_toggled(toggled_on):
 		_async_deploy_if_has_changes()
 
 
-func _on_button_magic_wallet_pressed():
-	pass
-	# On future we can open the magic wallet in a WebKit / WebView
-
-
-func _on_portrait_button_discover_pressed() -> void:
-	pass  # Replace with function body.
-
-
 func _on_size_changed() -> void:
 	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
 	var window_size: Vector2i = DisplayServer.window_get_size()
@@ -320,11 +232,9 @@ func _on_size_changed() -> void:
 		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
 
 	if Global.is_orientation_portrait():
-		color_rect_landscape_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
 	else:
-		color_rect_landscape_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0
 
@@ -341,3 +251,20 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 
 func _on_deep_link_received() -> void:
 	Global.check_deep_link_teleport_to()
+
+
+func _on_portrait_button_discover_pressed() -> void:
+	show_discover()
+
+
+func _on_portrait_button_backpack_pressed() -> void:
+	show_backpack()
+
+
+func _on_portrait_button_settings_pressed() -> void:
+	show_settings()
+
+
+func _on_account_delete() -> void:
+	if account_deletion_pop_up:
+		account_deletion_pop_up.async_start_flow()

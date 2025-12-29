@@ -4,6 +4,15 @@ pub enum ConversionResult {
     Modified(String),
 }
 
+/// Result of stripping Unity tags from text, optionally extracting the first color
+#[derive(Debug, Clone, PartialEq)]
+pub struct StripTagsResult {
+    /// The text with all tags removed
+    pub text: String,
+    /// The first color found in the text (if any), in Godot-compatible format
+    pub first_color: Option<String>,
+}
+
 pub fn convert_unity_to_godot(input_text: &str) -> ConversionResult {
     let bytes = input_text.as_bytes();
     let mut result = Vec::with_capacity(input_text.len());
@@ -49,6 +58,91 @@ pub fn convert_unity_to_godot(input_text: &str) -> ConversionResult {
     } else {
         ConversionResult::NonModified
     }
+}
+
+/// Strips all Unity tags from text and extracts the first color found.
+/// Used for TextShape (3D labels) which cannot render rich text.
+///
+/// Returns the plain text with all tags removed, and optionally the first color
+/// found which can be applied to the entire label.
+/// Also strips unknown tags (like `<cspace>`, `<size>`, etc.).
+pub fn strip_tags_extract_first_color(input_text: &str) -> Option<StripTagsResult> {
+    let bytes = input_text.as_bytes();
+    let mut result = Vec::with_capacity(input_text.len());
+    let mut first_color: Option<String> = None;
+    let mut found_any_tag = false;
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if bytes[i] == b'<' {
+            // Attempt to parse a known tag first
+            if let Some((tag_type, tag_len)) = parse_tag(&bytes[i..]) {
+                found_any_tag = true;
+                // Extract first color if not already found
+                if first_color.is_none() {
+                    if let Tag::ColorOpen(color) = tag_type {
+                        first_color = Some(color.to_string());
+                    }
+                }
+                // Skip the tag entirely (don't add anything to result)
+                i += tag_len;
+                continue;
+            }
+
+            // Try to skip unknown tags (anything that looks like <...>)
+            if let Some(tag_len) = skip_unknown_tag(&bytes[i..]) {
+                found_any_tag = true;
+                i += tag_len;
+                continue;
+            }
+        }
+
+        result.push(bytes[i]);
+        i += 1;
+    }
+
+    if !found_any_tag {
+        return None;
+    }
+
+    let text = String::from_utf8(result)
+        .unwrap_or_else(|e| String::from_utf8_lossy(&e.into_bytes()).into_owned());
+
+    Some(StripTagsResult { text, first_color })
+}
+
+/// Attempts to skip an unknown tag pattern like <tagname>, </tagname>, or <tagname=value>
+/// Returns the length of the tag if found, None otherwise
+fn skip_unknown_tag(bytes: &[u8]) -> Option<usize> {
+    if bytes.len() < 3 || bytes[0] != b'<' {
+        return None;
+    }
+
+    let mut i = 1;
+
+    // Skip optional '/' for closing tags
+    if i < bytes.len() && bytes[i] == b'/' {
+        i += 1;
+    }
+
+    // Must start with a letter (tag name)
+    if i >= bytes.len() || !bytes[i].is_ascii_alphabetic() {
+        return None;
+    }
+
+    // Find the closing '>'
+    while i < bytes.len() {
+        if bytes[i] == b'>' {
+            return Some(i + 1);
+        }
+        // Don't allow newlines inside tags
+        if bytes[i] == b'\n' || bytes[i] == b'\r' {
+            return None;
+        }
+        i += 1;
+    }
+
+    None
 }
 
 #[derive(Debug)]
@@ -295,5 +389,86 @@ mod tests {
     fn test_incomplete_tags_ignored() {
         let text = "This <b is not a tag and neither is <";
         assert_eq!(convert_unity_to_godot(text), ConversionResult::NonModified);
+    }
+
+    // Tests for strip_tags_extract_first_color
+
+    #[test]
+    fn test_strip_no_tags() {
+        let text = "Simple text without tags";
+        assert_eq!(strip_tags_extract_first_color(text), None);
+    }
+
+    #[test]
+    fn test_strip_bold_tags() {
+        let text = "We are <b>not</b> amused.";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "We are not amused.");
+        assert_eq!(result.first_color, None);
+    }
+
+    #[test]
+    fn test_strip_color_extracts_first() {
+        let text = "<color=red>Hello</color><color=yellow> World!</color>";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "Hello World!");
+        assert_eq!(result.first_color, Some("red".to_string()));
+    }
+
+    #[test]
+    fn test_strip_color_hex() {
+        let text = "<color=#ff0000>Red text</color>";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "Red text");
+        assert_eq!(result.first_color, Some("#ff0000".to_string()));
+    }
+
+    #[test]
+    fn test_strip_color_hex_with_alpha() {
+        let text = "<color=#ff0000ff>Red text</color>";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "Red text");
+        // Alpha is stripped by convert_color_value
+        assert_eq!(result.first_color, Some("#ff0000".to_string()));
+    }
+
+    #[test]
+    fn test_strip_mixed_tags() {
+        let text = "<b><color=cyan>Bold cyan</color></b> and <i>italic</i>";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "Bold cyan and italic");
+        assert_eq!(result.first_color, Some("cyan".to_string()));
+    }
+
+    #[test]
+    fn test_strip_only_first_color_extracted() {
+        let text = "<color=red>R</color><color=green>G</color><color=blue>B</color>";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "RGB");
+        assert_eq!(result.first_color, Some("red".to_string()));
+    }
+
+    #[test]
+    fn test_strip_unknown_tags() {
+        let text = "<cspace=-0.1em>Creature Cards Treasure Chest</cspace>";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "Creature Cards Treasure Chest");
+        assert_eq!(result.first_color, None);
+    }
+
+    #[test]
+    fn test_strip_unknown_tags_with_color() {
+        let text = "<cspace=-0.1em><color=red>Red Text</color></cspace>";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "Red Text");
+        assert_eq!(result.first_color, Some("red".to_string()));
+    }
+
+    #[test]
+    fn test_strip_size_tag() {
+        let text = "<size=20>Big text</size> normal";
+        let result = strip_tags_extract_first_color(text).unwrap();
+        assert_eq!(result.text, "Big text normal");
+        assert_eq!(result.first_color, None);
     }
 }

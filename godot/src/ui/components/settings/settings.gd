@@ -19,6 +19,7 @@ var _dirty_connected: bool = false
 @onready var container_graphics: Control = %VBoxContainer_Graphics
 @onready var container_advanced: Control = %VBoxContainer_Advanced
 @onready var container_audio: Control = %VBoxContainer_Audio
+@onready var container_account: VBoxContainer = %VBoxContainer_Account
 
 #General items:
 @onready var text_edit_cache_path = %TextEdit_CachePath
@@ -116,7 +117,16 @@ func refresh_graphic_settings():
 	else:
 		radio_selector_windowed.selected = Global.get_config().window_mode
 
-	radio_selector_limit_fps.selected = Global.get_config().limit_fps
+	# Maps limit_fps config to radio_selector_limit_fps index
+	const INVERSE_LIMIT_FPS_MAPPING: Dictionary[int, int] = {
+		ConfigData.FpsLimitMode.VSYNC: 0,
+		ConfigData.FpsLimitMode.NO_LIMIT: 1,
+		ConfigData.FpsLimitMode.FPS_30: 3,
+		ConfigData.FpsLimitMode.FPS_60: 4,
+		ConfigData.FpsLimitMode.FPS_18: 2,
+	}
+
+	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING[Global.get_config().limit_fps]
 	radio_selector_texture_quality.selected = Global.get_config().texture_quality
 	radio_selector_skybox.selected = Global.get_config().skybox
 	radio_selector_shadow.selected = Global.get_config().shadow_quality
@@ -132,6 +142,7 @@ func show_control(control: Control):
 	container_graphics.hide()
 	container_audio.hide()
 	container_advanced.hide()
+	container_account.hide()
 
 	control.show()
 
@@ -253,15 +264,18 @@ func refresh_zooms():
 	var selected_index: int = -1
 	var i: int = 0
 	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	radio_selector_ui_zoom.clear()
 
+	var new_items: Array[String] = []
 	for ui_zoom_option in options.keys():
-		radio_selector_ui_zoom.items.push_back(ui_zoom_option)
+		new_items.push_back(ui_zoom_option)
 		if options[ui_zoom_option] == get_window().content_scale_factor:
 			selected_index = i
 		i += 1
 	if selected_index == -1:
 		selected_index = i - 1
+
+	# Assign items array to trigger _refresh_list() and create children
+	radio_selector_ui_zoom.items = new_items
 	radio_selector_ui_zoom.selected = selected_index
 
 
@@ -312,7 +326,16 @@ func _on_radio_selector_ui_zoom_select_item(_index, item):
 
 
 func _on_radio_selector_select_item(index, _item):
-	Global.get_config().limit_fps = index
+	# Maps radio_selector_limit_fps index to limit_fps config
+	const LIMIT_FPS_MAPPING: Dictionary[int, int] = {
+		0: ConfigData.FpsLimitMode.VSYNC,
+		1: ConfigData.FpsLimitMode.NO_LIMIT,
+		2: ConfigData.FpsLimitMode.FPS_18,
+		3: ConfigData.FpsLimitMode.FPS_30,
+		4: ConfigData.FpsLimitMode.FPS_60
+	}
+
+	Global.get_config().limit_fps = LIMIT_FPS_MAPPING[index]
 	GraphicSettings.apply_fps_limit()
 	Global.get_config().save_to_settings_file()
 
@@ -447,3 +470,11 @@ func _on_button_general_pressed() -> void:
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
+
+
+func _on_button_account_pressed() -> void:
+	show_control(container_account)
+
+
+func _on_button_delete_account_pressed() -> void:
+	Global.delete_account.emit()

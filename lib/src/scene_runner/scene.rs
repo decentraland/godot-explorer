@@ -4,7 +4,11 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
+use godot::{
+    obj::{NewAlloc, Singleton},
+    prelude::Gd,
+    prelude::ToGodot,
+};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -32,7 +36,10 @@ use crate::{
     realm::scene_definition::SceneEntityDefinition,
 };
 
-use super::{components::tween::Tween, godot_dcl_scene::GodotDclScene};
+use super::{
+    components::{trigger_area::TriggerAreaState, tween::Tween},
+    godot_dcl_scene::GodotDclScene,
+};
 
 pub struct Dirty {
     pub waiting_process: bool,
@@ -92,6 +99,7 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
+    TriggerArea,
     VirtualCameras,
     AudioSource,
     ProcessRpcs,
@@ -125,7 +133,8 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::CameraModeArea,
-            Self::CameraModeArea => Self::VirtualCameras,
+            Self::CameraModeArea => Self::TriggerArea,
+            Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
             Self::AvatarAttach => Self::SceneUi,
@@ -176,6 +185,10 @@ pub struct Scene {
 
     pub gltf_loading: HashSet<SceneEntityId>,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
+    pub trigger_area_results: Vec<(
+        SceneEntityId,
+        crate::dcl::components::proto_components::sdk::components::PbTriggerAreaResult,
+    )>,
     pub continuos_raycast: HashSet<SceneEntityId>,
 
     pub current_dirty: Dirty,
@@ -207,6 +220,12 @@ pub struct Scene {
     pub tweens: HashMap<SceneEntityId, Tween>,
     // Duplicated value to async-access the animator
     pub dup_animator: HashMap<SceneEntityId, PbAnimator>,
+
+    // Trigger Areas
+    pub trigger_areas: TriggerAreaState,
+    /// Last known player scene - used to detect when player enters/leaves this scene
+    /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
+    pub last_player_scene_id: SceneId,
 
     pub virtual_camera: Gd<DclVirtualCamera>,
 
@@ -297,6 +316,7 @@ impl Scene {
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
             pointer_events_result: Vec::new(),
+            trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),
             start_time: Instant::now(),
             materials: HashMap::new(),
@@ -311,6 +331,8 @@ impl Scene {
             scene_test_plan_received: false,
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
+            trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
@@ -361,6 +383,7 @@ impl Scene {
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
             pointer_events_result: Vec::new(),
+            trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),
             start_time: Instant::now(),
             materials: HashMap::new(),
@@ -375,6 +398,8 @@ impl Scene {
             scene_test_plan_received: false,
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
+            trigger_areas: TriggerAreaState::default(),
+            last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
             deno_memory_stats: None,
@@ -390,13 +415,26 @@ impl Scene {
     }
 
     pub fn process_livekit_video_frame(&mut self, width: u32, height: u32, data: &[u8]) {
+        use crate::godot_classes::dcl_video_player::VIDEO_STATE_PLAYING;
+        use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
+        use godot::classes::Time;
+
+        let current_time = Time::singleton().get_ticks_msec() as f64 / 1000.0;
+
         // Send video frames to all registered livekit video players
-        for entity_id in &self.livekit_video_player_entities {
-            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(entity_id) {
+        for entity_id in self.livekit_video_player_entities.clone() {
+            // Update the texture
+            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
                 if let Some(vp_data) = &mut node.video_player_data {
-                    use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
-                    update_video_texture_from_livekit(&mut vp_data.video_sink, width, height, data);
+                    update_video_texture_from_livekit(vp_data, width, height, data);
                 }
+            }
+
+            // Update video player state to PLAYING when receiving frames
+            if let Some(video_player) = self.video_players.get_mut(&entity_id) {
+                video_player.set("video_state", &VIDEO_STATE_PLAYING.to_variant());
+                video_player.set("video_length", &(-1.0_f64).to_variant());
+                video_player.set("last_frame_time", &current_time.to_variant());
             }
         }
     }
@@ -418,7 +456,7 @@ impl Scene {
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
                 video_player.call(
-                    "init_livekit_audio".into(),
+                    "init_livekit_audio",
                     &[
                         sample_rate.to_variant(),
                         num_channels.to_variant(),
@@ -434,7 +472,7 @@ impl Scene {
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
                 // Call the stream_buffer method on the video player (GDScript)
-                video_player.call("stream_buffer".into(), &[frame.to_variant()]);
+                video_player.call("stream_buffer", &[frame.to_variant()]);
             }
         }
     }

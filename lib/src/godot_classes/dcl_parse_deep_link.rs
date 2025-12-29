@@ -10,8 +10,13 @@ pub struct DclParseDeepLink {
     #[var]
     realm: GString,
 
+    /// Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
+    /// When set, skips lobby and enables preview mode with WebSocket hot reload
     #[var]
-    params: Dictionary,
+    preview: GString,
+
+    #[var]
+    params: VarDictionary,
 }
 
 #[godot_api]
@@ -22,7 +27,8 @@ impl IRefCounted for DclParseDeepLink {
             //  Check is_location_defined
             location: Vector2i::MAX,
             realm: GString::new(),
-            params: Dictionary::new(),
+            preview: GString::new(),
+            params: VarDictionary::new(),
         }
     }
 }
@@ -34,7 +40,8 @@ impl DclParseDeepLink {
         let mut return_object = DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
-            params: Dictionary::new(),
+            preview: GString::new(),
+            params: VarDictionary::new(),
         };
 
         if url_str.is_empty() {
@@ -73,7 +80,11 @@ impl DclParseDeepLink {
                     }
                 }
                 "realm" => {
-                    return_object.realm = value.to_string().into();
+                    return_object.realm = value.to_string().to_godot();
+                }
+                "preview" => {
+                    // Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
+                    return_object.preview = value.to_string().to_godot();
                 }
                 _ => {}
             }
