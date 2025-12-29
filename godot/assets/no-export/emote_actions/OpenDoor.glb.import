@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://b7sutrycjmfs7"
-path="res://.godot/imported/OpenDoor.glb-42e477b76c8ed05f3a74ee370085d845.res"
+path="res://.godot/imported/OpenDoor.glb-b2f8fd0026cebaa8b45884cf73b85fc6.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/OpenDoor.glb"
-dest_files=["res://.godot/imported/OpenDoor.glb-42e477b76c8ed05f3a74ee370085d845.res"]
+source_file="res://assets/no-export/emote_actions/OpenDoor.glb"
+dest_files=["res://.godot/imported/OpenDoor.glb-b2f8fd0026cebaa8b45884cf73b85fc6.res"]
 
 [params]
 

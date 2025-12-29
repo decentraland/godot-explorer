@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://d31j0g56sbjt"
-path="res://.godot/imported/Punch.glb-c2cdfc290a5faec1addf74b288c0108f.res"
+path="res://.godot/imported/Punch.glb-3e2a4c2e5365818ee2b381d16e1c1e63.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Punch.glb"
-dest_files=["res://.godot/imported/Punch.glb-c2cdfc290a5faec1addf74b288c0108f.res"]
+source_file="res://assets/no-export/emote_actions/Punch.glb"
+dest_files=["res://.godot/imported/Punch.glb-3e2a4c2e5365818ee2b381d16e1c1e63.res"]
 
 [params]
 

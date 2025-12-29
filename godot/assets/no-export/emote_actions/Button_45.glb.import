@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://dnjgoe3u07ypi"
-path="res://.godot/imported/Button_45.glb-8a862dca564ee12c9258cc493f049876.res"
+path="res://.godot/imported/Button_45.glb-388ec36aa794f06c6f1f91f8eb86026a.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Button_45.glb"
-dest_files=["res://.godot/imported/Button_45.glb-8a862dca564ee12c9258cc493f049876.res"]
+source_file="res://assets/no-export/emote_actions/Button_45.glb"
+dest_files=["res://.godot/imported/Button_45.glb-388ec36aa794f06c6f1f91f8eb86026a.res"]
 
 [params]
 

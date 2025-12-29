@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://e2eb17ab7ok6"
-path="res://.godot/imported/Swing_OneHand.glb-74afa157d0850ac477d41092b4449377.res"
+path="res://.godot/imported/Swing_OneHand.glb-88383891583b4dcfa2b575321117dcd3.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Swing_OneHand.glb"
-dest_files=["res://.godot/imported/Swing_OneHand.glb-74afa157d0850ac477d41092b4449377.res"]
+source_file="res://assets/no-export/emote_actions/Swing_OneHand.glb"
+dest_files=["res://.godot/imported/Swing_OneHand.glb-88383891583b4dcfa2b575321117dcd3.res"]
 
 [params]
 

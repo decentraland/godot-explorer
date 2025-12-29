@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://dbam5wuoeqyne"
-path="res://.godot/imported/KO.glb-338883b58b4b2f2da94fa394f0601b48.res"
+path="res://.godot/imported/KO.glb-f020a91218de3812b95e99ef6ed820a1.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/KO.glb"
-dest_files=["res://.godot/imported/KO.glb-338883b58b4b2f2da94fa394f0601b48.res"]
+source_file="res://assets/no-export/emote_actions/KO.glb"
+dest_files=["res://.godot/imported/KO.glb-f020a91218de3812b95e99ef6ed820a1.res"]
 
 [params]
 

@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://c7xr75ryw23hq"
-path="res://.godot/imported/Throw.glb-6039620cb372554ba91061671ba3b475.res"
+path="res://.godot/imported/Throw.glb-7cab1a92ee8f55639efbda62ffefa4f4.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Throw.glb"
-dest_files=["res://.godot/imported/Throw.glb-6039620cb372554ba91061671ba3b475.res"]
+source_file="res://assets/no-export/emote_actions/Throw.glb"
+dest_files=["res://.godot/imported/Throw.glb-7cab1a92ee8f55639efbda62ffefa4f4.res"]
 
 [params]
 

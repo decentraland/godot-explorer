@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://bynj36xwrser4"
-path="res://.godot/imported/SittingChair_v02.glb-a53fe5000c65066bedc3d2d4bdb852a2.res"
+path="res://.godot/imported/SittingChair_v02.glb-bfc260fc76ef9cca77dfde931589f090.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/SittingChair_v02.glb"
-dest_files=["res://.godot/imported/SittingChair_v02.glb-a53fe5000c65066bedc3d2d4bdb852a2.res"]
+source_file="res://assets/no-export/emote_actions/SittingChair_v02.glb"
+dest_files=["res://.godot/imported/SittingChair_v02.glb-bfc260fc76ef9cca77dfde931589f090.res"]
 
 [params]
 

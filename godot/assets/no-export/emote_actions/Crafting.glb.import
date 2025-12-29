@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://du7jg5sgacwnb"
-path="res://.godot/imported/Crafting.glb-79356806a3ca2d4c85af55cae897a034.res"
+path="res://.godot/imported/Crafting.glb-35b4712ce20f3298ea838c7b3e12589a.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/Crafting.glb"
-dest_files=["res://.godot/imported/Crafting.glb-79356806a3ca2d4c85af55cae897a034.res"]
+source_file="res://assets/no-export/emote_actions/Crafting.glb"
+dest_files=["res://.godot/imported/Crafting.glb-35b4712ce20f3298ea838c7b3e12589a.res"]
 
 [params]
 

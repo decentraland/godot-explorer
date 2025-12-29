@@ -4,12 +4,12 @@ importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
 uid="uid://dvnmdinygu0l7"
-path="res://.godot/imported/OpenChest.glb-e15e340858d3776f6086dc6eaf91881b.res"
+path="res://.godot/imported/OpenChest.glb-de479cdafa50b45225b7e1e8172fcadc.res"
 
 [deps]
 
-source_file="res://assets/no-export/emotes/OpenChest.glb"
-dest_files=["res://.godot/imported/OpenChest.glb-e15e340858d3776f6086dc6eaf91881b.res"]
+source_file="res://assets/no-export/emote_actions/OpenChest.glb"
+dest_files=["res://.godot/imported/OpenChest.glb-de479cdafa50b45225b7e1e8172fcadc.res"]
 
 [params]
 
