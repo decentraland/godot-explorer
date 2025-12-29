@@ -25,7 +25,10 @@ use super::{
     content_mapping::ContentMappingAndUrlRef,
     content_provider::{ContentProviderContext, SceneGltfContext},
     file_string::get_base_dir,
-    scene_saver::{get_scene_path_for_hash, save_node_as_scene},
+    scene_saver::{
+        get_emote_path_for_hash, get_scene_path_for_hash, get_wearable_path_for_hash,
+        save_node_as_scene,
+    },
     texture::create_compressed_texture,
     thread_safety::GodotSingleThreadSafety,
 };
@@ -221,7 +224,14 @@ pub async fn load_gltf_emote(
 
     let (gltf_node, _thread_safe_check) =
         internal_load_gltf(file_path, content_mapping, ctx).await?;
-    Ok(add_animation_from_obj(&file_hash, gltf_node).map(|emote| emote.to_variant()))
+
+    let result = process_emote_animations(&file_hash, &gltf_node).map(
+        |(armature_prop, default_animation, prop_animation)| {
+            build_dcl_emote_gltf(armature_prop, default_animation, prop_animation).to_variant()
+        },
+    );
+    gltf_node.free();
+    Ok(result)
 }
 
 async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
@@ -327,7 +337,8 @@ fn _duplicate_animation_resources(gltf_node: Gd<Node>) {
     }
 }
 
-fn get_last_16_alphanumeric(input: &str) -> String {
+/// Get the last 16 alphanumeric characters from a hash (used for animation naming)
+pub fn get_last_16_alphanumeric(input: &str) -> String {
     let alphanumeric: String = input
         .chars()
         .rev()
@@ -342,15 +353,22 @@ fn get_last_16_alphanumeric(input: &str) -> String {
         .to_lowercase()
 }
 
-fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<Gd<DclEmoteGltf>> {
-    let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash.as_str());
-    let armature_prop = gltf_node.find_child("Armature_Prop");
+/// Process emote animations and return components for embedding or DclEmoteGltf creation
+///
+/// Returns (armature_prop, default_animation, prop_animation)
+/// This is used by load_and_save_emote_gltf to extract and embed animations in the background thread
+pub fn process_emote_animations(
+    file_hash: &str,
+    gltf_node: &Gd<Node3D>,
+) -> Option<(Option<Gd<Node3D>>, Option<Gd<Animation>>, Option<Gd<Animation>>)> {
+    let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash);
+    let armature_prop_node = gltf_node.find_child("Armature_Prop");
 
     let anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
 
     let armature_prefix = format!("Armature_Prop_{}/Skeleton3D:", anim_sufix_from_hash);
 
-    let armature_prop = armature_prop
+    let armature_prop = armature_prop_node
         .and_then(|v| v.clone().try_cast::<Node3D>().ok())
         .map(|mut node| {
             node.set_name(&format!("Armature_Prop_{}", anim_sufix_from_hash));
@@ -448,11 +466,21 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
         }
     }
 
-    Some(Gd::from_init_fn(|_base| DclEmoteGltf {
+    Some((armature_prop, default_animation, prop_animation))
+}
+
+/// Build DclEmoteGltf from processed components
+/// Used when loading from cache to create the DclEmoteGltf from stored data
+pub fn build_dcl_emote_gltf(
+    armature_prop: Option<Gd<Node3D>>,
+    default_animation: Option<Gd<Animation>>,
+    prop_animation: Option<Gd<Animation>>,
+) -> Gd<DclEmoteGltf> {
+    Gd::from_init_fn(|_base| DclEmoteGltf {
         armature_prop,
         default_animation,
         prop_animation,
-    }))
+    })
 }
 
 #[derive(GodotClass)]
@@ -754,4 +782,367 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
 
         create_scene_colliders(child, root_node.clone());
     }
+}
+
+// ============================================================================
+// Wearable GLTF Loading (for ContentProvider wearable loading)
+// ============================================================================
+
+/// Load and save a wearable GLTF to disk
+///
+/// This function:
+/// 1. Downloads the GLTF and its dependencies
+/// 2. Loads it into Godot
+/// 3. Processes textures
+/// 4. Saves the processed scene to disk (NO colliders - wearables don't need them)
+///
+/// Returns the path to the saved scene file on success
+pub async fn load_and_save_wearable_gltf(
+    file_path: String,
+    file_hash: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: SceneGltfContext,
+) -> Result<String, anyhow::Error> {
+    // Download the main GLTF file
+    let base_path = Arc::new(get_base_dir(&file_path));
+    let url = format!("{}{}", content_mapping.base_url, file_hash);
+    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+
+    ctx.resource_provider
+        .fetch_resource(url, file_hash.clone(), absolute_file_path.clone())
+        .await
+        .map_err(anyhow::Error::msg)?;
+
+    // Get dependencies from the GLTF file
+    let dependencies = get_dependencies(&absolute_file_path)
+        .await?
+        .into_iter()
+        .map(|dep| {
+            let full_path = if base_path.is_empty() {
+                dep.clone()
+            } else {
+                format!("{}/{}", base_path, dep)
+            };
+            let item = content_mapping.get_hash(full_path.as_str()).cloned();
+            (dep, item)
+        })
+        .collect::<Vec<(String, Option<String>)>>();
+
+    // Check all dependencies are available
+    if dependencies.iter().any(|(_, hash)| hash.is_none()) {
+        return Err(anyhow::Error::msg(
+            "There are some missing dependencies in the gltf",
+        ));
+    }
+
+    let dependencies_hash: Vec<(String, String)> = dependencies
+        .into_iter()
+        .map(|(file_path, hash)| (file_path, hash.unwrap()))
+        .collect();
+
+    // Download all dependencies in parallel
+    let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
+        let ctx = ctx.clone();
+        let content_mapping = content_mapping.clone();
+        async move {
+            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
+            ctx.resource_provider
+                .fetch_resource(url, dependency_file_hash.clone(), absolute_file_path)
+                .await
+                .map_err(|e| format!("Dependency {} failed: {:?}", dependency_file_hash, e))
+        }
+    });
+
+    let result = futures_util::future::join_all(futures).await;
+    if result.iter().any(|res| res.is_err()) {
+        let errors: Vec<String> = result.into_iter().filter_map(|res| res.err()).collect();
+        return Err(anyhow::Error::msg(format!(
+            "Error downloading gltf dependencies: {}",
+            errors.join("\n")
+        )));
+    }
+
+    // Acquire thread safety guard for Godot API access
+    let _thread_guard = GodotThreadSafetyGuard::acquire(&ctx.godot_single_thread)
+        .await
+        .ok_or(anyhow::Error::msg("Failed to acquire thread safety guard"))?;
+
+    // Process GLTF using Godot (all Godot objects are scoped here to drop before await)
+    let (scene_path, file_size) = {
+        // Load the GLTF using Godot
+        let mut new_gltf = GltfDocument::new_gd();
+        let mut new_gltf_state = GltfState::new_gd();
+
+        let mappings = VarDictionary::from_iter(
+            dependencies_hash
+                .iter()
+                .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
+        );
+
+        new_gltf_state.set_additional_data("base_path", &"some".to_variant());
+        new_gltf_state.set_additional_data("mappings", &mappings.to_variant());
+
+        let file_path_gstr = GString::from(absolute_file_path.as_str());
+        let base_path_gstr = GString::from(ctx.content_folder.as_str());
+        let err = new_gltf
+            .append_from_file_ex(&file_path_gstr, &new_gltf_state.clone())
+            .base_path(&base_path_gstr)
+            .flags(0)
+            .done();
+
+        if err != Error::OK {
+            return Err(anyhow::Error::msg(format!(
+                "Error loading wearable gltf: {:?}",
+                err
+            )));
+        }
+
+        let node = new_gltf
+            .generate_scene(&new_gltf_state)
+            .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
+
+        // Post-process textures
+        let max_size = ctx.texture_quality.to_max_size();
+        post_import_process(node.clone(), max_size);
+
+        // Attach ResourceLocker to track the asset's lifecycle
+        ResourceLocker::attach_to(node.clone());
+
+        // Cast to Node3D and rotate
+        let mut node = node
+            .try_cast::<Node3D>()
+            .map_err(|err| anyhow::Error::msg(format!("Error casting to Node3D: {err}")))?;
+        node.rotate_y(std::f32::consts::PI);
+
+        // NOTE: No colliders for wearables - they don't need collision shapes
+
+        // Save the processed scene to disk
+        let scene_path = get_wearable_path_for_hash(&ctx.content_folder, &file_hash);
+        save_node_as_scene(node.clone(), &scene_path).map_err(anyhow::Error::msg)?;
+
+        // Get file size synchronously
+        let file_size = std::fs::metadata(&scene_path)
+            .map(|m| m.len() as i64)
+            .unwrap_or(0);
+
+        // Count nodes before freeing
+        let node_count = count_nodes(node.clone().upcast());
+        tracing::info!(
+            "Wearable GLTF processed: {} with {} nodes, saved to {} ({} bytes)",
+            file_hash,
+            node_count,
+            scene_path,
+            file_size
+        );
+
+        // Free the node since we've saved it to disk
+        node.free();
+
+        (scene_path, file_size)
+    };
+
+    // Register the saved scene in resource_provider for cache management
+    ctx.resource_provider
+        .register_local_file(&scene_path, file_size)
+        .await;
+
+    Ok(scene_path)
+}
+
+// ============================================================================
+// Emote GLTF Loading (for ContentProvider emote loading)
+// ============================================================================
+
+/// Load and save an emote GLTF to disk
+///
+/// This function:
+/// 1. Downloads the GLTF and its dependencies
+/// 2. Loads it into Godot
+/// 3. Processes textures
+/// 4. Saves the processed scene to disk as plain Node3D
+///    (Animation extraction happens when loading from cache via load_cached_emote)
+///
+/// Returns the path to the saved scene file on success
+pub async fn load_and_save_emote_gltf(
+    file_path: String,
+    file_hash: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: SceneGltfContext,
+) -> Result<String, anyhow::Error> {
+    // Download the main GLTF file
+    let base_path = Arc::new(get_base_dir(&file_path));
+    let url = format!("{}{}", content_mapping.base_url, file_hash);
+    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+
+    ctx.resource_provider
+        .fetch_resource(url, file_hash.clone(), absolute_file_path.clone())
+        .await
+        .map_err(anyhow::Error::msg)?;
+
+    // Get dependencies from the GLTF file
+    let dependencies = get_dependencies(&absolute_file_path)
+        .await?
+        .into_iter()
+        .map(|dep| {
+            let full_path = if base_path.is_empty() {
+                dep.clone()
+            } else {
+                format!("{}/{}", base_path, dep)
+            };
+            let item = content_mapping.get_hash(full_path.as_str()).cloned();
+            (dep, item)
+        })
+        .collect::<Vec<(String, Option<String>)>>();
+
+    // Check all dependencies are available
+    if dependencies.iter().any(|(_, hash)| hash.is_none()) {
+        return Err(anyhow::Error::msg(
+            "There are some missing dependencies in the gltf",
+        ));
+    }
+
+    let dependencies_hash: Vec<(String, String)> = dependencies
+        .into_iter()
+        .map(|(file_path, hash)| (file_path, hash.unwrap()))
+        .collect();
+
+    // Download all dependencies in parallel
+    let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
+        let ctx = ctx.clone();
+        let content_mapping = content_mapping.clone();
+        async move {
+            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
+            ctx.resource_provider
+                .fetch_resource(url, dependency_file_hash.clone(), absolute_file_path)
+                .await
+                .map_err(|e| format!("Dependency {} failed: {:?}", dependency_file_hash, e))
+        }
+    });
+
+    let result = futures_util::future::join_all(futures).await;
+    if result.iter().any(|res| res.is_err()) {
+        let errors: Vec<String> = result.into_iter().filter_map(|res| res.err()).collect();
+        return Err(anyhow::Error::msg(format!(
+            "Error downloading gltf dependencies: {}",
+            errors.join("\n")
+        )));
+    }
+
+    // Acquire thread safety guard for Godot API access
+    let _thread_guard = GodotThreadSafetyGuard::acquire(&ctx.godot_single_thread)
+        .await
+        .ok_or(anyhow::Error::msg("Failed to acquire thread safety guard"))?;
+
+    // Process GLTF using Godot (all Godot objects are scoped here to drop before await)
+    let (scene_path, file_size) = {
+        // Load the GLTF using Godot
+        let mut new_gltf = GltfDocument::new_gd();
+        let mut new_gltf_state = GltfState::new_gd();
+
+        let mappings = VarDictionary::from_iter(
+            dependencies_hash
+                .iter()
+                .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
+        );
+
+        new_gltf_state.set_additional_data("base_path", &"some".to_variant());
+        new_gltf_state.set_additional_data("mappings", &mappings.to_variant());
+
+        let file_path_gstr = GString::from(absolute_file_path.as_str());
+        let base_path_gstr = GString::from(ctx.content_folder.as_str());
+        let err = new_gltf
+            .append_from_file_ex(&file_path_gstr, &new_gltf_state.clone())
+            .base_path(&base_path_gstr)
+            .flags(0)
+            .done();
+
+        if err != Error::OK {
+            return Err(anyhow::Error::msg(format!(
+                "Error loading emote gltf: {:?}",
+                err
+            )));
+        }
+
+        let node = new_gltf
+            .generate_scene(&new_gltf_state)
+            .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
+
+        // Post-process textures
+        let max_size = ctx.texture_quality.to_max_size();
+        post_import_process(node.clone(), max_size);
+
+        // Cast to Node3D and rotate
+        let node = node
+            .try_cast::<Node3D>()
+            .map_err(|err| anyhow::Error::msg(format!("Error casting to Node3D: {err}")))?;
+
+        // Extract animations in background thread
+        let (armature_prop, default_animation, prop_animation) =
+            process_emote_animations(&file_hash, &node)
+                .ok_or(anyhow::Error::msg("Failed to extract emote animations"))?;
+
+        // Create EmoteRoot node to save with embedded animations
+        let mut root = Node3D::new_alloc();
+        root.set_name(&StringName::from("EmoteRoot"));
+
+        // Add armature_prop as child if present
+        if let Some(mut prop) = armature_prop {
+            // Remove from original parent if any
+            if let Some(mut parent) = prop.get_parent() {
+                parent.remove_child(&prop.clone().upcast::<Node>());
+            }
+            root.add_child(&prop.clone().upcast::<Node>());
+            prop.set_owner(&root.clone().upcast::<Node>());
+        }
+
+        // Create AnimationPlayer with processed animations
+        let mut anim_player = AnimationPlayer::new_alloc();
+        anim_player.set_name(&StringName::from("EmoteAnimations"));
+
+        let mut anim_library = AnimationLibrary::new_gd();
+        if let Some(ref anim) = default_animation {
+            anim_library.add_animation(&StringName::from(&anim.get_name()), anim);
+        }
+        if let Some(ref anim) = prop_animation {
+            anim_library.add_animation(&StringName::from(&anim.get_name()), anim);
+        }
+        anim_player.add_animation_library(&StringName::from(""), &anim_library);
+
+        root.add_child(&anim_player.clone().upcast::<Node>());
+        anim_player.set_owner(&root.clone().upcast::<Node>());
+
+        // Save the EmoteRoot scene to disk
+        let scene_path = get_emote_path_for_hash(&ctx.content_folder, &file_hash);
+        save_node_as_scene(root.clone(), &scene_path).map_err(anyhow::Error::msg)?;
+
+        // Get file size synchronously
+        let file_size = std::fs::metadata(&scene_path)
+            .map(|m| m.len() as i64)
+            .unwrap_or(0);
+
+        // Count nodes before freeing
+        let node_count = count_nodes(root.clone().upcast());
+        tracing::info!(
+            "Emote GLTF processed with embedded animations: {} with {} nodes, saved to {} ({} bytes)",
+            file_hash,
+            node_count,
+            scene_path,
+            file_size
+        );
+
+        // Free both nodes since we've saved to disk
+        node.free();
+        root.free();
+
+        (scene_path, file_size)
+    };
+
+    // Register the saved scene in resource_provider for cache management
+    ctx.resource_provider
+        .register_local_file(&scene_path, file_size)
+        .await;
+
+    Ok(scene_path)
 }

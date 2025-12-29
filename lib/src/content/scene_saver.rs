@@ -49,3 +49,21 @@ pub fn save_node_as_scene(node: Gd<Node3D>, file_path: &str) -> Result<(), Strin
 pub fn get_scene_path_for_hash(content_folder: &str, hash: &str) -> String {
     format!("{}{}.scn", content_folder, hash)
 }
+
+/// Gets the absolute path for a cached wearable scene by its hash
+///
+/// # Arguments
+/// * `content_folder` - The cache folder path (e.g., "/path/to/cache/")
+/// * `hash` - The content hash
+pub fn get_wearable_path_for_hash(content_folder: &str, hash: &str) -> String {
+    format!("{}wearable_{}.scn", content_folder, hash)
+}
+
+/// Gets the absolute path for a cached emote scene by its hash
+///
+/// # Arguments
+/// * `content_folder` - The cache folder path (e.g., "/path/to/cache/")
+/// * `hash` - The content hash
+pub fn get_emote_path_for_hash(content_folder: &str, hash: &str) -> String {
+    format!("{}emote_{}.scn", content_folder, hash)
+}
