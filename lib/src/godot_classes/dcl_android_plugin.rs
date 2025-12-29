@@ -1,7 +1,7 @@
 use godot::prelude::*;
 
 use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
-use godot::engine::Image;
+use godot::classes::Image;
 
 /// Static wrapper for the DclAndroidPlugin (old plugin) that provides typed access to Android-specific functionality
 #[derive(GodotClass)]
@@ -14,8 +14,8 @@ pub struct DclAndroidPlugin {
 impl DclAndroidPlugin {
     /// Try to get the DclAndroidPlugin singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
-        let singleton = godot::engine::Engine::singleton()
-            .get_singleton(StringName::from("DclAndroidPlugin"))?;
+        let singleton = godot::classes::Engine::singleton()
+            .get_singleton(&StringName::from("DclAndroidPlugin"))?;
         Some(singleton.cast::<Object>())
     }
 
@@ -25,7 +25,7 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call(StringName::from("showDecentralandMobileToast"), &[]);
+        singleton.call("showDecentralandMobileToast", &[]);
         true
     }
 
@@ -35,7 +35,7 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call(StringName::from("openUrl"), &[url.to_variant()]);
+        singleton.call("openUrl", &[url.to_variant()]);
         true
     }
 
@@ -64,22 +64,22 @@ pub struct DclGodotAndroidPlugin {
 impl DclGodotAndroidPlugin {
     /// Try to get the dcl-godot-android singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
-        let singleton = godot::engine::Engine::singleton()
-            .get_singleton(StringName::from("dcl-godot-android"))?;
+        let singleton = godot::classes::Engine::singleton()
+            .get_singleton(&StringName::from("dcl-godot-android"))?;
         Some(singleton.cast::<Object>())
     }
 
     #[func]
-    pub fn get_deeplink_args() -> Dictionary {
-        let mut no_dict = Dictionary::new();
+    pub fn get_deeplink_args() -> VarDictionary {
+        let mut no_dict = VarDictionary::new();
         let Some(mut singleton) = Self::try_get_singleton() else {
             no_dict.set("error", "No singleton returned");
             return no_dict;
         };
 
         no_dict.set("error", "No dict returned");
-        let data = singleton.call(StringName::from("getLaunchIntentData"), &[]);
-        data.try_to::<Dictionary>().ok().unwrap_or(no_dict)
+        let data = singleton.call("getLaunchIntentData", &[]);
+        data.try_to::<VarDictionary>().ok().unwrap_or(no_dict)
     }
 
     /// Open a URL in a custom tab (for social)
@@ -88,7 +88,7 @@ impl DclGodotAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call(StringName::from("openCustomTabUrl"), &[url.to_variant()]);
+        singleton.call("openCustomTabUrl", &[url.to_variant()]);
         true
     }
 
@@ -98,26 +98,23 @@ impl DclGodotAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call(
-            StringName::from("openWebView"),
-            &[url.to_variant(), param.to_variant()],
-        );
+        singleton.call("openWebView", &[url.to_variant(), param.to_variant()]);
         true
     }
 
     /// Get static mobile device information (doesn't change during runtime) - internal use only
     pub(crate) fn get_mobile_device_info_internal() -> Option<DclMobileDeviceInfo> {
         let mut singleton = Self::try_get_singleton()?;
-        let info = singleton.call(StringName::from("getMobileDeviceInfo"), &[]);
-        let dict = info.try_to::<Dictionary>().ok()?;
+        let info = singleton.call("getMobileDeviceInfo", &[]);
+        let dict = info.try_to::<VarDictionary>().ok()?;
         Some(DclMobileDeviceInfo::from_dictionary(dict))
     }
 
     /// Get dynamic mobile metrics (changes during runtime) - internal use only
     pub(crate) fn get_mobile_metrics_internal() -> Option<DclMobileMetrics> {
         let mut singleton = Self::try_get_singleton()?;
-        let metrics = singleton.call(StringName::from("getMobileMetrics"), &[]);
-        let dict = metrics.try_to::<Dictionary>().ok()?;
+        let metrics = singleton.call("getMobileMetrics", &[]);
+        let dict = metrics.try_to::<VarDictionary>().ok()?;
         Some(DclMobileMetrics::from_dictionary(dict))
     }
 
@@ -149,7 +146,7 @@ impl DclGodotAndroidPlugin {
             return false;
         };
         let result = singleton.call(
-            StringName::from("addCalendarEvent"),
+            "addCalendarEvent",
             &[
                 title.to_variant(),
                 description.to_variant(),
@@ -168,7 +165,7 @@ impl DclGodotAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        let result = singleton.call(StringName::from("shareText"), &[text.to_variant()]);
+        let result = singleton.call("shareText", &[text.to_variant()]);
         result.try_to::<bool>().unwrap_or(false)
     }
 
@@ -187,15 +184,15 @@ impl DclGodotAndroidPlugin {
 
         // Convert image to RGBA8 format if needed
         let mut rgba_image = image.clone();
-        if image.get_format() != godot::engine::image::Format::RGBA8 {
-            rgba_image.convert(godot::engine::image::Format::RGBA8);
+        if image.get_format() != godot::classes::image::Format::RGBA8 {
+            rgba_image.convert(godot::classes::image::Format::RGBA8);
         }
 
         // Get the pixel data as a byte array
         let pixel_data = rgba_image.get_data();
 
         let result = singleton.call(
-            StringName::from("shareTextWithImage"),
+            "shareTextWithImage",
             &[
                 text.to_variant(),
                 width.to_variant(),
