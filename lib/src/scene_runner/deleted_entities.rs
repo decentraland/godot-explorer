@@ -47,6 +47,8 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
         scene.dup_animator.remove(deleted_entity);
         scene.gltf_loading.remove(deleted_entity);
         scene.continuos_raycast.remove(deleted_entity);
+        scene.tweens.remove(deleted_entity);
+        scene.texture_animations.remove(deleted_entity);
 
         // Clean up trigger area - unregister from monitor and release back to pool
         if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {
