@@ -49,9 +49,11 @@ func _exit_tree():
 	if not dcl_gltf_hash.is_empty():
 		currently_loading_assets.erase(dcl_gltf_hash)
 
-	# Disconnect signals
-	Global.content_provider.scene_gltf_ready.disconnect(_on_gltf_ready)
-	Global.content_provider.scene_gltf_error.disconnect(_on_gltf_error)
+	# Disconnect signals (check if connected first - node may be freed before _ready)
+	if Global.content_provider.scene_gltf_ready.is_connected(_on_gltf_ready):
+		Global.content_provider.scene_gltf_ready.disconnect(_on_gltf_ready)
+	if Global.content_provider.scene_gltf_error.is_connected(_on_gltf_error):
+		Global.content_provider.scene_gltf_error.disconnect(_on_gltf_error)
 
 
 #region Loading Flow
