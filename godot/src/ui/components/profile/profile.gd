@@ -659,8 +659,13 @@ func _async_refresh_equipped_items() -> void:
 
 	if not emotes.is_empty():
 		for emote in emotes:
+			# Convert short emote IDs to full URNs for lookup
+			var emote_urn = emote.urn
+			if not emote_urn.begins_with("urn") and Emotes.is_emote_default(emote_urn):
+				emote_urn = Emotes.get_base_emote_urn(emote_urn)
+
 			var emote_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(
-				emote.urn
+				emote_urn
 			)
 			if emote_definition != null:
 				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
@@ -670,11 +675,6 @@ func _async_refresh_equipped_items() -> void:
 				emote_item.set_as_emote(emote.urn)
 				emote_item.emote_pressed.connect(_on_emote_pressed)
 				emote_item.stop_emote.connect(_on_stop_emote)
-			else:
-				printerr("Error getting emote: ", emote.urn)
-
-	else:
-		printerr("Error getting emotes")
 
 
 func _on_button_add_link_pressed() -> void:
