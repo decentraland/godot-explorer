@@ -248,8 +248,7 @@ impl INode3D for DclGltfContainer {
             if self.transform_change_count >= TRANSFORM_CHANGE_THRESHOLD {
                 self.transform_tracking_enabled = false;
                 self.base_mut().set_process(false);
-                self.base_mut()
-                    .emit_signal("switch_to_kinematic".into(), &[]);
+                self.base_mut().emit_signal("switch_to_kinematic", &[]);
             }
         }
     }
