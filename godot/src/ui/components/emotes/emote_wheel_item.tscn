@@ -67,7 +67,7 @@ expand_mode = 1
 
 [node name="Inner" type="TextureRect" parent="Control_Inner/Background"]
 unique_name_in_owner = true
-self_modulate = Color(0.34902, 0.611765, 1, 1)
+self_modulate = Color(0.92549, 0.92157, 0.92941, 1)
 texture_filter = 4
 layout_mode = 1
 anchors_preset = 8

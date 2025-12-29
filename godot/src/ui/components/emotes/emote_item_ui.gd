@@ -48,10 +48,19 @@ var inside = false
 func async_load_from_urn(_emote_urn: String, _index: int = -1):
 	emote_urn = _emote_urn
 
-	await WearableRequest.async_fetch_emote(emote_urn)
-	var emote_data := Global.content_provider.get_wearable(emote_urn)
+	# Convert short emote IDs to full URNs for remote fetching
+	var fetch_urn = _emote_urn
+	if not _emote_urn.begins_with("urn"):
+		if Emotes.is_emote_default(_emote_urn):
+			fetch_urn = Emotes.get_base_emote_urn(_emote_urn)
+		else:
+			printerr("Unknown emote ID: ", _emote_urn)
+			return
+
+	await WearableRequest.async_fetch_emote(fetch_urn)
+	var emote_data := Global.content_provider.get_wearable(fetch_urn)
 	if emote_data == null:
-		printerr("Failed to get emote data: ", emote_urn)
+		printerr("Failed to get emote data: ", fetch_urn)
 		return
 
 	await async_load_from_entity(emote_data)

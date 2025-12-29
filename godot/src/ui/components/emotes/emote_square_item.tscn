@@ -1,7 +1,6 @@
-[gd_scene load_steps=9 format=3 uid="uid://blc0mna12dsxo"]
+[gd_scene load_steps=8 format=3 uid="uid://blc0mna12dsxo"]
 
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
-[ext_resource type="Texture2D" uid="uid://caviqeg8b20gg" path="res://assets/avatar/default_emotes_thumbnails/clap.png" id="2_ynh3m"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ojwu4"]
 bg_color = Color(0.776471, 0.25098, 0.803922, 1)
@@ -117,7 +116,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_o5uwa")
 
 [node name="Inner" type="Panel" parent="Control_Inner/Background"]
 unique_name_in_owner = true
-self_modulate = Color(0.34902, 0.611765, 1, 1)
+self_modulate = Color(0.92549, 0.92157, 0.92941, 1)
 texture_filter = 4
 layout_mode = 1
 anchors_preset = -1
@@ -151,7 +150,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(32, 32)
-texture = ExtResource("2_ynh3m")
 expand_mode = 1
 
 [connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]
