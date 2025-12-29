@@ -17,9 +17,9 @@ use crate::{
 
 impl DclTransformAndParent {
     pub fn from_godot(godot_transform: &Transform3D, offset: Vector3) -> Self {
-        let rotation = godot_transform.basis.orthonormalized().to_quat();
+        let rotation = godot_transform.basis.orthonormalized().get_quaternion();
         let translation = godot_transform.origin - offset;
-        let scale = godot_transform.basis.scale();
+        let scale = godot_transform.basis.get_scale();
 
         Self {
             translation: godot::prelude::Vector3 {
@@ -144,7 +144,7 @@ pub fn update_transform_and_parent(
                     godot_dcl_scene.ensure_node_3d(&entity);
 
                 current_node_3d
-                    .reparent_ex(root_node.clone())
+                    .reparent_ex(&root_node.clone())
                     .keep_global_transform(false)
                     .done();
                 current_godot_entity_node.computed_parent_3d = SceneEntityId::ROOT;
@@ -165,7 +165,7 @@ pub fn update_transform_and_parent(
                         godot_dcl_scene.ensure_node_3d(&entity);
 
                     current_node_3d
-                        .reparent_ex(parent_node)
+                        .reparent_ex(&parent_node)
                         .keep_global_transform(false)
                         .done();
                     current_godot_entity_node.computed_parent_3d = desired_parent_3d;

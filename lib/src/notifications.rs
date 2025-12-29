@@ -2,13 +2,14 @@
 
 mod local_notification_queue_tests {
     use crate::framework::TestContext;
+    use godot::obj::Singleton;
     use godot::prelude::*;
 
     /// Test fixture for notification tests
     /// Handles setup and cleanup automatically
     struct NotificationTestFixture {
-        pub mock: Gd<godot::engine::RefCounted>,
-        pub manager: Gd<godot::engine::Node>,
+        pub mock: Gd<godot::classes::RefCounted>,
+        pub manager: Gd<godot::classes::Node>,
     }
 
     impl NotificationTestFixture {
@@ -23,61 +24,62 @@ mod local_notification_queue_tests {
     }
 
     /// Helper to load the mock plugin
-    fn load_mock_plugin() -> Gd<godot::engine::RefCounted> {
-        let mut resource_loader = godot::engine::ResourceLoader::singleton();
+    fn load_mock_plugin() -> Gd<godot::classes::RefCounted> {
+        let mut resource_loader = godot::classes::ResourceLoader::singleton();
         let mock_script_path =
             GString::from("res://src/test/notifications/mock_notifications_plugin.gd");
+        let type_hint = GString::from("Script");
 
         let mock_script = resource_loader
-            .load_ex(mock_script_path.clone())
-            .type_hint(GString::from("Script"))
+            .load_ex(&mock_script_path)
+            .type_hint(&type_hint)
             .done()
             .expect("Mock plugin script should load");
 
-        let mut script = mock_script.cast::<godot::engine::GDScript>();
+        let mut script = mock_script.cast::<godot::classes::GDScript>();
 
         // Call new() on the script using Godot's call method
-        let instance = script.call("new".into(), &[]);
-        instance.to::<Gd<godot::engine::RefCounted>>()
+        let instance = script.call("new", &[]);
+        instance.to::<Gd<godot::classes::RefCounted>>()
     }
 
     /// Helper to create and register NotificationsManager singleton with mock plugin
     fn setup_notifications_manager_with_mock(
-        mock: &Gd<godot::engine::RefCounted>,
-    ) -> Gd<godot::engine::Node> {
-        let mut engine = godot::engine::Engine::singleton();
+        mock: &Gd<godot::classes::RefCounted>,
+    ) -> Gd<godot::classes::Node> {
+        let mut engine = godot::classes::Engine::singleton();
 
         // Check if already registered (from previous test)
-        if engine
-            .get_singleton("NotificationsManager".into())
-            .is_some()
-        {
-            engine.unregister_singleton("NotificationsManager".into());
+        if engine.get_singleton("NotificationsManager").is_some() {
+            engine.unregister_singleton("NotificationsManager");
         }
 
         // Load the NotificationsManager script
-        let mut resource_loader = godot::engine::ResourceLoader::singleton();
+        let mut resource_loader = godot::classes::ResourceLoader::singleton();
         let manager_script_path = GString::from("res://src/notifications_manager.gd");
 
         let manager_script = resource_loader
-            .load_ex(manager_script_path.clone())
-            .type_hint(GString::from("Script"))
+            .load_ex(&manager_script_path)
+            .type_hint(&GString::from("Script"))
             .done()
             .expect("NotificationsManager script should load");
 
-        let mut script = manager_script.cast::<godot::engine::GDScript>();
+        let mut script = manager_script.cast::<godot::classes::GDScript>();
 
         // Create an instance of NotificationsManager (but don't add to scene tree yet)
-        let instance = script.call("new".into(), &[]);
-        let mut manager_node = instance.to::<Gd<godot::engine::Node>>();
+        let instance = script.call("new", &[]);
+        let mut manager_node = instance.to::<Gd<godot::classes::Node>>();
 
         // Inject the mock plugin for both iOS and Android BEFORE _ready() is called
         // This ensures _get_plugin() returns the mock regardless of OS.get_name()
-        manager_node.set("_ios_plugin".into(), mock.to_variant());
-        manager_node.set("_android_plugin".into(), mock.to_variant());
+        manager_node.set("_ios_plugin", &mock.to_variant());
+        manager_node.set("_android_plugin", &mock.to_variant());
 
         // Register as singleton (this doesn't trigger _ready())
-        engine.register_singleton("NotificationsManager".into(), manager_node.clone().upcast());
+        engine.register_singleton(
+            "NotificationsManager",
+            &manager_node.clone().upcast::<godot::classes::Object>(),
+        );
 
         // Note: We don't add to scene tree, so _ready() won't be called automatically
         // This means _initialize_local_notifications() won't overwrite our mocks
@@ -86,15 +88,13 @@ mod local_notification_queue_tests {
     }
 
     /// Helper to reset mock plugin
-    fn reset_mock(mock: &mut Gd<godot::engine::RefCounted>) {
-        mock.call("reset".into(), &[]);
+    fn reset_mock(mock: &mut Gd<godot::classes::RefCounted>) {
+        mock.call("reset", &[]);
     }
 
     /// Helper to inspect mock state - total notifications in database
-    fn get_total_notifications(mock: &mut Gd<godot::engine::RefCounted>) -> i64 {
-        let state = mock
-            .call("get_database_state".into(), &[])
-            .to::<Dictionary>();
+    fn get_total_notifications(mock: &mut Gd<godot::classes::RefCounted>) -> i64 {
+        let state = mock.call("get_database_state", &[]).to::<VarDictionary>();
         state
             .get("total_notifications")
             .unwrap_or(Variant::from(0))
@@ -102,10 +102,8 @@ mod local_notification_queue_tests {
     }
 
     /// Helper to inspect mock state - how many scheduled with OS
-    fn get_os_scheduled_count(mock: &mut Gd<godot::engine::RefCounted>) -> i64 {
-        let state = mock
-            .call("get_database_state".into(), &[])
-            .to::<Dictionary>();
+    fn get_os_scheduled_count(mock: &mut Gd<godot::classes::RefCounted>) -> i64 {
+        let state = mock.call("get_database_state", &[]).to::<VarDictionary>();
         state
             .get("os_scheduled_count")
             .unwrap_or(Variant::from(0))
@@ -113,25 +111,22 @@ mod local_notification_queue_tests {
     }
 
     /// Helper to inspect if specific notification is scheduled
-    fn is_notification_scheduled(mock: &mut Gd<godot::engine::RefCounted>, notif_id: &str) -> bool {
+    fn is_notification_scheduled(
+        mock: &mut Gd<godot::classes::RefCounted>,
+        notif_id: &str,
+    ) -> bool {
         let where_clause = format!("id = '{}' AND is_scheduled = 1", notif_id);
         let count: i64 = mock
-            .call(
-                "db_count_notifications".into(),
-                &[Variant::from(where_clause)],
-            )
+            .call("db_count_notifications", &[Variant::from(where_clause)])
             .to::<i64>();
         count > 0
     }
 
     /// Helper to inspect if specific notification exists in database
-    fn notification_exists(mock: &mut Gd<godot::engine::RefCounted>, notif_id: &str) -> bool {
+    fn notification_exists(mock: &mut Gd<godot::classes::RefCounted>, notif_id: &str) -> bool {
         let where_clause = format!("id = '{}'", notif_id);
         let count: i64 = mock
-            .call(
-                "db_count_notifications".into(),
-                &[Variant::from(where_clause)],
-            )
+            .call("db_count_notifications", &[Variant::from(where_clause)])
             .to::<i64>();
         count > 0
     }
@@ -146,13 +141,13 @@ mod local_notification_queue_tests {
         let mut manager = fixture.manager.clone();
 
         // Get current time from Godot (must use future timestamps relative to NOW)
-        let time = godot::engine::Time::singleton();
+        let time = godot::classes::Time::singleton();
         let current_time = time.get_unix_time_from_system();
         let trigger_timestamp = (current_time as i64) + 3600; // 1 hour in the future
 
         // SETUP: Manually insert a notification into the mock database (bypassing async queue_local_notification)
         mock.call(
-            "db_insert_notification".into(),
+            "db_insert_notification",
             &[
                 Variant::from("test_notif_1"),
                 Variant::from("Test Event"),
@@ -178,7 +173,7 @@ mod local_notification_queue_tests {
 
         // ACTION: Call the synchronous _sync_notification_queue() method
         // This tests the core queue management logic
-        manager.call("_sync_notification_queue".into(), &[]);
+        manager.call("_sync_notification_queue", &[]);
 
         // VERIFY: The notification should now be scheduled with OS
         assert_eq!(
@@ -201,13 +196,13 @@ mod local_notification_queue_tests {
         let mut manager = setup_notifications_manager_with_mock(&mock);
 
         // Get current time from Godot (must use future timestamps relative to NOW)
-        let time = godot::engine::Time::singleton();
+        let time = godot::classes::Time::singleton();
         let current_time = time.get_unix_time_from_system();
         let trigger_timestamp = (current_time as i64) + 3600; // 1 hour in the future
 
         // SETUP: Manually insert and schedule a notification in the mock database
         mock.call(
-            "db_insert_notification".into(),
+            "db_insert_notification",
             &[
                 Variant::from("test_cancel"),
                 Variant::from("Cancel Test"),
@@ -219,7 +214,7 @@ mod local_notification_queue_tests {
             ],
         );
         mock.call(
-            "os_schedule_notification".into(),
+            "os_schedule_notification",
             &[
                 Variant::from("test_cancel"),
                 Variant::from("Cancel Test"),
@@ -242,7 +237,7 @@ mod local_notification_queue_tests {
         // ACTION: Call cancel_queued_local_notification (synchronous)
         let success: bool = manager
             .call(
-                "cancel_queued_local_notification".into(),
+                "cancel_queued_local_notification",
                 &[Variant::from("test_cancel")],
             )
             .to::<bool>();
@@ -276,7 +271,7 @@ mod local_notification_queue_tests {
         let mut manager = setup_notifications_manager_with_mock(&mock);
 
         // Use actual current time since _sync_notification_queue() uses Time.get_unix_time_from_system()
-        let time = godot::engine::Time::singleton();
+        let time = godot::classes::Time::singleton();
         let current_time = time.get_unix_time_from_system() as i64;
         let base_timestamp = current_time - 10000; // Past time for expired notifications
 
@@ -292,7 +287,7 @@ mod local_notification_queue_tests {
             let title = format!("Expired {}", i);
             let trigger_time = base_timestamp + (i * 100);
             mock.call(
-                "db_insert_notification".into(),
+                "db_insert_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -304,7 +299,7 @@ mod local_notification_queue_tests {
                 ],
             );
             mock.call(
-                "os_schedule_notification".into(),
+                "os_schedule_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -321,7 +316,7 @@ mod local_notification_queue_tests {
             let trigger_time = current_time + ((i + 1) * 300);
             let is_scheduled = if i < 15 { 1 } else { 0 };
             mock.call(
-                "db_insert_notification".into(),
+                "db_insert_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -336,7 +331,7 @@ mod local_notification_queue_tests {
             // Actually schedule first 15 with OS
             if i < 15 {
                 mock.call(
-                    "os_schedule_notification".into(),
+                    "os_schedule_notification",
                     &[
                         Variant::from(notif_id.as_str()),
                         Variant::from(title.as_str()),
@@ -350,7 +345,7 @@ mod local_notification_queue_tests {
         // Add inconsistency: OS notification not in DB (orphan)
         let orphan_id = "orphan_in_os";
         mock.call(
-            "os_schedule_notification".into(),
+            "os_schedule_notification",
             &[
                 Variant::from(orphan_id),
                 Variant::from("Orphan"),
@@ -361,17 +356,14 @@ mod local_notification_queue_tests {
 
         // ACTION: Call _sync_notification_queue which is triggered internally
         // We need to manually call it since we're testing with a fixed timestamp
-        manager.call("_sync_notification_queue".into(), &[]);
+        manager.call("_sync_notification_queue", &[]);
 
         // VERIFY: Check the final state
 
         // 1. All expired notifications should be removed
         let where_clause = format!("trigger_timestamp <= {}", current_time);
         let expired_count: i64 = mock
-            .call(
-                "db_count_notifications".into(),
-                &[Variant::from(where_clause)],
-            )
+            .call("db_count_notifications", &[Variant::from(where_clause)])
             .to::<i64>();
 
         assert_eq!(
@@ -389,7 +381,7 @@ mod local_notification_queue_tests {
         // 3. DB and OS counts should match
         let db_scheduled_count: i64 = mock
             .call(
-                "db_count_notifications".into(),
+                "db_count_notifications",
                 &[Variant::from("is_scheduled = 1")],
             )
             .to::<i64>();
@@ -399,7 +391,7 @@ mod local_notification_queue_tests {
         );
 
         // 4. The orphan should be cleaned up (cancelled from OS)
-        let os_ids_variant = mock.call("os_get_scheduled_ids".into(), &[]);
+        let os_ids_variant = mock.call("os_get_scheduled_ids", &[]);
         let os_ids = os_ids_variant.to::<PackedStringArray>();
         let os_ids_vec: Vec<String> = os_ids.to_vec().iter().map(|s| s.to_string()).collect();
         assert!(
@@ -410,7 +402,7 @@ mod local_notification_queue_tests {
         // 5. Verify next 24 are the earliest by timestamp
         let where_clause = format!("trigger_timestamp > {}", current_time);
         let _next_24_variant = mock.call(
-            "db_query_notifications".into(),
+            "db_query_notifications",
             &[
                 Variant::from(where_clause),
                 Variant::from("trigger_timestamp ASC"),
@@ -443,7 +435,7 @@ mod local_notification_queue_tests {
         let mut manager = setup_notifications_manager_with_mock(&mock);
 
         // Use actual current time
-        let time = godot::engine::Time::singleton();
+        let time = godot::classes::Time::singleton();
         let current_time = time.get_unix_time_from_system() as i64;
         let same_trigger_time = current_time + 3600; // 1 hour in the future
 
@@ -452,7 +444,7 @@ mod local_notification_queue_tests {
             let notif_id = format!("identical_{}", i);
             let title = format!("Event {}", i);
             mock.call(
-                "db_insert_notification".into(),
+                "db_insert_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -466,7 +458,7 @@ mod local_notification_queue_tests {
         }
 
         // ACTION: Sync
-        manager.call("_sync_notification_queue".into(), &[]);
+        manager.call("_sync_notification_queue", &[]);
 
         // VERIFY: All 5 should be scheduled (since < 24)
         let os_scheduled_count = get_os_scheduled_count(&mut mock);
@@ -489,7 +481,7 @@ mod local_notification_queue_tests {
         let mut manager = setup_notifications_manager_with_mock(&mock);
 
         // Use actual current time
-        let time = godot::engine::Time::singleton();
+        let time = godot::classes::Time::singleton();
         let current_time = time.get_unix_time_from_system() as i64;
 
         // Add 10 notifications
@@ -498,7 +490,7 @@ mod local_notification_queue_tests {
             let title = format!("Event {}", i);
             let trigger_time = current_time + ((i + 1) * 100);
             mock.call(
-                "db_insert_notification".into(),
+                "db_insert_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -512,7 +504,7 @@ mod local_notification_queue_tests {
         }
 
         // ACTION: Sync
-        manager.call("_sync_notification_queue".into(), &[]);
+        manager.call("_sync_notification_queue", &[]);
 
         // VERIFY: Validate consistency
         let consistency = validate_db_os_consistency(&mut mock);
@@ -548,7 +540,7 @@ mod local_notification_queue_tests {
         let mut manager = setup_notifications_manager_with_mock(&mock);
 
         // Use actual current time
-        let time = godot::engine::Time::singleton();
+        let time = godot::classes::Time::singleton();
         let current_time = time.get_unix_time_from_system() as i64;
         let base_timestamp = current_time - 5000; // Past time for expired
 
@@ -557,7 +549,7 @@ mod local_notification_queue_tests {
             let notif_id = format!("expired_{}", i);
             let title = format!("Expired {}", i);
             mock.call(
-                "db_insert_notification".into(),
+                "db_insert_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -576,7 +568,7 @@ mod local_notification_queue_tests {
             let title = format!("Scheduled {}", i);
             let trigger_time = current_time + ((i + 1) * 100);
             mock.call(
-                "db_insert_notification".into(),
+                "db_insert_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -588,7 +580,7 @@ mod local_notification_queue_tests {
                 ],
             );
             mock.call(
-                "os_schedule_notification".into(),
+                "os_schedule_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -604,7 +596,7 @@ mod local_notification_queue_tests {
             let title = format!("Pending {}", i);
             let trigger_time = current_time + ((20 + i + 1) * 100);
             mock.call(
-                "db_insert_notification".into(),
+                "db_insert_notification",
                 &[
                     Variant::from(notif_id.as_str()),
                     Variant::from(title.as_str()),
@@ -618,16 +610,13 @@ mod local_notification_queue_tests {
         }
 
         // ACTION: Sync
-        manager.call("_sync_notification_queue".into(), &[]);
+        manager.call("_sync_notification_queue", &[]);
 
         // VERIFY
         // 1. No expired should remain
         let where_clause = format!("trigger_timestamp <= {}", current_time);
         let expired_remaining: i64 = mock
-            .call(
-                "db_count_notifications".into(),
-                &[Variant::from(where_clause)],
-            )
+            .call("db_count_notifications", &[Variant::from(where_clause)])
             .to::<i64>();
         assert_eq!(expired_remaining, 0, "All expired should be removed");
 
@@ -646,11 +635,9 @@ mod local_notification_queue_tests {
         let mut all_pending_scheduled = true;
         for i in 0..4 {
             let notif_id = format!("pending_{}", i);
-            let notif_variant = mock.call(
-                "db_get_notification".into(),
-                &[Variant::from(notif_id.as_str())],
-            );
-            let notif = notif_variant.to::<Dictionary>();
+            let notif_variant =
+                mock.call("db_get_notification", &[Variant::from(notif_id.as_str())]);
+            let notif = notif_variant.to::<VarDictionary>();
             if let Some(is_scheduled_variant) = notif.get("is_scheduled") {
                 let is_scheduled = is_scheduled_variant.to::<i64>();
                 if is_scheduled != 1 {
@@ -675,16 +662,14 @@ mod local_notification_queue_tests {
     }
 
     /// Validate that DB and OS states are consistent
-    fn validate_db_os_consistency(mock: &mut Gd<godot::engine::RefCounted>) -> ConsistencyResult {
-        let state = mock
-            .call("get_database_state".into(), &[])
-            .to::<Dictionary>();
+    fn validate_db_os_consistency(mock: &mut Gd<godot::classes::RefCounted>) -> ConsistencyResult {
+        let state = mock.call("get_database_state", &[]).to::<VarDictionary>();
 
         // Get counts without detailed iteration to avoid type conversion panics
         let os_count = state.get("os_scheduled_count").unwrap().to::<i64>();
         let db_scheduled_count: i64 = mock
             .call(
-                "db_count_notifications".into(),
+                "db_count_notifications",
                 &[Variant::from("is_scheduled = 1")],
             )
             .to::<i64>();
