@@ -128,6 +128,20 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material
                             .set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
 
+                        // Apply UV offset/tiling from main texture (only main texture supports this)
+                        if let Some(texture) = &unlit.texture {
+                            godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                                texture.offset.0.x,
+                                texture.offset.0.y,
+                                0.0,
+                            ));
+                            godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                                texture.tiling.0.x,
+                                texture.tiling.0.y,
+                                1.0,
+                            ));
+                        }
+
                         // Handle transparency for unlit materials (auto-detect)
                         if unlit.diffuse_color.0.a < 1.0 || unlit.texture.is_some() {
                             godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
@@ -151,6 +165,20 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot());
+
+                        // Apply UV offset/tiling from main texture (only main texture supports this)
+                        if let Some(texture) = &pbr.texture {
+                            godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                                texture.offset.0.x,
+                                texture.offset.0.y,
+                                0.0,
+                            ));
+                            godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                                texture.tiling.0.x,
+                                texture.tiling.0.y,
+                                1.0,
+                            ));
+                        }
 
                         // Handle transparency mode
                         match pbr.transparency_mode {
