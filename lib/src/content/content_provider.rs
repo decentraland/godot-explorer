@@ -323,10 +323,7 @@ impl ContentProvider {
             Some(hash) => hash.clone(),
             None => {
                 // Emit error signal
-                let error_msg = format!(
-                    "File not found in content mapping: {}",
-                    file_path_str
-                );
+                let error_msg = format!("File not found in content mapping: {}", file_path_str);
                 self.base_mut().emit_signal(
                     "scene_gltf_error",
                     &[
@@ -643,7 +640,6 @@ impl ContentProvider {
         }
 
         tracing::debug!("Wearable cache MISS: {} - loading", file_hash);
-        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();

@@ -408,7 +408,8 @@ impl AvatarScene {
             self.last_position_index.remove(&alias);
 
             // Remove from tree first, then queue_free (correct order)
-            self.base_mut().remove_child(&avatar.clone().upcast::<Node>());
+            self.base_mut()
+                .remove_child(&avatar.clone().upcast::<Node>());
             avatar.queue_free();
 
             // Push dirty state in all the scenes
