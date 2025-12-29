@@ -3,23 +3,33 @@
 ## Orchestrates the full benchmark flow through all scenes without modifying production code.
 ## This controller manages scene transitions, metric collection, and report generation.
 ##
-## Flow: Terms → Lobby → Menu → Explorer (Goerli) → Explorer (Genesis) → Explorer (Goerli cleanup)
+## Flow: Terms → Lobby → Menu → Explorer (Goerli x3 / Genesis x3 alternating)
 
 extends Node
 
-# Benchmark configuration
+# Benchmark configuration - alternating between Goerli and Genesis to stress test scene loading/unloading
+const GOERLI_PLAZA = {
+	"name": "Goerli Plaza",
+	"pos": Vector2i(72, -10),
+	"realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+}
+
+const GENESIS_PLAZA = {
+	"name": "Genesis Plaza",
+	"pos": Vector2i(0, 0),
+	"realm": "https://realm-provider-ea.decentraland.org/main"
+}
+
 var benchmark_locations = [
-	{
-		"name": "Goerli Plaza",
-		"pos": Vector2i(72, -10),
-		"realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
-	},
-	{
-		"name": "Genesis Plaza",
-		"pos": Vector2i(0, 0),
-		"realm": "https://realm-provider-ea.decentraland.org/main"
-	},
-	#{"name": "Goerli Plaza (Cleanup Test)", "pos": Vector2i(72, -10), "realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"}
+	# Round 1
+	{"name": "Goerli Plaza", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
+	{"name": "Genesis Plaza", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
+	# Round 2
+	{"name": "Goerli Plaza Second", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
+	{"name": "Genesis Plaza Second", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
+	# Round 3
+	{"name": "Goerli Plaza Third", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
+	{"name": "Genesis Plaza Third", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
 ]
 
 var current_location_index = 0
@@ -221,7 +231,7 @@ func handle_explorer_scene(_scene):
 		log_message("✓ Moving to next location: %s at %s" % [next_loc.name, next_loc.pos])
 		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		current_stage = ""  # Reset to allow re-handling after teleport
-		await get_tree().create_timer(2.0).timeout
+		await get_tree().create_timer(4.0).timeout
 		Global.teleport_to(next_loc.pos, next_loc.realm)
 	else:
 		# All locations tested - finalize

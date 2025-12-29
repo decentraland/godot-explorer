@@ -21,11 +21,11 @@ var places = {
 
 func populate_menu(menu: PopupMenu, id: int):
 	menu.add_item("Run Benchmark", id)
-
-	if Global.cli.dcl_benchmark or Global.cli.benchmark_report:
-		print("Running Benchmark...")
-		await execute()
-		plugin.get_editor_interface().get_editor_main_screen().get_tree().quit()
+	if Global.cli != null:
+		if Global.cli.dcl_benchmark or Global.cli.benchmark_report:
+			print("Running Benchmark...")
+			await execute()
+			plugin.get_editor_interface().get_editor_main_screen().get_tree().quit()
 
 
 func execute():
