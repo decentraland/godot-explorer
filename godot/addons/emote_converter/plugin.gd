@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-const EMOTES_PATH = "res://assets/no-export/emotes/"
+const EMOTES_PATH = "res://assets/no-export/emote_actions/"
 const ANIMATIONS_OUTPUT_PATH = "res://assets/animations/emotes/"
 const LIBRARIES_OUTPUT_PATH = "res://assets/animations/"
 

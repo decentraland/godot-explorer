@@ -671,13 +671,7 @@ func _async_refresh_equipped_items() -> void:
 				emote_item.emote_pressed.connect(_on_emote_pressed)
 				emote_item.stop_emote.connect(_on_stop_emote)
 			else:
-				if Emotes.is_emote_default(emote.urn):
-					var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
-					h_flow_container_equipped_wearables.add_child(emote_item)
-					emote_item.button_group = equipped_button_group
-					emote_item.set_base_emote(emote.urn)
-					emote_item.emote_pressed.connect(_on_emote_pressed)
-					emote_item.stop_emote.connect(_on_stop_emote)
+				printerr("Error getting emote: ", emote.urn)
 
 	else:
 		printerr("Error getting emotes")

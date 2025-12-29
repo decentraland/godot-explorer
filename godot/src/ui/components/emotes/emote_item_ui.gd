@@ -45,23 +45,16 @@ var inside = false
 @onready var texture_rect_pressed = %Pressed
 
 
-func async_load_from_urn(_emote_urn: String, index: int = -1):
+func async_load_from_urn(_emote_urn: String, _index: int = -1):
 	emote_urn = _emote_urn
 
-	if Emotes.is_emote_default(emote_urn):
-		emote_name = Emotes.DEFAULT_EMOTE_NAMES[emote_urn]
-		rarity = Wearables.ItemRarity.COMMON
-		picture = load("res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urn)
-	else:
-		await WearableRequest.async_fetch_emote(emote_urn)
-		var emote_data := Global.content_provider.get_wearable(emote_urn)
-		if emote_data == null:
-			# Fallback to default emote
-			printerr("Failed to get emote data", emote_urn)
-			await async_load_from_urn(Emotes.DEFAULT_EMOTE_NAMES.keys()[0], index)
-			return
+	await WearableRequest.async_fetch_emote(emote_urn)
+	var emote_data := Global.content_provider.get_wearable(emote_urn)
+	if emote_data == null:
+		printerr("Failed to get emote data: ", emote_urn)
+		return
 
-		await async_load_from_entity(emote_data)
+	await async_load_from_entity(emote_data)
 
 
 func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
