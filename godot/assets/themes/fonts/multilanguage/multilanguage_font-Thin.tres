@@ -1,7 +1,8 @@
-[gd_resource type="FontVariation" load_steps=4 format=3 uid="uid://p563o786th6p"]
+[gd_resource type="FontVariation" load_steps=5 format=3 uid="uid://p563o786th6p"]
 
 [ext_resource type="FontFile" uid="uid://dt02jk7namyoa" path="res://assets/themes/fonts/inter/Inter-Thin.ttf" id="1_d4p8c"]
 [ext_resource type="FontFile" uid="uid://dfx6banyqu12e" path="res://assets/themes/fonts/nato_sc/NotoSansSC-VariableFont_wght.ttf" id="2_wkovr"]
+[ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="3_asba1"]
 
 [sub_resource type="FontVariation" id="FontVariation_wkovr"]
 base_font = ExtResource("2_wkovr")
@@ -10,5 +11,5 @@ variation_opentype = {
 }
 
 [resource]
-fallbacks = Array[Font]([SubResource("FontVariation_wkovr")])
+fallbacks = Array[Font]([SubResource("FontVariation_wkovr"), ExtResource("3_asba1")])
 base_font = ExtResource("1_d4p8c")

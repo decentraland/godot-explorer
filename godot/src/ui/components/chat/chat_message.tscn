@@ -1,10 +1,12 @@
-[gd_scene load_steps=12 format=3 uid="uid://c8i3cvso5yx7n"]
+[gd_scene load_steps=14 format=3 uid="uid://c8i3cvso5yx7n"]
 
 [ext_resource type="Script" uid="uid://b0g05gunsfh4u" path="res://src/ui/components/chat/chat_message.gd" id="1_ppxi6"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="2_gw0bh"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_gw0bh"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="3_qhmmi"]
+[ext_resource type="FontVariation" uid="uid://btl87w5jx2niu" path="res://assets/themes/fonts/multilanguage/multilanguage_font-Regular.tres" id="5_q5i5r"]
 [ext_resource type="FontFile" uid="uid://dpxpwjk8ilqos" path="res://assets/themes/fonts/lato_family/Lato-Regular.ttf" id="5_qhmmi"]
+[ext_resource type="FontVariation" uid="uid://8e6qohwgppej" path="res://assets/themes/fonts/multilanguage/multilanguage_font-Bold.tres" id="6_rb0rw"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qhmmi"]
 bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
@@ -13,11 +15,11 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q5i5r"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kjivd"]
 bg_color = Color(1, 1, 1, 0)
 
-[sub_resource type="Theme" id="Theme_rb0rw"]
-LinkButton/styles/normal = SubResource("StyleBoxFlat_q5i5r")
+[sub_resource type="Theme" id="Theme_pb0jp"]
+LinkButton/styles/normal = SubResource("StyleBoxFlat_kjivd")
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fq752"]
 bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
@@ -26,11 +28,11 @@ corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kjivd"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h5jj7"]
 bg_color = Color(1, 1, 1, 0)
 
-[sub_resource type="Theme" id="Theme_pb0jp"]
-LinkButton/styles/normal = SubResource("StyleBoxFlat_kjivd")
+[sub_resource type="Theme" id="Theme_a6tuv"]
+LinkButton/styles/normal = SubResource("StyleBoxFlat_h5jj7")
 
 [node name="ChatMessage" type="VBoxContainer"]
 offset_right = 237.0
@@ -139,8 +141,13 @@ expand_mode = 1
 [node name="RichTextLabel_Message" type="RichTextLabel" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer_Extended/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme = SubResource("Theme_rb0rw")
+theme = SubResource("Theme_pb0jp")
 theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("5_q5i5r")
+theme_override_fonts/bold_font = ExtResource("6_rb0rw")
+theme_override_fonts/bold_italics_font = ExtResource("6_rb0rw")
+theme_override_fonts/italics_font = ExtResource("5_q5i5r")
+theme_override_fonts/mono_font = ExtResource("5_q5i5r")
 theme_override_font_sizes/normal_font_size = 16
 theme_override_font_sizes/bold_font_size = 16
 theme_override_font_sizes/bold_italics_font_size = 16
@@ -207,8 +214,13 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme = SubResource("Theme_pb0jp")
+theme = SubResource("Theme_a6tuv")
 theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("5_q5i5r")
+theme_override_fonts/bold_font = ExtResource("6_rb0rw")
+theme_override_fonts/bold_italics_font = ExtResource("6_rb0rw")
+theme_override_fonts/italics_font = ExtResource("5_q5i5r")
+theme_override_fonts/mono_font = ExtResource("5_q5i5r")
 theme_override_font_sizes/normal_font_size = 16
 theme_override_font_sizes/bold_font_size = 16
 theme_override_font_sizes/bold_italics_font_size = 16
