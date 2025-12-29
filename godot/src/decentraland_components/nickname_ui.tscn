@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://d1i02k5nxmje6"]
+[gd_scene load_steps=7 format=3 uid="uid://d1i02k5nxmje6"]
 
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="1_8amxb"]
 [ext_resource type="Script" uid="uid://n63ru00fl7lr" path="res://src/decentraland_components/nickname_ui.gd" id="1_stx67"]
 [ext_resource type="PackedScene" uid="uid://bce2jth446t8i" path="res://src/decentraland_components/avatar/nickname_message_container.tscn" id="2_cu2t2"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="3_tj4hi"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_wgh2x"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wgo06"]
 bg_color = Color(0.129412, 0.129412, 0.129412, 1)
@@ -47,7 +48,7 @@ layout_mode = 2
 [node name="NicknameTag" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 0
 
 [node name="MicEnabled" type="MarginContainer" parent="MarginContainer/VBoxContainer/NicknameTag"]
 unique_name_in_owner = true
@@ -64,6 +65,7 @@ stretch_mode = 4
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 70
 text = "nickname"
 
@@ -77,6 +79,7 @@ layout_mode = 2
 [node name="HashTag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
+theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 70
 text = "#"
 
@@ -84,6 +87,7 @@ text = "#"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
+theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 70
 text = "xxxx"
 

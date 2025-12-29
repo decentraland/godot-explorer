@@ -8,7 +8,7 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
-use godot::prelude::*;
+use godot::{classes::Node, prelude::*};
 
 pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -27,12 +27,12 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             let new_value = new_value.value.clone();
 
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("NFTShape"));
+            let existing = node_3d.try_get_node_as::<Node>("NFTShape");
 
             if new_value.is_none() {
                 if let Some(mut nft_shape_node) = existing {
                     nft_shape_node.queue_free();
-                    node_3d.remove_child(nft_shape_node);
+                    node_3d.remove_child(&nft_shape_node);
                 }
             } else if let Some(new_value) = new_value {
                 let urn = new_value.urn.to_godot();
@@ -47,19 +47,19 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut nft_shape_3d = if let Some(nft_shape_3d) = existing {
                     nft_shape_3d
                 } else {
-                    let mut nft_shape_3d = godot::engine::load::<PackedScene>(
+                    let mut nft_shape_3d = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/nft_shape.tscn",
                     )
                     .instantiate()
                     .unwrap();
 
-                    nft_shape_3d.set_name(GString::from("NFTShape"));
-                    node_3d.add_child(nft_shape_3d.clone().upcast());
+                    nft_shape_3d.set_name("NFTShape");
+                    node_3d.add_child(&nft_shape_3d.clone().upcast::<Node>());
                     nft_shape_3d
                 };
 
                 nft_shape_3d.call(
-                    "async_load_nft".into(),
+                    "async_load_nft",
                     &[urn.to_variant(), style.to_variant(), color.to_variant()],
                 );
             }

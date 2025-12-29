@@ -20,7 +20,7 @@ impl TestRunnerSuite {
     #[func]
     fn run_all_tests(
         &mut self,
-        gdscript_tests: VariantArray,
+        gdscript_tests: VarArray,
         gdscript_file_count: i64,
         allow_focus: bool,
         scene_tree: Gd<Node>,
@@ -71,7 +71,7 @@ impl TestRunnerSuite {
         }
     }
 
-    fn run_gdscript_tests(&mut self, tests: VariantArray) -> Duration {
+    fn run_gdscript_tests(&mut self, tests: VarArray) -> Duration {
         let mut last_file = None;
         let mut extra_duration = Duration::new(0, 0);
 
@@ -82,7 +82,7 @@ impl TestRunnerSuite {
             print_test_pre(&test_case, test_file, &mut last_file, true);
             let result = test.call("run", &[]);
             // In case a test needs to disable error messages to ensure it runs properly.
-            godot::engine::Engine::singleton().set_print_error_messages(true);
+            godot::classes::Engine::singleton().set_print_error_messages(true);
 
             if let Some(duration) = get_execution_time(&test) {
                 extra_duration += duration;
@@ -212,9 +212,9 @@ fn print_test_pre(test_case: &str, test_file: String, last_file: &mut Option<Str
 
     print!("   -- {test_case} ... ");
     if flush {
-        // Flush in GDScript, because its own print may come sooner than Rust prints otherwise
-        // (strictly speaking, this can also happen from Rust, when Godot prints something. So far, it didn't though...
-        godot::private::flush_stdout();
+        // Flush stdout
+        use std::io::Write;
+        let _ = std::io::stdout().flush();
     }
 
     // State update for file-category-print

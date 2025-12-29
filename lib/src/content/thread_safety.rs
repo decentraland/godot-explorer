@@ -1,8 +1,4 @@
-use godot::{
-    builtin::{meta::ToGodot, Variant},
-    engine::Script,
-    obj::Gd,
-};
+use godot::{builtin::Variant, classes::Script, meta::ToGodot, obj::Gd};
 
 use crate::godot_classes::promise::Promise;
 
@@ -30,16 +26,13 @@ impl Drop for GodotSingleThreadSafety {
 // When this option is triggered (as false), be sure to not use async/await until you set it back to true
 // Following the same logic, do not exit of sync closure until you set it back to true
 pub fn set_thread_safety_checks_enabled(enabled: bool) {
-    let mut temp_script = godot::engine::load::<Script>("res://src/logic/thread_safety.gd");
-    temp_script.call(
-        "set_thread_safety_checks_enabled".into(),
-        &[enabled.to_variant()],
-    );
+    let mut temp_script = godot::tools::load::<Script>("res://src/logic/thread_safety.gd");
+    temp_script.call("set_thread_safety_checks_enabled", &[enabled.to_variant()]);
 }
 
 fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) -> bool {
     if let Some(mut promise) = get_promise() {
-        promise.call_deferred("reject".into(), &[reason.to_variant()]);
+        promise.call_deferred("reject", &[reason.to_variant()]);
         true
     } else {
         false
@@ -49,9 +42,9 @@ fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String)
 fn resolve_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, value: Option<Variant>) -> bool {
     if let Some(mut promise) = get_promise() {
         if let Some(value) = value {
-            promise.call_deferred("resolve_with_data".into(), &[value]);
+            promise.call_deferred("resolve_with_data", &[value]);
         } else {
-            promise.call_deferred("resolve".into(), &[]);
+            promise.call_deferred("resolve", &[]);
         }
         true
     } else {
