@@ -3,6 +3,7 @@
 [resource]
 resource_name = "sittingGround1"
 length = 2.0
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
