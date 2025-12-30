@@ -1,6 +1,6 @@
 use godot::prelude::*;
 
-use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat};
+use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarWireFormat};
 
 const AVATAR_EMOTE_SLOTS_COUNT: usize = 10;
 const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
@@ -197,15 +197,8 @@ impl DclAvatarWireFormat {
         self.inner.emotes = Some(emotes_vec);
     }
 
-    #[func]
-    fn set_snapshots(&mut self, face256: GString, body: GString) {
-        self.inner.snapshots = Some(AvatarSnapshots {
-            face256: face256.to_string(),
-            body: body.to_string(),
-            body_url: None,
-            face_url: None,
-        });
-    }
+    // ADR-290: set_snapshots removed - snapshots are no longer uploaded by clients.
+    // Profile images are served on-demand by the profile-images service.
 
     #[func]
     pub fn from_godot_dictionary(dictionary: VarDictionary) -> Gd<DclAvatarWireFormat> {

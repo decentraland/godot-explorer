@@ -316,39 +316,11 @@ func _on_wearable_filter_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat, profile: DclUserProfile):
-	snapshot_avatar_preview.reparent(get_tree().root)
-	snapshot_avatar_preview.set_position(get_tree().root.get_visible_rect().size)
-	snapshot_avatar_preview.show()
-
-	var cloned_avatar_preview: AvatarPreview = snapshot_avatar_preview
-	await cloned_avatar_preview.avatar.async_update_avatar_from_profile(profile)
-	cloned_avatar_preview.show_platform = false
-	cloned_avatar_preview.hide_name = true
-	cloned_avatar_preview.can_move = false
-	var face = await cloned_avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 25)
-	var body = await cloned_avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
-
-	var body_data: PackedByteArray = body.save_png_to_buffer()
-	var body_hash = DclHashing.hash_v1(body_data)
-	await PromiseUtils.async_awaiter(Global.content_provider.store_file(body_hash, body_data))
-
-	var face_data: PackedByteArray = face.save_png_to_buffer()
-	var face_hash = DclHashing.hash_v1(face_data)
-	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
-
-	new_mutable_avatar.set_snapshots(face_hash, body_hash)
-
-	snapshot_avatar_preview.reparent(self)
-	snapshot_avatar_preview.hide()
-
-
-func async_save_profile(generate_snapshots: bool = true):
+# ADR-290: Snapshots are no longer generated/uploaded by clients.
+# Profile images are now served on-demand by the profile-images service.
+func async_save_profile(_generate_snapshots: bool = true):
 	avatar_preview.avatar.emote_controller.stop_emote()
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
-
-	if generate_snapshots:
-		await async_prepare_snapshots(mutable_avatar, mutable_profile)
 
 	mutable_profile.set_avatar(mutable_avatar)
 
@@ -356,8 +328,8 @@ func async_save_profile(generate_snapshots: bool = true):
 	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
 	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
 
-	# Use the new profile service static method
-	await ProfileService.async_deploy_profile(mutable_profile, generate_snapshots)
+	# Use the new profile service static method (ADR-290: no snapshots uploaded)
+	await ProfileService.async_deploy_profile(mutable_profile)
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -467,9 +439,9 @@ func _on_color_picker_panel_hided():
 	skin_color_picker.set_pressed(false)
 
 
-# Save profile without snapshots (for non-visual changes like blocked/muted lists)
+# Save profile for non-visual changes like blocked/muted lists
 func async_save_profile_metadata_only():
-	await async_save_profile(false)
+	await async_save_profile()
 
 
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
@@ -526,5 +498,5 @@ func _on_blacklist_deploy_timer_timeout():
 	# Update the mutable profile with current blacklist before deploying
 	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
 	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
-	# Deploy without regenerating snapshots and without incrementing version for blacklist changes
-	ProfileService.async_deploy_profile_with_version_control(mutable_profile, false, false)
+	# Deploy without incrementing version for blacklist changes (ADR-290: no snapshots)
+	ProfileService.async_deploy_profile_with_version_control(mutable_profile, false)
