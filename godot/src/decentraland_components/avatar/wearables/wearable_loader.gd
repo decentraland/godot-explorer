@@ -12,6 +12,8 @@ var _pending_loads: Dictionary = {}
 var _completed_loads: Dictionary = {}
 # Tracks texture loads (still use promises)
 var _texture_promises: Array = []
+# Guard against concurrent load operations
+var _is_loading: bool = false
 
 
 func _init():
@@ -19,9 +21,23 @@ func _init():
 	Global.content_provider.wearable_gltf_error.connect(_on_wearable_error)
 
 
+## Cleanup signal connections. Call this when the loader is no longer needed.
+func cleanup():
+	if Global.content_provider:
+		if Global.content_provider.wearable_gltf_ready.is_connected(_on_wearable_ready):
+			Global.content_provider.wearable_gltf_ready.disconnect(_on_wearable_ready)
+		if Global.content_provider.wearable_gltf_error.is_connected(_on_wearable_error):
+			Global.content_provider.wearable_gltf_error.disconnect(_on_wearable_error)
+
+
 ## Load multiple wearables using signal-based loading.
 ## Returns Dictionary mapping file_hash -> scene_path
 func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictionary:
+	# Wait for any in-progress load to complete before starting a new one
+	if _is_loading:
+		await all_loads_complete
+
+	_is_loading = true
 	_pending_loads.clear()
 	_completed_loads.clear()
 	_texture_promises.clear()
@@ -81,6 +97,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 	if not _texture_promises.is_empty():
 		await PromiseUtils.async_all(_texture_promises)
 
+	_is_loading = false
 	return _completed_loads
 
 
@@ -114,12 +131,21 @@ func async_get_wearable_node(file_hash: String) -> Node3D:
 		status = ResourceLoader.load_threaded_get_status(scene_path)
 
 	if status != ResourceLoader.THREAD_LOAD_LOADED:
-		printerr("WearableLoader: threaded load failed for ", scene_path, " status: ", status)
+		if status == ResourceLoader.THREAD_LOAD_FAILED:
+			printerr("WearableLoader: threaded load FAILED for ", scene_path)
+		elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			printerr("WearableLoader: invalid resource at ", scene_path)
+		else:
+			printerr("WearableLoader: unexpected load status ", status, " for ", scene_path)
 		return null
 
 	var packed_scene = ResourceLoader.load_threaded_get(scene_path)
 	if packed_scene == null:
 		printerr("WearableLoader: loaded resource is null for ", scene_path)
+		return null
+
+	if not packed_scene is PackedScene:
+		printerr("WearableLoader: loaded resource is not a PackedScene: ", scene_path)
 		return null
 
 	return packed_scene.instantiate()

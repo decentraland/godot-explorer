@@ -198,44 +198,71 @@ func handle_menu_scene(_scene):
 # gdlint:ignore = async-function-name, unused-argument
 func handle_explorer_scene(_scene):
 	# Wait for loading to complete
-	log_message("✓ Waiting for Explorer to finish loading...")
-	await Global.loading_finished
+	await _wait_for_loading_complete()
 
 	# Wait for scene to stabilize
 	await get_tree().create_timer(5.0).timeout
 
-	# Collect metrics for current location
-	var current_pos = Global.get_explorer().parcel_position
-	var location_name = benchmark_locations[current_location_index].name
+	# Process all benchmark locations in a loop (don't rely on timer for re-detection)
+	while current_location_index < benchmark_locations.size():
+		# Collect metrics for current location
+		var current_pos = Global.get_explorer().parcel_position
+		var location_name = benchmark_locations[current_location_index].name
 
-	log_message(
-		"✓ Explorer: Collecting benchmark at " + str(current_pos) + " (" + location_name + ")..."
-	)
+		log_message(
+			"✓ Explorer: Collecting benchmark at %s (%s)..." % [str(current_pos), location_name]
+		)
 
-	await collect_explorer_metrics(current_pos, location_name)
+		await collect_explorer_metrics(current_pos, location_name)
 
-	log_message(
-		"✓ Explorer benchmark collected at " + str(current_pos) + " (" + location_name + ")"
-	)
+		log_message("✓ Explorer benchmark collected at %s (%s)" % [str(current_pos), location_name])
 
-	# Mark stage as complete
+		# Move to next location
+		current_location_index += 1
+
+		if current_location_index < benchmark_locations.size():
+			# Teleport to next location
+			var next_loc = benchmark_locations[current_location_index]
+			log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			log_message("✓ Moving to next location: %s at %s" % [next_loc.name, next_loc.pos])
+			log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+			# Wait before teleport
+			await get_tree().create_timer(4.0).timeout
+
+			# Teleport and wait for loading to complete
+			Global.teleport_to(next_loc.pos, next_loc.realm)
+			await _wait_for_loading_complete()
+
+			# Wait for scene to stabilize
+			await get_tree().create_timer(5.0).timeout
+
+	# Mark stage as complete (prevents re-entry from timer)
 	current_stage = "explorer"
 
-	# Check if more locations to test
-	current_location_index += 1
+	# All locations tested - finalize
+	finalize_benchmark()
 
-	if current_location_index < benchmark_locations.size():
-		# Teleport to next location - reset stage to allow re-handling
-		var next_loc = benchmark_locations[current_location_index]
-		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		log_message("✓ Moving to next location: %s at %s" % [next_loc.name, next_loc.pos])
-		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		current_stage = ""  # Reset to allow re-handling after teleport
-		await get_tree().create_timer(4.0).timeout
-		Global.teleport_to(next_loc.pos, next_loc.realm)
+
+## Wait for loading to complete (with smart detection)
+## Handles cases where loading screen may not be shown
+# gdlint:ignore = async-function-name
+func _wait_for_loading_complete():
+	log_message("✓ Waiting for Explorer to finish loading...")
+
+	# Check if loading screen is currently visible
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer):
+		return
+
+	var loading_ui = explorer.get_node_or_null("CanvasLayer/LoadingScreen")
+	if loading_ui != null and loading_ui.visible:
+		# Loading screen is visible, wait for it to complete
+		await Global.loading_finished
 	else:
-		# All locations tested - finalize
-		finalize_benchmark()
+		# Loading screen not visible - wait a bit for scenes to stabilize
+		# This handles cases where scenes were already loaded or loading was very fast
+		await get_tree().create_timer(2.0).timeout
 
 
 ## Collect metrics for UI scenes (Terms, Lobby, Menu)

@@ -13,6 +13,8 @@ var _pending_loads: Dictionary = {}
 var _completed_loads: Dictionary = {}
 # Tracks audio promises (still use promises)
 var _audio_promises: Array = []
+# Guard against concurrent load operations
+var _is_loading: bool = false
 
 
 func _init():
@@ -20,9 +22,23 @@ func _init():
 	Global.content_provider.emote_gltf_error.connect(_on_emote_error)
 
 
+## Cleanup signal connections. Call this when the loader is no longer needed.
+func cleanup():
+	if Global.content_provider:
+		if Global.content_provider.emote_gltf_ready.is_connected(_on_emote_ready):
+			Global.content_provider.emote_gltf_ready.disconnect(_on_emote_ready)
+		if Global.content_provider.emote_gltf_error.is_connected(_on_emote_error):
+			Global.content_provider.emote_gltf_error.disconnect(_on_emote_error)
+
+
 ## Load a single emote using signal-based loading.
 ## Returns the scene_path if successful, empty string on failure.
 func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
+	# Wait for any in-progress load to complete before starting a new one
+	if _is_loading:
+		await all_loads_complete
+
+	_is_loading = true
 	_pending_loads.clear()
 	_completed_loads.clear()
 	_audio_promises.clear()
@@ -30,6 +46,7 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 	var emote = Global.content_provider.get_wearable(emote_urn)
 	if emote == null:
 		printerr("EmoteLoader: emote ", emote_urn, " is null")
+		_is_loading = false
 		return ""
 
 	var file_name = emote.get_representation_main_file(body_shape_id)
@@ -37,12 +54,14 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 		printerr(
 			"EmoteLoader: no representation for ", emote_urn, " with body shape ", body_shape_id
 		)
+		_is_loading = false
 		return ""
 
 	var content_mapping = emote.get_content_mapping()
 	var file_hash = content_mapping.get_hash(file_name)
 	if file_hash.is_empty():
 		printerr("EmoteLoader: empty file_hash for ", emote_urn)
+		_is_loading = false
 		return ""
 
 	# Load audio files via promises
@@ -61,6 +80,7 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 		if not _audio_promises.is_empty():
 			await PromiseUtils.async_all(_audio_promises)
 
+		_is_loading = false
 		return scene_path
 
 	# Check if already loading
@@ -79,17 +99,24 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 	if not _audio_promises.is_empty():
 		await PromiseUtils.async_all(_audio_promises)
 
+	_is_loading = false
 	return _completed_loads.get(file_hash, "")
 
 
 ## Load a scene emote (from SDK scene, not wearable).
 ## Returns the scene_path if successful, empty string on failure.
 func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
+	# Wait for any in-progress load to complete before starting a new one
+	if _is_loading:
+		await all_loads_complete
+
+	_is_loading = true
 	_pending_loads.clear()
 	_completed_loads.clear()
 
 	# Check if already cached on disk
 	if Global.content_provider.is_emote_cached(glb_hash):
+		_is_loading = false
 		return Global.content_provider.get_emote_cache_path(glb_hash)
 
 	# Check if already loading
@@ -107,6 +134,7 @@ func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
 	if not _pending_loads.is_empty():
 		await all_loads_complete
 
+	_is_loading = false
 	return _completed_loads.get(glb_hash, "")
 
 
@@ -141,12 +169,21 @@ func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
 		status = ResourceLoader.load_threaded_get_status(scene_path)
 
 	if status != ResourceLoader.THREAD_LOAD_LOADED:
-		printerr("EmoteLoader: threaded load failed for ", scene_path, " status: ", status)
+		if status == ResourceLoader.THREAD_LOAD_FAILED:
+			printerr("EmoteLoader: threaded load FAILED for ", scene_path)
+		elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			printerr("EmoteLoader: invalid resource at ", scene_path)
+		else:
+			printerr("EmoteLoader: unexpected load status ", status, " for ", scene_path)
 		return null
 
 	var packed_scene = ResourceLoader.load_threaded_get(scene_path)
 	if packed_scene == null:
 		printerr("EmoteLoader: loaded resource is null for ", scene_path)
+		return null
+
+	if not packed_scene is PackedScene:
+		printerr("EmoteLoader: loaded resource is not a PackedScene: ", scene_path)
 		return null
 
 	# Use ContentProvider's extract_emote_from_scene to extract animations from loaded scene
