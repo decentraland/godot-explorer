@@ -438,7 +438,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<(), anyhow::Error> {
+pub fn install(skip_download_templates: bool, platforms: &[String], no_strip: bool) -> Result<(), anyhow::Error> {
     print_section("Installing Dependencies");
 
     let platform = get_platform_info();
@@ -565,7 +565,7 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     };
 
     if !skip_download_templates {
-        prepare_templates(platforms)?;
+        prepare_templates(platforms, no_strip)?;
     }
 
     print_message(MessageType::Success, "Installation complete!");

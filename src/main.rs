@@ -137,9 +137,16 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(true)
                         .multiple_values(true),
                 )
+                .arg(
+                    Arg::new("no-strip")
+                        .long("no-strip")
+                        .help("skip stripping debug symbols from iOS templates (needed for CI to generate Sentry dSYMs)")
+                        .takes_value(false),
+                )
         )
         .subcommand(Command::new("update-protocol"))
         .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
+        .subcommand(Command::new("strip-ios-templates").about("Strip debug symbols from installed iOS templates (macOS only)"))
         .subcommand(
             Command::new("compare-image-folders")
                 .arg(
@@ -372,8 +379,9 @@ fn main() -> Result<(), anyhow::Error> {
                 .unwrap_or_default();
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
+            let no_strip = sm.is_present("no-strip");
             // Call your install function and pass the templates
-            let result = install_dependency::install(no_templates, &platforms);
+            let result = install_dependency::install(no_templates, &platforms, no_strip);
             if result.is_ok() {
                 dependencies::suggest_next_steps("install", None);
             }
@@ -381,6 +389,7 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("clean-cache", _) => clear_cache_dir().map_err(|e| anyhow::anyhow!(e)),
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
+        ("strip-ios-templates", _) => export::strip_ios_templates(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
             let result_folder = Path::new(sm.value_of("result").unwrap());

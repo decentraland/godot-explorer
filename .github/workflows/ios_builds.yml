@@ -62,7 +62,7 @@ jobs:
 
       # Build section
       - name: Cargo install
-        run: cargo run -- install --targets ios
+        run: cargo run -- install --targets ios --no-strip
 
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
