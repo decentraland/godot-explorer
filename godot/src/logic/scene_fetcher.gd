@@ -376,9 +376,6 @@ func _on_realm_changed():
 	# Use floating islands mode (single scene) by default
 	# Only use dynamic city mode (radius-based) in test/renderer modes
 	var should_load_city_pointers = not is_using_floating_islands()
-	var global_scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get(
-		"globalScenesUrn", []
-	)
 
 	scene_entity_coordinator.config(
 		content_base_url + "entities/active", content_base_url, should_load_city_pointers
