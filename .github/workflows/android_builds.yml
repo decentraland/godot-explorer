@@ -143,16 +143,27 @@ jobs:
             # Install sentry-cli
             curl -sL https://sentry.io/get-cli/ | bash
 
-            # Upload debug symbols
-            sentry-cli upload-dif \
-              --org ${{ secrets.SENTRY_ORG }} \
-              --project ${{ secrets.SENTRY_PROJECT }} \
-              --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
-              --include-sources \
-              --wait \
-              godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip
+            # Upload libdclgodot.so directly (contains embedded debug symbols)
+            DEBUG_SYMBOLS_PATH="lib/target/libdclgodot_android/libdclgodot.so"
 
-            echo "Debug symbols uploaded successfully to release: $RELEASE_NAME"
+            if [ -f "$DEBUG_SYMBOLS_PATH" ]; then
+              echo "Uploading debug symbols from: $DEBUG_SYMBOLS_PATH"
+              file "$DEBUG_SYMBOLS_PATH"
+              ls -lh "$DEBUG_SYMBOLS_PATH"
+
+              sentry-cli upload-dif \
+                --org ${{ secrets.SENTRY_ORG }} \
+                --project ${{ secrets.SENTRY_PROJECT }} \
+                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+                --include-sources \
+                --wait \
+                "$DEBUG_SYMBOLS_PATH"
+
+              echo "Debug symbols uploaded successfully to release: $RELEASE_NAME"
+            else
+              echo "⚠️  libdclgodot.so not found at $DEBUG_SYMBOLS_PATH"
+              ls -la lib/target/libdclgodot_android/ 2>/dev/null || true
+            fi
           else
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
           fi
