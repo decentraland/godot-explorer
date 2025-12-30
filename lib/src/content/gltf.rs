@@ -343,6 +343,37 @@ fn _duplicate_animation_resources(gltf_node: Gd<Node>) {
     }
 }
 
+/// Strip Blender duplicate suffixes from bone names
+///
+/// Blender adds `_001`, `_002`, etc. suffixes when objects have duplicate names.
+/// These need to be stripped so animation tracks can target the actual skeleton bones.
+///
+/// Pattern: `_0XX` where XX are digits (e.g., `_001`, `_012`, `_099`)
+/// This does NOT strip valid bone suffixes like `Index1`, `Thumb2` (no underscore before digit)
+///
+/// Examples:
+/// - `Avatar_LeftLeg_001` → `Avatar_LeftLeg`
+/// - `Avatar_RightFoot_012` → `Avatar_RightFoot`
+/// - `Avatar_LeftHandIndex1` → `Avatar_LeftHandIndex1` (unchanged - valid bone name)
+fn strip_blender_suffix(name: &str) -> String {
+    // Pattern: ends with underscore + 0 + two more digits
+    // e.g., _001, _002, _012, _099
+    if name.len() >= 4 {
+        let bytes = name.as_bytes();
+        let len = bytes.len();
+
+        // Check if ends with _0XX pattern
+        if bytes[len - 4] == b'_'
+            && bytes[len - 3] == b'0'
+            && bytes[len - 2].is_ascii_digit()
+            && bytes[len - 1].is_ascii_digit()
+        {
+            return name[..len - 4].to_string();
+        }
+    }
+    name.to_string()
+}
+
 /// Get the last 16 alphanumeric characters from a hash (used for animation naming)
 pub fn get_last_16_alphanumeric(input: &str) -> String {
     let alphanumeric: String = input
@@ -444,43 +475,83 @@ pub fn process_emote_animations(
             anim.set_name(&format!("{anim_sufix_from_hash}_prop"))
         }
 
+        // First pass: identify tracks that reference orphan Blender duplicate bones
+        // These tracks have animation data authored for a wrong bone hierarchy
+        // and will cause incorrect animations if applied to the real skeleton.
+        //
+        // We identify two types of problematic tracks:
+        // 1. Direct orphan tracks: "Armature/Avatar_LeftLeg_001" (direct child with suffix)
+        // 2. Descendants of orphans: "Armature/Avatar_LeftLeg_001/Avatar_LeftFoot"
+        //    (these have animation data in the wrong coordinate space)
+        let mut orphan_tracks: Vec<i32> = Vec::new();
+
         for track_idx in 0..anim.get_track_count() {
             let track_path = anim.track_get_path(track_idx).to_string();
-            let track_type = anim.track_get_type(track_idx);
 
-            // Debug: log foot/leg related tracks with full details
-            let is_foot_track = track_path.to_lowercase().contains("foot")
-                || track_path.to_lowercase().contains("leg")
-                || track_path.to_lowercase().contains("ankle");
-
-            if is_foot_track {
-                tracing::info!(
-                    "FOOT TRACK [{}]: path='{}', type={:?}",
-                    track_idx,
-                    track_path,
-                    track_type
-                );
+            // Skip tracks that already have Skeleton3D or are prop tracks
+            if track_path.contains("Skeleton3D") || track_path.contains("Armature_Prop") {
+                continue;
             }
+
+            let parts: Vec<&str> = track_path.split('/').collect();
+
+            // Check if ANY part of the path (except the last bone) has a Blender suffix
+            // This means the track is either an orphan or a child of an orphan
+            let mut has_orphan_ancestor = false;
+            for (i, part) in parts.iter().enumerate() {
+                // Skip "Armature" prefix and the last part (which is the target bone)
+                if i == 0 || i == parts.len() - 1 {
+                    continue;
+                }
+                // Check if this intermediate path part has a Blender suffix
+                let stripped = strip_blender_suffix(part);
+                if stripped != *part {
+                    has_orphan_ancestor = true;
+                    break;
+                }
+            }
+
+            // Also check for direct orphan: "Armature/BoneName_0XX" (2 parts)
+            if parts.len() == 2 && parts[0] == "Armature" {
+                let bone_name = parts[1];
+                let stripped = strip_blender_suffix(bone_name);
+                if stripped != bone_name {
+                    has_orphan_ancestor = true;
+                }
+            }
+
+            if has_orphan_ancestor {
+                tracing::debug!(
+                    "Removing orphan hierarchy track [{}]: '{}' (has Blender duplicate ancestor)",
+                    track_idx,
+                    track_path
+                );
+                orphan_tracks.push(track_idx);
+            }
+        }
+
+        // Remove orphan tracks (in reverse order to maintain indices)
+        orphan_tracks.sort();
+        orphan_tracks.reverse();
+        for track_idx in &orphan_tracks {
+            tracing::debug!("Removing orphan track {}", track_idx);
+            anim.remove_track(*track_idx);
+        }
+
+        // Second pass: remap remaining tracks
+        for track_idx in 0..anim.get_track_count() {
+            let track_path = anim.track_get_path(track_idx).to_string();
 
             if !track_path.contains("Skeleton3D") {
                 let last_track_name = track_path.split('/').next_back().unwrap_or_default();
-                let new_track_path = format!("Armature/Skeleton3D:{}", last_track_name);
 
-                if is_foot_track {
-                    tracing::info!(
-                        "FOOT REMAP: '{}' -> '{}' (bone: '{}')",
-                        track_path,
-                        new_track_path,
-                        last_track_name
-                    );
-                }
+                // Strip Blender duplicate suffixes from the BONE NAME only
+                // This handles paths like "Armature/Avatar_LeftLeg_001/Avatar_LeftFoot"
+                // where the parent has a suffix but the bone name itself is correct
+                let bone_name = strip_blender_suffix(last_track_name);
 
+                let new_track_path = format!("Armature/Skeleton3D:{}", bone_name);
                 anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
-            } else if is_foot_track {
-                tracing::info!(
-                    "FOOT SKIP (already has Skeleton3D): '{}'",
-                    track_path
-                );
             }
 
             if track_path.contains("Armature_Prop/Skeleton3D") {
