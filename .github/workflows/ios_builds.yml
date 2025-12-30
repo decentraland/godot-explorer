@@ -52,25 +52,25 @@ jobs:
 
       # Build section
       - name: Cargo install
-        timeout-minutes: 4
+        timeout-minutes: 8
         run: cargo run -- install --targets ios
 
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
 
       - name: Build MacOS
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: cargo run -- build --release ${{ env.PROD_FLAG }}
 
       - name: Build iOS
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
       - name: Export
-        timeout-minutes: 2
+        timeout-minutes: 5
         run: cargo run -- export --target ios
 
       # Deploy to godot-mobile-deploy-pipeline
@@ -89,7 +89,7 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
       - name: Deploy iOS exports to mobile deploy pipeline
-        timeout-minutes: 6
+        timeout-minutes: 10
         run: |
           # Use PR-{number}-{branch} format for PR builds, otherwise use the ref name
           if [ -n "${{ github.event.inputs.pr_number }}" ]; then
