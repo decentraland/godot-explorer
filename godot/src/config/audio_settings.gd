@@ -49,10 +49,4 @@ static func apply_music_volume_settings():
 
 
 static func apply_mic_amplification_settings():
-	var volume_db = -10 + (34.0 * (float(Global.get_config().audio_mic_amplification) / 100.0))
-
-	var bus_index := AudioServer.get_bus_index("Capture")
-	for i in range(AudioServer.get_bus_effect_count(bus_index)):
-		var effect = AudioServer.get_bus_effect(bus_index, i)
-		if effect is AudioEffectAmplify:
-			effect.volume_db = volume_db
+	pass

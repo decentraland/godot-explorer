@@ -12,7 +12,7 @@ var walk_speed = 1.5
 var jog_speed = 8.0
 var run_speed = 11.0
 var gravity := 10.0
-var jump_height := 1.0
+var jump_height := 1.8
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
 var jump_time := 0.0
@@ -24,8 +24,6 @@ var current_direction: Vector3 = Vector3()
 
 var time_falling := 0.0
 var current_profile_version: int = -1
-var forced_position: Vector3
-var has_forced_position: bool = false
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -33,6 +31,7 @@ var has_forced_position: bool = false
 @onready var outline_system: OutlineSystem = $Mount/Camera3D/OutlineSystem
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
+@onready var stuck_detector := $StuckDetector
 
 
 func to_xz(pos: Vector3) -> Vector2:
@@ -135,6 +134,10 @@ func _ready():
 	if own_click_area:
 		own_click_area.queue_free()
 
+	# Setup trigger detection for local player's avatar
+	# entity_id=1 (SceneEntityId::PLAYER)
+	avatar.setup_trigger_detection(1)
+
 
 func _on_player_profile_changed(new_profile: DclUserProfile):
 	var new_version = new_profile.get_profile_version()
@@ -142,16 +145,6 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 	if new_version != current_profile_version:
 		current_profile_version = new_version
 		avatar.async_update_avatar_from_profile(new_profile)
-
-
-func _on_param_changed(_param):
-	# Disabled for now
-	# TODO: make the panel to change these values
-	# walk_speed = Global.get_config().walk_velocity
-	# run_speed = Global.get_config().run_velocity
-	# gravity = Global.get_config().gravity
-	# jump_velocity_0 = Global.get_config().jump_velocity
-	pass
 
 
 func clamp_camera_rotation():
@@ -228,10 +221,6 @@ func _physics_process(dt: float) -> void:
 	last_position = global_position
 	move_and_slide()
 	position.y = max(position.y, 0)
-
-	if has_forced_position:
-		global_position = forced_position
-		velocity = Vector3.ZERO
 
 
 func avatar_look_at(target_position: Vector3):
@@ -332,20 +321,8 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
-func async_move_to(target: Vector3):
-	# Clear any previous forced position state
-	has_forced_position = false
-
-	var original_target = target
+func move_to(target: Vector3):
 	global_position = target
 	velocity = Vector3.ZERO
-	await get_tree().physics_frame
-
-	# If physics engine pushed us out due to collision, lock at original position to stay stuck
-	# The player will remain stuck until either:
-	# 1. The collider that caused the stuck state is removed/moves away
-	# 2. async_move_to is called again with a new position
-	if global_position.distance_to(original_target) > 0.01:
-		forced_position = original_target
-		has_forced_position = true
-		global_position = original_target
+	if stuck_detector:
+		stuck_detector.check_stuck()

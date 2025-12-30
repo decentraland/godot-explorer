@@ -8,6 +8,10 @@
 
 config_version=5
 
+[animation]
+
+warnings/check_invalid_track_paths=false
+
 [application]
 
 config/name="Decentraland"
@@ -25,8 +29,6 @@ boot_splash/minimum_display_time=300
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
-XRToolsUserSettings="*res://addons/godot-xr-tools/user_settings/user_settings.gd"
-XRToolsRumbleManager="*res://addons/godot-xr-tools/rumble/rumble_manager.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 
 [debug]
@@ -46,9 +48,13 @@ window/size/window_width_override=720
 window/size/window_height_override=1280
 window/handheld/orientation=6
 
+[editor]
+
+run/main_run_args="--force-mobile"
+
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/dcl-godot-android/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 
@@ -58,6 +64,24 @@ import/blender/enabled=false
 
 theme/custom="res://assets/themes/theme.tres"
 theme/custom_font="res://assets/themes/fonts/inter/Inter-Regular.ttf"
+
+[importer_defaults]
+
+texture={
+&"compress/mode": 2
+}
+2d_array_texture={
+&"compress/mode": 2
+}
+3d_texture={
+&"compress/mode": 2
+}
+svg={
+"base_scale": 1.0,
+"color_map": {},
+"compress": true,
+"saturation": 1.0
+}
 
 [input]
 
@@ -166,9 +190,10 @@ pointing/emulate_touch_from_mouse=true
 
 [layer_names]
 
+3d_render/layer_20="OUTLINE_SYSTEM_DEPTH"
 3d_physics/layer_1="CL_POINTER"
 3d_physics/layer_2="CL_PHYSICS"
-3d_physics/layer_3="CL_RESERVED1"
+3d_physics/layer_3="CL_PLAYER"
 3d_physics/layer_4="CL_RESERVED2"
 3d_physics/layer_5="CL_RESERVED3"
 3d_physics/layer_6="CL_RESERVED4"
@@ -199,10 +224,7 @@ textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=2048
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
 lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
-reflections/sky_reflections/texture_array_reflections=false
 reflections/sky_reflections/ggx_samples=16
-shading/overrides/force_vertex_shading=true
-shading/overrides/force_lambert_over_burley=true
 environment/ssao/quality=0
 environment/ssil/quality=0
 environment/glow/upscale_mode=0
@@ -228,5 +250,5 @@ day_night_cycle={
 [xr]
 
 openxr/foveation_level=3
-openxr/enabled.xr=true
-shaders/enabled.xr=true
+openxr/enabled.xr=false
+shaders/enabled.xr=false

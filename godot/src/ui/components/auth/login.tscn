@@ -30,6 +30,7 @@ theme_override_fonts/font = ExtResource("3_f6pdb")
 theme_override_font_sizes/font_size = 24
 text = "GOOGLE"
 icon_alignment = 1
+expand_icon = true
 
 [node name="TextureRect_Google" type="TextureRect" parent="Button_Google"]
 layout_mode = 1
@@ -59,6 +60,7 @@ theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("3_f6pdb")
 theme_override_font_sizes/font_size = 24
 text = "WALLET CONNECT"
+expand_icon = true
 
 [node name="TextureRect" type="TextureRect" parent="Button_WalletConnect"]
 layout_mode = 1
@@ -95,6 +97,7 @@ theme_override_fonts/font = ExtResource("3_55bff")
 theme_override_font_sizes/font_size = 16
 icon = ExtResource("7_apdvw")
 icon_alignment = 1
+expand_icon = true
 
 [node name="Button_X" type="Button" parent="HBoxContainer_More"]
 custom_minimum_size = Vector2(0, 80)
@@ -109,6 +112,7 @@ theme_override_fonts/font = ExtResource("3_55bff")
 theme_override_font_sizes/font_size = 16
 icon = ExtResource("8_8hgbb")
 icon_alignment = 1
+expand_icon = true
 
 [node name="Button_Apple" type="Button" parent="HBoxContainer_More"]
 unique_name_in_owner = true

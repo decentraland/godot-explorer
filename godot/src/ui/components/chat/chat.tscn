@@ -1,14 +1,11 @@
-[gd_scene load_steps=18 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=12 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
-[ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="3_bhyuy"]
-[ext_resource type="Texture2D" uid="uid://bwhq0um6jgi1n" path="res://assets/ui/loading/LeftArrow.svg" id="3_lt7hs"]
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_mb7k1"]
+[ext_resource type="FontVariation" uid="uid://buop40k3e4u13" path="res://assets/themes/fonts/multilanguage/multilanguage_font-SemiBold.tres" id="6_mb7k1"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
-[ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="8_lt7hs"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
@@ -20,41 +17,6 @@ corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8g52q"]
 bg_color = Color(0, 0, 0, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mb7k1"]
-content_margin_left = 10.0
-content_margin_top = 0.0
-content_margin_right = 10.0
-content_margin_bottom = 0.0
-bg_color = Color(0.168627, 0.160784, 0.188235, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_euk1h"]
-content_margin_left = 10.0
-content_margin_top = 0.0
-content_margin_right = 10.0
-content_margin_bottom = 0.0
-bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lt7hs"]
-content_margin_left = 10.0
-content_margin_top = 0.0
-content_margin_right = 10.0
-content_margin_bottom = 0.0
-bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-corner_detail = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5a8fu"]
 bg_color = Color(0.276861, 0.698933, 0.396718, 1)
@@ -110,40 +72,6 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 theme_override_constants/separation = 11
 
-[node name="Button_Back" type="Button" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-size_flags_vertical = 0
-focus_mode = 0
-theme = ExtResource("1_ytipc")
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 40
-theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
-theme_override_styles/hover = SubResource("StyleBoxFlat_euk1h")
-icon = ExtResource("3_lt7hs")
-icon_alignment = 1
-
-[node name="Button_NearbyUsers" type="Button" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-focus_mode = 0
-theme = ExtResource("1_ytipc")
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 23
-theme_override_fonts/font = ExtResource("5_mb7k1")
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
-theme_override_styles/hover = SubResource("StyleBoxFlat_lt7hs")
-text = "0"
-icon = ExtResource("3_bhyuy")
-
 [node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 50)
@@ -151,37 +79,6 @@ layout_mode = 2
 texture = ExtResource("4_euk1h")
 expand_mode = 1
 stretch_mode = 5
-
-[node name="HBoxContainer_NearbyUsers" type="HBoxContainer" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-
-[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
-custom_minimum_size = Vector2(26, 26)
-layout_mode = 2
-texture = ExtResource("3_bhyuy")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Label_MembersQuantity" type="Label" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("5_mb7k1")
-theme_override_font_sizes/font_size = 20
-text = "0"
-horizontal_alignment = 1
-
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("5_mb7k1")
-theme_override_font_sizes/font_size = 16
-text = "Members"
 
 [node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer/HBoxContainer_Content"]
 unique_name_in_owner = true
@@ -261,14 +158,6 @@ label_settings = SubResource("LabelSettings_askrr")
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="AvatarsList" parent="VBoxContainer/HBoxContainer_Content" instance=ExtResource("8_lt7hs")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-mouse_filter = 2
-
 [node name="PanelLineEdit" type="PanelContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -289,6 +178,7 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("6_mb7k1")
 theme_override_font_sizes/font_size = 18
 placeholder_text = "Write a message..."
 max_length = 155
@@ -304,8 +194,6 @@ icon = ExtResource("3_umu3q")
 icon_alignment = 2
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_NearbyUsers" to="." method="_on_button_nearby_users_pressed"]
 [connection signal="gui_input" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
 [connection signal="scroll_ended" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_scroll_ended"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]

@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://de7563ke1agyk"]
+[gd_scene load_steps=2 format=3 uid="uid://2fdljjl3ksrt"]
 
 [ext_resource type="Script" uid="uid://rubmndtf5ttg" path="res://src/decentraland_components/video_player.gd" id="1_oqq6w"]
 

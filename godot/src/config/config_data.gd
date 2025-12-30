@@ -8,7 +8,7 @@ enum FpsLimitMode {
 	NO_LIMIT = 1,
 	FPS_30 = 2,
 	FPS_60 = 3,
-	FPS_120 = 4,
+	FPS_18 = 4,
 }
 
 enum ConfigParams {
@@ -16,10 +16,6 @@ enum ConfigParams {
 	WINDOW_MODE,
 	UI_ZOOM,
 	RESOLUTION_3D_SCALE,
-	GRAVITY,
-	JUMP_VELOCITY,
-	WALK_VELOCITY,
-	RUN_VELOCITY,
 	PROCESS_TICK_QUOTA_MS,
 	SHOW_FPS,
 	LIMIT_FPS,
@@ -28,6 +24,7 @@ enum ConfigParams {
 	GUEST_PROFILE,
 	AUDIO_GENERAL_VOLUME,
 	SHADOW_QUALITY,
+	BLOOM_QUALITY,
 	ANTI_ALIASING,
 	GRAPHIC_PROFILE,
 	DYNAMIC_SKYBOX,
@@ -45,11 +42,6 @@ var max_cache_size: int = 1:
 	set(value):
 		max_cache_size = value
 
-var gravity: float = 55.0:
-	set(value):
-		gravity = value
-		param_changed.emit(ConfigParams.GRAVITY)
-
 # 0: Windowed, 1: Borderless, 2: Full Screen
 var window_mode: int = 0:
 	set(value):
@@ -65,21 +57,6 @@ var resolution_3d_scale: float = 1.0:
 	set(value):
 		resolution_3d_scale = value
 		param_changed.emit(ConfigParams.RESOLUTION_3D_SCALE)
-
-var jump_velocity: float = 12.0:
-	set(value):
-		jump_velocity = value
-		param_changed.emit(ConfigParams.JUMP_VELOCITY)
-
-var walk_velocity: float = 2.0:
-	set(value):
-		walk_velocity = value
-		param_changed.emit(ConfigParams.WALK_VELOCITY)
-
-var run_velocity: float = 6.0:
-	set(value):
-		run_velocity = value
-		param_changed.emit(ConfigParams.RUN_VELOCITY)
 
 var process_tick_quota_ms: int = 10:
 	set(value):
@@ -119,6 +96,12 @@ var shadow_quality: int = 0:
 		shadow_quality = value
 		param_changed.emit(ConfigParams.SHADOW_QUALITY)
 
+# 0: Off, 1: Low, 2: High
+var bloom_quality: int = 0:
+	set(value):
+		bloom_quality = value
+		param_changed.emit(ConfigParams.BLOOM_QUALITY)
+
 # 0: Performance, 1: Balanced, 2: Quality, 3: Custom
 var graphic_profile: int = 0:
 	set(value):
@@ -140,6 +123,10 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 		last_parcel_position = value
 
 var terms_and_conditions_version: int = 0
+
+var optimized_assets_version: int = 0
+
+var local_notifications_version: int = 0
 
 var last_places: Array[Dictionary] = []:
 	set(value):
@@ -217,17 +204,13 @@ func add_place_to_last_places(position: Vector2i, realm: String):
 
 
 func load_from_default():
-	self.gravity = 55.0
-	self.jump_velocity = 12.0
-	self.walk_velocity = 2.0
-	self.run_velocity = 6.0
-
 	self.process_tick_quota_ms = 10
 	self.limit_fps = FpsLimitMode.FPS_30
 
 	self.skybox = 0  # basic
 
 	self.shadow_quality = 0  # disabled
+	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
 	self.graphic_profile = 0
 
@@ -254,14 +237,6 @@ func load_from_settings_file():
 	var data_default := ConfigData.new()
 	data_default.load_from_default()
 
-	self.gravity = settings_file.get_value("config", "gravity", data_default.gravity)
-	self.jump_velocity = settings_file.get_value(
-		"config", "jump_velocity", data_default.jump_velocity
-	)
-	self.walk_velocity = settings_file.get_value(
-		"config", "walk_velocity", data_default.walk_velocity
-	)
-	self.run_velocity = settings_file.get_value("config", "run_velocity", data_default.run_velocity)
 	self.process_tick_quota_ms = settings_file.get_value(
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
@@ -270,6 +245,9 @@ func load_from_settings_file():
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(
 		"config", "shadow_quality", data_default.shadow_quality
+	)
+	self.bloom_quality = settings_file.get_value(
+		"config", "bloom_quality", data_default.bloom_quality
 	)
 	self.anti_aliasing = settings_file.get_value(
 		"config", "anti_aliasing", data_default.anti_aliasing
@@ -347,20 +325,25 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
+	self.optimized_assets_version = settings_file.get_value(
+		"user", "optimized_assets_version", data_default.optimized_assets_version
+	)
+
+	self.local_notifications_version = settings_file.get_value(
+		"user", "local_notifications_version", data_default.local_notifications_version
+	)
+
 
 func save_to_settings_file():
 	if Global.testing_scene_mode:
 		return
 
 	var new_settings_file: ConfigFile = ConfigFile.new()
-	new_settings_file.set_value("config", "gravity", self.gravity)
-	new_settings_file.set_value("config", "jump_velocity", self.jump_velocity)
-	new_settings_file.set_value("config", "walk_velocity", self.walk_velocity)
-	new_settings_file.set_value("config", "run_velocity", self.run_velocity)
 	new_settings_file.set_value("config", "process_tick_quota_ms", self.process_tick_quota_ms)
 	new_settings_file.set_value("config", "fps_limit", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)
 	new_settings_file.set_value("config", "shadow_quality", self.shadow_quality)
+	new_settings_file.set_value("config", "bloom_quality", self.bloom_quality)
 	new_settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
 	new_settings_file.set_value("config", "graphic_profile", self.graphic_profile)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
@@ -385,6 +368,10 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "last_places", self.last_places)
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
+	)
+	new_settings_file.set_value("user", "optimized_assets_version", self.optimized_assets_version)
+	new_settings_file.set_value(
+		"user", "local_notifications_version", self.local_notifications_version
 	)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

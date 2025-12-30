@@ -1,11 +1,9 @@
 class_name Backpack
 extends Control
 
-const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
-const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
 @export var hide_navbar: bool = false
 
@@ -195,7 +193,8 @@ func _on_profile_changed(new_profile: DclUserProfile):
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
 	mutable_avatar.set_emotes(emotes_urns)
-	request_update_avatar = true
+	# Don't trigger request_update_avatar - emotes are loaded separately by the emote controller
+	# and don't require reloading the avatar mesh/wearables
 
 
 func _physics_process(_delta):
@@ -478,6 +477,11 @@ func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 
 
 func has_changes():
+	# Check both profile changes AND avatar changes
+	# Avatar is a clone, so changes to mutable_avatar don't affect mutable_profile directly
+	var original_avatar = current_profile.get_avatar()
+	if not original_avatar.equal(mutable_avatar):
+		return true
 	return not current_profile.equal(mutable_profile)
 
 

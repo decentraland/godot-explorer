@@ -9,6 +9,7 @@ var current_profile: DclUserProfile
 var guest_account_created: bool = false
 
 var waiting_for_new_wallet: bool = false
+var ready_for_redirect_by_deep_link: bool = false
 
 var loading_first_profile: bool = false
 var current_screen_name: String = ""
@@ -143,7 +144,7 @@ func async_close_sign_in(generate_snapshots: bool = true):
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty():
+	if _should_go_to_explorer_from_deeplink():
 		go_to_explorer()
 		return
 
@@ -156,12 +157,15 @@ func async_close_sign_in(generate_snapshots: bool = true):
 # gdlint:ignore = async-function-name
 func _ready():
 	# Set version label
-	label_version.set_text("v" + Global.get_version())
+	label_version.set_text("v" + DclGlobal.get_version())
 
-	Global.music_player.play("music_builder")
+	Global.music_player.play.call_deferred("music_builder")
 	control_restore_and_choose_name.hide()
 
 	var login = %Login
+
+	ready_for_redirect_by_deep_link = false
+	Global.deep_link_received.connect(_on_deep_link_received)
 
 	login.set_lobby(self)
 	login.show()
@@ -178,9 +182,13 @@ func _ready():
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
 
+	# Preview deeplink: create guest and skip lobby for hot reload development
+	if not Global.deep_link_obj.preview.is_empty():
+		_skip_lobby = true
+
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if Global.cli.guest_profile:
+	if Global.cli.guest_profile or not Global.deep_link_obj.preview.is_empty():
 		session_account.clear()
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()
@@ -202,6 +210,15 @@ func _ready():
 func go_to_explorer():
 	if is_inside_tree():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
+## Check if any deeplink parameter should redirect to explorer (preview, realm, or location)
+func _should_go_to_explorer_from_deeplink() -> bool:
+	return (
+		Global.deep_link_obj.is_location_defined()
+		or not Global.deep_link_obj.realm.is_empty()
+		or not Global.deep_link_obj.preview.is_empty()
+	)
 
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
@@ -238,7 +255,8 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		waiting_for_new_wallet = false
 		await async_close_sign_in()
 	else:
-		if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty():
+		ready_for_redirect_by_deep_link = true
+		if _should_go_to_explorer_from_deeplink():
 			go_to_explorer()
 			return
 
@@ -255,6 +273,9 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 		Global.get_config().session_account = new_stored_account
 
 	Global.get_config().save_to_settings_file()
+
+	# Note: Social service initialization moved to explorer.gd to ensure it completes
+	# before the Friends panel is used (lobby scene transitions before it finishes)
 
 
 func _on_button_different_account_pressed():
@@ -278,7 +299,8 @@ func _on_button_continue_pressed():
 
 func _on_button_start_pressed():
 	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	button_enter_as_guest.show()
+	if not DclGlobal.is_production():
+		button_enter_as_guest.show()
 	sign_in_title.text = "Create Your Account"
 	create_guest_account_if_needed()
 	is_creating_account = true
@@ -350,7 +372,7 @@ func _on_button_enter_as_guest_pressed():
 
 func _show_avatar_preview():
 	avatar_preview.show()
-	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
+	avatar_preview.avatar.emote_controller.async_play_emote("raiseHand")
 
 
 # gdlint:ignore = async-function-name
@@ -384,7 +406,7 @@ func _check_button_finish():
 		label_error.text = line_edit_choose_name.error_message
 		button_next.disabled = true
 		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
-			avatar_preview.avatar.emote_controller.play_emote("shrug")
+			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
 			_playing = "shrug"
 		panel_container_error_border.self_modulate = Color.RED
 	else:
@@ -395,7 +417,7 @@ func _check_button_finish():
 			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
 			or _playing != "clap"
 		):
-			avatar_preview.avatar.emote_controller.play_emote("clap")
+			avatar_preview.avatar.emote_controller.async_play_emote("clap")
 			_playing = "clap"
 		panel_container_error_border.self_modulate = Color.TRANSPARENT
 
@@ -405,10 +427,15 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 		if event.pressed:
 			if not avatar_preview.avatar.emote_controller.is_playing():
 				if line_edit_choose_name.text.contains("dancer"):
-					avatar_preview.avatar.emote_controller.play_emote("dance")
+					avatar_preview.avatar.emote_controller.async_play_emote("dance")
 				else:
-					avatar_preview.avatar.emote_controller.play_emote("wave")
+					avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
 
 func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
 	_check_button_finish()
+
+
+func _on_deep_link_received():
+	if ready_for_redirect_by_deep_link:
+		go_to_explorer.call_deferred()

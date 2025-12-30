@@ -19,6 +19,7 @@ var _dirty_connected: bool = false
 @onready var container_graphics: Control = %VBoxContainer_Graphics
 @onready var container_advanced: Control = %VBoxContainer_Advanced
 @onready var container_audio: Control = %VBoxContainer_Audio
+@onready var container_account: VBoxContainer = %VBoxContainer_Account
 
 #General items:
 @onready var text_edit_cache_path = %TextEdit_CachePath
@@ -53,6 +54,7 @@ var _dirty_connected: bool = false
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
 @onready var radio_selector_skybox = %RadioSelector_Skybox
 @onready var radio_selector_shadow = %RadioSelector_Shadow
+@onready var radio_selector_bloom = %RadioSelector_Bloom
 @onready var radio_selector_aa = %RadioSelector_AA
 
 @onready var radio_selector_limit_fps = %RadioSelector_LimitFps
@@ -65,10 +67,6 @@ var _dirty_connected: bool = false
 @onready var h_slider_process_tick_quota = %HSlider_ProcessTickQuota
 @onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
 
-@onready var spin_box_gravity = %SpinBox_Gravity
-@onready var spin_box_jump_velocity = %SpinBox_JumpVelocity
-@onready var spin_box_run_speed = %SpinBox_RunSpeed
-@onready var spin_box_walk_speed = %SpinBox_WalkSpeed
 @onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
 
 @onready var button_general: Button = %Button_General
@@ -78,6 +76,7 @@ var _dirty_connected: bool = false
 
 
 func _ready():
+	button_developer.visible = !Global.is_production()
 	button_general.set_pressed_no_signal(true)
 	_on_button_general_pressed()
 
@@ -118,10 +117,20 @@ func refresh_graphic_settings():
 	else:
 		radio_selector_windowed.selected = Global.get_config().window_mode
 
-	radio_selector_limit_fps.selected = Global.get_config().limit_fps
+	# Maps limit_fps config to radio_selector_limit_fps index
+	const INVERSE_LIMIT_FPS_MAPPING: Dictionary[int, int] = {
+		ConfigData.FpsLimitMode.VSYNC: 0,
+		ConfigData.FpsLimitMode.NO_LIMIT: 1,
+		ConfigData.FpsLimitMode.FPS_30: 3,
+		ConfigData.FpsLimitMode.FPS_60: 4,
+		ConfigData.FpsLimitMode.FPS_18: 2,
+	}
+
+	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING[Global.get_config().limit_fps]
 	radio_selector_texture_quality.selected = Global.get_config().texture_quality
 	radio_selector_skybox.selected = Global.get_config().skybox
 	radio_selector_shadow.selected = Global.get_config().shadow_quality
+	radio_selector_bloom.selected = Global.get_config().bloom_quality
 	radio_selector_aa.selected = Global.get_config().anti_aliasing
 
 	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
@@ -133,6 +142,7 @@ func show_control(control: Control):
 	container_graphics.hide()
 	container_audio.hide()
 	container_advanced.hide()
+	container_account.hide()
 
 	control.show()
 
@@ -154,10 +164,6 @@ func _on_checkbox_fps_toggled(button_pressed):
 
 
 func refresh_values():
-	spin_box_gravity.value = Global.get_config().gravity
-	spin_box_walk_speed.value = Global.get_config().walk_velocity
-	spin_box_run_speed.value = Global.get_config().run_velocity
-	spin_box_jump_velocity.value = Global.get_config().jump_velocity
 	h_slider_process_tick_quota.set_value_no_signal(Global.get_config().process_tick_quota_ms)
 	label_process_tick_quota_value.text = str(Global.get_config().process_tick_quota_ms)
 
@@ -232,26 +238,6 @@ func _process(_delta):
 			_dirty_connected = true
 
 
-func _on_spin_box_walk_speed_value_changed(value):
-	Global.get_config().walk_velocity = value
-	Global.get_config().save_to_settings_file()
-
-
-func _on_spin_box_run_speed_value_changed(value):
-	Global.get_config().run_velocity = value
-	Global.get_config().save_to_settings_file()
-
-
-func _on_spin_box_jump_velocity_value_changed(value):
-	Global.get_config().jump_velocity = value
-	Global.get_config().save_to_settings_file()
-
-
-func _on_spin_box_gravity_value_changed(value):
-	Global.get_config().gravity = value
-	Global.get_config().save_to_settings_file()
-
-
 func _on_button_connect_preview_pressed():
 	set_preview_url(line_edit_preview_url.text)
 
@@ -278,15 +264,18 @@ func refresh_zooms():
 	var selected_index: int = -1
 	var i: int = 0
 	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	radio_selector_ui_zoom.clear()
 
+	var new_items: Array[String] = []
 	for ui_zoom_option in options.keys():
-		radio_selector_ui_zoom.items.push_back(ui_zoom_option)
+		new_items.push_back(ui_zoom_option)
 		if options[ui_zoom_option] == get_window().content_scale_factor:
 			selected_index = i
 		i += 1
 	if selected_index == -1:
 		selected_index = i - 1
+
+	# Assign items array to trigger _refresh_list() and create children
+	radio_selector_ui_zoom.items = new_items
 	radio_selector_ui_zoom.selected = selected_index
 
 
@@ -337,7 +326,16 @@ func _on_radio_selector_ui_zoom_select_item(_index, item):
 
 
 func _on_radio_selector_select_item(index, _item):
-	Global.get_config().limit_fps = index
+	# Maps radio_selector_limit_fps index to limit_fps config
+	const LIMIT_FPS_MAPPING: Dictionary[int, int] = {
+		0: ConfigData.FpsLimitMode.VSYNC,
+		1: ConfigData.FpsLimitMode.NO_LIMIT,
+		2: ConfigData.FpsLimitMode.FPS_18,
+		3: ConfigData.FpsLimitMode.FPS_30,
+		4: ConfigData.FpsLimitMode.FPS_60
+	}
+
+	Global.get_config().limit_fps = LIMIT_FPS_MAPPING[index]
 	GraphicSettings.apply_fps_limit()
 	Global.get_config().save_to_settings_file()
 
@@ -349,6 +347,11 @@ func _on_radio_selector_skybox_select_item(index, _item):
 
 func _on_radio_selector_shadow_select_item(index, _item):
 	Global.get_config().shadow_quality = index
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_bloom_select_item(index, _item):
+	Global.get_config().bloom_quality = index
 	Global.get_config().save_to_settings_file()
 
 
@@ -372,16 +375,19 @@ func _on_radio_selector_graphic_profile_select_item(index, _item):
 		0:  # Performance
 			Global.get_config().anti_aliasing = 0  # off
 			Global.get_config().shadow_quality = 0  # disabled
+			Global.get_config().bloom_quality = 0  # off
 			Global.get_config().skybox = 0  # low
 			Global.get_config().texture_quality = 0  # low
 		1:  # Balanced
 			Global.get_config().anti_aliasing = 1  # x2
 			Global.get_config().shadow_quality = 1  # normal
+			Global.get_config().bloom_quality = 1  # low
 			Global.get_config().skybox = 1  # medium
 			Global.get_config().texture_quality = 1  # medium
 		2:  # Quality
 			Global.get_config().anti_aliasing = 3  # x8
 			Global.get_config().shadow_quality = 2  # high quality
+			Global.get_config().bloom_quality = 2  # high
 			Global.get_config().skybox = 2  # high
 			Global.get_config().texture_quality = 2  # high
 		3:  # Custom
@@ -464,3 +470,11 @@ func _on_button_general_pressed() -> void:
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
+
+
+func _on_button_account_pressed() -> void:
+	show_control(container_account)
+
+
+func _on_button_delete_account_pressed() -> void:
+	Global.delete_account.emit()

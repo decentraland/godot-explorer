@@ -24,6 +24,7 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 var event_id: String
 var event_status: String
 var event_tags: String
+var event_start_timestamp: int = 0  # Unix timestamp (seconds) when event starts
 var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
@@ -282,8 +283,29 @@ func set_data(item_data):
 	set_attendees_number(item_data.get("total_attendees", 0))
 	set_trending(item_data.get("trending", false))
 	event_id = item_data.get("id", "id")
-	set_attending(item_data.get("attending", false), event_id, event_tags)
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
+
+	# Parse event timestamp BEFORE set_attending so it's available for notifications
+	var next_start_at = item_data.get("next_start_at", "")
+	var live = item_data.get("live", false)
+	event_status = "live" if live else "upcoming"
+	if next_start_at != "":
+		# Convert ISO string to Unix timestamp
+		var timestamp = _parse_iso_timestamp(next_start_at)
+		if timestamp > 0:
+			event_start_timestamp = timestamp  # Store for notification scheduling
+			set_time(timestamp, live)
+
+	# Set location before set_attending so event_coordinates is correct for notifications
+	var location_vector = item_data.get("base_position", "0,0").split(",")
+	if location_vector.size() == 2:
+		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
+
+	var event_location_vector = item_data.get("coordinates", [0, 0])
+	if event_location_vector.size() == 2:
+		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
+
+	set_attending(item_data.get("attending", false), event_id, event_tags)
 	set_user_name(item_data.get("user_name", ""))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
@@ -292,30 +314,12 @@ func set_data(item_data):
 	set_duration(item_data.get("duration", 0))
 	set_recurrent(item_data.get("recurrent", false))
 
-	# Handle start_at for events (Unix timestamp)
-	var next_start_at = item_data.get("next_start_at", "")
-	var live = item_data.get("live", false)
-	event_status = "live" if live else "upcoming"
-	if next_start_at != "":
-		# Convert ISO string to Unix timestamp
-		var timestamp = _parse_iso_timestamp(next_start_at)
-		if timestamp > 0:
-			set_time(timestamp, live)
-
 	if _get_texture_image():
 		var image_url = item_data.get("image", "")
 		if not image_url.is_empty():
 			_async_download_image(image_url)
 		else:
 			set_image(texture_placeholder)
-
-	var location_vector = item_data.get("base_position", "0,0").split(",")
-	if location_vector.size() == 2:
-		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
-
-	var event_location_vector = item_data.get("coordinates", [0, 0])
-	if event_location_vector.size() == 2:
-		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
 	var world = item_data.get("world", false)
@@ -461,6 +465,10 @@ func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:
 	if reminder_button:
 		reminder_button.event_id_value = _id
 		reminder_button.event_tags = _event_tags
+		reminder_button.event_start_timestamp = event_start_timestamp
+		reminder_button.event_name = event_name
+		reminder_button.event_coordinates = location
+		reminder_button.event_cover_image_url = _data.get("image", "") if _data else ""
 		reminder_button.set_pressed_no_signal(_attending)
 		reminder_button.update_styles(_attending)
 

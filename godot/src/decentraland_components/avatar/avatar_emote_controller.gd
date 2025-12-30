@@ -33,6 +33,7 @@ class EmoteItemData:
 	var prop_anim_name: String = ""
 	var file_hash: String = ""
 	var armature_prop: Node3D = null
+	var prop_animation_player: AnimationPlayer = null
 
 	var from_scene: bool
 	var looping: bool
@@ -42,14 +43,20 @@ class EmoteItemData:
 		_default_anim_name: String,
 		_prop_anim_name: String,
 		_file_hash: String,
-		_armature_prop: Node3D
+		_armature_prop: Node3D,
+		_prop_animation_player: AnimationPlayer = null
 	):
 		urn = _urn
 		default_anim_name = _default_anim_name
 		prop_anim_name = _prop_anim_name
 		file_hash = _file_hash
 		armature_prop = _armature_prop
+		prop_animation_player = _prop_animation_player
 
+
+# Cooldown to prevent rapid emote spam that can crash the animation system
+const EMOTE_COOLDOWN_SECONDS: float = 0.5
+const MAX_DEFERRED_RETRIES: int = 3
 
 var loaded_emotes_by_urn: Dictionary
 
@@ -68,6 +75,21 @@ var idle_anim: Animation
 var animation_single_emote_node: AnimationNodeAnimation
 var animation_mix_emote_node: AnimationNodeBlendTree
 
+# Guard to prevent concurrent modifications to animation system
+var _is_modifying_animations: bool = false
+var _queued_emote_urn: String = ""
+
+var _last_emote_time: float = 0.0
+
+# Lock to prevent concurrent async emote loading
+var _is_loading_emote: bool = false
+
+# Track prop visibility nodes that need to be hidden on idle
+# This avoids modifying idle_anim at runtime which can crash the mixer
+var _prop_armature_names: Array[String] = []
+
+var _deferred_retry_count: int = 0
+
 
 func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree: AnimationTree):
 	# Core dependencies from avatar
@@ -85,6 +107,12 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	animation_mix_emote_node = animation_tree.tree_root.get_node("Emote_Mix")
 	assert(animation_mix_emote_node.get_node("A") != null)
 	assert(animation_mix_emote_node.get_node("B") != null)
+
+	# Set safe default animations to avoid errors when AnimationTree processes
+	# The default "AFK" in tscn may not exist in the animation player
+	animation_single_emote_node.animation = "idle/Anim"
+	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
+	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
 
 	# Idle Anim Duplication (so it makes mutable and non-shared-reference)
 	var idle_animation_library = animation_player.get_animation_library("idle")
@@ -110,9 +138,26 @@ func stop_emote():
 
 
 func play_emote(id: String):
+	# If animation system is being modified, queue this request
+	if _is_modifying_animations:
+		_queued_emote_urn = id
+		return
+
+	# Ensure animation tree is active before playing
+	if not animation_tree.active:
+		animation_tree.active = true
+
 	var triggered: bool = false
 	if not id.begins_with("urn"):
-		triggered = _play_default_emote(id)
+		# Check if it's a utility action (local) or base emote (remote)
+		if Emotes.is_emote_utility(id):
+			triggered = _play_utility_emote(id)
+		elif Emotes.is_emote_default(id):
+			# Base emotes are loaded remotely, play via URN
+			var urn = Emotes.get_base_emote_urn(id)
+			triggered = _play_loaded_emote(urn)
+		else:
+			printerr("Unknown emote: %s" % id)
 	else:
 		triggered = _play_loaded_emote(id)
 
@@ -120,18 +165,25 @@ func play_emote(id: String):
 		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop)
 
 
-func _play_default_emote(default_emote_id: String) -> bool:
-	var anim_name = "default_emotes/" + default_emote_id
+func _play_utility_emote(utility_emote_id: String) -> bool:
+	# Utility emotes are local animations from default_actions library
+	var anim_name = "default_actions/" + utility_emote_id
 	if not animation_player.has_animation(anim_name):
 		printerr(
-			"Emote %s not found from player '%s'" % [default_emote_id, avatar.get_avatar_name()]
+			(
+				"Utility emote %s not found from player '%s'"
+				% [utility_emote_id, avatar.get_avatar_name()]
+			)
 		)
 		return false
 
 	animation_single_emote_node.animation = anim_name
 	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
-	if pb.get_current_node() == "Emote":
+	var cur_node = pb.get_current_node()
+	if cur_node == "Emote":
 		pb.start("Emote", true)
+	else:
+		pb.travel("Emote")
 
 	playing_single = true
 	playing_mixed = false
@@ -146,6 +198,11 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 
 	var emote_item_data: EmoteItemData = loaded_emotes_by_urn[emote_urn]
 
+	# Validate animation name exists
+	if emote_item_data.default_anim_name.is_empty():
+		printerr("Emote %s has no animation" % emote_urn)
+		return false
+
 	if emote_item_data.from_scene:
 		playing_loop = emote_item_data.looping
 	else:
@@ -154,45 +211,188 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 			return false
 		playing_loop = emote_data.get_emote_loop()
 
-	playing_single = emote_item_data.prop_anim_name.is_empty()
-	playing_mixed = not playing_single
+	# Reset avatar state before playing new emote
+	_hide_all_props()
+	_reset_skeleton_to_rest_pose()
 
-	# Single Animation
-	if playing_single:
-		animation_single_emote_node.animation = "emotes/" + emote_item_data.default_anim_name
-		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
-		if pb.get_current_node() == "Emote":
-			pb.start("Emote", true)
-	elif playing_mixed:
-		animation_mix_emote_node.get_node("A").animation = (
-			"emotes/" + emote_item_data.default_anim_name
-		)
-		animation_mix_emote_node.get_node("B").animation = (
-			"emotes/" + emote_item_data.prop_anim_name
-		)
+	playing_single = true
+	playing_mixed = false
 
-		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
-		if pb.get_current_node() == "Emote_Mix":
-			pb.start("Emote_Mix", true)
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+
+	# Play merged animation (avatar + prop tracks combined) through AnimationTree
+	var anim_path = "emotes/" + emote_item_data.default_anim_name
+	if not animation_player.has_animation(anim_path):
+		printerr("Animation not found in player: %s" % anim_path)
+		return false
+
+	animation_single_emote_node.animation = anim_path
+
+	# Ensure animation tree is active
+	if not animation_tree.active:
+		animation_tree.active = true
+
+	# Ensure state machine is initialized - if current_node is empty, it hasn't started
+	var cur_state = pb.get_current_node()
+	if cur_state.is_empty():
+		pb.start("Idle", true)
+		# Need to wait a frame for state machine to initialize
+		# Use call_deferred to retry the play
+		_deferred_play_emote.call_deferred(emote_urn)
+		return true
+
+	# Set the emote condition BEFORE travel - the transition requires this condition
+	# (avatar.gd's _process() also sets this, but too late for immediate travel)
+	animation_tree.set("parameters/conditions/emote", true)
+	animation_tree.set("parameters/conditions/nemote", false)
+
+	# Use travel() to follow state machine transitions, then start() to restart if already there
+	if pb.get_current_node() == "Emote":
+		pb.start("Emote", true)
+	else:
+		pb.travel("Emote")
+
+	# Reset retry counter on success
+	_deferred_retry_count = 0
 	return true
 
 
-func async_play_emote(emote_urn: String) -> void:
-	if not emote_urn.begins_with("urn"):
-		play_emote(emote_urn)
+func _deferred_play_emote(emote_urn: String):
+	# Called after state machine is initialized, retry the play
+	_deferred_retry_count += 1
+	if _deferred_retry_count > MAX_DEFERRED_RETRIES:
+		_deferred_retry_count = 0
+		_force_play_emote(emote_urn)
 		return
+	play_emote(emote_urn)
+
+
+func _force_play_emote(emote_urn: String):
+	# Force play when state machine won't initialize (e.g., avatar hidden in backpack)
+	if not _has_emote(emote_urn):
+		return
+
+	var emote_item_data: EmoteItemData = loaded_emotes_by_urn[emote_urn]
+	if emote_item_data.default_anim_name.is_empty():
+		return
+
+	var anim_path = "emotes/" + emote_item_data.default_anim_name
+	if not animation_player.has_animation(anim_path):
+		return
+
+	# Reset state and play directly via AnimationPlayer
+	_hide_all_props()
+	_reset_skeleton_to_rest_pose()
+
+	# Set up the animation node
+	animation_single_emote_node.animation = anim_path
+
+	# Set the emote conditions for the state machine
+	animation_tree.set("parameters/conditions/emote", true)
+	animation_tree.set("parameters/conditions/nemote", false)
+
+	# Force the state machine to the Emote state
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+	pb.start("Emote", true)
+
+	playing_single = true
+	playing_mixed = false
+	playing_loop = false
+
+
+func _hide_all_props():
+	# Hide all prop armatures to ensure clean state before playing new emote
+	if not is_instance_valid(avatar):
+		return
+
+	# Use tracked prop names instead of iterating all children
+	for prop_name in _prop_armature_names:
+		var prop = avatar.get_node_or_null(NodePath(prop_name))
+		if prop != null and is_instance_valid(prop):
+			prop.hide()
+
+	# Also hide any legacy props (fallback for props added before tracking)
+	for child in avatar.get_children():
+		if is_instance_valid(child) and child.name.begins_with("Armature_Prop"):
+			child.hide()
+
+
+func _reset_skeleton_to_rest_pose():
+	# Reset skeleton bones to rest pose to clear any transforms from previous emotes
+	# (e.g., head scale from "head explode" emote)
+	# Note: Only reset if avatar is valid and not being freed
+	if not is_instance_valid(avatar):
+		return
+
+	var armature = avatar.get_node_or_null("Armature")
+	if armature == null or not is_instance_valid(armature):
+		return
+
+	var skeleton = armature.get_node_or_null("Skeleton3D")
+	if skeleton == null or not is_instance_valid(skeleton):
+		return
+
+	for i in range(skeleton.get_bone_count()):
+		skeleton.reset_bone_pose(i)
+
+
+func async_play_emote(emote_id_or_urn: String) -> void:
+	# Cooldown check to prevent rapid emote spam
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
+		return
+	_last_emote_time = current_time
+
+	# Prevent concurrent async loading operations
+	if _is_loading_emote:
+		return
+
+	var emote_urn: String = emote_id_or_urn
+
+	# Handle non-URN emote IDs
+	if not emote_id_or_urn.begins_with("urn"):
+		# Utility emotes are local, play directly
+		if Emotes.is_emote_utility(emote_id_or_urn):
+			play_emote(emote_id_or_urn)
+			return
+		# Base emotes need to be converted to URN for remote fetch
+		if Emotes.is_emote_default(emote_id_or_urn):
+			emote_urn = Emotes.get_base_emote_urn(emote_id_or_urn)
+		else:
+			printerr("Unknown emote: %s" % emote_id_or_urn)
+			return
 
 	# Does it need to be loaded?
 	if _has_emote(emote_urn):
 		play_emote(emote_urn)
 		return
 
+	# Set loading lock
+	_is_loading_emote = true
+
 	if emote_urn.contains("scene-emote"):
 		await _async_load_scene_emote(emote_urn)
 	else:
 		await _async_load_emote(emote_urn)
 
-	play_emote(emote_urn)
+	# Avatar may have been removed from tree during async load
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		_is_loading_emote = false
+		return
+
+	# Wait a frame for any deferred calls (load_emote_from_dcl_emote_gltf) to complete
+	await avatar.get_tree().process_frame
+
+	# Check again after waiting
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		_is_loading_emote = false
+		return
+
+	# Clear loading lock
+	_is_loading_emote = false
+
+	# Use call_deferred to ensure playback happens on main thread after async loading
+	play_emote.call_deferred(emote_urn)
 
 
 func _async_load_emote(emote_urn: String):
@@ -203,13 +403,18 @@ func _async_load_emote(emote_urn: String):
 
 	var emote = Global.content_provider.get_wearable(emote_urn)
 	if emote == null:
-		printerr("Error loading emote " + emote_urn)
+		printerr("Error: emote is null for URN: " + emote_urn)
 		return
 
 	var file_hash = Wearables.get_item_main_file_hash(emote, avatar.avatar_data.get_body_shape())
+	if file_hash.is_empty():
+		printerr("Error: file_hash is empty for emote: ", emote_urn)
+		return
+
 	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
-	if obj != null:
-		load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
+	if obj is DclEmoteGltf:
+		# Use call_deferred to ensure animation modifications happen on main thread
+		load_emote_from_dcl_emote_gltf.call_deferred(emote_urn, obj, file_hash)
 
 
 func _async_load_scene_emote(urn: String):
@@ -236,8 +441,11 @@ func _async_load_scene_emote(urn: String):
 	# await PromiseUtils.async_awaiter(audio_promise)
 
 	#var obj = Global.content_provider.get_emote_gltf_from_hash(emote_scene_urn.glb_hash)
-	if obj != null:
-		load_emote_from_dcl_emote_gltf(urn, obj, emote_scene_urn.glb_hash)
+	if obj is DclEmoteGltf:
+		# Use call_deferred to ensure animation modifications happen on main thread
+		load_emote_from_dcl_emote_gltf.call_deferred(urn, obj, emote_scene_urn.glb_hash)
+		# Wait a frame for the deferred call to execute before checking
+		await avatar.get_tree().process_frame
 		if _has_emote(urn):
 			loaded_emotes_by_urn[urn].looping = emote_scene_urn.looping
 			loaded_emotes_by_urn[urn].from_scene = true
@@ -252,28 +460,121 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 	if _has_emote(urn):
 		return
 
+	# Set guard to prevent concurrent operations
+	_is_modifying_animations = true
+
+	# IMPORTANT: Stop all animation processing while modifying animations
+	# This prevents crashes when the AnimationMixer tries to access animations being modified
+	var was_tree_active = animation_tree.active
+	animation_tree.active = false
+
+	# Also stop AnimationPlayer to ensure no iteration over animations
+	animation_player.stop()
+
+	# Reset all animation nodes to safe defaults before modifying the library
+	# This prevents "!has_animation" errors when reactivating the tree
+	animation_single_emote_node.animation = "idle/Anim"
+	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
+	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+
 	var armature_prop: Node3D = null
+
 	if obj.armature_prop != null:
 		if not avatar.has_node(NodePath(obj.armature_prop.name)):
 			armature_prop = obj.armature_prop.duplicate()
+
+			# Stop and remove any AnimationPlayer on the prop to prevent independent animation
+			# The prop animation should be controlled by the avatar's AnimationTree via merged tracks
+			var prop_anim_player = armature_prop.get_node_or_null("AnimationPlayer")
+			if prop_anim_player != null:
+				prop_anim_player.stop()
+				prop_anim_player.queue_free()
+
 			avatar.add_child(armature_prop)
+			armature_prop.hide()  # Start hidden
 
-			var track_id = idle_anim.add_track(Animation.TYPE_VALUE)
-			idle_anim.track_set_path(track_id, NodePath(armature_prop.name + ":visible"))
-			idle_anim.track_insert_key(track_id, 0.0, false)
+			# Track the prop name for hiding during idle - DON'T modify idle_anim at runtime
+			# Modifying idle_anim while animation system could access it causes crashes
+			if not _prop_armature_names.has(armature_prop.name):
+				_prop_armature_names.append(armature_prop.name)
+		else:
+			armature_prop = avatar.get_node(NodePath(obj.armature_prop.name))
 
-	var emote_item_data = EmoteItemData.new(urn, "", "", file_hash, armature_prop)
+	var emote_item_data = EmoteItemData.new(urn, "", "", file_hash, armature_prop, null)
+
 	if obj.default_animation != null:
-		emotes_animation_library.add_animation(
-			obj.default_animation.get_name(), obj.default_animation
-		)
-		emote_item_data.default_anim_name = obj.default_animation.get_name()
+		var anim_name = obj.default_animation.get_name()
+		if anim_name.is_empty():
+			anim_name = "emote_" + file_hash.substr(0, 8)
 
-	if obj.prop_animation != null:
-		emotes_animation_library.add_animation(obj.prop_animation.get_name(), obj.prop_animation)
-		emote_item_data.prop_anim_name = obj.prop_animation.get_name()
+		# If we have both avatar and prop animations, merge them into one
+		# Always duplicate the animation to avoid sharing references between avatar instances
+		var final_animation: Animation
+		if obj.prop_animation != null:
+			final_animation = _merge_animations(obj.default_animation, obj.prop_animation)
+		else:
+			final_animation = obj.default_animation.duplicate()
+
+		if not emotes_animation_library.has_animation(anim_name):
+			emotes_animation_library.add_animation(anim_name, final_animation)
+		emote_item_data.default_anim_name = anim_name
+	else:
+		printerr("Error: default_animation is NULL for emote: ", urn)
 
 	loaded_emotes_by_urn[urn] = emote_item_data
+
+	# Reactivate animation system after modifications are complete
+	# Do this via call_deferred to ensure all modifications are fully applied
+	# before the animation system starts processing again
+	_reactivate_animation_system.call_deferred(was_tree_active)
+
+
+func _reactivate_animation_system(_was_active: bool):
+	# Reactivate animation system after modifications
+	# This is called via call_deferred to ensure all changes are applied
+	# Always set to true - the tree should be active for animations to play
+	animation_tree.active = true
+
+	# Clear the modification guard
+	_is_modifying_animations = false
+
+	# Process any queued emote request
+	if not _queued_emote_urn.is_empty():
+		var queued = _queued_emote_urn
+		_queued_emote_urn = ""
+		# Use another deferred call to ensure tree is fully ready
+		play_emote.call_deferred(queued)
+
+
+func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animation:
+	# Create a new animation that combines both avatar and prop tracks
+	var merged = avatar_anim.duplicate()
+
+	# Use the longer duration
+	if prop_anim.length > merged.length:
+		merged.length = prop_anim.length
+
+	# Copy all tracks from prop animation to merged animation
+	for i in range(prop_anim.get_track_count()):
+		var track_path = prop_anim.track_get_path(i)
+		var track_type = prop_anim.track_get_type(i)
+
+		# Add the track
+		var new_track_idx = merged.add_track(track_type)
+		merged.track_set_path(new_track_idx, track_path)
+		merged.track_set_interpolation_type(
+			new_track_idx, prop_anim.track_get_interpolation_type(i)
+		)
+
+		# Copy all keys
+		var key_count = prop_anim.track_get_key_count(i)
+		for k in range(key_count):
+			var time = prop_anim.track_get_key_time(i, k)
+			var value = prop_anim.track_get_key_value(i, k)
+			var transition = prop_anim.track_get_key_transition(i, k)
+			merged.track_insert_key(new_track_idx, time, value, transition)
+
+	return merged
 
 
 func clean_unused_emotes():
@@ -281,6 +582,22 @@ func clean_unused_emotes():
 	var to_delete_emote_urns = loaded_emotes_by_urn.keys().filter(
 		func(urn): return not emotes.has(urn)
 	)
+
+	if to_delete_emote_urns.is_empty():
+		return
+
+	# Set guard to prevent concurrent operations
+	_is_modifying_animations = true
+
+	# Stop all animation processing while modifying animations
+	var was_tree_active = animation_tree.active
+	animation_tree.active = false
+	animation_player.stop()
+
+	# Reset all animation nodes to safe defaults before modifying the library
+	animation_single_emote_node.animation = "idle/Anim"
+	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
+	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
 
 	for urn in to_delete_emote_urns:
 		var emote_item_data: EmoteItemData = loaded_emotes_by_urn[urn]
@@ -291,10 +608,19 @@ func clean_unused_emotes():
 			emotes_animation_library.remove_animation(emote_item_data.prop_anim_name)
 
 		if emote_item_data.armature_prop != null:
+			# Remove from tracked props
+			var prop_name = emote_item_data.armature_prop.name
+			var prop_idx = _prop_armature_names.find(prop_name)
+			if prop_idx >= 0:
+				_prop_armature_names.remove_at(prop_idx)
+
 			avatar.remove_child(emote_item_data.armature_prop)
 			emote_item_data.armature_prop.queue_free()
 
 		loaded_emotes_by_urn.erase(urn)
+
+	# Reactivate animation system via deferred call
+	_reactivate_animation_system.call_deferred(was_tree_active)
 
 
 func play_emote_audio(file_hash: String):
@@ -363,6 +689,8 @@ func process(idle: bool):
 		if not idle:
 			playing_single = false
 			playing_mixed = false
+			# Hide props when interrupted
+			_hide_all_props()
 		else:
 			var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 			var cur_node: StringName = pb.get_current_node()
@@ -375,3 +703,5 @@ func process(idle: bool):
 					else:
 						playing_single = false
 						playing_mixed = false
+						# Hide props when emote ends
+						_hide_all_props()

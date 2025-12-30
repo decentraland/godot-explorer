@@ -140,45 +140,45 @@ impl sdk::components::common::TextAlignMode {
     pub fn to_godot(
         &self,
     ) -> (
-        godot::engine::global::HorizontalAlignment,
-        godot::engine::global::VerticalAlignment,
+        godot::global::HorizontalAlignment,
+        godot::global::VerticalAlignment,
     ) {
         match self {
             sdk::components::common::TextAlignMode::TamTopLeft => (
-                godot::engine::global::HorizontalAlignment::LEFT,
-                godot::engine::global::VerticalAlignment::TOP,
+                godot::global::HorizontalAlignment::LEFT,
+                godot::global::VerticalAlignment::TOP,
             ),
             sdk::components::common::TextAlignMode::TamTopCenter => (
-                godot::engine::global::HorizontalAlignment::CENTER,
-                godot::engine::global::VerticalAlignment::TOP,
+                godot::global::HorizontalAlignment::CENTER,
+                godot::global::VerticalAlignment::TOP,
             ),
             sdk::components::common::TextAlignMode::TamTopRight => (
-                godot::engine::global::HorizontalAlignment::RIGHT,
-                godot::engine::global::VerticalAlignment::TOP,
+                godot::global::HorizontalAlignment::RIGHT,
+                godot::global::VerticalAlignment::TOP,
             ),
             sdk::components::common::TextAlignMode::TamMiddleLeft => (
-                godot::engine::global::HorizontalAlignment::LEFT,
-                godot::engine::global::VerticalAlignment::CENTER,
+                godot::global::HorizontalAlignment::LEFT,
+                godot::global::VerticalAlignment::CENTER,
             ),
             sdk::components::common::TextAlignMode::TamMiddleCenter => (
-                godot::engine::global::HorizontalAlignment::CENTER,
-                godot::engine::global::VerticalAlignment::CENTER,
+                godot::global::HorizontalAlignment::CENTER,
+                godot::global::VerticalAlignment::CENTER,
             ),
             sdk::components::common::TextAlignMode::TamMiddleRight => (
-                godot::engine::global::HorizontalAlignment::RIGHT,
-                godot::engine::global::VerticalAlignment::CENTER,
+                godot::global::HorizontalAlignment::RIGHT,
+                godot::global::VerticalAlignment::CENTER,
             ),
             sdk::components::common::TextAlignMode::TamBottomLeft => (
-                godot::engine::global::HorizontalAlignment::LEFT,
-                godot::engine::global::VerticalAlignment::BOTTOM,
+                godot::global::HorizontalAlignment::LEFT,
+                godot::global::VerticalAlignment::BOTTOM,
             ),
             sdk::components::common::TextAlignMode::TamBottomCenter => (
-                godot::engine::global::HorizontalAlignment::CENTER,
-                godot::engine::global::VerticalAlignment::BOTTOM,
+                godot::global::HorizontalAlignment::CENTER,
+                godot::global::VerticalAlignment::BOTTOM,
             ),
             sdk::components::common::TextAlignMode::TamBottomRight => (
-                godot::engine::global::HorizontalAlignment::RIGHT,
-                godot::engine::global::VerticalAlignment::BOTTOM,
+                godot::global::HorizontalAlignment::RIGHT,
+                godot::global::VerticalAlignment::BOTTOM,
             ),
         }
     }
@@ -218,5 +218,18 @@ pub mod kernel {
         pub mod v3 {
             include!(concat!(env!("OUT_DIR"), "/decentraland.kernel.comms.v3.rs"));
         }
+    }
+}
+
+pub mod social_service {
+    // Include the error types from the social_service package
+    include!(concat!(env!("OUT_DIR"), "/decentraland.social_service.rs"));
+
+    #[allow(clippy::all)]
+    pub mod v2 {
+        include!(concat!(
+            env!("OUT_DIR"),
+            "/decentraland.social_service.v2.rs"
+        ));
     }
 }

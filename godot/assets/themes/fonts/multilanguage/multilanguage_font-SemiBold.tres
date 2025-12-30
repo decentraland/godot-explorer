@@ -1,0 +1,15 @@
+[gd_resource type="FontVariation" load_steps=5 format=3 uid="uid://buop40k3e4u13"]
+
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="1_2wb2u"]
+[ext_resource type="FontFile" uid="uid://dfx6banyqu12e" path="res://assets/themes/fonts/nato_sc/NotoSansSC-VariableFont_wght.ttf" id="2_3g7s0"]
+[ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="3_25t8f"]
+
+[sub_resource type="FontVariation" id="FontVariation_i31fy"]
+base_font = ExtResource("2_3g7s0")
+variation_opentype = {
+2003265652: 600
+}
+
+[resource]
+fallbacks = Array[Font]([SubResource("FontVariation_i31fy"), ExtResource("3_25t8f")])
+base_font = ExtResource("1_2wb2u")

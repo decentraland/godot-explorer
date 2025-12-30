@@ -1,5 +1,8 @@
 extends Control
 
+signal emote_wheel_opened
+signal emote_wheel_closed
+
 @export var avatar_node: Avatar = null:
 	set(value):
 		if value != avatar_node:  # Prevent redundant assignments
@@ -20,18 +23,18 @@ var last_selected_emote_urn: String = ""
 
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
-@onready var label_for_desktop = %Label_ForDesktop
+@onready var control_wheel: Control = %Control_Wheel
+@onready var button_emotes: Button = $Button_Emotes
 
 
 func _ready():
-	self.hide()
+	control_wheel.hide()
+
 	for child in emote_wheel_container.get_children():
 		if child is EmoteItemUi:
 			child.play_emote.connect(self._on_play_emote)
 			child.select_emote.connect(self._on_select_emote.bind(child))
 			emote_items.push_back(child)
-
-	label_for_desktop.set_visible(not Global.is_mobile())
 
 	if avatar_node != null:
 		avatar_node.avatar_loaded.connect(self._on_avatar_loaded)
@@ -56,36 +59,12 @@ func _update_wheel(emote_urns: Array):
 		emote_item.async_load_from_urn(emote_urns[i], i)  # Forget await
 
 
-func _gui_input(event):
-	if event is InputEventScreenTouch:
-		UiSounds.play_sound("widget_emotes_close")
-		hide()
-		Global.explorer_grab_focus()
-
-	if event is InputEventKey:
-		# Play emotes
-		if event.keycode >= KEY_0 and event.keycode <= KEY_9:
-			if event.pressed:
-				var index = event.keycode - KEY_0
-				var emote_urn = emote_items[index].emote_urn
-				_on_play_emote(emote_urn)
-
-
-func _physics_process(_delta):
-	if Input.is_action_just_pressed("ia_open_emote_wheel") and Global.explorer_has_focus():
-		if not is_visible_in_tree():
-			UiSounds.play_sound("widget_emotes_open")
-		show()
-		grab_focus()
-		Global.release_mouse()
-
-
 func _on_play_emote(emote_urn: String):
-	self.hide()
-	Global.explorer_grab_focus()
+	close()
 	if avatar_node != null:
 		var emote_controller = avatar_node.emote_controller
-		emote_controller.play_emote(emote_urn)
+		# Use async_play_emote to ensure base emotes are loaded from remote
+		emote_controller.async_play_emote(emote_urn)
 		Global.comms.send_emote(emote_urn)
 	else:
 		printerr("No avatar node in EmoteWheel!")
@@ -103,3 +82,38 @@ func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 	last_selected_emote_urn = emote_urn
 	label_emote_name.text = child.emote_name
 	UiSounds.play_sound("backpack_item_highlight")
+
+
+func close(play_sound: bool = false) -> void:
+	if not control_wheel.visible:
+		return
+	control_wheel.hide()
+	emote_wheel_closed.emit()
+	Global.explorer_grab_focus()
+	if play_sound:
+		UiSounds.play_sound("widget_emotes_close")
+	if button_emotes != null and button_emotes.button_pressed:
+		button_emotes.set_pressed_no_signal(false)
+
+
+func open() -> void:
+	if control_wheel.visible:
+		return
+	control_wheel.show()
+	UiSounds.play_sound("widget_emotes_open")
+	emote_wheel_opened.emit()
+	grab_focus()
+	Global.release_mouse()
+
+
+func _on_control_wheel_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		UiSounds.play_sound("widget_emotes_close")
+		close()
+
+
+func _on_button_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		open()
+	else:
+		close(true)

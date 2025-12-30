@@ -2,9 +2,11 @@ extends "res://addons/dcl_dev_tools/dev_tools/dcl_dev_tool.gd"
 
 var enabled: bool = false
 
+
 func populate_menu(menu: PopupMenu, id: int):
 	menu.add_check_item("Debug Minimap", id)
 	menu.set_item_checked(menu.get_item_index(id), enabled)
+
 
 func execute():
 	# Toggle the state
@@ -35,6 +37,7 @@ func execute():
 	print("Debug Minimap: ", "Enabled" if enabled else "Disabled")
 	if enabled:
 		print("Run args: ", new_args_string)
+
 
 func _update_menu_checkmark(enabled: bool):
 	# Update both 2D and 3D menu checkmarks

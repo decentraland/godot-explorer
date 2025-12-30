@@ -1,6 +1,6 @@
 use godot::prelude::*;
 
-use godot::engine::Image;
+use godot::classes::Image;
 
 /// Mobile device static information (doesn't change during runtime) - internal Rust struct
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ pub struct DclMobileMetrics {
 }
 
 impl DclMobileDeviceInfo {
-    pub fn from_dictionary(dict: Dictionary) -> Self {
+    pub fn from_dictionary(dict: VarDictionary) -> Self {
         Self {
             device_brand: dict
                 .get("device_brand")
@@ -48,7 +48,7 @@ impl DclMobileDeviceInfo {
 }
 
 impl DclMobileMetrics {
-    pub fn from_dictionary(dict: Dictionary) -> Self {
+    pub fn from_dictionary(dict: VarDictionary) -> Self {
         Self {
             memory_usage: dict
                 .get("memory_usage")
@@ -88,23 +88,23 @@ impl DclIosPlugin {
     /// Try to get the DclGodotiOS singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
         let singleton =
-            godot::engine::Engine::singleton().get_singleton(StringName::from("DclGodotiOS"))?;
+            godot::classes::Engine::singleton().get_singleton(&StringName::from("DclGodotiOS"))?;
         Some(singleton.cast::<Object>())
     }
 
     /// Get static mobile device information (doesn't change during runtime) - internal use only
     pub(crate) fn get_mobile_device_info_internal() -> Option<DclMobileDeviceInfo> {
         let mut singleton = Self::try_get_singleton()?;
-        let info = singleton.call(StringName::from("get_mobile_device_info"), &[]);
-        let dict = info.try_to::<Dictionary>().ok()?;
+        let info = singleton.call("get_mobile_device_info", &[]);
+        let dict = info.try_to::<VarDictionary>().ok()?;
         Some(DclMobileDeviceInfo::from_dictionary(dict))
     }
 
     /// Get dynamic mobile metrics (changes during runtime) - internal use only
     pub(crate) fn get_mobile_metrics_internal() -> Option<DclMobileMetrics> {
         let mut singleton = Self::try_get_singleton()?;
-        let metrics = singleton.call(StringName::from("get_mobile_metrics"), &[]);
-        let dict = metrics.try_to::<Dictionary>().ok()?;
+        let metrics = singleton.call("get_mobile_metrics", &[]);
+        let dict = metrics.try_to::<VarDictionary>().ok()?;
         Some(DclMobileMetrics::from_dictionary(dict))
     }
 
@@ -114,7 +114,7 @@ impl DclIosPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call(StringName::from("open_webview_url"), &[url.to_variant()]);
+        singleton.call("open_webview_url", &[url.to_variant()]);
         true
     }
 
@@ -124,8 +124,29 @@ impl DclIosPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call(StringName::from("open_auth_url"), &[url.to_variant()]);
+        singleton.call("open_auth_url", &[url.to_variant()]);
         true
+    }
+
+    /// Get deeplink arguments (URL received from deeplink)
+    /// Returns a Dictionary with "data" key containing the deeplink URL, or empty if no deeplink
+    #[func]
+    pub fn get_deeplink_args() -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            dict.set("error", "No singleton returned");
+            return dict;
+        };
+
+        let url_variant = singleton.call("get_deeplink_url", &[]);
+        let url = url_variant
+            .try_to::<GString>()
+            .ok()
+            .unwrap_or_else(|| GString::from(""));
+
+        // Return dictionary with "data" key to match Android API
+        dict.set("data", url);
+        dict
     }
 
     /// Check if the iOS plugin is available
@@ -156,7 +177,7 @@ impl DclIosPlugin {
             return false;
         };
         let result = singleton.call(
-            StringName::from("add_calendar_event"),
+            "add_calendar_event",
             &[
                 title.to_variant(),
                 description.to_variant(),
@@ -175,7 +196,7 @@ impl DclIosPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        let result = singleton.call(StringName::from("share_text"), &[text.to_variant()]);
+        let result = singleton.call("share_text", &[text.to_variant()]);
         result.try_to::<bool>().unwrap_or(false)
     }
 
@@ -188,7 +209,7 @@ impl DclIosPlugin {
             return false;
         };
         let result = singleton.call(
-            StringName::from("share_text_with_image"),
+            "share_text_with_image",
             &[text.to_variant(), image.to_variant()],
         );
         result.try_to::<bool>().unwrap_or(false)

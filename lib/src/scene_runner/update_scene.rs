@@ -1,9 +1,9 @@
-use std::time::Instant;
+use std::{cell::RefCell, time::Instant};
 
-use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
-
-#[cfg(feature = "use_ffmpeg")]
-use super::components::{audio_stream::update_audio_stream, video_player::update_video_player};
+use godot::{
+    obj::Singleton,
+    prelude::{varray, Callable, ToGodot, Transform3D},
+};
 
 use super::{
     components::{
@@ -16,7 +16,7 @@ use super::{
         billboard::update_billboard,
         camera_mode_area::update_camera_mode_area,
         gltf_container::{sync_gltf_loading_state, update_gltf_container},
-        material::update_material,
+        material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
@@ -25,11 +25,14 @@ use super::{
         realm_info::sync_realm_info,
         text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent,
+        trigger_area::update_trigger_area,
         tween::update_tween,
         ui::scene_ui::update_scene_ui,
+        video_player::update_video_player,
         visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
+    pool_manager::PoolManager,
     rpc_calls::process_rpcs,
     scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
@@ -50,7 +53,7 @@ use crate::{
     },
     godot_classes::dcl_global::DclGlobal,
     scene_runner::components::{
-        avatar_shape::update_avatar_shape_emote_command,
+        audio_stream::update_audio_stream, avatar_shape::update_avatar_shape_emote_command,
         virtual_cameras::update_main_and_virtual_cameras,
     },
 };
@@ -68,6 +71,7 @@ pub fn _process_scene(
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
     ui_canvas_information: &PbUiCanvasInformation,
+    pool_manager: &RefCell<PoolManager>,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
     let Ok(mut crdt_state) = crdt.try_lock() else {
@@ -165,17 +169,18 @@ pub fn _process_scene(
             SceneUpdateState::PrintLogs => {
                 // enable logs
                 for log in &scene.current_dirty.logs {
-                    let mut arguments = VariantArray::new();
-                    arguments.push((scene.scene_id.0).to_variant());
-                    arguments.push((log.level as i32).to_variant());
-                    arguments.push((log.timestamp as f32).to_variant());
-                    arguments.push(GString::from(&log.message).to_variant());
-                    console.callv(arguments);
+                    let arguments = varray![
+                        scene.scene_id.0,
+                        log.level as i32,
+                        log.timestamp as f32,
+                        log.message.to_godot()
+                    ];
+                    console.callv(&arguments);
                 }
                 false
             }
             SceneUpdateState::DeletedEntities => {
-                update_deleted_entities(scene);
+                update_deleted_entities(scene, &mut pool_manager.borrow_mut());
                 false
             }
             SceneUpdateState::Tween => {
@@ -198,6 +203,8 @@ pub fn _process_scene(
             }
             SceneUpdateState::Material => {
                 update_material(scene, crdt_state);
+                // Update video textures separately (needs mutable access to video_players)
+                update_video_material_textures(scene);
                 false
             }
             SceneUpdateState::TextShape => {
@@ -242,12 +249,10 @@ pub fn _process_scene(
                 update_avatar_attach(scene, crdt_state);
                 false
             }
-            #[cfg(feature = "use_ffmpeg")]
             SceneUpdateState::VideoPlayer => {
                 update_video_player(scene, crdt_state, current_parcel_scene_id);
                 false
             }
-            #[cfg(feature = "use_ffmpeg")]
             SceneUpdateState::AudioStream => {
                 update_audio_stream(scene, crdt_state, current_parcel_scene_id);
                 false
@@ -258,6 +263,15 @@ pub fn _process_scene(
             }
             SceneUpdateState::CameraModeArea => {
                 update_camera_mode_area(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::TriggerArea => {
+                update_trigger_area(
+                    scene,
+                    crdt_state,
+                    &mut pool_manager.borrow_mut(),
+                    current_parcel_scene_id,
+                );
                 false
             }
             SceneUpdateState::VirtualCameras => {
@@ -284,7 +298,7 @@ pub fn _process_scene(
                     scene
                         .godot_dcl_scene
                         .root_node_3d
-                        .call_deferred("emit_signal".into(), &["tree_changed".to_variant()]);
+                        .call_deferred("emit_signal", &["tree_changed".to_variant()]);
                     scene.godot_dcl_scene.hierarchy_changed_3d = false;
                 }
 
@@ -343,8 +357,8 @@ pub fn _process_scene(
                                 .map(|v| v.is_pointer_locked)
                         });
 
-                let is_pointer_locked = godot::prelude::Input::singleton().get_mouse_mode()
-                    == godot::engine::input::MouseMode::CAPTURED;
+                let is_pointer_locked = godot::classes::Input::singleton().get_mouse_mode()
+                    == godot::classes::input::MouseMode::CAPTURED;
                 if maybe_is_pointer_locked != Some(is_pointer_locked) {
                     let pointer_lock_component = PbPointerLock { is_pointer_locked };
                     SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)
@@ -364,6 +378,16 @@ pub fn _process_scene(
                 let results = ui_results.pointer_event_results.drain(0..);
                 for (entity, value) in results {
                     pointer_events_result_component.append(entity, value);
+                }
+
+                // Process trigger area results
+                if !scene.trigger_area_results.is_empty() {
+                    let trigger_area_result_component =
+                        SceneCrdtStateProtoComponents::get_trigger_area_result_mut(crdt_state);
+                    let results = scene.trigger_area_results.drain(0..);
+                    for (entity, value) in results {
+                        trigger_area_result_component.append(entity, value);
+                    }
                 }
 
                 let incoming_comms_message = DclGlobal::singleton()

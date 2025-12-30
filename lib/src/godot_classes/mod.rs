@@ -23,8 +23,10 @@ pub mod dcl_parse_deep_link;
 pub mod dcl_realm;
 #[cfg(feature = "use_resource_tracking")]
 pub mod dcl_resource_tracker;
+pub mod dcl_rich_ui_text;
 pub mod dcl_scene_node;
 pub mod dcl_social_blacklist;
+pub mod dcl_social_service;
 pub mod dcl_tokio_rpc;
 pub mod dcl_ui_background;
 pub mod dcl_ui_control;
@@ -46,7 +48,7 @@ where
     fn to_godot_from_json(&self) -> Result<godot::prelude::Variant, String> {
         let json_str = serde_json::to_string(&self).map_err(|e| e.to_string())?;
         let mut json_parser = godot::classes::Json::new_gd();
-        if json_parser.parse(json_str.into()) == godot::engine::global::Error::OK {
+        if json_parser.parse(json_str.as_str()) == godot::global::Error::OK {
             Ok(json_parser.get_data())
         } else {
             Err("godot json parse error".to_string())
@@ -54,7 +56,7 @@ where
     }
 
     fn from_godot_to_json(value: godot::prelude::Variant) -> Result<Self, String> {
-        let json_str = godot::engine::Json::stringify(value).to_string();
+        let json_str = godot::classes::Json::stringify(&value).to_string();
         json5::from_str(json_str.as_str()).map_err(|e| e.to_string())
     }
 }

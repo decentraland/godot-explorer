@@ -19,7 +19,7 @@
       "environment": [
         {
           "name": "RUST_LOG",
-          "value": "dclgodot=debug"
+          "value": "dclgodot=info"
         }
       ],
       "externalConsole": true,
@@ -130,24 +130,25 @@
     },
     {
       "name": "(MacOS) Launch",
-      "type": "cppdbg",
+      "type": "lldb",
       "request": "launch",
-      "targetArchitecture": "arm64",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot"],
-      "stopAtEntry": false,
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "--realm",
+        "boedo.dcl.eth",
+        "--debug-panel",
+        "--skip-lobby",
+        "--location",
+        "0,0"
+      ],
       "cwd": "${workspaceRoot}/godot",
-      "environment": [],
-      "externalConsole": true,
+      "env": {
+        "RUST_LOG": "dclgodot=debug,dclgodot::comms=error,dclgodot::analytics=error"
+      },
       "preLaunchTask": "Build GDExtension Lib",
-      "MIMode": "lldb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
+      "terminal": "integrated"
     }
   ]
 }

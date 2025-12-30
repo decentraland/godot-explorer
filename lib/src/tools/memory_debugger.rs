@@ -1,5 +1,6 @@
 use godot::{
-    engine::{performance::Monitor, Os, Performance},
+    classes::{performance::Monitor, Os, Performance},
+    obj::Singleton,
     prelude::*,
 };
 
@@ -14,10 +15,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 // Tracking Allocator - Live Rust Heap Memory Monitoring
 // ============================================================================
 
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
-static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
+pub static DEALLOCATED: AtomicUsize = AtomicUsize::new(0);
+pub static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub struct TrackingAllocator;
 
@@ -95,7 +96,7 @@ impl INode for MemoryDebugger {
         if self.scene_manager_path.is_none() {
             if let Some(parent) = self.base().get_parent() {
                 // Try to find scene_runner as a sibling (both are children of Global)
-                let scene_runner_node = parent.get_node_or_null("scene_runner".into());
+                let scene_runner_node = parent.get_node_or_null("scene_runner");
                 if let Some(node) = scene_runner_node {
                     self.scene_manager_path = Some(node);
                     tracing::info!("MemoryDebugger: Automatically found scene_runner");
@@ -143,7 +144,7 @@ impl MemoryDebugger {
 
     fn print_all_metrics(&self) {
         godot_print!("╔══════════════════════════════════════════════════════════════╗");
-        godot_print!("║                      MEMORY DEBUGGER 3                       ║");
+        godot_print!("║                      MEMORY DEBUGGER                         ║");
         godot_print!("╚══════════════════════════════════════════════════════════════╝");
 
         self.print_godot_memory_metrics();

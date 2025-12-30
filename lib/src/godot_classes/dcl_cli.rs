@@ -1,4 +1,5 @@
-use godot::engine::{Engine, Node, Os, SceneTree};
+use godot::classes::{Engine, Node, Os, SceneTree};
+use godot::obj::Singleton;
 use godot::prelude::*;
 use std::collections::HashMap;
 
@@ -58,6 +59,8 @@ pub struct DclCli {
     #[var(get)]
     pub debug_minimap: bool,
     #[var(get)]
+    pub debug_panel: bool,
+    #[var(get)]
     pub use_test_input: bool,
     #[var(get)]
     pub test_camera_tune: bool,
@@ -65,6 +68,8 @@ pub struct DclCli {
     pub measure_perf: bool,
     #[var(get)]
     pub dcl_benchmark: bool,
+    #[var(get)]
+    pub benchmark_report: bool,
     #[var(get)]
     pub fixed_skybox_time: bool,
     #[var(get)]
@@ -226,6 +231,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
+            ArgDefinition {
+                name: "--debug-panel".to_string(),
+                description: "Show the debug panel UI".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
             // Performance
             ArgDefinition {
                 name: "--measure-perf".to_string(),
@@ -236,6 +247,12 @@ impl DclCli {
             ArgDefinition {
                 name: "--dcl-benchmark".to_string(),
                 description: "Run automated benchmark tests".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--benchmark-report".to_string(),
+                description: "Run benchmarks and generate markdown reports".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Performance".to_string(),
             },
@@ -353,10 +370,12 @@ impl INode for DclCli {
         let network_debugger = args_map.contains_key("--network-debugger");
         let spawn_avatars = args_map.contains_key("--spawn-avatars");
         let debug_minimap = args_map.contains_key("--debug-minimap");
+        let debug_panel = args_map.contains_key("--debug-panel") || preview_mode;
         let use_test_input = args_map.contains_key("--use-test-input");
         let test_camera_tune = args_map.contains_key("--test-camera-tune");
         let measure_perf = args_map.contains_key("--measure-perf");
         let dcl_benchmark = args_map.contains_key("--dcl-benchmark");
+        let benchmark_report = args_map.contains_key("--benchmark-report");
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
 
@@ -406,10 +425,12 @@ impl INode for DclCli {
             network_debugger,
             spawn_avatars,
             debug_minimap,
+            debug_panel,
             use_test_input,
             test_camera_tune,
             measure_perf,
             dcl_benchmark,
+            benchmark_report,
             fixed_skybox_time,
             developer_mode,
             help_requested,
@@ -457,7 +478,7 @@ impl DclCli {
     #[func]
     pub fn get_location_vector(&self) -> Vector2i {
         if self.location.is_empty() {
-            return Vector2i::ZERO;
+            return Vector2i::MAX;
         }
 
         let loc_str = self.location.to_string();
@@ -467,7 +488,7 @@ impl DclCli {
                 return Vector2i::new(x, y);
             }
         }
-        Vector2i::ZERO
+        Vector2i::MAX
     }
 
     #[func]
@@ -508,7 +529,7 @@ impl DclCli {
             help.push('\n');
         }
 
-        GString::from(help)
+        GString::from(&help)
     }
 
     #[func]
@@ -522,7 +543,7 @@ impl DclCli {
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
-            .get_node_or_null("DclCli".into())?
+            .get_node_or_null("DclCli")?
             .try_cast::<Self>();
         res.ok()
     }

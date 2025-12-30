@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - release
   pull_request:
 
 concurrency:
@@ -37,13 +38,10 @@ jobs:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      
-  ios-build:
-    name: 🍏 iOS
-    needs: static-checks
-    uses: ./.github/workflows/ios_builds.yml
-    secrets:
-      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+
+  # iOS builds are triggered separately via:
+  # - Label 'build-ios-internal' on PRs (see ios_label_trigger.yml)
+  # - Manual workflow dispatch (see ios_builds.yml)
 
   linux-build:
     name: 🐧 Linux
@@ -68,3 +66,13 @@ jobs:
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+
+  benchmark:
+    name: 📊 Benchmark Report
+    needs: static-checks
+    uses: ./.github/workflows/benchmark.yml
+    secrets:
+      BENCHMARK_AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
+      BENCHMARK_AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
+      BENCHMARK_AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
+      BENCHMARK_AWS_S3_BUCKET: ${{ secrets.BENCHMARK_AWS_S3_BUCKET }}

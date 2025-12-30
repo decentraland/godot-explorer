@@ -8,16 +8,13 @@ use crate::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
+        ui_text_tags::strip_tags_extract_first_color,
     },
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{
-        global::{HorizontalAlignment, VerticalAlignment},
-        label_3d::AlphaCutMode,
-        text_server::AutowrapMode,
-        Label3D,
-    },
+    classes::{label_3d::AlphaCutMode, text_server::AutowrapMode, Label3D, Node},
+    global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
 
@@ -37,12 +34,12 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Label3D>(NodePath::from("TextShape"));
+            let existing = node_3d.try_get_node_as::<Label3D>("TextShape");
 
             if new_value.is_none() {
                 if let Some(mut text_shape_node) = existing {
                     text_shape_node.queue_free();
-                    node_3d.remove_child(text_shape_node.upcast());
+                    node_3d.remove_child(&text_shape_node.upcast::<Node>());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut label_3d, add_to_base) = match existing {
@@ -62,17 +59,31 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .map(|color| color.a)
                     .unwrap_or(1.0);
 
-                let text_color = new_value
-                    .text_color
-                    .map(|color| Color::from_rgba(color.r, color.g, color.b, opacity))
-                    .unwrap_or(Color::from_rgba(1.0, 1.0, 1.0, opacity));
+                // Process text: strip Unity tags and extract first color
+                let (display_text, tag_color) =
+                    if let Some(strip_result) = strip_tags_extract_first_color(&new_value.text) {
+                        let color = strip_result.first_color.and_then(|c| parse_color(&c));
+                        (strip_result.text, color)
+                    } else {
+                        (new_value.text.clone(), None)
+                    };
+
+                // Use tag color if found, otherwise use the default text_color
+                let text_color = tag_color
+                    .map(|c| Color::from_rgba(c.0, c.1, c.2, opacity))
+                    .unwrap_or_else(|| {
+                        new_value
+                            .text_color
+                            .map(|color| Color::from_rgba(color.r, color.g, color.b, opacity))
+                            .unwrap_or(Color::from_rgba(1.0, 1.0, 1.0, opacity))
+                    });
 
                 let outline_color = new_value
                     .outline_color
                     .map(|color| Color::from_rgba(color.r, color.g, color.b, opacity))
                     .unwrap_or(Color::from_rgba(1.0, 1.0, 1.0, opacity));
 
-                label_3d.set_text(GString::from(new_value.text));
+                label_3d.set_text(&display_text);
                 label_3d.set_modulate(text_color);
 
                 let font_size = (22.0 * new_value.font_size.unwrap_or(3.0)).max(1.0);
@@ -137,9 +148,9 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 label_3d.set_horizontal_alignment(h_align);
 
                 if add_to_base {
-                    label_3d.set_name(GString::from("TextShape"));
-                    label_3d.set_font(new_font.get_font_resource());
-                    node_3d.add_child(label_3d.upcast());
+                    label_3d.set_name("TextShape");
+                    label_3d.set_font(&new_font.get_font_resource());
+                    node_3d.add_child(&label_3d.upcast::<Node>());
                 }
 
                 // TODO: missing properties
@@ -150,4 +161,62 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
         }
     }
+}
+
+/// Parses a color string (named color or hex) into RGB values (0.0-1.0)
+fn parse_color(color: &str) -> Option<(f32, f32, f32)> {
+    let color = color.trim().to_lowercase();
+
+    // Named colors (common Unity/CSS colors)
+    match color.as_str() {
+        "red" => return Some((1.0, 0.0, 0.0)),
+        "green" => return Some((0.0, 0.5, 0.0)),
+        "blue" => return Some((0.0, 0.0, 1.0)),
+        "white" => return Some((1.0, 1.0, 1.0)),
+        "black" => return Some((0.0, 0.0, 0.0)),
+        "yellow" => return Some((1.0, 1.0, 0.0)),
+        "cyan" => return Some((0.0, 1.0, 1.0)),
+        "magenta" => return Some((1.0, 0.0, 1.0)),
+        "gray" | "grey" => return Some((0.5, 0.5, 0.5)),
+        "orange" => return Some((1.0, 0.65, 0.0)),
+        "purple" => return Some((0.5, 0.0, 0.5)),
+        "pink" => return Some((1.0, 0.75, 0.8)),
+        "brown" => return Some((0.65, 0.16, 0.16)),
+        "lime" => return Some((0.0, 1.0, 0.0)),
+        "navy" => return Some((0.0, 0.0, 0.5)),
+        "teal" => return Some((0.0, 0.5, 0.5)),
+        "olive" => return Some((0.5, 0.5, 0.0)),
+        "maroon" => return Some((0.5, 0.0, 0.0)),
+        "aqua" => return Some((0.0, 1.0, 1.0)),
+        "silver" => return Some((0.75, 0.75, 0.75)),
+        "fuchsia" => return Some((1.0, 0.0, 1.0)),
+        _ => {}
+    }
+
+    // Hex color (#RGB, #RRGGBB, or #RRGGBBAA)
+    if let Some(hex) = color.strip_prefix('#') {
+        match hex.len() {
+            3 => {
+                // #RGB -> expand to #RRGGBB
+                let r = u8::from_str_radix(&hex[0..1], 16).ok()?;
+                let g = u8::from_str_radix(&hex[1..2], 16).ok()?;
+                let b = u8::from_str_radix(&hex[2..3], 16).ok()?;
+                return Some((
+                    (r * 17) as f32 / 255.0,
+                    (g * 17) as f32 / 255.0,
+                    (b * 17) as f32 / 255.0,
+                ));
+            }
+            6 | 8 => {
+                // #RRGGBB or #RRGGBBAA (ignore alpha)
+                let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+                let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+                let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+                return Some((r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0));
+            }
+            _ => {}
+        }
+    }
+
+    None
 }

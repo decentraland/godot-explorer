@@ -41,14 +41,14 @@ jobs:
           image: godot-explorer
           tags: |
             ${{ github.sha }}
-            ${{ github.ref == 'refs/heads/main' && 'latest' || 'next' }}
+            ${{ github.ref == 'refs/heads/release' && 'latest' || (github.ref == 'refs/heads/main' && 'staging' || 'next') }}
           dockerfiles: |
             ./Dockerfile
           build-args: |
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
-        if: github.ref == 'refs/heads/main' # TODO: Push only on tags / releases?
+        if: github.ref == 'refs/heads/release'
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:

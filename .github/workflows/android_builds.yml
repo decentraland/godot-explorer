@@ -13,6 +13,10 @@ on:
       SENTRY_PROJECT:
         required: true
 
+permissions:
+  pull-requests: write
+  contents: read
+
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
   cancel-in-progress: true
@@ -57,14 +61,12 @@ jobs:
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
+          mkdir -p android-debug-symbols
+          cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
       
       - name: Export Android AAB
         run: |
           cargo run -- export --target android --format aab --release
-      
-      - name: Export Quest APK
-        run: |
-          cargo run -- export --target quest --format apk --release
 
       # Decode and setup keystore for AAB signing
       - name: Setup AAB Signing Keystore
@@ -97,46 +99,27 @@ jobs:
           ls -la exports/
           mkdir -p android-artifacts-apk
           mkdir -p android-artifacts-aab
-          mkdir -p android-debug-symbols
           mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
           mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
-          cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
 
-      - name: Copy Meta Quest Artifacts
-        if: success() || failure()
-        run: |
-          mkdir -p meta-quest-artifacts
-          mv exports/meta-quest.apk meta-quest-artifacts/ || true
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: Android APK
+          name: AndroidAPK
           path: android-artifacts-apk/
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload AAB Artifacts
+        uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: Android AAB
+          name: AndroidAAB
           path: android-artifacts-aab/
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
-        if: success() || failure()
-        with:
-          name: Meta Quest APK
-          path: meta-quest-artifacts/
-          if-no-files-found: error
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: libdclgodot_android
-          path: |
-            lib/target/aarch64-linux-android/release/libdclgodot.so
-          if-no-files-found: error
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload Android Debug Symbols
+        uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: Android Native Debug Symbols
@@ -172,3 +155,53 @@ jobs:
           else
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
           fi
+
+      # Build Report Comment
+      - name: Prepare Build Report
+        if: github.event_name == 'pull_request' && always()
+        run: |
+          ARTIFACTS_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Determine build status
+          if [ "${{ job.status }}" = "success" ]; then
+            ANDROID_STATUS="✅ Success"
+            APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
+            AAB_LINK="[📦 Download AAB](${ARTIFACTS_URL}/artifacts)"
+            SYMBOLS_LINK="[🔧 Debug Symbols](${ARTIFACTS_URL}/artifacts)"
+          else
+            ANDROID_STATUS="❌ Failed"
+            APK_LINK="Build failed"
+            AAB_LINK="Build failed"
+            SYMBOLS_LINK="Build failed"
+          fi
+
+          {
+            echo "## 📦 Build Report"
+            echo ""
+            echo "### 🤖 Android"
+            echo ""
+            echo "| Artifact | Status |"
+            echo "|----------|--------|"
+            echo "| APK | ${APK_LINK} |"
+            echo "| AAB | ${AAB_LINK} |"
+            echo "| Debug Symbols | ${SYMBOLS_LINK} |"
+            echo ""
+            echo "**Build Status**: ${ANDROID_STATUS}"
+            echo ""
+            echo "### 🍏 iOS"
+            echo ""
+            echo "> iOS builds are triggered manually. Add the \`build-ios-internal\` label to trigger an iOS build."
+            echo ""
+            echo "---"
+            echo ""
+            echo "🔗 **Workflow Run**: [View logs](${ARTIFACTS_URL})"
+            echo ""
+            echo "🔄 **Updated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          } > build-report.md
+
+      - name: Comment PR with Build Report
+        if: github.event_name == 'pull_request' && always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: build-report
+          path: build-report.md

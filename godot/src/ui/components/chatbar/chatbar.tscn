@@ -1,0 +1,111 @@
+[gd_scene load_steps=8 format=3 uid="uid://dfi5ql6ogtlxc"]
+
+[ext_resource type="Script" uid="uid://iot0yhkloep2" path="res://src/ui/components/chatbar/chatbar.gd" id="1_8wxvk"]
+[ext_resource type="Texture2D" uid="uid://u3i0iq64assb" path="res://assets/chathud.svg" id="2_8wxvk"]
+[ext_resource type="Texture2D" uid="uid://cwpaml0fpf1uk" path="res://assets/maphud.svg" id="3_2fmgn"]
+[ext_resource type="Texture2D" uid="uid://bhiwoh5dwudbo" path="res://assets/sharehud.svg" id="4_o1l3x"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tw2ns"]
+bg_color = Color(0, 0, 0, 0.9019608)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_bg"]
+bg_color = Color(0, 0, 0, 0.75)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_grvqo"]
+
+[node name="Chatbar" type="Control"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_8wxvk")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 192.0
+offset_bottom = 66.0
+theme_override_constants/separation = 12
+
+[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
+
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="Button_Chat" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_override_constants/icon_max_width = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
+toggle_mode = true
+button_group = SubResource("ButtonGroup_grvqo")
+icon = ExtResource("2_8wxvk")
+flat = true
+icon_alignment = 1
+
+[node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
+
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HudButton_Discover" type="Button" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_override_constants/icon_max_width = 54
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
+toggle_mode = true
+button_group = SubResource("ButtonGroup_grvqo")
+icon = ExtResource("3_2fmgn")
+flat = true
+icon_alignment = 2
+
+[node name="HudButton_Share" type="Button" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_override_constants/icon_max_width = 54
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
+toggle_mode = true
+button_group = SubResource("ButtonGroup_grvqo")
+icon = ExtResource("4_o1l3x")
+flat = true
+
+[connection signal="pressed" from="HBoxContainer/PanelContainer/VBoxContainer_Buttons/Button_Chat" to="." method="_on_button_chat_pressed"]
+[connection signal="pressed" from="HBoxContainer/PanelContainer2/VBoxContainer_Buttons/HudButton_Discover" to="." method="_on_hud_button_discover_pressed"]
+[connection signal="pressed" from="HBoxContainer/PanelContainer2/VBoxContainer_Buttons/HudButton_Share" to="." method="_on_hud_button_share_pressed"]

@@ -8,6 +8,9 @@
             "args": [
                 "--",
                 "build",
+                "--no-default-features", 
+                "--features", 
+                "use_livekit,use_deno,enable_inspector"
             ],
             "problemMatcher": [
                 "$rustc"

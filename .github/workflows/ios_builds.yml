@@ -10,6 +10,24 @@ on:
         required: false
       SENTRY_PROJECT:
         required: false
+  push:
+    branches:
+      - main
+      - release
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or commit to build'
+        required: false
+        default: 'main'
+      pr_number:
+        description: 'PR number to update with build status (optional)'
+        required: false
+        default: ''
+
+permissions:
+  pull-requests: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
@@ -25,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.inputs.ref || github.sha }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -116,21 +134,17 @@ jobs:
           git lfs install
 
       - name: Setup SSH for deployment
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
       - name: Deploy iOS exports to mobile deploy pipeline
         run: |
-          # Determine branch name based on event type
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BRANCH_NAME="PR-${{ github.event.pull_request.number }}-${{ github.head_ref || github.ref_name }}"
-          else
-            BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
-          fi
-
+          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
           echo "Deploying to branch: $BRANCH_NAME"
 
           # Clone the target repository using SSH
@@ -257,4 +271,121 @@ jobs:
             fi
           else
             echo "Development build detected (-dev suffix), skipping Sentry upload"
+
+      - name: Notify Slack on Failure
+        if: failure() && !cancelled()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHA:0:7}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TRIGGERED_BY="${{ github.actor }}"
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": {
+                  \"type\": \"plain_text\",
+                  \"text\": \"❌ iOS Build Failed\",
+                  \"emoji\": true
+                }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Branch:*\n\`${BRANCH_NAME}\`\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\"
+                  }
+                ]
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  {
+                    \"type\": \"button\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \"View Logs\",
+                      \"emoji\": true
+                    },
+                    \"style\": \"danger\",
+                    \"url\": \"${WORKFLOW_URL}\"
+                  }
+                ]
+              }
+            ]
+          }" "$SLACK_WEBHOOK_URL"
+
+      - name: Update PR Comment - Success
+        if: success() && github.event.inputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
+
+          COMMENT_BODY="---
+
+          ### 🍏 iOS Build Complete
+
+          ✅ **Status**: Success
+
+          🔗 **iOS Workflow**: [View build](${WORKFLOW_URL})
+
+          📦 **Artifacts**: [godot-mobile-deploy-pipeline](${DEPLOY_REPO_URL})
+
+          📍 **Branch**: \`${BRANCH_NAME}\`
+
+          🔄 **Completed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+          # Find and update the existing iOS comment
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete")) | .id' | head -1)
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
+          else
+            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
+          fi
+
+      - name: Update PR Comment - Failure
+        if: failure() && !cancelled() && github.event.inputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          COMMENT_BODY="---
+
+          ### 🍏 iOS Build Failed
+
+          ❌ **Status**: Failed
+
+          🔗 **iOS Workflow**: [View logs](${WORKFLOW_URL})
+
+          📍 **Branch**: \`${BRANCH_NAME}\`
+
+          🔄 **Failed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+          # Find and update the existing iOS comment
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed")) | .id' | head -1)
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
+          else
+            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
           fi

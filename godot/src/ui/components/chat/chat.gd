@@ -16,15 +16,10 @@ var new_messages_count: int = 0
 @onready var panel_line_edit: PanelContainer = %PanelLineEdit
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
-@onready var button_nearby_users: Button = %Button_NearbyUsers
-@onready var label_members_quantity: Label = %Label_MembersQuantity
 @onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
-@onready var button_back: Button = %Button_Back
 @onready var texture_rect_logo: TextureRect = %TextureRect_Logo
-@onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
 @onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
 @onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
-@onready var avatars_list: Control = %AvatarsList
 @onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
 @onready var margin_container_go_to_new_messages: MarginContainer = %MarginContainer_GoToNewMessages
 @onready var button_go_to_last: Button = %Button_GoToLast
@@ -34,11 +29,6 @@ var new_messages_count: int = 0
 
 # gdlint:ignore = async-function-name
 func _ready():
-	#_on_button_back_pressed()
-
-	# Connect to avatar scene changed signal instead of using timer
-	avatars_list.size_changed.connect(self.update_nearby_quantity)
-
 	Global.on_chat_message.connect(self._on_chat_message_arrived)
 	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
 	submit_message.connect(self._on_submit_message)
@@ -103,32 +93,11 @@ func finish():
 
 
 func toggle_chat_visibility(visibility: bool):
-	_on_button_back_pressed()
 	if visibility:
 		UiSounds.play_sound("widget_chat_open")
 	else:
 		Global.explorer_grab_focus()
 		UiSounds.play_sound("widget_chat_close")
-
-
-func update_nearby_quantity() -> void:
-	button_nearby_users.text = str(avatars_list.list_size)
-	label_members_quantity.text = str(avatars_list.list_size)
-
-
-func _on_button_nearby_users_pressed() -> void:
-	show_nearby_players()
-
-
-func _on_button_back_pressed() -> void:
-	panel_line_edit.show()
-	avatars_list.hide()
-	button_back.hide()
-	h_box_container_nearby_users.hide()
-	margin_container_chat.show()
-	texture_rect_logo.show()
-	button_nearby_users.show()
-	line_edit_command.grab_focus()
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -144,7 +113,8 @@ func _on_gui_input(event: InputEvent) -> void:
 func exit_chat() -> void:
 	hide()
 	on_exit_chat.emit()
-	DisplayServer.virtual_keyboard_hide()
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_hide()
 
 
 func async_start_chat():
@@ -159,16 +129,6 @@ func async_start_chat():
 	if !scrolled:
 		await get_tree().process_frame
 		_scroll_to_bottom()
-
-
-func show_nearby_players() -> void:
-	avatars_list.show()
-	button_back.show()
-	h_box_container_nearby_users.show()
-	margin_container_chat.hide()
-	texture_rect_logo.hide()
-	button_nearby_users.hide()
-	panel_line_edit.hide()
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
@@ -224,5 +184,4 @@ func _async_on_change_virtual_keyboard(_new_safe_area) -> void:
 
 
 func _on_line_edit_command_focus_exited() -> void:
-	if !avatars_list.visible:
-		exit_chat()
+	exit_chat()

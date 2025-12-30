@@ -1,0 +1,21 @@
+[gd_scene load_steps=3 format=3 uid="uid://c3stuckdetector"]
+
+[ext_resource type="Script" path="res://src/logic/player/stuck_detector.gd" id="1_script"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_stuck"]
+margin = 0.05
+radius = 0.25
+height = 1.5
+
+[node name="StuckDetector" type="Area3D"]
+collision_layer = 0
+collision_mask = 4294967295
+input_ray_pickable = false
+monitorable = false
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.153, 0)
+shape = SubResource("CapsuleShape3D_stuck")
+
+[connection signal="body_exited" from="." to="." method="_on_body_exited"]

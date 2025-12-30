@@ -35,14 +35,32 @@ pub struct IncomingMessage {
     pub room_id: String, // To identify which room the message came from
 }
 
+/// Reason for disconnection from the server
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisconnectReason {
+    /// Another participant with the same identity has joined the room
+    DuplicateIdentity,
+    /// The room was closed
+    RoomClosed,
+    /// Participant was removed/kicked from the server
+    Kicked,
+    /// Other disconnection reasons (server shutdown, signal close, etc.)
+    Other,
+}
+
 /// Types of messages that can be received from peers
 #[derive(Debug, Clone)]
 pub enum MessageType {
     Rfc4(Rfc4Message),
     InitVoice(VoiceInitData),
     VoiceFrame(VoiceFrameData),
-    PeerJoined, // Peer joined a room
-    PeerLeft,   // Peer left a room
+    InitVideo(VideoInitData),
+    VideoFrame(VideoFrameData),
+    InitStreamerAudio(StreamerAudioInitData),
+    StreamerAudioFrame(StreamerAudioFrameData),
+    PeerJoined,                     // Peer joined a room
+    PeerLeft,                       // Peer left a room
+    Disconnected(DisconnectReason), // Disconnected from the server
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +78,32 @@ pub struct VoiceInitData {
 
 #[derive(Debug, Clone)]
 pub struct VoiceFrameData {
+    pub data: Vec<i16>,
+}
+
+#[derive(Debug, Clone)]
+pub struct VideoInitData {
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct VideoFrameData {
+    pub data: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+}
+
+// Streamer audio data (separate from voice chat - for video player audio)
+#[derive(Debug, Clone)]
+pub struct StreamerAudioInitData {
+    pub sample_rate: u32,
+    pub num_channels: u32,
+    pub samples_per_channel: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct StreamerAudioFrameData {
     pub data: Vec<i16>,
 }
 
@@ -92,6 +136,14 @@ struct ProfileUpdate {
 struct ProfileFetchFailure {
     address: H160,
     announced_version: u32,
+}
+
+struct VideoTrackInfo {
+    #[allow(dead_code)]
+    width: u32,
+    #[allow(dead_code)]
+    height: u32,
+    last_frame_time: Instant,
 }
 
 /// Central message processor that handles all incoming and outgoing messages
@@ -151,6 +203,12 @@ pub struct MessageProcessor {
     // Cached blocked/muted sets for performance (updated when social_blacklist changes)
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
+
+    // Video track management
+    active_video_tracks: HashMap<H160, VideoTrackInfo>,
+
+    // Disconnect reason if disconnected from the server, along with the room_id
+    disconnect_reason: Option<(DisconnectReason, String)>,
 }
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
@@ -209,6 +267,8 @@ impl MessageProcessor {
             social_blacklist: None,
             cached_blocked: HashSet::new(),
             cached_muted: HashSet::new(),
+            active_video_tracks: HashMap::new(),
+            disconnect_reason: None,
         }
     }
 
@@ -324,6 +384,14 @@ impl MessageProcessor {
             messages.push(message);
         }
         messages
+    }
+
+    /// Checks if there was a disconnection and returns the reason along with the room_id
+    /// Clears the reason after returning it
+    ///
+    /// CommunicationManager should call this regularly to check for disconnection
+    pub fn consume_disconnect_reason(&mut self) -> Option<(DisconnectReason, String)> {
+        self.disconnect_reason.take()
     }
 
     /// Processes all pending messages and performs periodic maintenance
@@ -535,7 +603,7 @@ impl MessageProcessor {
                 let mut avatar_scene_ref = self.avatars.clone();
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene
-                    .add_avatar(new_alias, GString::from(format!("{:#x}", message.address)));
+                    .add_avatar(new_alias, GString::from(&format!("{:#x}", message.address)));
 
                 // If the user is blocked, hide the avatar immediately
                 if self.cached_blocked.contains(&message.address) {
@@ -611,6 +679,87 @@ impl MessageProcessor {
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene.push_voice_frame(peer_alias, frame);
             }
+            MessageType::InitVideo(video_init) => {
+                tracing::debug!(
+                    "InitVideo from {:#x}: {}x{}",
+                    message.address,
+                    video_init.width,
+                    video_init.height
+                );
+
+                self.active_video_tracks.insert(
+                    message.address,
+                    VideoTrackInfo {
+                        width: video_init.width,
+                        height: video_init.height,
+                        last_frame_time: Instant::now(),
+                    },
+                );
+            }
+            MessageType::VideoFrame(video_frame) => {
+                // Filter blocked users
+                if self.cached_blocked.contains(&message.address) {
+                    return;
+                }
+
+                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
+                    track_info.last_frame_time = Instant::now();
+
+                    // Forward to all scenes (any video track goes to all livekit video players)
+                    use crate::godot_classes::dcl_global::DclGlobal;
+                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                    let mut scene_runner = scene_runner.bind_mut();
+
+                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                        scene.process_livekit_video_frame(
+                            video_frame.width,
+                            video_frame.height,
+                            &video_frame.data,
+                        );
+                    }
+                } else {
+                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
+                }
+            }
+            MessageType::InitStreamerAudio(audio_init) => {
+                tracing::info!(
+                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
+                    audio_init.sample_rate,
+                    audio_init.num_channels,
+                    audio_init.samples_per_channel
+                );
+
+                // Forward to all scenes to initialize their video player audio
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.init_livekit_audio(
+                        audio_init.sample_rate,
+                        audio_init.num_channels,
+                        audio_init.samples_per_channel,
+                    );
+                }
+            }
+            MessageType::StreamerAudioFrame(audio_frame) => {
+                // Convert i16 audio data to PackedVector2Array (same as voice chat)
+                let frame = godot::prelude::PackedVector2Array::from_iter(
+                    audio_frame.data.iter().map(|c| {
+                        let val = (*c as f32) / (i16::MAX as f32);
+                        godot::prelude::Vector2 { x: val, y: val }
+                    }),
+                );
+
+                // Forward to all scenes
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.process_livekit_audio_frame(frame.clone());
+                }
+            }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
                 self.handle_rfc4_message(rfc4_msg.message.clone(), peer_alias, message.address);
@@ -627,6 +776,13 @@ impl MessageProcessor {
             MessageType::PeerLeft => {
                 // Handle peer leaving a room
                 self.handle_peer_left(message.address, room_id);
+            }
+            MessageType::Disconnected(reason) => {
+                // Set disconnect_reason if not already set (first disconnect wins)
+                // Any room disconnect (scene or archipelago) should be reported
+                if self.disconnect_reason.is_none() {
+                    self.disconnect_reason = Some((*reason, room_id));
+                }
             }
         }
     }
@@ -658,6 +814,9 @@ impl MessageProcessor {
 
                 // Clean up chat timestamp tracking for removed peer
                 self.last_chat_timestamps.remove(&address);
+
+                // Clean up video tracks
+                self.active_video_tracks.remove(&address);
             }
         }
     }
@@ -1156,5 +1315,8 @@ impl MessageProcessor {
     pub fn clean(&mut self) {
         self.peer_identities.clear();
         self.last_chat_timestamps.clear();
+        // Clean up all avatars when disconnected
+        let mut avatar_scene_ref = self.avatars.clone();
+        avatar_scene_ref.bind_mut().clean();
     }
 }

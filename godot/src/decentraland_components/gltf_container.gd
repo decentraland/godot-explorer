@@ -12,6 +12,8 @@ const MAX_CONCURRENT_LOADS := 10
 
 var dcl_gltf_hash := ""
 var optimized := false
+# Track if this GLTF has static colliders (for STATIC->KINEMATIC optimization)
+var _has_static_colliders := false
 
 @onready var timer = $Timer
 
@@ -22,6 +24,8 @@ static var pending_load_queue := []
 
 
 func _ready():
+	# Connect to switch_to_kinematic signal from Rust
+	self.switch_to_kinematic.connect(_on_switch_to_kinematic)
 	self.async_load_gltf.call_deferred()
 
 
@@ -210,10 +214,10 @@ func apply_fixes(gltf_instance: Node3D):
 		var mesh = instance.mesh
 		for idx in range(mesh.get_surface_count()):
 			var material = mesh.surface_get_material(idx)
-			fix_material(material)
+			fix_material(material, instance.name)
 
 
-func fix_material(mat: BaseMaterial3D):
+func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
 	# Induced rules for metallic specular roughness
 	# - If material has metallic texture then metallic value should be
 	# multiplied by .5
@@ -222,40 +226,6 @@ func fix_material(mat: BaseMaterial3D):
 
 	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
-
-	# Emission rules
-	set_emission_params(mat)
-
-
-func set_emission_params(mat: BaseMaterial3D):
-	var ios_workarounds = OS.get_name() == "iOS"
-	var base_energy_multiplier = 1.0 if !ios_workarounds else .15
-
-	if mat.resource_name.contains("_emission"):
-		mat.emission_energy_multiplier = 1.0 * base_energy_multiplier
-		mat.emission_enabled = true
-		return
-
-	if (
-		mat.albedo_texture
-		and mat.albedo_texture == mat.emission_texture
-		and mat.emission == Color.BLACK
-	):
-		mat.emission_enabled = false
-		return
-
-	if !mat.albedo_texture and !mat.emission_texture and mat.emission != Color.BLACK:
-		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 1.0 * base_energy_multiplier
-		mat.emission_operator = BaseMaterial3D.EMISSION_OP_ADD
-		return
-
-	if mat.albedo_texture and mat.emission_texture and mat.emission == Color.BLACK:
-		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
-		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
-		mat.emission = Color.WHITE
-		return
 
 
 func async_deferred_add_child():
@@ -281,6 +251,13 @@ func async_deferred_add_child():
 	# Colliders and rendering is ensured to be ready at this point
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
 	timer.stop()
+
+	# Set colliders to STATIC mode for better physics performance
+	_has_static_colliders = _set_colliders_static_mode(new_gltf_node)
+
+	# Enable transform tracking if we have static colliders
+	if _has_static_colliders:
+		self.enable_transform_tracking()
 
 	self.check_animations()
 
@@ -325,6 +302,8 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 		self.dcl_gltf_src = new_gltf
 		dcl_visible_cmask = visible_meshes_collision_mask
 		dcl_invisible_cmask = invisible_meshes_collision_mask
+		_has_static_colliders = false
+		self.disable_transform_tracking()  # Disable until new GLTF loads
 
 		if gltf_node != null:
 			remove_child(gltf_node)
@@ -349,3 +328,52 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 func _on_timer_timeout():
 	printerr("gltf loading timeout ", dcl_gltf_src)
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+
+
+#region Static/Kinematic Collider Optimization
+
+
+# Set all colliders to STATIC mode for better physics performance
+# Returns true if any colliders were set to STATIC mode
+func _set_colliders_static_mode(node_to_inspect: Node) -> bool:
+	var has_static := false
+	for node in node_to_inspect.get_children():
+		if node is MeshInstance3D:
+			var body_3d = get_animatable_body_3d(node)
+			if body_3d != null:
+				var mask = body_3d.get_meta("dcl_col", 0)
+				if mask != 0:
+					# Set STATIC mode via PhysicsServer3D for better performance
+					PhysicsServer3D.body_set_mode(
+						body_3d.get_rid(), PhysicsServer3D.BODY_MODE_STATIC
+					)
+					body_3d.set_meta("dcl_static_mode", true)
+					has_static = true
+		# Recurse into children
+		if _set_colliders_static_mode(node):
+			has_static = true
+	return has_static
+
+
+# Callback when Rust emits switch_to_kinematic signal
+func _on_switch_to_kinematic():
+	var gltf_node = get_gltf_resource()
+	if gltf_node != null:
+		_switch_colliders_to_kinematic(gltf_node)
+
+
+# Switch all colliders from STATIC to KINEMATIC mode
+# Called when the entity moves (after the 2nd transform change)
+func _switch_colliders_to_kinematic(node_to_inspect: Node):
+	for node in node_to_inspect.get_children():
+		if node is MeshInstance3D:
+			var body_3d = get_animatable_body_3d(node)
+			if body_3d != null and body_3d.has_meta("dcl_static_mode"):
+				# Switch to KINEMATIC mode via PhysicsServer3D
+				PhysicsServer3D.body_set_mode(
+					body_3d.get_rid(), PhysicsServer3D.BODY_MODE_KINEMATIC
+				)
+				body_3d.remove_meta("dcl_static_mode")
+		_switch_colliders_to_kinematic(node)
+
+#endregion
