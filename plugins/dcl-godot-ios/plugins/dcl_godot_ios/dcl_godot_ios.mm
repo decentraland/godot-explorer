@@ -238,7 +238,15 @@ void DclGodotiOS::open_auth_url(String url) {
         }];
 
     authSession.presentationContextProvider = authDelegate;
-    [authSession start];
+
+    // Use ephemeral session to ensure clean state (no shared cookies/session with Safari)
+    // This ensures each auth attempt starts fresh without previous login sessions
+    authSession.prefersEphemeralWebBrowserSession = YES;
+
+    BOOL started = [authSession start];
+    if (!started) {
+        [authDelegate show_notification_in_auth_window:@"Failed to start auth session"];
+    }
     #endif
 }
 
