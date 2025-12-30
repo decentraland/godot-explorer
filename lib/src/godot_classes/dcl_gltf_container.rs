@@ -99,7 +99,6 @@ pub struct DclGltfContainer {
     last_global_transform: Transform3D,
     transform_change_count: i32,
     transform_tracking_enabled: bool,
-    kinematic_signal_emitted: bool,
 
     base: Base<Node3D>,
 }
@@ -118,7 +117,6 @@ impl DclGltfContainer {
         self.last_global_transform = self.base().get_global_transform();
         self.transform_change_count = 0;
         self.transform_tracking_enabled = true;
-        self.kinematic_signal_emitted = false;
         self.base_mut().set_process(true);
     }
 
@@ -129,13 +127,13 @@ impl DclGltfContainer {
         self.base_mut().set_process(false);
     }
 
-    /// Reset transform tracking state (e.g., when loading a new GLTF)
+    /// Reset transform tracking state (e.g., when entity moves after kinematic switch)
+    /// Resets counters but keeps tracking enabled if it was
     #[func]
     pub fn reset_transform_tracking(&mut self) {
+        self.last_global_transform = self.base().get_global_transform();
         self.transform_change_count = 0;
-        self.transform_tracking_enabled = false;
-        self.kinematic_signal_emitted = false;
-        self.base_mut().set_process(false);
+        // Keep transform_tracking_enabled and process as they were
     }
 
     #[func]
@@ -230,14 +228,13 @@ impl INode3D for DclGltfContainer {
             last_global_transform: Transform3D::IDENTITY,
             transform_change_count: 0,
             transform_tracking_enabled: false,
-            kinematic_signal_emitted: false,
             base,
         }
     }
 
     fn process(&mut self, _delta: f64) {
-        // Skip if tracking is disabled or signal already emitted
-        if !self.transform_tracking_enabled || self.kinematic_signal_emitted {
+        // Skip if tracking is disabled
+        if !self.transform_tracking_enabled {
             return;
         }
 
@@ -249,7 +246,6 @@ impl INode3D for DclGltfContainer {
 
             // Emit signal after reaching threshold
             if self.transform_change_count >= TRANSFORM_CHANGE_THRESHOLD {
-                self.kinematic_signal_emitted = true;
                 self.transform_tracking_enabled = false;
                 self.base_mut().set_process(false);
                 self.base_mut().emit_signal("switch_to_kinematic", &[]);
