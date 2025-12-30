@@ -251,6 +251,14 @@ jobs:
         if: always()
         run: |
           rm -f ~/.ssh/deploy_key
+      # Debug with tmate (SSH access)
+      - name: Setup tmate session
+        if: success()
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          detached: true
+
       # Upload iOS debug symbols (dSYM) to Sentry
       - name: Upload iOS dSYMs to Sentry
         if: success()
@@ -319,6 +327,10 @@ jobs:
               echo "Checking app dSYM..."
               du -sh "$DSYM_DIR/decentraland-godot-client.app.dSYM" 2>/dev/null || true
               dwarfdump --uuid "$DSYM_DIR/decentraland-godot-client.app.dSYM" 2>/dev/null || true
+
+              # Check if dSYM contains Godot symbols
+              echo "Checking for Godot symbols in app dSYM..."
+              nm "$DSYM_DIR/decentraland-godot-client.app.dSYM/Contents/Resources/DWARF/decentraland-godot-client" 2>/dev/null | grep -i "godot" | head -10 || echo "No Godot symbols found via nm"
             fi
 
             # Create Sentry release and associate commits
@@ -333,12 +345,14 @@ jobs:
               --auth-token "$SENTRY_AUTH_TOKEN"
 
             # Upload all dSYM files found
+            echo "Uploading dSYMs to Sentry..."
             sentry-cli upload-dif \
               --org "$SENTRY_ORG" \
               --project "$SENTRY_PROJECT" \
               --auth-token "$SENTRY_AUTH_TOKEN" \
               --include-sources \
               --wait \
+              --log-level=info \
               "$DSYM_DIR"
 
             # Finalize the release
