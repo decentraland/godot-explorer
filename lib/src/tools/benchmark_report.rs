@@ -237,7 +237,7 @@ impl BenchmarkReport {
                 "=== ORPHAN NODES DEBUG: {} orphans detected ===",
                 orphan_node_count
             );
-            godot::engine::Node::print_orphan_nodes();
+            godot::classes::Node::print_orphan_nodes();
             godot::global::godot_print!("=== END ORPHAN NODES DEBUG ===");
         }
 
