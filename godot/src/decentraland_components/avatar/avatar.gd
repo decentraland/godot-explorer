@@ -485,8 +485,8 @@ func async_load_wearables():
 		var file_hash = Wearables.get_item_main_file_hash(emote, avatar_data.get_body_shape())
 		if file_hash.is_empty():
 			continue
-		# Use emote_loader from emote_controller to get the cached emote
-		var obj = emote_controller.emote_loader.get_emote_gltf(file_hash)
+		# Use emote_loader from emote_controller to get the cached emote (threaded loading)
+		var obj = await emote_controller.emote_loader.async_get_emote_gltf(file_hash)
 		if obj != null:
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 

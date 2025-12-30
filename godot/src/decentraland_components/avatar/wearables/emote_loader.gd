@@ -110,9 +110,9 @@ func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
 	return _completed_loads.get(glb_hash, "")
 
 
-## Get a DclEmoteGltf from cached scene.
-## Uses ContentProvider's load_cached_emote which extracts animations properly.
-func get_emote_gltf(file_hash: String) -> DclEmoteGltf:
+## Get a DclEmoteGltf from cached scene using threaded loading.
+## Uses ContentProvider's extract_emote_from_scene which extracts animations properly.
+func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
 	var scene_path = _completed_loads.get(file_hash, "")
 	if scene_path.is_empty():
 		scene_path = Global.content_provider.get_emote_cache_path(file_hash)
@@ -121,8 +121,36 @@ func get_emote_gltf(file_hash: String) -> DclEmoteGltf:
 		printerr("EmoteLoader: no scene_path for hash ", file_hash)
 		return null
 
-	# Use ContentProvider's load_cached_emote to properly extract animations
-	return Global.content_provider.load_cached_emote(scene_path, file_hash)
+	if not FileAccess.file_exists(scene_path):
+		printerr("EmoteLoader: scene file does not exist: ", scene_path)
+		return null
+
+	# Use threaded loading for non-blocking
+	var err = ResourceLoader.load_threaded_request(scene_path)
+	if err != OK:
+		printerr("EmoteLoader: failed to request threaded load for ", scene_path)
+		return null
+
+	# Poll until loaded
+	var main_tree = Engine.get_main_loop()
+	var status = ResourceLoader.load_threaded_get_status(scene_path)
+	while status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		if not is_instance_valid(main_tree):
+			return null
+		await main_tree.process_frame
+		status = ResourceLoader.load_threaded_get_status(scene_path)
+
+	if status != ResourceLoader.THREAD_LOAD_LOADED:
+		printerr("EmoteLoader: threaded load failed for ", scene_path, " status: ", status)
+		return null
+
+	var packed_scene = ResourceLoader.load_threaded_get(scene_path)
+	if packed_scene == null:
+		printerr("EmoteLoader: loaded resource is null for ", scene_path)
+		return null
+
+	# Use ContentProvider's extract_emote_from_scene to extract animations from loaded scene
+	return Global.content_provider.extract_emote_from_scene(packed_scene, file_hash)
 
 
 func _on_emote_ready(file_hash: String, scene_path: String):

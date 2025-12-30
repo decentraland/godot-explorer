@@ -869,20 +869,19 @@ impl ContentProvider {
         instance.try_cast::<Node3D>().ok()
     }
 
-    /// Load a cached emote scene from disk
+    /// Extract emote data from an already-loaded PackedScene.
     ///
-    /// This loads the pre-processed emote scene that was saved by load_and_save_emote_gltf.
-    /// The scene contains an AnimationPlayer with the processed animations embedded.
-    /// No re-extraction is needed - animations are read directly from the scene.
+    /// This takes a pre-loaded PackedScene (loaded via ResourceLoader.load_threaded_request)
+    /// and extracts the animations and armature prop from it.
+    /// Use this for non-blocking emote loading.
     #[func]
-    pub fn load_cached_emote(
+    pub fn extract_emote_from_scene(
         &self,
-        scene_path: GString,
+        packed_scene: Gd<godot::classes::PackedScene>,
         file_hash: GString,
     ) -> Option<Gd<DclEmoteGltf>> {
         use godot::classes::AnimationPlayer;
 
-        let packed_scene = godot::tools::load::<godot::classes::PackedScene>(&scene_path);
         let instance = packed_scene.instantiate()?;
         let root = instance.try_cast::<Node3D>().ok()?;
 

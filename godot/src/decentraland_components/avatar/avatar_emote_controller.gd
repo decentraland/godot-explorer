@@ -428,10 +428,9 @@ func _async_load_emote(emote_urn: String):
 		printerr("Error: failed to load emote scene for: ", emote_urn)
 		return
 
-	var obj = emote_loader.get_emote_gltf(file_hash)
+	var obj = await emote_loader.async_get_emote_gltf(file_hash)
 	if obj is DclEmoteGltf:
-		# Use call_deferred to ensure animation modifications happen on main thread
-		load_emote_from_dcl_emote_gltf.call_deferred(emote_urn, obj, file_hash)
+		load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 
 func _async_load_scene_emote(urn: String):
@@ -449,12 +448,9 @@ func _async_load_scene_emote(urn: String):
 		printerr("Error loading scene-emote ", urn, ": failed to load scene")
 		return
 
-	var obj = emote_loader.get_emote_gltf(emote_scene_urn.glb_hash)
+	var obj = await emote_loader.async_get_emote_gltf(emote_scene_urn.glb_hash)
 	if obj is DclEmoteGltf:
-		# Use call_deferred to ensure animation modifications happen on main thread
-		load_emote_from_dcl_emote_gltf.call_deferred(urn, obj, emote_scene_urn.glb_hash)
-		# Wait a frame for the deferred call to execute before checking
-		await avatar.get_tree().process_frame
+		load_emote_from_dcl_emote_gltf(urn, obj, emote_scene_urn.glb_hash)
 		if _has_emote(urn):
 			loaded_emotes_by_urn[urn].looping = emote_scene_urn.looping
 			loaded_emotes_by_urn[urn].from_scene = true
