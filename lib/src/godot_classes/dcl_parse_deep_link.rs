@@ -15,6 +15,12 @@ pub struct DclParseDeepLink {
     #[var]
     preview: GString,
 
+    /// Dynamic scene loading mode (deep link param: dynamic-scene-loading=true)
+    /// When true, uses continuous scene loading/unloading without terrain generation.
+    /// Works for any realm including Genesis City.
+    #[var]
+    dynamic_scene_loading: bool,
+
     #[var]
     params: VarDictionary,
 
@@ -32,6 +38,7 @@ impl IRefCounted for DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
             preview: GString::new(),
+            dynamic_scene_loading: false,
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
         }
@@ -46,6 +53,7 @@ impl DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
             preview: GString::new(),
+            dynamic_scene_loading: false,
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
         };
@@ -95,6 +103,11 @@ impl DclParseDeepLink {
                 "preview" => {
                     // Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
                     return_object.preview = value.to_string().to_godot();
+                }
+                "dynamic-scene-loading" => {
+                    // Dynamic scene loading mode - "true" or "1" enables it
+                    return_object.dynamic_scene_loading =
+                        value.eq_ignore_ascii_case("true") || value == "1";
                 }
                 _ => {}
             }
