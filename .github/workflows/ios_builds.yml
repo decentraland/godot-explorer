@@ -284,9 +284,30 @@ jobs:
 
             # Extract dSYM from libgodot.a (contains embedded debug symbols)
             if [ -f "$DSYM_DIR/libgodot.a" ]; then
-              echo "Extracting dSYM from libgodot.a..."
-              dsymutil "$DSYM_DIR/libgodot.a" -o "$DSYM_DIR/libgodot.a.dSYM" || echo "Warning: dsymutil failed for libgodot.a"
-              ls -la "$DSYM_DIR"/*.dSYM 2>/dev/null || true
+              echo "Analyzing libgodot.a..."
+              file "$DSYM_DIR/libgodot.a"
+              lipo -info "$DSYM_DIR/libgodot.a" 2>/dev/null || echo "Not a fat binary"
+
+              # Check if it's a fat binary and extract arm64 slice
+              if lipo -info "$DSYM_DIR/libgodot.a" 2>/dev/null | grep -q "arm64"; then
+                echo "Extracting arm64 slice from fat binary..."
+                lipo -extract arm64 "$DSYM_DIR/libgodot.a" -output "$DSYM_DIR/libgodot_arm64.a" 2>/dev/null || true
+                if [ -f "$DSYM_DIR/libgodot_arm64.a" ]; then
+                  echo "Running dsymutil on arm64 slice..."
+                  dsymutil "$DSYM_DIR/libgodot_arm64.a" -o "$DSYM_DIR/libgodot.a.dSYM" || echo "Warning: dsymutil failed"
+                fi
+              else
+                echo "Trying dsymutil directly..."
+                dsymutil "$DSYM_DIR/libgodot.a" -o "$DSYM_DIR/libgodot.a.dSYM" || echo "Warning: dsymutil failed for libgodot.a"
+              fi
+
+              # Check what dSYMs we have now
+              echo "Available dSYM files:"
+              find "$DSYM_DIR" -name "*.dSYM" -type d
+
+              # Also check if the app dSYM contains godot symbols
+              echo "Checking app dSYM for godot symbols..."
+              dwarfdump --uuid "$DSYM_DIR/decentraland-godot-client.app.dSYM" 2>/dev/null || true
             fi
 
             # Create Sentry release and associate commits
