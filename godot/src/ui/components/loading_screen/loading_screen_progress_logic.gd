@@ -56,6 +56,10 @@ func hide_loading_screen():
 	set_physics_process(false)
 	loading_screen.async_hide_loading_screen_effect()
 
+	# LOADING_END (Success) metric
+	var end_data = {"scene_id": str(Global.scene_fetcher.current_position), "status": "Success"}
+	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))
+
 
 func _physics_process(delta):
 	if wait_for > 0.0:
