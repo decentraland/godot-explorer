@@ -429,6 +429,13 @@ pub fn process_emote_animations(
             continue;
         };
 
+        tracing::debug!(
+            "Processing emote animation: hash='{}', key='{}', track_count={}",
+            file_hash,
+            animation_key,
+            anim.get_track_count()
+        );
+
         if default_anim_key.as_ref() == Some(animation_key) {
             default_animation = Some(anim.clone());
             anim.set_name(&anim_sufix_from_hash.to_godot())
@@ -441,25 +448,39 @@ pub fn process_emote_animations(
             let track_path = anim.track_get_path(track_idx).to_string();
             let track_type = anim.track_get_type(track_idx);
 
-            // Only remap bone-related transform tracks (not VALUE or METHOD tracks)
-            let is_transform_track = matches!(
-                track_type,
-                TrackType::POSITION_3D
-                    | TrackType::ROTATION_3D
-                    | TrackType::SCALE_3D
-                    | TrackType::BLEND_SHAPE
-            );
+            // Debug: log foot/leg related tracks with full details
+            let is_foot_track = track_path.to_lowercase().contains("foot")
+                || track_path.to_lowercase().contains("leg")
+                || track_path.to_lowercase().contains("ankle");
 
-            if !track_path.contains("Skeleton3D") && is_transform_track {
-                // Extract the bone name from the path (part after the last ':')
-                // Path could be "Armature:BoneName" or "Path/To/Node:BoneName"
-                if let Some(colon_pos) = track_path.rfind(':') {
-                    let bone_name = &track_path[colon_pos + 1..];
-                    if !bone_name.is_empty() {
-                        let new_track_path = format!("Armature/Skeleton3D:{}", bone_name);
-                        anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
-                    }
+            if is_foot_track {
+                tracing::info!(
+                    "FOOT TRACK [{}]: path='{}', type={:?}",
+                    track_idx,
+                    track_path,
+                    track_type
+                );
+            }
+
+            if !track_path.contains("Skeleton3D") {
+                let last_track_name = track_path.split('/').next_back().unwrap_or_default();
+                let new_track_path = format!("Armature/Skeleton3D:{}", last_track_name);
+
+                if is_foot_track {
+                    tracing::info!(
+                        "FOOT REMAP: '{}' -> '{}' (bone: '{}')",
+                        track_path,
+                        new_track_path,
+                        last_track_name
+                    );
                 }
+
+                anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
+            } else if is_foot_track {
+                tracing::info!(
+                    "FOOT SKIP (already has Skeleton3D): '{}'",
+                    track_path
+                );
             }
 
             if track_path.contains("Armature_Prop/Skeleton3D") {
@@ -1113,10 +1134,13 @@ pub async fn load_and_save_emote_gltf(
         let max_size = ctx.texture_quality.to_max_size();
         post_import_process(node.clone(), max_size);
 
-        // Cast to Node3D and rotate
-        let node = node
+        // Cast to Node3D and rotate (same as internal_load_gltf does)
+        let mut node = node
             .try_cast::<Node3D>()
             .map_err(|err| anyhow::Error::msg(format!("Error casting to Node3D: {err}")))?;
+
+        // Apply 180° rotation - same as internal_load_gltf
+        node.rotate_y(std::f32::consts::PI);
 
         // Extract animations in background thread
         let (armature_prop, default_animation, prop_animation) =

@@ -80,6 +80,8 @@ pub struct DclCli {
     pub only_optimized: bool,
     #[var(get)]
     pub only_no_optimized: bool,
+    #[var(get)]
+    pub emote_test_mode: bool,
 
     // Arguments with values
     #[var(get)]
@@ -183,6 +185,12 @@ impl DclCli {
             ArgDefinition {
                 name: "--avatar-renderer".to_string(),
                 description: "Run in avatar renderer mode".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--emote-test".to_string(),
+                description: "Run emote batch test (cycles through all emotes then exits)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
@@ -398,6 +406,7 @@ impl INode for DclCli {
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
         let only_optimized = args_map.contains_key("--only-optimized");
         let only_no_optimized = args_map.contains_key("--only-no-optimized");
+        let emote_test_mode = args_map.contains_key("--emote-test");
 
         // Extract arguments with values
         let realm = args_map
@@ -456,6 +465,7 @@ impl INode for DclCli {
             help_requested,
             only_optimized,
             only_no_optimized,
+            emote_test_mode,
             realm,
             location,
             scene_input_file,
