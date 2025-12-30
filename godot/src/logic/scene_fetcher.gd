@@ -40,6 +40,10 @@ var base_floor_manager: BaseFloorManager = null
 
 var desired_portable_experiences_urns: Array[String] = []
 
+# Dynamic loading mode: enables continuous scene loading/unloading without terrain generation
+# Used for deep links to custom realms - provides smooth loading without freezes
+var _use_dynamic_loading: bool = false
+
 # Flag to skip loading screen during reload operations (teleports, scene reloads, etc.)
 # This is a one-shot flag that gets reset after use
 var _is_reloading: bool = false
@@ -69,8 +73,10 @@ func _ready():
 
 		# Parcel data texture will be generated after parcels are loaded
 
-	# Hardcoded scene radius 0
-	var scene_radius = 0
+	# Set scene radius based on mode:
+	# - Floating islands: radius 5 to load scenes within range (avoids loading all scattered scenes)
+	# - City/test mode: radius 0 for precise coordinate-based loading
+	var scene_radius = 5 if is_using_floating_islands() else 0
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
@@ -130,15 +136,44 @@ func set_scene_radius(value: int):
 	scene_entity_coordinator.set_scene_radius(value)
 
 
+## Enables or disables dynamic loading mode.
+## In dynamic loading mode:
+## - Scenes are loaded/unloaded continuously as the player moves
+## - No loading screen is shown
+## - No floating island terrain is generated (just simple grass floors)
+## This mode is used for deep links to custom realms to provide smooth loading.
+func set_dynamic_loading_mode(enabled: bool) -> void:
+	if _use_dynamic_loading == enabled:
+		return
+
+	_use_dynamic_loading = enabled
+
+	if enabled:
+		# Clear floating island state when enabling dynamic mode
+		last_scene_group_hash = ""
+		for parcel in loaded_empty_scenes:
+			var empty_scene = loaded_empty_scenes[parcel]
+			remove_child(empty_scene)
+			empty_scene.queue_free()
+		loaded_empty_scenes.clear()
+		if wall_manager:
+			wall_manager.clear_walls()
+
+
+func is_dynamic_loading_mode() -> bool:
+	return _use_dynamic_loading
+
+
 # gdlint:ignore = async-function-name
 func _process(_dt):
 	scene_entity_coordinator.update()
 
 	var version := scene_entity_coordinator.get_version()
 
-	# For dynamic loading (no floating islands), always use continuous loading
-	# For floating islands, use on-demand loading (only when player enters new scene)
-	var use_continuous_loading = not is_using_floating_islands()
+	# Use continuous loading when:
+	# - Not using floating islands (test/renderer mode)
+	# - OR dynamic loading mode is enabled (deep link to custom realm)
+	var use_continuous_loading = not is_using_floating_islands() or _use_dynamic_loading
 	if use_continuous_loading:
 		if version != last_version_updated:
 			last_version_updated = scene_entity_coordinator.get_version()
@@ -213,9 +248,13 @@ func _async_on_desired_scene_changed():
 	# Show loading screen ONLY when:
 	# - We have no scenes loaded AND there are scenes to load (initial load)
 	# - We're in floating islands mode (not dynamic loading)
+	# - We're NOT in dynamic loading mode
 	# - We're NOT reloading (teleport, reload_scene, etc.)
 	var new_loading = (
-		loaded_scenes.is_empty() and not loadable_scenes.is_empty() and is_using_floating_islands()
+		loaded_scenes.is_empty()
+		and not loadable_scenes.is_empty()
+		and is_using_floating_islands()
+		and not _use_dynamic_loading
 	)
 
 	# Skip loading screen for any reload scenario (teleports, scene reloads, etc.)
@@ -274,8 +313,9 @@ func _async_on_desired_scene_changed():
 	for scene_id in scenes_to_remove:
 		loaded_scenes.erase(scene_id)
 
-	# Skip floating island generation in test/renderer modes
-	var use_floating_islands = is_using_floating_islands()
+	# Skip floating island generation in test/renderer modes or dynamic loading mode
+	# Dynamic loading mode uses simple grass floors without complex terrain
+	var use_floating_islands = is_using_floating_islands() and not _use_dynamic_loading
 
 	# Clear floating island state when switching to dynamic loading
 	if not use_floating_islands and !last_scene_group_hash.is_empty():
@@ -316,6 +356,17 @@ func _on_realm_changed():
 	Global.get_config().last_realm_joined = Global.realm.realm_url
 	Global.get_config().save_to_settings_file()
 
+	# Check if we should use dynamic loading mode
+	# Dynamic loading is enabled via deep link parameter: &dynamic-scene-loading=true
+	# This works for any realm including Genesis City
+	var deep_link_dynamic = (
+		Global.deep_link_obj.dynamic_scene_loading if Global.deep_link_obj else false
+	)
+	var should_use_dynamic = deep_link_dynamic and is_using_floating_islands()
+	set_dynamic_loading_mode(should_use_dynamic)
+
+	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
+
 	# Force floating island recreation on realm change
 	last_scene_group_hash = ""
 
@@ -329,7 +380,6 @@ func _on_realm_changed():
 	scene_entity_coordinator.config(
 		content_base_url + "entities/active", content_base_url, should_load_city_pointers
 	)
-	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
@@ -463,7 +513,11 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 		# Clear floating island hash to force regeneration on next load
 		last_scene_group_hash = ""
 
-	if not is_using_floating_islands() or is_teleport:
+	# Update coordinator position when:
+	# - Not using floating islands (test/renderer mode)
+	# - OR is a teleport
+	# - OR dynamic loading mode is enabled (need continuous position updates)
+	if not is_using_floating_islands() or is_teleport or _use_dynamic_loading:
 		scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 	player_parcel_changed.emit(new_position)
@@ -625,7 +679,8 @@ func _on_try_spawn_scene(
 		base_floor_manager.add_scene_floors(scene_item.id, scene_item.parcels)
 
 	# Regenerate floating islands after scene spawns (deferred to ensure scene is fully initialized)
-	if is_using_floating_islands():
+	# Skip in dynamic loading mode - we use simple base floors instead
+	if is_using_floating_islands() and not _use_dynamic_loading:
 		_regenerate_floating_islands.call_deferred()
 
 	return true

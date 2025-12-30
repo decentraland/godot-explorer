@@ -94,6 +94,8 @@ pub struct DclCli {
     pub avatars_file: GString,
     #[var(get)]
     pub snapshot_folder: GString,
+    #[var(get)]
+    pub fake_deeplink: GString,
 }
 
 impl DclCli {
@@ -290,6 +292,14 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Asset Loading".to_string(),
             },
+            // Deep Link
+            ArgDefinition {
+                name: "--fake-deeplink".to_string(),
+                description: "Simulate a deep link URL (e.g., decentraland:///?location=52,-52)"
+                    .to_string(),
+                arg_type: ArgType::Value("<URL>".to_string()),
+                category: "Testing".to_string(),
+            },
         ]
     }
 
@@ -343,6 +353,9 @@ impl DclCli {
         println!();
         println!("  # Run scene tests with debugging");
         println!("  godot-explorer --scene-test [[0,0],[1,1]] --raycast-debugger");
+        println!();
+        println!("  # Simulate a deep link (for testing mobile deep links on desktop)");
+        println!("  godot-explorer --fake-deeplink \"decentraland:///?location=52,-52&realm=https://my-realm.com\"");
     }
 }
 
@@ -435,6 +448,11 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
+        let fake_deeplink = args_map
+            .get("--fake-deeplink")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
 
         Self {
             _base: base,
@@ -472,6 +490,7 @@ impl INode for DclCli {
             scene_input_file,
             avatars_file,
             snapshot_folder,
+            fake_deeplink,
         }
     }
 }
