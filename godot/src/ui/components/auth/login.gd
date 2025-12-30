@@ -31,9 +31,10 @@ func async_login(social: bool):
 	elif Global.is_ios():
 		target_config_id = "ios"
 
-	# Use mobile auth flow (deep link based) for mobile platforms
-	# Desktop continues to use polling-based flow
-	if Global.is_mobile():
+	# Use mobile auth flow (deep link based) only for ACTUAL mobile platforms (Android/iOS)
+	# Desktop uses polling-based flow even when --force-mobile is used for UI testing
+	var is_real_mobile = Global.is_android() or Global.is_ios()
+	if is_real_mobile:
 		Global.player_identity.start_mobile_connect_account(target_config_id)
 	else:
 		Global.player_identity.try_connect_account(target_config_id)
