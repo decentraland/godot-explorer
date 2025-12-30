@@ -282,6 +282,13 @@ jobs:
             echo "dSYMs located at: $DSYM_DIR"
             ls -la "$DSYM_DIR"
 
+            # Extract dSYM from libgodot.a (contains embedded debug symbols)
+            if [ -f "$DSYM_DIR/libgodot.a" ]; then
+              echo "Extracting dSYM from libgodot.a..."
+              dsymutil "$DSYM_DIR/libgodot.a" -o "$DSYM_DIR/libgodot.a.dSYM" || echo "Warning: dsymutil failed for libgodot.a"
+              ls -la "$DSYM_DIR"/*.dSYM 2>/dev/null || true
+            fi
+
             # Create Sentry release and associate commits
             sentry-cli releases new "$RELEASE_NAME" \
               --org "$SENTRY_ORG" \
