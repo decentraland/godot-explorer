@@ -63,7 +63,8 @@ func _on_play_emote(emote_urn: String):
 	close()
 	if avatar_node != null:
 		var emote_controller = avatar_node.emote_controller
-		emote_controller.play_emote(emote_urn)
+		# Use async_play_emote to ensure base emotes are loaded from remote
+		emote_controller.async_play_emote(emote_urn)
 		Global.comms.send_emote(emote_urn)
 	else:
 		printerr("No avatar node in EmoteWheel!")

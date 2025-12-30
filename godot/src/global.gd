@@ -19,7 +19,9 @@ signal open_settings
 signal open_backpack
 signal open_discover
 signal open_own_profile
+signal open_navbar_silently
 signal close_menu
+signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
@@ -130,6 +132,11 @@ func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
+
+	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
+	if not cli.fake_deeplink.is_empty():
+		deep_link_url = cli.fake_deeplink
+		deep_link_obj = DclParseDeepLink.parse_decentraland_link(cli.fake_deeplink)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():

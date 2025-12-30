@@ -134,8 +134,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
 
-	prints("async_set_realm", new_realm_string, search_new_pos, "resolved", realm_url)
-
+	prints("[REALM] async_set_realm", new_realm_string, search_new_pos, "resolved", realm_url)
 	var promise: Promise = Global.http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", {}
 	)
@@ -143,7 +142,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
 		printerr(
-			"Rejected request change realm to: ",
+			"[REALM] Rejected request change realm to: ",
 			new_realm_string,
 			" error message: ",
 			res.get_error()
@@ -153,12 +152,12 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 
 		var json = response.get_string_response_as_json()
 		if json == null:
-			printerr("do_request_json failed because json_string is not a valid json")
+			printerr("[REALM] do_request_json failed because json_string is not a valid json")
 			return
 
 		var about_response = json
 		if about_response == null or not about_response is Dictionary:
-			printerr("Failed setting new realm " + realm_string)
+			printerr("[REALM] Failed setting new realm " + realm_string)
 			return
 
 		realm_about = about_response
