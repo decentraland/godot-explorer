@@ -81,12 +81,12 @@ corner_radius_bottom_left = 24
 
 [sub_resource type="LabelSettings" id="LabelSettings_l1b7y"]
 font = ExtResource("7_kyf7t")
-font_size = 15
+font_size = 17
 font_color = Color(0, 0, 0, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_bmyvb"]
 font = ExtResource("7_kyf7t")
-font_size = 15
+font_size = 17
 font_color = Color(1, 0.176471, 0.333333, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_wcxms"]

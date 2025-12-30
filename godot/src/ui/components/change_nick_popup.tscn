@@ -75,7 +75,7 @@ layout_mode = 2
 
 [node name="DclTextEdit_NewNick" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control" instance=ExtResource("3_xy6kt")]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 0
 offset_top = 4.0
 offset_right = 390.0
 offset_bottom = 71.0

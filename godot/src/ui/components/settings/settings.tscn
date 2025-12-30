@@ -1,12 +1,11 @@
-[gd_scene load_steps=21 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=22 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_1ym31"]
-[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="3_hdct4"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="5_drkw7"]
 [ext_resource type="Texture2D" uid="uid://djwf5d8a0rw6y" path="res://assets/ui/graphics.svg" id="5_lso3q"]
-[ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/filter.svg" id="6_br0rl"]
+[ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="6_br0rl"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="6_gugrl"]
 [ext_resource type="Texture2D" uid="uid://g38eqwq311ph" path="res://assets/ui/speaker-on.svg" id="6_q1ods"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="6_sa1v7"]
@@ -51,7 +50,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_drkw7")
 [node name="MarginContainer" type="MarginContainer" parent="ColorRect_Navbar"]
 custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
-theme = ExtResource("3_hdct4")
+theme = ExtResource("12_sa1v7")
 theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 30
@@ -109,7 +108,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
-theme = ExtResource("3_hdct4")
+theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
@@ -124,7 +123,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
-theme = ExtResource("3_hdct4")
+theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
@@ -139,7 +138,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
-theme = ExtResource("3_hdct4")
+theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
@@ -154,7 +153,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
-theme = ExtResource("3_hdct4")
+theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
@@ -350,7 +349,6 @@ items = Array[String](["LOW", "MEDIUM", "HIGH", "CUSTOM"])
 [node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme = SubResource("Theme_5xlkc")
 
 [node name="Label_Windowed" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed"]
 layout_mode = 2
