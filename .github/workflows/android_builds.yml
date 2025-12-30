@@ -129,6 +129,7 @@ jobs:
       # Upload debug symbols to Sentry for production builds
       - name: Upload debug symbols to Sentry
         if: success()
+        shell: bash
         run: |
           EXPLORER_VERSION=$(cargo run -- explorer-version)
           echo "Explorer version: $EXPLORER_VERSION"
