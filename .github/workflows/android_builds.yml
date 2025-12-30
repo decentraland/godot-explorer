@@ -148,7 +148,6 @@ jobs:
 
             if [ -f "$DEBUG_SYMBOLS_PATH" ]; then
               echo "Uploading debug symbols from: $DEBUG_SYMBOLS_PATH"
-              file "$DEBUG_SYMBOLS_PATH"
               ls -lh "$DEBUG_SYMBOLS_PATH"
 
               sentry-cli upload-dif \
