@@ -288,25 +288,36 @@ jobs:
               file "$DSYM_DIR/libgodot.a"
               lipo -info "$DSYM_DIR/libgodot.a" 2>/dev/null || echo "Not a fat binary"
 
-              # Check if it's a fat binary and extract arm64 slice
-              if lipo -info "$DSYM_DIR/libgodot.a" 2>/dev/null | grep -q "arm64"; then
-                echo "Extracting arm64 slice from fat binary..."
-                lipo -extract arm64 "$DSYM_DIR/libgodot.a" -output "$DSYM_DIR/libgodot_arm64.a" 2>/dev/null || true
-                if [ -f "$DSYM_DIR/libgodot_arm64.a" ]; then
-                  echo "Running dsymutil on arm64 slice..."
-                  dsymutil "$DSYM_DIR/libgodot_arm64.a" -o "$DSYM_DIR/libgodot.a.dSYM" || echo "Warning: dsymutil failed"
+              # Try dsymutil directly on the archive
+              echo "Trying dsymutil on libgodot.a..."
+              dsymutil "$DSYM_DIR/libgodot.a" -o "$DSYM_DIR/libgodot.a.dSYM" 2>&1 || true
+
+              # If dsymutil failed, check if archive has debug info and try extracting
+              if [ ! -d "$DSYM_DIR/libgodot.a.dSYM" ]; then
+                echo "dsymutil failed, checking archive contents..."
+                # List first few object files in archive
+                ar -t "$DSYM_DIR/libgodot.a" 2>/dev/null | head -5 || true
+
+                # Check if any .o file has debug info
+                TEMP_DIR=$(mktemp -d)
+                cd "$TEMP_DIR"
+                ar -x "$DSYM_DIR/libgodot.a" 2>/dev/null || true
+                FIRST_OBJ=$(ls *.o 2>/dev/null | head -1)
+                if [ -n "$FIRST_OBJ" ]; then
+                  echo "Checking debug info in $FIRST_OBJ..."
+                  dwarfdump --debug-info "$FIRST_OBJ" 2>/dev/null | head -20 || echo "No DWARF info found"
                 fi
-              else
-                echo "Trying dsymutil directly..."
-                dsymutil "$DSYM_DIR/libgodot.a" -o "$DSYM_DIR/libgodot.a.dSYM" || echo "Warning: dsymutil failed for libgodot.a"
+                cd - > /dev/null
+                rm -rf "$TEMP_DIR"
               fi
 
               # Check what dSYMs we have now
               echo "Available dSYM files:"
               find "$DSYM_DIR" -name "*.dSYM" -type d
 
-              # Also check if the app dSYM contains godot symbols
-              echo "Checking app dSYM for godot symbols..."
+              # Check app dSYM size and content
+              echo "Checking app dSYM..."
+              du -sh "$DSYM_DIR/decentraland-godot-client.app.dSYM" 2>/dev/null || true
               dwarfdump --uuid "$DSYM_DIR/decentraland-godot-client.app.dSYM" 2>/dev/null || true
             fi
 
