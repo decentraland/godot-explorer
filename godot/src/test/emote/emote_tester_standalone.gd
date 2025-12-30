@@ -56,7 +56,16 @@ func _load_default_avatar():
 func _build_emote_list():
 	emote_test_list.clear()
 
-	# Priority default emotes (test these first)
+	# Priority custom emotes (test these FIRST - known to have issues)
+	var priority_custom_emotes = [
+		"urn:decentraland:matic:collections-v2:0xcb911d51f7d9c470262461935636bd173f1061f5:0:3",
+		"urn:decentraland:matic:collections-v2:0xb13c91d7288e2d4328dd153fc0c6d29fad6159f7:0:147",
+		#"urn:decentraland:matic:collections-v2:0x0b472c2c04325a545a43370b54e93c87f3d5badf:1:105312291668557186697918027683670432318895095400549111254310978331",
+		#"urn:decentraland:matic:collections-v2:0xfbc9b2cff58dcc29dab28e2af7eac80c9012fe02:0:39",
+	]
+	emote_test_list.append_array(priority_custom_emotes)
+
+	# Priority default emotes
 	var priority_emotes = ["raiseHand", "wave", "clap", "dance", "kiss", "handsair"]
 	for emote_id in priority_emotes:
 		emote_test_list.append(Emotes.get_base_emote_urn(emote_id))
@@ -66,14 +75,6 @@ func _build_emote_list():
 		var urn = Emotes.get_base_emote_urn(emote_id)
 		if not emote_test_list.has(urn):
 			emote_test_list.append(urn)
-
-	# Custom/remote emotes (these are known to have foot issues)
-	var custom_emotes = [
-		"urn:decentraland:matic:collections-v2:0x0b472c2c04325a545a43370b54e93c87f3d5badf:1:105312291668557186697918027683670432318895095400549111254310978331",
-		"urn:decentraland:matic:collections-v2:0xb13c91d7288e2d4328dd153fc0c6d29fad6159f7:0:147",
-		"urn:decentraland:matic:collections-v2:0xfbc9b2cff58dcc29dab28e2af7eac80c9012fe02:0:39",
-	]
-	emote_test_list.append_array(custom_emotes)
 
 
 # gdlint:ignore = async-function-name

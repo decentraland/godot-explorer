@@ -432,10 +432,27 @@ pub fn process_emote_animations(
     let mut default_anim_key = None;
     let mut prop_anim_key = None;
 
+    tracing::debug!(
+        "Emote '{}': Found {} animations: {:?}, is_single_animation={}",
+        file_hash,
+        anim_list.len(),
+        anim_list,
+        is_single_animation
+    );
+
     for animation_key in anim_list.iter() {
-        if is_single_animation || animation_key.to_lowercase().ends_with("_avatar") {
+        // Strip Blender suffixes before checking for _avatar or _prop endings
+        let key_lower = animation_key.to_lowercase();
+        let key_stripped = strip_blender_suffix(&key_lower);
+
+        if is_single_animation || key_stripped.ends_with("_avatar") {
             default_anim_key = Some(animation_key.clone());
-        } else if animation_key.to_lowercase().ends_with("_prop") {
+        } else if key_stripped.ends_with("_prop")
+            || key_stripped.ends_with("action")
+            || key_lower.contains("prop")
+        {
+            // Match prop animations: ending with _prop, or "action" (common Blender naming),
+            // or containing "prop" anywhere in the name
             prop_anim_key = Some(animation_key.clone());
         }
     }
@@ -450,6 +467,13 @@ pub fn process_emote_animations(
             }
         }
     }
+
+    tracing::debug!(
+        "Emote '{}': Animation assignments - default_anim_key={:?}, prop_anim_key={:?}",
+        file_hash,
+        default_anim_key,
+        prop_anim_key
+    );
 
     let mut play_emote_audio_args = VarArray::new();
     play_emote_audio_args.push(&file_hash.to_variant());
@@ -466,11 +490,19 @@ pub fn process_emote_animations(
         };
 
         tracing::debug!(
-            "Processing emote animation: hash='{}', key='{}', track_count={}",
+            "Processing emote animation: hash='{}', key='{}', track_count={}, is_default={}, is_prop={}",
             file_hash,
             animation_key,
-            anim.get_track_count()
+            anim.get_track_count(),
+            default_anim_key.as_ref() == Some(animation_key),
+            prop_anim_key.as_ref() == Some(animation_key)
         );
+
+        // Log all tracks before processing
+        for track_idx in 0..anim.get_track_count() {
+            let track_path = anim.track_get_path(track_idx).to_string();
+            tracing::debug!("  [BEFORE] Track[{}]: '{}'", track_idx, track_path);
+        }
 
         if default_anim_key.as_ref() == Some(animation_key) {
             default_animation = Some(anim.clone());
@@ -547,21 +579,99 @@ pub fn process_emote_animations(
         for track_idx in 0..anim.get_track_count() {
             let track_path = anim.track_get_path(track_idx).to_string();
 
+            // Handle root motion "Armature" tracks specially
+            // These animate the entire Armature node and need coordinate system transformation
+            // because the avatar's Skeleton3D has a 180° Y rotation built into its transform
+            if track_path == "Armature" {
+                let track_type = anim.track_get_type(track_idx);
+                match track_type {
+                    TrackType::POSITION_3D => {
+                        // Don't transform position - let it pass through as-is
+                        // The sway motion should work without position changes
+                        tracing::debug!(
+                            "  Keeping position track 'Armature' unchanged ({} keys)",
+                            anim.track_get_key_count(track_idx)
+                        );
+                    }
+                    TrackType::ROTATION_3D => {
+                        // Transform rotation values: invert X only
+                        // This compensates for the 180° Y rotation in the skeleton
+                        let key_count = anim.track_get_key_count(track_idx);
+                        for key_idx in 0..key_count {
+                            let value = anim.track_get_key_value(track_idx, key_idx);
+                            if let Ok(rot) = value.try_to::<Quaternion>() {
+                                // Invert X and Z (fixes direction), then apply +90° X rotation (fixes forward tilt)
+                                // The avatar's Skeleton3D has a 180° Y rotation, requiring this compensation
+                                let sin_45 = std::f32::consts::FRAC_PI_4.sin(); // sin(45°) = cos(45°) ≈ 0.7071
+                                let x_pos90 = Quaternion::new(sin_45, 0.0, 0.0, sin_45);
+                                let inverted = Quaternion::new(-rot.x, rot.y, -rot.z, rot.w);
+                                let transformed = x_pos90 * inverted;
+                                anim.track_set_key_value(
+                                    track_idx,
+                                    key_idx,
+                                    &transformed.to_variant(),
+                                );
+                            }
+                        }
+                        tracing::debug!(
+                            "  Transformed {} rotation keys for root motion track 'Armature' (inverted X)",
+                            key_count
+                        );
+                    }
+                    _ => {
+                        tracing::debug!(
+                            "  Keeping root motion track 'Armature' unchanged (type: {:?})",
+                            track_type
+                        );
+                    }
+                }
+                continue;
+            }
+
             if !track_path.contains("Skeleton3D") {
                 let last_track_name = track_path.split('/').next_back().unwrap_or_default();
 
                 // Strip Blender duplicate suffixes from the BONE NAME only
-                // This handles paths like "Armature/Avatar_LeftLeg_001/Avatar_LeftFoot"
-                // where the parent has a suffix but the bone name itself is correct
                 let bone_name = strip_blender_suffix(last_track_name);
 
-                let new_track_path = format!("Armature/Skeleton3D:{}", bone_name);
-                anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
-            }
-
-            if track_path.contains("Armature_Prop/Skeleton3D") {
+                // Check if this is a prop track (Armature_Prop/...) or avatar track (Armature/...)
+                if track_path.starts_with("Armature_Prop") {
+                    // Check if it's a root prop track (just "Armature_Prop")
+                    if track_path == "Armature_Prop" {
+                        // Rename to Armature_Prop_{hash} for root motion
+                        let new_track_path = format!("Armature_Prop_{}", anim_sufix_from_hash);
+                        tracing::debug!(
+                            "  Remapping prop root motion '{}' -> '{}'",
+                            track_path,
+                            new_track_path
+                        );
+                        anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
+                    } else {
+                        // Prop bone track: remap to Armature_Prop_{hash}/Skeleton3D:{bone}
+                        let new_track_path = format!("{}{}", armature_prefix, bone_name);
+                        tracing::debug!(
+                            "  Remapping prop track '{}' -> '{}'",
+                            track_path,
+                            new_track_path
+                        );
+                        anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
+                    }
+                } else {
+                    // Avatar track: remap to Armature/Skeleton3D:{bone}
+                    let new_track_path = format!("Armature/Skeleton3D:{}", bone_name);
+                    anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
+                }
+            } else if track_path.contains("Armature_Prop/Skeleton3D")
+                || track_path.contains("Armature_Prop:")
+            {
+                // Already has Skeleton3D, just rename the Armature_Prop to include hash
                 let track_subname = track_path.split(':').next_back().unwrap_or_default();
-                let new_track_path = format!("{armature_prefix}{track_subname}");
+                let new_track_path = format!("{}{}", armature_prefix, track_subname);
+                tracing::debug!(
+                    "  Remapping Skeleton3D prop track '{}' -> '{}'",
+                    track_path,
+                    new_track_path
+                );
                 anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
             }
         }
@@ -584,6 +694,17 @@ pub fn process_emote_animations(
                 0.0,
                 &play_emote_audio_call.clone().to_variant(),
             );
+        }
+
+        // Log all tracks after processing
+        tracing::debug!(
+            "  [AFTER] Animation '{}' now has {} tracks",
+            animation_key,
+            anim.get_track_count()
+        );
+        for track_idx in 0..anim.get_track_count() {
+            let track_path = anim.track_get_path(track_idx).to_string();
+            tracing::debug!("  [AFTER] Track[{}]: '{}'", track_idx, track_path);
         }
     }
 
