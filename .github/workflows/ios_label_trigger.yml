@@ -1,0 +1,102 @@
+name: 🏷️ iOS Label Trigger
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  pull-requests: write
+  contents: read
+  actions: write
+
+jobs:
+  trigger-ios-build:
+    name: Trigger iOS Build
+    runs-on: ubuntu-latest
+    if: ${{ github.event.label.name == 'build-ios-internal' }}
+    steps:
+      - name: Remove build-ios-internal label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
+
+      - name: Cancel previous iOS builds for this branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get in-progress iOS workflow runs for this branch
+          IN_PROGRESS_RUNS=$(gh run list \
+            --workflow=ios_builds.yml \
+            --repo ${{ github.repository }} \
+            --branch ${{ github.event.pull_request.head.ref }} \
+            --status in_progress \
+            --json databaseId \
+            --jq '.[].databaseId')
+
+          # Also check for queued runs
+          QUEUED_RUNS=$(gh run list \
+            --workflow=ios_builds.yml \
+            --repo ${{ github.repository }} \
+            --branch ${{ github.event.pull_request.head.ref }} \
+            --status queued \
+            --json databaseId \
+            --jq '.[].databaseId')
+
+          ALL_RUNS="$IN_PROGRESS_RUNS $QUEUED_RUNS"
+
+          for RUN_ID in $ALL_RUNS; do
+            if [ -n "$RUN_ID" ]; then
+              echo "Cancelling run: $RUN_ID"
+              gh run cancel $RUN_ID --repo ${{ github.repository }} || true
+            fi
+          done
+
+      - name: Trigger iOS build workflow
+        id: trigger
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run ios_builds.yml \
+            --repo ${{ github.repository }} \
+            --ref ${{ github.event.pull_request.head.ref }} \
+            -f ref=${{ github.event.pull_request.head.ref }} \
+            -f pr_number=${{ github.event.pull_request.number }}
+          echo "✅ iOS build triggered for branch: ${{ github.event.pull_request.head.ref }}"
+
+          # Wait for the workflow run to appear
+          sleep 5
+
+          # Get the most recent run ID for the iOS workflow on this branch
+          RUN_ID=$(gh run list --workflow=ios_builds.yml --repo ${{ github.repository }} --branch ${{ github.event.pull_request.head.ref }} --limit 1 --json databaseId --jq '.[0].databaseId')
+
+          if [ -n "$RUN_ID" ]; then
+            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            echo "📍 Workflow Run ID: $RUN_ID"
+          else
+            echo "⚠️ Could not retrieve workflow run ID"
+          fi
+
+      - name: Prepare iOS Build Report Update
+        env:
+          RUN_ID: ${{ steps.trigger.outputs.run_id }}
+        run: |
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}"
+
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "### 🍏 iOS Build Triggered"
+            echo ""
+            echo "🔗 **iOS Workflow**: [View iOS build](${WORKFLOW_URL})"
+            echo ""
+            echo "📍 **Branch**: \`${{ github.event.pull_request.head.ref }}\`"
+            echo ""
+            echo "🔄 **Triggered**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          } > ios-build-report.md
+
+      - name: Update Build Report with iOS Status
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: build-report-ios
+          path: ios-build-report.md

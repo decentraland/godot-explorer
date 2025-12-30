@@ -23,24 +23,6 @@ func _ready():
 	pass
 
 
-func set_base_emote_info(urn: String):
-	var picture = load("res://assets/avatar/default_emotes_thumbnails/%s.png" % urn)
-	var current_size = texture_rect_preview.size
-	texture_rect_preview.texture = picture
-	texture_rect_preview.size = current_size
-
-	texture_rect_background.texture = base_thumbnail
-
-	var texture_path: String = "res://assets/ui/EmotesIcon.png"
-	if ResourceLoader.exists(texture_path):
-		var texture = load(texture_path)
-		if texture != null:
-			texture_rect_category.texture = texture
-	texture_rect_triangle.self_modulate = Wearables.RarityColor.BASE
-	panel_container_border.self_modulate = Wearables.RarityColor.BASE
-	texture_progress_bar_loading.hide()
-
-
 func async_set_item(item: DclItemEntityDefinition):
 	item_data = item
 	_update_category_icon(item)

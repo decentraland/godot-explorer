@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cav8k4qfnvjhp"]
+
+[ext_resource type="Script" uid="uid://cav6vk0gmqtvkn" path="res://src/decentraland_components/av_player.gd" id="1_av"]
+
+[node name="AVPlayer" type="Node"]
+script = ExtResource("1_av")

@@ -23,6 +23,7 @@ func _set_pending_request_count(count: int) -> void:
 func _on_button_clicked() -> void:
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
+	Global.send_haptic_feedback()
 
 
 func _get_button_metric_name() -> String:

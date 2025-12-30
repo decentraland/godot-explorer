@@ -18,7 +18,8 @@ use std::{
 };
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
-use crate::av::backend::{AudioSink, VideoSink};
+use crate::av::backend::{AudioSink, BackendType};
+use godot::classes::ImageTexture;
 
 pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, GodotEntityNode>,
@@ -36,11 +37,67 @@ pub struct GodotDclScene {
 
     pub ui_results: Rc<RefCell<UiResults>>,
 }
+
+/// Video player data for CRDT event tracking.
+/// State is polled from the video player node each frame.
 pub struct VideoPlayerData {
-    pub video_sink: VideoSink,
-    pub audio_sink: AudioSink,
+    /// The video source URL
+    pub source: String,
+    /// The backend type being used
+    pub backend_type: BackendType,
+    /// Texture for LiveKit video frames (only used for LiveKit backend)
+    pub texture: Option<Gd<ImageTexture>>,
+    /// Event timestamp counter for CRDT events
     pub timestamp: u32,
-    pub length: f32,
+
+    // Last known state - used to detect changes and generate events
+    /// Last known video state (matches VIDEO_STATE_* constants in dcl_video_player.rs)
+    pub last_state: i32,
+    /// Last known video position in seconds
+    pub last_position: f64,
+    /// Last known video length in seconds
+    pub last_length: f64,
+
+    // Last requested values from CRDT - used to detect changes
+    /// Last requested position (for seeking)
+    pub last_requested_position: f32,
+    /// Last requested playback rate
+    pub last_playback_rate: f32,
+}
+
+impl VideoPlayerData {
+    pub fn new(source: String, backend_type: BackendType) -> Self {
+        Self {
+            source,
+            backend_type,
+            texture: None,
+            timestamp: 0,
+            last_state: 0, // VIDEO_STATE_NONE
+            last_position: 0.0,
+            last_length: -1.0,
+            last_requested_position: 0.0,
+            last_playback_rate: 1.0,
+        }
+    }
+
+    /// Create VideoPlayerData with a texture (for LiveKit backend)
+    pub fn new_with_texture(
+        source: String,
+        backend_type: BackendType,
+        texture: Gd<ImageTexture>,
+    ) -> Self {
+        Self {
+            source,
+            backend_type,
+            texture: Some(texture),
+            timestamp: 0,
+            last_state: 0, // VIDEO_STATE_NONE
+            last_position: 0.0,
+            last_length: -1.0,
+            last_requested_position: 0.0,
+            last_playback_rate: 1.0,
+        }
+    }
 }
 
 pub struct UiNode {
@@ -98,7 +155,7 @@ impl GodotDclScene {
         root_node_3d.set_position(scene_entity_definition.get_godot_3d_position());
 
         let mut root_node_ui_control = DclUiControl::new_alloc();
-        root_node_ui_control.set_name(GString::from(format!("ui_scene_id_{:?}", scene_id.0)));
+        root_node_ui_control.set_name(&format!("ui_scene_id_{:?}", scene_id.0));
 
         let root_node_ui = UiNode {
             base_control: root_node_ui_control.clone(),
@@ -178,19 +235,20 @@ impl GodotDclScene {
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_3d.is_none() {
             let mut new_node_3d = DclNodeEntity3d::new_alloc(*entity);
-            self.root_node_3d.add_child(new_node_3d.clone().upcast());
+            self.root_node_3d
+                .add_child(&new_node_3d.clone().upcast::<Node>());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
-                let mut player_collider_filter = godot::engine::load::<PackedScene>(
+                let mut player_collider_filter = godot::tools::load::<PackedScene>(
                     "res://src/decentraland_components/player_collider_filter.tscn",
                 )
                 .instantiate()
                 .expect("player_collider_filter scene is valid")
                 .cast::<Node>();
-                player_collider_filter.set_name("PlayerColliderFilter".into());
+                player_collider_filter.set_name("PlayerColliderFilter");
 
-                new_node_3d.add_child(player_collider_filter.clone());
-                player_collider_filter.call("init_player_collider_filter".into(), &[]);
+                new_node_3d.add_child(&player_collider_filter.clone());
+                player_collider_filter.call("init_player_collider_filter", &[]);
             }
             godot_entity_node.base_3d = Some(new_node_3d.upcast());
         }
@@ -209,10 +267,7 @@ impl GodotDclScene {
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_ui.is_none() {
             let mut new_node_ui = DclUiControl::new_alloc();
-            new_node_ui.set_name(GString::from(format!(
-                "e{:?}_{:?}",
-                entity.number, entity.version
-            )));
+            new_node_ui.set_name(&format!("e{:?}_{:?}", entity.number, entity.version));
             new_node_ui
                 .bind_mut()
                 .set_pointer_events(&godot_entity_node.pointer_events);
@@ -221,7 +276,8 @@ impl GodotDclScene {
                 .set_ui_result(self.ui_results.clone());
             new_node_ui.bind_mut().set_dcl_entity_id(entity.as_i32());
 
-            self.root_node_ui.add_child(new_node_ui.clone().upcast());
+            self.root_node_ui
+                .add_child(&new_node_ui.clone().upcast::<Node>());
             godot_entity_node.base_ui = Some(UiNode {
                 base_control: new_node_ui,
                 ui_transform: UiTransform::default(),

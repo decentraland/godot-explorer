@@ -46,16 +46,6 @@ func async_set_item(item: DclItemEntityDefinition):
 		self.disabled = true
 
 
-func set_base_emote(emote_urn: String):
-	self.disabled = true
-	item_preview.set_base_emote_info(emote_urn)
-	label_rarity.text = "BASE"
-	marquee_label_name.set_text(Emotes.DEFAULT_EMOTE_NAMES[emote_urn])
-	is_buyable = false
-	urn = emote_urn
-	is_emote = true
-
-
 func _update_view() -> void:
 	if is_pressed:
 		marquee_label_name.check_and_start_marquee()

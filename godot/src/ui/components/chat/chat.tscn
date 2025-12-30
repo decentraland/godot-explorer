@@ -1,9 +1,10 @@
-[gd_scene load_steps=11 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=12 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
+[ext_resource type="FontVariation" uid="uid://buop40k3e4u13" path="res://assets/themes/fonts/multilanguage/multilanguage_font-SemiBold.tres" id="6_mb7k1"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
 
@@ -177,6 +178,7 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("6_mb7k1")
 theme_override_font_sizes/font_size = 18
 placeholder_text = "Write a message..."
 max_length = 155

@@ -1,4 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://bce2jth446t8i"]
+[gd_scene load_steps=3 format=3 uid="uid://bce2jth446t8i"]
+
+[ext_resource type="FontVariation" uid="uid://btl87w5jx2niu" path="res://assets/themes/fonts/multilanguage/multilanguage_font-Regular.tres" id="1_vf3ej"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_tj4hi"]
 font_size = 72
@@ -18,4 +20,5 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(580, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("1_vf3ej")
 label_settings = SubResource("LabelSettings_tj4hi")

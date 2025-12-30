@@ -7,7 +7,6 @@ var _emote_urn: String = ""
 
 @onready var panel_pressed = %Pressed
 @onready var emote_square_item = %EmoteSquareItem
-@onready var label_number = %Label_Number
 @onready var label_emote_name = %Label_EmoteName
 @onready var texture_rect_wheel = %TextureRect_Wheel
 
@@ -23,7 +22,6 @@ func async_load_from_urn(new_emote_urn: String, index: int):
 		return
 
 	_emote_urn = new_emote_urn
-	label_number.text = str(index)
 	texture_rect_wheel.rotation_degrees = (36.0 * index) - 36.0
 	await emote_square_item.async_load_from_urn(new_emote_urn)
 

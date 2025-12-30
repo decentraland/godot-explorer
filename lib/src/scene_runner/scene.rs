@@ -4,7 +4,11 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
+use godot::{
+    obj::{NewAlloc, Singleton},
+    prelude::Gd,
+    prelude::ToGodot,
+};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -36,6 +40,24 @@ use super::{
     components::{trigger_area::TriggerAreaState, tween::Tween},
     godot_dcl_scene::GodotDclScene,
 };
+
+/// State for texture UV animation (used by TextureMove and TextureMoveContinuous tweens)
+#[derive(Debug, Clone)]
+pub struct TextureAnimation {
+    /// Accumulated UV offset (for TMT_OFFSET mode)
+    pub uv_offset: godot::builtin::Vector2,
+    /// Accumulated UV scale multiplier (for TMT_TILING mode, starts at 1.0)
+    pub uv_scale: godot::builtin::Vector2,
+}
+
+impl Default for TextureAnimation {
+    fn default() -> Self {
+        Self {
+            uv_offset: godot::builtin::Vector2::ZERO,
+            uv_scale: godot::builtin::Vector2::new(1.0, 1.0),
+        }
+    }
+}
 
 pub struct Dirty {
     pub waiting_process: bool,
@@ -214,6 +236,8 @@ pub struct Scene {
 
     // Tween
     pub tweens: HashMap<SceneEntityId, Tween>,
+    // Texture animations (UV offset/scale) driven by TextureMove/TextureMoveContinuous tweens
+    pub texture_animations: HashMap<SceneEntityId, TextureAnimation>,
     // Duplicated value to async-access the animator
     pub dup_animator: HashMap<SceneEntityId, PbAnimator>,
 
@@ -326,6 +350,7 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
@@ -393,6 +418,7 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
@@ -411,13 +437,26 @@ impl Scene {
     }
 
     pub fn process_livekit_video_frame(&mut self, width: u32, height: u32, data: &[u8]) {
+        use crate::godot_classes::dcl_video_player::VIDEO_STATE_PLAYING;
+        use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
+        use godot::classes::Time;
+
+        let current_time = Time::singleton().get_ticks_msec() as f64 / 1000.0;
+
         // Send video frames to all registered livekit video players
-        for entity_id in &self.livekit_video_player_entities {
-            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(entity_id) {
+        for entity_id in self.livekit_video_player_entities.clone() {
+            // Update the texture
+            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
                 if let Some(vp_data) = &mut node.video_player_data {
-                    use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
-                    update_video_texture_from_livekit(&mut vp_data.video_sink, width, height, data);
+                    update_video_texture_from_livekit(vp_data, width, height, data);
                 }
+            }
+
+            // Update video player state to PLAYING when receiving frames
+            if let Some(video_player) = self.video_players.get_mut(&entity_id) {
+                video_player.set("video_state", &VIDEO_STATE_PLAYING.to_variant());
+                video_player.set("video_length", &(-1.0_f64).to_variant());
+                video_player.set("last_frame_time", &current_time.to_variant());
             }
         }
     }
@@ -439,7 +478,7 @@ impl Scene {
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
                 video_player.call(
-                    "init_livekit_audio".into(),
+                    "init_livekit_audio",
                     &[
                         sample_rate.to_variant(),
                         num_channels.to_variant(),
@@ -455,7 +494,7 @@ impl Scene {
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
                 // Call the stream_buffer method on the video player (GDScript)
-                video_player.call("stream_buffer".into(), &[frame.to_variant()]);
+                video_player.call("stream_buffer", &[frame.to_variant()]);
             }
         }
     }

@@ -25,6 +25,8 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 func _on_toggled(toggled_on: bool) -> void:
 	if toggled_on:
+		Global.open_own_profile.emit()
 		animation_player.play("toggled_on")
+		Global.send_haptic_feedback()
 	else:
 		animation_player.play_backwards("toggled_on")

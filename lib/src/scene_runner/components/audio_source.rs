@@ -33,27 +33,27 @@ pub fn update_audio_source(
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AudioSource"));
+            let existing = node_3d.try_get_node_as::<Node>("AudioSource");
 
             if new_value.is_none() {
                 if let Some(mut audio_source_node) = existing {
                     audio_source_node.queue_free();
-                    node_3d.remove_child(audio_source_node);
+                    node_3d.remove_child(&audio_source_node);
                 }
                 scene.audio_sources.remove(entity);
             } else if let Some(new_value) = new_value {
                 let mut audio_source = if let Some(audio_source_node) = existing {
                     audio_source_node.cast::<DclAudioSource>()
                 } else {
-                    let mut new_audio_source = godot::engine::load::<PackedScene>(
+                    let mut new_audio_source = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/audio_source.tscn",
                     )
                     .instantiate()
                     .unwrap()
                     .cast::<DclAudioSource>();
 
-                    new_audio_source.set_name(GString::from("AudioSource"));
-                    node_3d.add_child(new_audio_source.clone().upcast());
+                    new_audio_source.set_name("AudioSource");
+                    node_3d.add_child(&new_audio_source.clone().upcast::<Node>());
                     scene
                         .audio_sources
                         .insert(*entity, new_audio_source.clone());
@@ -61,12 +61,12 @@ pub fn update_audio_source(
                 };
 
                 audio_source.call_deferred(
-                    "_async_refresh_data".into(),
+                    "_async_refresh_data",
                     &[new_value.current_time.is_some().to_variant()],
                 );
 
                 let mut audio_source = audio_source.bind_mut();
-                audio_source.set_dcl_audio_clip_url(GString::from(new_value.audio_clip_url));
+                audio_source.set_dcl_audio_clip_url(GString::from(&new_value.audio_clip_url));
                 audio_source.set_dcl_loop_activated(new_value.r#loop.unwrap_or(false));
                 audio_source.set_dcl_playing(new_value.playing.unwrap_or(false));
                 audio_source.set_dcl_pitch(new_value.pitch.unwrap_or(1.0));

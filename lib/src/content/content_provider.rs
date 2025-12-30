@@ -9,7 +9,8 @@ use std::{
 
 use futures_util::future::try_join_all;
 use godot::{
-    engine::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
+    classes::{AudioStream, Material, Mesh, Os, ResourceLoader, Texture2D},
+    obj::Singleton,
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -126,10 +127,7 @@ const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com
 #[godot_api]
 impl INode for ContentProvider {
     fn init(_base: Base<Node>) -> Self {
-        let content_folder = Arc::new(format!(
-            "{}/content/",
-            godot::engine::Os::singleton().get_user_data_dir()
-        ));
+        let content_folder = Arc::new(format!("{}/content/", Os::singleton().get_user_data_dir()));
 
         #[cfg(feature = "use_resource_tracking")]
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
@@ -231,7 +229,7 @@ impl INode for ContentProvider {
                     let data = entry.promise.bind().get_data();
                     if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
                         if let Some(resource_locker) =
-                            node_3d.get_node_or_null(NodePath::from("ResourceLocker"))
+                            node_3d.get_node_or_null(&NodePath::from("ResourceLocker"))
                         {
                             if let Ok(resource_locker) =
                                 resource_locker.try_cast::<ResourceLocker>()
@@ -381,12 +379,12 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
+        let cache_key = format!("wearable:{}", file_hash);
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
-        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
@@ -394,7 +392,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
+        let hash_id = file_hash.to_string();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
@@ -417,7 +415,7 @@ impl ContentProvider {
         });
 
         self.cached.insert(
-            file_hash,
+            cache_key,
             ContentEntry {
                 last_access: Instant::now(),
                 promise: promise.clone(),
@@ -496,12 +494,12 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
+        let cache_key = format!("emote:{}", file_hash);
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
             entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
-        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
@@ -509,7 +507,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
+        let hash_id = file_hash.to_string();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
@@ -532,7 +530,7 @@ impl ContentProvider {
         });
 
         self.cached.insert(
-            file_hash,
+            cache_key,
             ContentEntry {
                 last_access: Instant::now(),
                 promise: promise.clone(),
@@ -579,7 +577,7 @@ impl ContentProvider {
         let file_hash = content_mapping.bind().get_hash(file_path);
         let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
 
-        self.fetch_file_by_url(file_hash, url.into_godot())
+        self.fetch_file_by_url(file_hash, GString::from(url.as_str()))
     }
 
     #[func]
@@ -752,8 +750,8 @@ impl ContentProvider {
         //  https://github.com/decentraland/godot-explorer/issues/363
         if file_hash.starts_with("http") {
             // get file_hash from url
-            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash());
-            let promise = self.fetch_texture_by_url(GString::from(new_file_hash), file_hash_godot);
+            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
+            let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
             self.cached.insert(
                 file_hash,
                 ContentEntry {
@@ -782,13 +780,13 @@ impl ContentProvider {
                 )
                 .await;
 
-                let godot_path = format!("res://content/{}", hash_id).to_godot();
+                let godot_path = format!("res://content/{}", hash_id);
 
                 let resource = ResourceLoader::singleton()
-                    .load(godot_path.clone())
+                    .load(&GString::from(godot_path.as_str()))
                     .unwrap();
 
-                let texture = resource.cast::<godot::engine::Texture2D>();
+                let texture = resource.cast::<godot::classes::Texture2D>();
                 let image = texture.get_image().unwrap();
 
                 let original_size = if let Some(original_size) = original_size {
@@ -835,6 +833,141 @@ impl ContentProvider {
                 loaded_resources.fetch_add(1, Ordering::Relaxed);
             });
         }
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    /// Fetches a texture by hash, bypassing the optimization pipeline.
+    /// This is useful for UI textures that need the original quality.
+    /// Uses a separate cache key (`{hash}_original`) to avoid conflicts with optimized versions.
+    pub fn fetch_texture_by_hash_original(
+        &mut self,
+        file_hash_godot: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let file_hash = file_hash_godot.to_string();
+        let cache_key = format!("{}_original", file_hash);
+
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+
+        // Handle URL-based textures
+        if file_hash.starts_with("http") {
+            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash_u32());
+            let promise =
+                self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
+            self.cached.insert(
+                cache_key,
+                ContentEntry {
+                    last_access: Instant::now(),
+                    promise: promise.clone(),
+                },
+            );
+            return promise;
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+
+        // Create context with Source quality to bypass resize optimization
+        let mut ctx = self.get_context();
+        ctx.texture_quality = TextureQuality::Source;
+
+        let url = format!(
+            "{}{}",
+            content_mapping.bind().get_base_url(),
+            file_hash.clone()
+        );
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        let hash_id = file_hash.clone();
+
+        TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result = load_image_texture(url, hash_id.clone(), ctx).await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &error.to_string());
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cached.insert(
+            cache_key,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    /// Fetches a texture by URL, bypassing the optimization pipeline.
+    /// Uses Source quality to preserve original texture resolution.
+    pub fn fetch_texture_by_url_original(
+        &mut self,
+        file_hash: GString,
+        url: GString,
+    ) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+        if let Some(entry) = self.cached.get_mut(&file_hash) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+        let url = url.to_string();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        // Create context with Source quality to bypass resize optimization
+        let mut content_provider_context = self.get_context();
+        content_provider_context.texture_quality = TextureQuality::Source;
+
+        let sent_file_hash = file_hash.clone();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        #[cfg(feature = "use_resource_tracking")]
+        let hash_id = file_hash.clone();
+        TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &error.to_string());
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
 
         self.cached.insert(
             file_hash,
@@ -907,14 +1040,16 @@ impl ContentProvider {
 
     #[func]
     pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        let cache_key = format!("wearable:{}", file_hash);
+        let entry = self.cached.get_mut(&cache_key)?;
         entry.last_access = Instant::now();
         entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
     }
 
     #[func]
     pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        let cache_key = format!("emote:{}", file_hash);
+        let entry = self.cached.get_mut(&cache_key)?;
         entry.last_access = Instant::now();
         entry
             .promise
@@ -993,11 +1128,11 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn duplicate_materials(&mut self, target_meshes: VariantArray) -> Gd<Promise> {
+    pub fn duplicate_materials(&mut self, target_meshes: VarArray) -> Gd<Promise> {
         let data = target_meshes
             .iter_shared()
             .map(|dict| {
-                let dict = dict.try_to::<Dictionary>().ok()?;
+                let dict = dict.try_to::<VarDictionary>().ok()?;
                 let mesh = dict.get("mesh")?.try_to::<Gd<Mesh>>().ok()?;
                 let n = dict.get("n")?.try_to::<i32>().ok()?;
 
@@ -1021,7 +1156,7 @@ impl ContentProvider {
                         continue;
                     };
 
-                    mesh.surface_set_material(i, new_material.cast::<Material>());
+                    mesh.surface_set_material(i, &new_material.cast::<Material>());
                 }
             }
 
@@ -1036,7 +1171,7 @@ impl ContentProvider {
     #[func]
     pub fn fetch_wearables(
         &mut self,
-        wearables: VariantArray,
+        wearables: VarArray,
         content_base_url: GString,
     ) -> Array<Gd<Promise>> {
         let mut promise_ids = HashSet::new();
@@ -1356,9 +1491,9 @@ impl ContentProvider {
         // 4. Load what was listed
         for hash_to_load in &hashes_to_load {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
-            let zip_path = format!("user://content/{}", hash_zip).to_godot();
-            let result = godot::engine::ProjectSettings::singleton()
-                .load_resource_pack_ex(zip_path.clone())
+            let zip_path = &format!("user://content/{}", hash_zip);
+            let result = godot::classes::ProjectSettings::singleton()
+                .load_resource_pack_ex(zip_path)
                 .replace_files(false)
                 .done();
 

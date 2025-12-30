@@ -3,6 +3,7 @@ description: Report a bug on Decentraland Mobile & Web Clients
 labels: ["bug", "triage"]
 projects: ["decentraland/43"]
 title: "[Bug]: "
+type: bug
 
 body:
   - type: markdown

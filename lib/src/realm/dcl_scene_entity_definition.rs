@@ -48,7 +48,7 @@ impl DclSceneEntityDefinition {
         else {
             return GString::from("No title");
         };
-        scene_display.to_string().into()
+        scene_display.to_godot()
     }
 
     #[func]
@@ -71,13 +71,13 @@ impl DclSceneEntityDefinition {
             .content_mapping
             .get_hash(self.inner.scene_meta_scene.main.as_str())
             .unwrap_or(&"".to_string())
-            .to_string()
+            .as_str()
             .into()
     }
 
     #[func]
     fn get_main_js_path(&self) -> GString {
-        self.inner.scene_meta_scene.main.as_str().into_godot()
+        self.inner.scene_meta_scene.main.as_str().into()
     }
 
     #[func]
@@ -91,13 +91,13 @@ impl DclSceneEntityDefinition {
             .content_mapping
             .get_hash("main.crdt")
             .unwrap_or(&"".to_string())
-            .to_string()
+            .as_str()
             .into()
     }
 
     #[func]
     fn get_base_url(&self) -> GString {
-        self.inner.content_mapping.base_url.to_string().into()
+        self.inner.content_mapping.base_url.to_godot()
     }
 
     #[func]

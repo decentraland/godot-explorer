@@ -1,6 +1,9 @@
 use std::{cell::RefCell, time::Instant};
 
-use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
+use godot::{
+    obj::Singleton,
+    prelude::{varray, Callable, ToGodot, Transform3D},
+};
 
 use super::{
     components::{
@@ -13,7 +16,7 @@ use super::{
         billboard::update_billboard,
         camera_mode_area::update_camera_mode_area,
         gltf_container::{sync_gltf_loading_state, update_gltf_container},
-        material::update_material,
+        material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
@@ -166,12 +169,13 @@ pub fn _process_scene(
             SceneUpdateState::PrintLogs => {
                 // enable logs
                 for log in &scene.current_dirty.logs {
-                    let mut arguments = VariantArray::new();
-                    arguments.push((scene.scene_id.0).to_variant());
-                    arguments.push((log.level as i32).to_variant());
-                    arguments.push((log.timestamp as f32).to_variant());
-                    arguments.push(GString::from(&log.message).to_variant());
-                    console.callv(arguments);
+                    let arguments = varray![
+                        scene.scene_id.0,
+                        log.level as i32,
+                        log.timestamp as f32,
+                        log.message.to_godot()
+                    ];
+                    console.callv(&arguments);
                 }
                 false
             }
@@ -199,6 +203,8 @@ pub fn _process_scene(
             }
             SceneUpdateState::Material => {
                 update_material(scene, crdt_state);
+                // Update video textures separately (needs mutable access to video_players)
+                update_video_material_textures(scene);
                 false
             }
             SceneUpdateState::TextShape => {
@@ -292,7 +298,7 @@ pub fn _process_scene(
                     scene
                         .godot_dcl_scene
                         .root_node_3d
-                        .call_deferred("emit_signal".into(), &["tree_changed".to_variant()]);
+                        .call_deferred("emit_signal", &["tree_changed".to_variant()]);
                     scene.godot_dcl_scene.hierarchy_changed_3d = false;
                 }
 
@@ -351,8 +357,8 @@ pub fn _process_scene(
                                 .map(|v| v.is_pointer_locked)
                         });
 
-                let is_pointer_locked = godot::prelude::Input::singleton().get_mouse_mode()
-                    == godot::engine::input::MouseMode::CAPTURED;
+                let is_pointer_locked = godot::classes::Input::singleton().get_mouse_mode()
+                    == godot::classes::input::MouseMode::CAPTURED;
                 if maybe_is_pointer_locked != Some(is_pointer_locked) {
                     let pointer_lock_component = PbPointerLock { is_pointer_locked };
                     SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)

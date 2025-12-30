@@ -16,7 +16,7 @@ pub struct DclParseDeepLink {
     preview: GString,
 
     #[var]
-    params: Dictionary,
+    params: VarDictionary,
 
     /// The signin identity ID from deep link `decentraland://open?signin=${identityId}`
     #[var]
@@ -32,7 +32,7 @@ impl IRefCounted for DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
             preview: GString::new(),
-            params: Dictionary::new(),
+            params: VarDictionary::new(),
             signin_identity_id: GString::new(),
         }
     }
@@ -46,7 +46,7 @@ impl DclParseDeepLink {
             location: Vector2i::MAX,
             realm: GString::new(),
             preview: GString::new(),
-            params: Dictionary::new(),
+            params: VarDictionary::new(),
             signin_identity_id: GString::new(),
         };
 
@@ -86,7 +86,7 @@ impl DclParseDeepLink {
                     }
                 }
                 "realm" => {
-                    return_object.realm = value.to_string().into();
+                    return_object.realm = value.to_string().to_godot();
                 }
                 "signin" => {
                     // Handle signin identity ID from deep link `decentraland://open?signin=${identityId}`
@@ -94,7 +94,7 @@ impl DclParseDeepLink {
                 }
                 "preview" => {
                     // Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
-                    return_object.preview = value.to_string().into();
+                    return_object.preview = value.to_string().to_godot();
                 }
                 _ => {}
             }

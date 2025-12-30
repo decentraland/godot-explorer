@@ -7,7 +7,7 @@ macro_rules! generate_dcl_rpc_sender {
             sender:
                 Option<$crate::dcl::scene_apis::RpcResultSender<Result<$response_type, String>>>,
 
-            _base: godot::obj::Base<godot::engine::RefCounted>,
+            _base: godot::obj::Base<godot::classes::RefCounted>,
         }
 
         impl $struct_name {

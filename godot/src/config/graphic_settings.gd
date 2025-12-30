@@ -59,19 +59,28 @@ static func apply_window_config() -> void:
 
 
 static func apply_fps_limit():
+	# Physics FPS matches render FPS but capped at 60 (default 30)
+	var physics_fps := 30
 	match Global.get_config().limit_fps:
 		ConfigData.FpsLimitMode.VSYNC:
 			Engine.max_fps = 0
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+			physics_fps = 60  # Cap at 60 for vsync (could be higher)
 		ConfigData.FpsLimitMode.NO_LIMIT:
 			Engine.max_fps = 0
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			physics_fps = 60  # Cap at 60 for unlimited
+		ConfigData.FpsLimitMode.FPS_18:
+			Engine.max_fps = 18
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			physics_fps = 18
 		ConfigData.FpsLimitMode.FPS_30:
 			Engine.max_fps = 30
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			physics_fps = 30
 		ConfigData.FpsLimitMode.FPS_60:
 			Engine.max_fps = 60
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-		ConfigData.FpsLimitMode.FPS_120:
-			Engine.max_fps = 120
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			physics_fps = 60
+
+	Engine.physics_ticks_per_second = physics_fps

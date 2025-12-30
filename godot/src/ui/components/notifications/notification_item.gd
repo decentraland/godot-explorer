@@ -109,9 +109,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _handle_tap() -> void:
-	# Haptic feedback on mobile
-	if Global.is_mobile():
-		Input.vibrate_handheld(20)  # 20ms subtle vibration
+	Global.send_haptic_feedback()
 
 	# Handle the tap action
 	_play_click_animation()
