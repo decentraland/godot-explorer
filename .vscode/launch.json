@@ -136,12 +136,9 @@
       "args": [
         "--path",
         "${workspaceFolder}/godot",
-        "--realm",
-        "boedo.dcl.eth",
-        "--debug-panel",
-        "--skip-lobby",
-        "--location",
-        "0,0"
+        "--fake-deeplink",
+        "decentraland://open?realm=https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest&position=72,-10&dynamic-scene-loading=true",
+        "--debug-panel"
       ],
       "cwd": "${workspaceRoot}/godot",
       "env": {

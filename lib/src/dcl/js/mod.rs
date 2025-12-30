@@ -40,6 +40,40 @@ use serde::Serialize;
 use tokio::sync::mpsc::Receiver;
 use v8::IsolateHandle;
 
+use crate::realm::scene_definition::SceneEntityDefinition;
+
+/// Helper struct for consistent scene logging with title and parcel info
+struct SceneLogInfo {
+    scene_id: SceneId,
+    title: String,
+    parcel: String,
+}
+
+impl SceneLogInfo {
+    fn new(scene_id: SceneId, scene_def: &SceneEntityDefinition) -> Self {
+        let title = scene_def
+            .scene_meta_scene
+            .display
+            .as_ref()
+            .and_then(|d| d.title.clone())
+            .unwrap_or_else(|| "untitled".to_string());
+        let base = scene_def.scene_meta_scene.scene.base;
+        let parcel = format!("{},{}", base.x, base.y);
+        Self {
+            scene_id,
+            title,
+            parcel,
+        }
+    }
+
+    fn prefix(&self) -> String {
+        format!(
+            "[scene {:?} '{}' @{}]",
+            self.scene_id, self.title, self.parcel
+        )
+    }
+}
+
 #[cfg(feature = "enable_inspector")]
 use inspector::InspectorServer;
 #[cfg(feature = "enable_inspector")]
@@ -159,6 +193,7 @@ pub(crate) fn scene_thread(
 
     let scene_id = spawn_dcl_scene_data.scene_id;
     let scene_entity_definition = spawn_dcl_scene_data.scene_entity_definition;
+    let log_info = SceneLogInfo::new(scene_id, &scene_entity_definition);
     let local_main_js_file_path = spawn_dcl_scene_data.local_main_js_file_path;
     let local_main_crdt_file_path = spawn_dcl_scene_data.local_main_crdt_file_path;
     let content_mapping = spawn_dcl_scene_data.content_mapping;
@@ -296,7 +331,7 @@ pub(crate) fn scene_thread(
 
     let script = match script {
         Err(e) => {
-            tracing::error!("[scene thread {scene_id:?}] script load error: {}", e);
+            tracing::error!("{} script load error: {}", log_info.prefix(), e);
             send_remove_godot_scene(&state, scene_id);
             return;
         }
@@ -306,7 +341,7 @@ pub(crate) fn scene_thread(
     let result =
         rt.block_on(async { run_script(&mut runtime, &script, "onStart", |_| Vec::new()).await });
     if let Err(e) = result {
-        tracing::error!("[scene thread {scene_id:?}] script onStart error: {}", e);
+        tracing::error!("{} script onStart error: {}", log_info.prefix(), e);
         send_remove_godot_scene(&state, scene_id);
         return;
     }
@@ -347,28 +382,29 @@ pub(crate) fn scene_thread(
         if let Err(e) = result {
             let err_str = format!("{:?}", e);
             if let Ok(err) = e.downcast::<JsError>() {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
-                    err_str,
-                    err.message,
-                    err
-                );
-            } else {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {}",
-                    err_str
-                );
+                if reported_error_filter < 10 {
+                    tracing::error!(
+                        "{} script error onUpdate: {} msg {:?} @ {:?}",
+                        log_info.prefix(),
+                        err_str,
+                        err.message,
+                        err
+                    );
+                }
+            } else if reported_error_filter < 10 {
+                tracing::error!("{} script error onUpdate: {}", log_info.prefix(), err_str);
             }
             reported_error_filter += 1;
 
-            if reported_error_filter == 10
+            if (10..15).contains(&reported_error_filter)
                 && state
                     .borrow()
                     .try_borrow::<CommunicatedWithRenderer>()
                     .is_none()
             {
                 tracing::error!(
-                    "[scene thread {scene_id:?}] too many errors without renderer interaction: shutting down"
+                    "{} too many errors without renderer interaction: shutting down",
+                    log_info.prefix()
                 );
                 break;
             }
@@ -394,7 +430,7 @@ pub(crate) fn scene_thread(
 
         let value = state.borrow().borrow::<SceneDying>().0;
         if value {
-            tracing::info!("breaking from the thread {:?}", scene_id);
+            tracing::info!("{} shutting down", log_info.prefix());
             break;
         }
 
@@ -404,7 +440,7 @@ pub(crate) fn scene_thread(
     send_remove_godot_scene(&state, scene_id);
     runtime.v8_isolate().terminate_execution();
 
-    tracing::info!("exiting from the thread {:?}", scene_id);
+    tracing::info!("{} thread exited", log_info.prefix());
 
     // std::thread::sleep(Duration::from_millis(5000));
 }
