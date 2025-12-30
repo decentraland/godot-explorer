@@ -86,7 +86,12 @@ jobs:
 
       - name: Deploy iOS exports to mobile deploy pipeline
         run: |
-          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          # Use PR-{number}-{branch} format for PR builds, otherwise use the ref name
+          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
+            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          else
+            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          fi
           echo "Deploying to branch: $BRANCH_NAME"
 
           # Clone the target repository using SSH
@@ -155,7 +160,11 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
+            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          else
+            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          fi
           COMMIT_SHA="${{ github.sha }}"
           COMMIT_SHORT="${COMMIT_SHA:0:7}"
           COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA}"
@@ -212,7 +221,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
 
@@ -244,7 +253,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           COMMENT_BODY="---
