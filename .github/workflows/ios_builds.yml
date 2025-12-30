@@ -288,7 +288,7 @@ jobs:
               --project "$SENTRY_PROJECT" \
               --auth-token "$SENTRY_AUTH_TOKEN"
 
-            sentry-cli releases set-commits "$RELEASE_NAME" --auto \
+            sentry-cli releases set-commits "$RELEASE_NAME" --auto --ignore-missing \
               --org "$SENTRY_ORG" \
               --project "$SENTRY_PROJECT" \
               --auth-token "$SENTRY_AUTH_TOKEN"
