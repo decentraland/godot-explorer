@@ -90,7 +90,7 @@ impl DclParseDeepLink {
                 }
                 "signin" => {
                     // Handle signin identity ID from deep link `decentraland://open?signin=${identityId}`
-                    return_object.signin_identity_id = value.to_string().into();
+                    return_object.signin_identity_id = value.to_string().to_godot();
                 }
                 "preview" => {
                     // Preview URL for hot reloading (e.g., http://192.168.0.55:8000)

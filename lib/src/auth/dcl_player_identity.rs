@@ -276,7 +276,7 @@ impl DclPlayerIdentity {
                 Err(err) => {
                     tracing::error!("Error starting mobile auth: {:?}", err);
                     this.call_deferred(
-                        "_error_getting_wallet".into(),
+                        "_error_getting_wallet",
                         &[format!("Mobile auth error: {}", err).to_variant()],
                     );
                 }
@@ -291,7 +291,7 @@ impl DclPlayerIdentity {
         if self.pending_mobile_auth.take().is_none() {
             tracing::error!("No pending mobile auth to complete");
             self.base_mut().call_deferred(
-                "_error_getting_wallet".into(),
+                "_error_getting_wallet",
                 &["No pending mobile auth".to_variant()],
             );
             return;
@@ -318,7 +318,7 @@ impl DclPlayerIdentity {
                             .expect("serialize ephemeral auth chain");
 
                     this.call_deferred(
-                        "try_set_remote_wallet".into(),
+                        "try_set_remote_wallet",
                         &[
                             format!("{:#x}", address).to_variant(),
                             chain_id.to_variant(),
@@ -329,7 +329,7 @@ impl DclPlayerIdentity {
                 Err(err) => {
                     tracing::error!("Error completing mobile auth: {:?}", err);
                     this.call_deferred(
-                        "_error_getting_wallet".into(),
+                        "_error_getting_wallet",
                         &[format!("Mobile auth completion error: {}", err).to_variant()],
                     );
                 }
