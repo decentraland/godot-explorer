@@ -41,6 +41,41 @@ jobs:
     runs-on: warp-macos-14-arm64-6x
     timeout-minutes: 35
     steps:
+      - name: Validate required secrets
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "Validating required secrets..."
+          MISSING=""
+
+          # Required secrets (build will fail without these)
+          if [ -z "$DEPLOY_SSH_KEY" ]; then
+            MISSING="$MISSING DEPLOY_SSH_KEY"
+          fi
+
+          if [ -n "$MISSING" ]; then
+            echo "❌ Missing required secrets:$MISSING"
+            echo "Please configure these secrets in the repository settings."
+            exit 1
+          fi
+
+          # Optional secrets (build will continue but some features disabled)
+          OPTIONAL_MISSING=""
+          if [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "⚠️  Sentry secrets not configured (SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT)"
+            echo "   dSYM upload will be skipped."
+          fi
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured"
+            echo "   Slack notifications will be skipped."
+          fi
+
+          echo "✅ Required secrets validated"
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref || github.sha }}
@@ -210,6 +245,10 @@ jobs:
       # Upload iOS debug symbols (dSYM) to Sentry for production builds
       - name: Upload iOS dSYMs to Sentry
         if: success()
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
           EXPLORER_VERSION=$(cargo run -- explorer-version)
           echo "Explorer version: $EXPLORER_VERSION"
@@ -239,38 +278,38 @@ jobs:
 
               # Create Sentry release and associate commits
               sentry-cli releases new "$RELEASE_NAME" \
-                --org ${{ secrets.SENTRY_ORG }} \
-                --project ${{ secrets.SENTRY_PROJECT }} \
-                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }}
+                --org "$SENTRY_ORG" \
+                --project "$SENTRY_PROJECT" \
+                --auth-token "$SENTRY_AUTH_TOKEN"
 
               sentry-cli releases set-commits "$RELEASE_NAME" --auto \
-                --org ${{ secrets.SENTRY_ORG }} \
-                --project ${{ secrets.SENTRY_PROJECT }} \
-                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }}
+                --org "$SENTRY_ORG" \
+                --project "$SENTRY_PROJECT" \
+                --auth-token "$SENTRY_AUTH_TOKEN"
 
               # Upload all dSYM files found
               sentry-cli upload-dif \
-                --org ${{ secrets.SENTRY_ORG }} \
-                --project ${{ secrets.SENTRY_PROJECT }} \
-                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+                --org "$SENTRY_ORG" \
+                --project "$SENTRY_PROJECT" \
+                --auth-token "$SENTRY_AUTH_TOKEN" \
                 --include-sources \
                 --wait \
                 "$DSYM_DIR"
 
               # Finalize the release
               sentry-cli releases finalize "$RELEASE_NAME" \
-                --org ${{ secrets.SENTRY_ORG }} \
-                --project ${{ secrets.SENTRY_PROJECT }} \
-                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }}
+                --org "$SENTRY_ORG" \
+                --project "$SENTRY_PROJECT" \
+                --auth-token "$SENTRY_AUTH_TOKEN"
 
-              echo "iOS dSYMs uploaded successfully to release: $RELEASE_NAME"
+              echo "✅ iOS dSYMs uploaded successfully to release: $RELEASE_NAME"
             else
-              echo "Warning: dSYMs not found at $ARCHIVE_PATH/dSYMs"
+              echo "⚠️  Warning: dSYMs not found in build/ios/DerivedData"
               echo "Searching for dSYMs in exports folder..."
               find exports -name "*.dSYM" -type d
             fi
           else
-            echo "Development build detected (-dev suffix), skipping Sentry upload"
+            echo "ℹ️  Development build detected (-dev suffix), skipping Sentry upload"
           fi
 
       - name: Notify Slack on Failure
