@@ -113,12 +113,12 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("explorer-version")
-                .about("Get Godot Explorer version")
+                .about("Get Godot Explorer version (reads from .build.version created during build)")
                 .arg(
                     Arg::new("verbose")
                         .short('v')
                         .long("verbose")
-                        .help("show detailed warning messages")
+                        .help("show detailed messages")
                         .takes_value(false),
                 )
         )
@@ -639,10 +639,7 @@ fn main() -> Result<(), anyhow::Error> {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
         ("version-check", _) => version_check::run_version_check(),
-        ("explorer-version", sm) => {
-            let verbose = sm.is_present("verbose");
-            version::get_godot_explorer_version(verbose)
-        }
+        ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
         _ => unreachable!("unreachable branch"),
     };
 

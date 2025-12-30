@@ -521,4 +521,18 @@ fn set_godot_explorer_version() {
     };
 
     println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
+
+    // Write checkpoint file for version verification
+    let checkpoint_path = Path::new("../.build.version");
+    if let Err(e) = fs::write(checkpoint_path, &full_version) {
+        println!(
+            "cargo:warning=Failed to write version checkpoint file: {}",
+            e
+        );
+    } else {
+        println!(
+            "cargo:warning=Version checkpoint written: {}",
+            full_version
+        );
+    }
 }
