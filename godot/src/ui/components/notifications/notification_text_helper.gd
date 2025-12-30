@@ -34,19 +34,19 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 		# Community notifications
 		"community_invite_received":
 			return "Community Invite Received"
-		"community_user_banned":
+		"community_member_banned":
 			return "Banned From Community"
-		"community_user_removed":
+		"community_member_removed":
 			return "Removed from Community"
-		"community_user_request_to_join_accepted":
+		"community_request_to_join_accepted":
 			return "Membership Request Accepted"
-		"community_user_request_to_join":
+		"community_request_to_join_received":
 			return "Membership Request Received"
 		"community_deleted":
 			return "Community Deleted"
 		"community_deleted_content_violation":
 			return "Your Community Has Been Deleted"
-		"community_event_created":
+		"event_created":
 			return "Community Event Added"
 		"community_renamed":
 			return "Community Renamed"
@@ -88,10 +88,10 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 			return "World Permission Revoked"
 
 		# Events
-		"event_started":
-			return "Event Started"
-		"event_ended":
-			return "Event Ended"
+		"events_started":
+			return metadata.get("title", "Event Started")
+		"events_ended":
+			return metadata.get("title", "Event Ended")
 
 		# Rewards
 		"reward_assigned":
@@ -158,15 +158,15 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			var community_name = metadata.get("communityName", "Unknown Community")
 			return "You've been invited to join the [b][%s][/b] Community." % community_name
 
-		"community_user_banned":
+		"community_member_banned":
 			var community_name = metadata.get("communityName", "Unknown Community")
 			return "You've been banned from the [b][%s][/b] Community." % community_name
 
-		"community_user_removed":
+		"community_member_removed":
 			var community_name = metadata.get("communityName", "Unknown Community")
 			return "You've been removed from the [b][%s][/b] Community." % community_name
 
-		"community_user_request_to_join_accepted":
+		"community_request_to_join_accepted":
 			var community_name = metadata.get("communityName", "Unknown Community")
 			return "Congrats! You're now a member of the [b][%s][/b] Community." % community_name
 
@@ -186,7 +186,7 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				% community_name
 			)
 
-		"community_event_created":
+		"event_created":
 			var community_name = metadata.get("communityName", "Unknown Community")
 			return "The [b][%s][/b] Community has added a new event." % community_name
 
@@ -234,9 +234,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			return metadata.get("description", "World permission revoked")
 
 		# Events
-		"event_started":
+		"events_started":
 			return metadata.get("description", "An event has started")
-		"event_ended":
+		"events_ended":
 			return metadata.get("description", "An event has ended")
 
 		# Rewards

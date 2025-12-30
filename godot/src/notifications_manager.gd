@@ -34,7 +34,6 @@ const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
-	"event_created",  # Events: New event created
 	"events_starts_soon",  # Events: Event starts soon
 	"events_started",  # Events: Event has started
 	"reward_assignment",  # Rewards: Reward assigned/received
@@ -210,6 +209,89 @@ func _generate_fake_notification() -> Dictionary:
 			"title": "Permission Granted",
 			"description": "You now have access to World XYZ"
 		},
+		{
+			"type": "event_created",
+			"title": "Title (!)",
+			"description": "Description (!)",
+			"metadata":
+			{
+				"link":
+				"https://decentraland.org/jump/events?id=5e33392d-fd7e-43db-8c65-ba18097cc7700",
+				"CommunityId": "comm_id",
+				"communityName": "Test Community",
+			}
+		},
+		{
+			"type": "events_started",
+			"title": "Title (!)",
+			"description": "Description (!)",
+			"metadata":
+			{
+				"title": "Thank God is Friday",
+				"description": "MAKUMBA SOCIAL CLUB will host",
+				"link":
+				"https://decentraland.org/jump/events?id=5f776ddc-bcc9-49e5-aa2c-d84f0b5dda27",
+				"CommunityId": "comm_id",
+				"communityName": "Test Community",
+			}
+		},
+		{
+			"type": "reward_assignment",
+			"title": "Title (!)",
+			"description": "Description (!)",
+			"metadata":
+			{
+				"tokenName": "Test token name",
+				"tokenImage": "https://",
+				"tokenRarity": "rare",
+				"title": "A test NFT",
+				"description": "This is a test NFT"
+			}
+		},
+		{
+			"type": "reward_in_progress",
+			"title": "Title (!)",
+			"description": "Description (!)",
+			"metadata":
+			{
+				"tokenName": "Test token name",
+				"tokenImage": "https://",
+				"tokenRarity": "rare",
+				"tokenCategory": "Lowerbody",
+				"title": "A test NFT",
+				"description": "This is a test NFT"
+			}
+		},
+		{
+			"type": "social_service_friendship_request",
+			"title": "Friend Request Received (!)",
+			"description": "X wants to be your friend (!)",
+			"metadata":
+			{
+				"sender":
+				{
+					"name": "TestUser",
+					"hasClaimedName": true,
+					"profileImageUrl": "",
+					"address": "123456789101112",
+				}
+			}
+		},
+		{
+			"type": "social_service_friendship_accepted",
+			"title": "",
+			"description": "",
+			"metadata":
+			{
+				"sender":
+				{
+					"name": "TestUser",
+					"hasClaimedName": true,
+					"profileImageUrl": "",
+					"address": "123456789101112",
+				}
+			}
+		}
 	]
 
 	var random_type = fake_types[randi() % fake_types.size()]
@@ -222,11 +304,15 @@ func _generate_fake_notification() -> Dictionary:
 		"timestamp": int(timestamp),
 		"read": false,
 		"metadata":
-		{
-			"title": random_type["title"],
-			"description": random_type["description"],
-			"link": "https://decentraland.org"
-		}
+		(
+			random_type["metadata"]
+			if random_type.has("metadata")
+			else {
+				"title": random_type["title"],
+				"description": random_type["description"],
+				"link": "https://decentraland.org"
+			}
+		)
 	}
 
 
