@@ -1,6 +1,13 @@
 class_name AvatarEmoteController
 extends RefCounted
 
+# Cooldown to prevent rapid emote spam that can crash the animation system
+const EMOTE_COOLDOWN_SECONDS: float = 0.5
+const MAX_DEFERRED_RETRIES: int = 3
+
+# Signal-based emote loader for threaded loading
+var emote_loader: EmoteLoader = null
+
 
 class EmoteSceneUrn:
 	var base_url: String
@@ -54,10 +61,6 @@ class EmoteItemData:
 		prop_animation_player = _prop_animation_player
 
 
-# Cooldown to prevent rapid emote spam that can crash the animation system
-const EMOTE_COOLDOWN_SECONDS: float = 0.5
-const MAX_DEFERRED_RETRIES: int = 3
-
 var loaded_emotes_by_urn: Dictionary
 
 var playing_single: bool = false
@@ -96,6 +99,9 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	avatar = _avatar
 	animation_player = _animation_player
 	animation_tree = _animation_tree
+
+	# Initialize emote loader for signal-based loading
+	emote_loader = EmoteLoader.new()
 
 	# TODO: this is a workaround because "Local to scene" is not working when
 	#	is selected in the independent nodes.
@@ -336,6 +342,13 @@ func _reset_skeleton_to_rest_pose():
 		skeleton.reset_bone_pose(i)
 
 
+func _clear_owner_recursive(node: Node) -> void:
+	# Clear owner on this node and all children to prevent "inconsistent owner" warnings
+	node.set_owner(null)
+	for child in node.get_children():
+		_clear_owner_recursive(child)
+
+
 func async_play_emote(emote_id_or_urn: String) -> void:
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -398,20 +411,24 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 func _async_load_emote(emote_urn: String):
 	await WearableRequest.async_fetch_emote(emote_urn)
 
-	var emote_content_promises = async_fetch_emote(emote_urn, avatar.avatar_data.get_body_shape())
-	await PromiseUtils.async_all(emote_content_promises)
-
 	var emote = Global.content_provider.get_wearable(emote_urn)
 	if emote == null:
 		printerr("Error: emote is null for URN: " + emote_urn)
 		return
 
-	var file_hash = Wearables.get_item_main_file_hash(emote, avatar.avatar_data.get_body_shape())
+	var body_shape_id = avatar.avatar_data.get_body_shape()
+	var file_hash = Wearables.get_item_main_file_hash(emote, body_shape_id)
 	if file_hash.is_empty():
 		printerr("Error: file_hash is empty for emote: ", emote_urn)
 		return
 
-	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
+	# Use signal-based emote loading
+	var scene_path = await emote_loader.async_load_emote(emote_urn, body_shape_id)
+	if scene_path.is_empty():
+		printerr("Error: failed to load emote scene for: ", emote_urn)
+		return
+
+	var obj = emote_loader.get_emote_gltf(file_hash)
 	if obj is DclEmoteGltf:
 		# Use call_deferred to ensure animation modifications happen on main thread
 		load_emote_from_dcl_emote_gltf.call_deferred(emote_urn, obj, file_hash)
@@ -423,24 +440,16 @@ func _async_load_scene_emote(urn: String):
 		printerr("Error loading scene-emote ", urn)
 		return
 
-	var content_mapping: DclContentMappingAndUrl = DclContentMappingAndUrl.from_values(
-		Global.realm.content_base_url + "contents/", {"emote.glb": emote_scene_urn.glb_hash}
+	# Use signal-based emote loading for scene emotes
+	var scene_path = await emote_loader.async_load_scene_emote(
+		emote_scene_urn.glb_hash, Global.realm.content_base_url
 	)
 
-	var gltf_promise: Promise = Global.content_provider.fetch_emote_gltf(
-		"emote.glb", content_mapping
-	)
-	var obj = await PromiseUtils.async_awaiter(gltf_promise)
-
-	if obj is PromiseError:
-		printerr("Error loading emote '", urn, "': ", obj.get_error())
+	if scene_path.is_empty():
+		printerr("Error loading scene-emote ", urn, ": failed to load scene")
 		return
 
-	# TODO: implement also audio for this
-	# var audio_promise: Promise = Global.content_provider.fetch_emote_gltf("emote.mp3", content_mapping)
-	# await PromiseUtils.async_awaiter(audio_promise)
-
-	#var obj = Global.content_provider.get_emote_gltf_from_hash(emote_scene_urn.glb_hash)
+	var obj = emote_loader.get_emote_gltf(emote_scene_urn.glb_hash)
 	if obj is DclEmoteGltf:
 		# Use call_deferred to ensure animation modifications happen on main thread
 		load_emote_from_dcl_emote_gltf.call_deferred(urn, obj, emote_scene_urn.glb_hash)
@@ -482,6 +491,9 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 	if obj.armature_prop != null:
 		if not avatar.has_node(NodePath(obj.armature_prop.name)):
 			armature_prop = obj.armature_prop.duplicate()
+
+			# Clear the owner on all nodes to avoid "inconsistent owner" warning when reparenting
+			_clear_owner_recursive(armature_prop)
 
 			# Stop and remove any AnimationPlayer on the prop to prevent independent animation
 			# The prop animation should be controlled by the avatar's AnimationTree via merged tracks
@@ -659,6 +671,8 @@ func freeze_on_idle():
 			child.hide()
 
 
+## Fetch an emote using signal-based loading.
+## Returns an array of promises for audio files (emotes still need audio via promises).
 func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 	var ret = []
 	var emote = Global.content_provider.get_wearable(emote_urn)
@@ -667,9 +681,11 @@ func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 		if file_name.is_empty():
 			return ret
 		var content_mapping: DclContentMappingAndUrl = emote.get_content_mapping()
-		var promise: Promise = Global.content_provider.fetch_emote_gltf(file_name, content_mapping)
-		ret.push_back(promise)
 
+		# Use signal-based emote loading (but start it here so it's loading in parallel)
+		Global.content_provider.load_emote_gltf(file_name, content_mapping)
+
+		# Audio still uses promise-based loading
 		for audio_file in content_mapping.get_files():
 			if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
 				var audio_promise: Promise = Global.content_provider.fetch_audio(

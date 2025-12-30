@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use godot::{
-    builtin::{GString, VarArray, Variant},
+    builtin::{GString, VarArray},
     classes::{
         animation::TrackType, base_material_3d::TextureParam, node::ProcessMode, AnimatableBody3D,
         Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D, CollisionShape3D,
@@ -23,148 +23,14 @@ use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
 
 use super::{
     content_mapping::ContentMappingAndUrlRef,
-    content_provider::{ContentProviderContext, SceneGltfContext},
+    content_provider::SceneGltfContext,
     file_string::get_base_dir,
     scene_saver::{
         get_emote_path_for_hash, get_scene_path_for_hash, get_wearable_path_for_hash,
         save_node_as_scene,
     },
     texture::create_compressed_texture,
-    thread_safety::GodotSingleThreadSafety,
 };
-
-pub async fn internal_load_gltf(
-    file_path: String,
-    content_mapping: ContentMappingAndUrlRef,
-    ctx: ContentProviderContext,
-) -> Result<(Gd<Node3D>, GodotSingleThreadSafety), anyhow::Error> {
-    let base_path = Arc::new(get_base_dir(&file_path));
-
-    let file_hash = content_mapping
-        .get_hash(file_path.as_str())
-        .ok_or(anyhow::Error::msg("File not found in the content mappings"))?;
-
-    let url = format!("{}{}", content_mapping.base_url, file_hash);
-    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    ctx.resource_provider
-        .fetch_resource(url, file_hash.clone(), absolute_file_path.clone())
-        .await
-        .map_err(anyhow::Error::msg)?;
-
-    #[cfg(feature = "use_resource_tracking")]
-    report_resource_loading(file_hash, &"0%".to_string(), &"gltf started".to_string());
-
-    let dependencies = get_dependencies(&absolute_file_path)
-        .await?
-        .into_iter()
-        .map(|dep| {
-            let full_path = if base_path.is_empty() {
-                dep.clone()
-            } else {
-                format!("{}/{}", base_path, dep)
-            };
-
-            let item = content_mapping.get_hash(full_path.as_str()).cloned();
-            (dep, item)
-        })
-        .collect::<Vec<(String, Option<String>)>>();
-
-    if dependencies.iter().any(|(_, hash)| hash.is_none()) {
-        return Err(anyhow::Error::msg(
-            "There are some missing dependencies in the gltf".to_string(),
-        ));
-    }
-
-    let dependencies_hash = dependencies
-        .into_iter()
-        .map(|(file_path, hash)| (file_path, hash.unwrap()))
-        .collect::<Vec<(String, String)>>();
-
-    let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
-        let ctx = ctx.clone();
-        let content_mapping = content_mapping.clone();
-        async move {
-            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
-            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
-            ctx.resource_provider
-                .fetch_resource(url, dependency_file_hash.clone(), absolute_file_path)
-                .await
-                .map_err(|e| {
-                    format!(
-                        "Dependency {} failed to fetch: {:?}",
-                        dependency_file_hash, e
-                    )
-                })
-        }
-    });
-
-    let result = futures_util::future::join_all(futures).await;
-    if result.iter().any(|res| res.is_err()) {
-        // collect errors
-        let errors = result
-            .into_iter()
-            .filter_map(|res| res.err())
-            .map(|err| err.to_string())
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        return Err(anyhow::Error::msg(format!(
-            "Error downloading gltf dependencies: {errors}"
-        )));
-    }
-
-    let thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
-        .await
-        .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
-
-    let mut new_gltf = GltfDocument::new_gd();
-    let mut new_gltf_state = GltfState::new_gd();
-
-    let mappings = VarDictionary::from_iter(
-        dependencies_hash
-            .iter()
-            .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
-    );
-
-    new_gltf_state.set_additional_data("base_path", &"some".to_variant());
-    new_gltf_state.set_additional_data("mappings", &mappings.to_variant());
-
-    let file_path = GString::from(absolute_file_path.as_str());
-    let base_path = GString::from(ctx.content_folder.as_str());
-    let err = new_gltf
-        .append_from_file_ex(&file_path, &new_gltf_state.clone())
-        .base_path(&base_path)
-        .flags(0)
-        .done();
-
-    if err != Error::OK {
-        let err = err.to_variant().to::<i32>();
-        return Err(anyhow::Error::msg(format!(
-            "Error loading gltf after appending from file {}",
-            err
-        )));
-    }
-
-    let node = new_gltf
-        .generate_scene(&new_gltf_state)
-        .ok_or(anyhow::Error::msg(
-            "Error loading gltf when generating scene".to_string(),
-        ))?;
-
-    // Attach a ResourceLocker to the Node to control the lifecycle
-    ResourceLocker::attach_to(node.clone());
-
-    let max_size = ctx.texture_quality.to_max_size();
-    post_import_process(node.clone(), max_size);
-
-    let mut node = node.try_cast::<Node3D>().map_err(|err| {
-        anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
-    })?;
-
-    node.rotate_y(std::f32::consts::PI);
-
-    Ok((node, thread_safe_check))
-}
 
 pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
     for child in node_to_inspect.get_children().iter_shared() {
@@ -202,42 +68,20 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
     }
 }
 
-pub async fn load_gltf_wearable(
-    file_path: String,
-    content_mapping: ContentMappingAndUrlRef,
-    ctx: ContentProviderContext,
-) -> Result<Option<Variant>, anyhow::Error> {
-    let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
-    Ok(Some(node.to_variant()))
+/// Recursively clear the owner of a node and all its children
+fn clear_owner_recursive(node: &mut Gd<Node>) {
+    node.set_owner(Gd::<Node>::null_arg());
+    for mut child in node.get_children().iter_shared() {
+        clear_owner_recursive(&mut child);
+    }
 }
 
-pub async fn load_gltf_emote(
-    file_path: String,
-    content_mapping: ContentMappingAndUrlRef,
-    ctx: ContentProviderContext,
-) -> Result<Option<Variant>, anyhow::Error> {
-    let file_hash = content_mapping
-        .clone()
-        .get_hash(file_path.as_str())
-        .ok_or(anyhow::Error::msg("File not found in the content mappings"))?
-        .clone();
-
-    let (gltf_node, _thread_safe_check) =
-        internal_load_gltf(file_path, content_mapping, ctx).await?;
-
-    let result = process_emote_animations(&file_hash, &gltf_node).map(
-        |(mut armature_prop, default_animation, prop_animation)| {
-            // Remove armature_prop from gltf_node before freeing (so it survives)
-            if let Some(ref mut prop) = armature_prop {
-                if let Some(mut parent) = prop.get_parent() {
-                    parent.remove_child(&prop.clone().upcast::<Node>());
-                }
-            }
-            build_dcl_emote_gltf(armature_prop, default_animation, prop_animation).to_variant()
-        },
-    );
-    gltf_node.free();
-    Ok(result)
+/// Recursively set the owner of a node and all its children
+fn set_owner_recursive(node: &mut Gd<Node>, owner: &Gd<Node>) {
+    node.set_owner(owner);
+    for mut child in node.get_children().iter_shared() {
+        set_owner_recursive(&mut child, owner);
+    }
 }
 
 async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
@@ -1354,8 +1198,14 @@ pub async fn load_and_save_emote_gltf(
             if let Some(mut parent) = prop.get_parent() {
                 parent.remove_child(&prop.clone().upcast::<Node>());
             }
+            // Clear owner to avoid "inconsistent owner" warning
+            prop.set_owner(Gd::<Node>::null_arg());
+            clear_owner_recursive(&mut prop.clone().upcast::<Node>());
             root.add_child(&prop.clone().upcast::<Node>());
-            prop.set_owner(&root.clone().upcast::<Node>());
+            set_owner_recursive(
+                &mut prop.clone().upcast::<Node>(),
+                &root.clone().upcast::<Node>(),
+            );
         }
 
         // Create AnimationPlayer with processed animations

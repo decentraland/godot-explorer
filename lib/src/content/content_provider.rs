@@ -42,8 +42,7 @@ use super::{
     audio::load_audio,
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
-        load_and_save_scene_gltf, load_and_save_wearable_gltf, load_gltf_emote, load_gltf_wearable,
-        DclEmoteGltf,
+        load_and_save_scene_gltf, load_and_save_wearable_gltf, DclEmoteGltf,
     },
     profile::{prepare_request_requirements, request_lambda_profile},
     resource_provider::ResourceProvider,
@@ -903,9 +902,20 @@ impl ContentProvider {
         let anim_player = root.try_get_node_as::<AnimationPlayer>("EmoteAnimations")?;
 
         let hash_suffix = get_last_16_alphanumeric(&file_hash.to_string());
-        let default_animation = anim_player.get_animation(&StringName::from(&hash_suffix));
-        let prop_animation =
-            anim_player.get_animation(&StringName::from(&format!("{}_prop", hash_suffix)));
+        let default_anim_name = StringName::from(&hash_suffix);
+        let prop_anim_name = StringName::from(&format!("{}_prop", hash_suffix));
+
+        // Check if animations exist before getting them to avoid Godot errors
+        let default_animation = if anim_player.has_animation(&default_anim_name) {
+            anim_player.get_animation(&default_anim_name)
+        } else {
+            None
+        };
+        let prop_animation = if anim_player.has_animation(&prop_anim_name) {
+            anim_player.get_animation(&prop_anim_name)
+        } else {
+            None
+        };
 
         // Remove armature_prop from root before freeing (so it survives)
         // Animations are Resources, they survive independently
@@ -1076,122 +1086,6 @@ impl ContentProvider {
                 ))),
             );
         }
-
-        promise
-    }
-
-    #[func]
-    pub fn fetch_wearable_gltf(
-        &mut self,
-        file_path: GString,
-        content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Promise> {
-        let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
-            return Promise::from_rejected(format!("File not found: {}", file_path));
-        };
-
-        let cache_key = format!("wearable:{}", file_hash);
-        if let Some(entry) = self.cached.get_mut(&cache_key) {
-            entry.last_access = Instant::now();
-            tracing::debug!("Wearable cache HIT: {}", file_hash);
-            return entry.promise.clone();
-        }
-
-        tracing::debug!("Wearable cache MISS: {} - loading", file_hash);
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_file_path = file_path.to_string();
-        let content_provider_context = self.get_context();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.to_string();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result =
-                load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context).await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cached.insert(
-            cache_key,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
-
-        promise
-    }
-
-    #[func]
-    pub fn fetch_emote_gltf(
-        &mut self,
-        file_path: GString,
-        content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Promise> {
-        let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
-            return Promise::from_rejected(format!("File not found: {}", file_path));
-        };
-
-        let cache_key = format!("emote:{}", file_hash);
-        if let Some(entry) = self.cached.get_mut(&cache_key) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
-        }
-
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_file_path = file_path.to_string();
-        let content_provider_context = self.get_context();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.to_string();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result =
-                load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cached.insert(
-            cache_key,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
 
         promise
     }
@@ -1664,27 +1558,6 @@ impl ContentProvider {
         let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
         let texture = texture_entry.bind().texture.clone();
         Some(texture)
-    }
-
-    #[func]
-    pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
-        let cache_key = format!("wearable:{}", file_hash);
-        let entry = self.cached.get_mut(&cache_key)?;
-        entry.last_access = Instant::now();
-        entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
-    }
-
-    #[func]
-    pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        let cache_key = format!("emote:{}", file_hash);
-        let entry = self.cached.get_mut(&cache_key)?;
-        entry.last_access = Instant::now();
-        entry
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<DclEmoteGltf>>()
-            .ok()
     }
 
     #[func]

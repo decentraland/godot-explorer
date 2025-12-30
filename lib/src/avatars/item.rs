@@ -325,18 +325,18 @@ impl DclItemEntityDefinition {
                     .bind_mut()
                     .get_content_provider()
                     .clone();
-            let mut content_provider = _content_provider.bind_mut();
+            let content_provider = _content_provider.bind();
 
-            if let Some(obj) = content_provider.get_gltf_from_hash(GString::from(main_file_hash)) {
-                obj.find_child("Skeleton3D").is_some()
-            } else if let Some(_obj) =
-                content_provider.get_texture_from_hash(GString::from(main_file_hash))
+            // For texture-based wearables, check the texture cache
+            if wearable_data.category == WearableCategory::EYES
+                || wearable_data.category == WearableCategory::EYEBROWS
+                || wearable_data.category == WearableCategory::MOUTH
             {
-                wearable_data.category == WearableCategory::EYES
-                    || wearable_data.category == WearableCategory::EYEBROWS
-                    || wearable_data.category == WearableCategory::MOUTH
+                content_provider.is_resource_from_hash_loaded(GString::from(main_file_hash))
             } else {
-                false
+                // For GLTF wearables, check if cached on disk or currently loading
+                content_provider.is_wearable_cached(GString::from(main_file_hash))
+                    || content_provider.is_wearable_loading(GString::from(main_file_hash))
             }
         } else {
             true

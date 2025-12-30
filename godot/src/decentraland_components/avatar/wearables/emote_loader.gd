@@ -1,0 +1,144 @@
+class_name EmoteLoader
+extends RefCounted
+
+## Helper class for signal-based batched emote loading.
+## Connects to ContentProvider signals and manages threaded resource loading.
+## Emotes have a special structure with animations that need extraction.
+
+signal all_loads_complete
+
+# Tracks pending loads: file_hash -> true
+var _pending_loads: Dictionary = {}
+# Tracks completed loads: file_hash -> scene_path
+var _completed_loads: Dictionary = {}
+# Tracks audio promises (still use promises)
+var _audio_promises: Array = []
+
+
+func _init():
+	Global.content_provider.emote_gltf_ready.connect(_on_emote_ready)
+	Global.content_provider.emote_gltf_error.connect(_on_emote_error)
+
+
+## Load a single emote using signal-based loading.
+## Returns the scene_path if successful, empty string on failure.
+func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
+	_pending_loads.clear()
+	_completed_loads.clear()
+	_audio_promises.clear()
+
+	var emote = Global.content_provider.get_wearable(emote_urn)
+	if emote == null:
+		printerr("EmoteLoader: emote ", emote_urn, " is null")
+		return ""
+
+	var file_name = emote.get_representation_main_file(body_shape_id)
+	if file_name.is_empty():
+		printerr(
+			"EmoteLoader: no representation for ", emote_urn, " with body shape ", body_shape_id
+		)
+		return ""
+
+	var content_mapping = emote.get_content_mapping()
+	var file_hash = content_mapping.get_hash(file_name)
+	if file_hash.is_empty():
+		printerr("EmoteLoader: empty file_hash for ", emote_urn)
+		return ""
+
+	# Load audio files via promises
+	for audio_file in content_mapping.get_files():
+		if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
+			var audio_promise = Global.content_provider.fetch_audio(audio_file, content_mapping)
+			_audio_promises.push_back(audio_promise)
+			break
+
+	# Check if already cached on disk
+	if Global.content_provider.is_emote_cached(file_hash):
+		var scene_path = Global.content_provider.get_emote_cache_path(file_hash)
+		_completed_loads[file_hash] = scene_path
+
+		# Still wait for audio
+		if not _audio_promises.is_empty():
+			await PromiseUtils.async_all(_audio_promises)
+
+		return scene_path
+
+	# Check if already loading
+	if Global.content_provider.is_emote_loading(file_hash):
+		_pending_loads[file_hash] = true
+	else:
+		# Start loading
+		Global.content_provider.load_emote_gltf(file_name, content_mapping)
+		_pending_loads[file_hash] = true
+
+	# Wait for GLTF load
+	if not _pending_loads.is_empty():
+		await all_loads_complete
+
+	# Wait for audio
+	if not _audio_promises.is_empty():
+		await PromiseUtils.async_all(_audio_promises)
+
+	return _completed_loads.get(file_hash, "")
+
+
+## Load a scene emote (from SDK scene, not wearable).
+## Returns the scene_path if successful, empty string on failure.
+func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
+	_pending_loads.clear()
+	_completed_loads.clear()
+
+	# Check if already cached on disk
+	if Global.content_provider.is_emote_cached(glb_hash):
+		return Global.content_provider.get_emote_cache_path(glb_hash)
+
+	# Check if already loading
+	if Global.content_provider.is_emote_loading(glb_hash):
+		_pending_loads[glb_hash] = true
+	else:
+		# Create content mapping for the scene emote
+		var content_mapping = DclContentMappingAndUrl.from_values(
+			base_url + "contents/", {"emote.glb": glb_hash}
+		)
+		Global.content_provider.load_emote_gltf("emote.glb", content_mapping)
+		_pending_loads[glb_hash] = true
+
+	# Wait for load
+	if not _pending_loads.is_empty():
+		await all_loads_complete
+
+	return _completed_loads.get(glb_hash, "")
+
+
+## Get a DclEmoteGltf from cached scene.
+## Uses ContentProvider's load_cached_emote which extracts animations properly.
+func get_emote_gltf(file_hash: String) -> DclEmoteGltf:
+	var scene_path = _completed_loads.get(file_hash, "")
+	if scene_path.is_empty():
+		scene_path = Global.content_provider.get_emote_cache_path(file_hash)
+
+	if scene_path.is_empty():
+		printerr("EmoteLoader: no scene_path for hash ", file_hash)
+		return null
+
+	# Use ContentProvider's load_cached_emote to properly extract animations
+	return Global.content_provider.load_cached_emote(scene_path, file_hash)
+
+
+func _on_emote_ready(file_hash: String, scene_path: String):
+	if _pending_loads.has(file_hash):
+		_pending_loads.erase(file_hash)
+		_completed_loads[file_hash] = scene_path
+		_check_all_complete()
+
+
+func _on_emote_error(file_hash: String, error: String):
+	printerr("EmoteLoader: load error for ", file_hash, ": ", error)
+	if _pending_loads.has(file_hash):
+		_pending_loads.erase(file_hash)
+		_check_all_complete()
+
+
+func _check_all_complete():
+	if _pending_loads.is_empty():
+		all_loads_complete.emit()
