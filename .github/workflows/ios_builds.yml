@@ -271,6 +271,7 @@ jobs:
             fi
           else
             echo "Development build detected (-dev suffix), skipping Sentry upload"
+          fi
 
       - name: Notify Slack on Failure
         if: failure() && !cancelled()
