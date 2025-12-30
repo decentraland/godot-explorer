@@ -259,7 +259,7 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
-          EXPLORER_VERSION=$(cargo run -- explorer-version)
+          EXPLORER_VERSION=$(cargo run -- explorer-version --release --target ios $PROD_FLAG)
           echo "Explorer version: $EXPLORER_VERSION"
 
           RELEASE_NAME="org.decentraland.godotexplorer@$EXPLORER_VERSION"
