@@ -90,9 +90,7 @@ fn strip_ios_template_symbols(templates_path: &str) -> Result<(), anyhow::Error>
     for entry in WalkDir::new(&temp_dir)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path().extension().map_or(false, |ext| ext == "a") && e.file_type().is_file()
-        })
+        .filter(|e| e.path().extension().map_or(false, |ext| ext == "a") && e.file_type().is_file())
     {
         let path = entry.path();
 

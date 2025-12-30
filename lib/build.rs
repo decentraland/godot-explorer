@@ -530,9 +530,6 @@ fn set_godot_explorer_version() {
             e
         );
     } else {
-        println!(
-            "cargo:warning=Version checkpoint written: {}",
-            full_version
-        );
+        println!("cargo:warning=Version checkpoint written: {}", full_version);
     }
 }
