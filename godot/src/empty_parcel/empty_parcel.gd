@@ -40,7 +40,10 @@ func _ready():
 
 func set_corner_configuration(config: CornerConfiguration) -> void:
 	corner_config = config
-	generate()
+	# Only generate if we're in the tree (global_position requires this)
+	# This can happen if the node was removed before the deferred call executed
+	if is_inside_tree():
+		generate()
 
 
 func get_corner_configuration() -> CornerConfiguration:

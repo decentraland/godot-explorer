@@ -131,6 +131,11 @@ func _ready():
 	if cli.force_mobile:
 		_set_is_mobile(true)
 
+	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
+	if not cli.fake_deeplink.is_empty():
+		deep_link_url = cli.fake_deeplink
+		deep_link_obj = DclParseDeepLink.parse_decentraland_link(cli.fake_deeplink)
+
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
