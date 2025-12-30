@@ -130,7 +130,7 @@ jobs:
       - name: Upload debug symbols to Sentry
         if: success()
         run: |
-          EXPLORER_VERSION=$(cargo run -- explorer-version --release --target android $PROD_FLAG)
+          EXPLORER_VERSION=$(cargo run -- explorer-version)
           echo "Explorer version: $EXPLORER_VERSION"
 
           # Check if this is a production build (no -dev suffix)

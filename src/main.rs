@@ -113,39 +113,13 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("explorer-version")
-                .about("Get Godot Explorer version (runs build with given args then reads .build.version)")
+                .about("Get Godot Explorer version (reads from .build.version created during build)")
                 .arg(
                     Arg::new("verbose")
                         .short('v')
                         .long("verbose")
                         .help("show detailed messages")
                         .takes_value(false),
-                )
-                .arg(
-                    Arg::new("release")
-                        .short('r')
-                        .long("release")
-                        .help("build in release mode")
-                        .takes_value(false),
-                )
-                .arg(
-                    Arg::new("prod")
-                        .long("prod")
-                        .help("mark as production build")
-                        .takes_value(false),
-                )
-                .arg(
-                    Arg::new("staging")
-                        .long("staging")
-                        .help("mark as staging build")
-                        .takes_value(false),
-                )
-                .arg(
-                    Arg::new("target")
-                        .short('t')
-                        .long("target")
-                        .help("target platform (ios, android, etc.)")
-                        .takes_value(true),
                 )
         )
         .subcommand(
@@ -627,8 +601,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Check dependencies first
             dependencies::check_command_dependencies("import-assets", None)?;
 
-            // Build for host OS first (import-assets needs the library)
-            run::build(false, false, vec![], None, None)?;
+            // Only build if library doesn't exist (to avoid overwriting .build.version from CI builds)
+            let lib_path = helpers::get_host_library_path();
+            if !lib_path.exists() {
+                run::build(false, false, vec![], None, None)?;
+            }
 
             let status = import_assets();
             if !status.success() {
@@ -665,28 +642,7 @@ fn main() -> Result<(), anyhow::Error> {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
         ("version-check", _) => version_check::run_version_check(),
-        ("explorer-version", sm) => {
-            // Set environment variable based on --prod or --staging flag
-            if sm.is_present("prod") {
-                std::env::set_var("DECENTRALAND_PROD_BUILD", "1");
-            } else if sm.is_present("staging") {
-                std::env::set_var("DECENTRALAND_STAGING_BUILD", "1");
-            }
-
-            let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
-            let target = sm.value_of("target");
-
-            // Run build to generate .build.version with correct flags
-            run::build(
-                sm.is_present("release"),
-                production_or_staging,
-                vec![],
-                None,
-                target,
-            )?;
-
-            version::get_godot_explorer_version(sm.is_present("verbose"))
-        }
+        ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
         _ => unreachable!("unreachable branch"),
     };
 
