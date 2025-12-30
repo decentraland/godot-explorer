@@ -3,33 +3,23 @@
 ## Orchestrates the full benchmark flow through all scenes without modifying production code.
 ## This controller manages scene transitions, metric collection, and report generation.
 ##
-## Flow: Terms → Lobby → Menu → Explorer (Goerli x3 / Genesis x3 alternating)
+## Flow: Terms → Lobby → Menu → Explorer (Goerli) → Explorer (Genesis) → Explorer (Goerli cleanup)
 
 extends Node
 
-# Benchmark configuration - alternating between Goerli and Genesis to stress test scene loading/unloading
-const GOERLI_PLAZA = {
-	"name": "Goerli Plaza",
-	"pos": Vector2i(72, -10),
-	"realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
-}
-
-const GENESIS_PLAZA = {
-	"name": "Genesis Plaza",
-	"pos": Vector2i(0, 0),
-	"realm": "https://realm-provider-ea.decentraland.org/main"
-}
-
+# Benchmark configuration
 var benchmark_locations = [
-	# Round 1
-	{"name": "Goerli Plaza", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
-	{"name": "Genesis Plaza", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
-	# Round 2
-	{"name": "Goerli Plaza Second", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
-	{"name": "Genesis Plaza Second", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
-	# Round 3
-	{"name": "Goerli Plaza Third", "pos": GOERLI_PLAZA.pos, "realm": GOERLI_PLAZA.realm},
-	{"name": "Genesis Plaza Third", "pos": GENESIS_PLAZA.pos, "realm": GENESIS_PLAZA.realm},
+	{
+		"name": "Goerli Plaza",
+		"pos": Vector2i(72, -10),
+		"realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+	},
+	{
+		"name": "Genesis Plaza",
+		"pos": Vector2i(0, 0),
+		"realm": "https://realm-provider-ea.decentraland.org/main"
+	},
+	#{"name": "Goerli Plaza (Cleanup Test)", "pos": Vector2i(72, -10), "realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"}
 ]
 
 var current_location_index = 0
@@ -197,9 +187,9 @@ func handle_menu_scene(_scene):
 ## Explorer Scene
 # gdlint:ignore = async-function-name, unused-argument
 func handle_explorer_scene(_scene):
-	# Wait for loading to complete (with timeout fallback)
+	# Wait for loading to complete
 	log_message("✓ Waiting for Explorer to finish loading...")
-	await wait_for_loading_with_timeout(60.0)
+	await Global.loading_finished
 
 	# Wait for scene to stabilize
 	await get_tree().create_timer(5.0).timeout
@@ -230,13 +220,8 @@ func handle_explorer_scene(_scene):
 		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		log_message("✓ Moving to next location: %s at %s" % [next_loc.name, next_loc.pos])
 		log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-		# Force cleanup of content provider cache before next scene
-		var cleaned = Global.content_provider.force_clean_cache()
-		log_message("✓ Cleaned %d cached resources" % cleaned)
-
 		current_stage = ""  # Reset to allow re-handling after teleport
-		await get_tree().create_timer(4.0).timeout
+		await get_tree().create_timer(2.0).timeout
 		Global.teleport_to(next_loc.pos, next_loc.realm)
 	else:
 		# All locations tested - finalize
@@ -322,49 +307,6 @@ func finalize_benchmark():
 
 	await get_tree().create_timer(3.0).timeout
 	get_tree().quit()
-
-
-## Wait for loading to complete with timeout fallback
-## This handles cases where loading_finished may not be emitted
-## (e.g., scenes already loaded, quick loads, or no loading screen shown)
-# gdlint:ignore = async-function-name
-func wait_for_loading_with_timeout(timeout_seconds: float):
-	var start_time = Time.get_ticks_msec()
-	var timeout_ms = timeout_seconds * 1000.0
-
-	# Poll until loading is complete or timeout
-	while Time.get_ticks_msec() - start_time < timeout_ms:
-		var explorer = Global.get_explorer()
-		var loading_screen = explorer.get_node_or_null("UI/Loading") if explorer else null
-
-		# If loading screen is visible, wait a bit for it to finish
-		if loading_screen and loading_screen.visible:
-			log_message("  Loading screen visible, waiting...")
-			await get_tree().create_timer(1.0).timeout
-			continue
-
-		# Check if we have scenes loaded and they're ready
-		var scene_runner = get_tree().get_root().get_node_or_null("scene_runner")
-		if scene_runner and scene_runner.get_child_count() > 0:
-			var all_ready = true
-			var max_tick = 0
-			for child in scene_runner.get_children():
-				if child is DclSceneNode:
-					var tick = child.get_last_tick_number()
-					max_tick = maxi(max_tick, tick)
-					# Scene is considered ready if it has processed at least 4 ticks
-					if tick < 4:
-						all_ready = false
-
-			if all_ready:
-				log_message("  All scenes ready (max tick: %d)" % max_tick)
-				return
-
-			log_message("  Waiting for scenes... (max tick: %d)" % max_tick)
-
-		await get_tree().create_timer(0.5).timeout
-
-	log_message("  ⚠ Timeout reached after %.1f seconds" % timeout_seconds)
 
 
 ## Logging helper
