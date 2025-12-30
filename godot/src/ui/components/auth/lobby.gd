@@ -319,11 +319,10 @@ func _on_button_next_pressed():
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
-	await backpack.async_prepare_snapshots(avatar, current_profile)
-
+	# ADR-290: Snapshots are no longer generated/uploaded by clients
 	current_profile.set_avatar(avatar)
 
-	await ProfileService.async_deploy_profile(current_profile, true)
+	await ProfileService.async_deploy_profile(current_profile)
 
 	show_auth_home_screen()
 
