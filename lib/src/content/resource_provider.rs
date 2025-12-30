@@ -124,6 +124,20 @@ impl ResourceProvider {
         self.remove_file(&mut existing_files, file_path).await
     }
 
+    /// Delete a file from the cache by its hash.
+    /// Returns the metadata if the file was found and deleted.
+    pub async fn delete_file_by_hash(&self, file_hash: &str) -> Option<FileMetadata> {
+        let file_path = self.cache_folder.join(file_hash);
+        let file_path = file_path.to_str().unwrap().to_string();
+        self.delete_file(&file_path).await
+    }
+
+    /// Try to delete a file by hash, ignoring errors.
+    /// Used for cleanup where files might be shared or already deleted.
+    pub async fn try_delete_file_by_hash(&self, file_hash: &str) {
+        let _ = self.delete_file_by_hash(file_hash).await;
+    }
+
     fn total_size(&self, existing_files: &HashMap<String, FileMetadata>) -> i64 {
         existing_files
             .values()

@@ -439,11 +439,29 @@ pub fn process_emote_animations(
 
         for track_idx in 0..anim.get_track_count() {
             let track_path = anim.track_get_path(track_idx).to_string();
-            if !track_path.contains("Skeleton3D") {
-                let last_track_name = track_path.split('/').next_back().unwrap_or_default();
-                let new_track_path = format!("Armature/Skeleton3D:{}", last_track_name);
-                anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
+            let track_type = anim.track_get_type(track_idx);
+
+            // Only remap bone-related transform tracks (not VALUE or METHOD tracks)
+            let is_transform_track = matches!(
+                track_type,
+                TrackType::POSITION_3D
+                    | TrackType::ROTATION_3D
+                    | TrackType::SCALE_3D
+                    | TrackType::BLEND_SHAPE
+            );
+
+            if !track_path.contains("Skeleton3D") && is_transform_track {
+                // Extract the bone name from the path (part after the last ':')
+                // Path could be "Armature:BoneName" or "Path/To/Node:BoneName"
+                if let Some(colon_pos) = track_path.rfind(':') {
+                    let bone_name = &track_path[colon_pos + 1..];
+                    if !bone_name.is_empty() {
+                        let new_track_path = format!("Armature/Skeleton3D:{}", bone_name);
+                        anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
+                    }
+                }
             }
+
             if track_path.contains("Armature_Prop/Skeleton3D") {
                 let track_subname = track_path.split(':').next_back().unwrap_or_default();
                 let new_track_path = format!("{armature_prefix}{track_subname}");
@@ -685,6 +703,14 @@ pub async fn load_and_save_scene_gltf(
     // Register the saved scene in resource_provider for cache management
     ctx.resource_provider
         .register_local_file(&scene_path, file_size)
+        .await;
+
+    // Cleanup source GLTF file after successful save
+    // NOTE: We only delete the main GLTF file, NOT dependencies (textures/buffers).
+    // Dependencies may be shared by multiple GLTFs loading in parallel.
+    // They will be cleaned up by LRU eviction when the cache exceeds its limit.
+    ctx.resource_provider
+        .try_delete_file_by_hash(&file_hash)
         .await;
 
     Ok(scene_path)
@@ -953,6 +979,14 @@ pub async fn load_and_save_wearable_gltf(
         .register_local_file(&scene_path, file_size)
         .await;
 
+    // Cleanup source GLTF file after successful save
+    // NOTE: We only delete the main GLTF file, NOT dependencies (textures/buffers).
+    // Dependencies may be shared by multiple GLTFs loading in parallel.
+    // They will be cleaned up by LRU eviction when the cache exceeds its limit.
+    ctx.resource_provider
+        .try_delete_file_by_hash(&file_hash)
+        .await;
+
     Ok(scene_path)
 }
 
@@ -1148,6 +1182,14 @@ pub async fn load_and_save_emote_gltf(
     // Register the saved scene in resource_provider for cache management
     ctx.resource_provider
         .register_local_file(&scene_path, file_size)
+        .await;
+
+    // Cleanup source GLTF file after successful save
+    // NOTE: We only delete the main GLTF file, NOT dependencies (textures/buffers).
+    // Dependencies may be shared by multiple GLTFs loading in parallel.
+    // They will be cleaned up by LRU eviction when the cache exceeds its limit.
+    ctx.resource_provider
+        .try_delete_file_by_hash(&file_hash)
         .await;
 
     Ok(scene_path)

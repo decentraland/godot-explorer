@@ -10,6 +10,7 @@
 //! Scenes are stored in the same cache folder as other content,
 //! using the hash as filename with .scn extension.
 
+use godot::classes::resource_saver::SaverFlags;
 use godot::classes::{Node, PackedScene, Resource, ResourceSaver};
 use godot::prelude::*;
 
@@ -33,6 +34,7 @@ pub fn save_node_as_scene(node: Gd<Node3D>, file_path: &str) -> Result<(), Strin
     let err = ResourceSaver::singleton()
         .save_ex(&packed.upcast::<Resource>())
         .path(file_path)
+        .flags(SaverFlags::COMPRESS)
         .done();
     if err != godot::global::Error::OK {
         return Err(format!("Failed to save scene to {}: {:?}", file_path, err));
