@@ -394,10 +394,15 @@ pub fn get_last_16_alphanumeric(input: &str) -> String {
 ///
 /// Returns (armature_prop, default_animation, prop_animation)
 /// This is used by load_and_save_emote_gltf to extract and embed animations in the background thread
+#[allow(clippy::type_complexity)]
 pub fn process_emote_animations(
     file_hash: &str,
     gltf_node: &Gd<Node3D>,
-) -> Option<(Option<Gd<Node3D>>, Option<Gd<Animation>>, Option<Gd<Animation>>)> {
+) -> Option<(
+    Option<Gd<Node3D>>,
+    Option<Gd<Animation>>,
+    Option<Gd<Animation>>,
+)> {
     let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash);
     let armature_prop_node = gltf_node.find_child("Armature_Prop");
 

@@ -190,7 +190,8 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--emote-test".to_string(),
-                description: "Run emote batch test (cycles through all emotes then exits)".to_string(),
+                description: "Run emote batch test (cycles through all emotes then exits)"
+                    .to_string(),
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },

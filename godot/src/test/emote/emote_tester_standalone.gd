@@ -76,6 +76,7 @@ func _build_emote_list():
 	emote_test_list.append_array(custom_emotes)
 
 
+# gdlint:ignore = async-function-name
 func _on_avatar_loaded():
 	status_label.text = "Avatar loaded. Ready to test."
 	if auto_mode:
@@ -140,6 +141,7 @@ func _on_timer_timeout():
 	_play_next_emote()
 
 
+# gdlint:ignore = async-function-name
 func _on_test_complete():
 	emote_test_running = false
 	start_button.text = "Start Test"

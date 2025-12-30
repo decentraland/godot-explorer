@@ -9,6 +9,11 @@ var emote_batch_test_list: Array = []
 var emote_batch_test_delay: float = 3.0  # seconds between each emote
 var emote_batch_auto_mode: bool = false  # Auto-run and quit mode (CLI)
 
+# Emote batch test UI (will be created dynamically)
+var batch_test_button: Button = null
+var batch_test_label: Label = null
+var batch_test_timer: Timer = null
+
 @onready var sub_viewport_container = $SubViewportContainer
 @onready var avatar: Avatar = sub_viewport_container.avatar
 @onready var emote_wheel = $TabContainer/Emotes/EmoteWheel
@@ -21,11 +26,6 @@ var emote_batch_auto_mode: bool = false  # Auto-run and quit mode (CLI)
 @onready var spinner = $Spinner
 @onready var line_edit_profile_entity = $TabContainer/Avatars/LineEdit_ProfileEntity
 @onready var outline_checkbox = %OutlineCheckBox
-
-# Emote batch test UI (will be created dynamically)
-var batch_test_button: Button = null
-var batch_test_label: Label = null
-var batch_test_timer: Timer = null
 
 
 func _ready():
@@ -105,6 +105,7 @@ func download_avatar():
 		download_wearable(wearable_id)
 
 
+# gdlint:ignore = async-function-name
 func _on_avatar_loaded():
 	# Auto-start batch test in CLI mode
 	if emote_batch_auto_mode and not emote_batch_test_running:
@@ -241,6 +242,7 @@ func _on_outline_toggled(button_pressed: bool):
 # EMOTE BATCH TESTER
 # ============================================================================
 
+
 func _setup_emote_batch_tester():
 	var emotes_panel = $TabContainer/Emotes
 
@@ -314,7 +316,12 @@ func _start_emote_batch_test():
 	emote_batch_test_index = 0
 	batch_test_button.text = "Stop Batch Test"
 	print("\n========== EMOTE BATCH TEST STARTED ==========")
-	print("Testing %d emotes with %.1fs delay between each" % [emote_batch_test_list.size(), emote_batch_test_delay])
+	print(
+		(
+			"Testing %d emotes with %.1fs delay between each"
+			% [emote_batch_test_list.size(), emote_batch_test_delay]
+		)
+	)
 	print("Watch for broken feet/animations!\n")
 	_play_next_emote()
 
@@ -327,6 +334,7 @@ func _stop_emote_batch_test():
 	print("\n========== EMOTE BATCH TEST STOPPED ==========\n")
 
 
+# gdlint:ignore = async-function-name
 func _play_next_emote():
 	if not emote_batch_test_running:
 		return
@@ -346,18 +354,17 @@ func _play_next_emote():
 	var emote_urn = emote_batch_test_list[emote_batch_test_index]
 	var emote_name = Emotes.get_emote_name(Emotes.get_base_emote_id_from_urn(emote_urn))
 
-	batch_test_label.text = "Testing [%d/%d]: %s" % [
-		emote_batch_test_index + 1,
-		emote_batch_test_list.size(),
-		emote_name
-	]
+	batch_test_label.text = (
+		"Testing [%d/%d]: %s"
+		% [emote_batch_test_index + 1, emote_batch_test_list.size(), emote_name]
+	)
 
-	print("[%d/%d] Playing: %s (%s)" % [
-		emote_batch_test_index + 1,
-		emote_batch_test_list.size(),
-		emote_name,
-		emote_urn
-	])
+	print(
+		(
+			"[%d/%d] Playing: %s (%s)"
+			% [emote_batch_test_index + 1, emote_batch_test_list.size(), emote_name, emote_urn]
+		)
+	)
 
 	avatar.emote_controller.async_play_emote(emote_urn)
 
