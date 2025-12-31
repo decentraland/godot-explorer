@@ -16,7 +16,7 @@ use godot::{
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::Semaphore;
 
-use crate::{content::texture::resize_image, godot_classes::resource_locker::ResourceLocker};
+use crate::content::texture::resize_image;
 
 #[cfg(feature = "use_resource_tracking")]
 use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
@@ -999,9 +999,6 @@ pub async fn load_and_save_wearable_gltf(
         // Post-process textures
         let max_size = ctx.texture_quality.to_max_size();
         post_import_process(node.clone(), max_size);
-
-        // Attach ResourceLocker to track the asset's lifecycle
-        ResourceLocker::attach_to(node.clone());
 
         // Cast to Node3D and rotate
         let mut node = node

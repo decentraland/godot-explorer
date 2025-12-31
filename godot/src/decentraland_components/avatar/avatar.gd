@@ -319,12 +319,6 @@ func async_try_to_set_body_shape(body_shape_hash):
 	for child in new_skeleton.get_children():
 		var new_child = child.duplicate()
 		new_child.name = "bodyshape_" + child.name.to_lower()
-
-		# ResourceLocker is already part of the instantiated scene
-		var resource_locker = body_shape.get_node_or_null("ResourceLocker")
-		if resource_locker != null:
-			new_child.add_child(resource_locker.duplicate())
-
 		body_shape_skeleton_3d.add_child(new_child)
 
 	# Free the instantiated body shape since we've duplicated what we need
@@ -404,9 +398,6 @@ func async_load_wearables():
 				var new_wearable = child.duplicate()
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
 				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
-				var resource_locker = obj.get_node_or_null("ResourceLocker")
-				if resource_locker != null:
-					new_wearable.add_child(resource_locker.duplicate())
 				body_shape_skeleton_3d.add_child(new_wearable)
 
 		# Free the instantiated wearable since we've duplicated what we need
