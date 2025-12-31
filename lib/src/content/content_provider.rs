@@ -4,7 +4,6 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    time::{Duration, Instant},
 };
 
 use futures_util::future::try_join_all;
@@ -25,7 +24,6 @@ use crate::{
         dcl_config::{DclConfig, TextureQuality},
         dcl_global::DclGlobal,
         promise::Promise,
-        resource_locker::ResourceLocker,
     },
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
@@ -55,15 +53,6 @@ use super::{
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
-
-// DEPRECATED: The promise-based cache system is being phased out for scene GLTF loading.
-// ContentProvider2 uses file-based caching for non-optimized assets.
-// This cache is still used for textures, audio, wearables, profiles, optimized assets, etc.
-#[derive(Clone)]
-pub struct ContentEntry {
-    promise: Gd<Promise>,
-    last_access: Instant,
-}
 
 pub struct OptimizedData {
     // Set of optimized hashes that we know that exists...
@@ -99,7 +88,9 @@ pub struct ContentProvider {
     #[cfg(feature = "use_resource_tracking")]
     resource_download_tracking: Arc<ResourceDownloadTracking>,
     http_queue_requester: Arc<HttpQueueRequester>,
-    cached: HashMap<String, ContentEntry>,
+    // InstanceId of Promise - if nobody holds the promise, it gets garbage collected
+    // and try_from_instance_id will fail, allowing us to clean up the entry
+    promises: HashMap<String, InstanceId>,
     godot_single_thread: Arc<Semaphore>,
     texture_quality: TextureQuality, // copy from DclGlobal on startup
     every_second_tick: f64,
@@ -170,7 +161,7 @@ impl INode for ContentProvider {
                 DclGlobal::get_network_inspector_sender(),
             )),
             content_folder,
-            cached: HashMap::new(),
+            promises: HashMap::new(),
             godot_single_thread: Arc::new(Semaphore::new(1)),
             texture_quality: DclConfig::static_get_texture_quality(),
             every_second_tick: 0.0,
@@ -195,7 +186,7 @@ impl INode for ContentProvider {
     }
     fn ready(&mut self) {}
     fn exit_tree(&mut self) {
-        self.cached.clear();
+        self.promises.clear();
         self.loading_scene_hashes.clear();
         self.loading_wearable_hashes.clear();
         self.loading_emote_hashes.clear();
@@ -247,37 +238,12 @@ impl INode for ContentProvider {
                 self.network_download_history_mb.pop_front();
             }
 
-            // Clean cache
-            self.cached.retain(|_hash_id, entry| {
-                // don't add a timeout for promise to be resolved,
-                // that timeout should be done on the fetch process
-                // resolved doesn't mean that is resolved correctly
-                let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
-                    && entry.promise.bind().is_resolved();
-                if process_promise {
-                    let data = entry.promise.bind().get_data();
-                    if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
-                        if let Some(resource_locker) =
-                            node_3d.get_node_or_null(&NodePath::from("ResourceLocker"))
-                        {
-                            if let Ok(resource_locker) =
-                                resource_locker.try_cast::<ResourceLocker>()
-                            {
-                                let reference_count = resource_locker.bind().get_reference_count();
-                                if reference_count == 1 {
-                                    #[cfg(feature = "use_resource_tracking")]
-                                    report_resource_deleted(&_hash_id);
-                                    node_3d.queue_free();
-                                    return false;
-                                }
-                            }
-                        }
-                    } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
-                        let reference_count = ref_counted.get_reference_count();
-                        if reference_count == 1 {
-                            return false;
-                        }
-                    }
+            // Clean up dead promises - if nobody holds the promise, the InstanceId becomes invalid
+            self.promises.retain(|_hash_id, instance_id| {
+                if Gd::<Promise>::try_from_instance_id(*instance_id).is_err() {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_deleted(_hash_id);
+                    return false;
                 }
                 true
             });
@@ -934,48 +900,6 @@ impl ContentProvider {
         ))
     }
 
-    // =========================================================================
-    // Cache Management
-    // =========================================================================
-
-    /// Force cleanup of all resolved cache entries.
-    /// This immediately frees Node3D resources and clears the cache.
-    /// Use between benchmark runs to ensure clean state.
-    #[func]
-    pub fn force_clean_cache(&mut self) -> i32 {
-        let mut cleaned_count = 0;
-
-        self.cached.retain(|_hash_id, entry| {
-            if !entry.promise.bind().is_resolved() {
-                // Keep unresolved promises
-                return true;
-            }
-
-            let data = entry.promise.bind().get_data();
-
-            // Free Node3D resources
-            if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
-                #[cfg(feature = "use_resource_tracking")]
-                report_resource_deleted(_hash_id);
-                node_3d.queue_free();
-                cleaned_count += 1;
-                return false;
-            }
-
-            // Remove RefCounted resources (textures, audio, etc.)
-            if Gd::<RefCounted>::try_from_variant(&data).is_ok() {
-                cleaned_count += 1;
-                return false;
-            }
-
-            // Keep other entries
-            true
-        });
-
-        tracing::info!("force_clean_cache: cleaned {} entries", cleaned_count);
-        cleaned_count
-    }
-
     // DEPRECATED: The promise/cache pattern here is being phased out.
     // This function still loads pre-baked optimized assets via ResourceLoader,
     // but the promise-based caching will be removed in favor of direct loading.
@@ -1106,9 +1030,8 @@ impl ContentProvider {
         let file_hash = file_hash.to_string();
 
         // Check cache first - prevent duplicate downloads of the same file
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
         }
 
         let url = url.to_string();
@@ -1148,13 +1071,7 @@ impl ContentProvider {
         });
 
         // Insert into cache to prevent duplicate downloads
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -1195,9 +1112,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(file_hash) {
+            return promise;
         }
 
         let file_hash = file_hash.clone();
@@ -1229,13 +1145,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -1261,9 +1171,8 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
         }
 
         // TODO: In the future, this would be handled by each component handler
@@ -1273,13 +1182,7 @@ impl ContentProvider {
             // get file_hash from url
             let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
             let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
-            self.cached.insert(
-                file_hash,
-                ContentEntry {
-                    last_access: Instant::now(),
-                    promise: promise.clone(),
-                },
-            );
+            self.cache_promise(file_hash, &promise);
             return promise;
         }
 
@@ -1355,13 +1258,7 @@ impl ContentProvider {
             });
         }
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -1377,9 +1274,8 @@ impl ContentProvider {
         let file_hash = file_hash_godot.to_string();
         let cache_key = format!("{}_original", file_hash);
 
-        if let Some(entry) = self.cached.get_mut(&cache_key) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
         }
 
         // Handle URL-based textures
@@ -1387,13 +1283,7 @@ impl ContentProvider {
             let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash_u32());
             let promise =
                 self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
-            self.cached.insert(
-                cache_key,
-                ContentEntry {
-                    last_access: Instant::now(),
-                    promise: promise.clone(),
-                },
-            );
+            self.cache_promise(cache_key, &promise);
             return promise;
         }
 
@@ -1433,13 +1323,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            cache_key,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(cache_key, &promise);
 
         promise
     }
@@ -1452,9 +1336,8 @@ impl ContentProvider {
         url: GString,
     ) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
         }
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
@@ -1490,13 +1373,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -1504,9 +1381,8 @@ impl ContentProvider {
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
         }
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
@@ -1538,22 +1414,15 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
 
     #[func]
     pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<Texture2D>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
-        entry.last_access = Instant::now();
-        let promise_data = entry.promise.bind().get_data();
+        let promise = self.get_cached_promise(&file_hash.to_string())?;
+        let promise_data = promise.bind().get_data();
         let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
         let texture = texture_entry.bind().texture.clone();
         Some(texture)
@@ -1561,20 +1430,15 @@ impl ContentProvider {
 
     #[func]
     pub fn get_audio_from_hash(&mut self, file_hash: GString) -> Option<Gd<AudioStream>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
-        entry.last_access = Instant::now();
-        entry
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<AudioStream>>()
-            .ok()
+        let promise = self.get_cached_promise(&file_hash.to_string())?;
+        let promise_data = promise.bind().get_data();
+        promise_data.try_to::<Gd<AudioStream>>().ok()
     }
 
     #[func]
     pub fn is_resource_from_hash_loaded(&self, file_hash: GString) -> bool {
-        if let Some(entry) = self.cached.get(&file_hash.to_string()) {
-            return entry.promise.bind().is_resolved();
+        if let Some(promise) = self.get_cached_promise(&file_hash.to_string()) {
+            return promise.bind().is_resolved();
         }
         false
     }
@@ -1616,13 +1480,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -1685,9 +1543,8 @@ impl ContentProvider {
                 .unwrap_or(wearable_id.len());
             let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
 
-            if let Some(entry) = self.cached.get_mut(&wearable_id) {
-                entry.last_access = Instant::now();
-                promise_ids.insert(entry.promise.instance_id());
+            if let Some(promise) = self.get_cached_promise(&wearable_id) {
+                promise_ids.insert(promise.instance_id());
             } else {
                 wearable_to_fetch.insert(wearable_id.clone());
                 if new_promise.is_none() {
@@ -1696,12 +1553,9 @@ impl ContentProvider {
                     new_promise = Some((promise, get_promise));
                 }
 
-                self.cached.insert(
+                self.cache_promise(
                     wearable_id,
-                    ContentEntry {
-                        last_access: Instant::now(),
-                        promise: new_promise.as_ref().unwrap().0.clone(),
-                    },
+                    &new_promise.as_ref().unwrap().0,
                 );
             }
         }
@@ -1727,13 +1581,7 @@ impl ContentProvider {
                 .await;
                 then_promise(get_promise, result);
             });
-            self.cached.insert(
-                "wearables".to_string(),
-                ContentEntry {
-                    last_access: Instant::now(),
-                    promise: promise.clone(),
-                },
-            );
+            self.cache_promise("wearables".to_string(), &promise);
         }
 
         Array::from_iter(promise_ids.into_iter().map(Gd::from_instance_id))
@@ -1745,10 +1593,8 @@ impl ContentProvider {
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
 
-        if let Some(entry) = self.cached.get_mut(&id) {
-            entry.last_access = Instant::now();
-            if let Ok(results) = entry
-                .promise
+        if let Some(promise) = self.get_cached_promise(&id) {
+            if let Ok(results) = promise
                 .bind()
                 .get_data()
                 .try_to::<Gd<WearableManyResolved>>()
@@ -1763,21 +1609,23 @@ impl ContentProvider {
 
     #[func]
     pub fn get_pending_promises(&self) -> Array<Gd<Promise>> {
-        Array::from_iter(
-            self.cached
-                .iter()
-                .filter(|(_, entry)| !entry.promise.bind().is_resolved())
-                .map(|(_, entry)| entry.promise.clone()),
-        )
+        let mut result = Array::new();
+        for instance_id in self.promises.values() {
+            if let Ok(promise) = Gd::<Promise>::try_from_instance_id(*instance_id) {
+                if !promise.bind().is_resolved() {
+                    result.push(&promise);
+                }
+            }
+        }
+        result
     }
 
     #[func]
     pub fn get_profile(&mut self, user_id: GString) -> Option<Gd<DclUserProfile>> {
         let user_id = user_id.to_string().as_str().as_h160()?;
         let hash = format!("profile_{:x}", user_id);
-        if let Some(entry) = self.cached.get_mut(&hash) {
-            entry.last_access = Instant::now();
-            let promise_data = entry.promise.bind().get_data();
+        if let Some(promise) = self.get_cached_promise(&hash) {
+            let promise_data = promise.bind().get_data();
             promise_data.try_to::<Gd<DclUserProfile>>().ok()
         } else {
             None
@@ -1845,9 +1693,8 @@ impl ContentProvider {
         };
 
         let hash = format!("profile_{:x}", user_id);
-        if let Some(entry) = self.cached.get_mut(&hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&hash) {
+            return promise;
         }
 
         let (lamda_server_base_url, profile_base_url, http_requester) =
@@ -1875,13 +1722,7 @@ impl ContentProvider {
             then_promise(get_promise, result)
         });
 
-        self.cached.insert(
-            hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(hash, &promise);
 
         promise
     }
@@ -1894,7 +1735,7 @@ impl ContentProvider {
         let resource_provider = self.resource_provider.clone();
         let (promise, get_promise) = Promise::make_to_async();
 
-        self.cached.remove(&file_hash_str);
+        self.promises.remove(&file_hash_str);
 
         TokioRuntime::spawn(async move {
             resource_provider.delete_file(&absolute_file_path).await;
@@ -1914,6 +1755,17 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
         }
+    }
+
+    /// Get a promise from the cache if it still exists (InstanceId is valid)
+    fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
+        let instance_id = self.promises.get(key)?;
+        Gd::<Promise>::try_from_instance_id(*instance_id).ok()
+    }
+
+    /// Insert a promise into the cache using its InstanceId
+    fn cache_promise(&mut self, key: String, promise: &Gd<Promise>) {
+        self.promises.insert(key, promise.instance_id());
     }
 
     pub async fn async_fetch_optimized_asset(
