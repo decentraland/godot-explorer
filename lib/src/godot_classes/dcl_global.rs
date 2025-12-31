@@ -57,7 +57,7 @@ mod android {
             // "debug"  // Debug, info, warnings and errors (shows all debug logs)
             // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
             // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
-            "dclgodot::auth=debug", // Info, warnings and errors
+            "info",
         );
 
         let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
@@ -122,7 +122,7 @@ mod ios {
             // "debug"  // Debug, info, warnings and errors (shows all debug logs)
             // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
             // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
-            "warn,dclgodot::scene_runner::components::video_player=debug", // Debug for video_player, warn for everything else
+            "info",
         );
 
         // Use custom formatter that explicitly includes target in every message
