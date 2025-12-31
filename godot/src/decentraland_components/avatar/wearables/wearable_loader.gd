@@ -1,46 +1,26 @@
 class_name WearableLoader
 extends RefCounted
 
-## Helper class for signal-based batched wearable loading.
-## Connects to ContentProvider signals and manages threaded resource loading.
+## Helper class for promise-based batched wearable loading.
+## Uses ContentProvider's promise-based API for GLTF loading.
 
-signal all_loads_complete
-
-# Tracks pending loads: file_hash -> true
-var _pending_loads: Dictionary = {}
 # Tracks completed loads: file_hash -> scene_path
 var _completed_loads: Dictionary = {}
-# Tracks texture loads (still use promises)
-var _texture_promises: Array = []
-# Guard against concurrent load operations
-var _is_loading: bool = false
 
 
-func _init():
-	Global.content_provider.wearable_gltf_ready.connect(_on_wearable_ready)
-	Global.content_provider.wearable_gltf_error.connect(_on_wearable_error)
-
-
-## Cleanup signal connections. Call this when the loader is no longer needed.
+## Cleanup - no longer needed but kept for API compatibility.
 func cleanup():
-	if Global.content_provider:
-		if Global.content_provider.wearable_gltf_ready.is_connected(_on_wearable_ready):
-			Global.content_provider.wearable_gltf_ready.disconnect(_on_wearable_ready)
-		if Global.content_provider.wearable_gltf_error.is_connected(_on_wearable_error):
-			Global.content_provider.wearable_gltf_error.disconnect(_on_wearable_error)
+	pass
 
 
-## Load multiple wearables using signal-based loading.
+## Load multiple wearables using promise-based loading.
 ## Returns Dictionary mapping file_hash -> scene_path
 func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictionary:
-	# Wait for any in-progress load to complete before starting a new one
-	if _is_loading:
-		await all_loads_complete
-
-	_is_loading = true
-	_pending_loads.clear()
 	_completed_loads.clear()
-	_texture_promises.clear()
+
+	var gltf_promises: Array = []
+	var gltf_file_hashes: Array = []
+	var texture_promises: Array = []
 
 	for wearable_key in wearable_keys:
 		var wearable = Global.content_provider.get_wearable(wearable_key)
@@ -53,7 +33,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 
 		var category = wearable.get_category()
 
-		# Texture wearables (eyes, eyebrows, mouth) still use promise-based loading
+		# Texture wearables (eyes, eyebrows, mouth) use texture loading
 		if Wearables.is_texture(category):
 			var texture_hashes = Wearables.get_wearable_facial_hashes(wearable, body_shape_id)
 			var content_mapping = wearable.get_content_mapping()
@@ -63,41 +43,40 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 						var promise = Global.content_provider.fetch_texture(
 							file_name, content_mapping
 						)
-						_texture_promises.push_back(promise)
+						texture_promises.push_back(promise)
 			continue
 
-		# GLTF wearables use signal-based loading
+		# GLTF wearables use promise-based loading
 		var file_hash = Wearables.get_item_main_file_hash(wearable, body_shape_id)
 		if file_hash.is_empty():
 			printerr("WearableLoader: empty file_hash for ", wearable_key)
 			continue
 
-		# Check if already cached on disk
-		if Global.content_provider.is_wearable_cached(file_hash):
-			var scene_path = Global.content_provider.get_wearable_cache_path(file_hash)
-			_completed_loads[file_hash] = scene_path
-			continue
-
-		# Check if already loading
-		if Global.content_provider.is_wearable_loading(file_hash):
-			_pending_loads[file_hash] = true
-			continue
-
-		# Start loading
+		# Start loading - ContentProvider handles caching and deduplication
 		var content_mapping = wearable.get_content_mapping()
 		var main_file = wearable.get_representation_main_file(body_shape_id)
-		Global.content_provider.load_wearable_gltf(main_file, content_mapping)
-		_pending_loads[file_hash] = true
+		var promise = Global.content_provider.load_wearable_gltf(main_file, content_mapping)
+		if promise != null:
+			gltf_promises.push_back(promise)
+			gltf_file_hashes.push_back(file_hash)
 
-	# Wait for all pending GLTF loads
-	if not _pending_loads.is_empty():
-		await all_loads_complete
+	# Wait for all GLTF promises
+	if not gltf_promises.is_empty():
+		await PromiseUtils.async_all(gltf_promises)
+
+	# Collect GLTF results
+	for i in range(gltf_promises.size()):
+		var promise = gltf_promises[i]
+		var file_hash = gltf_file_hashes[i]
+		if promise.is_resolved() and not promise.is_rejected():
+			var scene_path = promise.get_data()
+			if scene_path is String and not scene_path.is_empty():
+				_completed_loads[file_hash] = scene_path
 
 	# Wait for all texture promises
-	if not _texture_promises.is_empty():
-		await PromiseUtils.async_all(_texture_promises)
+	if not texture_promises.is_empty():
+		await PromiseUtils.async_all(texture_promises)
 
-	_is_loading = false
 	return _completed_loads
 
 
@@ -149,22 +128,3 @@ func async_get_wearable_node(file_hash: String) -> Node3D:
 		return null
 
 	return packed_scene.instantiate()
-
-
-func _on_wearable_ready(file_hash: String, scene_path: String):
-	if _pending_loads.has(file_hash):
-		_pending_loads.erase(file_hash)
-		_completed_loads[file_hash] = scene_path
-		_check_all_complete()
-
-
-func _on_wearable_error(file_hash: String, error: String):
-	printerr("WearableLoader: load error for ", file_hash, ": ", error)
-	if _pending_loads.has(file_hash):
-		_pending_loads.erase(file_hash)
-		_check_all_complete()
-
-
-func _check_all_complete():
-	if _pending_loads.is_empty():
-		all_loads_complete.emit()

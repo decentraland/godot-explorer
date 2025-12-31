@@ -334,9 +334,10 @@ impl DclItemEntityDefinition {
             {
                 content_provider.is_resource_from_hash_loaded(GString::from(main_file_hash))
             } else {
-                // For GLTF wearables, check if cached on disk or currently loading
+                // For GLTF wearables, check if cached on disk
+                // Note: Loading state is handled by the promise system - callers should
+                // use load_wearable_gltf() which returns cached promises for in-progress loads
                 content_provider.is_wearable_cached(GString::from(main_file_hash))
-                    || content_provider.is_wearable_loading(GString::from(main_file_hash))
             }
         } else {
             true

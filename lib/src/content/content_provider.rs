@@ -105,12 +105,6 @@ pub struct ContentProvider {
     // Set of optimized hashes that we know that exists...
     optimized_assets: HashSet<String>,
     optimized_original_size: HashMap<String, ImageSize>,
-    // Set of scene GLTF hashes currently being loaded (to prevent duplicate loads)
-    loading_scene_hashes: HashSet<String>,
-    // Set of wearable GLTF hashes currently being loaded (to prevent duplicate loads)
-    loading_wearable_hashes: HashSet<String>,
-    // Set of emote GLTF hashes currently being loaded (to prevent duplicate loads)
-    loading_emote_hashes: HashSet<String>,
 }
 
 #[derive(Clone)]
@@ -179,17 +173,11 @@ impl INode for ContentProvider {
             }),
             optimized_assets: HashSet::default(),
             optimized_original_size: HashMap::default(),
-            loading_scene_hashes: HashSet::new(),
-            loading_wearable_hashes: HashSet::new(),
-            loading_emote_hashes: HashSet::new(),
         }
     }
     fn ready(&mut self) {}
     fn exit_tree(&mut self) {
         self.promises.clear();
-        self.loading_scene_hashes.clear();
-        self.loading_wearable_hashes.clear();
-        self.loading_emote_hashes.clear();
         tracing::info!("ContentProvider::exit_tree");
     }
 
@@ -254,84 +242,21 @@ impl INode for ContentProvider {
 #[godot_api]
 impl ContentProvider {
     // =========================================================================
-    // Scene GLTF Loading Signals (for non-optimized assets)
-    // =========================================================================
-
-    /// Signal emitted when a scene GLTF is ready to be loaded from disk
-    ///
-    /// Parameters:
-    /// - file_hash: The hash of the GLTF file
-    /// - scene_path: The path to the saved .scn file
-    #[signal]
-    fn scene_gltf_ready(file_hash: GString, scene_path: GString);
-
-    /// Signal emitted when a scene GLTF fails to load
-    ///
-    /// Parameters:
-    /// - file_hash: The hash of the GLTF file
-    /// - error: Error message
-    #[signal]
-    fn scene_gltf_error(file_hash: GString, error: GString);
-
-    // =========================================================================
-    // Wearable GLTF Loading Signals (for non-optimized assets)
-    // =========================================================================
-
-    /// Signal emitted when a wearable GLTF is ready to be loaded from disk
-    ///
-    /// Parameters:
-    /// - file_hash: The hash of the GLTF file
-    /// - scene_path: The path to the saved .scn file
-    #[signal]
-    fn wearable_gltf_ready(file_hash: GString, scene_path: GString);
-
-    /// Signal emitted when a wearable GLTF fails to load
-    ///
-    /// Parameters:
-    /// - file_hash: The hash of the GLTF file
-    /// - error: Error message
-    #[signal]
-    fn wearable_gltf_error(file_hash: GString, error: GString);
-
-    // =========================================================================
-    // Emote GLTF Loading Signals (for non-optimized assets)
-    // =========================================================================
-
-    /// Signal emitted when an emote GLTF is ready to be loaded from disk
-    ///
-    /// Parameters:
-    /// - file_hash: The hash of the GLTF file
-    /// - scene_path: The path to the saved .scn file
-    #[signal]
-    fn emote_gltf_ready(file_hash: GString, scene_path: GString);
-
-    /// Signal emitted when an emote GLTF fails to load
-    ///
-    /// Parameters:
-    /// - file_hash: The hash of the GLTF file
-    /// - error: Error message
-    #[signal]
-    fn emote_gltf_error(file_hash: GString, error: GString);
-
-    // =========================================================================
-    // Scene GLTF Loading Functions (for non-optimized assets)
+    // Scene GLTF Loading Functions (Promise-based)
     // =========================================================================
 
     /// Request to load a scene GLTF (for non-optimized assets)
     ///
-    /// This will either:
-    /// - Emit scene_gltf_ready immediately if the scene is already cached
-    /// - Start async loading and emit scene_gltf_ready/scene_gltf_error when done
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
     ///
     /// Note: Colliders are created with mask=0. Caller should set masks after instantiating.
-    ///
-    /// Returns true if the load was started, false if already loading
     #[func]
     pub fn load_scene_gltf(
         &mut self,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> bool {
+    ) -> Option<Gd<Promise>> {
         let file_path_str = file_path.to_string().to_lowercase();
         let content_mapping_ref = content_mapping.bind().get_content_mapping();
 
@@ -339,27 +264,18 @@ impl ContentProvider {
         let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
             Some(hash) => hash.clone(),
             None => {
-                // Emit error signal
-                let error_msg = format!("File not found in content mapping: {}", file_path_str);
-                self.base_mut().emit_signal(
-                    "scene_gltf_error",
-                    &[
-                        GString::from("").to_variant(),
-                        GString::from(error_msg.as_str()).to_variant(),
-                    ],
-                );
-                return false;
+                return None;
             }
         };
 
-        // Check if already loading this hash - caller should wait for signal
-        if self.loading_scene_hashes.contains(&file_hash) {
-            // Return true because the load is in progress and signal will be emitted
-            return true;
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&file_hash) {
+            return Some(existing);
         }
 
-        // Mark as loading
-        self.loading_scene_hashes.insert(file_hash.clone());
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(file_hash.clone(), &promise);
 
         // Create context for async operation
         let ctx = SceneGltfContext {
@@ -369,8 +285,6 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
         };
 
-        // Get instance ID for callback
-        let instance_id = self.base().instance_id();
         let file_hash_clone = file_hash.clone();
 
         // Spawn async task - cache check and loading all happens here
@@ -386,81 +300,27 @@ impl ContentProvider {
                     scene_path
                 );
                 ctx.resource_provider.touch_file_async(&scene_path).await;
-                Ok(scene_path)
+                Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
                 // Cache MISS - load, process, and save
                 tracing::debug!("Scene GLTF cache MISS: {} - loading", file_hash_clone);
-                load_and_save_scene_gltf(
+                match load_and_save_scene_gltf(
                     file_path_str,
                     file_hash_clone.clone(),
                     content_mapping_ref,
                     ctx,
                 )
                 .await
+                {
+                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Err(e) => Err(e),
+                }
             };
 
-            // Callback to main thread
-            let file_hash_gd = GString::from(&file_hash_clone);
-            match result {
-                Ok(scene_path) => {
-                    let scene_path_gd = GString::from(&scene_path);
-                    if let Ok(mut provider) =
-                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
-                    {
-                        provider.call_deferred(
-                            "on_scene_gltf_load_complete",
-                            &[
-                                file_hash_gd.to_variant(),
-                                scene_path_gd.to_variant(),
-                                GString::from("").to_variant(),
-                            ],
-                        );
-                    }
-                }
-                Err(e) => {
-                    let error_str = e.to_string();
-                    let error_msg = GString::from(error_str.as_str());
-                    if let Ok(mut provider) =
-                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
-                    {
-                        provider.call_deferred(
-                            "on_scene_gltf_load_complete",
-                            &[
-                                file_hash_gd.to_variant(),
-                                GString::from("").to_variant(),
-                                error_msg.to_variant(),
-                            ],
-                        );
-                    }
-                }
-            }
+            then_promise(get_promise, result);
         });
 
-        true
-    }
-
-    /// Internal callback when scene GLTF load completes (called via call_deferred)
-    #[func]
-    fn on_scene_gltf_load_complete(
-        &mut self,
-        file_hash: GString,
-        scene_path: GString,
-        error: GString,
-    ) {
-        let hash_str = file_hash.to_string();
-        self.loading_scene_hashes.remove(&hash_str);
-
-        if error.is_empty() {
-            self.base_mut().emit_signal(
-                "scene_gltf_ready",
-                &[file_hash.to_variant(), scene_path.to_variant()],
-            );
-        } else {
-            self.base_mut().emit_signal(
-                "scene_gltf_error",
-                &[file_hash.to_variant(), error.to_variant()],
-            );
-        }
+        Some(promise)
     }
 
     /// Check if a scene is cached on disk
@@ -477,29 +337,20 @@ impl ContentProvider {
         GString::from(path.as_str())
     }
 
-    /// Check if a hash is currently being loaded
-    #[func]
-    pub fn is_scene_loading(&self, file_hash: GString) -> bool {
-        self.loading_scene_hashes.contains(&file_hash.to_string())
-    }
-
     // =========================================================================
-    // Wearable GLTF Loading Functions (for non-optimized assets)
+    // Wearable GLTF Loading Functions (Promise-based)
     // =========================================================================
 
     /// Request to load a wearable GLTF (for non-optimized assets)
     ///
-    /// This will either:
-    /// - Emit wearable_gltf_ready immediately if the wearable is already cached
-    /// - Start async loading and emit wearable_gltf_ready/wearable_gltf_error when done
-    ///
-    /// Returns true if the load was started, false if already loading
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
     #[func]
     pub fn load_wearable_gltf(
         &mut self,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> bool {
+    ) -> Option<Gd<Promise>> {
         let file_path_str = file_path.to_string().to_lowercase();
         let content_mapping_ref = content_mapping.bind().get_content_mapping();
 
@@ -507,27 +358,18 @@ impl ContentProvider {
         let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
             Some(hash) => hash.clone(),
             None => {
-                // Emit error signal
-                let error_msg = format!("File not found in content mapping: {}", file_path_str);
-                self.base_mut().emit_signal(
-                    "wearable_gltf_error",
-                    &[
-                        GString::from("").to_variant(),
-                        GString::from(error_msg.as_str()).to_variant(),
-                    ],
-                );
-                return false;
+                return None;
             }
         };
 
-        // Check if already loading this hash - caller should wait for signal
-        if self.loading_wearable_hashes.contains(&file_hash) {
-            // Return true because the load is in progress and signal will be emitted
-            return true;
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&file_hash) {
+            return Some(existing);
         }
 
-        // Mark as loading
-        self.loading_wearable_hashes.insert(file_hash.clone());
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(file_hash.clone(), &promise);
 
         // Create context for async operation
         let ctx = SceneGltfContext {
@@ -537,8 +379,6 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
         };
 
-        // Get instance ID for callback
-        let instance_id = self.base().instance_id();
         let file_hash_clone = file_hash.clone();
 
         // Spawn async task - cache check and loading all happens here
@@ -554,81 +394,27 @@ impl ContentProvider {
                     scene_path
                 );
                 ctx.resource_provider.touch_file_async(&scene_path).await;
-                Ok(scene_path)
+                Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
                 // Cache MISS - load, process, and save
                 tracing::debug!("Wearable GLTF cache MISS: {} - loading", file_hash_clone);
-                load_and_save_wearable_gltf(
+                match load_and_save_wearable_gltf(
                     file_path_str,
                     file_hash_clone.clone(),
                     content_mapping_ref,
                     ctx,
                 )
                 .await
+                {
+                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Err(e) => Err(e),
+                }
             };
 
-            // Callback to main thread
-            let file_hash_gd = GString::from(&file_hash_clone);
-            match result {
-                Ok(scene_path) => {
-                    let scene_path_gd = GString::from(&scene_path);
-                    if let Ok(mut provider) =
-                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
-                    {
-                        provider.call_deferred(
-                            "on_wearable_gltf_load_complete",
-                            &[
-                                file_hash_gd.to_variant(),
-                                scene_path_gd.to_variant(),
-                                GString::from("").to_variant(),
-                            ],
-                        );
-                    }
-                }
-                Err(e) => {
-                    let error_str = e.to_string();
-                    let error_msg = GString::from(error_str.as_str());
-                    if let Ok(mut provider) =
-                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
-                    {
-                        provider.call_deferred(
-                            "on_wearable_gltf_load_complete",
-                            &[
-                                file_hash_gd.to_variant(),
-                                GString::from("").to_variant(),
-                                error_msg.to_variant(),
-                            ],
-                        );
-                    }
-                }
-            }
+            then_promise(get_promise, result);
         });
 
-        true
-    }
-
-    /// Internal callback when wearable GLTF load completes (called via call_deferred)
-    #[func]
-    fn on_wearable_gltf_load_complete(
-        &mut self,
-        file_hash: GString,
-        scene_path: GString,
-        error: GString,
-    ) {
-        let hash_str = file_hash.to_string();
-        self.loading_wearable_hashes.remove(&hash_str);
-
-        if error.is_empty() {
-            self.base_mut().emit_signal(
-                "wearable_gltf_ready",
-                &[file_hash.to_variant(), scene_path.to_variant()],
-            );
-        } else {
-            self.base_mut().emit_signal(
-                "wearable_gltf_error",
-                &[file_hash.to_variant(), error.to_variant()],
-            );
-        }
+        Some(promise)
     }
 
     /// Check if a wearable is cached on disk
@@ -645,30 +431,20 @@ impl ContentProvider {
         GString::from(path.as_str())
     }
 
-    /// Check if a wearable hash is currently being loaded
-    #[func]
-    pub fn is_wearable_loading(&self, file_hash: GString) -> bool {
-        self.loading_wearable_hashes
-            .contains(&file_hash.to_string())
-    }
-
     // =========================================================================
-    // Emote GLTF Loading Functions (for non-optimized assets)
+    // Emote GLTF Loading Functions (Promise-based)
     // =========================================================================
 
     /// Request to load an emote GLTF (for non-optimized assets)
     ///
-    /// This will either:
-    /// - Emit emote_gltf_ready immediately if the emote is already cached
-    /// - Start async loading and emit emote_gltf_ready/emote_gltf_error when done
-    ///
-    /// Returns true if the load was started, false if already loading
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
     #[func]
     pub fn load_emote_gltf(
         &mut self,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> bool {
+    ) -> Option<Gd<Promise>> {
         let file_path_str = file_path.to_string().to_lowercase();
         let content_mapping_ref = content_mapping.bind().get_content_mapping();
 
@@ -676,27 +452,18 @@ impl ContentProvider {
         let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
             Some(hash) => hash.clone(),
             None => {
-                // Emit error signal
-                let error_msg = format!("File not found in content mapping: {}", file_path_str);
-                self.base_mut().emit_signal(
-                    "emote_gltf_error",
-                    &[
-                        GString::from("").to_variant(),
-                        GString::from(error_msg.as_str()).to_variant(),
-                    ],
-                );
-                return false;
+                return None;
             }
         };
 
-        // Check if already loading this hash - caller should wait for signal
-        if self.loading_emote_hashes.contains(&file_hash) {
-            // Return true because the load is in progress and signal will be emitted
-            return true;
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&file_hash) {
+            return Some(existing);
         }
 
-        // Mark as loading
-        self.loading_emote_hashes.insert(file_hash.clone());
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(file_hash.clone(), &promise);
 
         // Create context for async operation
         let ctx = SceneGltfContext {
@@ -706,8 +473,6 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
         };
 
-        // Get instance ID for callback
-        let instance_id = self.base().instance_id();
         let file_hash_clone = file_hash.clone();
 
         // Spawn async task - cache check and loading all happens here
@@ -723,81 +488,27 @@ impl ContentProvider {
                     scene_path
                 );
                 ctx.resource_provider.touch_file_async(&scene_path).await;
-                Ok(scene_path)
+                Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
                 // Cache MISS - load, process, and save
                 tracing::debug!("Emote GLTF cache MISS: {} - loading", file_hash_clone);
-                load_and_save_emote_gltf(
+                match load_and_save_emote_gltf(
                     file_path_str,
                     file_hash_clone.clone(),
                     content_mapping_ref,
                     ctx,
                 )
                 .await
+                {
+                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Err(e) => Err(e),
+                }
             };
 
-            // Callback to main thread
-            let file_hash_gd = GString::from(&file_hash_clone);
-            match result {
-                Ok(scene_path) => {
-                    let scene_path_gd = GString::from(&scene_path);
-                    if let Ok(mut provider) =
-                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
-                    {
-                        provider.call_deferred(
-                            "on_emote_gltf_load_complete",
-                            &[
-                                file_hash_gd.to_variant(),
-                                scene_path_gd.to_variant(),
-                                GString::from("").to_variant(),
-                            ],
-                        );
-                    }
-                }
-                Err(e) => {
-                    let error_str = e.to_string();
-                    let error_msg = GString::from(error_str.as_str());
-                    if let Ok(mut provider) =
-                        Gd::<ContentProvider>::try_from_instance_id(instance_id)
-                    {
-                        provider.call_deferred(
-                            "on_emote_gltf_load_complete",
-                            &[
-                                file_hash_gd.to_variant(),
-                                GString::from("").to_variant(),
-                                error_msg.to_variant(),
-                            ],
-                        );
-                    }
-                }
-            }
+            then_promise(get_promise, result);
         });
 
-        true
-    }
-
-    /// Internal callback when emote GLTF load completes (called via call_deferred)
-    #[func]
-    fn on_emote_gltf_load_complete(
-        &mut self,
-        file_hash: GString,
-        scene_path: GString,
-        error: GString,
-    ) {
-        let hash_str = file_hash.to_string();
-        self.loading_emote_hashes.remove(&hash_str);
-
-        if error.is_empty() {
-            self.base_mut().emit_signal(
-                "emote_gltf_ready",
-                &[file_hash.to_variant(), scene_path.to_variant()],
-            );
-        } else {
-            self.base_mut().emit_signal(
-                "emote_gltf_error",
-                &[file_hash.to_variant(), error.to_variant()],
-            );
-        }
+        Some(promise)
     }
 
     /// Check if an emote is cached on disk
@@ -812,12 +523,6 @@ impl ContentProvider {
     pub fn get_emote_cache_path(&self, file_hash: GString) -> GString {
         let path = get_emote_path_for_hash(&self.content_folder, &file_hash.to_string());
         GString::from(path.as_str())
-    }
-
-    /// Check if an emote hash is currently being loaded
-    #[func]
-    pub fn is_emote_loading(&self, file_hash: GString) -> bool {
-        self.loading_emote_hashes.contains(&file_hash.to_string())
     }
 
     // =========================================================================
@@ -1553,10 +1258,7 @@ impl ContentProvider {
                     new_promise = Some((promise, get_promise));
                 }
 
-                self.cache_promise(
-                    wearable_id,
-                    &new_promise.as_ref().unwrap().0,
-                );
+                self.cache_promise(wearable_id, &new_promise.as_ref().unwrap().0);
             }
         }
 

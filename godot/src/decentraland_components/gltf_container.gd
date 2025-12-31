@@ -29,8 +29,6 @@ static var _debug_kinematic_material: StandardMaterial3D = null
 
 
 func _ready():
-	Global.content_provider.scene_gltf_ready.connect(_on_gltf_ready)
-	Global.content_provider.scene_gltf_error.connect(_on_gltf_error)
 	# Connect to switch_to_kinematic signal from Rust
 	self.switch_to_kinematic.connect(_on_switch_to_kinematic)
 	self.async_load_gltf.call_deferred()
@@ -49,17 +47,11 @@ func _exit_tree():
 	if not dcl_gltf_hash.is_empty():
 		currently_loading_assets.erase(dcl_gltf_hash)
 
-	# Disconnect signals (check if connected first - node may be freed before _ready)
-	if Global.content_provider.scene_gltf_ready.is_connected(_on_gltf_ready):
-		Global.content_provider.scene_gltf_ready.disconnect(_on_gltf_ready)
-	if Global.content_provider.scene_gltf_error.is_connected(_on_gltf_error):
-		Global.content_provider.scene_gltf_error.disconnect(_on_gltf_error)
-
 
 #region Loading Flow
 # Two loading paths:
 # 1. Optimized: Pre-baked scenes from res://glbs/ (loaded via ResourceLoader)
-# 2. Runtime: Runtime-processed scenes from user://content/<hash>.scn (signal-based)
+# 2. Runtime: Runtime-processed scenes from user://content/<hash>.scn (promise-based)
 #
 # Both paths share:
 # - Throttling via currently_loading_assets and pending_load_queue
@@ -85,7 +77,7 @@ func async_load_gltf():
 
 	# --only-no-optimized: Always use runtime processing, ignore optimized assets
 	if Global.cli.only_no_optimized:
-		_start_runtime_gltf_load()
+		await _async_load_runtime_gltf()
 		return
 
 	# --only-optimized: Only use optimized path, skip if not optimized
@@ -104,7 +96,7 @@ func async_load_gltf():
 		return
 
 	# Fall back to runtime processing (saves to user://content/<hash>.scn)
-	_start_runtime_gltf_load()
+	await _async_load_runtime_gltf()
 
 
 ## Optimized Asset Loading Path
@@ -141,9 +133,10 @@ func _async_load_optimized_asset(gltf_hash: String):
 	_async_add_gltf_to_tree.call_deferred(gltf_node)
 
 
-## Runtime GLTF Loading Path
+## Runtime GLTF Loading Path (Promise-based)
 ## Runtime-processed scenes saved to user://content/<hash>.scn
-func _start_runtime_gltf_load():
+# gdlint:ignore = async-function-name
+func _async_load_runtime_gltf():
 	self.optimized = false
 
 	# Throttle: queue if at max concurrent loads
@@ -156,16 +149,34 @@ func _start_runtime_gltf_load():
 		currently_loading_assets.append(dcl_gltf_hash)
 
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
-	Global.content_provider.load_scene_gltf(dcl_gltf_src, content_mapping)
+	var promise = Global.content_provider.load_scene_gltf(dcl_gltf_src, content_mapping)
 
-
-# gdlint:ignore = async-function-name
-func _on_gltf_ready(file_hash: String, scene_path: String):
-	if file_hash != dcl_gltf_hash:
+	if promise == null:
+		printerr("GLTF load failed to start for ", dcl_gltf_src)
+		_finish_with_error()
 		return
 
-	# Ignore if already processed or not in loading state
+	# Wait for the promise to resolve
+	await PromiseUtils.async_awaiter(promise)
+
+	# Check if we're still in a valid state (scene might have been unloaded)
 	if dcl_gltf_loading_state != GltfContainerLoadingState.LOADING:
+		return
+
+	if promise.is_rejected():
+		var error = promise.get_data()
+		if error is PromiseError:
+			printerr("GLTF load error for ", dcl_gltf_src, ": ", error.get_error())
+		else:
+			printerr("GLTF load error for ", dcl_gltf_src)
+		_finish_with_error()
+		return
+
+	# Get scene path from promise data
+	var scene_path = promise.get_data()
+	if not scene_path is String or scene_path.is_empty():
+		printerr("GLTF load returned invalid scene path for ", dcl_gltf_src)
+		_finish_with_error()
 		return
 
 	# Load and instantiate the PackedScene
@@ -178,23 +189,13 @@ func _on_gltf_ready(file_hash: String, scene_path: String):
 	_async_add_gltf_to_tree.call_deferred(gltf_node)
 
 
-func _on_gltf_error(file_hash: String, error: String):
-	if file_hash != dcl_gltf_hash:
-		return
-	if dcl_gltf_loading_state != GltfContainerLoadingState.LOADING:
-		return
-
-	printerr("GLTF load error for ", dcl_gltf_src, ": ", error)
-	_finish_with_error()
-
-
 #endregion
 
 #region Shared Loading Logic
 
 
 ## Load a PackedScene via ResourceLoader and instantiate it
-## Used by both optimized and ContentProvider2 paths
+## Used by both optimized and runtime paths
 func _async_load_and_instantiate(scene_path: String) -> Node3D:
 	# Check file exists (for user:// paths, .remap for res:// paths)
 	if scene_path.begins_with("res://"):
@@ -288,7 +289,7 @@ static func _process_next_in_queue():
 		if next_gltf.optimized:
 			next_gltf._async_load_optimized_asset(next_gltf.dcl_gltf_hash)
 		else:
-			next_gltf._start_runtime_gltf_load()
+			next_gltf._async_load_runtime_gltf()
 
 
 static func _pop_next_from_queue():
