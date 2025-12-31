@@ -197,8 +197,22 @@ impl DclAvatarWireFormat {
         self.inner.emotes = Some(emotes_vec);
     }
 
-    // ADR-290: set_snapshots removed - snapshots are no longer uploaded by clients.
-    // Profile images are served on-demand by the profile-images service.
+    // ADR-290: set_snapshot_urls - updates only the display URLs for profile images
+    // These URLs come from the profile-images service and are used for UI display only
+    #[func]
+    fn set_snapshot_urls(&mut self, face_url: GString, body_url: GString) {
+        if let Some(ref mut snapshots) = self.inner.snapshots {
+            snapshots.face_url = Some(face_url.to_string());
+            snapshots.body_url = Some(body_url.to_string());
+        } else {
+            self.inner.snapshots = Some(crate::comms::profile::AvatarSnapshots {
+                face256: String::new(),
+                body: String::new(),
+                face_url: Some(face_url.to_string()),
+                body_url: Some(body_url.to_string()),
+            });
+        }
+    }
 
     #[func]
     pub fn from_godot_dictionary(dictionary: VarDictionary) -> Gd<DclAvatarWireFormat> {
