@@ -1,0 +1,11 @@
+{
+  "name": "testing-library",
+  "version": "protocol-squad",
+  "description": "local testing library",
+  "scripts": {},
+  "devDependencies": {
+    "@dcl/js-runtime": "^7.15.2",
+    "@dcl/sdk": "^7.15.2"
+  },
+  "files": ["src", "tsconfig.json", "package.json", "package-lock.json", "README.md"]
+}

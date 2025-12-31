@@ -1,0 +1,15 @@
+{
+  "name": "nft-shape",
+  "version": "protocol-squad",
+  "description": "SDK7 Template scene",
+  "scripts": {
+    "build": "sdk-commands build --skip-install",
+    "deploy": "sdk-commands deploy",
+    "start": "sdk-commands start"
+  },
+  "devDependencies": {
+    "@dcl/js-runtime": "^7.15.2",
+    "@dcl/sdk": "^7.15.2",
+    "testing-library": "./../testing-library/"
+  }
+}
