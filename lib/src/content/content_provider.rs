@@ -774,19 +774,15 @@ impl ContentProvider {
         let file_hash = file_hash.to_string();
 
         // Check cache first - prevent duplicate downloads of the same file
+        // Note: For raw file downloads, we only cache in-flight promises.
+        // Once resolved, we don't cache because the file might be evicted from disk.
+        // The async task will check if file exists before downloading.
         if let Some(promise) = self.get_cached_promise(&file_hash) {
-            // If the promise is still loading (not resolved), return it
             if !promise.bind().is_resolved() {
                 return promise;
             }
-            // If resolved, check if the file still exists on disk
-            // (cache eviction may have removed it)
-            let file_path = format!("{}{}", self.content_folder, file_hash);
-            if std::path::Path::new(&file_path).exists() {
-                return promise;
-            }
-            // File was evicted from cache - remove stale promise and re-download
-            tracing::debug!("File cache EVICTED: {} - re-downloading", file_hash);
+            // Promise is resolved - remove it so we create a fresh one that will
+            // verify the file exists in the async task
             self.promises.remove(&file_hash);
         }
 
