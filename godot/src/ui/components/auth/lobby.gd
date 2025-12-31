@@ -321,24 +321,7 @@ func _on_button_next_pressed():
 
 	await ProfileService.async_deploy_profile(current_profile)
 
-	# ADR-290: Schedule refresh to get updated snapshot URLs from profile-images service
-	_schedule_profile_image_refresh()
-
 	show_auth_home_screen()
-
-
-# ADR-290: Schedule a delayed refresh to fetch updated profile images
-func _schedule_profile_image_refresh():
-	if Global.player_identity.is_guest:
-		return
-
-	# Wait 5 seconds for the profile-images service to generate new snapshots
-	await get_tree().create_timer(5.0).timeout
-
-	# Re-fetch profile from server to get updated snapshot URLs
-	var address = Global.player_identity.get_address_str()
-	var lambda_url = Global.realm.get_lambda_server_base_url()
-	Global.player_identity.async_fetch_profile(address, lambda_url)
 
 
 func _on_button_random_name_pressed():
