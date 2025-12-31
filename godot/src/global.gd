@@ -253,6 +253,13 @@ func _ready():
 			"BenchmarkReport requires --features use_memory_debugger to be enabled during build"
 		)
 
+	# Add stress test controller if stress testing is enabled
+	if cli.stress_test:
+		print("✓ StressTest initialized for scene loading/unloading stress test")
+		var stress_test_controller = load("res://src/tools/stress_test_controller.gd").new()
+		stress_test_controller.set_name("StressTestController")
+		get_tree().root.add_child.call_deferred(stress_test_controller)
+
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 

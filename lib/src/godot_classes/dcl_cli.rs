@@ -82,6 +82,8 @@ pub struct DclCli {
     pub only_no_optimized: bool,
     #[var(get)]
     pub emote_test_mode: bool,
+    #[var(get)]
+    pub stress_test: bool,
 
     // Arguments with values
     #[var(get)]
@@ -300,6 +302,14 @@ impl DclCli {
                 arg_type: ArgType::Value("<URL>".to_string()),
                 category: "Testing".to_string(),
             },
+            ArgDefinition {
+                name: "--stress-test".to_string(),
+                description:
+                    "Run stress test with rapid teleportation to test scene loading/unloading"
+                        .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
         ]
     }
 
@@ -421,6 +431,7 @@ impl INode for DclCli {
         let only_optimized = args_map.contains_key("--only-optimized");
         let only_no_optimized = args_map.contains_key("--only-no-optimized");
         let emote_test_mode = args_map.contains_key("--emote-test");
+        let stress_test = args_map.contains_key("--stress-test");
 
         // Extract arguments with values
         let realm = args_map
@@ -485,6 +496,7 @@ impl INode for DclCli {
             only_optimized,
             only_no_optimized,
             emote_test_mode,
+            stress_test,
             realm,
             location,
             scene_input_file,
