@@ -318,7 +318,7 @@ func _on_wearable_filter_button_filter_type(type):
 
 # ADR-290: Snapshots are no longer generated/uploaded by clients.
 # Profile images are now served on-demand by the profile-images service.
-func async_save_profile(_generate_snapshots: bool = true):
+func async_save_profile():
 	avatar_preview.avatar.emote_controller.stop_emote()
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 

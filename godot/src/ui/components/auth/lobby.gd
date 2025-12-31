@@ -135,8 +135,8 @@ func show_avatar_create_screen():
 	show_panel(control_backpack)
 
 
-# ADR-290: Removed generate_snapshots parameter - snapshots no longer uploaded
-func async_close_sign_in(_generate_snapshots: bool = true):
+# ADR-290: Snapshots no longer uploaded
+func async_close_sign_in():
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
