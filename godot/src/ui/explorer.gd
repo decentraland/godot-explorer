@@ -891,7 +891,6 @@ func _on_discover_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	navbar.set_manually_hidden(true)
-	control_menu.show_discover()
 	release_mouse()
 
 

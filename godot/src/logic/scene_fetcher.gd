@@ -611,7 +611,12 @@ func send_scene_failed_metrics(
 	scene_entity_id: String, error_str: String, error_message: String = ""
 ) -> void:
 	# LOADING_END (Failed) metric
-	var error_data = {"scene_id": scene_entity_id, "status": "Failed", "error": error_str}
+	var error_data = {
+		"scene_id": scene_entity_id,
+		"position": "%d,%d" % current_position,
+		"status": "Failed",
+		"error": error_str
+	}
 	if error_message != "":
 		error_data["error_message"] = error_message
 	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(error_data))
