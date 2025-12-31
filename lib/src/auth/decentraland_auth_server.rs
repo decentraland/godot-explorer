@@ -6,10 +6,20 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 
 use super::wallet::SimpleAuthChain;
 
+// Production
 const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-// const AUTH_FRONT_URL: &str = "https://localhost:5173/auth/requests";
+const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
+
+// Localhost with .zone auth-api
+// const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
 // const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
+// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
+
+// Staging with .zone frontend + .zone auth-api
+// const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
+// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
+// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
@@ -51,16 +61,141 @@ struct RequestResult {
     error: Option<RequestResultError>,
 }
 
+/// Response from the identity endpoint containing the full AuthIdentity
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IdentityResponse {
+    pub identity: AuthIdentity,
+}
+
+/// The AuthIdentity returned by the server for mobile auth flow
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthIdentity {
+    pub ephemeral_identity: EphemeralIdentity,
+    pub expiration: String, // ISO date string
+    pub auth_chain: Vec<AuthLink>,
+}
+
+/// The ephemeral identity with private key provided by the server
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EphemeralIdentity {
+    pub private_key: String,
+    pub public_key: String,
+    pub address: String,
+}
+
+/// A single link in the auth chain
+#[derive(Debug, Deserialize, Clone)]
+pub struct AuthLink {
+    #[serde(rename = "type")]
+    pub ty: String,
+    pub payload: String,
+    #[serde(default)]
+    pub signature: String,
+}
+
+/// Fetches an identity result by ID from the auth server.
+/// Used for mobile deep link auth flow where we receive the identity ID via deep link
+/// instead of polling for the result.
+/// Returns the full AuthIdentity including ephemeral private key and auth chain.
+pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityResponse, anyhow::Error> {
+    let url = format!("{AUTH_SERVER_ENDPOINT_BASE_URL}/identities/{identity_id}");
+    tracing::debug!(
+        "fetch_identity_by_id: requesting identity_id={}, url={}",
+        identity_id,
+        url
+    );
+
+    let response = reqwest::Client::builder()
+        .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
+        .build()
+        .expect("reqwest build error")
+        .get(&url)
+        .send()
+        .await?;
+
+    let status = response.status();
+    tracing::debug!(
+        "fetch_identity_by_id: received response status={} for identity_id={}",
+        status,
+        identity_id
+    );
+
+    if status.as_u16() == 204 {
+        tracing::debug!(
+            "fetch_identity_by_id: identity not ready yet (204) for identity_id={}",
+            identity_id
+        );
+        return Err(anyhow::Error::msg("Identity not ready yet (204)"));
+    }
+
+    if !status.is_success() {
+        let status_code = status.as_u16();
+        tracing::warn!(
+            "fetch_identity_by_id: error status={} for identity_id={}",
+            status_code,
+            identity_id
+        );
+        return Err(anyhow::Error::msg(format!(
+            "Error fetching identity: status {}",
+            status_code
+        )));
+    }
+
+    let result = response.json::<IdentityResponse>().await?;
+    tracing::debug!(
+        "fetch_identity_by_id: successfully parsed identity response for identity_id={}, full response: \
+        address={}, \
+        public_key={}, \
+        private_key_len={}, \
+        expiration={}, \
+        auth_chain_len={}, \
+        auth_chain={:?}",
+        identity_id,
+        result.identity.ephemeral_identity.address,
+        result.identity.ephemeral_identity.public_key,
+        result.identity.ephemeral_identity.private_key.len(),
+        result.identity.expiration,
+        result.identity.auth_chain.len(),
+        result.identity.auth_chain.iter().map(|link| format!(
+            "AuthLink {{ type: {}, payload_len: {}, signature_len: {} }}",
+            link.ty,
+            link.payload.len(),
+            link.signature.len()
+        )).collect::<Vec<_>>()
+    );
+    Ok(result)
+}
+
 async fn fetch_polling_server(
     req_id: String,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let url = format!("{AUTH_SERVER_ENDPOINT_URL}/{req_id}");
+    tracing::debug!(
+        "fetch_polling_server: starting polling for req_id={}, url={}, max_retries={}, timeout={}s",
+        req_id,
+        url,
+        AUTH_SERVER_RETRIES,
+        AUTH_SERVER_TIMEOUT.as_secs()
+    );
     let mut attempt = 0;
     let mut requested_time = std::time::Instant::now();
 
     loop {
-        tracing::debug!("trying req_id {:?} attempt ${attempt}", req_id);
+        tracing::debug!(
+            "fetch_polling_server: attempt {}/{} for req_id={}",
+            attempt + 1,
+            AUTH_SERVER_RETRIES,
+            req_id
+        );
         if attempt >= AUTH_SERVER_RETRIES {
+            tracing::warn!(
+                "fetch_polling_server: max retries ({}) exceeded for req_id={}",
+                AUTH_SERVER_RETRIES,
+                req_id
+            );
             return Err(anyhow::Error::msg("too many atempts"));
         }
         attempt += 1;
@@ -68,10 +203,15 @@ async fn fetch_polling_server(
         let diff = (std::time::Instant::now() - requested_time).as_millis() as i64;
         let remaining_delay = (AUTH_SERVER_RETRY_INTERVAL.as_millis() as i64) - diff;
         if remaining_delay > 0 {
+            tracing::trace!(
+                "fetch_polling_server: sleeping for {}ms before next attempt",
+                remaining_delay
+            );
             tokio::time::sleep(Duration::from_millis(remaining_delay as u64)).await;
         }
 
         requested_time = std::time::Instant::now();
+        tracing::trace!("fetch_polling_server: sending GET request to {}", url);
         let response = reqwest::Client::builder()
             .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
             .build()
@@ -82,25 +222,68 @@ async fn fetch_polling_server(
 
         let response = match response {
             Ok(response) => {
-                if response.status().as_u16() == 204 {
+                let status = response.status();
+                tracing::debug!(
+                    "fetch_polling_server: received status={} for req_id={}",
+                    status,
+                    req_id
+                );
+                if status.as_u16() == 204 {
+                    tracing::debug!(
+                        "fetch_polling_server: result not ready yet (204), continuing polling for req_id={}",
+                        req_id
+                    );
                     continue;
-                } else if response.status().is_success() {
+                } else if status.is_success() {
                     match response.json::<RequestResult>().await {
                         Ok(response) => {
+                            tracing::debug!(
+                                "fetch_polling_server: parsed response for req_id={}, sender={}, has_result={}, has_error={}",
+                                req_id,
+                                response.sender,
+                                response.result.is_some(),
+                                response.error.is_some()
+                            );
                             if let Some(response_data) = response.result {
+                                tracing::debug!(
+                                    "fetch_polling_server: success! got result for req_id={} from sender={}",
+                                    req_id,
+                                    response.sender
+                                );
                                 Ok((response.sender, response_data))
                             } else if let Some(error) = response.error {
+                                tracing::warn!(
+                                    "fetch_polling_server: server returned error for req_id={}: {}",
+                                    req_id,
+                                    error.message
+                                );
                                 Err(anyhow::Error::msg(error.message))
                             } else {
+                                tracing::warn!(
+                                    "fetch_polling_server: invalid response (no result or error) for req_id={}",
+                                    req_id
+                                );
                                 Err(anyhow::Error::msg("invalid response"))
                             }
                         }
-                        Err(error) => Err(anyhow::Error::msg(format!(
-                            "error while parsing a task {:?}",
-                            error
-                        ))),
+                        Err(error) => {
+                            tracing::warn!(
+                                "fetch_polling_server: failed to parse response JSON for req_id={}: {:?}",
+                                req_id,
+                                error
+                            );
+                            Err(anyhow::Error::msg(format!(
+                                "error while parsing a task {:?}",
+                                error
+                            )))
+                        }
                     }
                 } else {
+                    tracing::warn!(
+                        "fetch_polling_server: unexpected status={} for req_id={}",
+                        status,
+                        req_id
+                    );
                     Err(anyhow::Error::msg(format!(
                         "Success fetching task but then fail: {:?}",
                         response
@@ -109,11 +292,22 @@ async fn fetch_polling_server(
             }
             Err(error) => {
                 if let Some(status_code) = error.status() {
+                    tracing::warn!(
+                        "fetch_polling_server: request error with status={} for req_id={}: {:?}",
+                        status_code,
+                        req_id,
+                        error
+                    );
                     Err(anyhow::Error::msg(format!(
                         "Error fetching task with status {:?}: {:?}",
                         status_code, error
                     )))
                 } else {
+                    tracing::warn!(
+                        "fetch_polling_server: request error (no status) for req_id={}: {:?}",
+                        req_id,
+                        error
+                    );
                     Err(anyhow::Error::msg(format!(
                         "Error fetching task: {:?}",
                         error
@@ -123,10 +317,20 @@ async fn fetch_polling_server(
         };
 
         if response.is_err() {
-            tracing::error!("error fetching task: {:?}", response.err().unwrap());
+            tracing::error!(
+                "fetch_polling_server: error on attempt {}, will retry for req_id={}: {:?}",
+                attempt,
+                req_id,
+                response.as_ref().err()
+            );
             continue;
         }
 
+        tracing::debug!(
+            "fetch_polling_server: completed successfully after {} attempts for req_id={}",
+            attempt,
+            req_id
+        );
         return response;
     }
 }
@@ -134,7 +338,20 @@ async fn fetch_polling_server(
 async fn create_new_request(
     message: CreateRequest,
 ) -> Result<CreateRequestResponse, anyhow::Error> {
+    tracing::debug!(
+        "create_new_request: creating request with method={}, params_count={}, has_auth_chain={}",
+        message.method,
+        message.params.len(),
+        message.auth_chain.is_some()
+    );
+
     let body = serde_json::to_string(&message).expect("valid json");
+    tracing::trace!(
+        "create_new_request: POST to {} with body length={}",
+        AUTH_SERVER_ENDPOINT_URL,
+        body.len()
+    );
+
     let response = reqwest::Client::builder()
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
@@ -145,26 +362,59 @@ async fn create_new_request(
         .send()
         .await?;
 
-    if response.status().is_success() {
-        Ok(response.json::<CreateRequestResponse>().await?)
+    let status = response.status();
+    tracing::debug!("create_new_request: received response status={}", status);
+
+    if status.is_success() {
+        let result = response.json::<CreateRequestResponse>().await?;
+        tracing::debug!(
+            "create_new_request: success! request_id={}, code={}",
+            result.request_id,
+            result.code
+        );
+        Ok(result)
     } else {
-        let status_code = response.status().as_u16();
-        let response = response.text().await?;
+        let status_code = status.as_u16();
+        let response_text = response.text().await?;
+        tracing::warn!(
+            "create_new_request: failed with status={}, response={}",
+            status_code,
+            response_text
+        );
         Err(anyhow::Error::msg(format!(
-            "Error creating request {status_code}: ${response}"
+            "Error creating request {status_code}: ${response_text}"
         )))
     }
 }
 
-pub async fn do_request(
+/// Result from creating a mobile auth request.
+/// Contains the request_id that will be received via deep link.
+pub struct MobileAuthRequest {
+    pub request_id: String,
+}
+
+/// Creates an auth request and opens the browser for mobile.
+/// Instead of polling, the app should wait for a deep link with the identity ID.
+/// Returns the request_id that will be received via deep link `decentraland://open?signin=${request_id}`
+pub async fn do_request_mobile(
     message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
     target_config_id: Option<String>,
-) -> Result<(String, serde_json::Value), anyhow::Error> {
+) -> Result<MobileAuthRequest, anyhow::Error> {
+    tracing::debug!(
+        "do_request_mobile: starting mobile auth request, method={}, target_config_id={:?}",
+        message.method,
+        target_config_id
+    );
+
     let request = create_new_request(message).await?;
-    let req_id = request.request_id;
+    let req_id = request.request_id.clone();
     let code = request.code;
-    println!("code is: {}", code);
+    tracing::debug!(
+        "do_request_mobile: request created with req_id={}, code={}",
+        req_id,
+        code
+    );
 
     // Determine target_config_id based on OS or use the provided one
     let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
@@ -172,21 +422,103 @@ pub async fn do_request(
         "android" => "android".to_string(),
         _ => "alternative".to_string(),
     });
+    tracing::debug!(
+        "do_request_mobile: resolved target_config_id={}, os={}",
+        target_config_id,
+        std::env::consts::OS
+    );
 
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
+    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}&flow=deeplink");
+    tracing::debug!("do_request_mobile: opening auth URL={}", url);
+
     url_reporter
         .send(GodotTokioCall::OpenUrl {
-            url,
+            url: url.clone(),
             description: "".into(),
             use_webview: true,
         })
         .await?;
 
-    fetch_polling_server(req_id).await
+    tracing::debug!(
+        "do_request_mobile: auth URL sent to Godot, waiting for deep link callback with req_id={}",
+        req_id
+    );
+
+    Ok(MobileAuthRequest {
+        request_id: request.request_id,
+    })
+}
+
+pub async fn do_request(
+    message: CreateRequest,
+    url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    target_config_id: Option<String>,
+) -> Result<(String, serde_json::Value), anyhow::Error> {
+    tracing::debug!(
+        "do_request: starting auth request, method={}, target_config_id={:?}",
+        message.method,
+        target_config_id
+    );
+
+    let request = create_new_request(message).await?;
+    let req_id = request.request_id;
+    let code = request.code;
+    tracing::debug!(
+        "do_request: request created with req_id={}, code={}",
+        req_id,
+        code
+    );
+
+    // Determine target_config_id based on OS or use the provided one
+    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
+        "ios" => "ios".to_string(),
+        "android" => "android".to_string(),
+        _ => "alternative".to_string(),
+    });
+    tracing::debug!(
+        "do_request: resolved target_config_id={}, os={}",
+        target_config_id,
+        std::env::consts::OS
+    );
+
+    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
+    tracing::debug!("do_request: opening auth URL={}", url);
+
+    url_reporter
+        .send(GodotTokioCall::OpenUrl {
+            url: url.clone(),
+            description: "".into(),
+            use_webview: true,
+        })
+        .await?;
+
+    tracing::debug!(
+        "do_request: auth URL sent to Godot, starting polling for req_id={}",
+        req_id
+    );
+
+    let result = fetch_polling_server(req_id.clone()).await;
+    match &result {
+        Ok((sender, _)) => {
+            tracing::debug!(
+                "do_request: completed successfully for req_id={}, sender={}",
+                req_id,
+                sender
+            );
+        }
+        Err(e) => {
+            tracing::warn!("do_request: failed for req_id={}: {:?}", req_id, e);
+        }
+    }
+    result
 }
 
 impl CreateRequest {
     pub fn from_new_ephemeral(ephemeral_message: &str) -> Self {
+        tracing::debug!(
+            "CreateRequest::from_new_ephemeral: creating request with message_len={}",
+            ephemeral_message.len()
+        );
         Self {
             method: "dcl_personal_sign".to_owned(),
             params: vec![ephemeral_message.into()],
@@ -199,6 +531,11 @@ impl CreateRequest {
         params: Vec<serde_json::Value>,
         auth_chain: SimpleAuthChain,
     ) -> Self {
+        tracing::debug!(
+            "CreateRequest::from_send_async_ephemeral: creating request with method={}, params_count={}",
+            method,
+            params.len(),
+        );
         Self {
             method,
             params,

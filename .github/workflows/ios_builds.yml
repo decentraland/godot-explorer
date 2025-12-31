@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: warp-macos-14-arm64-6x
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - name: Validate required secrets
         env:
