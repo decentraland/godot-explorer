@@ -331,21 +331,6 @@ func async_save_profile():
 	# Use the new profile service static method (ADR-290: no snapshots uploaded)
 	await ProfileService.async_deploy_profile(mutable_profile)
 
-	# ADR-290: Refresh profile image after delay to get snapshot URLs from profile-images service
-	_schedule_profile_image_refresh()
-
-
-# ADR-290: Fetch updated snapshot URLs from profile-images service after deployment
-func _schedule_profile_image_refresh():
-	if Global.player_identity.is_guest:
-		return
-
-	# Wait 10 seconds for the profile-images service to generate new snapshots
-	await get_tree().create_timer(10.0).timeout
-
-	# Fetch only snapshot URLs without overwriting the profile
-	await Global.player_identity.async_refresh_profile_snapshots()
-
 
 func _on_wearable_equip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
