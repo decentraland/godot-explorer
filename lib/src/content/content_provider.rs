@@ -270,7 +270,19 @@ impl ContentProvider {
 
         // Return existing promise if already loading/loaded
         if let Some(existing) = self.get_cached_promise(&file_hash) {
-            return Some(existing);
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash);
+            if std::path::Path::new(&scene_path).exists() {
+                return Some(existing);
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            tracing::debug!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
+            self.promises.remove(&file_hash);
         }
 
         // Create new promise and cache it
@@ -364,7 +376,22 @@ impl ContentProvider {
 
         // Return existing promise if already loading/loaded
         if let Some(existing) = self.get_cached_promise(&file_hash) {
-            return Some(existing);
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let scene_path = get_wearable_path_for_hash(&self.content_folder, &file_hash);
+            if std::path::Path::new(&scene_path).exists() {
+                return Some(existing);
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            tracing::debug!(
+                "Wearable GLTF cache EVICTED: {} - re-downloading",
+                file_hash
+            );
+            self.promises.remove(&file_hash);
         }
 
         // Create new promise and cache it
@@ -458,7 +485,19 @@ impl ContentProvider {
 
         // Return existing promise if already loading/loaded
         if let Some(existing) = self.get_cached_promise(&file_hash) {
-            return Some(existing);
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let scene_path = get_emote_path_for_hash(&self.content_folder, &file_hash);
+            if std::path::Path::new(&scene_path).exists() {
+                return Some(existing);
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            tracing::debug!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
+            self.promises.remove(&file_hash);
         }
 
         // Create new promise and cache it
@@ -736,7 +775,19 @@ impl ContentProvider {
 
         // Check cache first - prevent duplicate downloads of the same file
         if let Some(promise) = self.get_cached_promise(&file_hash) {
-            return promise;
+            // If the promise is still loading (not resolved), return it
+            if !promise.bind().is_resolved() {
+                return promise;
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let file_path = format!("{}{}", self.content_folder, file_hash);
+            if std::path::Path::new(&file_path).exists() {
+                return promise;
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            tracing::debug!("File cache EVICTED: {} - re-downloading", file_hash);
+            self.promises.remove(&file_hash);
         }
 
         let url = url.to_string();
