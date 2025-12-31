@@ -218,9 +218,65 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 	)
 
 
+# ADR-290: Generate local snapshots if the server doesn't provide them
+func _async_generate_local_snapshots_if_needed(profile: DclUserProfile):
+	var avatar = profile.get_avatar()
+	var face_url = avatar.get_snapshots_face_url()
+
+	# If snapshots are already available (from server or locally), skip generation
+	if not face_url.is_empty():
+		return
+
+	# Ensure avatar_preview is visible for rendering
+	var was_visible = avatar_preview.visible
+	avatar_preview.show()
+
+	# Store original settings
+	var original_show_platform = avatar_preview.show_platform
+	var original_hide_name = avatar_preview.hide_name
+	var original_can_move = avatar_preview.can_move
+
+	# Configure for snapshot capture
+	avatar_preview.show_platform = false
+	avatar_preview.hide_name = true
+	avatar_preview.can_move = false
+
+	# Wait for avatar to fully render
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var face = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 25)
+	var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
+
+	# Restore original settings
+	avatar_preview.show_platform = original_show_platform
+	avatar_preview.hide_name = original_hide_name
+	avatar_preview.can_move = original_can_move
+	if not was_visible:
+		avatar_preview.hide()
+
+	var body_data: PackedByteArray = body.save_png_to_buffer()
+	var body_hash = DclHashing.hash_v1(body_data)
+	await PromiseUtils.async_awaiter(Global.content_provider.store_file(body_hash, body_data))
+
+	var face_data: PackedByteArray = face.save_png_to_buffer()
+	var face_hash = DclHashing.hash_v1(face_data)
+	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
+
+	# Store local snapshot hashes for UI display
+	avatar.set_snapshots(face_hash, body_hash)
+	profile.set_avatar(avatar)
+
+	# Notify UI components that the profile has updated snapshots
+	Global.player_identity.set_profile(profile)
+
+
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+
+	# ADR-290: Generate local snapshots if not available from server
+	await _async_generate_local_snapshots_if_needed(new_profile)
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
