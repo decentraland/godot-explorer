@@ -23,6 +23,10 @@ pub struct DclParseDeepLink {
 
     #[var]
     params: VarDictionary,
+
+    /// The signin identity ID from deep link `decentraland://open?signin=${identityId}`
+    #[var]
+    signin_identity_id: GString,
 }
 
 #[godot_api]
@@ -36,6 +40,7 @@ impl IRefCounted for DclParseDeepLink {
             preview: GString::new(),
             dynamic_scene_loading: false,
             params: VarDictionary::new(),
+            signin_identity_id: GString::new(),
         }
     }
 }
@@ -50,6 +55,7 @@ impl DclParseDeepLink {
             preview: GString::new(),
             dynamic_scene_loading: false,
             params: VarDictionary::new(),
+            signin_identity_id: GString::new(),
         };
 
         if url_str.is_empty() {
@@ -90,6 +96,10 @@ impl DclParseDeepLink {
                 "realm" => {
                     return_object.realm = value.to_string().to_godot();
                 }
+                "signin" => {
+                    // Handle signin identity ID from deep link `decentraland://open?signin=${identityId}`
+                    return_object.signin_identity_id = value.to_string().to_godot();
+                }
                 "preview" => {
                     // Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
                     return_object.preview = value.to_string().to_godot();
@@ -109,5 +119,10 @@ impl DclParseDeepLink {
     #[func]
     pub fn is_location_defined(&self) -> bool {
         self.location.x < 1000000
+    }
+
+    #[func]
+    pub fn is_signin_request(&self) -> bool {
+        !self.signin_identity_id.is_empty()
     }
 }
