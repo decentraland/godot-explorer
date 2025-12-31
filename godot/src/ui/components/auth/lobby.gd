@@ -135,11 +135,8 @@ func show_avatar_create_screen():
 	show_panel(control_backpack)
 
 
-func async_close_sign_in(generate_snapshots: bool = true):
-	if generate_snapshots:
-		var avatar := current_profile.get_avatar()
-		await backpack.async_prepare_snapshots(avatar, current_profile)
-
+# ADR-290: Removed generate_snapshots parameter - snapshots no longer uploaded
+func async_close_sign_in(_generate_snapshots: bool = true):
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
