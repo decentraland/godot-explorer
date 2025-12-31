@@ -67,7 +67,11 @@ custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_drkw7")
 
-[node name="MarginContainer" type="MarginContainer" parent="ColorRect_Navbar"]
+[node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Navbar"]
+layout_mode = 2
+vertical_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect_Navbar/ScrollContainer"]
 custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
 theme = ExtResource("12_sa1v7")
@@ -79,12 +83,12 @@ script = ExtResource("8_wyn32")
 default_margin = 30
 use_bottom = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Navbar/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Navbar/ScrollContainer/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 14
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="ColorRect_Navbar/MarginContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_1ym31")
@@ -93,12 +97,12 @@ text = "Settings"
 label_settings = ExtResource("6_sa1v7")
 script = ExtResource("5_drkw7")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Navbar/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 15
 
-[node name="Label_Title" type="Label" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label_Title" type="Label" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_1ym31")
 text = "Settings"
@@ -106,12 +110,13 @@ label_settings = ExtResource("6_sa1v7")
 script = ExtResource("5_drkw7")
 hide_on_portrait = true
 
-[node name="Button_General" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Button_General" type="Button" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
+mouse_filter = 1
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
@@ -121,12 +126,13 @@ text = "General"
 icon = ExtResource("6_gugrl")
 alignment = 0
 
-[node name="Button_Graphics" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Button_Graphics" type="Button" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
+mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
@@ -136,12 +142,13 @@ text = "Graphics"
 icon = ExtResource("5_lso3q")
 alignment = 0
 
-[node name="Button_Audio" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Button_Audio" type="Button" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
+mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
@@ -151,12 +158,13 @@ text = "Audio"
 icon = ExtResource("6_q1ods")
 alignment = 0
 
-[node name="Button_Account" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Button_Account" type="Button" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
+mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
@@ -166,12 +174,13 @@ text = "Account"
 icon = ExtResource("8_hdct4")
 alignment = 0
 
-[node name="Button_Developer" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Button_Developer" type="Button" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
+mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"WearableButton"
 theme_override_constants/icon_max_width = 25
@@ -181,18 +190,19 @@ text = "Dev Tools"
 icon = ExtResource("6_br0rl")
 alignment = 0
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 19
 alignment = 2
 
-[node name="Button_ResetAll" type="Button" parent="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer2"]
+[node name="Button_ResetAll" type="Button" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer2"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
+mouse_filter = 1
 theme_type_variation = &"WhiteButton"
 theme_override_constants/h_separation = 0
 text = "RESET ALL
@@ -857,12 +867,12 @@ layout_mode = 2
 script = ExtResource("5_drkw7")
 hide_on_portrait = true
 
-[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_General" to="." method="_on_button_general_pressed"]
-[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
-[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
-[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Account" to="." method="_on_button_account_pressed"]
-[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
-[connection signal="toggled" from="ColorRect_Navbar/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer2/Button_ResetAll" to="." method="_on_monitoring_button_toggled"]
+[connection signal="pressed" from="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer/Button_General" to="." method="_on_button_general_pressed"]
+[connection signal="pressed" from="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
+[connection signal="pressed" from="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
+[connection signal="pressed" from="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer/Button_Account" to="." method="_on_button_account_pressed"]
+[connection signal="pressed" from="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
+[connection signal="toggled" from="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer2/Button_ResetAll" to="." method="_on_monitoring_button_toggled"]
 [connection signal="visibility_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize/RadioSelector_MaxCacheSize" to="." method="_on_radio_selector_max_cache_size_select_item"]
