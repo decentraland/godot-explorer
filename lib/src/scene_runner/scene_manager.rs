@@ -451,25 +451,14 @@ impl SceneManager {
 
     /// Internal: Check and emit phase transition
     fn check_loading_phase_transition(&mut self) {
-        let (phase_changed, new_phase, is_complete, session_id, _debug_info) = {
+        let (phase_changed, new_phase, is_complete, session_id) = {
             if let Some(session) = &mut self.current_loading_session {
                 let changed = session.check_phase_transition();
-                let debug = format!(
-                    "phase={:?} expected={} fetched={} spawned={} ready={} assets_exp={:?} assets_loaded={:?}",
-                    session.phase,
-                    session.expected_scene_entities.len(),
-                    session.fetched_scene_entities.len(),
-                    session.spawned_scenes.len(),
-                    session.ready_scenes.len(),
-                    session.expected_assets,
-                    session.loaded_assets,
-                );
                 (
                     changed,
                     session.phase,
                     session.is_complete(),
                     session.id as i64,
-                    debug,
                 )
             } else {
                 return;
