@@ -362,20 +362,19 @@ Scene GLTFs have colliders created during processing:
 └─────────────────────────────────────────────────────────────────────────────┘
 
 1. For each MeshInstance3D:
-   ├── Create trimesh collision
-   ├── Replace StaticBody3D with AnimatableBody3D
+   ├── Create trimesh collision (creates StaticBody3D)
    ├── Set collision_layer = 0, collision_mask = 0
    ├── Set process_mode = DISABLED
    └── Set metadata: dcl_col, invisible_mesh
 
 2. After instantiation (gltf_container.gd):
    ├── set_mask_colliders() assigns proper masks
-   ├── Set PhysicsServer3D.BODY_MODE_STATIC
+   ├── StaticBody3D is STATIC by default (no PhysicsServer call needed)
    └── Enable transform tracking if has colliders
 
 3. On entity movement (Rust detects via transform tracking):
    ├── Emit switch_to_kinematic signal
-   └── GDScript switches colliders to BODY_MODE_KINEMATIC
+   └── GDScript switches colliders to BODY_MODE_KINEMATIC via PhysicsServer3D
 ```
 
 ## Error Handling

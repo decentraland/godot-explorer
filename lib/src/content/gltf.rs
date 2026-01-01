@@ -3,10 +3,9 @@ use std::{collections::HashMap, sync::Arc};
 use godot::{
     builtin::{GString, VarArray},
     classes::{
-        animation::TrackType, base_material_3d::TextureParam, node::ProcessMode, AnimatableBody3D,
-        Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D, CollisionShape3D,
-        ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
-        StaticBody3D,
+        animation::TrackType, base_material_3d::TextureParam, node::ProcessMode, Animation,
+        AnimationLibrary, AnimationPlayer, BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D,
+        GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D, StaticBody3D,
     },
     global::Error,
     meta::ToGodot,
@@ -821,56 +820,38 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
             }
 
             if let Some(mut static_body_3d) = static_body_3d {
-                // Create AnimatableBody3D to replace StaticBody3D
-                let mut animatable_body = AnimatableBody3D::new_alloc();
-                animatable_body.set_sync_to_physics(false);
-                animatable_body.set_process_mode(ProcessMode::DISABLED);
-                animatable_body.set_meta("dcl_col", &0.to_variant());
-                animatable_body.set_meta("invisible_mesh", &invisible_mesh.to_variant());
-                animatable_body.set_collision_layer(0);
-                animatable_body.set_collision_mask(0);
+                // Keep StaticBody3D - we'll use PhysicsServer3D to switch to KINEMATIC when needed
+                // This is simpler than replacing with AnimatableBody3D
+                static_body_3d.set_process_mode(ProcessMode::DISABLED);
+                static_body_3d.set_meta("dcl_col", &0.to_variant());
+                static_body_3d.set_meta("invisible_mesh", &invisible_mesh.to_variant());
+                static_body_3d.set_collision_layer(0);
+                static_body_3d.set_collision_mask(0);
                 let colgen_name = format!("{}_colgen", mesh_instance_3d.get_name());
-                animatable_body.set_name(&colgen_name);
+                static_body_3d.set_name(&colgen_name);
 
-                // Get the parent to add the new body
-                if let Some(mut parent) = static_body_3d.get_parent() {
-                    parent.add_child(&animatable_body.clone().upcast::<Node>());
-
-                    // Move collision shapes from StaticBody3D to AnimatableBody3D
-                    for mut body_child in static_body_3d
-                        .get_children_ex()
-                        .include_internal(true)
-                        .done()
-                        .iter_shared()
+                // Enable backface collision for concave shapes
+                for body_child in static_body_3d
+                    .get_children_ex()
+                    .include_internal(true)
+                    .done()
+                    .iter_shared()
+                {
+                    if let Ok(collision_shape_3d) =
+                        body_child.clone().try_cast::<CollisionShape3D>()
                     {
-                        static_body_3d.remove_child(&body_child.clone());
-                        body_child.call("set_owner", &[godot::builtin::Variant::nil()]);
-                        animatable_body.add_child(&body_child.clone());
-
-                        // Enable backface collision for concave shapes
-                        if let Ok(collision_shape_3d) =
-                            body_child.clone().try_cast::<CollisionShape3D>()
-                        {
-                            if let Some(shape) = collision_shape_3d.get_shape() {
-                                if let Ok(mut concave_polygon_shape_3d) =
-                                    shape.try_cast::<ConcavePolygonShape3D>()
-                                {
-                                    concave_polygon_shape_3d.set_backface_collision_enabled(true);
-                                }
+                        if let Some(shape) = collision_shape_3d.get_shape() {
+                            if let Ok(mut concave_polygon_shape_3d) =
+                                shape.try_cast::<ConcavePolygonShape3D>()
+                            {
+                                concave_polygon_shape_3d.set_backface_collision_enabled(true);
                             }
                         }
-
-                        // Set owner to root so it gets saved with PackedScene
-                        body_child.set_owner(&root_node.clone().upcast::<Node>());
                     }
-
-                    // Remove the old StaticBody3D and free it immediately
-                    parent.remove_child(&static_body_3d.clone().upcast::<Node>());
-                    static_body_3d.free();
-
-                    // Set owner for AnimatableBody3D
-                    animatable_body.set_owner(&root_node.clone().upcast::<Node>());
                 }
+
+                // Set owner so it gets saved with PackedScene
+                static_body_3d.set_owner(&root_node.clone().upcast::<Node>());
             }
         }
 

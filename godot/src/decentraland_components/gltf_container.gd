@@ -403,24 +403,24 @@ func async_deferred_add_child():
 #region Collider Management
 
 
-func get_animatable_body_3d(mesh_instance: MeshInstance3D):
+func get_static_body_3d(mesh_instance: MeshInstance3D):
 	for maybe_body in mesh_instance.get_children():
-		if maybe_body is AnimatableBody3D:
+		if maybe_body is StaticBody3D:
 			return maybe_body
 
 	return null
 
 
 # Set collision masks and metadata on all colliders after instantiating
-# Also sets STATIC mode for better performance (will switch to KINEMATIC if entity moves)
-# Returns true if any colliders were set to STATIC mode
+# StaticBody3D is STATIC by default - will switch to KINEMATIC if entity moves
+# Returns true if any colliders have active masks (need kinematic tracking)
 func set_mask_colliders(
 	node_to_inspect: Node, visible_cmask: int, invisible_cmask: int, scene_id: int, entity_id: int
 ) -> bool:
-	var has_static := false
+	var has_active_colliders := false
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
-			var body_3d = get_animatable_body_3d(node)
+			var body_3d = get_static_body_3d(node)
 			if body_3d != null:
 				# Check if this is an invisible collider mesh (metadata set during GLTF processing)
 				var invisible_mesh = (
@@ -443,23 +443,20 @@ func set_mask_colliders(
 					body_3d.process_mode = Node.PROCESS_MODE_DISABLED
 				else:
 					body_3d.process_mode = Node.PROCESS_MODE_INHERIT
-					# Set STATIC mode for better performance
-					# Will switch to KINEMATIC if entity moves (detected in _process)
-					PhysicsServer3D.body_set_mode(
-						body_3d.get_rid(), PhysicsServer3D.BODY_MODE_STATIC
-					)
+					# StaticBody3D is already STATIC by default
+					# Mark for tracking - will switch to KINEMATIC if entity moves
 					body_3d.set_meta("dcl_static_mode", true)
-					has_static = true
+					has_active_colliders = true
 
 		if set_mask_colliders(node, visible_cmask, invisible_cmask, scene_id, entity_id):
-			has_static = true
-	return has_static
+			has_active_colliders = true
+	return has_active_colliders
 
 
 func update_mask_colliders(node_to_inspect: Node):
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
-			var body_3d = get_animatable_body_3d(node)
+			var body_3d = get_static_body_3d(node)
 			if body_3d != null:
 				# Check if this is an invisible collider mesh
 				var invisible_mesh = (
@@ -511,7 +508,7 @@ func _switch_colliders_to_kinematic(node_to_inspect: Node):
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
 			var mesh_instance: MeshInstance3D = node
-			var body_3d = get_animatable_body_3d(mesh_instance)
+			var body_3d = get_static_body_3d(mesh_instance)
 			if body_3d != null and body_3d.has_meta("dcl_static_mode"):
 				# Switch to KINEMATIC mode via PhysicsServer3D
 				PhysicsServer3D.body_set_mode(
