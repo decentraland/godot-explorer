@@ -227,14 +227,16 @@ func _async_generate_local_snapshots_if_needed(profile: DclUserProfile):
 	if not face_url.is_empty():
 		return
 
-	# Ensure avatar_preview is visible for rendering
-	var was_visible = avatar_preview.visible
-	avatar_preview.show()
-
-	# Store original settings
+	# Store original parent and settings
+	var original_parent = avatar_preview.get_parent()
 	var original_show_platform = avatar_preview.show_platform
 	var original_hide_name = avatar_preview.hide_name
 	var original_can_move = avatar_preview.can_move
+
+	# Reparent to root to ensure visibility (parent panels might be hidden during sign-in)
+	avatar_preview.reparent(get_tree().root)
+	avatar_preview.set_position(get_tree().root.get_visible_rect().size)
+	avatar_preview.show()
 
 	# Configure for snapshot capture
 	avatar_preview.show_platform = false
@@ -248,12 +250,11 @@ func _async_generate_local_snapshots_if_needed(profile: DclUserProfile):
 	var face = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 25)
 	var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
 
-	# Restore original settings
+	# Restore original parent and settings
+	avatar_preview.reparent(original_parent)
 	avatar_preview.show_platform = original_show_platform
 	avatar_preview.hide_name = original_hide_name
 	avatar_preview.can_move = original_can_move
-	if not was_visible:
-		avatar_preview.hide()
 
 	var body_data: PackedByteArray = body.save_png_to_buffer()
 	var body_hash = DclHashing.hash_v1(body_data)
