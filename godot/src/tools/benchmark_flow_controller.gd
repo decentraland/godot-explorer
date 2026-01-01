@@ -200,8 +200,10 @@ func handle_explorer_scene(_scene):
 	# Wait for loading to complete
 	await _wait_for_loading_complete()
 
-	# Wait for scene to stabilize
-	await get_tree().create_timer(5.0).timeout
+	# Wait 20 seconds for memory to stabilize before collecting metrics
+	# This ensures accurate memory measurements as GC and resource cleanup finish
+	log_message("✓ Waiting 20 seconds for memory to stabilize...")
+	await get_tree().create_timer(20.0).timeout
 
 	# Process all benchmark locations in a loop (don't rely on timer for re-detection)
 	while current_location_index < benchmark_locations.size():
@@ -227,15 +229,16 @@ func handle_explorer_scene(_scene):
 			log_message("✓ Moving to next location: %s at %s" % [next_loc.name, next_loc.pos])
 			log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-			# Wait before teleport
-			await get_tree().create_timer(30.0).timeout
+			# Wait 10 seconds before teleporting
+			await get_tree().create_timer(10.0).timeout
 
 			# Teleport and wait for loading to complete
 			Global.teleport_to(next_loc.pos, next_loc.realm)
 			await _wait_for_loading_complete()
 
-			# Wait for scene to stabilize
-			await get_tree().create_timer(5.0).timeout
+			# Wait 20 seconds for memory to stabilize before collecting next metrics
+			log_message("✓ Waiting 20 seconds for memory to stabilize...")
+			await get_tree().create_timer(20.0).timeout
 
 	# Mark stage as complete (prevents re-entry from timer)
 	current_stage = "explorer"
