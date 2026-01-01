@@ -620,22 +620,27 @@ func async_load_scene(
 	# - --only-no-optimized flag (explicitly loading non-optimized scenes)
 	var skip_optimized = Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
 
-	var download_res = null
+	var download_success := false
+	var download_error: PromiseError = null
 	if not skip_optimized:
 		# Check if optimized zip already exists to avoid re-download hang
 		var zip_file_path = "user://content/" + scene_hash_zip
 		if FileAccess.file_exists(zip_file_path):
-			download_res = true  # Pretend success since file exists
+			download_success = true
 		else:
 			var download_promise: Promise = Global.content_provider.fetch_file_by_url(
 				scene_hash_zip, asset_url
 			)
-			download_res = await PromiseUtils.async_awaiter(download_promise)
+			var download_res = await PromiseUtils.async_awaiter(download_promise)
+			if download_res is PromiseError:
+				download_error = download_res
+			else:
+				download_success = true
 
 	if skip_optimized:
 		pass  # Scene optimization skipped (XR, testing, or --only-no-optimized)
-	elif download_res == null or download_res is PromiseError:
-		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
+	elif download_error != null or not download_success:
+		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip asset=url", asset_url)
 		# --only-optimized: Skip scene if it's not optimized
 		if Global.cli.only_optimized:
 			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
