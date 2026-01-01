@@ -19,9 +19,16 @@ func _ready():
 
 ## Called by loading_screen.gd when it wants to enable loading
 func enable_loading_screen():
-	# The actual showing is now triggered by loading_started signal from Rust
-	# This function is kept for compatibility with loading_screen.gd
-	pass
+	# Show loading screen immediately - the LoadingSession will update progress later
+	Global.content_provider.set_max_concurrent_downloads(6)
+
+	# Mute voice chat and scene volume during loading
+	AudioSettings.apply_scene_volume_settings(0.0)
+	AudioSettings.apply_voice_chat_volume_settings(0.0)
+
+	loading_screen.show()
+	loading_screen.set_progress(0)
+	loading_show_requested.emit()
 
 
 ## Called by loading_screen.gd or popup button to force hide loading
