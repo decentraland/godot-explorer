@@ -220,11 +220,15 @@ void DclGodotiOS::open_auth_url(String url) {
         callbackURLScheme:callbackScheme
         completionHandler:^(NSURL * _Nullable callbackURL, NSError * _Nullable error) {
             if (callbackURL) {
-                printf("Authentication completed with callback URL: %s\n", callbackURL.absoluteString.UTF8String);
-                // Forward the callback URL to Godot if needed
+                NSLog(@"[DEEPLINK] ASWebAuthenticationSession completed with callback URL: %@", callbackURL.absoluteString);
+                // Only forward if the callback URL has the decentraland:// scheme
+                if ([callbackURL.scheme isEqualToString:@"decentraland"]) {
+                    DclGodotiOS::emit_deeplink_received(String::utf8(callbackURL.absoluteString.UTF8String));
+                } else {
+                    NSLog(@"[DEEPLINK] Ignoring callback URL with unexpected scheme: %@", callbackURL.scheme);
+                }
             } else if (error) {
-                printf("Authentication failed with error: %s\n", error.localizedDescription.UTF8String);
-                // Forward the error to Godot if needed
+                NSLog(@"[DEEPLINK] ASWebAuthenticationSession failed with error: %@", error.localizedDescription);
             }
 
             // Release the authSession and remove the auth window
@@ -234,7 +238,15 @@ void DclGodotiOS::open_auth_url(String url) {
         }];
 
     authSession.presentationContextProvider = authDelegate;
-    [authSession start];
+
+    // Use ephemeral session to ensure clean state (no shared cookies/session with Safari)
+    // This ensures each auth attempt starts fresh without previous login sessions
+    authSession.prefersEphemeralWebBrowserSession = YES;
+
+    BOOL started = [authSession start];
+    if (!started) {
+        [authDelegate show_notification_in_auth_window:@"Failed to start auth session"];
+    }
     #endif
 }
 

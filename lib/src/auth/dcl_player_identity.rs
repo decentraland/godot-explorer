@@ -12,7 +12,9 @@ use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
-use super::auth_identity::create_local_ephemeral;
+use super::auth_identity::{
+    complete_mobile_auth, create_local_ephemeral, start_mobile_auth, PendingMobileAuth,
+};
 use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
@@ -36,6 +38,10 @@ pub struct DclPlayerIdentity {
 
     try_connect_account_handle: Option<JoinHandle<()>>,
 
+    /// Pending mobile auth state, stored between start_mobile_connect_account
+    /// and complete_mobile_connect_account (when deep link arrives)
+    pending_mobile_auth: Option<PendingMobileAuth>,
+
     #[var]
     is_guest: bool,
 
@@ -52,6 +58,7 @@ impl INode for DclPlayerIdentity {
             base,
             is_guest: false,
             try_connect_account_handle: None,
+            pending_mobile_auth: None,
             target_config_id: GString::default(),
         }
     }
@@ -225,6 +232,115 @@ impl DclPlayerIdentity {
         if let Some(handle) = self.try_connect_account_handle.take() {
             handle.abort();
         }
+        // Also clear any pending mobile auth
+        self.pending_mobile_auth = None;
+    }
+
+    /// Starts mobile auth flow. Opens browser and returns immediately.
+    /// The app should wait for a deep link with signin identity ID,
+    /// then call complete_mobile_connect_account with that ID.
+    #[func]
+    fn start_mobile_connect_account(&mut self, target_config_id: GString) {
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            panic!("tokio runtime not initialized")
+        };
+
+        let instance_id = self.base().instance_id();
+        let sender = DclGlobal::singleton()
+            .bind()
+            .get_dcl_tokio_rpc()
+            .bind()
+            .get_sender();
+
+        self.target_config_id = target_config_id.clone();
+        let target_config_id = if target_config_id.is_empty() {
+            None
+        } else {
+            Some(target_config_id.to_string())
+        };
+
+        handle.spawn(async move {
+            let result = start_mobile_auth(sender, target_config_id).await;
+            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
+                return;
+            };
+
+            match result {
+                Ok(pending) => {
+                    tracing::info!(
+                        "Mobile auth started, waiting for deep link with request_id: {}",
+                        pending.request_id
+                    );
+                    this.bind_mut().pending_mobile_auth = Some(pending);
+                }
+                Err(err) => {
+                    tracing::error!("Error starting mobile auth: {:?}", err);
+                    this.call_deferred(
+                        "_error_getting_wallet",
+                        &[format!("Mobile auth error: {}", err).to_variant()],
+                    );
+                }
+            }
+        });
+    }
+
+    /// Completes mobile auth flow using the identity ID received via deep link.
+    /// Should be called when app receives deep link `decentraland://open?signin=${identityId}`
+    #[func]
+    fn complete_mobile_connect_account(&mut self, identity_id: GString) {
+        if self.pending_mobile_auth.take().is_none() {
+            tracing::error!("No pending mobile auth to complete");
+            self.base_mut().call_deferred(
+                "_error_getting_wallet",
+                &["No pending mobile auth".to_variant()],
+            );
+            return;
+        };
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            panic!("tokio runtime not initialized")
+        };
+
+        let instance_id = self.base().instance_id();
+        let identity_id = identity_id.to_string();
+
+        handle.spawn(async move {
+            let result = complete_mobile_auth(identity_id).await;
+            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
+                return;
+            };
+
+            match result {
+                Ok((ephemeral_auth_chain, chain_id)) => {
+                    let address = ephemeral_auth_chain.signer();
+                    let ephemeral_auth_chain_json_str =
+                        serde_json::to_string(&ephemeral_auth_chain)
+                            .expect("serialize ephemeral auth chain");
+
+                    this.call_deferred(
+                        "try_set_remote_wallet",
+                        &[
+                            format!("{:#x}", address).to_variant(),
+                            chain_id.to_variant(),
+                            ephemeral_auth_chain_json_str.to_variant(),
+                        ],
+                    );
+                }
+                Err(err) => {
+                    tracing::error!("Error completing mobile auth: {:?}", err);
+                    this.call_deferred(
+                        "_error_getting_wallet",
+                        &[format!("Mobile auth completion error: {}", err).to_variant()],
+                    );
+                }
+            }
+        });
+    }
+
+    /// Returns true if there's a pending mobile auth waiting for deep link
+    #[func]
+    fn has_pending_mobile_auth(&self) -> bool {
+        self.pending_mobile_auth.is_some()
     }
 
     #[func]
