@@ -316,12 +316,15 @@ func async_try_to_set_body_shape(body_shape_hash):
 			body_shape_skeleton_3d.remove_child(child)
 			child.queue_free()
 
+	# Reparent children directly (no need to duplicate since wearable_loader
+	# returns a fresh instantiated scene that we'll discard anyway)
 	for child in new_skeleton.get_children():
-		var new_child = child.duplicate()
-		new_child.name = "bodyshape_" + child.name.to_lower()
-		body_shape_skeleton_3d.add_child(new_child)
+		new_skeleton.remove_child(child)
+		child.set_owner(null)  # Clear owner since we're reparenting
+		child.name = "bodyshape_" + child.name.to_lower()
+		body_shape_skeleton_3d.add_child(child)
 
-	# Free the instantiated body shape since we've duplicated what we need
+	# Free the now-empty body shape container
 	body_shape.queue_free()
 	_add_attach_points()
 
@@ -391,16 +394,18 @@ func async_load_wearables():
 			printerr("Avatar: Failed to load wearable ", category, " hash: ", file_hash)
 			continue
 
-		# Some wearables have many Skeleton3d
+		# Reparent wearable meshes directly (no need to duplicate since wearable_loader
+		# returns a fresh instantiated scene that we'll discard anyway)
 		var wearable_skeletons = obj.find_children("Skeleton3D")
 		for skeleton_3d in wearable_skeletons:
 			for child in skeleton_3d.get_children():
-				var new_wearable = child.duplicate()
+				skeleton_3d.remove_child(child)
+				child.set_owner(null)  # Clear owner since we're reparenting
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
-				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
-				body_shape_skeleton_3d.add_child(new_wearable)
+				child.name = child.name.to_lower() + WEARABLE_NAME_PREFIX + category
+				body_shape_skeleton_3d.add_child(child)
 
-		# Free the instantiated wearable since we've duplicated what we need
+		# Free the now-empty wearable container
 		obj.queue_free()
 
 		match category:
