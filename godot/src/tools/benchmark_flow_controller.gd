@@ -228,7 +228,7 @@ func handle_explorer_scene(_scene):
 			log_message("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 			# Wait before teleport
-			await get_tree().create_timer(4.0).timeout
+			await get_tree().create_timer(30.0).timeout
 
 			# Teleport and wait for loading to complete
 			Global.teleport_to(next_loc.pos, next_loc.realm)
