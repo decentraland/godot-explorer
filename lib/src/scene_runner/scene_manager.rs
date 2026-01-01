@@ -939,14 +939,6 @@ impl SceneManager {
                 }
             }
 
-            // Clean up VM_HANDLES entry
-            #[cfg(feature = "use_deno")]
-            {
-                if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
-                    handles.remove(scene_id);
-                }
-            }
-
             if scene.dcl_scene.thread_join_handle.is_finished() {
                 if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
                     let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
