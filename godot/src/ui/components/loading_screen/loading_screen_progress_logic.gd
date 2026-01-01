@@ -36,7 +36,7 @@ func hide_loading_screen():
 	_hide_loading_screen()
 
 
-func _on_loading_started(_session_id: int, expected_count: int):
+func _on_loading_started(_session_id: int, _expected_count: int):
 	Global.content_provider.set_max_concurrent_downloads(6)
 
 	# Mute voice chat and scene volume during loading
@@ -48,13 +48,13 @@ func _on_loading_started(_session_id: int, expected_count: int):
 	loading_show_requested.emit()
 
 
-func _on_phase_changed(phase: String):
+func _on_phase_changed(_phase: String):
 	# Could update status text here if loading screen supports it
 	# e.g., loading_screen.set_status({"metadata": "Fetching scenes...", ...}.get(phase, "Loading..."))
 	pass
 
 
-func _on_loading_progress(percent: float, ready_count: int, total_count: int):
+func _on_loading_progress(percent: float, _ready_count: int, _total_count: int):
 	loading_screen.set_progress(percent)
 
 

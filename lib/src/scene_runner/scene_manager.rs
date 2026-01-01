@@ -320,10 +320,8 @@ impl SceneManager {
     pub fn start_loading_session(&mut self, scene_entity_ids: PackedStringArray) {
         // Cancel any existing session
         if let Some(old_session) = self.current_loading_session.take() {
-            self.base_mut().emit_signal(
-                "loading_cancelled",
-                &[(old_session.id as i64).to_variant()],
-            );
+            self.base_mut()
+                .emit_signal("loading_cancelled", &[(old_session.id as i64).to_variant()]);
         }
 
         self.next_session_id += 1;
@@ -453,7 +451,7 @@ impl SceneManager {
 
     /// Internal: Check and emit phase transition
     fn check_loading_phase_transition(&mut self) {
-        let (phase_changed, new_phase, is_complete, session_id, debug_info) = {
+        let (phase_changed, new_phase, is_complete, session_id, _debug_info) = {
             if let Some(session) = &mut self.current_loading_session {
                 let changed = session.check_phase_transition();
                 let debug = format!(

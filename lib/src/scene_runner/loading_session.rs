@@ -238,13 +238,18 @@ impl LoadingSession {
                 // Wait for asset discovery grace period
                 let grace_period_passed = self
                     .assets_phase_start
-                    .map(|start| now.duration_since(start).as_millis() >= Self::ASSET_DISCOVERY_GRACE_MS as u128)
+                    .map(|start| {
+                        now.duration_since(start).as_millis()
+                            >= Self::ASSET_DISCOVERY_GRACE_MS as u128
+                    })
                     .unwrap_or(false);
 
                 // Check if asset discovery has stabilized (no new assets registered recently)
                 let discovery_stable = self
                     .last_asset_registered
-                    .map(|last| now.duration_since(last).as_millis() >= Self::ASSET_STABLE_MS as u128)
+                    .map(|last| {
+                        now.duration_since(last).as_millis() >= Self::ASSET_STABLE_MS as u128
+                    })
                     .unwrap_or(true); // If no assets ever registered, consider stable
 
                 // Check if all registered assets are loaded

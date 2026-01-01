@@ -169,13 +169,12 @@ pub fn sync_gltf_loading_state(
                 .put(*entity, Some(pb_gltf_container_loading_state));
         }
 
-        if current_state_godot == GltfContainerLoadingState::Finished
+        if (current_state_godot == GltfContainerLoadingState::Finished
             || current_state_godot == GltfContainerLoadingState::FinishedWithError
-            || current_state_godot == GltfContainerLoadingState::NotFound
+            || current_state_godot == GltfContainerLoadingState::NotFound)
+            && scene.gltf_loading.remove(entity)
         {
-            if scene.gltf_loading.remove(entity) {
-                scene.gltf_loading_finished_count += 1;
-            }
+            scene.gltf_loading_finished_count += 1;
         }
 
         current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;

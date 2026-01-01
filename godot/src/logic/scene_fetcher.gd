@@ -618,7 +618,9 @@ func async_load_scene(
 	# - XR mode (handled separately)
 	# - Testing scene mode (handled separately)
 	# - --only-no-optimized flag (explicitly loading non-optimized scenes)
-	var skip_optimized = Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
+	var skip_optimized = (
+		Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
+	)
 
 	var download_success := false
 	var download_error: PromiseError = null
@@ -640,7 +642,12 @@ func async_load_scene(
 	if skip_optimized:
 		pass  # Scene optimization skipped (XR, testing, or --only-no-optimized)
 	elif download_error != null or not download_success:
-		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip asset=url", asset_url)
+		printerr(
+			"Scene ",
+			scene_entity_id,
+			" is not optimized, failed to download zip asset=url",
+			asset_url
+		)
 		# --only-optimized: Skip scene if it's not optimized
 		if Global.cli.only_optimized:
 			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
