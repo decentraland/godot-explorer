@@ -3,9 +3,7 @@ extends RefCounted
 
 ## Helper class for promise-based batched emote loading.
 ## Emotes have a special structure with animations that need extraction.
-
-# Tracks completed loads: file_hash -> scene_path
-var _completed_loads: Dictionary = {}
+## Scene paths are retrieved from ContentProvider's cache rather than tracked locally.
 
 
 ## Cleanup - no longer needed but kept for API compatibility.
@@ -16,8 +14,6 @@ func cleanup():
 ## Load a single emote using promise-based loading.
 ## Returns the scene_path if successful, empty string on failure.
 func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
-	_completed_loads.clear()
-
 	var emote = Global.content_provider.get_wearable(emote_urn)
 	if emote == null:
 		printerr("EmoteLoader: emote ", emote_urn, " is null")
@@ -58,7 +54,6 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 		var result = gltf_promise.get_data()
 		if result is String:
 			scene_path = result
-			_completed_loads[file_hash] = scene_path
 
 	# Wait for audio (if any)
 	if not audio_promises.is_empty():
@@ -70,8 +65,6 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 ## Load a scene emote (from SDK scene, not wearable).
 ## Returns the scene_path if successful, empty string on failure.
 func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
-	_completed_loads.clear()
-
 	# Create content mapping for the scene emote
 	var content_mapping = DclContentMappingAndUrl.from_values(
 		base_url + "contents/", {"emote.glb": glb_hash}
@@ -89,7 +82,6 @@ func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
 	if gltf_promise.is_resolved() and not gltf_promise.is_rejected():
 		var result = gltf_promise.get_data()
 		if result is String:
-			_completed_loads[glb_hash] = result
 			return result
 
 	return ""
@@ -98,9 +90,8 @@ func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
 ## Get a DclEmoteGltf from cached scene using threaded loading.
 ## Uses ContentProvider's extract_emote_from_scene which extracts animations properly.
 func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
-	var scene_path = _completed_loads.get(file_hash, "")
-	if scene_path.is_empty():
-		scene_path = Global.content_provider.get_emote_cache_path(file_hash)
+	# Get scene path from ContentProvider's cache
+	var scene_path = Global.content_provider.get_emote_cache_path(file_hash)
 
 	if scene_path.is_empty():
 		printerr("EmoteLoader: no scene_path for hash ", file_hash)

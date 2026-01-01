@@ -343,7 +343,11 @@ func _reset_skeleton_to_rest_pose():
 
 
 func _clear_owner_recursive(node: Node) -> void:
-	# Clear owner on this node and all children to prevent "inconsistent owner" warnings
+	## When duplicating a node from a PackedScene, the duplicated node and its children
+	## retain their original owner (the scene root they came from). When we add this
+	## duplicated subtree as a child of a different scene tree (the avatar), Godot warns
+	## about "inconsistent owner" because the owner no longer exists in the new tree.
+	## Clearing ownership before reparenting silences these warnings.
 	node.set_owner(null)
 	for child in node.get_children():
 		_clear_owner_recursive(child)
@@ -678,7 +682,7 @@ func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 			return ret
 		var content_mapping: DclContentMappingAndUrl = emote.get_content_mapping()
 
-		# Use signal-based emote loading (but start it here so it's loading in parallel)
+		# Start loading emote in background (fire-and-forget, we'll await via EmoteLoader later)
 		Global.content_provider.load_emote_gltf(file_name, content_mapping)
 
 		# Audio still uses promise-based loading
