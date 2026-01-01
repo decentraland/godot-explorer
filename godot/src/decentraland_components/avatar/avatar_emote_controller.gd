@@ -342,17 +342,6 @@ func _reset_skeleton_to_rest_pose():
 		skeleton.reset_bone_pose(i)
 
 
-func _clear_owner_recursive(node: Node) -> void:
-	## When duplicating a node from a PackedScene, the duplicated node and its children
-	## retain their original owner (the scene root they came from). When we add this
-	## duplicated subtree as a child of a different scene tree (the avatar), Godot warns
-	## about "inconsistent owner" because the owner no longer exists in the new tree.
-	## Clearing ownership before reparenting silences these warnings.
-	node.set_owner(null)
-	for child in node.get_children():
-		_clear_owner_recursive(child)
-
-
 func async_play_emote(emote_id_or_urn: String) -> void:
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -490,10 +479,10 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 
 	if obj.armature_prop != null:
 		if not avatar.has_node(NodePath(obj.armature_prop.name)):
-			armature_prop = obj.armature_prop.duplicate()
-
-			# Clear the owner on all nodes to avoid "inconsistent owner" warning when reparenting
-			_clear_owner_recursive(armature_prop)
+			# Take ownership of the prop node directly (no need to duplicate since
+			# DclEmoteGltf is temporary and gets garbage collected after this)
+			armature_prop = obj.armature_prop
+			armature_prop.set_owner(null)  # Clear owner since we're reparenting
 
 			# Stop and remove any AnimationPlayer on the prop to prevent independent animation
 			# The prop animation should be controlled by the avatar's AnimationTree via merged tracks
