@@ -49,7 +49,10 @@ pub fn update_gltf_container(
                 if let Some(mut gltf_node) = existing {
                     gltf_node.queue_free();
                     node_3d.remove_child(&gltf_node);
-                    scene.gltf_loading.remove(entity);
+                    // If GLTF was still loading when removed, count it as finished
+                    if scene.gltf_loading.remove(entity) {
+                        scene.gltf_loading_finished_count += 1;
+                    }
                 }
             } else if let Some(new_value) = new_value {
                 let visible_meshes_collision_mask =
@@ -66,7 +69,9 @@ pub fn update_gltf_container(
                             invisible_meshes_collision_mask.to_variant(),
                         ],
                     );
-                    scene.gltf_loading.insert(*entity);
+                    if scene.gltf_loading.insert(*entity) {
+                        scene.gltf_loading_started_count += 1;
+                    }
                 } else {
                     // TODO: preload this resource
                     let mut new_gltf = godot::tools::load::<PackedScene>(
@@ -87,7 +92,9 @@ pub fn update_gltf_container(
                     new_gltf.set_name("GltfContainer");
                     node_3d.add_child(&new_gltf.clone().upcast::<Node>());
 
-                    scene.gltf_loading.insert(*entity);
+                    if scene.gltf_loading.insert(*entity) {
+                        scene.gltf_loading_started_count += 1;
+                    }
                 }
             }
 
@@ -166,7 +173,9 @@ pub fn sync_gltf_loading_state(
             || current_state_godot == GltfContainerLoadingState::FinishedWithError
             || current_state_godot == GltfContainerLoadingState::NotFound
         {
-            scene.gltf_loading.remove(entity);
+            if scene.gltf_loading.remove(entity) {
+                scene.gltf_loading_finished_count += 1;
+            }
         }
 
         current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;

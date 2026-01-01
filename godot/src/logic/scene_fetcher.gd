@@ -244,25 +244,29 @@ func _async_on_desired_scene_changed():
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
+	# Capture reloading flag - only consume it when there are scenes to load
+	# This ensures we don't lose the flag if coordinator hasn't discovered scenes yet
+	var is_reloading_now := _is_reloading
+	if not loadable_scenes.is_empty():
+		_is_reloading = false  # Only reset when we have scenes to consider
+
 	# Determine if we should show a loading screen
-	# Show loading screen ONLY when:
-	# - We have no scenes loaded AND there are scenes to load (initial load)
-	# - We're in floating islands mode (not dynamic loading)
-	# - We're NOT in dynamic loading mode
-	# - We're NOT reloading (teleport, reload_scene, etc.)
+	# Show loading screen when:
+	# - We have no scenes loaded AND there are scenes to load
+	# - We're in floating islands mode
+	# - Either NOT in dynamic loading mode, OR this is a teleport (user expects to wait)
 	var new_loading = (
 		loaded_scenes.is_empty()
 		and not loadable_scenes.is_empty()
 		and is_using_floating_islands()
-		and not _use_dynamic_loading
+		and (not _use_dynamic_loading or is_reloading_now)
 	)
 
-	# Skip loading screen for any reload scenario (teleports, scene reloads, etc.)
-	if new_loading and _is_reloading:
-		_is_reloading = false  # Reset the flag after use (one-shot)
-		new_loading = false
-
+	# Start a new loading session if we need to load scenes
+	# The loading session tracks progress through the Rust-based LoadingSession
+	var scenes_to_load: PackedStringArray = PackedStringArray()
 	var loading_promises: Array = []
+
 	for scene_id in loadable_scenes:
 		var should_load = false
 		if not loaded_scenes.has(scene_id):
@@ -277,10 +281,18 @@ func _async_on_desired_scene_changed():
 		if should_load:
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
 			if scene_definition != null:
+				scenes_to_load.append(scene_id)
 				loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
 			else:
 				printerr("should load scene_id ", scene_id, " but data is empty")
+				# Report as fetched (with null definition) so loading session can progress
+				Global.scene_runner.report_scene_fetched(scene_id)
 
+	# Start a loading session for the new scenes (cancels any existing session)
+	if scenes_to_load.size() > 0 and new_loading:
+		Global.scene_runner.start_loading_session(scenes_to_load)
+
+	# Keep the old signal for backwards compatibility
 	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
 	await PromiseUtils.async_all(loading_promises)
@@ -492,8 +504,8 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	if is_teleport:
 		_teleport_target_parcel = new_position
 
-		# Always skip loading screen for teleports (both same and different positions)
-		# Teleports are user-initiated and should feel seamless
+		# Mark as reloading to show loading screen even in dynamic loading mode
+		# This ensures scenes are properly loaded before user interaction
 		_is_reloading = true
 
 		# If teleporting to the same position, force scene processing even if we're in the same scene entity
@@ -575,6 +587,8 @@ func async_load_scene(
 				" fail getting the script code content, error message: ",
 				script_res.get_error()
 			)
+			# Still report as fetched (with error) so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
 			return PromiseUtils.resolved(false)
 
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
@@ -591,6 +605,8 @@ func async_load_scene(
 				" fail getting the main crdt content, error message: ",
 				res.get_error()
 			)
+			# Still report as fetched (with error) so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
 			return PromiseUtils.resolved(false)
 
 	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
@@ -598,24 +614,33 @@ func async_load_scene(
 		"%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
 	)
 
-	# Check if optimized zip already exists to avoid re-download hang
-	var zip_file_path = "user://content/" + scene_hash_zip
-	var download_res = null
-	if FileAccess.file_exists(zip_file_path):
-		download_res = true  # Pretend success since file exists
-	else:
-		var download_promise: Promise = Global.content_provider.fetch_file_by_url(
-			scene_hash_zip, asset_url
-		)
-		download_res = await PromiseUtils.async_awaiter(download_promise)
+	# Skip optimized zip download when:
+	# - XR mode (handled separately)
+	# - Testing scene mode (handled separately)
+	# - --only-no-optimized flag (explicitly loading non-optimized scenes)
+	var skip_optimized = Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
 
-	if Global.is_xr() or Global.get_testing_scene_mode():
-		pass  # Scene optimization skipped (XR/testing mode)
-	elif download_res is PromiseError:
+	var download_res = null
+	if not skip_optimized:
+		# Check if optimized zip already exists to avoid re-download hang
+		var zip_file_path = "user://content/" + scene_hash_zip
+		if FileAccess.file_exists(zip_file_path):
+			download_res = true  # Pretend success since file exists
+		else:
+			var download_promise: Promise = Global.content_provider.fetch_file_by_url(
+				scene_hash_zip, asset_url
+			)
+			download_res = await PromiseUtils.async_awaiter(download_promise)
+
+	if skip_optimized:
+		pass  # Scene optimization skipped (XR, testing, or --only-no-optimized)
+	elif download_res == null or download_res is PromiseError:
 		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
 		# --only-optimized: Skip scene if it's not optimized
 		if Global.cli.only_optimized:
 			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
+			# Still report as fetched so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
 			loaded_scenes.erase(scene_entity_id)
 			return PromiseUtils.resolved(false)
 	else:
@@ -640,7 +665,12 @@ func async_load_scene(
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
 		printerr("Scene was removed while loading:", scene_entity_id)
+		# Still report as fetched so loading session can progress
+		Global.scene_runner.report_scene_fetched(scene_entity_id)
 		return PromiseUtils.resolved(false)
+
+	# Report that this scene's metadata/content has been fetched
+	Global.scene_runner.report_scene_fetched(scene_entity_id)
 
 	var scene_in_dict = loaded_scenes[scene_entity_id]
 	_on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)

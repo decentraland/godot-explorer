@@ -140,14 +140,15 @@ func _wait_for_loading_with_timeout(timeout_seconds: float) -> bool:
 	if not is_instance_valid(explorer):
 		return false
 
-	var loading_ui = explorer.get_node_or_null("CanvasLayer/LoadingScreen")
+	# Loading screen is at UI/Loading in the explorer scene
+	var loading_ui = explorer.get_node_or_null("UI/Loading")
 
 	# Wait for loading screen to appear (might take a frame)
 	await get_tree().create_timer(0.1).timeout
 
 	# Now wait for it to complete
 	while Time.get_ticks_msec() - start < timeout_ms:
-		loading_ui = explorer.get_node_or_null("CanvasLayer/LoadingScreen")
+		loading_ui = explorer.get_node_or_null("UI/Loading")
 		if loading_ui == null or not loading_ui.visible:
 			return true
 		await get_tree().create_timer(0.2).timeout
@@ -164,7 +165,8 @@ func _wait_for_loading_complete():
 	if not is_instance_valid(explorer):
 		return
 
-	var loading_ui = explorer.get_node_or_null("CanvasLayer/LoadingScreen")
+	# Loading screen is at UI/Loading in the explorer scene
+	var loading_ui = explorer.get_node_or_null("UI/Loading")
 	if loading_ui != null and loading_ui.visible:
 		await Global.loading_finished
 	else:

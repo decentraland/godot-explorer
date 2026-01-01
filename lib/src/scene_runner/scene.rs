@@ -202,6 +202,12 @@ pub struct Scene {
     pub content_mapping: ContentMappingAndUrlRef,
 
     pub gltf_loading: HashSet<SceneEntityId>,
+    /// Count of GLTF entities that started loading (for loading session tracking)
+    pub gltf_loading_started_count: u32,
+    /// Count of GLTF entities that finished loading (for loading session tracking)
+    pub gltf_loading_finished_count: u32,
+    /// Whether this scene has been reported as ready to the loading session
+    pub loading_reported_ready: bool,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
     pub trigger_area_results: Vec<(
         SceneEntityId,
@@ -335,6 +341,9 @@ impl Scene {
             next_tick_us: 0,
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
+            gltf_loading_started_count: 0,
+            gltf_loading_finished_count: 0,
+            loading_reported_ready: false,
             pointer_events_result: Vec::new(),
             trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),
@@ -403,6 +412,9 @@ impl Scene {
             next_tick_us: 0,
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
+            gltf_loading_started_count: 0,
+            gltf_loading_finished_count: 0,
+            loading_reported_ready: false,
             pointer_events_result: Vec::new(),
             trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),

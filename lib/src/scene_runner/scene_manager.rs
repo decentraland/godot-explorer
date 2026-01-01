@@ -41,6 +41,7 @@ use std::{
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
     input::InputState,
+    loading_session::LoadingSession,
     pool_manager::PoolManager,
     scene::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
@@ -112,6 +113,10 @@ pub struct SceneManager {
     // Global pool manager for all scene resources (physics areas, etc.)
     // Uses RefCell because we need interior mutability while iterating scenes
     pool_manager: RefCell<PoolManager>,
+
+    // Loading session tracking
+    current_loading_session: Option<LoadingSession>,
+    next_session_id: u64,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -128,6 +133,25 @@ impl SceneManager {
 
     #[signal]
     fn scene_killed(scene_id: i32, entity_id: GString);
+
+    // Loading session signals
+    #[signal]
+    fn loading_started(session_id: i64, expected_count: i32);
+
+    #[signal]
+    fn loading_phase_changed(phase: GString);
+
+    #[signal]
+    fn loading_progress(percent: f32, ready: i32, total: i32);
+
+    #[signal]
+    fn loading_complete(session_id: i64);
+
+    #[signal]
+    fn loading_timeout(session_id: i64);
+
+    #[signal]
+    fn loading_cancelled(session_id: i64);
 
     // Testing a comment for the API
     #[func]
@@ -248,6 +272,12 @@ impl SceneManager {
 
         self.compute_scene_distance();
 
+        // Report to loading session that this scene was spawned (with 0 expected assets initially)
+        // The expected assets will be updated as GLTF containers are created
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_scene_spawned(new_scene_id, 0);
+        }
+
         self.base_mut().call_deferred(
             "emit_signal",
             &[
@@ -281,6 +311,307 @@ impl SceneManager {
             }
         }
     }
+
+    // ============== Loading Session API ==============
+
+    /// Start a new loading session for the given scene entity IDs.
+    /// Any existing session is automatically cancelled.
+    #[func]
+    pub fn start_loading_session(&mut self, scene_entity_ids: PackedStringArray) {
+        // Cancel any existing session
+        if let Some(old_session) = self.current_loading_session.take() {
+            self.base_mut().emit_signal(
+                "loading_cancelled",
+                &[(old_session.id as i64).to_variant()],
+            );
+        }
+
+        self.next_session_id += 1;
+        let ids: Vec<String> = scene_entity_ids
+            .as_slice()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+
+        let count = ids.len() as i32;
+        let session_id = self.next_session_id as i64;
+
+        // Handle empty case - complete immediately
+        if ids.is_empty() {
+            self.base_mut()
+                .emit_signal("loading_complete", &[session_id.to_variant()]);
+            return;
+        }
+
+        let session = LoadingSession::new(self.next_session_id, ids);
+        self.current_loading_session = Some(session);
+
+        self.base_mut().emit_signal(
+            "loading_started",
+            &[session_id.to_variant(), count.to_variant()],
+        );
+        self.base_mut().emit_signal(
+            "loading_phase_changed",
+            &[GString::from("metadata").to_variant()],
+        );
+    }
+
+    /// Report that a scene entity's metadata was fetched
+    #[func]
+    pub fn report_scene_fetched(&mut self, scene_entity_id: GString) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_scene_fetched(&scene_entity_id.to_string());
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+    }
+
+    /// Report that a scene was spawned and is now loading assets
+    #[func]
+    pub fn report_scene_spawned(&mut self, scene_id: i32, expected_assets: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_scene_spawned(SceneId(scene_id), expected_assets.max(0) as u32);
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+    }
+
+    /// Report that an asset started loading for a scene
+    #[func]
+    pub fn report_asset_loading_started(&mut self, scene_id: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_asset_loading_started(SceneId(scene_id));
+            // Don't emit progress here - this increases the denominator
+            // Progress will be emitted when assets complete
+        }
+    }
+
+    /// Report that an asset finished loading for a scene
+    #[func]
+    pub fn report_asset_loaded(&mut self, scene_id: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_asset_loaded(SceneId(scene_id));
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+    }
+
+    /// Report that a scene is fully ready (tick >= 4 and all GLTF loaded)
+    #[func]
+    pub fn report_scene_ready(&mut self, scene_id: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_scene_ready(SceneId(scene_id));
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+    }
+
+    /// Report that a scene encountered an error (treat as ready to not block)
+    #[func]
+    pub fn report_scene_error(&mut self, scene_id: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_scene_error(SceneId(scene_id));
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+    }
+
+    /// Cancel the current loading session
+    #[func]
+    pub fn cancel_loading_session(&mut self) {
+        if let Some(session) = self.current_loading_session.take() {
+            self.base_mut()
+                .emit_signal("loading_cancelled", &[(session.id as i64).to_variant()]);
+        }
+    }
+
+    /// Check if there's an active loading session
+    #[func]
+    pub fn has_active_loading_session(&self) -> bool {
+        self.current_loading_session.is_some()
+    }
+
+    /// Get the current loading progress (0-100)
+    #[func]
+    pub fn get_loading_progress(&mut self) -> f32 {
+        if let Some(session) = &mut self.current_loading_session {
+            session.calculate_progress()
+        } else {
+            100.0
+        }
+    }
+
+    /// Get the current loading phase as a string
+    #[func]
+    pub fn get_loading_phase(&self) -> GString {
+        if let Some(session) = &self.current_loading_session {
+            GString::from(session.phase.as_str())
+        } else {
+            GString::from("idle")
+        }
+    }
+
+    /// Internal: Check and emit phase transition
+    fn check_loading_phase_transition(&mut self) {
+        let (phase_changed, new_phase, is_complete, session_id, debug_info) = {
+            if let Some(session) = &mut self.current_loading_session {
+                let changed = session.check_phase_transition();
+                let debug = format!(
+                    "phase={:?} expected={} fetched={} spawned={} ready={} assets_exp={:?} assets_loaded={:?}",
+                    session.phase,
+                    session.expected_scene_entities.len(),
+                    session.fetched_scene_entities.len(),
+                    session.spawned_scenes.len(),
+                    session.ready_scenes.len(),
+                    session.expected_assets,
+                    session.loaded_assets,
+                );
+                (
+                    changed,
+                    session.phase,
+                    session.is_complete(),
+                    session.id as i64,
+                    debug,
+                )
+            } else {
+                return;
+            }
+        };
+
+        if phase_changed {
+            self.base_mut().emit_signal(
+                "loading_phase_changed",
+                &[GString::from(new_phase.as_str()).to_variant()],
+            );
+        }
+
+        if is_complete {
+            self.current_loading_session = None;
+            self.base_mut()
+                .emit_signal("loading_complete", &[session_id.to_variant()]);
+        }
+    }
+
+    /// Internal: Emit loading progress
+    fn emit_loading_progress(&mut self) {
+        if let Some(session) = &mut self.current_loading_session {
+            let progress = session.calculate_progress();
+            let (ready, total) = session.get_scene_counts();
+            self.base_mut().emit_signal(
+                "loading_progress",
+                &[
+                    progress.to_variant(),
+                    (ready as i32).to_variant(),
+                    (total as i32).to_variant(),
+                ],
+            );
+        }
+    }
+
+    /// Internal: Check loading session timeouts (called from physics_process)
+    fn check_loading_timeouts(&mut self) {
+        let (session_timed_out, timed_out_scenes, session_id) = {
+            if let Some(session) = &mut self.current_loading_session {
+                let now = Instant::now();
+                let timed_out_scenes = session.get_timed_out_scenes(now);
+
+                // Mark timed-out scenes as ready
+                if !timed_out_scenes.is_empty() {
+                    session.mark_timed_out_scenes_ready(timed_out_scenes.clone());
+                }
+
+                (
+                    session.is_session_timed_out(),
+                    timed_out_scenes,
+                    session.id as i64,
+                )
+            } else {
+                return;
+            }
+        };
+
+        // Log timed-out scenes
+        if !timed_out_scenes.is_empty() {
+            tracing::warn!(
+                "Loading session: {} scenes timed out: {:?}",
+                timed_out_scenes.len(),
+                timed_out_scenes
+            );
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+
+        // Handle session timeout
+        if session_timed_out {
+            tracing::warn!("Loading session {} timed out", session_id);
+            self.current_loading_session = None;
+            self.base_mut()
+                .emit_signal("loading_timeout", &[session_id.to_variant()]);
+        }
+    }
+
+    /// Internal: Collect loading events from scenes and update loading session
+    fn update_loading_session_from_scenes(&mut self) {
+        if self.current_loading_session.is_none() {
+            return;
+        }
+
+        // Collect all loading events from scenes
+        let mut assets_started: Vec<(SceneId, u32)> = Vec::new();
+        let mut assets_finished: Vec<(SceneId, u32)> = Vec::new();
+        let mut scenes_ready: Vec<SceneId> = Vec::new();
+
+        for (scene_id, scene) in self.scenes.iter_mut() {
+            // Skip non-alive scenes
+            if !matches!(scene.state, SceneState::Alive) {
+                continue;
+            }
+
+            // Collect GLTF loading events
+            if scene.gltf_loading_started_count > 0 {
+                assets_started.push((*scene_id, scene.gltf_loading_started_count));
+                scene.gltf_loading_started_count = 0;
+            }
+            if scene.gltf_loading_finished_count > 0 {
+                assets_finished.push((*scene_id, scene.gltf_loading_finished_count));
+                scene.gltf_loading_finished_count = 0;
+            }
+
+            // Check if scene is ready (tick >= 4 and no GLTF loading)
+            if !scene.loading_reported_ready
+                && scene.tick_number >= 4
+                && scene.gltf_loading.is_empty()
+            {
+                scene.loading_reported_ready = true;
+                scenes_ready.push(*scene_id);
+            }
+        }
+
+        // Now update the loading session with collected events
+        let session = self.current_loading_session.as_mut().unwrap();
+
+        for (scene_id, count) in assets_started {
+            for _ in 0..count {
+                session.report_asset_loading_started(scene_id);
+            }
+        }
+
+        for (scene_id, count) in assets_finished {
+            for _ in 0..count {
+                session.report_asset_loaded(scene_id);
+            }
+        }
+
+        for scene_id in scenes_ready {
+            session.report_scene_ready(scene_id);
+        }
+
+        // Check for phase transitions and emit progress
+        self.check_loading_phase_transition();
+        self.emit_loading_progress();
+    }
+
+    // ============== End Loading Session API ==============
 
     #[func]
     fn on_primary_player_trigger_emote(&mut self, emote_id: GString, looping: bool) {
@@ -528,6 +859,9 @@ impl SceneManager {
                 }
             }
         }
+
+        // Process loading session updates from all scenes
+        self.update_loading_session_from_scenes();
 
         for scene_id in self.dying_scene_ids.iter() {
             let scene = self.scenes.get_mut(scene_id).unwrap();
@@ -1194,6 +1528,8 @@ impl INode for SceneManager {
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,
             pool_manager: RefCell::new(PoolManager::new()),
+            current_loading_session: None,
+            next_session_id: 0,
         }
     }
 
@@ -1215,6 +1551,9 @@ impl INode for SceneManager {
 
     fn physics_process(&mut self, delta: f64) {
         self.scene_runner_update(delta);
+
+        // Check loading session timeouts
+        self.check_loading_timeouts();
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.
