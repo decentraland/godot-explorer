@@ -1453,6 +1453,27 @@ impl SceneManager {
             0.0
         }
     }
+
+    /// Get total Deno/V8 external memory across all scenes in MB
+    /// External memory includes: typed arrays, ArrayBuffers, native bindings
+    /// This is NOT included in used_heap_mb() and could be a significant leak source
+    #[func]
+    pub fn get_total_deno_external_memory_mb(&self) -> f64 {
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.deno_memory_stats)
+            .map(|stats| stats.external_memory_mb())
+            .sum()
+    }
+
+    /// Get count of alive scenes (with active threads)
+    #[func]
+    pub fn get_alive_scene_count(&self) -> i32 {
+        self.scenes
+            .values()
+            .filter(|scene| scene.state == SceneState::Alive)
+            .count() as i32
+    }
 }
 
 #[godot_api]

@@ -70,6 +70,7 @@ pub struct Dirty {
     pub rpc_calls: Vec<RpcCall>,
 }
 
+#[derive(PartialEq)]
 pub enum SceneState {
     Alive,
     ToKill,

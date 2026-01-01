@@ -1399,6 +1399,12 @@ impl ContentProvider {
         self.resource_provider.get_cache_total_size()
     }
 
+    /// Get current disk cache size in MiB for memory diagnostics
+    #[func]
+    pub fn get_cache_size_mb(&mut self) -> f64 {
+        self.resource_provider.get_cache_total_size() as f64 / 1_048_576.0
+    }
+
     #[func]
     pub fn get_download_speed_mbs(&self) -> f64 {
         self.download_speed_mbs
