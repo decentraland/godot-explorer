@@ -18,6 +18,7 @@ pub fn run(
     extras: Vec<String>,
     scene_tests: bool,
     client_tests: bool,
+    use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
     let program = get_godot_path();
     println!("extras: {:?}", extras);
@@ -42,9 +43,9 @@ pub fn run(
     }
 
     if itest || scene_tests || client_tests {
-        run_tests(&program, &args, scene_tests, client_tests)
+        run_tests(&program, &args, scene_tests, client_tests, use_tuned_glibc)
     } else {
-        run_godot(&program, &args)
+        run_godot(&program, &args, use_tuned_glibc)
     }
 }
 
@@ -520,12 +521,33 @@ fn run_cargo_build(
 }
 
 /// Runs Godot with the provided arguments and checks for successful exit.
-fn run_godot(program: &str, args: &[&str]) -> anyhow::Result<()> {
+fn run_godot(program: &str, args: &[&str], use_tuned_glibc: bool) -> anyhow::Result<()> {
     print_message(MessageType::Step, "Starting Godot...");
-    let status = std::process::Command::new(program)
-        .args(args)
-        .status()
-        .expect("Failed to get the status of Godot");
+
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(args);
+
+    // Apply tuned glibc malloc settings on Linux for better memory release
+    #[cfg(target_os = "linux")]
+    if use_tuned_glibc {
+        print_message(MessageType::Info, "Using tuned glibc malloc settings");
+        // Use mmap for allocations >= 128KB (released immediately on free)
+        cmd.env("MALLOC_MMAP_THRESHOLD_", "131072");
+        // Trim heap when free memory exceeds 128KB
+        cmd.env("MALLOC_TRIM_THRESHOLD_", "131072");
+        // Limit arenas to reduce fragmentation (default is 8 * num_cpus)
+        cmd.env("MALLOC_ARENA_MAX", "2");
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    if use_tuned_glibc {
+        print_message(
+            MessageType::Warning,
+            "--use-tuned-glibc is only supported on Linux",
+        );
+    }
+
+    let status = cmd.status().expect("Failed to get the status of Godot");
 
     if !status.success() {
         Err(anyhow::anyhow!(
@@ -543,6 +565,7 @@ fn run_tests(
     args: &[&str],
     scene_tests: bool,
     client_tests: bool,
+    use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
     // Prepare arguments for client tests
     let mut final_args = args.to_vec();
@@ -552,11 +575,19 @@ fn run_tests(
         final_args.push("avatar_outline"); // Run avatar outline tests by default
     }
 
-    let child = std::process::Command::new(program)
-        .args(&final_args)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("Failed to run Godot");
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(&final_args);
+    cmd.stdout(std::process::Stdio::piped());
+
+    // Apply tuned glibc malloc settings on Linux
+    #[cfg(target_os = "linux")]
+    if use_tuned_glibc {
+        cmd.env("MALLOC_MMAP_THRESHOLD_", "131072");
+        cmd.env("MALLOC_TRIM_THRESHOLD_", "131072");
+        cmd.env("MALLOC_ARENA_MAX", "2");
+    }
+
+    let child = cmd.spawn().expect("Failed to run Godot");
 
     let output = child.stdout.expect("Failed to get stdout of Godot");
     let reader = std::io::BufReader::new(output);
