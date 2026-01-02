@@ -192,6 +192,14 @@ jobs:
             echo "⚠️ No CSV file to convert"
           fi
 
+      - name: Install AWS CLI
+        if: always()
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install
+          aws --version
+
       - name: Upload CSV to S3
         if: always()
         env:
