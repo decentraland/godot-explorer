@@ -370,36 +370,47 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 // This matches Unity's: axis = (direction * Vector3.up).normalized
                 // The axis stays in DCL coordinate space (conversion happens in to_godot_transform_3d)
                 let axis = raw_direction
-                    .map(|q| q * godot::builtin::Vector3::UP)
-                    .unwrap_or(godot::builtin::Vector3::ZERO);
-                let axis_length = axis.length();
+                    .and_then(|q| {
+                        // Quaternion must be normalized for multiplication
+                        if q.is_normalized() {
+                            Some(q * godot::builtin::Vector3::UP)
+                        } else if q.length_squared() > 0.0001 {
+                            Some(q.normalized() * godot::builtin::Vector3::UP)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(godot::builtin::Vector3::UP);
 
-                if axis_length > 0.0001 {
-                    let axis_normalized = axis / axis_length;
+                // Unity: if (axis.sqrMagnitude < 1e-6f) axis = Vector3.up;
+                let axis_normalized = if axis.length_squared() > 1e-6 {
+                    axis.normalized()
+                } else {
+                    godot::builtin::Vector3::UP
+                };
 
-                    // Speed is in degrees per second, convert to radians
-                    let angle_radians = speed.to_radians() * delta_time;
+                // Speed is in degrees per second, convert to radians
+                let angle_radians = speed.to_radians() * delta_time;
 
-                    // Create rotation quaternion for this frame's rotation step
-                    let half_angle = angle_radians / 2.0;
-                    let sin_half = half_angle.sin();
-                    let cos_half = half_angle.cos();
-                    let rotation_step = godot::builtin::Quaternion::new(
-                        axis_normalized.x * sin_half,
-                        axis_normalized.y * sin_half,
-                        axis_normalized.z * sin_half,
-                        cos_half,
-                    );
+                // Create rotation quaternion for this frame's rotation step
+                let half_angle = angle_radians / 2.0;
+                let sin_half = half_angle.sin();
+                let cos_half = half_angle.cos();
+                let rotation_step = godot::builtin::Quaternion::new(
+                    axis_normalized.x * sin_half,
+                    axis_normalized.y * sin_half,
+                    axis_normalized.z * sin_half,
+                    cos_half,
+                );
 
-                    // Apply the rotation step to the current rotation
-                    let current = transform.rotation.normalized();
-                    transform.rotation = (current * rotation_step).normalized();
+                // Apply the rotation step to the current rotation
+                let current = transform.rotation.normalized();
+                transform.rotation = (current * rotation_step).normalized();
 
-                    tracing::debug!(
-                        "[Tween] RotateContinuous: entity={:?}, axis={:?}, speed={} deg/s, angle_rad={:.6}, result={:?}",
-                        entity, axis_normalized, speed, angle_radians, transform.rotation
-                    );
-                }
+                tracing::debug!(
+                    "[Tween] RotateContinuous: entity={:?}, axis={:?}, speed={} deg/s, angle_rad={:.6}, result={:?}",
+                    entity, axis_normalized, speed, angle_radians, transform.rotation
+                );
 
                 transform
             }
