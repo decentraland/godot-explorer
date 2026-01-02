@@ -361,15 +361,16 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 transform
             }
             Some(Mode::RotateContinuous(data)) => {
-                // RotateContinuous: The SDK encodes the rotation axis in (x, y, z) of the quaternion
-                // with w=0, and speed is in DEGREES per second
+                // RotateContinuous: direction is an orientation quaternion
+                // Speed is in DEGREES per second
                 let raw_direction = data.direction.clone().map(|d| d.to_godot());
                 let speed = data.speed;
 
-                // Extract axis from the quaternion's (x, y, z) components
-                // The SDK uses this as a direction vector, not a true quaternion
+                // Derive rotation axis by rotating Vector3::UP through the quaternion
+                // This matches Unity's: axis = (direction * Vector3.up).normalized
+                // The axis stays in DCL coordinate space (conversion happens in to_godot_transform_3d)
                 let axis = raw_direction
-                    .map(|d| godot::builtin::Vector3::new(d.x, d.y, d.z))
+                    .map(|q| q * godot::builtin::Vector3::UP)
                     .unwrap_or(godot::builtin::Vector3::ZERO);
                 let axis_length = axis.length();
 
