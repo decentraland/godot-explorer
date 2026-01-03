@@ -90,13 +90,16 @@ func _on_button_close_pressed():
 	_async_request_hide_menu()
 
 
+# gdlint:ignore = async-function-name
 func close():
+	# Wait for profile deploy if backpack has changes before closing
+	if selected_node == control_backpack:
+		await _async_deploy_if_has_changes()
+
 	var tween_m = create_tween()
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
 	tween_h.tween_callback(hide).set_delay(0.3)
-	if selected_node == control_backpack:
-		_async_deploy_if_has_changes()
 
 
 func show_discover():

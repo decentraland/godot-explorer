@@ -8,10 +8,11 @@ static func get_mutable_profile() -> DclUserProfile:
 	return null
 
 
-static func async_save_profile(generate_snapshots: bool = true):
+# ADR-290: Snapshots no longer uploaded
+static func async_save_profile():
 	var backpack = Global.get_backpack()
 	if backpack != null:
-		await backpack.async_save_profile(generate_snapshots)
+		await backpack.async_save_profile()
 
 
 static func has_changes() -> bool:

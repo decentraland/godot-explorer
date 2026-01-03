@@ -141,7 +141,12 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) 
 	camera_3d.rotation_degrees = DEFAULT_ROTATION if not face else Vector3(0.0, 180.0, 0.0)
 	camera_3d.fov = fov
 
-	set_deferred("size", dest_size)
+	# Store original values to restore after capture
+	var original_stretch = stretch
+	var original_size = size
+
+	# Disable stretch to allow manual SubViewport sizing
+	stretch = false
 	set_size(dest_size)
 	subviewport.set_size(dest_size)
 
@@ -150,4 +155,9 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) 
 	await get_tree().process_frame
 
 	var img := subviewport.get_texture().get_image()
+
+	# Restore original stretch and size
+	stretch = original_stretch
+	set_size(original_size)
+
 	return img

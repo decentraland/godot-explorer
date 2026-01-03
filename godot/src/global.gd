@@ -519,9 +519,9 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	return await PromiseUtils.async_awaiter(response_promise)
 
 
-# Save profile without generating new snapshots (for non-visual changes)
+# Save profile (ADR-290: snapshots are no longer uploaded)
 func async_save_profile_metadata(profile: DclUserProfile):
-	await ProfileService.async_deploy_profile(profile, false)
+	await ProfileService.async_deploy_profile(profile)
 
 
 func shorten_address(address: String) -> String:

@@ -275,7 +275,7 @@ func _async_save_profile_changes() -> void:
 		ProfileHelper.get_mutable_profile().set_description(current_about_me)
 		original_about_me = current_about_me
 
-	await ProfileHelper.async_save_profile(false)
+	await ProfileHelper.async_save_profile()
 
 
 func _update_elements_visibility() -> void:
@@ -768,7 +768,7 @@ func _async_on_button_links_save_pressed():
 		if child.is_in_group("profile_link_buttons"):
 			links_to_save.append({"title": child.text, "url": child.url})
 	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	await ProfileHelper.async_save_profile(false)
+	await ProfileHelper.async_save_profile()
 	_turn_links_editing(false)
 
 

@@ -197,13 +197,20 @@ impl DclAvatarWireFormat {
         self.inner.emotes = Some(emotes_vec);
     }
 
+    // ADR-290: set_snapshots for LOCAL use only - snapshots are no longer uploaded to server.
+    // This stores locally generated snapshots for immediate display in the UI.
+    // The profile-images service generates snapshots on-demand for other users.
     #[func]
     fn set_snapshots(&mut self, face256: GString, body: GString) {
+        // Use "local:" prefix to indicate these are locally stored files
+        // The content provider will find them by hash in the local content folder
+        let face_local_url = format!("local:{}", face256);
+        let body_local_url = format!("local:{}", body);
         self.inner.snapshots = Some(AvatarSnapshots {
             face256: face256.to_string(),
             body: body.to_string(),
-            body_url: None,
-            face_url: None,
+            body_url: Some(body_local_url),
+            face_url: Some(face_local_url),
         });
     }
 

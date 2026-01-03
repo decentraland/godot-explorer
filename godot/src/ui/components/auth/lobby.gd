@@ -135,11 +135,8 @@ func show_avatar_create_screen():
 	show_panel(control_backpack)
 
 
-func async_close_sign_in(generate_snapshots: bool = true):
-	if generate_snapshots:
-		var avatar := current_profile.get_avatar()
-		await backpack.async_prepare_snapshots(avatar, current_profile)
-
+# ADR-290: Snapshots no longer uploaded
+func async_close_sign_in():
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
@@ -221,9 +218,66 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 	)
 
 
+# ADR-290: Generate local snapshots if the server doesn't provide them
+func _async_generate_local_snapshots_if_needed(profile: DclUserProfile):
+	var avatar = profile.get_avatar()
+	var face_url = avatar.get_snapshots_face_url()
+
+	# If snapshots are already available (from server or locally), skip generation
+	if not face_url.is_empty():
+		return
+
+	# Store original parent and settings
+	var original_parent = avatar_preview.get_parent()
+	var original_show_platform = avatar_preview.show_platform
+	var original_hide_name = avatar_preview.hide_name
+	var original_can_move = avatar_preview.can_move
+
+	# Reparent to root to ensure visibility (parent panels might be hidden during sign-in)
+	avatar_preview.reparent(get_tree().root)
+	avatar_preview.set_position(get_tree().root.get_visible_rect().size)
+	avatar_preview.show()
+
+	# Configure for snapshot capture
+	avatar_preview.show_platform = false
+	avatar_preview.hide_name = true
+	avatar_preview.can_move = false
+
+	# Wait for avatar to fully render
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var face = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 25)
+	var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
+
+	# Restore original parent and settings
+	avatar_preview.reparent(original_parent)
+	avatar_preview.show_platform = original_show_platform
+	avatar_preview.hide_name = original_hide_name
+	avatar_preview.can_move = original_can_move
+
+	var body_data: PackedByteArray = body.save_png_to_buffer()
+	var body_hash = DclHashing.hash_v1(body_data)
+	await PromiseUtils.async_awaiter(Global.content_provider.store_file(body_hash, body_data))
+
+	var face_data: PackedByteArray = face.save_png_to_buffer()
+	var face_hash = DclHashing.hash_v1(face_data)
+	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
+
+	# Store local snapshot hashes for UI display
+	avatar.set_snapshots(face_hash, body_hash)
+	profile.set_avatar(avatar)
+
+	# Notify UI components that the profile has updated snapshots
+	Global.player_identity.set_profile(profile)
+
+
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+
+	# ADR-290: Generate local snapshots if not available from server
+	await _async_generate_local_snapshots_if_needed(new_profile)
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -319,11 +373,10 @@ func _on_button_next_pressed():
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
-	await backpack.async_prepare_snapshots(avatar, current_profile)
-
+	# ADR-290: Snapshots are no longer generated/uploaded by clients
 	current_profile.set_avatar(avatar)
 
-	await ProfileService.async_deploy_profile(current_profile, true)
+	await ProfileService.async_deploy_profile(current_profile)
 
 	show_auth_home_screen()
 
