@@ -69,7 +69,7 @@ func _ready() -> void:
 	_hide_all_drowpdown_highlights()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
-	_on_button_nearby_toggled(true)
+	toggle_nearby()
 
 	_connect_social_service_signals()
 
@@ -219,13 +219,22 @@ func _on_button_friends_toggled(toggled_on: bool) -> void:
 
 func _on_button_nearby_toggled(toggled_on: bool) -> void:
 	if toggled_on:
-		_hide_all()
-		color_rect_nearby.self_modulate = Color.WHITE
-		scroll_container_nearby.show()
+		# nearby_menu_opened metric
+		Global.metrics.track_click_button("nearby_menu_opened", "SOCIAL_PANEL", "")
+		toggle_nearby()
+
+
+func toggle_nearby() -> void:
+	_hide_all()
+	color_rect_nearby.self_modulate = Color.WHITE
+	scroll_container_nearby.show()
 
 
 func _on_button_blocked_toggled(toggled_on: bool) -> void:
 	if toggled_on:
+		# blocked_menu_opened metric
+		Global.metrics.track_click_button("blocked_menu_opened", "SOCIAL_PANEL", "")
+
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE
 		scroll_container_blocked.show()

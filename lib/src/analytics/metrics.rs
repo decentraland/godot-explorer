@@ -52,6 +52,9 @@ pub struct Metrics {
     // Static mobile device info (fetched once at ready)
     device_info: Option<DclMobileDeviceInfo>,
 
+    // Debug level: 0=disabled, 1=enabled (full JSON output)
+    debug_level: u8,
+
     base: Base<Node>,
 }
 
@@ -70,6 +73,7 @@ impl INode for Metrics {
             serialized_events: Vec::new(),
             mobile_platform: None,
             device_info: None,
+            debug_level: 0,
             base,
         }
     }
@@ -125,6 +129,7 @@ impl Metrics {
             serialized_events: Vec::new(),
             mobile_platform: None,
             device_info: None,
+            debug_level: 0,
             base,
         })
     }
@@ -142,12 +147,14 @@ impl Metrics {
 
     #[func]
     pub fn update_position(&mut self, position: String) {
-        self.events.push(SegmentEvent::ExplorerMoveToParcel(
+        let event = SegmentEvent::ExplorerMoveToParcel(
             position.clone(),
             SegmentEventExplorerMoveToParcel {
                 old_parcel: self.common.position.clone(),
             },
-        ));
+        );
+        self.events.push(event.clone());
+        self.debug_print_event("Explorer Move To Parcel", &event);
         self.common.position = position;
     }
 
@@ -163,24 +170,25 @@ impl Metrics {
         community_id: String,
         screen_name: String,
     ) {
-        self.events
-            .push(SegmentEvent::ChatMessageSent(SegmentEventChatMessageSent {
-                length,
-                channel,
-                is_command,
-                is_private,
-                community_id: if community_id.is_empty() {
-                    None
-                } else {
-                    Some(community_id)
-                },
-                is_mention,
-                screen_name: if screen_name.is_empty() {
-                    None
-                } else {
-                    Some(screen_name)
-                },
-            }));
+        let event = SegmentEvent::ChatMessageSent(SegmentEventChatMessageSent {
+            length,
+            channel,
+            is_command,
+            is_private,
+            community_id: if community_id.is_empty() {
+                None
+            } else {
+                Some(community_id)
+            },
+            is_mention,
+            screen_name: if screen_name.is_empty() {
+                None
+            } else {
+                Some(screen_name)
+            },
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Chat Message Sent", &event);
     }
 
     #[func]
@@ -190,29 +198,31 @@ impl Metrics {
         screen_name: String,
         extra_properties: String,
     ) {
-        self.events
-            .push(SegmentEvent::ClickButton(SegmentEventClickButton {
-                button_text,
-                screen_name,
-                extra_properties: if extra_properties.is_empty() {
-                    None
-                } else {
-                    Some(extra_properties)
-                },
-            }));
+        let event = SegmentEvent::ClickButton(SegmentEventClickButton {
+            button_text,
+            screen_name,
+            extra_properties: if extra_properties.is_empty() {
+                None
+            } else {
+                Some(extra_properties)
+            },
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Click Button", &event);
     }
 
     #[func]
     pub fn track_screen_viewed(&mut self, screen_name: String, extra_properties: String) {
-        self.events
-            .push(SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
-                screen_name,
-                extra_properties: if extra_properties.is_empty() {
-                    None
-                } else {
-                    Some(extra_properties)
-                },
-            }));
+        let event = SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
+            screen_name,
+            extra_properties: if extra_properties.is_empty() {
+                None
+            } else {
+                Some(extra_properties)
+            },
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Screen Viewed", &event);
     }
 
     #[func]
@@ -221,6 +231,22 @@ impl Metrics {
 
         // Process all events with ignore_batch_limit = true
         self.process_and_send_events(true);
+    }
+
+    #[func]
+    pub fn set_debug_level(&mut self, level: u8) {
+        self.debug_level = level.min(1); // Clamp to 0-1
+
+        if self.debug_level == 1 {
+            tracing::info!("Metrics debug mode enabled");
+        } else {
+            tracing::info!("Metrics debug mode disabled");
+        }
+    }
+
+    #[func]
+    pub fn get_debug_level(&self) -> u8 {
+        self.debug_level
     }
 
     fn process_and_send_events(&mut self, ignore_batch_limit: bool) {
@@ -299,6 +325,22 @@ impl Metrics {
 }
 
 impl Metrics {
+    /// Print debug information for a queued event (full JSON when enabled)
+    fn debug_print_event(&self, event_name: &str, event: &SegmentEvent) {
+        if self.debug_level == 0 {
+            return; // Disabled
+        }
+
+        // Build the complete event as it would be sent to Segment
+        let event_body =
+            build_segment_event_batch_item(self.user_id.clone(), &self.common, event.clone());
+
+        let json = serde_json::to_string_pretty(&event_body)
+            .unwrap_or_else(|e| format!("<serialization error: {}>", e));
+
+        tracing::info!("[Metrics] Event queued: {}\n{}", event_name, json);
+    }
+
     fn populate_event_metrics(&self, event: &mut SegmentEvent) {
         if let SegmentEvent::PerformanceMetrics(metrics) = event {
             // Fetch dynamic mobile metrics ONLY when event is about to be sent

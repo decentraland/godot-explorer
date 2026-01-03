@@ -203,6 +203,7 @@ func _ready():
 	var session_id := DclConfig.generate_uuid_v4()
 	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
+	self.metrics.set_debug_level(0)  # 0 off - 1 on
 	self.metrics.set_name("metrics")
 
 	var sentry_user = SentryUser.new()

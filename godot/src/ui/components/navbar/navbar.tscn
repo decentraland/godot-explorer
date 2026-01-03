@@ -323,5 +323,4 @@ toggle_mode = true
 flat = true
 
 [connection signal="pressed" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Control/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_pressed"]
-[connection signal="toggled" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Control/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_toggled"]
 [connection signal="toggled" from="Control/Button" to="." method="_on_button_toggled"]

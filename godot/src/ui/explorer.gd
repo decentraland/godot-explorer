@@ -153,6 +153,11 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
+	# LOADING_START metric
+	var loading_data = {
+		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
+	}
+	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 	# --spawn-avatars
 	if Global.cli.spawn_avatars:
@@ -441,6 +446,14 @@ func _on_panel_chat_submit_message(message: String):
 			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
+			# LOADING_START metric
+			var loading_data = {
+				"position": str(Global.scene_fetcher.current_position),
+				"realm": params[1],
+				"when": "on_changerealm"
+			}
+			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
@@ -483,6 +496,13 @@ func move_to(position: Vector3, skip_loading: bool):
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 			loading_ui.enable_loading_screen()
+			# LOADING_START metric
+			var loading_data = {
+				"position": str(position),
+				"realm": Global.realm.get_realm_string(),
+				"when": "on_moveto"
+			}
+			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
@@ -874,7 +894,6 @@ func _on_discover_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	navbar.set_manually_hidden(true)
-	control_menu.show_discover()
 	release_mouse()
 
 

@@ -65,7 +65,7 @@ func _ready():
 	self.modulate = Color(1, 1, 1, 1)
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	if !is_in_game:
-		Global.metrics.track_screen_viewed(current_screen_name, "")
+		Global.metrics.track_screen_viewed(current_screen_name, '{"function": "ready"}')
 		Global.metrics.flush()
 
 	selected_node = control_discover

@@ -50,6 +50,7 @@ func enable_loading_screen():
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
 	Global.loading_started.emit()
+
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
 
@@ -167,6 +168,17 @@ func _on_timer_check_progress_timeout_timeout():
 			Tween.TRANS_ELASTIC
 		)
 		popup_warning.show()
+
+		# LOADING_TIMEOUT metric
+		var timeout_data = {
+			"loaded_resources": loaded_resources,
+			"loading_resources": loading_resources,
+			"download_speed_mbs": download_speed_mbs,
+			"scene_id": str(Global.scene_fetcher.current_scene_entity_id),
+			"inactive_seconds": inactive_seconds
+		}
+		Global.metrics.track_screen_viewed("LOADING_TIMEOUT", JSON.stringify(timeout_data))
+
 		timer_check_progress_timeout.stop()
 
 
@@ -181,11 +193,17 @@ func async_hide_popup_warning():
 
 
 func _on_button_continue_pressed():
+	# LOADING_RUNANYWAY metric
+	Global.metrics.track_click_button("run_anyway", "LOADING", "")
+
 	loading_screen_progress_logic.hide_loading_screen()
 	async_hide_popup_warning()
 
 
 func _on_button_reload_pressed():
+	# LOADING_RELOAD metric
+	Global.metrics.track_click_button("reload", "LOADING", "")
+
 	Global.realm.async_set_realm(Global.realm.get_realm_string())
 	async_hide_popup_warning()
 

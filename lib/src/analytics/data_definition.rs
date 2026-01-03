@@ -46,6 +46,7 @@ impl SegmentEventCommonExplorerFields {
     }
 }
 
+#[derive(Clone)]
 pub enum SegmentEvent {
     PerformanceMetrics(Box<SegmentEventPerformanceMetrics>),
     ExplorerError(SegmentEventExplorerError),
@@ -57,7 +58,7 @@ pub enum SegmentEvent {
     ScreenViewed(SegmentEventScreenViewed),
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventPerformanceMetrics {
     // Total number of frames measured for this event.
     pub samples: u32,
@@ -147,7 +148,7 @@ pub struct SegmentEventPerformanceMetrics {
     pub average_jsheap_mb: Option<f32>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventExplorerError {
     // Generic or Fatal.
     error_type: String,
@@ -157,7 +158,7 @@ pub struct SegmentEventExplorerError {
     error_stack: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventExplorerSceneLoadTimes {
     // Unique hash for the scene.
     scene_hash: String,
@@ -168,13 +169,13 @@ pub struct SegmentEventExplorerSceneLoadTimes {
 }
 
 // TODO: maybe important what realm?
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventExplorerMoveToParcel {
     // Parcel where the user is coming from.
     pub old_parcel: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventSystemInfoReport {
     // Processor used by the user.
     processor_type: String,
@@ -188,7 +189,7 @@ pub struct SegmentEventSystemInfoReport {
     system_memory_size_mb: u32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventChatMessageSent {
     // Length of the message sent.
     pub length: u32,
@@ -208,7 +209,7 @@ pub struct SegmentEventChatMessageSent {
     pub screen_name: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventClickButton {
     // Text of the button clicked.
     pub button_text: String,
@@ -219,7 +220,7 @@ pub struct SegmentEventClickButton {
     pub extra_properties: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct SegmentEventScreenViewed {
     // Name of the screen viewed.
     pub screen_name: String,
