@@ -13,8 +13,8 @@ use crate::{
 };
 use godot::{
     classes::{
-        mesh::PrimitiveType, AnimatableBody3D, ArrayMesh, BoxShape3D, CollisionShape3D,
-        CylinderShape3D, Shape3D, SphereShape3D,
+        mesh::PrimitiveType, ArrayMesh, BoxShape3D, CollisionShape3D, CylinderShape3D, Shape3D,
+        SphereShape3D, StaticBody3D,
     },
     prelude::*,
 };
@@ -208,14 +208,14 @@ fn build_cylinder_arrays(radius_top: f32, radius_bottom: f32) -> VarArray {
 }
 
 pub fn create_or_update_mesh(
-    animatable_body_3d: &mut Gd<AnimatableBody3D>,
+    static_body_3d: &mut Gd<StaticBody3D>,
     mesh_collider: &PbMeshCollider,
 ) {
-    if animatable_body_3d.get_child_count() == 0 {
+    if static_body_3d.get_child_count() == 0 {
         return;
     }
 
-    let mut collision_shape = if let Some(maybe_shape) = animatable_body_3d.get_child(0) {
+    let mut collision_shape = if let Some(maybe_shape) = static_body_3d.get_child(0) {
         if let Ok(shape) = maybe_shape.try_cast::<CollisionShape3D>() {
             shape
         } else {
@@ -300,8 +300,8 @@ pub fn create_or_update_mesh(
     };
 
     collision_shape.set_shape(&godot_shape);
-    animatable_body_3d.set_collision_layer(collision_mask);
-    animatable_body_3d.set_collision_mask(0);
+    static_body_3d.set_collision_layer(collision_mask);
+    static_body_3d.set_collision_mask(0);
 }
 
 pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -320,7 +320,7 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<AnimatableBody3D>("MeshCollider");
+            let existing = node_3d.try_get_node_as::<StaticBody3D>("MeshCollider");
 
             if new_value.is_none() {
                 if let Some(mut mesh_collider_node) = existing {
@@ -328,26 +328,25 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     node_3d.remove_child(&mesh_collider_node.upcast::<Node>());
                 }
             } else if let Some(new_value) = new_value {
-                let (mut animatable_body_3d, add_to_base) = match existing {
-                    Some(animatable_body_3d) => (animatable_body_3d, false),
+                let (mut static_body_3d, add_to_base) = match existing {
+                    Some(static_body_3d) => (static_body_3d, false),
                     None => {
-                        let mut body = AnimatableBody3D::new_alloc();
+                        let mut body = StaticBody3D::new_alloc();
 
-                        body.set("sync_to_physics", &Variant::from(false));
                         body.add_child(&CollisionShape3D::new_alloc().upcast::<Node>());
 
                         (body, true)
                     }
                 };
 
-                create_or_update_mesh(&mut animatable_body_3d, &new_value);
+                create_or_update_mesh(&mut static_body_3d, &new_value);
 
                 if add_to_base {
-                    animatable_body_3d.set_name("MeshCollider");
-                    animatable_body_3d.set_meta("dcl_entity_id", &(entity.as_i32()).to_variant());
-                    animatable_body_3d.set_meta("dcl_scene_id", &(scene.scene_id.0).to_variant());
+                    static_body_3d.set_name("MeshCollider");
+                    static_body_3d.set_meta("dcl_entity_id", &(entity.as_i32()).to_variant());
+                    static_body_3d.set_meta("dcl_scene_id", &(scene.scene_id.0).to_variant());
 
-                    node_3d.add_child(&animatable_body_3d.upcast::<Node>());
+                    node_3d.add_child(&static_body_3d.upcast::<Node>());
                 }
             }
         }

@@ -30,6 +30,7 @@ class BenchmarkMetrics:
 
         # Process info
         self.process_memory_usage_mb = float(row['process_memory_usage_mb'])
+        self.unknown_memory_mb = float(row.get('unknown_memory_mb', 0))
 
         # Memory metrics
         self.godot_static_memory_mb = float(row['godot_static_memory_mb'])
@@ -156,6 +157,7 @@ def format_individual_report(metrics: BenchmarkMetrics, baseline: Optional[Bench
 
     if baseline:
         report.append(f"| **Process Memory Usage (RSS)** | **{format_change(metrics.process_memory_usage_mb, baseline.process_memory_usage_mb)} MiB** |\n")
+        report.append(f"| **Unknown Memory (untracked)** | **{format_change(metrics.unknown_memory_mb, baseline.unknown_memory_mb)} MiB** |\n")
         report.append(f"| Godot Static Memory | {format_change(metrics.godot_static_memory_mb, baseline.godot_static_memory_mb)} MiB |\n")
         report.append(f"| Godot Peak Memory | {format_change(metrics.godot_static_memory_peak_mb, baseline.godot_static_memory_peak_mb)} MiB |\n")
         report.append(f"| GPU Video RAM | {format_change(metrics.gpu_video_ram_mb, baseline.gpu_video_ram_mb)} MiB |\n")
@@ -165,6 +167,7 @@ def format_individual_report(metrics: BenchmarkMetrics, baseline: Optional[Bench
         report.append(f"| Rust Total Allocated | {format_change(metrics.rust_total_allocated_mb, baseline.rust_total_allocated_mb)} MiB |\n")
     else:
         report.append(f"| **Process Memory Usage (RSS)** | **{metrics.process_memory_usage_mb:.2f} MiB ({metrics.process_memory_usage_mb / 1024.0:.2f} GiB)** |\n")
+        report.append(f"| **Unknown Memory (untracked)** | **{metrics.unknown_memory_mb:.2f} MiB** |\n")
         report.append(f"| Godot Static Memory | {metrics.godot_static_memory_mb:.2f} MiB |\n")
         report.append(f"| Godot Peak Memory | {metrics.godot_static_memory_peak_mb:.2f} MiB |\n")
         report.append(f"| GPU Video RAM | {metrics.gpu_video_ram_mb:.2f} MiB |\n")
@@ -271,26 +274,19 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
 
     report.append("\n---\n")
 
-    # Table of Contents
-    report.append("\n## Table of Contents\n")
-    for i, metrics in enumerate(metrics_list, 1):
-        anchor = metrics.test_name.lower().replace(' ', '-').replace('_', '-')
-        report.append(f"\n{i}. [{metrics.test_name}](#test-{i}-{anchor})")
-    report.append("\n\n---\n")
-
     # Summary Overview
     report.append("\n## Summary Overview\n")
 
     # Memory Metrics
     report.append("\n### Memory Metrics\n")
-    report.append("\n| Test | Process RSS (MiB) | Godot Static (MiB) | GPU VRAM (MiB) | Rust Heap (MiB) | Deno Total (MiB) |\n")
-    report.append("|------|-------------------|-------------------|----------------|-----------------|------------------|\n")
+    report.append("\n| Test | Process RSS (MiB) | Unknown (MiB) | Godot Static (MiB) | GPU VRAM (MiB) | Rust Heap (MiB) | Deno Total (MiB) |\n")
+    report.append("|------|-------------------|---------------|-------------------|----------------|-----------------|------------------|\n")
     for metrics in metrics_list:
         baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
         if baseline:
-            report.append(f"| {metrics.test_name} | {format_change(metrics.process_memory_usage_mb, baseline.process_memory_usage_mb)} | {format_change(metrics.godot_static_memory_mb, baseline.godot_static_memory_mb)} | {format_change(metrics.gpu_video_ram_mb, baseline.gpu_video_ram_mb)} | {format_change(metrics.rust_heap_usage_mb, baseline.rust_heap_usage_mb)} | {format_change(metrics.deno_total_memory_mb, baseline.deno_total_memory_mb)} |\n")
+            report.append(f"| {metrics.test_name} | {format_change(metrics.process_memory_usage_mb, baseline.process_memory_usage_mb)} | {format_change(metrics.unknown_memory_mb, baseline.unknown_memory_mb)} | {format_change(metrics.godot_static_memory_mb, baseline.godot_static_memory_mb)} | {format_change(metrics.gpu_video_ram_mb, baseline.gpu_video_ram_mb)} | {format_change(metrics.rust_heap_usage_mb, baseline.rust_heap_usage_mb)} | {format_change(metrics.deno_total_memory_mb, baseline.deno_total_memory_mb)} |\n")
         else:
-            report.append(f"| {metrics.test_name} | {metrics.process_memory_usage_mb:.2f} | {metrics.godot_static_memory_mb:.2f} | {metrics.gpu_video_ram_mb:.2f} | {metrics.rust_heap_usage_mb:.2f} | {metrics.deno_total_memory_mb:.2f} |\n")
+            report.append(f"| {metrics.test_name} | {metrics.process_memory_usage_mb:.2f} | {metrics.unknown_memory_mb:.2f} | {metrics.godot_static_memory_mb:.2f} | {metrics.gpu_video_ram_mb:.2f} | {metrics.rust_heap_usage_mb:.2f} | {metrics.deno_total_memory_mb:.2f} |\n")
     report.append("\n")
 
     # Objects Summary
@@ -327,16 +323,6 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
             report.append(f"| {metrics.test_name} | {format_change_int(metrics.total_meshes, baseline.total_meshes)} | {format_change_int(metrics.total_materials, baseline.total_materials)} | {format_change_int(metrics.mesh_rid_count, baseline.mesh_rid_count)} | {format_change_int(metrics.material_rid_count, baseline.material_rid_count)} | {format_change_int(metrics.potential_dedup_count, baseline.potential_dedup_count)} |\n")
         else:
             report.append(f"| {metrics.test_name} | {metrics.total_meshes} | {metrics.total_materials} | {metrics.mesh_rid_count} | {metrics.material_rid_count} | {metrics.potential_dedup_count} |\n")
-    report.append("\n---\n")
-
-    # Detailed Test Results
-    report.append("\n## Detailed Test Results\n")
-    for i, metrics in enumerate(metrics_list, 1):
-        baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
-        report.append(f"\n### Test {i}: {metrics.test_name}\n")
-        report.append(format_individual_report(metrics, baseline))
-        report.append("\n---\n")
-
     return ''.join(report)
 
 

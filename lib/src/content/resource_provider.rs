@@ -124,6 +124,20 @@ impl ResourceProvider {
         self.remove_file(&mut existing_files, file_path).await
     }
 
+    /// Delete a file from the cache by its hash.
+    /// Returns the metadata if the file was found and deleted.
+    pub async fn delete_file_by_hash(&self, file_hash: &str) -> Option<FileMetadata> {
+        let file_path = self.cache_folder.join(file_hash);
+        let file_path = file_path.to_str().unwrap().to_string();
+        self.delete_file(&file_path).await
+    }
+
+    /// Try to delete a file by hash, ignoring errors.
+    /// Used for cleanup where files might be shared or already deleted.
+    pub async fn try_delete_file_by_hash(&self, file_hash: &str) {
+        let _ = self.delete_file_by_hash(file_hash).await;
+    }
+
     fn total_size(&self, existing_files: &HashMap<String, FileMetadata>) -> i64 {
         existing_files
             .values()
@@ -358,6 +372,20 @@ impl ResourceProvider {
         existing_files.contains_key(&absolute_file_path)
     }
 
+    /// Check if a file exists in the cache by full path.
+    pub async fn file_exists_by_path(&self, file_path: &str) -> bool {
+        let existing_files = self.existing_files.read().await;
+        existing_files.contains_key(file_path)
+    }
+
+    /// Touch a file to update its last_access time for LRU (async version).
+    pub async fn touch_file_async(&self, file_path: &str) {
+        let mut existing_files = self.existing_files.write().await;
+        if let Some(metadata) = existing_files.get_mut(file_path) {
+            metadata.last_accessed = Instant::now();
+        }
+    }
+
     pub async fn store_file(&self, file_hash: &str, bytes: &[u8]) -> Result<(), String> {
         self.ensure_initialized().await?;
         let absolute_file_path = self.cache_folder.join(file_hash);
@@ -391,6 +419,27 @@ impl ResourceProvider {
         .await;
 
         Ok(())
+    }
+
+    /// Register a locally-created file in the cache (not downloaded).
+    /// This is used for files created by the application (e.g., processed GLTF scenes).
+    /// The file must already exist on disk.
+    pub async fn register_local_file(&self, file_path: &str, file_size: i64) {
+        if self.ensure_initialized().await.is_err() {
+            return;
+        }
+
+        let mut existing_files = self.existing_files.write().await;
+
+        // Don't register if already tracked
+        if existing_files.contains_key(file_path) {
+            self.touch_file(&mut existing_files, file_path);
+            return;
+        }
+
+        self.ensure_space_for(&mut existing_files, file_size).await;
+        self.add_file(&mut existing_files, file_path.to_string(), file_size)
+            .await;
     }
 
     pub async fn fetch_resource(

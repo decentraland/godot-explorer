@@ -39,9 +39,8 @@ var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
-# Retain promises of the current loaded wearables for avoid deletion
-var wearable_dependencies_promises = null
-var wearable_promises = null
+# Signal-based wearable loader for threaded loading
+var wearable_loader: WearableLoader = null
 
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
@@ -68,6 +67,7 @@ func _ready():
 	)
 	nickname_quad.billboard = billboard_mode
 
+	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
 
@@ -289,9 +289,9 @@ func async_fetch_wearables_dependencies():
 				async_calls.push_back(emote_promise)
 				async_calls_info.push_back(emote_urn)
 
-	wearable_dependencies_promises = await Wearables.async_load_wearables(
-		wearables_dict.keys(), body_shape_id
-	)
+	# Use signal-based wearable loading with threaded ResourceLoader
+	await wearable_loader.async_load_wearables(wearables_dict.keys(), body_shape_id)
+
 	var promises_result: Array = await PromiseUtils.async_all(async_calls)
 	for i in range(promises_result.size()):
 		if promises_result[i] is PromiseError:
@@ -300,13 +300,15 @@ func async_fetch_wearables_dependencies():
 	await async_load_wearables()
 
 
-func try_to_set_body_shape(body_shape_hash):
-	var body_shape: Node3D = Global.content_provider.get_gltf_from_hash(body_shape_hash)
+func async_try_to_set_body_shape(body_shape_hash):
+	var body_shape: Node3D = await wearable_loader.async_get_wearable_node(body_shape_hash)
 	if body_shape == null:
+		printerr("Avatar: Failed to load body shape ", body_shape_hash)
 		return
 
 	var new_skeleton = body_shape.find_child("Skeleton3D")
 	if new_skeleton == null:
+		body_shape.queue_free()
 		return
 
 	for child in body_shape_skeleton_3d.get_children():
@@ -314,15 +316,16 @@ func try_to_set_body_shape(body_shape_hash):
 			body_shape_skeleton_3d.remove_child(child)
 			child.queue_free()
 
+	# Reparent children directly (no need to duplicate since wearable_loader
+	# returns a fresh instantiated scene that we'll discard anyway)
 	for child in new_skeleton.get_children():
-		var new_child = child.duplicate()
-		new_child.name = "bodyshape_" + child.name.to_lower()
+		new_skeleton.remove_child(child)
+		child.set_owner(null)  # Clear owner since we're reparenting
+		child.name = "bodyshape_" + child.name.to_lower()
+		body_shape_skeleton_3d.add_child(child)
 
-		var resource_locker = body_shape.get_node("ResourceLocker")
-		new_child.add_child(resource_locker.duplicate())
-
-		body_shape_skeleton_3d.add_child(new_child)
-
+	# Free the now-empty body shape container
+	body_shape.queue_free()
 	_add_attach_points()
 
 
@@ -356,7 +359,8 @@ func async_load_wearables():
 			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
 		)
 		await PromiseUtils.async_all(need_to_fetch_promise)
-		wearable_promises = await Wearables.async_load_wearables(
+		# Use signal-based wearable loading with threaded ResourceLoader
+		await wearable_loader.async_load_wearables(
 			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
 		)
 
@@ -365,7 +369,7 @@ func async_load_wearables():
 			if wearable != null:
 				wearables_by_category[wearable.get_category()] = wearable
 
-	try_to_set_body_shape(
+	await async_try_to_set_body_shape(
 		Wearables.get_item_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
 	)
 	wearables_by_category.erase(Wearables.Categories.BODY_SHAPE)
@@ -380,21 +384,29 @@ func async_load_wearables():
 	for category in wearables_by_category:
 		var wearable = wearables_by_category[category]
 
-		# Skip
+		# Skip texture-based wearables (eyes, eyebrows, mouth)
 		if Wearables.is_texture(category):
 			continue
 
 		var file_hash = Wearables.get_item_main_file_hash(wearable, avatar_data.get_body_shape())
-		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
-		# Some wearables have many Skeleton3d
+		var obj = await wearable_loader.async_get_wearable_node(file_hash)
+		if obj == null:
+			printerr("Avatar: Failed to load wearable ", category, " hash: ", file_hash)
+			continue
+
+		# Reparent wearable meshes directly (no need to duplicate since wearable_loader
+		# returns a fresh instantiated scene that we'll discard anyway)
 		var wearable_skeletons = obj.find_children("Skeleton3D")
 		for skeleton_3d in wearable_skeletons:
 			for child in skeleton_3d.get_children():
-				var new_wearable = child.duplicate()
+				skeleton_3d.remove_child(child)
+				child.set_owner(null)  # Clear owner since we're reparenting
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
-				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
-				new_wearable.add_child(obj.get_node("ResourceLocker").duplicate())
-				body_shape_skeleton_3d.add_child(new_wearable)
+				child.name = child.name.to_lower() + WEARABLE_NAME_PREFIX + category
+				body_shape_skeleton_3d.add_child(child)
+
+		# Free the now-empty wearable container
+		obj.queue_free()
 
 		match category:
 			Wearables.Categories.UPPER_BODY:
@@ -457,15 +469,20 @@ func async_load_wearables():
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
 
-	# Emotes
+	# Emotes - get from cached emote scenes
 	for emote_urn in avatar_data.get_emotes():
 		if not emote_urn.begins_with("urn"):
-			# Default
+			# Default (utility emotes)
 			continue
 
 		var emote = Global.content_provider.get_wearable(emote_urn)
+		if emote == null:
+			continue
 		var file_hash = Wearables.get_item_main_file_hash(emote, avatar_data.get_body_shape())
-		var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
+		if file_hash.is_empty():
+			continue
+		# Use emote_loader from emote_controller to get the cached emote (threaded loading)
+		var obj = await emote_controller.emote_loader.async_get_emote_gltf(file_hash)
 		if obj != null:
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 

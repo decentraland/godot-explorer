@@ -2,6 +2,18 @@ extends Control
 
 var avatar_list: Array = []
 
+# Emote batch testing
+var emote_batch_test_running: bool = false
+var emote_batch_test_index: int = 0
+var emote_batch_test_list: Array = []
+var emote_batch_test_delay: float = 3.0  # seconds between each emote
+var emote_batch_auto_mode: bool = false  # Auto-run and quit mode (CLI)
+
+# Emote batch test UI (will be created dynamically)
+var batch_test_button: Button = null
+var batch_test_label: Label = null
+var batch_test_timer: Timer = null
+
 @onready var sub_viewport_container = $SubViewportContainer
 @onready var avatar: Avatar = sub_viewport_container.avatar
 @onready var emote_wheel = $TabContainer/Emotes/EmoteWheel
@@ -32,6 +44,15 @@ func _ready():
 	viewport.use_debanding = true
 	viewport.scaling_3d_scale = 2.0
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
+
+	# Setup emote batch tester UI
+	_setup_emote_batch_tester()
+
+	# Check for CLI auto-run mode: --emote-test
+	if Global.cli.emote_test_mode:
+		emote_batch_auto_mode = true
+		print("\n[AUTO MODE] Emote batch test will start automatically after avatar loads")
+		print("[AUTO MODE] App will close when test completes\n")
 
 
 func load_avatar_list():
@@ -84,8 +105,13 @@ func download_avatar():
 		download_wearable(wearable_id)
 
 
+# gdlint:ignore = async-function-name
 func _on_avatar_loaded():
-	pass
+	# Auto-start batch test in CLI mode
+	if emote_batch_auto_mode and not emote_batch_test_running:
+		# Small delay to ensure everything is ready
+		await get_tree().create_timer(1.0).timeout
+		_start_emote_batch_test()
 
 
 func _on_button_open_wheel_pressed():
@@ -210,3 +236,141 @@ func _on_outline_toggled(button_pressed: bool):
 			sub_viewport_container.enable_outline()
 		else:
 			sub_viewport_container.disable_outline()
+
+
+# ============================================================================
+# EMOTE BATCH TESTER
+# ============================================================================
+
+
+func _setup_emote_batch_tester():
+	var emotes_panel = $TabContainer/Emotes
+
+	# Create batch test button
+	batch_test_button = Button.new()
+	batch_test_button.text = "Start Emote Batch Test"
+	batch_test_button.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	batch_test_button.offset_top = 60
+	batch_test_button.offset_bottom = 98
+	batch_test_button.offset_left = 50
+	batch_test_button.offset_right = -50
+	batch_test_button.pressed.connect(_on_batch_test_button_pressed)
+	emotes_panel.add_child(batch_test_button)
+
+	# Create status label
+	batch_test_label = Label.new()
+	batch_test_label.text = "Batch test: Ready"
+	batch_test_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	batch_test_label.offset_top = 105
+	batch_test_label.offset_bottom = 135
+	batch_test_label.offset_left = 50
+	batch_test_label.offset_right = -50
+	batch_test_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	emotes_panel.add_child(batch_test_label)
+
+	# Create timer
+	batch_test_timer = Timer.new()
+	batch_test_timer.one_shot = true
+	batch_test_timer.timeout.connect(_on_batch_test_timer_timeout)
+	add_child(batch_test_timer)
+
+	# Build emote list for testing
+	emote_batch_test_list.clear()
+
+	# Priority default emotes (test these first - common ones)
+	var priority_emotes = ["raiseHand", "wave", "clap", "dance", "kiss", "handsair"]
+	for emote_id in priority_emotes:
+		emote_batch_test_list.append(Emotes.get_base_emote_urn(emote_id))
+
+	# Rest of default emotes (embedded)
+	for emote_id in Emotes.DEFAULT_EMOTE_NAMES.keys():
+		var urn = Emotes.get_base_emote_urn(emote_id)
+		if not emote_batch_test_list.has(urn):
+			emote_batch_test_list.append(urn)
+
+	# Utility emotes (embedded)
+	for emote_id in Emotes.UTILITY_EMOTE_NAMES.keys():
+		emote_batch_test_list.append(Emotes.get_base_emote_urn(emote_id))
+
+	# Custom emotes from collections (downloaded - test these for foot issues!)
+	# Festival 23 emotes (known to have foot issues)
+	var custom_emotes = [
+		"urn:decentraland:matic:collections-v2:0x8bfa4ffb139049f953fea3409bcc846decbef4b1:0",
+		"urn:decentraland:matic:collections-v2:0x8bfa4ffb139049f953fea3409bcc846decbef4b1:1",
+		"urn:decentraland:matic:collections-v2:0x8bfa4ffb139049f953fea3409bcc846decbef4b1:2",
+		"urn:decentraland:matic:collections-v2:0x8bfa4ffb139049f953fea3409bcc846decbef4b1:3",
+		"urn:decentraland:matic:collections-v2:0x8bfa4ffb139049f953fea3409bcc846decbef4b1:4",
+	]
+	emote_batch_test_list.append_array(custom_emotes)
+
+
+func _on_batch_test_button_pressed():
+	if emote_batch_test_running:
+		_stop_emote_batch_test()
+	else:
+		_start_emote_batch_test()
+
+
+func _start_emote_batch_test():
+	emote_batch_test_running = true
+	emote_batch_test_index = 0
+	batch_test_button.text = "Stop Batch Test"
+	print("\n========== EMOTE BATCH TEST STARTED ==========")
+	print(
+		(
+			"Testing %d emotes with %.1fs delay between each"
+			% [emote_batch_test_list.size(), emote_batch_test_delay]
+		)
+	)
+	print("Watch for broken feet/animations!\n")
+	_play_next_emote()
+
+
+func _stop_emote_batch_test():
+	emote_batch_test_running = false
+	batch_test_timer.stop()
+	batch_test_button.text = "Start Emote Batch Test"
+	batch_test_label.text = "Batch test: Stopped"
+	print("\n========== EMOTE BATCH TEST STOPPED ==========\n")
+
+
+# gdlint:ignore = async-function-name
+func _play_next_emote():
+	if not emote_batch_test_running:
+		return
+
+	if emote_batch_test_index >= emote_batch_test_list.size():
+		_stop_emote_batch_test()
+		batch_test_label.text = "Batch test: COMPLETE!"
+		print("\n========== EMOTE BATCH TEST COMPLETE ==========\n")
+
+		# Quit app in auto mode
+		if emote_batch_auto_mode:
+			print("[AUTO MODE] Test complete. Closing app...")
+			await get_tree().create_timer(1.0).timeout
+			get_tree().quit(0)
+		return
+
+	var emote_urn = emote_batch_test_list[emote_batch_test_index]
+	var emote_name = Emotes.get_emote_name(Emotes.get_base_emote_id_from_urn(emote_urn))
+
+	batch_test_label.text = (
+		"Testing [%d/%d]: %s"
+		% [emote_batch_test_index + 1, emote_batch_test_list.size(), emote_name]
+	)
+
+	print(
+		(
+			"[%d/%d] Playing: %s (%s)"
+			% [emote_batch_test_index + 1, emote_batch_test_list.size(), emote_name, emote_urn]
+		)
+	)
+
+	avatar.emote_controller.async_play_emote(emote_urn)
+
+	emote_batch_test_index += 1
+	batch_test_timer.start(emote_batch_test_delay)
+
+
+func _on_batch_test_timer_timeout():
+	_play_next_emote()
