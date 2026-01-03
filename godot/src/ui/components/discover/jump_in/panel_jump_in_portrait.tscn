@@ -137,7 +137,7 @@ theme_override_constants/separation = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 16
 text = "created by"
 
 [node name="Label_Creator" type="Label" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Creator"]
@@ -145,7 +145,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("3_3inh7")
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 16
 text = "Kuruk"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
@@ -220,7 +220,7 @@ size_flags_horizontal = 3
 theme = ExtResource("5_jnv06")
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("3_3inh7")
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 18
 text = "78%"
 horizontal_alignment = 2
 vertical_alignment = 1
@@ -246,7 +246,7 @@ size_flags_horizontal = 3
 theme = ExtResource("5_jnv06")
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("3_3inh7")
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 18
 text = "546"
 horizontal_alignment = 2
 vertical_alignment = 1
@@ -272,7 +272,7 @@ size_flags_horizontal = 3
 theme = ExtResource("5_jnv06")
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("3_3inh7")
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 18
 text = "0"
 horizontal_alignment = 2
 vertical_alignment = 1
@@ -302,7 +302,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("10_cpvjm")
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 17
 text = "0, 0"
 
 [node name="TextureRect2" type="TextureRect" parent="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
@@ -319,7 +319,7 @@ custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("10_cpvjm")
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 17
 text = "Genesis City "
 clip_text = true
 
@@ -405,7 +405,7 @@ custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("10_cpvjm")
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 16
 autowrap_mode = 2
 
 [node name="Control" type="Control" parent="."]

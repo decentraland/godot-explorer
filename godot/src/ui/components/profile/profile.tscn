@@ -204,7 +204,7 @@ mouse_default_cursor_shape = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("7_m8kjd")
-theme_override_font_sizes/font_size = 21
+theme_override_font_sizes/font_size = 27
 text = "NickName"
 
 [node name="Label_Tag" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
@@ -216,7 +216,7 @@ theme_override_colors/font_color = Color(0.625597, 0.625597, 0.625597, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("7_m8kjd")
-theme_override_font_sizes/font_size = 21
+theme_override_font_sizes/font_size = 27
 text = "#Tag"
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
@@ -406,7 +406,7 @@ theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("10_odsw2")
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 18
 text = "0x1...a92"
 
 [node name="Button_CopyAddress" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer2/HBoxContainer"]

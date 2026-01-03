@@ -534,6 +534,7 @@ BlackButton/styles/hover = SubResource("StyleBoxFlat_tux50")
 BlackButton/styles/normal = SubResource("StyleBoxFlat_dwpue")
 BlackButton/styles/pressed = SubResource("StyleBoxFlat_5xxgb")
 Button/colors/font_color = Color(1, 1, 1, 1)
+Button/font_sizes/font_size = 17
 Button/fonts/font = ExtResource("2_l2aal")
 Button/styles/disabled = SubResource("StyleBoxFlat_s7e52")
 Button/styles/focus = SubResource("StyleBoxFlat_1nv0e")

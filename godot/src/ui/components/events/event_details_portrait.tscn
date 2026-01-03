@@ -81,12 +81,12 @@ corner_radius_bottom_left = 24
 
 [sub_resource type="LabelSettings" id="LabelSettings_l1b7y"]
 font = ExtResource("7_kyf7t")
-font_size = 15
+font_size = 17
 font_color = Color(0, 0, 0, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_bmyvb"]
 font = ExtResource("7_kyf7t")
-font_size = 15
+font_size = 17
 font_color = Color(1, 0.176471, 0.333333, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_wcxms"]
@@ -373,7 +373,6 @@ custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("12_j8tr7")
-theme_override_font_sizes/font_size = 13
 text = "Prizes: 50 @akidcalledbeast Points Full AKCB Toy Wearable SKINS ( For New DCL Users) @OtherPageHQ
 MBRP Badge 9
 a 3X is hard to find don't miss it fam!
