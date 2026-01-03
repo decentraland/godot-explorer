@@ -70,10 +70,14 @@ brew install pkg-config
 |---------|-------------|
 | `cargo run -- doctor` | Check system health and dependencies |
 | `cargo run -- install` | Install Godot and protoc |
+| `cargo run -- install --targets ios` | Install iOS templates (auto-strips debug symbols) |
+| `cargo run -- install --targets ios --no-strip` | Install iOS templates with debug symbols |
 | `cargo run -- build` | Build for host platform |
 | `cargo run -- run` | Build and run the client |
 | `cargo run -- run -e` | Build and run the editor |
 | `cargo run -- export --target android` | Export Android APK |
+| `cargo run -- strip-ios-templates` | Strip debug symbols from iOS templates |
+| `cargo run -- clean-cache` | Clear downloaded template cache |
 
 ## 🛠️ Development Workflow
 
@@ -112,7 +116,7 @@ cargo run -- export --target android --format aab --release
 ### iOS Development (macOS only)
 
 ```bash
-# Install iOS dependencies
+# Install iOS dependencies (strips debug symbols by default, saves ~1.9GB)
 cargo run -- install --targets ios
 rustup target add aarch64-apple-ios
 
@@ -122,6 +126,27 @@ cargo run -- build --target ios
 # Export iOS app
 cargo run -- export --target ios
 ```
+
+#### iOS Template Debug Symbols
+
+By default, iOS templates are **stripped of debug symbols** during installation to save disk space (~2.1GB → ~234MB). This is fine for most local development.
+
+```bash
+# Default install (strips debug symbols, smaller size)
+cargo run -- install --targets ios
+
+# Install WITH debug symbols (needed for Sentry crash symbolication)
+cargo run -- install --targets ios --no-strip
+
+# Strip already-installed templates manually
+cargo run -- strip-ios-templates
+```
+
+> **Note**: Downloaded templates are cached. If you've already installed stripped templates and need debug symbols, clear the cache first:
+> ```bash
+> cargo run -- clean-cache
+> cargo run -- install --targets ios --no-strip
+> ```
 
 #### Triggering iOS CI Builds
 

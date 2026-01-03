@@ -21,8 +21,16 @@ cargo run -- doctor
 
 # Install dependencies (specify platforms: linux, windows, macos, android, ios)
 cargo run -- install                      # Installs protoc and Godot only
-cargo run -- install --targets linux    # Also installs Linux export templates
-cargo run -- install --targets android  # Also installs Android tools and templates
+cargo run -- install --targets linux      # Also installs Linux export templates
+cargo run -- install --targets android    # Also installs Android tools and templates
+cargo run -- install --targets ios        # iOS templates (auto-strips debug symbols)
+cargo run -- install --targets ios --no-strip  # iOS templates with debug symbols (for Sentry)
+
+# Strip iOS templates manually (saves ~1.9GB disk space)
+cargo run -- strip-ios-templates
+
+# Clear download cache (useful if you need to re-download templates)
+cargo run -- clean-cache
 ```
 
 ### Development
@@ -153,7 +161,30 @@ cargo run -- export --target ios
    docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
    ```
 
-4. **Triggering iOS CI builds**:
+4. **For iOS development** (macOS only):
+   ```bash
+   # Install iOS templates (strips debug symbols by default to save ~1.9GB)
+   cargo run -- install --targets ios
+
+   # Install WITHOUT stripping (preserves debug symbols for Sentry crash reports)
+   cargo run -- install --targets ios --no-strip
+
+   # Strip already-installed templates manually
+   cargo run -- strip-ios-templates
+   ```
+
+   **Important notes about iOS templates:**
+   - Local installs **strip debug symbols by default** to save disk space (~2.1GB → ~234MB)
+   - Stripping can take a few minutes (extracts, strips, re-compresses the zip)
+   - **Cached templates are already stripped** - if you need debug symbols for crash symbolication, you must clear the cache and reinstall with `--no-strip`:
+     ```bash
+     cargo run -- clean-cache
+     cargo run -- install --targets ios --no-strip
+     ```
+   - CI uses `--no-strip` to preserve debug symbols for Sentry dSYM uploads
+   - The strip command auto-detects already-stripped templates (< 1GB) and skips
+
+5. **Triggering iOS CI builds**:
    iOS builds are skipped by default to save CI resources. To trigger an iOS build:
    ```bash
    # On a PR: add the build-ios-internal label

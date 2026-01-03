@@ -15,6 +15,177 @@ use crate::{
     ui::{create_spinner, print_message, print_section, MessageType},
 };
 
+use walkdir::WalkDir;
+
+/// Strips debug symbols from iOS static libraries (.a files) inside ios.zip to reduce size.
+/// This extracts the zip, strips the libraries, and re-compresses it.
+/// This is only run on macOS since iOS templates are only used there.
+#[cfg(target_os = "macos")]
+fn strip_ios_template_symbols(templates_path: &str) -> Result<(), anyhow::Error> {
+    use zip::write::FileOptions;
+
+    let ios_zip_path = Path::new(templates_path).join("ios.zip");
+
+    if !ios_zip_path.exists() {
+        print_message(
+            MessageType::Warning,
+            &format!("iOS template not found at: {}", ios_zip_path.display()),
+        );
+        return Ok(());
+    }
+
+    let size_before = fs::metadata(&ios_zip_path).map(|m| m.len()).unwrap_or(0);
+    let size_before_mb = size_before as f64 / (1024.0 * 1024.0);
+
+    // Check if already stripped (assume >1GB means not stripped)
+    const MIN_UNSTRIPPED_SIZE_MB: f64 = 1024.0; // 1 GB
+    if size_before_mb < MIN_UNSTRIPPED_SIZE_MB {
+        print_message(
+            MessageType::Info,
+            &format!(
+                "iOS template size is {:.1} MB (<{:.0} MB), appears already stripped. Skipping.",
+                size_before_mb, MIN_UNSTRIPPED_SIZE_MB
+            ),
+        );
+        return Ok(());
+    }
+
+    print_message(
+        MessageType::Info,
+        &format!("iOS template size before: {:.1} MB", size_before_mb),
+    );
+
+    // Create a temporary directory for extraction
+    let temp_dir = Path::new(templates_path).join("ios_temp");
+    if temp_dir.exists() {
+        fs::remove_dir_all(&temp_dir)?;
+    }
+    fs::create_dir_all(&temp_dir)?;
+
+    // Extract the zip
+    let spinner = create_spinner("Extracting iOS template...");
+    let file = fs::File::open(&ios_zip_path)?;
+    let mut archive = ZipArchive::new(file)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let outpath = temp_dir.join(file.mangled_name());
+
+        if file.is_dir() {
+            fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut outfile = fs::File::create(&outpath)?;
+            io::copy(&mut file, &mut outfile)?;
+        }
+    }
+    spinner.finish_and_clear();
+
+    // Strip the .a files
+    let spinner = create_spinner("Stripping debug symbols...");
+    let mut stripped_count = 0;
+
+    for entry in WalkDir::new(&temp_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().map_or(false, |ext| ext == "a") && e.file_type().is_file())
+    {
+        let path = entry.path();
+
+        // Run strip -S to remove debug symbols (keeps symbol table for linking)
+        let status = std::process::Command::new("strip")
+            .args(["-S", path.to_str().unwrap()])
+            .status();
+
+        match status {
+            Ok(s) if s.success() => {
+                stripped_count += 1;
+            }
+            Ok(s) => {
+                print_message(
+                    MessageType::Warning,
+                    &format!(
+                        "strip command failed for {}: exit code {:?}",
+                        path.display(),
+                        s.code()
+                    ),
+                );
+            }
+            Err(e) => {
+                print_message(
+                    MessageType::Warning,
+                    &format!("Failed to run strip on {}: {}", path.display(), e),
+                );
+            }
+        }
+    }
+    spinner.finish_and_clear();
+
+    print_message(
+        MessageType::Info,
+        &format!("Stripped {} static libraries", stripped_count),
+    );
+
+    // Re-compress the zip
+    let spinner = create_spinner("Re-compressing iOS template...");
+    let new_zip_path = Path::new(templates_path).join("ios_new.zip");
+    let new_zip_file = fs::File::create(&new_zip_path)?;
+    let mut zip_writer = zip::ZipWriter::new(new_zip_file);
+
+    let options = FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+
+    for entry in WalkDir::new(&temp_dir).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        let relative_path = path.strip_prefix(&temp_dir)?;
+
+        if relative_path.as_os_str().is_empty() {
+            continue;
+        }
+
+        if path.is_dir() {
+            let dir_name = format!("{}/", relative_path.display());
+            zip_writer.add_directory(&dir_name, options)?;
+        } else {
+            let file_name = relative_path.to_string_lossy().to_string();
+            zip_writer.start_file(&file_name, options)?;
+            let mut file = fs::File::open(path)?;
+            io::copy(&mut file, &mut zip_writer)?;
+        }
+    }
+
+    zip_writer.finish()?;
+    spinner.finish_and_clear();
+
+    // Replace the original zip with the new one
+    fs::remove_file(&ios_zip_path)?;
+    fs::rename(&new_zip_path, &ios_zip_path)?;
+
+    // Clean up temp directory
+    fs::remove_dir_all(&temp_dir)?;
+
+    let size_after = fs::metadata(&ios_zip_path).map(|m| m.len()).unwrap_or(0);
+    let size_after_mb = size_after as f64 / (1024.0 * 1024.0);
+    let saved_mb = (size_before as f64 - size_after as f64) / (1024.0 * 1024.0);
+
+    print_message(
+        MessageType::Success,
+        &format!(
+            "iOS template size after: {:.1} MB (saved {:.1} MB)",
+            size_after_mb, saved_mb
+        ),
+    );
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn strip_ios_template_symbols(_templates_path: &str) -> Result<(), anyhow::Error> {
+    // iOS templates are only used on macOS, no-op on other platforms
+    Ok(())
+}
+
 #[allow(dead_code)]
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
     fs::create_dir_all(&dst)?;
@@ -255,7 +426,7 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     Ok(())
 }
 
-pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
+pub fn prepare_templates(platforms: &[String], no_strip: bool) -> Result<(), anyhow::Error> {
     // Convert GODOT_PLATFORM_FILES into a HashMap
     let file_map: HashMap<&str, Vec<&str>> = GODOT_PLATFORM_FILES
         .iter()
@@ -279,7 +450,7 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
     // Process each template and download the associated files
     let dest_path = godot_export_templates_path().expect("Failed to get template path");
 
-    for template in templates {
+    for template in &templates {
         if let Some(files) = file_map.get(template.as_str()) {
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
@@ -297,6 +468,27 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
             println!("No files mapped for template: {}", template);
         }
     }
+
+    // Strip iOS templates if downloaded (unless --no-strip is specified)
+    if templates.iter().any(|t| t == "ios") && !no_strip {
+        strip_ios_template_symbols(&dest_path)?;
+    } else if templates.iter().any(|t| t == "ios") && no_strip {
+        print_message(
+            MessageType::Info,
+            "Skipping iOS template stripping (--no-strip specified, debug symbols preserved for Sentry)",
+        );
+    }
+
+    Ok(())
+}
+
+/// Strips debug symbols from already-installed iOS templates.
+/// This can be run standalone via `cargo run -- strip-ios-templates`
+pub fn strip_ios_templates() -> Result<(), anyhow::Error> {
+    print_section("Stripping iOS Templates");
+
+    let dest_path = godot_export_templates_path().expect("Failed to get template path");
+    strip_ios_template_symbols(&dest_path)?;
 
     Ok(())
 }
