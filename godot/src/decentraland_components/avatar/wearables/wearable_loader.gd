@@ -8,11 +8,6 @@ extends RefCounted
 var _completed_loads: Dictionary = {}
 
 
-## Cleanup - no longer needed but kept for API compatibility.
-func cleanup():
-	pass
-
-
 ## Load multiple wearables using promise-based loading.
 ## Returns Dictionary mapping file_hash -> scene_path
 func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictionary:

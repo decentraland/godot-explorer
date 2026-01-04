@@ -6,11 +6,6 @@ extends RefCounted
 ## Scene paths are retrieved from ContentProvider's cache rather than tracked locally.
 
 
-## Cleanup - no longer needed but kept for API compatibility.
-func cleanup():
-	pass
-
-
 ## Load a single emote using promise-based loading.
 ## Returns the scene_path if successful, empty string on failure.
 func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
