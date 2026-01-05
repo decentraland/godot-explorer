@@ -178,7 +178,8 @@ func _ready():
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
-	if cli.clear_cache_startup:
+	if cli.clear_cache_startup or true: # REVERT THIS! TESTING!
+		printerr("# REVERT THIS! TESTING!")
 		prints("Clear cache startup!")
 		Global.content_provider.clear_cache_folder()
 
@@ -448,7 +449,6 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
-
 
 func is_orientation_portrait():
 	var window_size: Vector2i = DisplayServer.window_get_size()

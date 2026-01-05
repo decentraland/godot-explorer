@@ -6,10 +6,7 @@ use super::{
 };
 use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
-    classes::{
-        image::CompressMode, portable_compressed_texture_2d::CompressionMode, DirAccess, Image,
-        ImageTexture, PortableCompressedTexture2D, Texture2D,
-    },
+    classes::{DirAccess, Image, ImageTexture, Texture2D},
     global::Error,
     meta::ToGodot,
     obj::Gd,
@@ -80,41 +77,35 @@ pub async fn load_image_texture(
 
     let original_size = image.get_size();
 
+    // Resize based on quality settings
     let max_size = ctx.texture_quality.to_max_size();
-    let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios"
-        || std::env::consts::OS == "android"
-    {
-        create_compressed_texture(&mut image, max_size)
-    } else {
-        resize_image(&mut image, max_size);
-        let texture = ImageTexture::create_from_image(&image.clone()).ok_or(anyhow::Error::msg(
-            format!("Error creating texture from image {}", absolute_file_path),
-        ))?;
-        texture.upcast()
-    };
+    resize_image(&mut image, max_size);
+
+    // Create ImageTexture from image
+    let mut texture = ImageTexture::create_from_image(&image)
+        .ok_or_else(|| anyhow::Error::msg("Failed to create texture from image"))?;
 
     texture.set_name(&GString::from(&url));
 
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
         image,
-        texture,
+        texture: texture.upcast::<Texture2D>(),
         original_size,
     });
 
     Ok(Some(texture_entry.to_variant()))
 }
 
-pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
-    resize_image(image, max_size);
-
+/// Creates a texture from an image, resizing if needed.
+/// Does not apply compression - suitable for all platforms.
+pub fn create_texture(image: &mut Gd<Image>, max_size: i32) -> Option<Gd<Texture2D>> {
+    // Only resize if the image is not already compressed
+    // (compressed images cannot be resized)
     if !image.is_compressed() {
-        image.compress(CompressMode::ETC2);
+        resize_image(image, max_size);
     }
 
-    let mut texture = PortableCompressedTexture2D::new_gd();
-    let image: &Gd<Image> = image;
-    texture.create_from_image(image, CompressionMode::ETC2);
-    texture.upcast()
+    ImageTexture::create_from_image(&*image).map(|t| t.upcast::<Texture2D>())
 }
 
 pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {

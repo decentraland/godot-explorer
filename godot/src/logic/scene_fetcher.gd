@@ -76,7 +76,7 @@ func _ready():
 	# Set scene radius based on mode:
 	# - Floating islands: radius 5 to load scenes within range (avoids loading all scattered scenes)
 	# - City/test mode: radius 0 for precise coordinate-based loading
-	var scene_radius = 5 if is_using_floating_islands() else 0
+	var scene_radius = 5 if _use_dynamic_loading else 0
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
@@ -147,6 +147,8 @@ func set_dynamic_loading_mode(enabled: bool) -> void:
 		return
 
 	_use_dynamic_loading = enabled
+	var scene_radius = 5 if _use_dynamic_loading else 0
+	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	if enabled:
 		# Clear floating island state when enabling dynamic mode
@@ -645,7 +647,7 @@ func async_load_scene(
 		printerr(
 			"Scene ",
 			scene_entity_id,
-			" is not optimized, failed to download zip asset=url",
+			" is not optimized, failed to download zip asset_url=",
 			asset_url
 		)
 		# --only-optimized: Skip scene if it's not optimized

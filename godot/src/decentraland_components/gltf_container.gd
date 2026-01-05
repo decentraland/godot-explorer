@@ -35,6 +35,9 @@ func _ready():
 
 
 func _exit_tree():
+	# Disable transform tracking FIRST to prevent signal emission during cleanup
+	self.disable_transform_tracking()
+
 	# Remove from pending queue
 	pending_load_queue.erase(self)
 
@@ -497,23 +500,41 @@ static func _get_debug_kinematic_material() -> StandardMaterial3D:
 
 # Signal handler: called by Rust when entity has moved enough to require kinematic mode
 func _on_switch_to_kinematic():
+	# Guard: Don't process if we're being freed or not in tree
+	if not is_inside_tree():
+		return
+	if is_queued_for_deletion():
+		return
+
 	var gltf_node = get_gltf_resource()
-	if gltf_node != null:
+	if gltf_node != null and is_instance_valid(gltf_node):
 		_switch_colliders_to_kinematic(gltf_node)
 
 
 # Switch all colliders from STATIC to KINEMATIC mode
 # Called when the entity moves (after the 2nd transform change)
 func _switch_colliders_to_kinematic(node_to_inspect: Node):
+	# Guard: Skip if node is being freed
+	if not is_instance_valid(node_to_inspect):
+		return
+
 	for node in node_to_inspect.get_children():
+		if not is_instance_valid(node):
+			continue
+
 		if node is MeshInstance3D:
 			var mesh_instance: MeshInstance3D = node
 			var body_3d = get_static_body_3d(mesh_instance)
-			if body_3d != null and body_3d.has_meta("dcl_static_mode"):
-				# Switch to KINEMATIC mode via PhysicsServer3D
-				PhysicsServer3D.body_set_mode(
-					body_3d.get_rid(), PhysicsServer3D.BODY_MODE_KINEMATIC
-				)
+			if (
+				body_3d != null
+				and is_instance_valid(body_3d)
+				and body_3d.has_meta("dcl_static_mode")
+			):
+				# Check RID validity before PhysicsServer3D call
+				var rid = body_3d.get_rid()
+				if rid.is_valid():
+					# Switch to KINEMATIC mode via PhysicsServer3D
+					PhysicsServer3D.body_set_mode(rid, PhysicsServer3D.BODY_MODE_KINEMATIC)
 				body_3d.remove_meta("dcl_static_mode")
 
 			# Debug: Paint visible meshes red (skip collider meshes)
@@ -523,6 +544,7 @@ func _switch_colliders_to_kinematic(node_to_inspect: Node):
 					var mat = _get_debug_kinematic_material()
 					mesh_instance.material_override = mat
 					print("[DEBUG] KINEMATIC painted: ", mesh_instance.name)
+
 		_switch_colliders_to_kinematic(node)
 
 
@@ -545,6 +567,9 @@ func change_gltf(
 	dcl_invisible_cmask = invisible_meshes_collision_mask
 
 	if gltf_changed:
+		# Disable transform tracking BEFORE removing old GLTF to prevent signal during cleanup
+		self.disable_transform_tracking()
+
 		# New GLTF source - reload everything
 		dcl_gltf_src = new_gltf
 		_has_static_colliders = false
