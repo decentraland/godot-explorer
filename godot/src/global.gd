@@ -135,6 +135,13 @@ func get_safe_area() -> Rect2i:
 		return DisplayServer.get_display_safe_area()
 
 
+func _instantiate_phone_frame_overlay() -> void:
+	var overlay_scene = load("res://assets/no-export/phone_frame_overlay.tscn")
+	if overlay_scene:
+		var overlay = overlay_scene.instantiate()
+		add_child(overlay)
+
+
 ## Vibrate handheld device
 func send_haptic_feedback() -> void:
 	if is_mobile():
@@ -152,11 +159,13 @@ func _ready():
 		var target_size := SafeAreaPresets.get_ios_window_size(is_orientation_portrait())
 		get_window().size = target_size
 		get_window().move_to_center()
+		_instantiate_phone_frame_overlay()
 	elif cli.emulate_android:
 		_set_is_mobile(true)
 		var target_size := SafeAreaPresets.get_android_window_size(is_orientation_portrait())
 		get_window().size = target_size
 		get_window().move_to_center()
+		_instantiate_phone_frame_overlay()
 
 	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
 	if not cli.fake_deeplink.is_empty():
