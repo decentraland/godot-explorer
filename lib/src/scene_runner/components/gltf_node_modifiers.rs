@@ -262,7 +262,11 @@ fn apply_material_to_mesh(
 
 /// Apply shadow casting modifier to a mesh instance
 /// If surface_index is Some, this is a per-surface modifier (but shadows apply to whole mesh)
-fn apply_shadow_to_mesh(mesh: &mut Gd<MeshInstance3D>, cast_shadows: bool, _surface_index: Option<i32>) {
+fn apply_shadow_to_mesh(
+    mesh: &mut Gd<MeshInstance3D>,
+    cast_shadows: bool,
+    _surface_index: Option<i32>,
+) {
     // Note: Shadow casting is per-mesh, not per-surface, so surface_index is ignored
     let setting = if cast_shadows {
         ShadowCastingSetting::ON
@@ -453,7 +457,8 @@ fn path_matches(modifier_path: &str, info: &MeshInstanceInfo) -> PathMatchResult
         let parent_matches = if parent_path.is_empty() {
             // Just primitive name, match any mesh whose name starts with the base
             info.node_name.starts_with(primitive_base)
-                || normalize_segment(&info.node_name).starts_with(&normalize_segment(primitive_base))
+                || normalize_segment(&info.node_name)
+                    .starts_with(&normalize_segment(primitive_base))
         } else {
             // Check parent path against this node
             path_matches_basic(&parent_path, info)
@@ -752,10 +757,8 @@ pub fn update_gltf_node_modifiers(
             let resolved = resolve_modifiers(modifiers, &all_meshes);
 
             // Track which paths are now being modified (using node_path for simplicity)
-            let new_applied_paths: HashSet<String> = resolved
-                .keys()
-                .map(|k| k.node_path.clone())
-                .collect();
+            let new_applied_paths: HashSet<String> =
+                resolved.keys().map(|k| k.node_path.clone()).collect();
 
             // Find paths that were previously modified but no longer have modifiers
             let paths_to_restore: Vec<String> = state
