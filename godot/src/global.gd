@@ -53,8 +53,8 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
-# Increase this value when optimized assets change (invalidates cache)
-const OPTIMIZED_ASSETS_VERSION: int = 2
+# Increase this value when local assets cache format changes (invalidates cache)
+const LOCAL_ASSETS_CACHE_VERSION: int = 3
 
 ## Global classes (singleton pattern)
 var raycast_debugger: RaycastDebugger
@@ -182,11 +182,11 @@ func _ready():
 		prints("Clear cache startup!")
 		Global.content_provider.clear_cache_folder()
 
-	# Clear cache if optimized assets version changed
-	if config.optimized_assets_version != Global.OPTIMIZED_ASSETS_VERSION:
-		prints("Optimized assets version changed, clearing cache!")
+	# Clear cache if local assets cache version changed
+	if config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION:
+		prints("Local assets cache version changed, clearing cache!")
 		Global.content_provider.clear_cache_folder()
-		config.optimized_assets_version = Global.OPTIMIZED_ASSETS_VERSION
+		config.local_assets_cache_version = Global.LOCAL_ASSETS_CACHE_VERSION
 		config.save_to_settings_file()
 
 	# #[itest] only needs a godot context, not the all explorer one
