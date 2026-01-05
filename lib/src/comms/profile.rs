@@ -144,12 +144,9 @@ impl Default for AvatarWireFormat {
                 "urn:decentraland:off-chain:base-avatars:f_eyebrows_00".into(),
                 "urn:decentraland:off-chain:base-avatars:f_mouth_00".into(),
             ],
-            snapshots: Some(AvatarSnapshots {
-                body: "bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq".into(),
-                face256: "bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y".into(),
-                body_url: None,
-                face_url: None,
-            }),
+            // ADR-290: Snapshots are no longer uploaded by clients.
+            // Profile images are served on-demand by the profile-images service.
+            snapshots: None,
             eyes: Some(AvatarColor {
                 color: AvatarColor3 {
                     r: 0.3,
