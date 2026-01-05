@@ -16,9 +16,11 @@ use godot::{
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::Semaphore;
 
+use crate::content::texture::resize_image;
+
 use super::super::{
     content_mapping::ContentMappingAndUrlRef, content_provider::SceneGltfContext,
-    file_string::get_base_dir, texture::create_texture,
+    file_string::get_base_dir, texture::create_compressed_texture,
 };
 
 #[cfg(feature = "use_resource_tracking")]
@@ -37,13 +39,18 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                             for ord in 0..TextureParam::MAX.ord() {
                                 let texture_param = TextureParam::from_ord(ord);
                                 if let Some(texture) = base_material.get_texture(texture_param) {
-                                    if let Ok(texture_image) = texture.try_cast::<ImageTexture>() {
+                                    if let Ok(mut texture_image) =
+                                        texture.try_cast::<ImageTexture>()
+                                    {
                                         if let Some(mut image) = texture_image.get_image() {
-                                            // Resize and create new texture
-                                            if let Some(new_texture) =
-                                                create_texture(&mut image, max_size)
+                                            if std::env::consts::OS == "ios"
+                                                || std::env::consts::OS == "android"
                                             {
-                                                base_material.set_texture(texture_param, &new_texture);
+                                                let texture =
+                                                    create_compressed_texture(&mut image, max_size);
+                                                base_material.set_texture(texture_param, &texture);
+                                            } else if resize_image(&mut image, max_size) {
+                                                texture_image.set_image(&image);
                                             }
                                         }
                                     }
