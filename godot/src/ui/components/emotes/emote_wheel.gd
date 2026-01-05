@@ -117,3 +117,9 @@ func _on_button_toggled(toggled_on: bool) -> void:
 		open()
 	else:
 		close(true)
+
+
+func _on_button_edit_pressed() -> void:
+	Global.open_backpack.emit(true)
+	Global.send_haptic_feedback()
+	close(false)

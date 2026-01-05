@@ -53,7 +53,8 @@ var is_loading_profile: bool = false
 @onready var emote_editor = %EmoteEditor
 
 @onready var container_navbar = %PanelContainer_Navbar
-
+@onready var button_emotes = %Button_Emotes
+@onready var button_wearables = %Button_Wearables
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -498,9 +499,18 @@ func _on_button_wearables_pressed():
 
 
 func _on_button_emotes_pressed():
+	show_emotes()
+
+
+func show_emotes() -> void:
 	avatar_preview.focus_camera_on(Wearables.Categories.BODY_SHAPE)
 	wearable_editor.hide()
 	emote_editor.show()
+
+
+func press_button_emotes() -> void:
+	button_emotes.set_pressed_no_signal(true)
+	button_wearables.set_pressed_no_signal(false)
 
 
 func _on_check_box_only_collectibles_toggled(toggled_on):

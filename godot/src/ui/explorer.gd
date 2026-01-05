@@ -134,6 +134,9 @@ func _ready():
 	# Connect to notification clicks to handle friend request notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
+	# Connect on open emotes backpack
+	Global.open_backpack.connect(_on_backpack_emote_opened)
+
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
@@ -879,6 +882,12 @@ func _on_emote_wheel_emote_wheel_closed() -> void:
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
+
+
+func _on_backpack_emote_opened(on_emotes:=false) -> void:
+	if not on_emotes: return
+	navbar.open_navbar_silently()
+	navbar.set_button_pressed(navbar.BUTTON.BACKPACK)
 
 
 func _close_all_panels():
