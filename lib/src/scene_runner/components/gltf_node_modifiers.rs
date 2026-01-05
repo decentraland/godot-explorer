@@ -74,6 +74,16 @@ pub struct MeshInstanceInfo {
     pub full_path: String,
     /// The actual MeshInstance3D node
     pub mesh_instance: Gd<MeshInstance3D>,
+    /// Number of surfaces (primitives) in this mesh
+    pub surface_count: i32,
+}
+
+/// Result of matching a modifier path to a mesh instance
+#[derive(Clone)]
+pub struct ModifierMatch<'a> {
+    pub modifier: &'a GltfNodeModifier,
+    /// Optional surface index for per-primitive targeting (None = all surfaces)
+    pub surface_index: Option<i32>,
 }
 
 /// Collect all MeshInstance3D nodes in the GLTF hierarchy with full info
@@ -106,12 +116,14 @@ fn collect_mesh_instances_recursive(
             current_path.clone()
         };
 
+        let surface_count = mesh_instance.get_surface_override_material_count();
         result.push(MeshInstanceInfo {
             node_path: current_path.clone(),
             node_name,
             mesh_name,
             full_path,
             mesh_instance,
+            surface_count,
         });
     }
 
@@ -190,11 +202,13 @@ fn restore_original_materials(mesh: &mut Gd<MeshInstance3D>, materials: &[Option
 }
 
 /// Apply a material modifier to a mesh instance
+/// If surface_index is Some, only applies to that surface; otherwise applies to all surfaces.
 /// Returns the DclMaterial and Godot material if textures need loading
 fn apply_material_to_mesh(
     mesh: &mut Gd<MeshInstance3D>,
     material: &PbMaterial,
     content_mapping: &crate::content::content_mapping::ContentMappingAndUrlRef,
+    surface_index: Option<i32>,
 ) -> Option<(DclMaterial, Gd<StandardMaterial3D>)> {
     let mat = material.material.as_ref()?;
     let dcl_material = DclMaterial::from_proto(mat, content_mapping);
@@ -214,10 +228,18 @@ fn apply_material_to_mesh(
         }
     }
 
-    // Apply to all surfaces
-    let surface_count = mesh.get_surface_override_material_count();
-    for i in 0..surface_count {
-        mesh.set_surface_override_material(i, &godot_material.clone().upcast::<Material>());
+    // Apply to specified surface(s)
+    if let Some(idx) = surface_index {
+        // Apply to specific surface only
+        if idx < mesh.get_surface_override_material_count() {
+            mesh.set_surface_override_material(idx, &godot_material.clone().upcast::<Material>());
+        }
+    } else {
+        // Apply to all surfaces
+        let surface_count = mesh.get_surface_override_material_count();
+        for i in 0..surface_count {
+            mesh.set_surface_override_material(i, &godot_material.clone().upcast::<Material>());
+        }
     }
 
     // Check if we need to wait for textures
@@ -236,6 +258,18 @@ fn apply_material_to_mesh(
     } else {
         None
     }
+}
+
+/// Apply shadow casting modifier to a mesh instance
+/// If surface_index is Some, this is a per-surface modifier (but shadows apply to whole mesh)
+fn apply_shadow_to_mesh(mesh: &mut Gd<MeshInstance3D>, cast_shadows: bool, _surface_index: Option<i32>) {
+    // Note: Shadow casting is per-mesh, not per-surface, so surface_index is ignored
+    let setting = if cast_shadows {
+        ShadowCastingSetting::ON
+    } else {
+        ShadowCastingSetting::OFF
+    };
+    mesh.set_cast_shadows_setting(setting);
 }
 
 /// Create a Godot StandardMaterial3D from a DclMaterial
@@ -335,14 +369,56 @@ fn create_godot_material_from_dcl(dcl_material: &DclMaterial) -> Gd<StandardMate
     godot_material
 }
 
-/// Apply shadow casting modifier to a mesh instance
-fn apply_shadow_to_mesh(mesh: &mut Gd<MeshInstance3D>, cast_shadows: bool) {
-    let setting = if cast_shadows {
-        ShadowCastingSetting::ON
-    } else {
-        ShadowCastingSetting::OFF
-    };
-    mesh.set_cast_shadows_setting(setting);
+/// Result of path matching - includes optional surface index for per-primitive targeting
+#[derive(Clone, Copy)]
+pub struct PathMatchResult {
+    /// Whether the path matched
+    pub matched: bool,
+    /// Optional surface index if targeting a specific primitive (e.g., "Sphere_1" -> surface 1)
+    pub surface_index: Option<i32>,
+}
+
+impl PathMatchResult {
+    fn no_match() -> Self {
+        Self {
+            matched: false,
+            surface_index: None,
+        }
+    }
+
+    fn matched_all() -> Self {
+        Self {
+            matched: true,
+            surface_index: None,
+        }
+    }
+
+    fn matched_surface(index: i32) -> Self {
+        Self {
+            matched: true,
+            surface_index: Some(index),
+        }
+    }
+}
+
+/// Try to parse a virtual primitive suffix from a path segment.
+/// SDK convention: "NodeName_N" where N is a 0-based primitive index.
+/// Returns (base_name, surface_index) if parsing succeeds.
+fn parse_virtual_primitive(segment: &str) -> Option<(&str, i32)> {
+    // Look for pattern like "Sphere_1" where the number after underscore is the surface index
+    if let Some(last_underscore) = segment.rfind('_') {
+        let (base, num_part) = segment.split_at(last_underscore);
+        // Skip the underscore
+        let num_str = &num_part[1..];
+        if let Ok(index) = num_str.parse::<i32>() {
+            // Only match single digit suffixes (0-9) to avoid false positives
+            // Also don't match if the base name is empty
+            if !base.is_empty() && num_str.len() <= 2 {
+                return Some((base, index));
+            }
+        }
+    }
+    None
 }
 
 /// Check if a modifier path matches a mesh instance.
@@ -353,9 +429,53 @@ fn apply_shadow_to_mesh(mesh: &mut Gd<MeshInstance3D>, cast_shadows: bool) {
 /// - Node name only: "PlaneScreen" (matches any node with that name)
 /// - Mesh name only: "Plane.105" (matches any mesh with that resource name)
 /// - Prefix/subtree: "Screen" matches "Screen/PlaneScreen" and children
-fn path_matches(modifier_path: &str, info: &MeshInstanceInfo) -> bool {
+/// - Suffix match: partial paths match at the end of full paths
+/// - Virtual primitive: "Sphere.001/Sphere_2" targets surface 2 on Sphere.001
+fn path_matches(modifier_path: &str, info: &MeshInstanceInfo) -> PathMatchResult {
     if modifier_path.is_empty() {
-        return true; // Global modifier
+        return PathMatchResult::matched_all();
+    }
+
+    // Check if the last segment is a virtual primitive reference
+    let segments: Vec<&str> = modifier_path.split('/').collect();
+    let last_segment = segments.last().unwrap_or(&"");
+
+    // Try to parse virtual primitive targeting (e.g., "Parent/Sphere_2")
+    if let Some((primitive_base, surface_index)) = parse_virtual_primitive(last_segment) {
+        // Build the parent path without the virtual primitive
+        let parent_path = if segments.len() > 1 {
+            segments[..segments.len() - 1].join("/")
+        } else {
+            String::new()
+        };
+
+        // Check if the parent path matches this mesh instance
+        let parent_matches = if parent_path.is_empty() {
+            // Just primitive name, match any mesh whose name starts with the base
+            info.node_name.starts_with(primitive_base)
+                || normalize_segment(&info.node_name).starts_with(&normalize_segment(primitive_base))
+        } else {
+            // Check parent path against this node
+            path_matches_basic(&parent_path, info)
+        };
+
+        if parent_matches && surface_index < info.surface_count {
+            return PathMatchResult::matched_surface(surface_index);
+        }
+    }
+
+    // Standard path matching
+    if path_matches_basic(modifier_path, info) {
+        return PathMatchResult::matched_all();
+    }
+
+    PathMatchResult::no_match()
+}
+
+/// Basic path matching without virtual primitive parsing
+fn path_matches_basic(modifier_path: &str, info: &MeshInstanceInfo) -> bool {
+    if modifier_path.is_empty() {
+        return true;
     }
 
     // 1. Exact full path match (node_path/mesh_name)
@@ -368,52 +488,124 @@ fn path_matches(modifier_path: &str, info: &MeshInstanceInfo) -> bool {
         return true;
     }
 
-    // 3. Node name only match (e.g., "PlaneScreen" matches any node named PlaneScreen)
+    // 3. Node name only match
     if info.node_name == modifier_path {
         return true;
     }
 
-    // 4. Mesh name only match (e.g., "Plane.105" matches any mesh with that resource name)
+    // 4. Mesh name only match
     if let Some(ref mesh_name) = info.mesh_name {
         if mesh_name == modifier_path {
             return true;
         }
     }
 
-    // 5. Prefix/subtree match (e.g., "Screen" matches "Screen/PlaneScreen")
+    // 5. Prefix/subtree match
     if info.node_path.starts_with(&format!("{}/", modifier_path)) {
         return true;
     }
 
-    // 6. Suffix match for partial paths (e.g., "PlaneScreen/Plane.105" matches "Screen/PlaneScreen/Plane.105")
+    // 6. Suffix match on full path
     if info.full_path.ends_with(&format!("/{}", modifier_path)) {
         return true;
     }
 
-    // 7. Suffix match on node path (e.g., "Parent/Child" matches "Root/Parent/Child")
+    // 7. Suffix match on node path
     if info.node_path.ends_with(&format!("/{}", modifier_path)) {
+        return true;
+    }
+
+    // 8. Fuzzy matching for skeletal meshes and Godot naming conventions
+    // Godot may:
+    // - Insert "Skeleton3D" nodes for skeletal meshes
+    // - Replace "." with "_" in node names (e.g., "Sphere.001" -> "Sphere_001")
+    let modifier_segments: Vec<&str> = modifier_path.split('/').collect();
+    let node_segments: Vec<&str> = info.node_path.split('/').collect();
+
+    if segments_match_fuzzy(&modifier_segments, &node_segments) {
         return true;
     }
 
     false
 }
 
+/// Normalize a segment name for comparison (handle Godot's "." -> "_" conversion)
+fn normalize_segment(s: &str) -> String {
+    s.replace('.', "_")
+}
+
+/// Check if pattern segments match target segments with fuzzy matching.
+/// Allows:
+/// - Extra segments in target (like "Skeleton3D" inserted by Godot)
+/// - "." replaced with "_" in segment names
+fn segments_match_fuzzy(pattern: &[&str], target: &[&str]) -> bool {
+    if pattern.is_empty() {
+        return true;
+    }
+
+    let mut pattern_idx = 0;
+    for target_segment in target {
+        let pattern_segment = pattern[pattern_idx];
+
+        // Check for exact match or normalized match (. -> _)
+        if *target_segment == pattern_segment
+            || normalize_segment(target_segment) == normalize_segment(pattern_segment)
+        {
+            pattern_idx += 1;
+            if pattern_idx == pattern.len() {
+                return true;
+            }
+        }
+        // Skip segments like "Skeleton3D" that Godot inserts
+    }
+
+    false
+}
+
+/// Key for resolved modifier mappings - combines node path and optional surface index
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct ModifierKey {
+    node_path: String,
+    /// None means all surfaces, Some(i) means specific surface
+    surface_index: Option<i32>,
+}
+
+impl ModifierKey {
+    fn new(node_path: &str, surface_index: Option<i32>) -> Self {
+        Self {
+            node_path: node_path.to_string(),
+            surface_index,
+        }
+    }
+
+    fn all_surfaces(node_path: &str) -> Self {
+        Self::new(node_path, None)
+    }
+}
+
 /// Resolve which modifier applies to each mesh instance.
 /// Specific path modifiers take priority over global modifiers.
 /// More specific matches (longer paths) take priority over less specific ones.
+/// Returns map from (node_path, surface_index) to modifier match.
 fn resolve_modifiers<'a>(
     modifiers: &'a [GltfNodeModifier],
     all_meshes: &[MeshInstanceInfo],
-) -> HashMap<String, &'a GltfNodeModifier> {
-    let mut resolved: HashMap<String, &GltfNodeModifier> = HashMap::new();
+) -> HashMap<ModifierKey, ModifierMatch<'a>> {
+    let mut resolved: HashMap<ModifierKey, ModifierMatch> = HashMap::new();
 
     // First pass: find global modifier (empty path)
     let global_modifier = modifiers.iter().find(|m| m.path.is_empty());
 
-    // If there's a global modifier, apply it to all meshes
+    // If there's a global modifier, apply it to all meshes (all surfaces)
     if let Some(global) = global_modifier {
         for info in all_meshes {
-            resolved.insert(info.node_path.clone(), global);
+            resolved.insert(
+                ModifierKey::all_surfaces(&info.node_path),
+                ModifierMatch {
+                    modifier: global,
+                    surface_index: None,
+                },
+            );
         }
     }
 
@@ -422,11 +614,37 @@ fn resolve_modifiers<'a>(
     let mut specific_modifiers: Vec<_> = modifiers.iter().filter(|m| !m.path.is_empty()).collect();
     specific_modifiers.sort_by_key(|m| m.path.len());
 
-    for modifier in specific_modifiers {
+    for modifier in &specific_modifiers {
+        let mut matched = false;
         for info in all_meshes {
-            if path_matches(&modifier.path, info) {
-                resolved.insert(info.node_path.clone(), modifier);
+            let match_result = path_matches(&modifier.path, info);
+            if match_result.matched {
+                let key = ModifierKey::new(&info.node_path, match_result.surface_index);
+                resolved.insert(
+                    key,
+                    ModifierMatch {
+                        modifier,
+                        surface_index: match_result.surface_index,
+                    },
+                );
+                matched = true;
             }
+        }
+
+        // Debug: log when a modifier path doesn't match any mesh
+        if !matched {
+            let available_paths: Vec<&str> =
+                all_meshes.iter().map(|i| i.node_path.as_str()).collect();
+            let surface_counts: Vec<(&str, i32)> = all_meshes
+                .iter()
+                .map(|i| (i.node_path.as_str(), i.surface_count))
+                .collect();
+            tracing::warn!(
+                "GltfNodeModifiers: path '{}' did not match any node. Available paths: {:?}, surface counts: {:?}",
+                modifier.path,
+                available_paths,
+                surface_counts
+            );
         }
     }
 
@@ -503,7 +721,7 @@ pub fn update_gltf_node_modifiers(
 
             if modifiers.is_empty() {
                 // Component was removed or has no modifiers - restore all original states
-                for (path, mesh_instances) in collect_paths_with_meshes(&gltf_root) {
+                for (_path, mesh_instances) in collect_paths_with_meshes(&gltf_root) {
                     for (full_path, mut mesh) in mesh_instances {
                         if let Some(original_materials) = state.original_materials.get(&full_path) {
                             restore_original_materials(&mut mesh, original_materials);
@@ -512,7 +730,6 @@ pub fn update_gltf_node_modifiers(
                             mesh.set_cast_shadows_setting(*original_shadow);
                         }
                     }
-                    let _ = path;
                 }
 
                 // Clear state
@@ -531,11 +748,14 @@ pub fn update_gltf_node_modifiers(
             // Collect all mesh instances in the GLTF
             let all_meshes = collect_all_mesh_instances(&gltf_root);
 
-            // Resolve which modifier applies to each mesh
+            // Resolve which modifier applies to each mesh (and optionally which surface)
             let resolved = resolve_modifiers(modifiers, &all_meshes);
 
-            // Track which paths are now being modified
-            let new_applied_paths: HashSet<String> = resolved.keys().cloned().collect();
+            // Track which paths are now being modified (using node_path for simplicity)
+            let new_applied_paths: HashSet<String> = resolved
+                .keys()
+                .map(|k| k.node_path.clone())
+                .collect();
 
             // Find paths that were previously modified but no longer have modifiers
             let paths_to_restore: Vec<String> = state
@@ -563,26 +783,28 @@ pub fn update_gltf_node_modifiers(
                 let path = &info.node_path;
                 let mut mesh = info.mesh_instance;
 
-                if let Some(modifier) = resolved.get(path) {
-                    // Capture original state if not already captured
-                    if !state.original_materials.contains_key(path) {
-                        state
-                            .original_materials
-                            .insert(path.clone(), capture_original_materials(&mesh));
-                        state
-                            .original_shadows
-                            .insert(path.clone(), mesh.get_cast_shadows_setting());
-                    }
+                // Capture original state if not already captured (before applying any modifiers)
+                if !state.original_materials.contains_key(path) {
+                    state
+                        .original_materials
+                        .insert(path.clone(), capture_original_materials(&mesh));
+                    state
+                        .original_shadows
+                        .insert(path.clone(), mesh.get_cast_shadows_setting());
+                }
 
+                // Check for "all surfaces" modifier first
+                let all_surfaces_key = ModifierKey::all_surfaces(path);
+                if let Some(modifier_match) = resolved.get(&all_surfaces_key) {
                     // Apply shadow casting if specified
-                    if let Some(cast_shadows) = modifier.cast_shadows {
-                        apply_shadow_to_mesh(&mut mesh, cast_shadows);
+                    if let Some(cast_shadows) = modifier_match.modifier.cast_shadows {
+                        apply_shadow_to_mesh(&mut mesh, cast_shadows, None);
                     }
 
-                    // Apply material if specified
-                    if let Some(material) = &modifier.material {
+                    // Apply material if specified (to all surfaces)
+                    if let Some(material) = &modifier_match.modifier.material {
                         if let Some((dcl_material, godot_material)) =
-                            apply_material_to_mesh(&mut mesh, material, &content_mapping)
+                            apply_material_to_mesh(&mut mesh, material, &content_mapping, None)
                         {
                             // Track material for texture loading
                             state.pending_materials.insert(
@@ -593,6 +815,38 @@ pub fn update_gltf_node_modifiers(
                                     waiting_textures: true,
                                 },
                             );
+                        }
+                    }
+                }
+
+                // Check for per-surface modifiers (can override "all surfaces" for specific surfaces)
+                for surface_idx in 0..info.surface_count {
+                    let surface_key = ModifierKey::new(path, Some(surface_idx));
+                    if let Some(modifier_match) = resolved.get(&surface_key) {
+                        // Per-surface shadow is applied to whole mesh (shadows are mesh-level)
+                        if let Some(cast_shadows) = modifier_match.modifier.cast_shadows {
+                            apply_shadow_to_mesh(&mut mesh, cast_shadows, Some(surface_idx));
+                        }
+
+                        // Apply material to this specific surface
+                        if let Some(material) = &modifier_match.modifier.material {
+                            if let Some((dcl_material, godot_material)) = apply_material_to_mesh(
+                                &mut mesh,
+                                material,
+                                &content_mapping,
+                                Some(surface_idx),
+                            ) {
+                                // Track material for texture loading with surface-specific key
+                                let material_key = format!("{}:{}", path, surface_idx);
+                                state.pending_materials.insert(
+                                    material_key,
+                                    ModifierMaterialItem {
+                                        dcl_material,
+                                        weak_ref: weakref(&godot_material.to_variant()),
+                                        waiting_textures: true,
+                                    },
+                                );
+                            }
                         }
                     }
                 }

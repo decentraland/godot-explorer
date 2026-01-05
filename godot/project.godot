@@ -50,7 +50,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--force-mobile --debug-panel --fake-deeplink decentraland://open?preview=http://0.0.0.0:8000&position=5,-149"
+run/main_run_args="--force-mobile"
 
 [editor_plugins]
 
