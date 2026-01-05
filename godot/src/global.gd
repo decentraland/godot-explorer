@@ -126,11 +126,23 @@ func is_emulating_safe_area() -> bool:
 	return cli.emulate_ios or cli.emulate_android
 
 
+# Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
+var _safe_area_presets: GDScript = null
+
+
+func _get_safe_area_presets() -> GDScript:
+	if _safe_area_presets == null:
+		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
+	return _safe_area_presets
+
+
 func get_safe_area() -> Rect2i:
 	if cli.emulate_ios:
-		return SafeAreaPresets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
+		var presets := _get_safe_area_presets()
+		return presets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
 	elif cli.emulate_android:
-		return SafeAreaPresets.get_android_safe_area(is_orientation_portrait(), get_window().size)
+		var presets := _get_safe_area_presets()
+		return presets.get_android_safe_area(is_orientation_portrait(), get_window().size)
 	else:
 		return DisplayServer.get_display_safe_area()
 
@@ -156,13 +168,15 @@ func _ready():
 	# Handle safe area emulation (enables mobile mode and resizes window)
 	if cli.emulate_ios:
 		_set_is_mobile(true)
-		var target_size := SafeAreaPresets.get_ios_window_size(is_orientation_portrait())
+		var presets := _get_safe_area_presets()
+		var target_size: Vector2i = presets.get_ios_window_size(is_orientation_portrait())
 		get_window().size = target_size
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
 	elif cli.emulate_android:
 		_set_is_mobile(true)
-		var target_size := SafeAreaPresets.get_android_window_size(is_orientation_portrait())
+		var presets := _get_safe_area_presets()
+		var target_size: Vector2i = presets.get_android_window_size(is_orientation_portrait())
 		get_window().size = target_size
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
@@ -473,17 +487,19 @@ func set_orientation_landscape():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	elif cli.emulate_ios:
-		get_window().size = SafeAreaPresets.get_ios_window_size(false)
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_ios_window_size(false)
 		get_window().move_to_center()
 	elif cli.emulate_android:
-		get_window().size = SafeAreaPresets.get_android_window_size(false)
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_android_window_size(false)
 		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
 
 
-func is_orientation_portrait():
+func is_orientation_portrait() -> bool:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	return window_size.x < window_size.y
 
@@ -492,10 +508,12 @@ func set_orientation_portrait():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 	elif cli.emulate_ios:
-		get_window().size = SafeAreaPresets.get_ios_window_size(true)
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_ios_window_size(true)
 		get_window().move_to_center()
 	elif cli.emulate_android:
-		get_window().size = SafeAreaPresets.get_android_window_size(true)
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_android_window_size(true)
 		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(720, 1280)
