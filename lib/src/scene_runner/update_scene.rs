@@ -16,6 +16,9 @@ use super::{
         billboard::update_billboard,
         camera_mode_area::update_camera_mode_area,
         gltf_container::{sync_gltf_loading_state, update_gltf_container},
+        gltf_node_modifiers::{
+            update_gltf_node_modifiers, update_modifier_textures, update_modifier_video_textures,
+        },
         material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
@@ -224,6 +227,14 @@ pub fn _process_scene(
             }
             SceneUpdateState::SyncGltfContainer => {
                 !sync_gltf_loading_state(scene, crdt_state, ref_time, end_time_us)
+            }
+            SceneUpdateState::GltfNodeModifiers => {
+                let result = !update_gltf_node_modifiers(scene, crdt_state, ref_time, end_time_us);
+                // Check and apply pending textures for modifier materials
+                update_modifier_textures(scene);
+                // Update video textures (needs mutable access to video_players)
+                update_modifier_video_textures(scene);
+                result
             }
             SceneUpdateState::NftShape => {
                 update_nft_shape(scene, crdt_state);

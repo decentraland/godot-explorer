@@ -71,51 +71,55 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     None
                 };
 
-                if existing_material.is_none() {
-                    for tex in dcl_material.get_textures().into_iter().flatten() {
-                        if let DclSourceTex::Texture(hash) = &tex.source {
-                            content_provider.call_deferred(
-                                "fetch_texture_by_hash",
-                                &[
-                                    hash.to_godot().to_variant(),
-                                    DclContentMappingAndUrl::from_ref(
-                                        scene.content_mapping.clone(),
-                                    )
+                // Always request texture fetches for new textures
+                for tex in dcl_material.get_textures().into_iter().flatten() {
+                    if let DclSourceTex::Texture(hash) = &tex.source {
+                        content_provider.call_deferred(
+                            "fetch_texture_by_hash",
+                            &[
+                                hash.to_godot().to_variant(),
+                                DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
                                     .to_variant(),
-                                ],
-                            );
-                        }
+                            ],
+                        );
                     }
                 }
 
-                let mut godot_material = if let Some(material) = existing_material {
-                    material.to::<Gd<StandardMaterial3D>>()
-                } else {
-                    let godot_material = StandardMaterial3D::new_gd();
-
-                    let waiting_textures = {
-                        match &dcl_material {
-                            DclMaterial::Unlit(unlit) => unlit.texture.is_some(),
-                            DclMaterial::Pbr(pbr) => {
-                                pbr.texture.is_some()
-                                    || pbr.bump_texture.is_some()
-                                    || pbr.alpha_texture.is_some()
-                                    || pbr.emissive_texture.is_some()
-                            }
+                let waiting_textures = {
+                    match &dcl_material {
+                        DclMaterial::Unlit(unlit) => unlit.texture.is_some(),
+                        DclMaterial::Pbr(pbr) => {
+                            pbr.texture.is_some()
+                                || pbr.bump_texture.is_some()
+                                || pbr.alpha_texture.is_some()
+                                || pbr.emissive_texture.is_some()
                         }
-                    };
-
-                    scene.materials.insert(
-                        *entity,
-                        MaterialItem {
-                            dcl_mat: dcl_material.clone(),
-                            weak_ref: weakref(&godot_material.to_variant()),
-                            waiting_textures,
-                            alive: true,
-                        },
-                    );
-                    godot_material
+                    }
                 };
+
+                let mut godot_material = if let Some(material) = existing_material {
+                    let mut mat = material.to::<Gd<StandardMaterial3D>>();
+
+                    // Clear textures that are no longer present in the new material
+                    // This is needed when changing from a textured material to a non-textured one
+                    clear_removed_textures(&mut mat, &dcl_material);
+
+                    mat
+                } else {
+                    StandardMaterial3D::new_gd()
+                };
+
+                // Always update the MaterialItem with the new material definition
+                // This is critical for texture changes to be detected and applied
+                scene.materials.insert(
+                    *entity,
+                    MaterialItem {
+                        dcl_mat: dcl_material.clone(),
+                        weak_ref: weakref(&godot_material.to_variant()),
+                        waiting_textures,
+                        alive: true,
+                    },
+                );
 
                 match &dcl_material {
                     DclMaterial::Unlit(unlit) => {
@@ -213,6 +217,9 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     mesh_renderer
                         .set_surface_override_material(0, &godot_material.upcast::<Material>());
                 }
+
+                // Update tracked material for change detection
+                godot_entity_node.material = Some(dcl_material);
             } else {
                 let mesh_renderer = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
 
@@ -307,6 +314,58 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
         scene.materials.retain(|k, _| !dead_materials.contains(k));
         scene.dirty_materials = keep_dirty;
+    }
+}
+
+/// Clear textures from a material that are no longer present in the new material definition.
+/// This ensures that when a texture is set to null, it's actually removed from the Godot material.
+fn clear_removed_textures(material: &mut Gd<StandardMaterial3D>, dcl_material: &DclMaterial) {
+    use godot::classes::base_material_3d::TextureParam;
+
+    match dcl_material {
+        DclMaterial::Unlit(unlit) => {
+            if unlit.texture.is_none() {
+                // Clear albedo texture if not present
+                material.call(
+                    "set_texture",
+                    &[TextureParam::ALBEDO.ord().to_variant(), Variant::nil()],
+                );
+            }
+            // Unlit materials don't have normal/emission textures
+            material.call(
+                "set_texture",
+                &[TextureParam::NORMAL.ord().to_variant(), Variant::nil()],
+            );
+            material.call(
+                "set_texture",
+                &[TextureParam::EMISSION.ord().to_variant(), Variant::nil()],
+            );
+        }
+        DclMaterial::Pbr(pbr) => {
+            // Clear albedo texture if not present (and no alpha texture either)
+            if pbr.texture.is_none() && pbr.alpha_texture.is_none() {
+                material.call(
+                    "set_texture",
+                    &[TextureParam::ALBEDO.ord().to_variant(), Variant::nil()],
+                );
+            }
+            // Clear normal texture if not present
+            if pbr.bump_texture.is_none() {
+                material.call(
+                    "set_texture",
+                    &[TextureParam::NORMAL.ord().to_variant(), Variant::nil()],
+                );
+                // Also disable the normal map feature
+                material.set_feature(Feature::NORMAL_MAPPING, false);
+            }
+            // Clear emission texture if not present
+            if pbr.emissive_texture.is_none() {
+                material.call(
+                    "set_texture",
+                    &[TextureParam::EMISSION.ord().to_variant(), Variant::nil()],
+                );
+            }
+        }
     }
 }
 

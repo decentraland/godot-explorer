@@ -167,6 +167,12 @@ pub fn sync_gltf_loading_state(
             || current_state_godot == GltfContainerLoadingState::NotFound
         {
             scene.gltf_loading.remove(entity);
+
+            // When GLTF finishes loading, mark entity for GltfNodeModifiers re-application
+            // (modifiers need to be applied to newly loaded nodes)
+            if current_state_godot == GltfContainerLoadingState::Finished {
+                scene.gltf_node_modifiers_pending.insert(*entity);
+            }
         }
 
         current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
