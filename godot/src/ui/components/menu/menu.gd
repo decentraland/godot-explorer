@@ -222,7 +222,7 @@ func _on_button_backpack_toggled(toggled_on):
 
 
 func _on_size_changed() -> void:
-	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var safe_area: Rect2i = Global.get_safe_area()
 	var window_size: Vector2i = DisplayServer.window_get_size()
 
 	var top: int = 0

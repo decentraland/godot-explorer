@@ -76,6 +76,10 @@ pub struct DclCli {
     pub developer_mode: bool,
     #[var(get)]
     pub help_requested: bool,
+    #[var(get)]
+    pub emulate_ios: bool,
+    #[var(get)]
+    pub emulate_android: bool,
 
     // Arguments with values
     #[var(get)]
@@ -118,6 +122,20 @@ impl DclCli {
             ArgDefinition {
                 name: "--skip-lobby".to_string(),
                 description: "Skip the lobby screen and go directly to the explorer".to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--emulate-ios".to_string(),
+                description: "Emulate iOS safe area margins (iPhone 14 Pro style notch)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--emulate-android".to_string(),
+                description: "Emulate Android safe area margins (status bar + gesture nav)"
+                    .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
@@ -391,6 +409,8 @@ impl INode for DclCli {
         let benchmark_report = args_map.contains_key("--benchmark-report");
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
+        let emulate_ios = args_map.contains_key("--emulate-ios");
+        let emulate_android = args_map.contains_key("--emulate-android");
 
         // Extract arguments with values
         let realm = args_map
@@ -452,6 +472,8 @@ impl INode for DclCli {
             fixed_skybox_time,
             developer_mode,
             help_requested,
+            emulate_ios,
+            emulate_android,
             realm,
             location,
             scene_input_file,

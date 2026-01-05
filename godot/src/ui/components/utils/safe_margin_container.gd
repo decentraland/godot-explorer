@@ -16,7 +16,7 @@ func _ready() -> void:
 
 
 func _on_size_changed():
-	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var safe_area: Rect2i = Global.get_safe_area()
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var viewport_size = get_viewport().get_visible_rect().size
 
@@ -29,7 +29,7 @@ func _on_size_changed():
 	var x_factor: float = viewport_size.x / window_size.x
 	var y_factor: float = viewport_size.y / window_size.y
 
-	if Global.is_mobile() and !Global.is_virtual_mobile():
+	if Global.is_mobile() or Global.is_emulating_safe_area():
 		top = max(top, safe_area.position.y * y_factor)
 		left = max(left, safe_area.position.x * x_factor)
 		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)

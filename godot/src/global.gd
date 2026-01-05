@@ -122,6 +122,19 @@ func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
 
 
+func is_emulating_safe_area() -> bool:
+	return cli.emulate_ios or cli.emulate_android
+
+
+func get_safe_area() -> Rect2i:
+	if cli.emulate_ios:
+		return SafeAreaPresets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
+	elif cli.emulate_android:
+		return SafeAreaPresets.get_android_safe_area(is_orientation_portrait(), get_window().size)
+	else:
+		return DisplayServer.get_display_safe_area()
+
+
 ## Vibrate handheld device
 func send_haptic_feedback() -> void:
 	if is_mobile():
@@ -132,6 +145,18 @@ func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
+
+	# Handle safe area emulation (enables mobile mode and resizes window)
+	if cli.emulate_ios:
+		_set_is_mobile(true)
+		var target_size := SafeAreaPresets.get_ios_window_size(is_orientation_portrait())
+		get_window().size = target_size
+		get_window().move_to_center()
+	elif cli.emulate_android:
+		_set_is_mobile(true)
+		var target_size := SafeAreaPresets.get_android_window_size(is_orientation_portrait())
+		get_window().size = target_size
+		get_window().move_to_center()
 
 	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
 	if not cli.fake_deeplink.is_empty():
@@ -438,6 +463,12 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 func set_orientation_landscape():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+	elif cli.emulate_ios:
+		get_window().size = SafeAreaPresets.get_ios_window_size(false)
+		get_window().move_to_center()
+	elif cli.emulate_android:
+		get_window().size = SafeAreaPresets.get_android_window_size(false)
+		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
@@ -451,6 +482,12 @@ func is_orientation_portrait():
 func set_orientation_portrait():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+	elif cli.emulate_ios:
+		get_window().size = SafeAreaPresets.get_ios_window_size(true)
+		get_window().move_to_center()
+	elif cli.emulate_android:
+		get_window().size = SafeAreaPresets.get_android_window_size(true)
+		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
