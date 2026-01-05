@@ -62,8 +62,22 @@ fn get_gltf_container(node_3d: &Gd<Node3D>) -> Option<Gd<DclGltfContainer>> {
     node_3d.try_get_node_as::<DclGltfContainer>("GltfContainer")
 }
 
-/// Collect all MeshInstance3D nodes in the GLTF hierarchy
-fn collect_all_mesh_instances(root: &Gd<Node3D>) -> Vec<(String, Gd<MeshInstance3D>)> {
+/// Information about a mesh instance in the GLTF hierarchy
+pub struct MeshInstanceInfo {
+    /// Full node path (e.g., "Screen/PlaneScreen")
+    pub node_path: String,
+    /// Node name only (e.g., "PlaneScreen")
+    pub node_name: String,
+    /// Mesh resource name if available (e.g., "Plane.105")
+    pub mesh_name: Option<String>,
+    /// Full path including mesh name (e.g., "Screen/PlaneScreen/Plane.105")
+    pub full_path: String,
+    /// The actual MeshInstance3D node
+    pub mesh_instance: Gd<MeshInstance3D>,
+}
+
+/// Collect all MeshInstance3D nodes in the GLTF hierarchy with full info
+fn collect_all_mesh_instances(root: &Gd<Node3D>) -> Vec<MeshInstanceInfo> {
     let mut result = Vec::new();
     collect_mesh_instances_recursive(root, String::new(), &mut result);
     result
@@ -72,11 +86,33 @@ fn collect_all_mesh_instances(root: &Gd<Node3D>) -> Vec<(String, Gd<MeshInstance
 fn collect_mesh_instances_recursive(
     node: &Gd<Node3D>,
     current_path: String,
-    result: &mut Vec<(String, Gd<MeshInstance3D>)>,
+    result: &mut Vec<MeshInstanceInfo>,
 ) {
     // Check if this node is a MeshInstance3D
     if let Ok(mesh_instance) = node.clone().try_cast::<MeshInstance3D>() {
-        result.push((current_path.clone(), mesh_instance));
+        let node_name = node.get_name().to_string();
+        let mesh_name = mesh_instance
+            .get_mesh()
+            .map(|m| m.get_name().to_string())
+            .filter(|n| !n.is_empty());
+
+        let full_path = if let Some(ref mesh) = mesh_name {
+            if current_path.is_empty() {
+                mesh.clone()
+            } else {
+                format!("{}/{}", current_path, mesh)
+            }
+        } else {
+            current_path.clone()
+        };
+
+        result.push(MeshInstanceInfo {
+            node_path: current_path.clone(),
+            node_name,
+            mesh_name,
+            full_path,
+            mesh_instance,
+        });
     }
 
     // Recurse into children
@@ -309,30 +345,87 @@ fn apply_shadow_to_mesh(mesh: &mut Gd<MeshInstance3D>, cast_shadows: bool) {
     mesh.set_cast_shadows_setting(setting);
 }
 
-/// Resolve which modifier applies to each node path.
+/// Check if a modifier path matches a mesh instance.
+/// Supports multiple matching strategies for compatibility with Unity/Bevy:
+/// - Empty path: global modifier, matches everything
+/// - Full path with mesh: "Screen/PlaneScreen/Plane.105" (exact match)
+/// - Node path: "Screen/PlaneScreen" (exact node path match)
+/// - Node name only: "PlaneScreen" (matches any node with that name)
+/// - Mesh name only: "Plane.105" (matches any mesh with that resource name)
+/// - Prefix/subtree: "Screen" matches "Screen/PlaneScreen" and children
+fn path_matches(modifier_path: &str, info: &MeshInstanceInfo) -> bool {
+    if modifier_path.is_empty() {
+        return true; // Global modifier
+    }
+
+    // 1. Exact full path match (node_path/mesh_name)
+    if info.full_path == modifier_path {
+        return true;
+    }
+
+    // 2. Exact node path match
+    if info.node_path == modifier_path {
+        return true;
+    }
+
+    // 3. Node name only match (e.g., "PlaneScreen" matches any node named PlaneScreen)
+    if info.node_name == modifier_path {
+        return true;
+    }
+
+    // 4. Mesh name only match (e.g., "Plane.105" matches any mesh with that resource name)
+    if let Some(ref mesh_name) = info.mesh_name {
+        if mesh_name == modifier_path {
+            return true;
+        }
+    }
+
+    // 5. Prefix/subtree match (e.g., "Screen" matches "Screen/PlaneScreen")
+    if info.node_path.starts_with(&format!("{}/", modifier_path)) {
+        return true;
+    }
+
+    // 6. Suffix match for partial paths (e.g., "PlaneScreen/Plane.105" matches "Screen/PlaneScreen/Plane.105")
+    if info.full_path.ends_with(&format!("/{}", modifier_path)) {
+        return true;
+    }
+
+    // 7. Suffix match on node path (e.g., "Parent/Child" matches "Root/Parent/Child")
+    if info.node_path.ends_with(&format!("/{}", modifier_path)) {
+        return true;
+    }
+
+    false
+}
+
+/// Resolve which modifier applies to each mesh instance.
 /// Specific path modifiers take priority over global modifiers.
+/// More specific matches (longer paths) take priority over less specific ones.
 fn resolve_modifiers<'a>(
     modifiers: &'a [GltfNodeModifier],
-    all_paths: &[String],
+    all_meshes: &[MeshInstanceInfo],
 ) -> HashMap<String, &'a GltfNodeModifier> {
     let mut resolved: HashMap<String, &GltfNodeModifier> = HashMap::new();
 
     // First pass: find global modifier (empty path)
     let global_modifier = modifiers.iter().find(|m| m.path.is_empty());
 
-    // If there's a global modifier, apply it to all paths
+    // If there's a global modifier, apply it to all meshes
     if let Some(global) = global_modifier {
-        for path in all_paths {
-            resolved.insert(path.clone(), global);
+        for info in all_meshes {
+            resolved.insert(info.node_path.clone(), global);
         }
     }
 
     // Second pass: specific paths override globals
-    for modifier in modifiers.iter().filter(|m| !m.path.is_empty()) {
-        // Find all paths that match this modifier's path (exact match or prefix)
-        for path in all_paths {
-            if path == &modifier.path || path.starts_with(&format!("{}/", modifier.path)) {
-                resolved.insert(path.clone(), modifier);
+    // Sort modifiers by path length (shorter first) so more specific paths override
+    let mut specific_modifiers: Vec<_> = modifiers.iter().filter(|m| !m.path.is_empty()).collect();
+    specific_modifiers.sort_by_key(|m| m.path.len());
+
+    for modifier in specific_modifiers {
+        for info in all_meshes {
+            if path_matches(&modifier.path, info) {
+                resolved.insert(info.node_path.clone(), modifier);
             }
         }
     }
@@ -437,10 +530,9 @@ pub fn update_gltf_node_modifiers(
 
             // Collect all mesh instances in the GLTF
             let all_meshes = collect_all_mesh_instances(&gltf_root);
-            let all_paths: Vec<String> = all_meshes.iter().map(|(p, _)| p.clone()).collect();
 
-            // Resolve which modifier applies to each path
-            let resolved = resolve_modifiers(modifiers, &all_paths);
+            // Resolve which modifier applies to each mesh
+            let resolved = resolve_modifiers(modifiers, &all_meshes);
 
             // Track which paths are now being modified
             let new_applied_paths: HashSet<String> = resolved.keys().cloned().collect();
@@ -467,10 +559,13 @@ pub fn update_gltf_node_modifiers(
             }
 
             // Apply modifiers to each mesh
-            for (path, mut mesh) in all_meshes {
-                if let Some(modifier) = resolved.get(&path) {
+            for info in all_meshes {
+                let path = &info.node_path;
+                let mut mesh = info.mesh_instance;
+
+                if let Some(modifier) = resolved.get(path) {
                     // Capture original state if not already captured
-                    if !state.original_materials.contains_key(&path) {
+                    if !state.original_materials.contains_key(path) {
                         state
                             .original_materials
                             .insert(path.clone(), capture_original_materials(&mesh));
@@ -534,9 +629,12 @@ fn collect_paths_with_meshes(root: &Gd<Node3D>) -> Vec<(String, MeshInstancesWit
     let meshes = collect_all_mesh_instances(root);
     // Group by top-level path
     let mut grouped: HashMap<String, MeshInstancesWithPaths> = HashMap::new();
-    for (path, mesh) in meshes {
-        let top_level = path.split('/').next().unwrap_or("").to_string();
-        grouped.entry(top_level).or_default().push((path, mesh));
+    for info in meshes {
+        let top_level = info.node_path.split('/').next().unwrap_or("").to_string();
+        grouped
+            .entry(top_level)
+            .or_default()
+            .push((info.node_path, info.mesh_instance));
     }
     grouped.into_iter().collect()
 }
