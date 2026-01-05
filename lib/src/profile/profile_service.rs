@@ -1,16 +1,17 @@
 use crate::{
     avatars::dcl_user_profile::DclUserProfile,
     comms::profile::UserProfile,
-    dcl::common::content_entity::TypedIpfsRef,
     godot_classes::{dcl_global::DclGlobal, promise::Promise},
     scene_runner::tokio_runtime::TokioRuntime,
 };
 use anyhow::anyhow;
-use godot::{classes::Os, obj::Singleton, prelude::*};
+use godot::prelude::*;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
 use std::{io::Read, sync::Arc};
 
+// ADR-290: Profile deployments no longer include snapshot content files.
+// Profile images are served on-demand by the profile-images service.
 #[derive(Serialize)]
 struct Deployment<'a> {
     version: &'a str,
@@ -18,7 +19,7 @@ struct Deployment<'a> {
     ty: &'a str,
     pointers: Vec<String>,
     timestamp: u128,
-    content: Vec<TypedIpfsRef>,
+    content: Vec<()>, // ADR-290: Empty content array, no snapshot files
     metadata: serde_json::Value,
 }
 
@@ -37,19 +38,17 @@ impl IRefCounted for ProfileService {
 
 #[godot_api]
 impl ProfileService {
+    // ADR-290: Removed generate_snapshots parameter - snapshots are no longer uploaded
     #[func]
-    pub fn async_deploy_profile(
-        new_profile: Gd<DclUserProfile>,
-        generate_snapshots: bool,
-    ) -> Gd<Promise> {
+    pub fn async_deploy_profile(new_profile: Gd<DclUserProfile>) -> Gd<Promise> {
         // Default behavior: increment version
-        Self::async_deploy_profile_with_version_control(new_profile, generate_snapshots, true)
+        Self::async_deploy_profile_with_version_control(new_profile, true)
     }
 
+    // ADR-290: Removed generate_snapshots parameter - snapshots are no longer uploaded
     #[func]
     pub fn async_deploy_profile_with_version_control(
         mut new_profile: Gd<DclUserProfile>,
-        generate_snapshots: bool,
         increment_version: bool,
     ) -> Gd<Promise> {
         let promise = Promise::new_alloc();
@@ -112,12 +111,12 @@ impl ProfileService {
             .to_string();
 
         TokioRuntime::spawn(async move {
+            // ADR-290: Snapshots are no longer uploaded with profile deployments
             let result = Self::prepare_and_deploy_profile_internal(
                 http_requester_arc,
                 ephemeral_auth_chain,
                 profile,
                 eth_address,
-                generate_snapshots,
                 profile_content_url,
             )
             .await;
@@ -174,12 +173,11 @@ impl ProfileService {
 }
 
 impl ProfileService {
+    // ADR-290: Simplified multipart data preparation - no snapshot files included
     fn prepare_multipart_data(
         cid: String,
         entity_authchain: crate::auth::wallet::SimpleAuthChain,
         deployment_bytes: Vec<u8>,
-        has_new_snapshots: bool,
-        snapshots: &crate::comms::profile::AvatarSnapshots,
     ) -> Result<(Vec<u8>, String), anyhow::Error> {
         let mut form_data = multipart::client::lazy::Multipart::new();
         form_data.add_text("entityId", cid.clone());
@@ -193,14 +191,7 @@ impl ProfileService {
             None,
         );
 
-        // Add images if needed
-        if has_new_snapshots {
-            let content_folder = format!("{}/content/", Os::singleton().get_user_data_dir());
-            let body_path = format!("{}{}", content_folder, snapshots.body);
-            let face_path = format!("{}{}", content_folder, snapshots.face256);
-            form_data.add_file(snapshots.body.clone(), body_path);
-            form_data.add_file(snapshots.face256.clone(), face_path);
-        }
+        // ADR-290: No snapshot images are uploaded anymore
 
         let mut prepared = form_data.prepare()?;
         let boundary = prepared.boundary().to_string();
@@ -211,17 +202,20 @@ impl ProfileService {
         Ok((prepared_data, content_type))
     }
 
+    // ADR-290: Snapshots are no longer included in profile deployments
     async fn prepare_and_deploy_profile_internal(
         http_requester: Arc<crate::http_request::http_queue_requester::HttpQueueRequester>,
         ephemeral_auth_chain: crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
         mut profile: UserProfile,
         eth_address: String,
-        has_new_snapshots: bool,
         profile_content_url: String,
     ) -> Result<serde_json::Value, anyhow::Error> {
         // Update profile fields
         profile.content.user_id = Some(eth_address.clone());
         profile.content.eth_address.clone_from(&eth_address);
+
+        // ADR-290: Remove snapshots from avatar before deployment
+        profile.content.avatar.snapshots = None;
 
         // Prepare deployment data
         let unix_time = std::time::SystemTime::now()
@@ -229,29 +223,13 @@ impl ProfileService {
             .unwrap()
             .as_millis();
 
-        let snapshots = profile
-            .content
-            .avatar
-            .snapshots
-            .as_ref()
-            .ok_or(anyhow!("no snapshots"))?
-            .clone();
-
+        // ADR-290: Empty content array - no snapshot files uploaded
         let deployment = serde_json::to_string(&Deployment {
             version: "v3",
             ty: "profile",
             pointers: vec![eth_address.clone()],
             timestamp: unix_time,
-            content: vec![
-                TypedIpfsRef {
-                    file: "body.png".to_owned(),
-                    hash: snapshots.body.clone(),
-                },
-                TypedIpfsRef {
-                    file: "face256.png".to_owned(),
-                    hash: snapshots.face256.clone(),
-                },
-            ],
+            content: vec![], // ADR-290: No snapshot content files
             metadata: serde_json::json!({
                 "avatars": [profile.content]
             }),
@@ -270,14 +248,9 @@ impl ProfileService {
         let mut entity_authchain = ephemeral_auth_chain.auth_chain().clone();
         entity_authchain.add_signed_entity(cid.clone(), entity_id_signature);
 
-        // Prepare multipart form data in a separate function to avoid Send issues
-        let (prepared_data, content_type) = Self::prepare_multipart_data(
-            cid.clone(),
-            entity_authchain,
-            deployment.into_bytes(),
-            has_new_snapshots,
-            &snapshots,
-        )?;
+        // Prepare multipart form data (ADR-290: no snapshot files)
+        let (prepared_data, content_type) =
+            Self::prepare_multipart_data(cid.clone(), entity_authchain, deployment.into_bytes())?;
 
         // Deploy to server
         let url = format!("{}entities/", profile_content_url);

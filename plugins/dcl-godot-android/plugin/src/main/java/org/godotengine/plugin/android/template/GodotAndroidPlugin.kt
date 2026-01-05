@@ -187,9 +187,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         runOnUiThread {
             activity?.let {
                 if (!isWebViewOpen) {
-                    // Change orientation to portrait
-                    it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-
                     // Create a FrameLayout to hold the WebView and TextView
                     overlayLayout = FrameLayout(it)
 
@@ -215,16 +212,21 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                         // Set a custom WebViewClient to handle deep links, redirects, SSL, etc.
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                val requestUrl = request?.url.toString()
-                                if (requestUrl.startsWith("wc:")) {
-                                    handleDeepLink(it, requestUrl)
-                                    return true
-                                }
+                                val requestUrl = request?.url?.toString() ?: return false
 
+                                // Handle decentraland:// scheme - close the WebView (auth callback)
                                 if (requestUrl.startsWith("decentraland:")) {
                                     closeWebView()
                                     return true
                                 }
+
+                                // Handle all other non-HTTP(S) schemes as deep links
+                                // This includes: wc:, metamask://, trust://, rainbow://, argent://, etc.
+                                if (!requestUrl.startsWith("http://") && !requestUrl.startsWith("https://")) {
+                                    handleDeepLink(it, requestUrl)
+                                    return true
+                                }
+
                                 return false
                             }
 
@@ -301,9 +303,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     webView = null
                     overlayLayout = null
                     isWebViewOpen = false
-
-                    // Change orientation back to landscape
-                    it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 }
             } ?: Log.e(pluginName, "Activity is null, cannot close WebView.")
         }

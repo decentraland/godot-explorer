@@ -1,15 +1,14 @@
 use std::io::Read;
 
-use anyhow::anyhow;
-use godot::{classes::Os, obj::Singleton};
-
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
 
-use crate::{comms::profile::UserProfile, dcl::common::content_entity::TypedIpfsRef};
+use crate::comms::profile::UserProfile;
 
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 
+// ADR-290: Profile deployments no longer include snapshot content files.
+// Profile images are served on-demand by the profile-images service.
 #[derive(Serialize)]
 pub struct Deployment<'a> {
     version: &'a str,
@@ -17,7 +16,7 @@ pub struct Deployment<'a> {
     ty: &'a str,
     pointers: Vec<String>,
     timestamp: u128,
-    content: Vec<TypedIpfsRef>,
+    content: Vec<()>, // ADR-290: Empty content array, no snapshot files
     metadata: serde_json::Value,
 }
 
@@ -26,23 +25,19 @@ pub struct PrepareDeployProfileData {
     pub prepared_data: Vec<u8>,
 }
 
+// ADR-290: Snapshots are no longer included in profile deployments.
+// Profile images are served on-demand by the profile-images service.
 pub async fn prepare_deploy_profile(
     ephemeral_auth_chain: EphemeralAuthChain,
-    profile: UserProfile,
-    has_new_snapshots: bool,
+    mut profile: UserProfile,
 ) -> Result<(String, Vec<u8>), anyhow::Error> {
     let unix_time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_millis();
 
-    let snapshots = profile
-        .content
-        .avatar
-        .snapshots
-        .as_ref()
-        .ok_or(anyhow!("no snapshots"))?
-        .clone();
+    // ADR-290: Remove snapshots from avatar before deployment
+    profile.content.avatar.snapshots = None;
 
     let user_id = profile
         .content
@@ -51,21 +46,13 @@ pub async fn prepare_deploy_profile(
         .unwrap_or(&profile.content.eth_address)
         .clone();
 
+    // ADR-290: Empty content array - no snapshot files uploaded
     let deployment = serde_json::to_string(&Deployment {
         version: "v3",
         ty: "profile",
         pointers: vec![user_id],
         timestamp: unix_time,
-        content: vec![
-            TypedIpfsRef {
-                file: "body.png".to_owned(),
-                hash: snapshots.body,
-            },
-            TypedIpfsRef {
-                file: "face256.png".to_owned(),
-                hash: snapshots.face256,
-            },
-        ],
+        content: vec![], // ADR-290: No snapshot content files
         metadata: serde_json::json!({
             "avatars": [
                 profile.content
@@ -95,16 +82,7 @@ pub async fn prepare_deploy_profile(
         None,
     );
 
-    // add images
-    if has_new_snapshots {
-        if let Some(snapshots) = profile.content.avatar.snapshots {
-            let content_folder = format!("{}/content/", Os::singleton().get_user_data_dir());
-            let body_path = format!("{}{}", content_folder, snapshots.body);
-            let face_path = format!("{}{}", content_folder, snapshots.face256);
-            form_data.add_file(snapshots.body, body_path);
-            form_data.add_file(snapshots.face256, face_path);
-        }
-    }
+    // ADR-290: No snapshot images are uploaded anymore
 
     let mut prepared = form_data.prepare()?;
     let mut prepared_data = Vec::default();
