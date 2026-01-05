@@ -89,6 +89,9 @@ var deep_link_url: String = ""
 
 var player_camera_node: DclCamera3D
 
+# Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
+var _safe_area_presets: GDScript = null
+
 
 func set_url_popup_instance(popup_instance) -> void:
 	url_popup_instance = popup_instance
@@ -126,10 +129,6 @@ func is_emulating_safe_area() -> bool:
 	return cli.emulate_ios or cli.emulate_android
 
 
-# Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
-var _safe_area_presets: GDScript = null
-
-
 func _get_safe_area_presets() -> GDScript:
 	if _safe_area_presets == null:
 		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
@@ -140,11 +139,10 @@ func get_safe_area() -> Rect2i:
 	if cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		return presets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
-	elif cli.emulate_android:
+	if cli.emulate_android:
 		var presets := _get_safe_area_presets()
 		return presets.get_android_safe_area(is_orientation_portrait(), get_window().size)
-	else:
-		return DisplayServer.get_display_safe_area()
+	return DisplayServer.get_display_safe_area()
 
 
 func _instantiate_phone_frame_overlay() -> void:

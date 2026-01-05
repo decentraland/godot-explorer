@@ -71,9 +71,8 @@ static func get_ios_window_size(is_portrait: bool) -> Vector2i:
 	if is_portrait:
 		# height=1280 -> width = 1280 * (1179/2556) = 590
 		return Vector2i(590, 1280)
-	else:
-		# height=720 -> width = 720 * (2556/1179) = 1561
-		return Vector2i(1561, 720)
+	# height=720 -> width = 720 * (2556/1179) = 1561
+	return Vector2i(1561, 720)
 
 
 static func get_android_window_size(is_portrait: bool) -> Vector2i:
@@ -81,6 +80,5 @@ static func get_android_window_size(is_portrait: bool) -> Vector2i:
 	if is_portrait:
 		# height=1280 -> width = 1280 * (1220/2712) = 576
 		return Vector2i(576, 1280)
-	else:
-		# height=720 -> width = 720 * (2712/1220) = 1600
-		return Vector2i(1600, 720)
+	# height=720 -> width = 720 * (2712/1220) = 1600
+	return Vector2i(1600, 720)
