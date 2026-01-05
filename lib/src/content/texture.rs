@@ -6,10 +6,7 @@ use super::{
 };
 use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
-    classes::{
-        image::CompressMode, portable_compressed_texture_2d::CompressionMode, DirAccess, Image,
-        ImageTexture, PortableCompressedTexture2D, Texture2D,
-    },
+    classes::{image::CompressMode, DirAccess, Image, ImageTexture, Texture2D},
     global::Error,
     meta::ToGodot,
     obj::Gd,
@@ -104,18 +101,20 @@ pub async fn load_image_texture(
     Ok(Some(texture_entry.to_variant()))
 }
 
-/// Creates a compressed texture from an image, resizing if needed.
-/// Uses ETC2 compression for better memory usage on mobile platforms.
+/// Creates a texture from a compressed image, resizing if needed.
+/// Uses ASTC compression for better memory usage on mobile platforms.
+/// Returns an ImageTexture containing the compressed image data.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
     resize_image(image, max_size);
 
     if !image.is_compressed() {
-        image.compress(CompressMode::ETC2);
+        image.compress(CompressMode::ASTC);
     }
 
-    let mut texture = PortableCompressedTexture2D::new_gd();
-    let image: &Gd<Image> = image;
-    texture.create_from_image(image, CompressionMode::ETC2);
+    // Create ImageTexture from the compressed image
+    // The compressed image data will be preserved when saved/loaded
+    let texture = ImageTexture::create_from_image(&*image)
+        .expect("Failed to create ImageTexture from compressed image");
     texture.upcast()
 }
 
