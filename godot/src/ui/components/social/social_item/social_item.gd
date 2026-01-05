@@ -311,6 +311,9 @@ func _async_on_button_add_friend_pressed() -> void:
 		button_add_friend.disabled = false
 		return
 
+	# friend_request_sent metric
+	Global.metrics.track_click_button("friend_request_sent", "SOCIAL_PANEL", "")
+
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
 	label_pending_request.show()
@@ -337,6 +340,9 @@ func _async_on_button_accept_pressed() -> void:
 	current_friendship_status = Global.FriendshipStatus.ACCEPTED
 	button_add_friend.hide()
 	label_pending_request.hide()
+
+	# friend_request_accept metric
+	Global.metrics.track_click_button("friend_request_accept", "SOCIAL_PANEL", "")
 
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_accepted.emit(social_data.address)
@@ -368,6 +374,9 @@ func _async_on_button_reject_pressed() -> void:
 		var status = status_data.get("status", -1)
 		current_friendship_status = status
 		_update_button_visibility_from_status()
+
+	# friend_request_reject metric
+	Global.metrics.track_click_button("friend_request_reject", "SOCIAL_PANEL", "")
 
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_rejected.emit(social_data.address)
@@ -425,6 +434,9 @@ func update_location() -> void:
 
 
 func _on_button_unblock_pressed() -> void:
+	# user_unblock metric
+	Global.metrics.track_click_button("user_unblock", "SOCIAL_PANEL", "")
+
 	Global.social_blacklist.remove_blocked(social_data.address)
 	# Update the containing list
 	var parent_list = get_parent()
