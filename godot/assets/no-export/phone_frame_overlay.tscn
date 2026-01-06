@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bpf8xr3qvthqs"]
+
+[ext_resource type="Script" path="res://assets/no-export/phone_frame_overlay.gd" id="1_script"]
+
+[node name="PhoneFrameOverlay" type="CanvasLayer"]
+script = ExtResource("1_script")
