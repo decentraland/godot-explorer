@@ -869,16 +869,19 @@ disabled = true
 text = "LOG OUT"
 
 [node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
 custom_minimum_size = Vector2(0, 23)
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_h5vs5")
 
 [node name="Label_Notifications" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
 layout_mode = 2
 text = "NOTIFICATIONS"
 label_settings = ExtResource("15_7krp8")
 
 [node name="Button_AllNotifications" type="CheckButton" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
 custom_minimum_size = Vector2(300, 50)
 layout_mode = 2
 size_flags_horizontal = 0
