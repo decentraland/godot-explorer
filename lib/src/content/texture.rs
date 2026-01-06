@@ -102,13 +102,13 @@ pub async fn load_image_texture(
 }
 
 /// Creates a texture from a compressed image, resizing if needed.
-/// Uses ASTC compression for better memory usage on mobile platforms.
+/// Uses ETC2 compression for better memory usage on mobile platforms.
 /// Returns an ImageTexture containing the compressed image data.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
     resize_image(image, max_size);
 
     if !image.is_compressed() {
-        image.compress(CompressMode::ASTC);
+        image.compress(CompressMode::ETC2);
     }
 
     // Create ImageTexture from the compressed image
