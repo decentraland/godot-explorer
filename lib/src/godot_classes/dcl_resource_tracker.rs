@@ -22,12 +22,12 @@ fn send_resource_tracker_message(
         return;
     }
     let mut array = Array::new();
-    array.push(hash_id.to_variant());
-    array.push((state as i32).to_variant());
-    array.push(progress.to_variant());
-    array.push(size.to_variant());
-    array.push(metadata.to_variant());
-    EngineDebugger::singleton().send_message("resource_tracker:report".into_godot(), array);
+    array.push(&hash_id.to_variant());
+    array.push(&(state as i32).to_variant());
+    array.push(&progress.to_variant());
+    array.push(&size.to_variant());
+    array.push(&metadata.to_variant());
+    EngineDebugger::singleton().send_message("resource_tracker:report", &array);
 }
 
 pub fn report_download_speed(speed: f64) {
@@ -36,8 +36,8 @@ pub fn report_download_speed(speed: f64) {
     }
     let speed_str = format!("{:.2}mb/s", speed / 1024.0 / 1024.0);
     let mut array = Array::new();
-    array.push(speed_str.to_variant());
-    EngineDebugger::singleton().send_message("resource_tracker:report_speed".into_godot(), array);
+    array.push(&speed_str.to_variant());
+    EngineDebugger::singleton().send_message("resource_tracker:report_speed", &array);
 }
 
 pub fn report_resource_start(hash_id: &String) {

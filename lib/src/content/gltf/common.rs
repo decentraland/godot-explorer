@@ -23,9 +23,6 @@ use super::super::{
     file_string::get_base_dir, texture::create_compressed_texture,
 };
 
-#[cfg(feature = "use_resource_tracking")]
-use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
-
 /// Post-import texture processing for all GLTF types.
 /// Resizes images according to max_size limits.
 pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
