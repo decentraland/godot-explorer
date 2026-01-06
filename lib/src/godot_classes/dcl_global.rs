@@ -192,8 +192,7 @@ mod ios {
 
         // Use custom OSLog layer that formats messages with [LEVEL] [target] prefix
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
-        let oslog_layer =
-            IosOsLogLayer::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
+        let oslog_layer = IosOsLogLayer::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
         Registry::default().with(oslog_layer).init();
     }
