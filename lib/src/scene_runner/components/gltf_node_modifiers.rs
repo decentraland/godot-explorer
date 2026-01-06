@@ -662,9 +662,6 @@ pub fn update_gltf_node_modifiers(
     ref_time: &Instant,
     end_time_us: i64,
 ) -> bool {
-    let mut updated_count = 0;
-    let mut current_time_us;
-
     // Get dirty entities from CRDT (read-only access to dirty state)
     let gltf_node_modifiers_dirty = scene
         .current_dirty
@@ -672,7 +669,27 @@ pub fn update_gltf_node_modifiers(
         .get(&SceneComponentId::GLTF_NODE_MODIFIERS)
         .cloned();
 
-    // Also include entities pending re-application after GLTF load
+    // Check if there are pending entities (without draining yet)
+    let has_pending = !scene.gltf_node_modifiers_pending.is_empty();
+    let has_dirty = gltf_node_modifiers_dirty
+        .as_ref()
+        .is_some_and(|d| !d.is_empty());
+
+    // Early exit if nothing to do
+    if !has_dirty && !has_pending {
+        return true;
+    }
+
+    tracing::debug!(
+        "update_gltf_node_modifiers: has_dirty={}, has_pending={}",
+        has_dirty,
+        has_pending
+    );
+
+    let mut updated_count = 0;
+    let mut current_time_us;
+
+    // Now drain pending entities
     let pending_entities: Vec<SceneEntityId> = scene.gltf_node_modifiers_pending.drain().collect();
 
     let gltf_node_modifiers_component =
@@ -696,24 +713,54 @@ pub fn update_gltf_node_modifiers(
 
     if !entities_to_process.is_empty() {
         for entity in entities_to_process.iter() {
-            let godot_dcl_scene = &mut scene.godot_dcl_scene;
             let new_value = gltf_node_modifiers_component.get(entity);
 
+            // Skip entities that have no GltfNodeModifiers component AND no existing state
+            // This avoids processing entities that never had the component
+            let has_component = new_value
+                .and_then(|v| v.value.as_ref())
+                .is_some_and(|v| !v.modifiers.is_empty());
+            let has_existing_state = scene.gltf_node_modifier_states.contains_key(entity);
+
+            tracing::debug!(
+                "Processing entity {:?}: has_component={}, has_existing_state={}",
+                entity,
+                has_component,
+                has_existing_state
+            );
+
+            if !has_component && !has_existing_state {
+                tracing::debug!("Skipping entity {:?} - no component and no state", entity);
+                updated_count += 1;
+                continue;
+            }
+
+            let godot_dcl_scene = &mut scene.godot_dcl_scene;
             let (_, node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             // Get the GltfContainer to access the loaded GLTF
             let Some(gltf_container) = get_gltf_container(&node_3d) else {
                 // No GltfContainer on this entity, skip
                 // Could be still loading - will be processed when GLTF finishes loading
+                tracing::debug!("Entity {:?}: No GltfContainer found, skipping", entity);
                 updated_count += 1;
                 continue;
             };
 
             let Some(gltf_root) = gltf_container.bind().get_gltf_resource() else {
                 // GLTF not loaded yet, skip - will be processed when loading completes
+                tracing::debug!(
+                    "Entity {:?}: GltfContainer found but get_gltf_resource() returned None, skipping",
+                    entity
+                );
                 updated_count += 1;
                 continue;
             };
+
+            tracing::debug!(
+                "Entity {:?}: GltfContainer and gltf_root found, processing modifiers",
+                entity
+            );
 
             // Get or create state for this entity
             let state = scene.gltf_node_modifier_states.entry(*entity).or_default();
@@ -724,8 +771,19 @@ pub fn update_gltf_node_modifiers(
                 .map(|v| v.modifiers.as_slice())
                 .unwrap_or(&[]);
 
+            tracing::debug!(
+                "Entity {:?}: modifiers.len()={}, original_materials.len()={}",
+                entity,
+                modifiers.len(),
+                state.original_materials.len()
+            );
+
             if modifiers.is_empty() {
                 // Component was removed or has no modifiers - restore all original states
+                tracing::debug!(
+                    "Entity {:?}: modifiers empty, restoring original state",
+                    entity
+                );
                 for (_path, mesh_instances) in collect_paths_with_meshes(&gltf_root) {
                     for (full_path, mut mesh) in mesh_instances {
                         if let Some(original_materials) = state.original_materials.get(&full_path) {
@@ -898,9 +956,23 @@ fn collect_paths_with_meshes(root: &Gd<Node3D>) -> Vec<(String, MeshInstancesWit
 
 /// Check and apply pending textures for modifier materials
 pub fn update_modifier_textures(scene: &mut Scene) {
+    // Early exit if no states have pending materials
+    let has_pending = scene
+        .gltf_node_modifier_states
+        .values()
+        .any(|state| !state.pending_materials.is_empty());
+
+    if !has_pending {
+        return;
+    }
+
     let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
 
     for state in scene.gltf_node_modifier_states.values_mut() {
+        if state.pending_materials.is_empty() {
+            continue;
+        }
+
         // Remove entries where material is no longer valid
         state.pending_materials.retain(|_, item| {
             if !item.waiting_textures {
@@ -1030,11 +1102,25 @@ fn check_texture(
 /// Update video textures on modifier materials.
 /// This is called separately because video textures need mutable access to video_players.
 pub fn update_modifier_video_textures(scene: &mut Scene) {
+    // Early exit if no states have pending materials
+    let has_pending = scene
+        .gltf_node_modifier_states
+        .values()
+        .any(|state| !state.pending_materials.is_empty());
+
+    if !has_pending {
+        return;
+    }
+
     // Collect video texture bindings we need to update
     // Format: (material weak_ref, texture_param, video_entity_id)
     let mut video_texture_updates: Vec<(Variant, TextureParam, SceneEntityId)> = Vec::new();
 
     for state in scene.gltf_node_modifier_states.values() {
+        if state.pending_materials.is_empty() {
+            continue;
+        }
+
         for item in state.pending_materials.values() {
             if !item.waiting_textures {
                 continue;

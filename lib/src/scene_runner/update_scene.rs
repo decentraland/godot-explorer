@@ -229,12 +229,21 @@ pub fn _process_scene(
                 !sync_gltf_loading_state(scene, crdt_state, ref_time, end_time_us)
             }
             SceneUpdateState::GltfNodeModifiers => {
-                let result = !update_gltf_node_modifiers(scene, crdt_state, ref_time, end_time_us);
-                // Check and apply pending textures for modifier materials
-                update_modifier_textures(scene);
-                // Update video textures (needs mutable access to video_players)
-                update_modifier_video_textures(scene);
-                result
+                tracing::debug!("Entering GltfNodeModifiers state");
+                let still_processing =
+                    !update_gltf_node_modifiers(scene, crdt_state, ref_time, end_time_us);
+                tracing::debug!(
+                    "GltfNodeModifiers update complete, still_processing={}",
+                    still_processing
+                );
+                // Only check textures when we're done with the main update (avoid redundant work)
+                if !still_processing {
+                    // Check and apply pending textures for modifier materials
+                    update_modifier_textures(scene);
+                    // Update video textures (needs mutable access to video_players)
+                    update_modifier_video_textures(scene);
+                }
+                still_processing
             }
             SceneUpdateState::NftShape => {
                 update_nft_shape(scene, crdt_state);
@@ -453,14 +462,14 @@ pub fn _process_scene(
         };
 
         const TICK_TIME_LOGABLE_MS: i64 = 16000;
-        let this_update_ms = (std::time::Instant::now() - before_compute_update).as_micros() as i64;
-        if this_update_ms > TICK_TIME_LOGABLE_MS {
+        let this_update_us = (std::time::Instant::now() - before_compute_update).as_micros() as i64;
+        if this_update_us > TICK_TIME_LOGABLE_MS {
             tracing::warn!(
-                "Scene \"{:?}\"(tick={:?}) in state {:?} takes more than {TICK_TIME_LOGABLE_MS}: {:?}ms",
+                "Scene \"{:?}\"(tick={:?}) in state {:?} takes more than {TICK_TIME_LOGABLE_MS}: {:?}us",
                 scene.scene_entity_definition.get_title(),
                 scene.tick_number,
                 scene.current_dirty.update_state,
-                this_update_ms
+                this_update_us
             );
         }
 

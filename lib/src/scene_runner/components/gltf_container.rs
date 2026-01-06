@@ -170,8 +170,24 @@ pub fn sync_gltf_loading_state(
 
             // When GLTF finishes loading, mark entity for GltfNodeModifiers re-application
             // (modifiers need to be applied to newly loaded nodes)
+            // Only add if entity actually has the GltfNodeModifiers component
             if current_state_godot == GltfContainerLoadingState::Finished {
-                scene.gltf_node_modifiers_pending.insert(*entity);
+                let has_state = scene.gltf_node_modifier_states.contains_key(entity);
+                let has_dirty = scene
+                    .current_dirty
+                    .lww_components
+                    .get(&SceneComponentId::GLTF_NODE_MODIFIERS)
+                    .is_some_and(|dirty| dirty.contains(entity));
+                tracing::debug!(
+                    "GLTF finished loading for entity {:?}, has_modifier_state={}, has_modifier_dirty={}",
+                    entity,
+                    has_state,
+                    has_dirty
+                );
+                if has_state || has_dirty {
+                    tracing::debug!("Adding entity {:?} to gltf_node_modifiers_pending", entity);
+                    scene.gltf_node_modifiers_pending.insert(*entity);
+                }
             }
         }
 

@@ -194,7 +194,12 @@ func async_load_gltf():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
 		return
-
+	elif not is_instance_valid(res_instance):
+		printerr("Error on fetch gltf: null instance")
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		return
+		
 	apply_fixes(res_instance)
 	dcl_pending_node = res_instance
 
