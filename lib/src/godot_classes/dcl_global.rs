@@ -72,46 +72,17 @@ mod android {
 
 #[cfg(target_os = "ios")]
 mod ios {
+    use tracing_oslog::OsLogger;
     use tracing_subscriber::filter::EnvFilter;
-    use tracing_subscriber::fmt::format::Writer;
-    use tracing_subscriber::fmt::{self, FormatEvent, FormatFields};
-    use tracing_subscriber::registry::LookupSpan;
-
-    /// Custom formatter that includes target in the message for iOS
-    /// Format: [LEVEL] [target] message
-    struct IosFormatter;
-
-    impl<S, N> FormatEvent<S, N> for IosFormatter
-    where
-        S: tracing::Subscriber + for<'a> LookupSpan<'a>,
-        N: for<'a> FormatFields<'a> + 'static,
-    {
-        fn format_event(
-            &self,
-            ctx: &fmt::FmtContext<'_, S, N>,
-            mut writer: Writer<'_>,
-            event: &tracing::Event<'_>,
-        ) -> std::fmt::Result {
-            let metadata = event.metadata();
-            let level = metadata.level();
-            let target = metadata.target();
-
-            // Format: [LEVEL] [target] message
-            write!(writer, "[{}] [{}] ", level, target)?;
-
-            // Write the event fields (the actual message)
-            ctx.field_format().format_fields(writer.by_ref(), event)?;
-
-            writeln!(writer)
-        }
-    }
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::registry;
 
     pub fn init_logger() {
         // Configure logging filters for iOS
-        // By default, filter everything to WARN level
+        // By default, filter everything to INFO level
         // You can customize specific modules here:
         // Examples:
-        //   "warn" - only warnings and errors (default)
+        //   "warn" - only warnings and errors
         //   "debug" - show debug logs from all modules
         //   "dclgodot::scene_runner=debug,warn" - debug for scene_runner, warn for others
         //   "dclgodot::scene_runner=debug,dclgodot::comms=info,warn" - multiple modules
@@ -125,13 +96,12 @@ mod ios {
             "info",
         );
 
-        // Use custom formatter that explicitly includes target in every message
-        // This ensures the module path is visible even when iOS strips formatting
-        tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .with_ansi(false) // Disable ANSI color codes
-            .event_format(IosFormatter)
-            .init();
+        // Use OSLog for iOS - writes to the system log instead of stderr
+        // This avoids crashes when stderr is not available (e.g., running without Xcode)
+        // Note: Level is shown in Console.app's "Type" column, target is not included in message
+        let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
+
+        registry().with(oslog_layer).init();
     }
 }
 
