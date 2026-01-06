@@ -179,13 +179,14 @@ pub fn sync_gltf_loading_state(
                     .get(&SceneComponentId::GLTF_NODE_MODIFIERS)
                     .is_some_and(|dirty| dirty.contains(entity));
                 tracing::debug!(
-                    "GLTF finished loading for entity {:?}, has_modifier_state={}, has_modifier_dirty={}",
+                    "sync_gltf_loading_state: entity {:?} state=Finished, has_modifier_state={}, has_modifier_dirty={}, gltf_loading.len()={}",
                     entity,
                     has_state,
-                    has_dirty
+                    has_dirty,
+                    scene.gltf_loading.len()
                 );
                 if has_state || has_dirty {
-                    tracing::debug!("Adding entity {:?} to gltf_node_modifiers_pending", entity);
+                    tracing::debug!("sync_gltf_loading_state: Adding entity {:?} to gltf_node_modifiers_pending (will be removed from gltf_loading)", entity);
                     scene.gltf_node_modifiers_pending.insert(*entity);
                 }
             }
