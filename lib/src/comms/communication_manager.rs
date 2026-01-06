@@ -18,7 +18,7 @@ use crate::{
         consts::DEFAULT_PROTOCOL_VERSION,
         signed_login::SignedLoginMeta,
     },
-    dcl::components::proto_components::kernel::comms::rfc4,
+    dcl::{components::proto_components::kernel::comms::rfc4, scene_apis::NetworkMessageRecipient},
     godot_classes::dcl_global::DclGlobal,
 };
 use serde::{Deserialize, Serialize};
@@ -74,7 +74,7 @@ impl MainRoom {
         &mut self,
         packet: rfc4::Packet,
         unreliable: bool,
-        recipient: Option<H160>,
+        recipient: NetworkMessageRecipient,
     ) -> bool {
         match self {
             // WebSocket doesn't support targeted messages, fall back to broadcast
@@ -428,7 +428,12 @@ impl CommunicationManager {
         }
     }
 
-    pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>, recipient: Option<H160>) {
+    pub fn send_scene_message(
+        &mut self,
+        scene_id: String,
+        data: Vec<u8>,
+        recipient: NetworkMessageRecipient,
+    ) {
         let scene_message = rfc4::Packet {
             message: Some(rfc4::packet::Message::Scene(rfc4::Scene {
                 scene_id,
@@ -1528,20 +1533,28 @@ async fn get_scene_adapter(
     // Create the request body
 
     use crate::{
-        comms::consts::GATEKEEPER_URL,
+        comms::consts::{GATEKEEPER_URL, PREVIEW_GATEKEEPER_URL},
         http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
     };
+
+    // Use preview gatekeeper for local scenes (b64- prefix indicates local preview)
+    let gatekeeper_url = if scene_id.starts_with("b64-") {
+        PREVIEW_GATEKEEPER_URL
+    } else {
+        GATEKEEPER_URL
+    };
+
     let request_body = serde_json::json!({
         "sceneId": scene_id,
         "realmName": realm_name
     });
     let metadata_json_string = request_body.to_string();
 
-    tracing::info!("🔄 Making scene adapter request to: {}", GATEKEEPER_URL);
+    tracing::info!("🔄 Making scene adapter request to: {}", gatekeeper_url);
     tracing::info!("📋 Request body: {}", metadata_json_string);
 
     // Create URI
-    let uri = http::Uri::from_static(GATEKEEPER_URL);
+    let uri = http::Uri::try_from(gatekeeper_url).map_err(|e| format!("Invalid URI: {}", e))?;
     let method = http::Method::POST;
 
     // Sign the request

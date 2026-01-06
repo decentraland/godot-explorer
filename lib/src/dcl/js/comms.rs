@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use deno_core::{op2, JsBuffer, OpDecl, OpState};
 use ethers_core::types::H160;
 
-use crate::dcl::scene_apis::RpcCall;
+use crate::dcl::scene_apis::{NetworkMessageRecipient, RpcCall};
 
 #[derive(Default)]
 pub(crate) struct InternalPendingBinaryMessages {
@@ -138,6 +138,10 @@ async fn comms_send_single(
     body: Vec<u8>,
     recipient: Option<H160>,
 ) -> Result<(), anyhow::Error> {
+    let recipient = recipient
+        .map(NetworkMessageRecipient::Peer)
+        .unwrap_or(NetworkMessageRecipient::All);
+
     state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()

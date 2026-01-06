@@ -17,8 +17,9 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    auth::wallet::AsH160, comms::profile::UserProfile,
-    dcl::components::proto_components::kernel::comms::rfc4,
+    auth::wallet::AsH160,
+    comms::profile::UserProfile,
+    dcl::{components::proto_components::kernel::comms::rfc4, scene_apis::NetworkMessageRecipient},
 };
 
 use super::{
@@ -35,7 +36,7 @@ const CHANNEL_SIZE: usize = 1000;
 pub struct NetworkMessage {
     pub data: Vec<u8>,
     pub unreliable: bool,
-    pub recipient: Option<H160>,
+    pub recipient: NetworkMessageRecipient,
 }
 
 pub struct LivekitRoom {
@@ -139,14 +140,14 @@ impl LivekitRoom {
     }
 
     fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
-        self._send_rfc4_targeted(packet, unreliable, None)
+        self._send_rfc4_targeted(packet, unreliable, NetworkMessageRecipient::All)
     }
 
     fn _send_rfc4_targeted(
         &mut self,
         packet: rfc4::Packet,
         unreliable: bool,
-        recipient: Option<H160>,
+        recipient: NetworkMessageRecipient,
     ) -> bool {
         let mut data: Vec<u8> = Vec::new();
         packet.encode(&mut data).unwrap();
@@ -164,7 +165,7 @@ impl LivekitRoom {
         &mut self,
         packet: rfc4::Packet,
         unreliable: bool,
-        recipient: Option<H160>,
+        recipient: NetworkMessageRecipient,
     ) -> bool {
         self._send_rfc4_targeted(packet, unreliable, recipient)
     }
@@ -669,10 +670,14 @@ fn spawn_livekit_task(
                     };
 
                     let reliable = !outgoing.unreliable;
-                    let destination_identities = if let Some(address) = outgoing.recipient {
-                        vec![ParticipantIdentity(format!("{address:#x}"))]
-                    } else {
-                        Vec::new()
+                    let destination_identities = match outgoing.recipient {
+                        NetworkMessageRecipient::All => Vec::new(),
+                        NetworkMessageRecipient::Peer(address) => {
+                            vec![ParticipantIdentity(format!("{address:#x}"))]
+                        }
+                        NetworkMessageRecipient::AuthServer => {
+                            vec![ParticipantIdentity("authoritative-server".to_string())]
+                        }
                     };
 
                     if let Err(e) = room.local_participant().publish_data(DataPacket {
