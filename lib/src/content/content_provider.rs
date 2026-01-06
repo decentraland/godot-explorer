@@ -1147,14 +1147,7 @@ impl ContentProvider {
             set_thread_safety_checks_enabled(false);
 
             for (mesh_instance_id, n) in data {
-                // Use try_from_instance_id to handle freed meshes gracefully
-                let Ok(mut mesh) = Gd::<Mesh>::try_from_instance_id(mesh_instance_id) else {
-                    tracing::warn!(
-                        "Mesh instance {} no longer valid, skipping material duplication",
-                        mesh_instance_id
-                    );
-                    continue;
-                };
+                let mut mesh = Gd::<Mesh>::from_instance_id(mesh_instance_id);
                 for i in 0..n {
                     let Some(new_material) = mesh.surface_get_material(i) else {
                         continue;

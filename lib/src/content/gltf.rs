@@ -245,15 +245,7 @@ pub async fn apply_update_set_mask_colliders(
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
     let mut to_remove_nodes = Vec::new();
-    // Use try_from_instance_id to gracefully handle the case where the node was freed
-    // (e.g., entity deleted or scene unloaded while this async task was pending)
-    let Ok(gltf_node) = Gd::<Node>::try_from_instance_id(gltf_node_instance_id) else {
-        tracing::warn!(
-            "GLTF node instance {} no longer valid, skipping collider setup",
-            gltf_node_instance_id
-        );
-        return Ok(None);
-    };
+    let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
     let gltf_node = gltf_node
         .duplicate_ex()
         .flags(godot::classes::node::DuplicateFlags::USE_INSTANTIATION)
