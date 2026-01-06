@@ -532,4 +532,4 @@ func _on_button_report_bug_pressed() -> void:
 	if params.size() > 0:
 		url += "?" + "&".join(params)
 
-	Global.open_webview_url(url)
+	Global.open_url(url)
