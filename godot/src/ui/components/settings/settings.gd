@@ -478,3 +478,58 @@ func _on_button_account_pressed() -> void:
 
 func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
+
+
+func _on_button_report_bug_pressed() -> void:
+	var form_id = "1FAIpQLScWjnb3Ya7yV8xFn0R-yf_SMejzBGDiDTZbHaddOFEmJwAM6g"
+	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+
+	var params = []
+	var platform = "desktop"
+	var device_brand = ""
+	var device_model = ""
+	var os_version = OS.get_name()
+	var app_version = Global.get_version()
+	var environment = ""
+	if DclGodotAndroidPlugin.is_available():
+		var android_singleton = Engine.get_singleton("dcl-godot-android")
+		if android_singleton:
+			var device_info = android_singleton.getMobileDeviceInfo()
+			device_brand = device_info.get("device_brand", "")
+			device_model = device_info.get("device_model", "")
+			os_version = device_info.get("os_version", OS.get_name())
+		platform = "mobile"
+	elif DclIosPlugin.is_available():
+		var ios_singleton = Engine.get_singleton("DclGodotiOS")
+		if ios_singleton:
+			var device_info = ios_singleton.get_mobile_device_info()
+			device_brand = device_info.get("device_brand", "")
+			device_model = device_info.get("device_model", "")
+			os_version = device_info.get("os_version", OS.get_name())
+		platform = "mobile"
+
+	params.append("entry.908487542=" + os_version.uri_encode())
+	params.append("entry.1825988508=" + app_version.uri_encode())
+	params.append("entry.902053507=" + platform.uri_encode())
+	params.append("entry.983493489=" + Global.player_identity.get_address_str().uri_encode())
+	params.append("entry.519686692=" + RenderingServer.get_video_adapter_name().uri_encode())
+	params.append("entry.69678037=" + Global.session_id.uri_encode())
+
+	if "dev" in app_version:
+		environment = "develop"
+	else:
+		environment = "production"
+
+	params.append("entry.1045647501=" + environment.uri_encode())
+
+	if device_brand != "":
+		params.append("entry.942533991=" + device_brand.uri_encode())
+
+	if device_model != "":
+		params.append("entry.264855991=" + device_model.uri_encode())
+
+	var url = base_url
+	if params.size() > 0:
+		url += "?" + "&".join(params)
+
+	Global.open_webview_url(url)
