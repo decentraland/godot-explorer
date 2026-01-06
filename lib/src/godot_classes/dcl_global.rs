@@ -72,10 +72,104 @@ mod android {
 
 #[cfg(target_os = "ios")]
 mod ios {
-    use tracing_oslog::OsLogger;
+    use std::fmt::Write;
+    use tracing::field::{Field, Visit};
+    use tracing::{Event, Level, Subscriber};
     use tracing_subscriber::filter::EnvFilter;
+    use tracing_subscriber::layer::{Context, Layer};
     use tracing_subscriber::prelude::*;
-    use tracing_subscriber::registry;
+    use tracing_subscriber::registry::{LookupSpan, Registry};
+
+    /// Custom iOS logger that formats messages with [LEVEL] [target] prefix
+    /// and writes to Apple's OSLog system (avoids stderr crashes)
+    struct IosOsLogLayer {
+        logger: oslog::OsLog,
+    }
+
+    impl IosOsLogLayer {
+        fn new(subsystem: &str, category: &str) -> Self {
+            Self {
+                logger: oslog::OsLog::new(subsystem, category),
+            }
+        }
+    }
+
+    /// Visitor to extract fields from tracing events
+    struct FieldVisitor {
+        message: String,
+        fields: String,
+    }
+
+    impl FieldVisitor {
+        fn new() -> Self {
+            Self {
+                message: String::new(),
+                fields: String::new(),
+            }
+        }
+
+        fn result(self) -> String {
+            if self.fields.is_empty() {
+                self.message
+            } else if self.message.is_empty() {
+                self.fields
+            } else {
+                format!("{} {}", self.message, self.fields)
+            }
+        }
+    }
+
+    impl Visit for FieldVisitor {
+        fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
+            if field.name() == "message" {
+                let _ = write!(self.message, "{:?}", value);
+            } else {
+                if !self.fields.is_empty() {
+                    self.fields.push(' ');
+                }
+                let _ = write!(self.fields, "{}={:?}", field.name(), value);
+            }
+        }
+
+        fn record_str(&mut self, field: &Field, value: &str) {
+            if field.name() == "message" {
+                self.message.push_str(value);
+            } else {
+                if !self.fields.is_empty() {
+                    self.fields.push(' ');
+                }
+                let _ = write!(self.fields, "{}={}", field.name(), value);
+            }
+        }
+    }
+
+    impl<S> Layer<S> for IosOsLogLayer
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+        fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+            let metadata = event.metadata();
+            let level = metadata.level();
+            let target = metadata.target();
+
+            // Extract message and fields
+            let mut visitor = FieldVisitor::new();
+            event.record(&mut visitor);
+            let content = visitor.result();
+
+            // Format: [LEVEL] [target] message
+            let formatted = format!("[{}] [{}] {}", level, target, content);
+
+            // Log to OSLog with appropriate level
+            match *level {
+                Level::ERROR => self.logger.with_level(oslog::Level::Error, &formatted),
+                Level::WARN => self.logger.with_level(oslog::Level::Error, &formatted),
+                Level::INFO => self.logger.with_level(oslog::Level::Info, &formatted),
+                Level::DEBUG => self.logger.with_level(oslog::Level::Debug, &formatted),
+                Level::TRACE => self.logger.with_level(oslog::Level::Debug, &formatted),
+            }
+        }
+    }
 
     pub fn init_logger() {
         // Configure logging filters for iOS
@@ -96,11 +190,12 @@ mod ios {
             "info",
         );
 
-        // Use OSLog for iOS - writes to the system log instead of stderr
+        // Use custom OSLog layer that formats messages with [LEVEL] [target] prefix
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
-        let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
+        let oslog_layer =
+            IosOsLogLayer::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
-        registry().with(oslog_layer).init();
+        Registry::default().with(oslog_layer).init();
     }
 }
 
