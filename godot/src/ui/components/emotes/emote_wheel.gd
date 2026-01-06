@@ -71,11 +71,11 @@ func _on_play_emote(emote_urn: String):
 
 
 func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
-	if emote_urn == last_selected_emote_urn:
+	if emote_urn == last_selected_emote_urn and selected:
 		return
 
 	if !selected:
-		label_emote_name.text = ""
+		label_emote_name.text = "Emotes"
 		last_selected_emote_urn = ""
 		return
 
