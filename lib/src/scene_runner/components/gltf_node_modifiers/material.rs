@@ -53,9 +53,39 @@ pub fn restore_original_materials(
     }
 }
 
+/// Get or create a material for modification.
+/// Tries to reuse existing StandardMaterial3D from the mesh, duplicating it if found.
+/// Falls back to creating a new StandardMaterial3D if none exists or type doesn't match.
+fn get_or_create_material(mesh: &Gd<MeshInstance3D>, surface_idx: i32) -> Gd<StandardMaterial3D> {
+    // First check if there's already an override material we can reuse
+    if let Some(override_mat) = mesh.get_surface_override_material(surface_idx) {
+        if let Ok(std_mat) = override_mat.try_cast::<StandardMaterial3D>() {
+            // Already have a StandardMaterial3D override, reuse it directly
+            return std_mat;
+        }
+    }
+
+    // Try to get the active material (from mesh resource) and duplicate it
+    if let Some(active_mat) = mesh.get_active_material(surface_idx) {
+        if let Ok(std_mat) = active_mat.try_cast::<StandardMaterial3D>() {
+            // Duplicate to avoid modifying the shared resource
+            if let Some(duplicated) = std_mat.duplicate() {
+                if let Ok(dup_std) = duplicated.try_cast::<StandardMaterial3D>() {
+                    return dup_std;
+                }
+            }
+        }
+    }
+
+    // No compatible material found, create a new one
+    StandardMaterial3D::new_gd()
+}
+
 /// Apply a material modifier to a mesh instance
 /// If surface_index is Some, only applies to that surface; otherwise applies to all surfaces.
-/// Returns the DclMaterial and Godot material if textures need loading
+/// Returns the DclMaterial and Godot material if textures need loading.
+///
+/// This function reuses existing materials when possible to reduce Vulkan descriptor pool usage.
 pub fn apply_material_to_mesh(
     mesh: &mut Gd<MeshInstance3D>,
     material: &PbMaterial,
@@ -64,7 +94,6 @@ pub fn apply_material_to_mesh(
 ) -> Option<(DclMaterial, Gd<StandardMaterial3D>)> {
     let mat = material.material.as_ref()?;
     let dcl_material = DclMaterial::from_proto(mat, content_mapping);
-    let godot_material = create_godot_material_from_dcl(&dcl_material);
 
     // Request texture fetches
     let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
@@ -80,17 +109,27 @@ pub fn apply_material_to_mesh(
         }
     }
 
+    // Track the last material for texture loading (we'll return this one)
+    let mut result_material: Option<Gd<StandardMaterial3D>> = None;
+
     // Apply to specified surface(s)
     if let Some(idx) = surface_index {
         // Apply to specific surface only
         if idx < mesh.get_surface_override_material_count() {
+            let mut godot_material = get_or_create_material(mesh, idx);
+            apply_dcl_material_properties(&mut godot_material, &dcl_material);
             mesh.set_surface_override_material(idx, &godot_material.clone().upcast::<Material>());
+            result_material = Some(godot_material);
         }
     } else {
         // Apply to all surfaces
         let surface_count = mesh.get_surface_override_material_count();
         for i in 0..surface_count {
+            let mut godot_material = get_or_create_material(mesh, i);
+            apply_dcl_material_properties(&mut godot_material, &dcl_material);
             mesh.set_surface_override_material(i, &godot_material.clone().upcast::<Material>());
+            // Keep reference to last material for texture loading
+            result_material = Some(godot_material);
         }
     }
 
@@ -106,7 +145,7 @@ pub fn apply_material_to_mesh(
     };
 
     if has_textures {
-        Some((dcl_material, godot_material))
+        result_material.map(|m| (dcl_material, m))
     } else {
         None
     }
@@ -128,10 +167,12 @@ pub fn apply_shadow_to_mesh(
     mesh.set_cast_shadows_setting(setting);
 }
 
-/// Create a Godot StandardMaterial3D from a DclMaterial
-pub fn create_godot_material_from_dcl(dcl_material: &DclMaterial) -> Gd<StandardMaterial3D> {
-    let mut godot_material = StandardMaterial3D::new_gd();
-
+/// Apply DCL material properties to an existing Godot StandardMaterial3D.
+/// This modifies the material in-place, preserving shader state where possible.
+fn apply_dcl_material_properties(
+    godot_material: &mut Gd<StandardMaterial3D>,
+    dcl_material: &DclMaterial,
+) {
     match dcl_material {
         DclMaterial::Unlit(unlit) => {
             godot_material.set_metallic(0.0);
@@ -154,6 +195,10 @@ pub fn create_godot_material_from_dcl(dcl_material: &DclMaterial) -> Gd<Standard
                     texture.tiling.0.y,
                     1.0,
                 ));
+            } else {
+                // Reset UV transform if no texture
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(0.0, 0.0, 0.0));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(1.0, 1.0, 1.0));
             }
 
             // Handle transparency for unlit materials (auto-detect)
@@ -168,6 +213,7 @@ pub fn create_godot_material_from_dcl(dcl_material: &DclMaterial) -> Gd<Standard
             godot_material.set_roughness(pbr.roughness.0);
             godot_material.set_specular(pbr.specular_intensity.0);
 
+            godot_material.set_shading_mode(ShadingMode::PER_PIXEL);
             godot_material.set_emission(pbr.emissive_color.0.to_godot());
             godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
             godot_material.set_feature(Feature::EMISSION, true);
@@ -175,6 +221,8 @@ pub fn create_godot_material_from_dcl(dcl_material: &DclMaterial) -> Gd<Standard
             // Use MULTIPLY operator when there's an emissive texture
             if pbr.emissive_texture.is_some() {
                 godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
+            } else {
+                godot_material.set_emission_operator(EmissionOperator::ADD);
             }
 
             godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
@@ -192,6 +240,10 @@ pub fn create_godot_material_from_dcl(dcl_material: &DclMaterial) -> Gd<Standard
                     texture.tiling.0.y,
                     1.0,
                 ));
+            } else {
+                // Reset UV transform if no texture
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(0.0, 0.0, 0.0));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(1.0, 1.0, 1.0));
             }
 
             // Handle transparency mode
@@ -221,8 +273,6 @@ pub fn create_godot_material_from_dcl(dcl_material: &DclMaterial) -> Gd<Standard
             }
         }
     }
-
-    godot_material
 }
 
 /// Check and apply pending textures for modifier materials
