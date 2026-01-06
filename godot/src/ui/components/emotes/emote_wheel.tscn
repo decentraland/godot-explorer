@@ -1,10 +1,9 @@
-[gd_scene load_steps=17 format=3 uid="uid://ec0egfeyv5fm"]
+[gd_scene load_steps=16 format=3 uid="uid://ec0egfeyv5fm"]
 
 [ext_resource type="Script" uid="uid://bly6o82m2sh7x" path="res://src/ui/components/emotes/emote_wheel.gd" id="1_jcqth"]
 [ext_resource type="PackedScene" uid="uid://c7bnh6p6qygxu" path="res://src/ui/components/emotes/emote_wheel_item.tscn" id="2_h3qru"]
 [ext_resource type="Texture2D" uid="uid://bgx284betq718" path="res://src/ui/components/emotes/dance_figure.png" id="3_poid4"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_ntwf1"]
-[ext_resource type="Texture2D" uid="uid://3w81orc6dom3" path="res://assets/ui/nav-bar-icons/backpack-off.svg" id="5_lttyx"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_lttyx"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_0irnm"]
 [ext_resource type="Texture2D" uid="uid://b2mc65ohvctmu" path="res://assets/ui/emotes2.svg" id="7_lttyx"]
@@ -348,7 +347,6 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_r42xh")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_6yi1n")
 theme_override_styles/focus = SubResource("StyleBoxFlat_33uqc")
 text = "Edit"
-icon = ExtResource("5_lttyx")
 alignment = 0
 
 [node name="Button_Emotes" type="Button" parent="."]
