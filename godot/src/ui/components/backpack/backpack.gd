@@ -56,6 +56,7 @@ var is_loading_profile: bool = false
 @onready var button_emotes = %Button_Emotes
 @onready var button_wearables = %Button_Wearables
 
+
 # gdlint:ignore = async-function-name
 func _ready():
 	snapshot_avatar_preview.hide()

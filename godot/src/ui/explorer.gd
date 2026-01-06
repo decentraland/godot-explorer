@@ -884,8 +884,9 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
 
 
-func _on_backpack_emote_opened(on_emotes:=false) -> void:
-	if not on_emotes: return
+func _on_backpack_emote_opened(on_emotes := false) -> void:
+	if not on_emotes:
+		return
 	navbar.open_navbar_silently()
 	navbar.set_button_pressed(navbar.BUTTON.BACKPACK)
 

@@ -108,7 +108,7 @@ func show_discover():
 	_open()
 
 
-func show_backpack(on_emotes:=false):
+func show_backpack(on_emotes := false):
 	select_backpack_screen()
 	if on_emotes:
 		control_backpack.show_emotes()
