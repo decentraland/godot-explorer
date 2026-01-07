@@ -294,7 +294,10 @@ jobs:
             echo ""
             echo "### 📋 Logs & Artifacts"
             echo ""
-            echo "- 📊 **CSV Data**: [benchmark_report.csv](${S3_URL}) - Raw benchmark data in S3"
+            echo "- 📊 **CSV Data**: [benchmark_report.csv](${S3_URL}) - Raw benchmark data"
+            if [ "${{ env.BASELINE_FOUND }}" = "true" ]; then
+              echo "- 📊 **Baseline CSV**: [benchmark_report.csv](${{ env.BASELINE_URL }}) - Baseline data from \`${{ env.BASELINE_BRANCH }}\` branch"
+            fi
             echo "- 🔧 **Full Logs**: [benchmark_run.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Complete benchmark run output (build + execution)"
             echo "- 🌐 **Workflow Run**: [View full logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- 📦 **Download All**: Get the \`benchmark-report\` artifact from the workflow run"

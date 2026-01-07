@@ -271,13 +271,6 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
 
     report.append("\n---\n")
 
-    # Table of Contents
-    report.append("\n## Table of Contents\n")
-    for i, metrics in enumerate(metrics_list, 1):
-        anchor = metrics.test_name.lower().replace(' ', '-').replace('_', '-')
-        report.append(f"\n{i}. [{metrics.test_name}](#test-{i}-{anchor})")
-    report.append("\n\n---\n")
-
     # Summary Overview
     report.append("\n## Summary Overview\n")
 
@@ -327,15 +320,7 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
             report.append(f"| {metrics.test_name} | {format_change_int(metrics.total_meshes, baseline.total_meshes)} | {format_change_int(metrics.total_materials, baseline.total_materials)} | {format_change_int(metrics.mesh_rid_count, baseline.mesh_rid_count)} | {format_change_int(metrics.material_rid_count, baseline.material_rid_count)} | {format_change_int(metrics.potential_dedup_count, baseline.potential_dedup_count)} |\n")
         else:
             report.append(f"| {metrics.test_name} | {metrics.total_meshes} | {metrics.total_materials} | {metrics.mesh_rid_count} | {metrics.material_rid_count} | {metrics.potential_dedup_count} |\n")
-    report.append("\n---\n")
-
-    # Detailed Test Results
-    report.append("\n## Detailed Test Results\n")
-    for i, metrics in enumerate(metrics_list, 1):
-        baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
-        report.append(f"\n### Test {i}: {metrics.test_name}\n")
-        report.append(format_individual_report(metrics, baseline))
-        report.append("\n---\n")
+    report.append("\n")
 
     return ''.join(report)
 
