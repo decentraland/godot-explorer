@@ -75,29 +75,6 @@ pub fn update_gltf_node_modifiers(
     let gltf_node_modifiers_component =
         SceneCrdtStateProtoComponents::get_gltf_node_modifiers(crdt_state);
 
-    // Log timestamps from dirty entities to see if SDK is sending new data
-    let pending_entities_snapshot: Vec<_> = pending_entities.to_vec();
-    let dirty_with_timestamps: Vec<_> = gltf_node_modifiers_dirty
-        .as_ref()
-        .map(|d| {
-            d.iter()
-                .map(|e| {
-                    let ts = gltf_node_modifiers_component
-                        .get(e)
-                        .map(|v| v.timestamp.0)
-                        .unwrap_or(0);
-                    (*e, ts)
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-
-    tracing::debug!(
-        "update_gltf_node_modifiers: dirty(with ts)={:?}, pending={:?}",
-        dirty_with_timestamps,
-        pending_entities_snapshot
-    );
-
     // Clone content_mapping reference before mutable borrows
     let content_mapping = scene.content_mapping.clone();
 
