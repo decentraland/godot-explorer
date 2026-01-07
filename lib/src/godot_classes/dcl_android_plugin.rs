@@ -96,6 +96,15 @@ impl DclAndroidPlugin {
         Some(DclMobileMetrics::from_dictionary(dict))
     }
 
+    /// Get current thermal state for dynamic graphics adjustment
+    /// Returns: "nominal", "fair", "serious", "critical", or empty string if unavailable
+    #[func]
+    pub fn get_thermal_state() -> GString {
+        Self::get_mobile_metrics_internal()
+            .map(|m| GString::from(m.device_thermal_state))
+            .unwrap_or_default()
+    }
+
     /// Add a calendar event with title, description, start time, end time, and location
     /// Times are in milliseconds since Unix epoch (Jan 1, 1970)
     /// Returns true if the calendar UI was shown successfully, false otherwise

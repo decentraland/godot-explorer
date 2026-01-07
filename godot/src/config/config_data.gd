@@ -29,6 +29,7 @@ enum ConfigParams {
 	GRAPHIC_PROFILE,
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
+	DYNAMIC_GRAPHICS_ENABLED,
 }
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
@@ -113,6 +114,12 @@ var anti_aliasing: int = 0:
 	set(value):
 		anti_aliasing = value
 		param_changed.emit(ConfigParams.ANTI_ALIASING)
+
+# Dynamic graphics profile adjustment enabled
+var dynamic_graphics_enabled: bool = true:
+	set(value):
+		dynamic_graphics_enabled = value
+		param_changed.emit(ConfigParams.DYNAMIC_GRAPHICS_ENABLED)
 
 var last_realm_joined: String = "":
 	set(value):
@@ -213,6 +220,7 @@ func load_from_default():
 	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
 	self.graphic_profile = 0
+	self.dynamic_graphics_enabled = true
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 	self.max_cache_size = 1
@@ -254,6 +262,9 @@ func load_from_settings_file():
 	)
 	self.graphic_profile = settings_file.get_value(
 		"config", "graphic_profile", data_default.graphic_profile
+	)
+	self.dynamic_graphics_enabled = settings_file.get_value(
+		"config", "dynamic_graphics_enabled", data_default.dynamic_graphics_enabled
 	)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
@@ -346,6 +357,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "bloom_quality", self.bloom_quality)
 	new_settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
 	new_settings_file.set_value("config", "graphic_profile", self.graphic_profile)
+	new_settings_file.set_value("config", "dynamic_graphics_enabled", self.dynamic_graphics_enabled)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
