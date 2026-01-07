@@ -1,3 +1,4 @@
+use godot::classes::Performance;
 use godot::prelude::*;
 
 use crate::godot_classes::{
@@ -27,12 +28,13 @@ const DOWNGRADE_WINDOW: f64 = 60.0; // Window for downgrade evaluation
 const UPGRADE_WINDOW: f64 = 120.0; // Window for upgrade evaluation
 const COOLDOWN_DURATION: f64 = 300.0; // 5 minutes after profile change
 const THERMAL_HIGH_DOWNGRADE_TIME: f64 = 30.0; // Seconds of HIGH thermal before downgrade
-const SAMPLE_INTERVAL: f64 = 1.0; // Sample FPS every second
+const SAMPLE_INTERVAL: f64 = 1.0; // Sample frame time every second
 
-/// Threshold constants
-const FPS_DOWNGRADE_THRESHOLD: f64 = 30.0;
-const FPS_UPGRADE_THRESHOLD: f64 = 55.0;
-const FRAME_SPIKE_THRESHOLD_MS: f64 = 50.0;
+/// Threshold constants based on frame time ratio to target
+/// If target is 33.3ms (30 FPS), these ratios determine thresholds
+const FRAME_TIME_DOWNGRADE_RATIO: f64 = 1.2; // Downgrade if frame time > target * 1.2
+const FRAME_TIME_UPGRADE_RATIO: f64 = 0.5; // Upgrade if frame time < target * 0.5 (plenty of headroom)
+const FRAME_SPIKE_THRESHOLD_MS: f64 = 50.0; // Frames > 50ms are considered spikes/hiccups
 const FRAME_SPIKE_RATIO_THRESHOLD: f64 = 0.1; // 10% of frames with spikes triggers downgrade
 
 /// Profile bounds (0=Low, 1=Medium, 2=High, 3=Custom is excluded)
@@ -50,13 +52,17 @@ pub struct DclDynamicGraphicsManager {
     /// Timer for current state
     state_timer: f64,
 
-    /// FPS samples collected every second
-    fps_samples: Vec<f64>,
+    /// Frame time samples (actual process time in ms) collected every second
+    frame_time_samples: Vec<f64>,
 
-    /// Timer for FPS sampling
+    /// Timer for sampling
     sample_timer: f64,
 
-    /// Frame spike tracking
+    /// Accumulated frame times for averaging within sample interval
+    accumulated_frame_time: f64,
+    accumulated_frame_count: u32,
+
+    /// Frame spike tracking (frames > 50ms)
     spike_count: u32,
     frame_count: u32,
 
@@ -68,6 +74,9 @@ pub struct DclDynamicGraphicsManager {
 
     /// Current active profile
     current_profile: i32,
+
+    /// Target frame time based on FPS limit (e.g., 33.3ms for 30 FPS)
+    target_frame_time_ms: f64,
 
     /// Is gameplay active (not loading)
     is_gameplay_active: bool,
@@ -91,13 +100,16 @@ impl INode for DclDynamicGraphicsManager {
             base,
             state: ManagerState::Disabled,
             state_timer: 0.0,
-            fps_samples: Vec::with_capacity(150),
+            frame_time_samples: Vec::with_capacity(150),
             sample_timer: 0.0,
+            accumulated_frame_time: 0.0,
+            accumulated_frame_count: 0,
             spike_count: 0,
             frame_count: 0,
             thermal_state: ThermalState::Normal,
             thermal_high_timer: 0.0,
             current_profile: 0,
+            target_frame_time_ms: 33.3, // Default for 30 FPS
             is_gameplay_active: false,
             enabled: true,
             has_ios_plugin,
@@ -120,18 +132,26 @@ impl INode for DclDynamicGraphicsManager {
             return;
         }
 
-        // Track frame spikes
-        let frame_time_ms = delta * 1000.0;
+        // Get actual process time from Performance monitor (in seconds, convert to ms)
+        let process_time_ms = Performance::singleton()
+            .get_monitor(godot::classes::performance::Monitor::TIME_PROCESS)
+            * 1000.0;
+
+        // Track frame spikes (using actual process time, not delta which includes wait time)
         self.frame_count += 1;
-        if frame_time_ms > FRAME_SPIKE_THRESHOLD_MS {
+        if process_time_ms > FRAME_SPIKE_THRESHOLD_MS {
             self.spike_count += 1;
         }
 
-        // Sample FPS periodically
+        // Accumulate frame times for averaging
+        self.accumulated_frame_time += process_time_ms;
+        self.accumulated_frame_count += 1;
+
+        // Sample frame time periodically (average over the interval)
         self.sample_timer += delta;
         if self.sample_timer >= SAMPLE_INTERVAL {
             self.sample_timer = 0.0;
-            self.collect_fps_sample();
+            self.collect_frame_time_sample();
         }
 
         // Update thermal state
@@ -154,10 +174,20 @@ impl DclDynamicGraphicsManager {
     fn profile_change_requested(new_profile: i32);
 
     /// Initialize the manager with config values. Call this from GDScript after Global is ready.
+    /// fps_limit: The FPS limit mode (0=VSYNC, 1=NO_LIMIT, 2=30, 3=60, 4=120)
     #[func]
-    pub fn initialize(&mut self, enabled: bool, current_profile: i32) {
+    pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {
         self.enabled = enabled;
         self.current_profile = current_profile;
+
+        // Calculate target frame time based on FPS limit
+        self.target_frame_time_ms = match fps_limit {
+            0 | 1 => 16.6, // VSYNC or NO_LIMIT - assume 60 FPS target
+            2 => 33.3,     // 30 FPS
+            3 => 16.6,     // 60 FPS
+            4 => 8.3,      // 120 FPS
+            _ => 33.3,     // Default to 30 FPS
+        };
 
         // Start warmup if enabled and not custom profile
         if self.should_enable() {
@@ -165,9 +195,27 @@ impl DclDynamicGraphicsManager {
         }
 
         tracing::info!(
-            "DclDynamicGraphicsManager initialized: enabled={}, profile={}",
+            "DclDynamicGraphicsManager initialized: enabled={}, profile={}, fps_limit={}, target_frame_time={}ms",
             self.enabled,
-            self.current_profile
+            self.current_profile,
+            fps_limit,
+            self.target_frame_time_ms
+        );
+    }
+
+    /// Update target frame time when FPS limit changes
+    #[func]
+    pub fn on_fps_limit_changed(&mut self, fps_limit: i32) {
+        self.target_frame_time_ms = match fps_limit {
+            0 | 1 => 16.6, // VSYNC or NO_LIMIT - assume 60 FPS target
+            2 => 33.3,     // 30 FPS
+            3 => 16.6,     // 60 FPS
+            4 => 8.3,      // 120 FPS
+            _ => 33.3,     // Default to 30 FPS
+        };
+        tracing::debug!(
+            "DynamicGraphicsManager: FPS limit changed, new target_frame_time={}ms",
+            self.target_frame_time_ms
         );
     }
 
@@ -242,14 +290,26 @@ impl DclDynamicGraphicsManager {
         self.current_profile
     }
 
-    /// Get average FPS from recent samples
+    /// Get average frame time from recent samples (in ms)
     #[func]
-    pub fn get_average_fps(&self) -> f64 {
-        if self.fps_samples.is_empty() {
-            return 60.0;
+    pub fn get_average_frame_time(&self) -> f64 {
+        if self.frame_time_samples.is_empty() {
+            return self.target_frame_time_ms;
         }
-        let sum: f64 = self.fps_samples.iter().sum();
-        sum / self.fps_samples.len() as f64
+        let sum: f64 = self.frame_time_samples.iter().sum();
+        sum / self.frame_time_samples.len() as f64
+    }
+
+    /// Get target frame time (in ms)
+    #[func]
+    pub fn get_target_frame_time(&self) -> f64 {
+        self.target_frame_time_ms
+    }
+
+    /// Get frame time ratio (actual / target). < 1.0 means headroom, > 1.0 means struggling
+    #[func]
+    pub fn get_frame_time_ratio(&self) -> f64 {
+        self.get_average_frame_time() / self.target_frame_time_ms
     }
 
     /// Get current thermal state as string
@@ -308,13 +368,18 @@ impl DclDynamicGraphicsManager {
         }
 
         // Check downgrade conditions (need DOWNGRADE_WINDOW seconds of samples)
-        if self.fps_samples.len() >= DOWNGRADE_WINDOW as usize {
-            let avg_fps = self.calculate_average_fps(DOWNGRADE_WINDOW as usize);
+        if self.frame_time_samples.len() >= DOWNGRADE_WINDOW as usize {
+            let avg_frame_time = self.calculate_average_frame_time(DOWNGRADE_WINDOW as usize);
+            let frame_time_ratio = avg_frame_time / self.target_frame_time_ms;
             let spike_ratio = self.calculate_spike_ratio();
 
-            // Downgrade if FPS too low
-            if avg_fps < FPS_DOWNGRADE_THRESHOLD {
-                self.try_downgrade(&format!("low FPS (avg: {:.1})", avg_fps));
+            // Downgrade if frame time too high (ratio > 1.2 means 20% over budget)
+            if frame_time_ratio > FRAME_TIME_DOWNGRADE_RATIO {
+                self.try_downgrade(&format!(
+                    "high frame time ({:.1}ms, {:.0}% of budget)",
+                    avg_frame_time,
+                    frame_time_ratio * 100.0
+                ));
                 return;
             }
 
@@ -332,17 +397,23 @@ impl DclDynamicGraphicsManager {
         }
 
         // Check upgrade conditions (need UPGRADE_WINDOW seconds of samples)
-        if self.fps_samples.len() >= UPGRADE_WINDOW as usize {
-            let avg_fps = self.calculate_average_fps(UPGRADE_WINDOW as usize);
+        if self.frame_time_samples.len() >= UPGRADE_WINDOW as usize {
+            let avg_frame_time = self.calculate_average_frame_time(UPGRADE_WINDOW as usize);
+            let frame_time_ratio = avg_frame_time / self.target_frame_time_ms;
             let spike_ratio = self.calculate_spike_ratio();
 
             // All conditions must be met for upgrade
-            let fps_ok = avg_fps >= FPS_UPGRADE_THRESHOLD;
+            // Ratio < 0.5 means using less than 50% of frame budget (plenty of headroom)
+            let frame_time_ok = frame_time_ratio < FRAME_TIME_UPGRADE_RATIO;
             let spikes_ok = spike_ratio < FRAME_SPIKE_RATIO_THRESHOLD * 0.5; // More strict for upgrade
             let thermal_ok = self.thermal_state == ThermalState::Normal;
 
-            if fps_ok && spikes_ok && thermal_ok {
-                self.try_upgrade(&format!("good performance (FPS: {:.1})", avg_fps));
+            if frame_time_ok && spikes_ok && thermal_ok {
+                self.try_upgrade(&format!(
+                    "good performance ({:.1}ms, {:.0}% of budget)",
+                    avg_frame_time,
+                    frame_time_ratio * 100.0
+                ));
             }
         }
     }
@@ -357,25 +428,32 @@ impl DclDynamicGraphicsManager {
         }
     }
 
-    fn collect_fps_sample(&mut self) {
-        let fps = godot::engine::Engine::singleton().get_frames_per_second() as f64;
-        self.fps_samples.push(fps);
+    fn collect_frame_time_sample(&mut self) {
+        // Calculate average frame time from accumulated values
+        if self.accumulated_frame_count > 0 {
+            let avg_frame_time = self.accumulated_frame_time / self.accumulated_frame_count as f64;
+            self.frame_time_samples.push(avg_frame_time);
+
+            // Reset accumulators
+            self.accumulated_frame_time = 0.0;
+            self.accumulated_frame_count = 0;
+        }
 
         // Keep only samples needed for upgrade window (larger window)
         let max_samples = UPGRADE_WINDOW as usize + 10;
-        while self.fps_samples.len() > max_samples {
-            self.fps_samples.remove(0);
+        while self.frame_time_samples.len() > max_samples {
+            self.frame_time_samples.remove(0);
         }
     }
 
-    fn calculate_average_fps(&self, sample_count: usize) -> f64 {
-        if self.fps_samples.is_empty() {
-            return 60.0;
+    fn calculate_average_frame_time(&self, sample_count: usize) -> f64 {
+        if self.frame_time_samples.is_empty() {
+            return self.target_frame_time_ms;
         }
 
-        let count = sample_count.min(self.fps_samples.len());
-        let start_index = self.fps_samples.len() - count;
-        let sum: f64 = self.fps_samples[start_index..].iter().sum();
+        let count = sample_count.min(self.frame_time_samples.len());
+        let start_index = self.frame_time_samples.len() - count;
+        let sum: f64 = self.frame_time_samples[start_index..].iter().sum();
         sum / count as f64
     }
 
@@ -471,7 +549,9 @@ impl DclDynamicGraphicsManager {
     }
 
     fn reset_samples(&mut self) {
-        self.fps_samples.clear();
+        self.frame_time_samples.clear();
+        self.accumulated_frame_time = 0.0;
+        self.accumulated_frame_count = 0;
         self.spike_count = 0;
         self.frame_count = 0;
         self.thermal_high_timer = 0.0;

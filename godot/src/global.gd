@@ -334,11 +334,18 @@ func _ready():
 func _init_dynamic_graphics_manager() -> void:
 	# Initialize with config values and connect signals
 	dynamic_graphics_manager.initialize(
-		get_config().dynamic_graphics_enabled, get_config().graphic_profile
+		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
 	)
 	loading_started.connect(dynamic_graphics_manager.on_loading_started)
 	loading_finished.connect(dynamic_graphics_manager.on_loading_finished)
 	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
+	# Listen for FPS limit changes
+	get_config().param_changed.connect(_on_config_param_changed)
+
+
+func _on_config_param_changed(param: int) -> void:
+	if param == ConfigData.ConfigParams.LIMIT_FPS:
+		dynamic_graphics_manager.on_fps_limit_changed(get_config().limit_fps)
 
 
 func _on_dynamic_profile_change(new_profile: int) -> void:
