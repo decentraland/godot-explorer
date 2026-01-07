@@ -50,6 +50,12 @@ var _dirty_connected: bool = false
 @onready var box_container_custom = %VBoxContainer_Custom
 
 @onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
+@onready var graphic_profile_container = %RadioSelector_GraphicProfile.get_parent()
+
+# Dynamic graphics toggle
+@onready var check_box_dynamic_graphics: CheckBox = %CheckBox_DynamicGraphics
+@onready var label_dynamic_graphics_status: Label = %Label_DynamicGraphicsStatus
+@onready var dynamic_graphics_container: VBoxContainer = %DynamicGraphics
 
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
 @onready var radio_selector_skybox = %RadioSelector_Skybox
@@ -94,6 +100,7 @@ func _ready():
 	label_skybox_time.visible = !Global.get_config().dynamic_skybox
 
 	# graphic
+	_setup_dynamic_graphics()
 	refresh_graphic_settings()
 
 	# volume
@@ -561,3 +568,79 @@ func _on_button_report_bug_pressed() -> void:
 		url += "?" + "&".join(params)
 
 	Global.open_url(url)
+
+
+func _setup_dynamic_graphics() -> void:
+	# Only show on mobile platforms
+	dynamic_graphics_container.visible = Global.is_mobile()
+
+	if not Global.is_mobile():
+		return
+
+	# Initialize checkbox state
+	var is_enabled: bool = Global.get_config().dynamic_graphics_enabled
+	check_box_dynamic_graphics.set_pressed_no_signal(is_enabled)
+
+	# Update UI state
+	_update_graphic_settings_enabled(is_enabled)
+	_update_dynamic_graphics_status()
+
+	# Connect to manager signal to update status
+	Global.dynamic_graphics_manager.profile_change_requested.connect(
+		func(_profile: int): _update_dynamic_graphics_status()
+	)
+
+
+func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
+	Global.get_config().dynamic_graphics_enabled = toggled_on
+	Global.get_config().save_to_settings_file()
+
+	# Enable/disable the dynamic graphics manager
+	Global.dynamic_graphics_manager.set_enabled(toggled_on)
+
+	# Update UI state
+	_update_graphic_settings_enabled(toggled_on)
+	_update_dynamic_graphics_status()
+
+
+func _update_graphic_settings_enabled(dynamic_enabled: bool) -> void:
+	# When dynamic graphics is enabled, disable manual graphic profile selection
+	# Custom profile (index 3) is always excluded from dynamic adjustment
+	var current_profile: int = Global.get_config().graphic_profile
+	var should_disable: bool = dynamic_enabled and current_profile != 3
+
+	# Disable/enable the graphic profile selector
+	radio_selector_graphic_profile.modulate.a = 0.5 if should_disable else 1.0
+	for child in radio_selector_graphic_profile.get_children():
+		if child is BaseButton:
+			child.disabled = should_disable
+
+
+func _update_dynamic_graphics_status() -> void:
+	if not Global.is_mobile():
+		return
+
+	var manager := Global.dynamic_graphics_manager
+	if not manager.is_enabled():
+		label_dynamic_graphics_status.text = ""
+		return
+
+	var state_name: String = manager.get_state_name()
+	var profile_names: Array[String] = ["Performance", "Balanced", "Quality", "Custom"]
+	var current_profile: int = Global.get_config().graphic_profile
+
+	match state_name:
+		"Disabled":
+			label_dynamic_graphics_status.text = ""
+		"WarmingUp":
+			var remaining := int(manager.get_warmup_remaining())
+			label_dynamic_graphics_status.text = "Warming up... (%ds)" % remaining
+		"Monitoring":
+			label_dynamic_graphics_status.text = (
+				"Active - Current: %s" % profile_names[current_profile]
+			)
+		"Cooldown":
+			var remaining := int(manager.get_cooldown_remaining())
+			label_dynamic_graphics_status.text = (
+				"Cooldown (%ds) - Current: %s" % [remaining, profile_names[current_profile]]
+			)

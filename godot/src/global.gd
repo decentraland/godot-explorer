@@ -349,6 +349,15 @@ func _on_config_param_changed(param: int) -> void:
 
 
 func _on_dynamic_profile_change(new_profile: int) -> void:
+	var old_profile: int = get_config().graphic_profile
+	var profile_names: Array[String] = ["Performance", "Balanced", "Quality", "Custom"]
+	print(
+		(
+			"[DynamicGraphics] Profile changed: %s -> %s"
+			% [profile_names[old_profile], profile_names[new_profile]]
+		)
+	)
+
 	# Apply the profile change requested by the dynamic graphics manager
 	GraphicSettings.apply_graphic_profile(new_profile)
 	get_config().save_to_settings_file()
