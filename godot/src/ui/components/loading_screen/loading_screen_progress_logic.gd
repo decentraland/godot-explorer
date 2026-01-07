@@ -82,3 +82,11 @@ func _hide_loading_screen():
 	AudioSettings.apply_voice_chat_volume_settings()
 
 	loading_screen.async_hide_loading_screen_effect()
+
+	# LOADING_END (Success) metric
+	var end_data = {
+		"scene_id": Global.scene_fetcher.current_scene_entity_id,
+		"position": "%d,%d" % Global.scene_fetcher.current_position,
+		"status": "Success"
+	}
+	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))

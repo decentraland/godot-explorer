@@ -84,6 +84,10 @@ pub struct DclCli {
     pub emote_test_mode: bool,
     #[var(get)]
     pub stress_test: bool,
+    #[var(get)]
+    pub emulate_ios: bool,
+    #[var(get)]
+    pub emulate_android: bool,
 
     // Arguments with values
     #[var(get)]
@@ -126,6 +130,20 @@ impl DclCli {
             ArgDefinition {
                 name: "--skip-lobby".to_string(),
                 description: "Skip the lobby screen and go directly to the explorer".to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--emulate-ios".to_string(),
+                description: "Emulate iOS safe area margins (iPhone 14 Pro style notch)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--emulate-android".to_string(),
+                description: "Emulate Android safe area margins (status bar + gesture nav)"
+                    .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
@@ -432,6 +450,8 @@ impl INode for DclCli {
         let only_no_optimized = args_map.contains_key("--only-no-optimized");
         let emote_test_mode = args_map.contains_key("--emote-test");
         let stress_test = args_map.contains_key("--stress-test");
+        let emulate_ios = args_map.contains_key("--emulate-ios");
+        let emulate_android = args_map.contains_key("--emulate-android");
 
         // Extract arguments with values
         let realm = args_map
@@ -497,6 +517,8 @@ impl INode for DclCli {
             only_no_optimized,
             emote_test_mode,
             stress_test,
+            emulate_ios,
+            emulate_android,
             realm,
             location,
             scene_input_file,

@@ -275,7 +275,7 @@ func _async_save_profile_changes() -> void:
 		ProfileHelper.get_mutable_profile().set_description(current_about_me)
 		original_about_me = current_about_me
 
-	await ProfileHelper.async_save_profile(false)
+	await ProfileHelper.async_save_profile()
 
 
 func _update_elements_visibility() -> void:
@@ -768,7 +768,7 @@ func _async_on_button_links_save_pressed():
 		if child.is_in_group("profile_link_buttons"):
 			links_to_save.append({"title": child.text, "url": child.url})
 	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	await ProfileHelper.async_save_profile(false)
+	await ProfileHelper.async_save_profile()
 	_turn_links_editing(false)
 
 
@@ -873,8 +873,12 @@ func _on_button_block_user_pressed() -> void:
 	var current_avatar = avatar_preview_landscape.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	if is_blocked_user:
+		# user_unblock metric
+		Global.metrics.track_click_button("user_unblock", "PROFILE", "")
 		Global.social_blacklist.remove_blocked(current_avatar.avatar_id)
 	else:
+		# user_block metric
+		Global.metrics.track_click_button("user_block", "PROFILE", "")
 		Global.social_blacklist.add_blocked(current_avatar.avatar_id)
 		# When blocking, also delete friendship if it exists
 		_async_delete_friendship_if_exists(current_avatar.avatar_id)
@@ -1145,9 +1149,14 @@ func _async_send_friend_request(friend_address: String) -> void:
 	var promise = Global.social_service.send_friend_request(friend_address, "")
 	await PromiseUtils.async_awaiter(promise)
 	button_add_friend.disabled = false
+
+	# friend_request_sent metric
+	Global.metrics.track_click_button("friend_request_sent", "PROFILE", "")
+
 	if promise.is_rejected():
 		printerr("Failed to send friend request: ", promise.get_data().get_error())
 		return
+
 	_async_update_buttons_and_lists()
 
 
@@ -1156,9 +1165,14 @@ func _async_accept_friend_request(friend_address: String) -> void:
 	var promise = Global.social_service.accept_friend_request(friend_address)
 	await PromiseUtils.async_awaiter(promise)
 	button_add_friend.disabled = false
+
+	# friend_request_accept metric
+	Global.metrics.track_click_button("friend_request_accept", "PROFILE", "")
+
 	if promise.is_rejected():
 		printerr("Failed to accept friend request: ", promise.get_data().get_error())
 		return
+
 	_async_update_buttons_and_lists()
 
 

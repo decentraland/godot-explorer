@@ -591,6 +591,11 @@ func async_load_scene(
 			)
 			# Still report as fetched (with error) so loading session can progress
 			Global.scene_runner.report_scene_fetched(scene_entity_id)
+
+			send_scene_failed_metrics(
+				scene_entity_id, "script_fetch_failed", script_res.get_error()
+			)
+
 			return PromiseUtils.resolved(false)
 
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
@@ -609,6 +614,9 @@ func async_load_scene(
 			)
 			# Still report as fetched (with error) so loading session can progress
 			Global.scene_runner.report_scene_fetched(scene_entity_id)
+
+			send_scene_failed_metrics(scene_entity_id, "crdt_fetch_failed", res.get_error())
+
 			return PromiseUtils.resolved(false)
 
 	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
@@ -650,6 +658,9 @@ func async_load_scene(
 			" is not optimized, failed to download zip asset_url=",
 			asset_url
 		)
+
+		send_scene_failed_metrics(scene_entity_id, "zip_download_failed")
+
 		# --only-optimized: Skip scene if it's not optimized
 		if Global.cli.only_optimized:
 			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
@@ -661,6 +672,8 @@ func async_load_scene(
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
 		if not ok:
 			printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #1")
+
+			send_scene_failed_metrics(scene_entity_id, "optimized_scene_load_failed")
 		else:
 			var optimized_metadata_path = "res://" + scene_entity_id + "-optimized.json"
 			var file = FileAccess.open(optimized_metadata_path, FileAccess.READ)
@@ -675,12 +688,18 @@ func async_load_scene(
 				print("Scene ", scene_entity_id, " optimized assets metadata loaded successfully.")
 			else:
 				printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #2")
+				send_scene_failed_metrics(
+					scene_entity_id,
+					"optimized_scene_json_load_failed",
+					error_string(FileAccess.get_open_error())
+				)
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
 		printerr("Scene was removed while loading:", scene_entity_id)
 		# Still report as fetched so loading session can progress
 		Global.scene_runner.report_scene_fetched(scene_entity_id)
+		send_scene_failed_metrics(scene_entity_id, "scene_removed_while_loading")
 		return PromiseUtils.resolved(false)
 
 	# Report that this scene's metadata/content has been fetched
@@ -689,6 +708,22 @@ func async_load_scene(
 	var scene_in_dict = loaded_scenes[scene_entity_id]
 	_on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)
 	return PromiseUtils.resolved(true)
+
+
+## Sends metrics when the scene load fails
+func send_scene_failed_metrics(
+	scene_entity_id: String, error_str: String, error_message: String = ""
+) -> void:
+	# LOADING_END (Failed) metric
+	var error_data = {
+		"scene_id": scene_entity_id,
+		"position": "%d,%d" % current_position,
+		"status": "Failed",
+		"error": error_str
+	}
+	if error_message != "":
+		error_data["error_message"] = error_message
+	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(error_data))
 
 
 func _on_try_spawn_scene(

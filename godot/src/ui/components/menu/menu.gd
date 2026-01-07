@@ -65,7 +65,7 @@ func _ready():
 	self.modulate = Color(1, 1, 1, 1)
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	if !is_in_game:
-		Global.metrics.track_screen_viewed(current_screen_name, "")
+		Global.metrics.track_screen_viewed(current_screen_name, '{"function": "ready"}')
 		Global.metrics.flush()
 
 	selected_node = control_discover
@@ -90,13 +90,16 @@ func _on_button_close_pressed():
 	_async_request_hide_menu()
 
 
+# gdlint:ignore = async-function-name
 func close():
+	# Wait for profile deploy if backpack has changes before closing
+	if selected_node == control_backpack:
+		await _async_deploy_if_has_changes()
+
 	var tween_m = create_tween()
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
 	tween_h.tween_callback(hide).set_delay(0.3)
-	if selected_node == control_backpack:
-		_async_deploy_if_has_changes()
 
 
 func show_discover():
@@ -219,7 +222,7 @@ func _on_button_backpack_toggled(toggled_on):
 
 
 func _on_size_changed() -> void:
-	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var safe_area: Rect2i = Global.get_safe_area()
 	var window_size: Vector2i = DisplayServer.window_get_size()
 
 	var top: int = 0
