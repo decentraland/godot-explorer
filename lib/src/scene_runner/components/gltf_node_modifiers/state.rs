@@ -32,8 +32,6 @@ pub struct GltfNodeModifierState {
     pub applied_paths: HashSet<String>,
     /// Materials waiting for textures to load, keyed by node path
     pub pending_materials: HashMap<String, ModifierMaterialItem>,
-    /// Hash of last applied modifiers to detect changes (avoids redundant reprocessing)
-    pub last_modifiers_hash: u64,
 }
 
 /// Information about a mesh instance in the GLTF hierarchy
