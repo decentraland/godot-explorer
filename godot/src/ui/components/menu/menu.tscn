@@ -3,6 +3,7 @@
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
 [ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
+[ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/components/utils/clean_orientation.gd" id="3_rdch8"]
 [ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
 [ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/components/discover/discover_button.gd" id="13_2fqoa"]
@@ -15,7 +16,6 @@
 [ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/components/settings/settings_button.gd" id="18_3id7u"]
 [ext_resource type="PackedScene" uid="uid://cuduuu2b4u4bn" path="res://src/ui/components/profile_settings/profile_settings.tscn" id="18_x0kg3"]
 [ext_resource type="SpriteFrames" uid="uid://bkr6jgehk1ji0" path="res://assets/animations/settings_animation.tres" id="19_j150v"]
-[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="22_1kuym"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
 [ext_resource type="PackedScene" uid="uid://b3e5xybvamaqr" path="res://src/ui/components/menu/account_deletion_popup.tscn" id="31_kkhkt"]
 
@@ -75,6 +75,8 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 color = Color(0.0862745, 0.0784314, 0.105882, 1)
+script = ExtResource("3_rdch8")
+clean_on_landscape = true
 
 [node name="ColorRect_Background" type="TextureRect" parent="VBoxContainer"]
 show_behind_parent = true
@@ -139,7 +141,8 @@ backpack = NodePath("../Control_Backpack")
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_080im")
-script = ExtResource("22_1kuym")
+script = ExtResource("3_rdch8")
+clean_on_landscape = true
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/BottomBar_Portrait"]
 layout_mode = 2

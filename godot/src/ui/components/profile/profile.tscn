@@ -24,7 +24,6 @@
 [ext_resource type="Texture2D" uid="uid://bk8rmfac3ul7j" path="res://assets/ui/friends.svg" id="12_jcjsg"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_oyuqo"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="13_ltw05"]
-[ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="13_ood4l"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="13_quy3q"]
 [ext_resource type="Texture2D" uid="uid://bjc0grtm3cyvg" path="res://assets/ui/profile/pronouns.svg" id="13_wt1aa"]
 [ext_resource type="Texture2D" uid="uid://bxi281gjgk05i" path="res://assets/ui/unfriend.svg" id="14_ur8se"]
@@ -36,6 +35,7 @@
 [ext_resource type="Texture2D" uid="uid://2ewijqnp4rks" path="res://assets/ui/profile/profession.svg" id="18_uj2xw"]
 [ext_resource type="Texture2D" uid="uid://cx5hu05afkdsq" path="res://assets/ui/profile/real_name.svg" id="19_mpru1"]
 [ext_resource type="Texture2D" uid="uid://y82giak6j1iy" path="res://assets/ui/profile/hobbies.svg" id="20_m8kjd"]
+[ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/components/utils/clean_orientation.gd" id="20_ybu4s"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="22_mpru1"]
 [ext_resource type="PackedScene" uid="uid://bndmt8hl1n5ke" path="res://src/ui/components/change_nick_popup.tscn" id="30_8t4r5"]
 [ext_resource type="PackedScene" uid="uid://dklmxtp0xs5sv" path="res://src/ui/components/profile/profile_new_link_popup.tscn" id="31_8t4r5"]
@@ -441,12 +441,12 @@ theme_override_constants/separation = 30
 
 [node name="Control_Avatar" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(300, 500)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-script = ExtResource("3_oe5oo")
+script = ExtResource("20_ybu4s")
+clean_on_landscape = true
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar"]
 layout_mode = 1
@@ -466,7 +466,6 @@ mouse_filter = 0
 mouse_force_pass_scroll_events = false
 stretch = true
 hide_name = true
-custom_environment = ExtResource("13_ood4l")
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -869,6 +868,7 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="Control" type="Control" parent="MarginContainer/HBoxContainer/Control_OwnAndLandscape"]
+visible = false
 custom_minimum_size = Vector2(90, 0)
 layout_mode = 2
 script = ExtResource("3_oe5oo")
