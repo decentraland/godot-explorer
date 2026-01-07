@@ -11,13 +11,13 @@ extends Node
 const GOERLI_PLAZA = {
 	"name": "Goerli Plaza",
 	"pos": Vector2i(72, -10),
-	"realm": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+	"realm": "https://benchmark-scenes.dclexplorer.com/sdk7-goerli-plaza/power-cube/power-cube/"
 }
 
 const GENESIS_PLAZA = {
 	"name": "Genesis Plaza",
 	"pos": Vector2i(0, 0),
-	"realm": "https://realm-provider-ea.decentraland.org/main"
+	"realm": "https://benchmark-scenes.dclexplorer.com/Genesis-Plaza-2025/central-plaza/central-plaza/"
 }
 
 var benchmark_locations = [
