@@ -240,10 +240,7 @@ pub fn resolve_modifiers<'a>(
         for info in all_meshes {
             resolved.insert(
                 ModifierKey::all_surfaces(&info.node_path),
-                ModifierMatch {
-                    modifier: global,
-                    surface_index: None,
-                },
+                ModifierMatch { modifier: global },
             );
         }
     }
@@ -259,13 +256,7 @@ pub fn resolve_modifiers<'a>(
             let match_result = path_matches(&modifier.path, info);
             if match_result.matched {
                 let key = ModifierKey::new(&info.node_path, match_result.surface_index);
-                resolved.insert(
-                    key,
-                    ModifierMatch {
-                        modifier,
-                        surface_index: match_result.surface_index,
-                    },
-                );
+                resolved.insert(key, ModifierMatch { modifier });
                 matched = true;
             }
         }

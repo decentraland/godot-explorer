@@ -56,6 +56,4 @@ pub struct MeshInstanceInfo {
 #[derive(Clone)]
 pub struct ModifierMatch<'a> {
     pub modifier: &'a GltfNodeModifier,
-    /// Optional surface index for per-primitive targeting (None = all surfaces)
-    pub surface_index: Option<i32>,
 }

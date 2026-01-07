@@ -76,7 +76,7 @@ pub fn update_gltf_node_modifiers(
         SceneCrdtStateProtoComponents::get_gltf_node_modifiers(crdt_state);
 
     // Log timestamps from dirty entities to see if SDK is sending new data
-    let pending_entities_snapshot: Vec<_> = pending_entities.iter().copied().collect();
+    let pending_entities_snapshot: Vec<_> = pending_entities.to_vec();
     let dirty_with_timestamps: Vec<_> = gltf_node_modifiers_dirty
         .as_ref()
         .map(|d| {
