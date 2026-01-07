@@ -40,50 +40,8 @@ jobs:
       - name: Set up cache
         uses: ./.github/actions/set-up-cache
 
-      - name: Debug GPU and Install Vulkan drivers
-        run: |
-          echo "=== GPU Information ==="
-          lspci | grep -i vga || echo "No VGA controller found"
-          lspci | grep -i nvidia || echo "No NVIDIA GPU found"
-          lspci | grep -i amd || echo "No AMD GPU found"
-
-          echo ""
-          echo "=== Checking GPU drivers ==="
-          nvidia-smi || echo "nvidia-smi not available"
-
-          echo ""
-          echo "=== Current Vulkan status ==="
-          vulkaninfo --summary || echo "vulkaninfo not available"
-
-          echo ""
-          echo "=== Installing Vulkan drivers and tools ==="
-          sudo apt-get update
-          sudo apt-get install -y \
-            mesa-vulkan-drivers \
-            vulkan-tools \
-            vulkan-validationlayers \
-            libvulkan1 \
-            libvulkan-dev \
-            mesa-utils
-
-          echo ""
-          echo "=== Post-install GPU information ==="
-          glxinfo | grep -i "opengl version" || echo "glxinfo not available"
-          glxinfo | grep -i "opengl renderer" || echo "glxinfo not available"
-
-          echo ""
-          echo "=== Vulkan devices available ==="
-          vulkaninfo --summary || echo "Still no Vulkan available"
-
-          echo ""
-          echo "=== Display and X11 setup ==="
-          echo "DISPLAY=$DISPLAY"
-          xdpyinfo || echo "xdpyinfo not available (expected before Xvfb starts)"
-
-      - name: Prepare graphics rendering
-        run: |
-          sudo apt-get -y install xvfb
-          sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
+      - name: Setup Vulkan and graphics rendering
+        uses: ./.github/actions/setup-vulkan
 
       # Dependencies section
       - name: Install dependencies
@@ -334,7 +292,10 @@ jobs:
             echo ""
             echo "### 📋 Logs & Artifacts"
             echo ""
-            echo "- 📊 **CSV Data**: [benchmark_report.csv](${S3_URL}) - Raw benchmark data in S3"
+            echo "- 📊 **CSV Data**: [benchmark_report.csv](${S3_URL}) - Raw benchmark data"
+            if [ "${{ env.BASELINE_FOUND }}" = "true" ]; then
+              echo "- 📊 **Baseline CSV**: [benchmark_report.csv](${{ env.BASELINE_URL }}) - Baseline data from \`${{ env.BASELINE_BRANCH }}\` branch"
+            fi
             echo "- 🔧 **Full Logs**: [benchmark_run.log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts) - Complete benchmark run output (build + execution)"
             echo "- 🌐 **Workflow Run**: [View full logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- 📦 **Download All**: Get the \`benchmark-report\` artifact from the workflow run"
