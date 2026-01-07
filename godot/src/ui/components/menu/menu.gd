@@ -234,10 +234,12 @@ func _on_size_changed() -> void:
 		top = max(top, safe_area.position.y * y_factor)
 		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
 
-	if is_instance_valid(color_rect_portrait_top_safe_area) and is_instance_valid(color_rect_portrait_bottom_safe_area):
+	if (
+		is_instance_valid(color_rect_portrait_top_safe_area)
+		and is_instance_valid(color_rect_portrait_bottom_safe_area)
+	):
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
-
 
 
 func _on_notification_clicked(notification: Dictionary) -> void:
