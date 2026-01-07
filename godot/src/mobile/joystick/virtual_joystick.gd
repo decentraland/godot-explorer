@@ -8,7 +8,7 @@ signal is_holded(bool)
 
 # EXPORTED VARIABLE
 
-## The joystick doesn't move. 
+## The joystick doesn't move.
 ## Every time the joystick area is pressed,
 ## the joystick position is set on the touched position.
 enum JoystickMode { FIXED, DYNAMIC }
@@ -62,8 +62,7 @@ var _tip_position := Vector2.ZERO
 @onready var _dynamic_material: ShaderMaterial = $Dynamic.material
 @onready var _active_area: Control = $ActiveArea
 
-@onready var _tip_default_position:= Vector2.ZERO
-
+@onready var _tip_default_position := Vector2.ZERO
 
 # FUNCTIONS
 
@@ -78,6 +77,7 @@ func _ready() -> void:
 		hide()
 
 	_active_area.connect("input_received", _on_input)
+
 
 func _on_input(event: InputEvent) -> void:
 	if Global.is_mobile():
@@ -112,7 +112,6 @@ func _move_base(new_position: Vector2) -> void:
 	_dynamic_material.set_shader_parameter("joystick_position", _joystick_position)
 
 
-
 func _move_tip(vector: Vector2) -> void:
 	_dynamic_material.set_shader_parameter("tip_position", vector)
 
@@ -122,14 +121,26 @@ func _is_point_inside_joystick_area(point: Vector2) -> bool:
 		point.x >= _active_area.global_position.x
 		and (
 			point.x
-			<= _active_area.global_position.x + (_active_area.size.x * _active_area.get_global_transform_with_canvas().get_scale().x)
+			<= (
+				_active_area.global_position.x
+				+ (
+					_active_area.size.x
+					* _active_area.get_global_transform_with_canvas().get_scale().x
+				)
+			)
 		)
 	)
 	var y: bool = (
 		point.y >= _active_area.global_position.y
 		and (
 			point.y
-			<= _active_area.global_position.y + (_active_area.size.y * _active_area.get_global_transform_with_canvas().get_scale().y)
+			<= (
+				_active_area.global_position.y
+				+ (
+					_active_area.size.y
+					* _active_area.get_global_transform_with_canvas().get_scale().y
+				)
+			)
 		)
 	)
 	return x and y
@@ -199,12 +210,12 @@ func _reset():
 	var pos := _joystick_default_position
 	pos.y = size.y - pos.y
 	_move_base(pos)
-	
+
 	_tip_position = _tip_default_position
 	_move_tip(_tip_position)
-	
+
 	_dynamic_material.set_shader_parameter("show_guide", true)
-	
+
 	if use_input_actions:
 		if Input.is_action_pressed(action_left) or Input.is_action_just_pressed(action_left):
 			Input.action_release(action_left)
@@ -217,5 +228,6 @@ func _reset():
 
 
 func _on_resized() -> void:
-	if not is_node_ready(): return
+	if not is_node_ready():
+		return
 	_reset()
