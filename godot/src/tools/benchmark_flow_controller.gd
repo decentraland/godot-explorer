@@ -17,7 +17,8 @@ const GOERLI_PLAZA = {
 const GENESIS_PLAZA = {
 	"name": "Genesis Plaza",
 	"pos": Vector2i(0, 0),
-	"realm": "https://benchmark-scenes.dclexplorer.com/Genesis-Plaza-2025/central-plaza/central-plaza/"
+	"realm":
+	"https://benchmark-scenes.dclexplorer.com/Genesis-Plaza-2025/central-plaza/central-plaza/"
 }
 
 var benchmark_locations = [
