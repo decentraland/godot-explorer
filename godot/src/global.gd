@@ -88,6 +88,10 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 
 var player_camera_node: DclCamera3D
+var session_id: String
+
+# Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
+var _safe_area_presets: GDScript = null
 
 
 func set_url_popup_instance(popup_instance) -> void:
@@ -122,6 +126,33 @@ func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
 
 
+func is_emulating_safe_area() -> bool:
+	return cli.emulate_ios or cli.emulate_android
+
+
+func _get_safe_area_presets() -> GDScript:
+	if _safe_area_presets == null:
+		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
+	return _safe_area_presets
+
+
+func get_safe_area() -> Rect2i:
+	if cli.emulate_ios:
+		var presets := _get_safe_area_presets()
+		return presets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
+	if cli.emulate_android:
+		var presets := _get_safe_area_presets()
+		return presets.get_android_safe_area(is_orientation_portrait(), get_window().size)
+	return DisplayServer.get_display_safe_area()
+
+
+func _instantiate_phone_frame_overlay() -> void:
+	var overlay_scene = load("res://assets/no-export/phone_frame_overlay.tscn")
+	if overlay_scene:
+		var overlay = overlay_scene.instantiate()
+		add_child(overlay)
+
+
 ## Vibrate handheld device
 func send_haptic_feedback() -> void:
 	if is_mobile():
@@ -132,6 +163,22 @@ func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
+
+	# Handle safe area emulation (enables mobile mode and resizes window)
+	if cli.emulate_ios:
+		_set_is_mobile(true)
+		var presets := _get_safe_area_presets()
+		var target_size: Vector2i = presets.get_ios_window_size(is_orientation_portrait())
+		get_window().size = target_size
+		get_window().move_to_center()
+		_instantiate_phone_frame_overlay()
+	elif cli.emulate_android:
+		_set_is_mobile(true)
+		var presets := _get_safe_area_presets()
+		var target_size: Vector2i = presets.get_android_window_size(is_orientation_portrait())
+		get_window().size = target_size
+		get_window().move_to_center()
+		_instantiate_phone_frame_overlay()
 
 	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
 	if not cli.fake_deeplink.is_empty():
@@ -200,9 +247,10 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
-	var session_id := DclConfig.generate_uuid_v4()
+	session_id = DclConfig.generate_uuid_v4()
 	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
+	self.metrics.set_debug_level(0)  # 0 off - 1 on
 	self.metrics.set_name("metrics")
 
 	var sentry_user = SentryUser.new()
@@ -438,12 +486,20 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 func set_orientation_landscape():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+	elif cli.emulate_ios:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_ios_window_size(false)
+		get_window().move_to_center()
+	elif cli.emulate_android:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_android_window_size(false)
+		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
 
 
-func is_orientation_portrait():
+func is_orientation_portrait() -> bool:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	return window_size.x < window_size.y
 
@@ -451,6 +507,14 @@ func is_orientation_portrait():
 func set_orientation_portrait():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+	elif cli.emulate_ios:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_ios_window_size(true)
+		get_window().move_to_center()
+	elif cli.emulate_android:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_android_window_size(true)
+		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
