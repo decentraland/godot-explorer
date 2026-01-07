@@ -28,7 +28,8 @@ use crate::tools::memory_debugger::MemoryDebugger;
 use crate::tools::benchmark_report::BenchmarkReport;
 
 use super::{
-    dcl_cli::DclCli, dcl_config::DclConfig, dcl_realm::DclRealm,
+    dcl_cli::DclCli, dcl_config::DclConfig,
+    dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
     dcl_social_blacklist::DclSocialBlacklist, dcl_social_service::DclSocialService,
     dcl_tokio_rpc::DclTokioRpc, portables::DclPortableExperienceController,
 };
@@ -208,6 +209,9 @@ pub struct DclGlobal {
     #[var(get)]
     pub cli: Gd<DclCli>,
 
+    #[var(get)]
+    pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
+
     pub selected_avatar: Option<Gd<DclAvatar>>,
 
     // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
@@ -265,6 +269,8 @@ impl INode for DclGlobal {
 
         let mut metrics: Gd<Metrics> = Metrics::new_alloc();
         let mut cli: Gd<DclCli> = DclCli::new_alloc();
+        let mut dynamic_graphics_manager: Gd<DclDynamicGraphicsManager> =
+            DclDynamicGraphicsManager::new_alloc();
 
         // For now, keep using base Rust classes - GDScript extensions will be created in global.gd
         let mut realm: Gd<DclRealm> = DclRealm::new_alloc();
@@ -297,6 +303,7 @@ impl INode for DclGlobal {
 
         metrics.set_name("metrics");
         cli.set_name("cli");
+        dynamic_graphics_manager.set_name("dynamic_graphics_manager");
 
         // Use CLI singleton for parsing
         let (testing_scene_mode, preview_mode, developer_mode, fixed_skybox_time, force_mobile) = {
@@ -360,6 +367,7 @@ impl INode for DclGlobal {
             #[cfg(not(feature = "enable_inspector"))]
             has_javascript_debugger: false,
             cli,
+            dynamic_graphics_manager,
             selected_avatar: None,
 
             // Input modifiers start as false (no modification)

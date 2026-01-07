@@ -397,6 +397,9 @@ func _on_radio_selector_graphic_profile_select_item(index, _item):
 	refresh_graphic_settings()
 	Global.get_config().save_to_settings_file()
 
+	# Notify dynamic graphics manager of manual profile change
+	Global.dynamic_graphics_manager.on_manual_profile_change(index)
+
 
 func _on_h_slider_music_volume_value_changed(value):
 	Global.get_config().audio_music_volume = value

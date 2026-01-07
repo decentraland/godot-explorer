@@ -294,6 +294,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
+	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
+
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
@@ -311,6 +313,9 @@ func _ready():
 			"BenchmarkReport requires --features use_memory_debugger to be enabled during build"
 		)
 
+	# Initialize dynamic graphics manager after config is loaded
+	_init_dynamic_graphics_manager.call_deferred()
+
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
@@ -324,6 +329,22 @@ func _ready():
 		self.network_inspector.set_is_active(false)
 
 	DclMeshRenderer.init_primitive_shapes()
+
+
+func _init_dynamic_graphics_manager() -> void:
+	# Initialize with config values and connect signals
+	dynamic_graphics_manager.initialize(
+		get_config().dynamic_graphics_enabled, get_config().graphic_profile
+	)
+	loading_started.connect(dynamic_graphics_manager.on_loading_started)
+	loading_finished.connect(dynamic_graphics_manager.on_loading_finished)
+	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
+
+
+func _on_dynamic_profile_change(new_profile: int) -> void:
+	# Apply the profile change requested by the dynamic graphics manager
+	GraphicSettings.apply_graphic_profile(new_profile)
+	get_config().save_to_settings_file()
 
 
 func set_raycast_debugger_enable(enable: bool):

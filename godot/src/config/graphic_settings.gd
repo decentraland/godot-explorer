@@ -82,5 +82,38 @@ static func apply_fps_limit():
 			Engine.max_fps = 60
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 			physics_fps = 60
+		ConfigData.FpsLimitMode.FPS_120:
+			Engine.max_fps = 120
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			physics_fps = 60  # Cap physics at 60
 
 	Engine.physics_ticks_per_second = physics_fps
+
+
+## Apply a graphic profile by index
+## 0: Performance (LOW), 1: Balanced (MEDIUM), 2: Quality (HIGH)
+## Does not apply to Custom (3) profiles
+static func apply_graphic_profile(profile_index: int) -> void:
+	var config := Global.get_config()
+
+	match profile_index:
+		0:  # Performance (LOW)
+			config.anti_aliasing = 0  # off
+			config.shadow_quality = 0  # disabled
+			config.skybox = 0  # basic
+			config.texture_quality = 0  # low
+		1:  # Balanced (MEDIUM)
+			config.anti_aliasing = 1  # x2
+			config.shadow_quality = 1  # normal
+			config.skybox = 1  # normal
+			config.texture_quality = 1  # medium
+		2:  # Quality (HIGH)
+			config.anti_aliasing = 3  # x8
+			config.shadow_quality = 2  # high quality
+			config.skybox = 2  # realistic
+			config.texture_quality = 2  # high
+		_:
+			# Custom or invalid - do nothing
+			return
+
+	config.graphic_profile = profile_index
