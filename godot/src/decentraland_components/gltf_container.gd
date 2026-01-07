@@ -121,15 +121,14 @@ func _async_load_optimized_asset(gltf_hash: String):
 	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		printerr("Failed to download optimized asset dependencies: ", gltf_hash)
-		_finish_with_error()
+		_finish_with_error("failed to download optimized asset dependencies")
 		return
 
 	# Load from res://glbs/
 	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
 	var gltf_node := await _async_load_and_instantiate(scene_file)
 	if gltf_node == null:
-		_finish_with_error()
+		_finish_with_error("failed to instantiate optimized scene")
 		return
 
 	# Add to scene tree
@@ -155,8 +154,7 @@ func _async_load_runtime_gltf():
 	var promise = Global.content_provider.load_scene_gltf(dcl_gltf_src, content_mapping)
 
 	if promise == null:
-		printerr("GLTF load failed to start for ", dcl_gltf_src)
-		_finish_with_error()
+		_finish_with_error("failed to start loading")
 		return
 
 	# Wait for the promise to resolve
@@ -168,24 +166,20 @@ func _async_load_runtime_gltf():
 
 	if promise.is_rejected():
 		var error = promise.get_data()
-		if error is PromiseError:
-			printerr("GLTF load error for ", dcl_gltf_src, ": ", error.get_error())
-		else:
-			printerr("GLTF load error for ", dcl_gltf_src)
-		_finish_with_error()
+		var reason = error.get_error() if error is PromiseError else "promise rejected"
+		_finish_with_error(reason)
 		return
 
 	# Get scene path from promise data
 	var scene_path = promise.get_data()
 	if not scene_path is String or scene_path.is_empty():
-		printerr("GLTF load returned invalid scene path for ", dcl_gltf_src)
-		_finish_with_error()
+		_finish_with_error("invalid scene path")
 		return
 
 	# Load and instantiate the PackedScene
 	var gltf_node := await _async_load_and_instantiate(scene_path)
 	if gltf_node == null:
-		_finish_with_error()
+		_finish_with_error("failed to instantiate scene")
 		return
 
 	# Add to scene tree
@@ -246,7 +240,7 @@ func _async_add_gltf_to_tree(gltf_node: Node3D):
 	# Check if still valid (scene might have been unloaded)
 	if not is_inside_tree():
 		gltf_node.queue_free()
-		_finish_with_error()
+		_finish_with_error("scene unloaded during load")
 		return
 
 	add_child(gltf_node)
@@ -267,7 +261,11 @@ func _complete_load():
 	self.check_animations()
 
 
-func _finish_with_error():
+func _finish_with_error(reason: String = "unknown"):
+	printerr("GLTF load error for ", dcl_gltf_src, ": ", reason)
+	# Report to resource tracker if we have a valid hash
+	if not dcl_gltf_hash.is_empty():
+		Global.content_provider.report_resource_failed(dcl_gltf_hash, reason)
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 	timer.stop()
 	_finish_loading_slot()
@@ -592,7 +590,6 @@ func change_gltf(
 
 
 func _on_timer_timeout():
-	printerr("GLTF loading timeout: ", dcl_gltf_src)
-	_finish_with_error()
+	_finish_with_error("timeout")
 
 #endregion

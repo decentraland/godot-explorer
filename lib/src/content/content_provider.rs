@@ -31,9 +31,9 @@ use crate::{
 
 #[cfg(feature = "use_resource_tracking")]
 use crate::godot_classes::dcl_resource_tracker::{
-    report_download_speed, report_resource_deleted, report_resource_download_done,
-    report_resource_downloading, report_resource_error, report_resource_loaded,
-    report_resource_start,
+    check_and_report_timeouts, report_download_speed, report_resource_deleted,
+    report_resource_download_done, report_resource_downloading, report_resource_error,
+    report_resource_loaded, report_resource_start,
 };
 
 use super::{
@@ -203,6 +203,9 @@ impl INode for ContentProvider {
                     speed += state_info.speed;
                 }
                 report_download_speed(speed);
+
+                // Check for timed out resources (no progress for 20 seconds)
+                check_and_report_timeouts();
             }
         }
 
@@ -659,13 +662,25 @@ impl ContentProvider {
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&file_hash);
+            report_resource_start(&file_hash, "optimized_asset");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let _ =
-                ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, true)
-                    .await;
+            #[allow(unused_variables)]
+            let result = ContentProvider::async_fetch_optimized_asset(
+                file_hash.clone(),
+                ctx,
+                optimized_data,
+                true,
+            )
+            .await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&file_hash, &error.to_string());
+            } else {
+                report_resource_loaded(&file_hash);
+            }
 
             then_promise(get_promise, Ok(None));
 
@@ -694,13 +709,26 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&file_hash);
+            report_resource_start(&file_hash, "optimized_asset");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let _ =
-                ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, false)
-                    .await;
+            #[allow(unused_variables)]
+            let result = ContentProvider::async_fetch_optimized_asset(
+                file_hash.clone(),
+                ctx,
+                optimized_data,
+                false,
+            )
+            .await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&file_hash, &error.to_string());
+            } else {
+                report_resource_loaded(&file_hash);
+            }
+
             then_promise(get_promise, Ok(None));
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
@@ -795,7 +823,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "file");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -879,7 +907,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "audio");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -991,7 +1019,7 @@ impl ContentProvider {
             let hash_id = file_hash.clone();
             TokioRuntime::spawn(async move {
                 #[cfg(feature = "use_resource_tracking")]
-                report_resource_start(&hash_id);
+                report_resource_start(&hash_id, "texture");
 
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1057,7 +1085,7 @@ impl ContentProvider {
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "texture_original");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1107,7 +1135,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "texture_url_original");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1148,7 +1176,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "texture_url");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1213,7 +1241,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "video");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1482,6 +1510,20 @@ impl ContentProvider {
         promise
     }
 
+    /// Report a resource as failed (for use by GDScript when loading times out)
+    #[cfg(feature = "use_resource_tracking")]
+    #[func]
+    pub fn report_resource_failed(&self, file_hash: GString, reason: GString) {
+        report_resource_error(&file_hash.to_string(), &reason.to_string());
+    }
+
+    /// Stub for when resource tracking is disabled
+    #[cfg(not(feature = "use_resource_tracking"))]
+    #[func]
+    pub fn report_resource_failed(&self, _file_hash: GString, _reason: GString) {
+        // No-op when resource tracking is disabled
+    }
+
     #[func]
     pub fn purge_file(&mut self, file_hash: GString) -> Gd<Promise> {
         let file_hash_str = file_hash.to_string();
@@ -1573,12 +1615,29 @@ impl ContentProvider {
 
             // Fetch the resource if it's either a new dependency or missing in cache
 
-            let future = ctx.resource_provider.fetch_resource(
-                asset_url.clone(),
-                hash_dependency_zip.clone(),
-                absolute_file_path,
-            );
-            futures_to_wait.push(future);
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_dependency_zip, "optimized_asset_dep");
+
+            #[cfg(feature = "use_resource_tracking")]
+            let hash_for_tracking = hash_dependency_zip.clone();
+
+            let ctx_clone = ctx.clone();
+            let future = async move {
+                let result = ctx_clone
+                    .resource_provider
+                    .fetch_resource(asset_url, hash_dependency_zip, absolute_file_path)
+                    .await;
+
+                #[cfg(feature = "use_resource_tracking")]
+                if let Err(ref e) = result {
+                    report_resource_error(&hash_for_tracking, &e.to_string());
+                } else {
+                    report_resource_loaded(&hash_for_tracking);
+                }
+
+                result
+            };
+            futures_to_wait.push(Box::pin(future));
         }
 
         // 1.1 We ensure that the file_hash (the scene who is requesting) is the last dependency to load

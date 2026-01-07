@@ -23,6 +23,11 @@ use super::super::{
     file_string::get_base_dir, texture::create_compressed_texture,
 };
 
+#[cfg(feature = "use_resource_tracking")]
+use crate::godot_classes::dcl_resource_tracker::{
+    report_resource_error, report_resource_loaded, report_resource_start,
+};
+
 /// Post-import texture processing for all GLTF types.
 /// Resizes images according to max_size limits.
 pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
@@ -195,10 +200,20 @@ where
     let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
 
-    ctx.resource_provider
+    #[cfg(feature = "use_resource_tracking")]
+    report_resource_start(&file_hash, "gltf");
+
+    let gltf_result = ctx
+        .resource_provider
         .fetch_resource(url, file_hash.clone(), absolute_file_path.clone())
-        .await
-        .map_err(anyhow::Error::msg)?;
+        .await;
+
+    #[cfg(feature = "use_resource_tracking")]
+    if let Err(ref e) = gltf_result {
+        report_resource_error(&file_hash, &e.to_string());
+    }
+
+    gltf_result.map_err(anyhow::Error::msg)?;
 
     // Get dependencies from the GLTF file
     let dependencies = get_dependencies(&absolute_file_path)
@@ -231,13 +246,26 @@ where
     let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
         let ctx = ctx.clone();
         let content_mapping = content_mapping.clone();
+        let dep_hash = dependency_file_hash.clone();
         async move {
-            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
-            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
-            ctx.resource_provider
-                .fetch_resource(url, dependency_file_hash.clone(), absolute_file_path)
-                .await
-                .map_err(|e| format!("Dependency {} failed: {:?}", dependency_file_hash, e))
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&dep_hash, "gltf_dep");
+
+            let url = format!("{}{}", content_mapping.base_url, dep_hash);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, dep_hash);
+            let result = ctx
+                .resource_provider
+                .fetch_resource(url, dep_hash.clone(), absolute_file_path)
+                .await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(ref e) = result {
+                report_resource_error(&dep_hash, &format!("{:?}", e));
+            } else {
+                report_resource_loaded(&dep_hash);
+            }
+
+            result.map_err(|e| format!("Dependency {} failed: {:?}", dep_hash, e))
         }
     });
 
@@ -308,6 +336,9 @@ where
     ctx.resource_provider
         .try_delete_file_by_hash(&file_hash)
         .await;
+
+    #[cfg(feature = "use_resource_tracking")]
+    report_resource_loaded(&file_hash);
 
     Ok((result, file_size))
 }
