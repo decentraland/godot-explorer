@@ -22,7 +22,7 @@ permissions:
 jobs:
   benchmark:
     name: Run Benchmark
-    runs-on: ubuntu-latest
+    runs-on: gpu-godot-docker
     timeout-minutes: 45
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
@@ -40,10 +40,8 @@ jobs:
       - name: Set up cache
         uses: ./.github/actions/set-up-cache
 
-      - name: Prepare graphics rendering
-        run: |
-          sudo apt-get -y install xvfb
-          sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
+      - name: Setup Vulkan and graphics rendering
+        uses: ./.github/actions/setup-vulkan
 
       # Dependencies section
       - name: Install dependencies
