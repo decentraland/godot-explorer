@@ -499,6 +499,7 @@ pivot_offset = Vector2(232, 0)
 mouse_filter = 2
 
 [node name="Button_Primary" parent="Button_Press/Control/HBoxContainer2" instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
@@ -564,6 +565,7 @@ pivot_offset = Vector2(232, 0)
 mouse_filter = 2
 
 [node name="Button_Secondary" parent="Button_Press/Control/HBoxContainer4" instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
@@ -631,6 +633,7 @@ pivot_offset = Vector2(110, 25)
 mouse_filter = 2
 
 [node name="Button_Combo1" parent="Control/Button_Combo/HBoxContainer" instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
 modulate = Color(1, 1, 1, 1)
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 0
@@ -667,6 +670,7 @@ pivot_offset = Vector2(110, 25)
 mouse_filter = 2
 
 [node name="Button_Combo2" parent="Control/Button_Combo/HBoxContainer2" instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
 modulate = Color(1, 1, 1, 1)
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 1
@@ -705,6 +709,7 @@ pivot_offset = Vector2(112.5, 25)
 mouse_filter = 2
 
 [node name="Button_Combo3" parent="Control/Button_Combo/HBoxContainer3" instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
 modulate = Color(1, 1, 1, 1)
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 0
@@ -740,6 +745,7 @@ pivot_offset = Vector2(110, 25)
 mouse_filter = 2
 
 [node name="Button_Combo4" parent="Control/Button_Combo/HBoxContainer4" instance=ExtResource("1_81cx4")]
+unique_name_in_owner = true
 modulate = Color(1, 1, 1, 1)
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 0

@@ -279,6 +279,7 @@ text = "EMOTES"
 horizontal_alignment = 1
 
 [node name="Button_Emotes" type="Button" parent="."]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(65, 65)
 layout_mode = 1
 anchors_preset = 2
