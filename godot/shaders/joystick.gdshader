@@ -10,12 +10,7 @@ void vertex() {
 	pixel_pos = VERTEX;
 }
 
-float circle(vec2 position, float radius, float feather)
-{
-	return smoothstep(radius, radius + feather, length(position - vec2(0.5)));
-}
-
-float circle2(vec2 uv, vec2 position, float radius, float feather)
+float circle(vec2 uv, vec2 position, float radius, float feather)
 {
 	float dist = distance(uv, position);
 	if (dist ==0.0) return 0.0;
@@ -31,7 +26,7 @@ void fragment() {
 	COLOR.a = 0.0;
 	
 	if (show_guide) {
-		float tip_border = circle2(
+		float tip_border = circle(
 			canvas_point,
 			joystick_position+tip_position,
 			68.0,
@@ -40,21 +35,21 @@ void fragment() {
 			COLOR = vec4(1.0, 1.0, 1.0, 1.0) * tip_border;
 		}
 		
-		float tip = circle2(
+		float tip = circle(
 			canvas_point,
 			joystick_position+tip_position,
 			63.0,
 			2.0);
 		COLOR = mix(COLOR, vec4(0.0, 0.0, 0.0, 0.7), tip);
 		
-		float tip_center_border = circle2(
+		float tip_center_border = circle(
 			canvas_point,
 			joystick_position+tip_position,
 			27.0,
 			2.0);
 		COLOR = mix(COLOR, vec4(1.0, 1.0, 1.0, 1.0), tip_center_border);
 		
-		float tip_center = circle2(
+		float tip_center = circle(
 			canvas_point,
 			joystick_position+tip_position,
 			22.5,
@@ -76,7 +71,7 @@ void fragment() {
 			
 			if (link_alpha == 0.0) continue;
 			
-			float chain_link = circle2(
+			float chain_link = circle(
 				canvas_point,
 				joystick_position - (tip_vector * chain_link_distance),
 				link_radius,
@@ -85,7 +80,7 @@ void fragment() {
 			COLOR = mix(COLOR, vec4(0.0, 0.0, 0.0, link_alpha*0.3), chain_link);
 		}
 		
-		float tip_border = circle2(
+		float tip_border = circle(
 			canvas_point,
 			joystick_position+tip_position,
 			53.0,
@@ -94,14 +89,14 @@ void fragment() {
 			COLOR = vec4(1.0, 1.0, 1.0, 1.0) * tip_border;
 		}
 		
-		float tip = circle2(
+		float tip = circle(
 			canvas_point,
 			joystick_position+tip_position,
 			50.0,
 			2.0);
 		COLOR = mix(COLOR, vec4(0.0, 0.0, 0.0, 0.4), tip);
 		
-		float tip_center = circle2(
+		float tip_center = circle(
 			canvas_point,
 			joystick_position+tip_position,
 			20.0,
