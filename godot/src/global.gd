@@ -88,6 +88,7 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 
 var player_camera_node: DclCamera3D
+var session_id: String
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
@@ -246,7 +247,7 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
-	var session_id := DclConfig.generate_uuid_v4()
+	session_id = DclConfig.generate_uuid_v4()
 	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
 	self.metrics.set_debug_level(0)  # 0 off - 1 on
