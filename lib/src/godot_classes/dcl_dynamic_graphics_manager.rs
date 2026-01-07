@@ -297,7 +297,24 @@ impl DclDynamicGraphicsManager {
         self.state != ManagerState::Disabled
     }
 
-    /// Get current state for debugging
+    /// Check if dynamic adjustment is enabled (regardless of state)
+    #[func]
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    /// Get current state name (without timer info)
+    #[func]
+    pub fn get_state_name(&self) -> GString {
+        match self.state {
+            ManagerState::Disabled => "Disabled".into(),
+            ManagerState::WarmingUp => "WarmingUp".into(),
+            ManagerState::Monitoring => "Monitoring".into(),
+            ManagerState::Cooldown => "Cooldown".into(),
+        }
+    }
+
+    /// Get current state for debugging (with timer info)
     #[func]
     pub fn get_state_string(&self) -> GString {
         match self.state {
@@ -305,6 +322,26 @@ impl DclDynamicGraphicsManager {
             ManagerState::WarmingUp => format!("warming_up ({:.0}s)", self.state_timer).into(),
             ManagerState::Monitoring => "monitoring".into(),
             ManagerState::Cooldown => format!("cooldown ({:.0}s)", self.state_timer).into(),
+        }
+    }
+
+    /// Get remaining warmup time in seconds
+    #[func]
+    pub fn get_warmup_remaining(&self) -> f64 {
+        if self.state == ManagerState::WarmingUp {
+            (WARMUP_DURATION - self.state_timer).max(0.0)
+        } else {
+            0.0
+        }
+    }
+
+    /// Get remaining cooldown time in seconds
+    #[func]
+    pub fn get_cooldown_remaining(&self) -> f64 {
+        if self.state == ManagerState::Cooldown {
+            (COOLDOWN_DURATION - self.state_timer).max(0.0)
+        } else {
+            0.0
         }
     }
 
