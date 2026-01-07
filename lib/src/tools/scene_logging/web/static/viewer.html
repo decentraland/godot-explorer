@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scene Log Viewer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; }
+        .header { background: #16213e; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.2rem; color: #00d9ff; }
+        .stats { font-size: 0.9rem; color: #888; }
+        .main { display: flex; height: calc(100vh - 60px); }
+        .sidebar { width: 280px; background: #0f0f23; padding: 1rem; overflow-y: auto; border-right: 1px solid #333; }
+        .content { flex: 1; overflow-y: auto; padding: 1rem; }
+        .detail { width: 400px; background: #0f0f23; padding: 1rem; overflow-y: auto; border-left: 1px solid #333; }
+        .panel { margin-bottom: 1rem; }
+        .panel h2 { font-size: 0.9rem; color: #888; margin-bottom: 0.5rem; text-transform: uppercase; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .tab { padding: 0.5rem 1rem; background: #1a1a2e; border: 1px solid #333; color: #888; cursor: pointer; border-radius: 4px; }
+        .tab.active { background: #00d9ff; color: #000; border-color: #00d9ff; }
+        input, select { width: 100%; padding: 0.5rem; background: #1a1a2e; border: 1px solid #333; color: #eee; border-radius: 4px; margin-bottom: 0.5rem; }
+        .btn { padding: 0.5rem 1rem; background: #333; border: none; color: #eee; cursor: pointer; border-radius: 4px; }
+        .btn.primary { background: #00d9ff; color: #000; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .list-item { padding: 0.75rem; background: #1a1a2e; margin-bottom: 0.5rem; border-radius: 4px; cursor: pointer; border: 1px solid transparent; }
+        .list-item:hover { border-color: #00d9ff; }
+        .list-item.selected { border-color: #00d9ff; background: #16213e; }
+        .badge { display: inline-block; padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 3px; margin-right: 0.3rem; }
+        .badge.s2r { background: #2ecc71; color: #000; }
+        .badge.r2s { background: #9b59b6; color: #fff; }
+        .badge.put { background: #3498db; }
+        .badge.delete { background: #e74c3c; }
+        .badge.append { background: #f39c12; }
+        .badge.lifecycle { background: #1abc9c; }
+        .badge.op { background: #e67e22; }
+        .timestamp { color: #666; font-size: 0.8rem; }
+        .entity-id { color: #00d9ff; font-weight: bold; }
+        .component { color: #f39c12; }
+        pre { background: #0a0a15; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; white-space: pre-wrap; word-break: break-all; }
+        .drop-zone { border: 2px dashed #333; padding: 3rem; text-align: center; border-radius: 8px; margin: 1rem; }
+        .drop-zone.drag-over { border-color: #00d9ff; background: rgba(0,217,255,0.1); }
+        .filter-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .filter-row input, .filter-row select { flex: 1; }
+        .pagination { display: flex; justify-content: center; gap: 1rem; align-items: center; padding: 1rem; }
+        #file-input { display: none; }
+        .upload-btn { display: inline-block; padding: 1rem 2rem; background: #00d9ff; color: #000; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Scene Log Viewer</h1>
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <div id="upload-screen">
+        <div class="drop-zone" id="drop-zone">
+            <p>Drag & drop a .jsonl file here</p>
+            <p style="margin: 1rem 0; color: #666;">or</p>
+            <label class="upload-btn">
+                Choose File
+                <input type="file" id="file-input" accept=".jsonl">
+            </label>
+        </div>
+    </div>
+
+    <div class="main hidden" id="main-view">
+        <div class="sidebar">
+            <div class="panel">
+                <h2>View</h2>
+                <div class="tabs">
+                    <button class="tab active" data-view="all">All</button>
+                    <button class="tab" data-view="crdt">CRDT</button>
+                    <button class="tab" data-view="ops">Ops</button>
+                    <button class="tab" data-view="lifecycle">Lifecycle</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Filters</h2>
+                <div class="filter-row">
+                    <input type="number" id="filter-entity" placeholder="Entity ID">
+                    <select id="filter-direction">
+                        <option value="">Direction</option>
+                        <option value="s2r">Scene→Renderer</option>
+                        <option value="r2s">Renderer→Scene</option>
+                    </select>
+                </div>
+                <input type="text" id="filter-component" placeholder="Component name...">
+                <input type="text" id="filter-op" placeholder="Op name...">
+                <div class="filter-row">
+                    <button class="btn primary" id="apply-filters">Apply</button>
+                    <button class="btn" id="clear-filters">Clear</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Components</h2>
+                <div id="component-list" style="max-height: 200px; overflow-y: auto;"></div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="entries-list"></div>
+            <div class="pagination">
+                <button class="btn" id="prev-page" disabled>← Prev</button>
+                <span id="page-info">Page 1</span>
+                <button class="btn" id="next-page">Next →</button>
+            </div>
+        </div>
+
+        <div class="detail">
+            <div class="panel">
+                <h2>Details</h2>
+                <div id="detail-content">
+                    <p style="color: #666;">Select an entry to view details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const PAGE_SIZE = 100;
+    let allEntries = [];
+    let filteredEntries = [];
+    let currentPage = 0;
+    let currentView = 'all';
+    let selectedEntry = null;
+
+    // File handling
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file) loadFile(file);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) loadFile(file);
+    });
+
+    function loadFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const lines = e.target.result.split('\n').filter(l => l.trim());
+            allEntries = lines.map((line, idx) => {
+                try {
+                    const entry = JSON.parse(line);
+                    entry._idx = idx;
+                    return entry;
+                } catch { return null; }
+            }).filter(Boolean);
+
+            document.getElementById('upload-screen').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+
+            updateStats();
+            buildComponentList();
+            applyFilters();
+        };
+        reader.readAsText(file);
+    }
+
+    function updateStats() {
+        const crdt = allEntries.filter(e => e.type === 'crdt').length;
+        const ops = allEntries.filter(e => e.type === 'op_call_start' || e.type === 'op_call_end').length;
+        const lifecycle = allEntries.filter(e => e.type === 'scene_lifecycle').length;
+        document.getElementById('stats').textContent =
+            `Total: ${allEntries.length} | CRDT: ${crdt} | Ops: ${ops} | Lifecycle: ${lifecycle}`;
+    }
+
+    function buildComponentList() {
+        const components = {};
+        allEntries.filter(e => e.type === 'crdt').forEach(e => {
+            const name = e.c || e.component_name || 'Unknown';
+            components[name] = (components[name] || 0) + 1;
+        });
+
+        const sorted = Object.entries(components).sort((a, b) => b[1] - a[1]);
+        const list = document.getElementById('component-list');
+        list.innerHTML = sorted.map(([name, count]) =>
+            `<div class="list-item" onclick="filterByComponent('${name}')">${name} <span style="color:#666">(${count})</span></div>`
+        ).join('');
+    }
+
+    function filterByComponent(name) {
+        document.getElementById('filter-component').value = name;
+        applyFilters();
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentView = tab.dataset.view;
+            currentPage = 0;
+            applyFilters();
+        });
+    });
+
+    // Filters
+    document.getElementById('apply-filters').addEventListener('click', () => {
+        currentPage = 0;
+        applyFilters();
+    });
+
+    document.getElementById('clear-filters').addEventListener('click', () => {
+        document.getElementById('filter-entity').value = '';
+        document.getElementById('filter-direction').value = '';
+        document.getElementById('filter-component').value = '';
+        document.getElementById('filter-op').value = '';
+        currentPage = 0;
+        applyFilters();
+    });
+
+    function applyFilters() {
+        const entityFilter = document.getElementById('filter-entity').value;
+        const dirFilter = document.getElementById('filter-direction').value;
+        const compFilter = document.getElementById('filter-component').value.toLowerCase();
+        const opFilter = document.getElementById('filter-op').value.toLowerCase();
+
+        filteredEntries = allEntries.filter(entry => {
+            // View filter
+            if (currentView === 'crdt' && entry.type !== 'crdt') return false;
+            if (currentView === 'ops' && entry.type !== 'op_call_start' && entry.type !== 'op_call_end') return false;
+            if (currentView === 'lifecycle' && entry.type !== 'scene_lifecycle') return false;
+
+            // Entity filter
+            if (entityFilter) {
+                const eid = entry.e || entry.entity_id;
+                if (eid !== parseInt(entityFilter)) return false;
+            }
+
+            // Direction filter
+            if (dirFilter && entry.d !== dirFilter) return false;
+
+            // Component filter
+            if (compFilter) {
+                const comp = (entry.c || entry.component_name || '').toLowerCase();
+                if (!comp.includes(compFilter)) return false;
+            }
+
+            // Op filter
+            if (opFilter) {
+                const op = (entry.op_name || '').toLowerCase();
+                if (!op.includes(opFilter)) return false;
+            }
+
+            return true;
+        });
+
+        renderEntries();
+    }
+
+    function renderEntries() {
+        const start = currentPage * PAGE_SIZE;
+        const pageEntries = filteredEntries.slice(start, start + PAGE_SIZE);
+
+        const list = document.getElementById('entries-list');
+        list.innerHTML = pageEntries.map(entry => renderEntry(entry)).join('');
+
+        // Pagination
+        document.getElementById('prev-page').disabled = currentPage === 0;
+        document.getElementById('next-page').disabled = start + PAGE_SIZE >= filteredEntries.length;
+        document.getElementById('page-info').textContent =
+            `Page ${currentPage + 1} of ${Math.ceil(filteredEntries.length / PAGE_SIZE)} (${filteredEntries.length} entries)`;
+    }
+
+    function renderEntry(entry) {
+        const idx = entry._idx;
+        const selected = selectedEntry === idx ? 'selected' : '';
+
+        if (entry.type === 'crdt') {
+            const dir = entry.d || 's2r';
+            const op = entry.op || entry.operation || 'put';
+            const comp = entry.c || entry.component_name || '?';
+            const eid = entry.e || entry.entity_id || 0;
+            const tick = entry.tk || entry.tick || 0;
+            return `<div class="list-item ${selected}" onclick="selectEntry(${idx})">
+                <span class="badge ${dir}">${dir}</span>
+                <span class="badge ${op}">${op}</span>
+                <span class="entity-id">E${eid}</span>
+                <span class="component">${comp}</span>
+                <span class="timestamp">tk:${tick}</span>
+            </div>`;
+        }
+
+        if (entry.type === 'op_call_start' || entry.type === 'op_call_end') {
+            const isStart = entry.type === 'op_call_start';
+            return `<div class="list-item ${selected}" onclick="selectEntry(${idx})">
+                <span class="badge op">${isStart ? '→' : '←'} ${entry.op_name}</span>
+                <span class="timestamp">#${entry.call_id}</span>
+                ${entry.duration_ms ? `<span class="timestamp">${entry.duration_ms.toFixed(2)}ms</span>` : ''}
+                ${entry.error ? '<span style="color:#e74c3c">ERROR</span>' : ''}
+            </div>`;
+        }
+
+        if (entry.type === 'scene_lifecycle') {
+            return `<div class="list-item ${selected}" onclick="selectEntry(${idx})">
+                <span class="badge lifecycle">${entry.event}</span>
+                ${entry.tick !== undefined ? `<span class="timestamp">tk:${entry.tick}</span>` : ''}
+                ${entry.error ? `<span style="color:#e74c3c">${entry.error}</span>` : ''}
+            </div>`;
+        }
+
+        return `<div class="list-item ${selected}" onclick="selectEntry(${idx})">
+            <span class="badge">${entry.type}</span>
+        </div>`;
+    }
+
+    function selectEntry(idx) {
+        selectedEntry = idx;
+        const entry = allEntries.find(e => e._idx === idx);
+        if (entry) {
+            const clean = {...entry};
+            delete clean._idx;
+            document.getElementById('detail-content').innerHTML =
+                `<pre>${JSON.stringify(clean, null, 2)}</pre>`;
+        }
+        renderEntries();
+    }
+
+    // Pagination
+    document.getElementById('prev-page').addEventListener('click', () => {
+        if (currentPage > 0) {
+            currentPage--;
+            renderEntries();
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+        if ((currentPage + 1) * PAGE_SIZE < filteredEntries.length) {
+            currentPage++;
+            renderEntries();
+        }
+    });
+    </script>
+</body>
+</html>

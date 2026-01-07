@@ -116,7 +116,20 @@ fn generate_enum(proto_components: &Vec<Component>) {
             component.id
         );
     }
-    let output_str = format!("impl SceneComponentId {{ {output_str} }}");
+
+    // Generate component_id_to_name function
+    let mut name_mapping = String::from(
+        "pub fn component_id_to_name(id: u32) -> &'static str {\n    match id {\n        1 => \"Transform\",\n        101 => \"InternalPlayerData\",\n"
+    );
+    for component in proto_components {
+        name_mapping += &format!(
+            "        {} => \"{}\",\n",
+            component.id, component.pascal_name
+        );
+    }
+    name_mapping += "        _ => \"Unknown\",\n    }\n}\n";
+
+    let output_str = format!("impl SceneComponentId {{ {output_str} }}\n\n{name_mapping}");
     generate_file(dest_path, output_str.as_bytes());
 }
 
@@ -298,6 +311,9 @@ fn generate_social_service() -> io::Result<()> {
 }
 
 fn main() -> io::Result<()> {
+    // Rerun if scene_logging feature changes (affects proto codegen)
+    println!("cargo:rerun-if-env-changed=CARGO_FEATURE_SCENE_LOGGING");
+
     // ---------- Linux, Android, the BSDs, Windows-gnu, and other ld/LLD users
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
@@ -368,7 +384,16 @@ fn main() -> io::Result<()> {
         .expect("Failed to canonicalize protoc path");
 
     std::env::set_var("PROTOC", protoc_path);
-    prost_build::compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
+
+    // Configure prost-build with optional serde support for scene_logging
+    let mut prost_config = prost_build::Config::new();
+
+    // When scene_logging feature is enabled, add Serialize derive to all proto types
+    if env::var("CARGO_FEATURE_SCENE_LOGGING").is_ok() {
+        prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
+    }
+
+    prost_config.compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
 
     // Generate social service with RPC support
     generate_social_service()?;
