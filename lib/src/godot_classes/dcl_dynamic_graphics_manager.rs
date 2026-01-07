@@ -1,4 +1,4 @@
-use godot::classes::Performance;
+use godot::classes::RenderingServer;
 use godot::prelude::*;
 
 use crate::godot_classes::{
@@ -87,6 +87,12 @@ pub struct DclDynamicGraphicsManager {
     /// Cached mobile platform availability (checked once at init)
     has_ios_plugin: bool,
     has_android_plugin: bool,
+
+    /// Viewport RID for render time measurement
+    viewport_rid: Option<Rid>,
+
+    /// Whether render time measurement is enabled
+    render_time_enabled: bool,
 }
 
 #[godot_api]
@@ -114,17 +120,36 @@ impl INode for DclDynamicGraphicsManager {
             enabled: true,
             has_ios_plugin,
             has_android_plugin,
+            viewport_rid: None,
+            render_time_enabled: false,
         }
     }
 
     fn ready(&mut self) {
         // Note: DclGlobal is not available yet during init, so we start disabled.
         // GDScript should call initialize() after Global is ready.
-        tracing::info!(
-            "DclDynamicGraphicsManager ready (iOS={}, Android={})",
-            self.has_ios_plugin,
-            self.has_android_plugin
-        );
+
+        // Get viewport RID and enable render time measurement
+        if let Some(viewport) = self.base().get_viewport() {
+            let rid = viewport.get_viewport_rid();
+            self.viewport_rid = Some(rid);
+
+            // Enable render time measurement on the viewport
+            RenderingServer::singleton().viewport_set_measure_render_time(rid, true);
+            self.render_time_enabled = true;
+
+            tracing::info!(
+                "DclDynamicGraphicsManager ready: render time measurement enabled (iOS={}, Android={})",
+                self.has_ios_plugin,
+                self.has_android_plugin
+            );
+        } else {
+            tracing::warn!(
+                "DclDynamicGraphicsManager ready: could not get viewport (iOS={}, Android={})",
+                self.has_ios_plugin,
+                self.has_android_plugin
+            );
+        }
     }
 
     fn process(&mut self, delta: f64) {
@@ -132,19 +157,18 @@ impl INode for DclDynamicGraphicsManager {
             return;
         }
 
-        // Get actual process time from Performance monitor (in seconds, convert to ms)
-        let process_time_ms = Performance::singleton()
-            .get_monitor(godot::classes::performance::Monitor::TIME_PROCESS)
-            * 1000.0;
+        // Get actual render time (CPU + GPU) from RenderingServer
+        // This gives us the real work time, independent of FPS cap
+        let render_time_ms = self.get_total_render_time_ms();
 
-        // Track frame spikes (using actual process time, not delta which includes wait time)
+        // Track frame spikes (using actual render time, not delta which includes wait time)
         self.frame_count += 1;
-        if process_time_ms > FRAME_SPIKE_THRESHOLD_MS {
+        if render_time_ms > FRAME_SPIKE_THRESHOLD_MS {
             self.spike_count += 1;
         }
 
         // Accumulate frame times for averaging
-        self.accumulated_frame_time += process_time_ms;
+        self.accumulated_frame_time += render_time_ms;
         self.accumulated_frame_count += 1;
 
         // Sample frame time periodically (average over the interval)
@@ -497,6 +521,29 @@ impl DclDynamicGraphicsManager {
             return DclGodotAndroidPlugin::get_thermal_state().to_string();
         }
         "nominal".to_string()
+    }
+
+    /// Get total render time (CPU + GPU) in milliseconds
+    /// This is the actual work time, independent of FPS cap
+    fn get_total_render_time_ms(&self) -> f64 {
+        if !self.render_time_enabled {
+            // Fallback to delta-based estimation if measurement not available
+            return self.target_frame_time_ms;
+        }
+
+        if let Some(rid) = self.viewport_rid {
+            let rs = RenderingServer::singleton();
+
+            // Get CPU and GPU render times (in milliseconds)
+            let cpu_time = rs.viewport_get_measured_render_time_cpu(rid);
+            let gpu_time = rs.viewport_get_measured_render_time_gpu(rid);
+
+            // Return the larger of the two (bottleneck determines frame time)
+            // In practice, we want to know if either CPU or GPU is struggling
+            cpu_time.max(gpu_time)
+        } else {
+            self.target_frame_time_ms
+        }
     }
 
     fn try_downgrade(&mut self, reason: &str) {
