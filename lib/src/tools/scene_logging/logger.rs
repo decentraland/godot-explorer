@@ -230,8 +230,6 @@ impl SceneLogger {
         // Spawn a dedicated thread with its own tokio runtime for logging
         let writer_config = config.clone();
         let writer_session_id = session_id.clone();
-        let server_config = config.clone();
-        let server_session_id = session_id.clone();
 
         std::thread::Builder::new()
             .name("scene-logger".to_string())
@@ -242,15 +240,6 @@ impl SceneLogger {
                     .expect("Failed to create scene logger runtime");
 
                 rt.block_on(async move {
-                    // Start the HTTP server if enabled
-                    if server_config.server_enabled {
-                        let server_cfg = server_config.clone();
-                        let server_sid = server_session_id.clone();
-                        tokio::spawn(async move {
-                            crate::tools::scene_logging::start_server(&server_cfg, server_sid).await;
-                        });
-                    }
-
                     // Run the log writer task
                     log_writer_task(receiver, writer_config, writer_session_id).await;
                 });

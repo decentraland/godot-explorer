@@ -16,10 +16,6 @@ pub struct SceneLoggingConfig {
     pub max_file_size_mb: u64,
     /// Maximum total size of all log files in megabytes.
     pub max_total_size_mb: u64,
-    /// Port for the HTTP server serving the web frontend.
-    pub server_port: u16,
-    /// Whether the HTTP server is enabled.
-    pub server_enabled: bool,
     /// Whether CRDT message logging is enabled.
     pub crdt_logging_enabled: bool,
     /// Whether op call logging is enabled.
@@ -55,8 +51,6 @@ impl Default for SceneLoggingConfig {
             log_directory,
             max_file_size_mb: 100,
             max_total_size_mb: 1024, // 1 GB
-            server_port: 9876,
-            server_enabled: true,
             crdt_logging_enabled: true,
             op_logging_enabled: true,
             truncate_body_bytes: 10 * 1024, // 10 KB
@@ -68,18 +62,6 @@ impl SceneLoggingConfig {
     /// Creates a new configuration with the specified log directory.
     pub fn with_log_directory(mut self, path: PathBuf) -> Self {
         self.log_directory = path;
-        self
-    }
-
-    /// Creates a new configuration with the specified server port.
-    pub fn with_server_port(mut self, port: u16) -> Self {
-        self.server_port = port;
-        self
-    }
-
-    /// Disables the HTTP server.
-    pub fn without_server(mut self) -> Self {
-        self.server_enabled = false;
         self
     }
 

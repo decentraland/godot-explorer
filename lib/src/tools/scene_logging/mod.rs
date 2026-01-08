@@ -4,14 +4,14 @@
 //! - CRDT messages (component updates, entity lifecycle)
 //! - Op calls (JS -> Rust runtime calls via Deno.core.ops)
 //!
-//! Data is stored in JSONL format and served via a web UI for visualization.
+//! Data is stored in JSONL format for offline analysis.
 //!
 //! # Usage
 //!
 //! Enable the `scene_logging` feature in Cargo.toml:
 //! ```toml
 //! [features]
-//! scene_logging = ["dep:axum", "dep:tower-http"]
+//! scene_logging = []
 //! ```
 //!
 //! Then build with the feature enabled:
@@ -21,7 +21,6 @@
 
 mod config;
 mod logger;
-mod server;
 mod storage;
 
 pub use config::SceneLoggingConfig;
@@ -30,7 +29,6 @@ pub use logger::{
     OpCallStartEntry, SceneLifecycleEntry, SceneLifecycleEvent, SceneLogEntry, SceneLogger,
     SceneLoggerSender, SessionEndEntry, SessionStartEntry,
 };
-pub use server::start_server;
 pub use storage::StorageManager;
 
 use once_cell::sync::OnceCell;

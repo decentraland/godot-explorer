@@ -75,9 +75,6 @@ multipart = { version = "0.18.0", default-features = false, features = ["client"
 
 modular-bitfield = "0.11"
 
-# Scene logging (optional)
-axum = { version = "0.7", optional = true }
-tower-http = { version = "0.6", features = ["fs", "cors"], optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21.1", features = ["invocation"] }
@@ -93,7 +90,7 @@ use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 use_voice_chat = []
 use_memory_debugger = []
-scene_logging = ["dep:axum", "dep:tower-http"]
+scene_logging = []
 
 # TODO: Fix enable_inspector failure when cross-compiling to Android from Windows.
 #       The FastWebSockets build incorrectly includes `unmask`.
