@@ -1,11 +1,14 @@
-[gd_scene load_steps=9 format=3 uid="uid://bndmt8hl1n5ke"]
+[gd_scene load_steps=14 format=3 uid="uid://bndmt8hl1n5ke"]
 
 [ext_resource type="Script" uid="uid://b0oiqklpfigfm" path="res://src/ui/components/change_nick_popup.gd" id="1_3hx3u"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="1_v1ppy"]
+[ext_resource type="Script" uid="uid://bo6p514e8op0r" path="res://src/ui/components/dcl_line_edit.gd" id="3_3hx3u"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="3_r8goi"]
-[ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/dcl_text_edit.tscn" id="3_xy6kt"]
 [ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="4_xy6kt"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="5_r18gj"]
+[ext_resource type="FontFile" uid="uid://c578syx7u7pdh" path="res://assets/themes/fonts/lato_family/Lato-Italic.ttf" id="5_v0a8f"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_06rk3"]
+[ext_resource type="LabelSettings" uid="uid://c8tjmk5hweyae" path="res://assets/themes/lobby_error.tres" id="7_fc2a6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_doqh1"]
 bg_color = Color(0.298039, 0.0784314, 0.486275, 1)
@@ -14,10 +17,32 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r8goi"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0, 0, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+
 [sub_resource type="LabelSettings" id="LabelSettings_usboe"]
 font = ExtResource("3_r8goi")
-font_size = 14
+font_size = 24
 font_color = Color(0.687215, 0.687215, 0.687215, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_6vqo4"]
+font = ExtResource("5_v0a8f")
+font_size = 20
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
 
 [node name="ChangeNickPopup" type="ColorRect"]
 anchors_preset = 15
@@ -58,8 +83,9 @@ theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
+custom_minimum_size = Vector2(0, 303)
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 25
 
 [node name="Label" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -67,20 +93,34 @@ text = "Edit Username"
 label_settings = ExtResource("1_v1ppy")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 
 [node name="Control" type="Control" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 
-[node name="DclTextEdit_NewNick" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control" instance=ExtResource("3_xy6kt")]
+[node name="PanelContainer_ErrorBorder" type="PanelContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control"]
 unique_name_in_owner = true
-layout_mode = 0
-offset_top = 4.0
-offset_right = 390.0
-offset_bottom = 71.0
-place_holder = "Type your new name here..."
-is_optional = false
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_r8goi")
+
+[node name="LineEdit_NewName" type="LineEdit" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/PanelContainer_ErrorBorder"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_font_sizes/font_size = 24
+placeholder_text = "Username"
+clear_button_enabled = true
+script = ExtResource("3_3hx3u")
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control"]
 layout_mode = 1
@@ -90,21 +130,58 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 18
+theme_override_constants/margin_right = 50
 
 [node name="Label_Tag" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 0
+size_flags_horizontal = 8
+size_flags_vertical = 1
 text = "#####"
 label_settings = SubResource("LabelSettings_usboe")
 horizontal_alignment = 2
 vertical_alignment = 1
 
+[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label_Advise" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "*Avoid using your real name for safety"
+label_settings = SubResource("LabelSettings_6vqo4")
+autowrap_mode = 2
+
+[node name="Label_Error" type="RichTextLabel" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(1, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_fonts/normal_font = ExtResource("6_06rk3")
+theme_override_font_sizes/normal_font_size = 20
+text = "Error"
+fit_content = true
+autowrap_mode = 2
+
+[node name="Label_Length" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("3_r8goi")
+theme_override_font_sizes/font_size = 20
+text = "0/15"
+label_settings = ExtResource("7_fc2a6")
+horizontal_alignment = 2
+
 [node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 15
 alignment = 2
 
@@ -113,6 +190,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 0
 theme_type_variation = &"DarkButton"
 text = "CANCEL"
 
@@ -121,6 +199,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 0
 theme = ExtResource("5_r18gj")
 text = "SAVE"
 
@@ -162,6 +241,6 @@ text = "CLAIM NAME"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/DclTextEdit_NewNick" to="." method="_on_dcl_text_edit_new_nick_dcl_text_edit_changed"]
+[connection signal="dcl_line_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/PanelContainer_ErrorBorder/LineEdit_NewName" to="." method="_on_line_edit_new_name_dcl_line_edit_changed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Save" to="." method="_on_button_save_pressed"]
