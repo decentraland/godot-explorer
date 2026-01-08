@@ -9,6 +9,11 @@ var new_nickname: String
 @onready var button_claim_name: Button = %Button_ClaimName
 @onready var dcl_text_edit_new_nick: VBoxContainer = %DclTextEdit_NewNick
 @onready var label_tag: Label = %Label_Tag
+@onready var claim_name_container: MarginContainer = %ClaimNameContainer
+
+
+func _ready():
+	claim_name_container.visible = !Global.is_ios()
 
 
 func _on_gui_input(event: InputEvent) -> void:
