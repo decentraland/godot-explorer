@@ -121,97 +121,8 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     },
                 );
 
-                match &dcl_material {
-                    DclMaterial::Unlit(unlit) => {
-                        godot_material.set_metallic(0.0);
-                        godot_material.set_roughness(0.0);
-                        godot_material.set_specular(0.0);
+                apply_dcl_material_properties(&mut godot_material, &dcl_material);
 
-                        godot_material.set_shading_mode(ShadingMode::UNSHADED);
-                        godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
-                        godot_material
-                            .set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
-
-                        // Apply UV offset/tiling from main texture (only main texture supports this)
-                        if let Some(texture) = &unlit.texture {
-                            godot_material.set_uv1_offset(godot::builtin::Vector3::new(
-                                texture.offset.0.x,
-                                texture.offset.0.y,
-                                0.0,
-                            ));
-                            godot_material.set_uv1_scale(godot::builtin::Vector3::new(
-                                texture.tiling.0.x,
-                                texture.tiling.0.y,
-                                1.0,
-                            ));
-                        }
-
-                        // Handle transparency for unlit materials (auto-detect)
-                        if unlit.diffuse_color.0.a < 1.0 || unlit.texture.is_some() {
-                            godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
-                        } else {
-                            godot_material.set_transparency(Transparency::DISABLED);
-                        }
-                    }
-                    DclMaterial::Pbr(pbr) => {
-                        godot_material.set_metallic(pbr.metallic.0);
-                        godot_material.set_roughness(pbr.roughness.0);
-                        godot_material.set_specular(pbr.specular_intensity.0);
-
-                        godot_material.set_emission(pbr.emissive_color.0.to_godot());
-                        godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
-                        godot_material.set_feature(Feature::EMISSION, true);
-
-                        // Use MULTIPLY operator when there's an emissive texture
-                        if pbr.emissive_texture.is_some() {
-                            godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
-                        }
-
-                        godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
-                        godot_material.set_albedo(pbr.albedo_color.0.to_godot());
-
-                        // Apply UV offset/tiling from main texture (only main texture supports this)
-                        if let Some(texture) = &pbr.texture {
-                            godot_material.set_uv1_offset(godot::builtin::Vector3::new(
-                                texture.offset.0.x,
-                                texture.offset.0.y,
-                                0.0,
-                            ));
-                            godot_material.set_uv1_scale(godot::builtin::Vector3::new(
-                                texture.tiling.0.x,
-                                texture.tiling.0.y,
-                                1.0,
-                            ));
-                        }
-
-                        // Handle transparency mode
-                        match pbr.transparency_mode {
-                            MaterialTransparencyMode::MtmOpaque => {
-                                godot_material.set_transparency(Transparency::DISABLED);
-                            }
-                            MaterialTransparencyMode::MtmAlphaTest => {
-                                godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
-                                godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
-                            }
-                            MaterialTransparencyMode::MtmAlphaBlend => {
-                                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
-                            }
-                            MaterialTransparencyMode::MtmAlphaTestAndAlphaBlend => {
-                                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
-                                godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
-                            }
-                            MaterialTransparencyMode::MtmAuto => {
-                                // Auto-detect: use alpha blend if albedo has transparency
-                                if pbr.albedo_color.0.a < 1.0 || pbr.texture.is_some() {
-                                    godot_material
-                                        .set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
-                                } else {
-                                    godot_material.set_transparency(Transparency::DISABLED);
-                                }
-                            }
-                        }
-                    }
-                }
                 let mesh_renderer = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
                 if let Some(mut mesh_renderer) = mesh_renderer {
                     mesh_renderer
@@ -314,6 +225,114 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
         scene.materials.retain(|k, _| !dead_materials.contains(k));
         scene.dirty_materials = keep_dirty;
+    }
+}
+
+/// Apply DCL material properties to an existing Godot StandardMaterial3D.
+/// This modifies the material in-place, preserving shader state where possible.
+pub fn apply_dcl_material_properties(
+    godot_material: &mut Gd<StandardMaterial3D>,
+    dcl_material: &DclMaterial,
+) {
+    match dcl_material {
+        DclMaterial::Unlit(unlit) => {
+            godot_material.set_metallic(0.0);
+            godot_material.set_roughness(0.0);
+            godot_material.set_specular(0.0);
+
+            godot_material.set_shading_mode(ShadingMode::UNSHADED);
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
+            godot_material.set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
+
+            // Apply UV offset/tiling from main texture (only main texture supports this)
+            if let Some(texture) = &unlit.texture {
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                    texture.offset.0.x,
+                    texture.offset.0.y,
+                    0.0,
+                ));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                    texture.tiling.0.x,
+                    texture.tiling.0.y,
+                    1.0,
+                ));
+            } else {
+                // Reset UV transform if no texture
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(0.0, 0.0, 0.0));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(1.0, 1.0, 1.0));
+            }
+
+            // Handle transparency for unlit materials (auto-detect)
+            if unlit.diffuse_color.0.a < 1.0 || unlit.texture.is_some() {
+                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+            } else {
+                godot_material.set_transparency(Transparency::DISABLED);
+            }
+        }
+        DclMaterial::Pbr(pbr) => {
+            godot_material.set_metallic(pbr.metallic.0);
+            godot_material.set_roughness(pbr.roughness.0);
+            godot_material.set_specular(pbr.specular_intensity.0);
+
+            godot_material.set_shading_mode(ShadingMode::PER_PIXEL);
+            godot_material.set_emission(pbr.emissive_color.0.to_godot());
+            godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
+            godot_material.set_feature(Feature::EMISSION, true);
+
+            // Use MULTIPLY operator when there's an emissive texture, ADD otherwise
+            if pbr.emissive_texture.is_some() {
+                godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
+            } else {
+                godot_material.set_emission_operator(EmissionOperator::ADD);
+            }
+
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
+            godot_material.set_albedo(pbr.albedo_color.0.to_godot());
+
+            // Apply UV offset/tiling from main texture (only main texture supports this)
+            if let Some(texture) = &pbr.texture {
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                    texture.offset.0.x,
+                    texture.offset.0.y,
+                    0.0,
+                ));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                    texture.tiling.0.x,
+                    texture.tiling.0.y,
+                    1.0,
+                ));
+            } else {
+                // Reset UV transform if no texture
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(0.0, 0.0, 0.0));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(1.0, 1.0, 1.0));
+            }
+
+            // Handle transparency mode
+            match pbr.transparency_mode {
+                MaterialTransparencyMode::MtmOpaque => {
+                    godot_material.set_transparency(Transparency::DISABLED);
+                }
+                MaterialTransparencyMode::MtmAlphaTest => {
+                    godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
+                    godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                }
+                MaterialTransparencyMode::MtmAlphaBlend => {
+                    godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                }
+                MaterialTransparencyMode::MtmAlphaTestAndAlphaBlend => {
+                    godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                    godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                }
+                MaterialTransparencyMode::MtmAuto => {
+                    // Auto-detect: use alpha blend if albedo has transparency
+                    if pbr.albedo_color.0.a < 1.0 || pbr.texture.is_some() {
+                        godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                    } else {
+                        godot_material.set_transparency(Transparency::DISABLED);
+                    }
+                }
+            }
+        }
     }
 }
 
