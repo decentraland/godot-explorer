@@ -1,0 +1,126 @@
+[gd_scene load_steps=9 format=3 uid="uid://fc5fxcmfp4pq"]
+
+[ext_resource type="Script" uid="uid://bo6p514e8op0r" path="res://src/ui/components/dcl_line_edit.gd" id="1_gt5hx"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_8pd44"]
+[ext_resource type="FontFile" uid="uid://c578syx7u7pdh" path="res://assets/themes/fonts/lato_family/Lato-Italic.ttf" id="3_q7bqo"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_v66w7"]
+[ext_resource type="LabelSettings" uid="uid://c8tjmk5hweyae" path="res://assets/themes/lobby_error.tres" id="5_lg14u"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rrmjg"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0, 0, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+
+[sub_resource type="LabelSettings" id="LabelSettings_poknr"]
+font = ExtResource("2_8pd44")
+font_size = 24
+font_color = Color(0.687215, 0.687215, 0.687215, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_uxhe4"]
+font = ExtResource("3_q7bqo")
+font_size = 20
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
+
+[node name="DclLineEdit" type="VBoxContainer"]
+custom_minimum_size = Vector2(0, 150)
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 109.0
+grow_horizontal = 2
+size_flags_vertical = 0
+script = ExtResource("1_gt5hx")
+
+[node name="Control" type="Control" parent="."]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+
+[node name="PanelContainer_ErrorBorder" type="PanelContainer" parent="Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_rrmjg")
+
+[node name="LineEdit" type="LineEdit" parent="Control/PanelContainer_ErrorBorder"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_font_sizes/font_size = 24
+placeholder_text = "Username"
+clear_button_enabled = true
+
+[node name="MarginContainer" type="MarginContainer" parent="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 50
+
+[node name="Label_Tag" type="Label" parent="Control/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 1
+text = "#####"
+label_settings = SubResource("LabelSettings_poknr")
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Label_Advise" type="Label" parent="HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "*Avoid using your real name for safety"
+label_settings = SubResource("LabelSettings_uxhe4")
+autowrap_mode = 2
+
+[node name="Label_Error" type="RichTextLabel" parent="HBoxContainer2"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(1, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_fonts/normal_font = ExtResource("4_v66w7")
+theme_override_font_sizes/normal_font_size = 20
+text = "Error"
+fit_content = true
+autowrap_mode = 2
+
+[node name="Label_Length" type="Label" parent="HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("2_8pd44")
+theme_override_font_sizes/font_size = 20
+text = "0/15"
+label_settings = ExtResource("5_lg14u")
+horizontal_alignment = 2
+
+[connection signal="text_changed" from="Control/PanelContainer_ErrorBorder/LineEdit" to="." method="_on_line_edit_text_changed"]

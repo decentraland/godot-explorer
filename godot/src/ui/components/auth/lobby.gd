@@ -438,41 +438,6 @@ func _on_check_box_terms_and_privacy_toggled(_toggled_on):
 	_check_button_finish()
 
 
-func _on_line_edit_choose_name_text_changed(_new_text):
-	_check_button_finish()
-
-
-func _check_button_finish():
-	var color: Color = Color.WHITE
-	label_length.text = (
-		str(line_edit_choose_name.text.length()) + "/" + str(line_edit_choose_name.character_limit)
-	)
-	if line_edit_choose_name.text.length() > line_edit_choose_name.character_limit:
-		color = Color.RED
-	else:
-		color = Color.WHITE
-	label_length.label_settings.font_color = color
-
-	if line_edit_choose_name.error:
-		label_error.show()
-		label_advise.hide()
-		label_error.text = line_edit_choose_name.error_message
-		button_next.disabled = true
-		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
-			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
-			_playing = "shrug"
-		panel_container_error_border.self_modulate = Color.RED
-	else:
-		label_error.hide()
-		label_advise.show()
-		button_next.disabled = line_edit_choose_name.text.is_empty()
-		if (
-			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
-			or _playing != "clap"
-		):
-			avatar_preview.avatar.emote_controller.async_play_emote("clap")
-			_playing = "clap"
-		panel_container_error_border.self_modulate = Color.TRANSPARENT
 
 
 func _on_avatar_preview_gui_input(event: InputEvent) -> void:
@@ -485,10 +450,12 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 					avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
 
-func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
-	_check_button_finish()
 
 
 func _on_deep_link_received():
 	if ready_for_redirect_by_deep_link:
 		go_to_explorer.call_deferred()
+
+
+func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
+	pass # Replace with function body.
