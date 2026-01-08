@@ -10,12 +10,14 @@ extends Control
 # gdlint:ignore = async-function-name
 func _ready():
 	var profile := Global.player_identity.get_profile_or_null()
+	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 	if profile != null:
 		await _async_on_profile_changed(profile)
-	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 
 
 func _async_on_profile_changed(profile: DclUserProfile):
+		# ADR-290: Generate local snapshots if not available from server
+	await Global.snapshot.async_generate_for_avatar(profile.get_avatar(), profile)
 	await passport.async_show_profile(profile)
 
 

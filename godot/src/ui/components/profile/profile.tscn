@@ -1,4 +1,4 @@
-[gd_scene load_steps=51 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=50 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
@@ -24,7 +24,6 @@
 [ext_resource type="Texture2D" uid="uid://bk8rmfac3ul7j" path="res://assets/ui/friends.svg" id="12_jcjsg"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_oyuqo"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="13_ltw05"]
-[ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="13_ood4l"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="13_quy3q"]
 [ext_resource type="Texture2D" uid="uid://bjc0grtm3cyvg" path="res://assets/ui/profile/pronouns.svg" id="13_wt1aa"]
 [ext_resource type="Texture2D" uid="uid://bxi281gjgk05i" path="res://assets/ui/unfriend.svg" id="14_ur8se"]
@@ -466,7 +465,7 @@ mouse_filter = 0
 mouse_force_pass_scroll_events = false
 stretch = true
 hide_name = true
-custom_environment = ExtResource("13_ood4l")
+can_move = false
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true

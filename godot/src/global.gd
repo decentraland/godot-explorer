@@ -65,6 +65,8 @@ var skybox_time: SkyboxTime = null
 var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
 
+var snapshot: Snapshot
+
 var music_player: MusicPlayer
 
 var preload_assets: PreloadAssets
@@ -195,6 +197,7 @@ func _ready():
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
+	snapshot = Snapshot.new()
 	preload_assets = PreloadAssets.new()
 
 	var args = cli.get_all_args()
