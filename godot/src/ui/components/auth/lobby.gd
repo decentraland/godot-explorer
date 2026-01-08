@@ -218,6 +218,7 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 		or not Global.deep_link_obj.preview.is_empty()
 	)
 
+
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)

@@ -16,7 +16,7 @@ func _ready():
 
 
 func _async_on_profile_changed(profile: DclUserProfile):
-		# ADR-290: Generate local snapshots if not available from server
+	# ADR-290: Generate local snapshots if not available from server
 	await Global.snapshot.async_generate_for_avatar(profile.get_avatar(), profile)
 	await passport.async_show_profile(profile)
 
