@@ -31,7 +31,7 @@ var _playing: String
 
 @onready var panel_container_error_border: PanelContainer = %PanelContainer_ErrorBorder
 
-@onready var line_edit_choose_name: LineEdit = %LineEdit_ChooseName
+@onready var dcl_line_edit: VBoxContainer = %DclLineEdit
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
@@ -94,7 +94,6 @@ func show_avatar_naming_screen():
 	choose_name_head.show()
 	choose_name_footer.show()
 	show_panel(control_restore_and_choose_name)
-	_check_button_finish()
 
 
 func show_loading_screen():
@@ -363,13 +362,15 @@ func _on_button_start_pressed():
 
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
+	var name = dcl_line_edit.line_edit.text
+	print(name)
 	Global.metrics.track_click_button("next", current_screen_name, "")
-	if line_edit_choose_name.text.is_empty():
+	if name.is_empty():
 		return
 
 	avatar_preview.hide()
 	show_loading_screen()
-	current_profile.set_name(line_edit_choose_name.text)
+	current_profile.set_name(name)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
@@ -382,8 +383,7 @@ func _on_button_next_pressed():
 
 
 func _on_button_random_name_pressed():
-	line_edit_choose_name.set_text_value(RandomGeneratorUtil.generate_unique_name())
-	_check_button_finish()
+	dcl_line_edit.set_text_value(RandomGeneratorUtil.generate_unique_name())
 
 
 func _on_button_go_to_sign_in_pressed():
@@ -434,22 +434,15 @@ func _on_button_jump_in_pressed():
 	await async_close_sign_in()
 
 
-func _on_check_box_terms_and_privacy_toggled(_toggled_on):
-	_check_button_finish()
-
-
-
-
 func _on_avatar_preview_gui_input(event: InputEvent) -> void:
+	var name = dcl_line_edit.line_edit.text
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if not avatar_preview.avatar.emote_controller.is_playing():
-				if line_edit_choose_name.text.contains("dancer"):
+				if name.contains("dancer"):
 					avatar_preview.avatar.emote_controller.async_play_emote("dance")
 				else:
 					avatar_preview.avatar.emote_controller.async_play_emote("wave")
-
-
 
 
 func _on_deep_link_received():
@@ -458,4 +451,15 @@ func _on_deep_link_received():
 
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
-	pass # Replace with function body.
+	button_next.disabled = dcl_line_edit.error
+	if dcl_line_edit.error:
+		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
+			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
+			_playing = "shrug"
+	else:
+		if (
+			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
+			or _playing != "clap"
+		):
+			avatar_preview.avatar.emote_controller.async_play_emote("clap")
+			_playing = "clap"

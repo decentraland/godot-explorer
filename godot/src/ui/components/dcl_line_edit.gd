@@ -54,21 +54,27 @@ func _check_error():
 		error = true
 		_append_error_message("⚠️ Spaces aren't allowed")
 
-	if not allow_special_characters and not is_alphanumeric_with_spaces(line_edit.text) and line_edit.text.length() > 0:
+	if (
+		not allow_special_characters
+		and not is_alphanumeric_with_spaces(line_edit.text)
+		and line_edit.text.length() > 0
+	):
 		error = true
 		_append_error_message("⚠️ Special characters aren't allowed")
 
-	if not allow_edge_spaces and has_leading_or_trailing_spaces(line_edit.text) and line_edit.text.length() > 0:
+	if (
+		not allow_edge_spaces
+		and has_leading_or_trailing_spaces(line_edit.text)
+		and line_edit.text.length() > 0
+	):
 		error = true
 		_append_error_message("⚠️ Edge spaces aren't allowed")
-	
+
 	if line_edit.text.length() <= 0:
 		error = true
-	
+
 	var color: Color = Color.WHITE
-	label_length.text = (
-		str(line_edit.text.length()) + "/" + str(character_limit)
-	)
+	label_length.text = (str(line_edit.text.length()) + "/" + str(character_limit))
 	if line_edit.text.length() > character_limit:
 		color = error_color
 	else:
@@ -103,6 +109,6 @@ func set_text_value(new_text: String) -> void:
 	dcl_line_edit_changed.emit()
 
 
-func _on_line_edit_text_changed(new_text: String) -> void:
+func _on_line_edit_text_changed(_new_text: String) -> void:
 	_check_error()
 	dcl_line_edit_changed.emit()

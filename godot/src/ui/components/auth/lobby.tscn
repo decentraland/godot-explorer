@@ -319,6 +319,7 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="DclLineEdit" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer" instance=ExtResource("13_vcjym")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 advise = "*Avoid using your real name for safety"
@@ -418,6 +419,7 @@ horizontal_alignment = 1
 
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 11
 alignment = 2
@@ -603,6 +605,7 @@ expand_mode = 1
 [connection signal="pressed" from="Main/Start/MarginContainer/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
 [connection signal="pressed" from="Main/Start/MarginContainer/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
 [connection signal="pressed" from="Main/BackpackContainer/MarginContainer/VBoxContainer/Button_Continue" to="." method="_on_button_continue_pressed"]
+[connection signal="dcl_line_edit_changed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/DclLineEdit" to="." method="_on_dcl_line_edit_dcl_line_edit_changed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/VBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
 [connection signal="gui_input" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/Button_Next" to="." method="_on_button_next_pressed"]
