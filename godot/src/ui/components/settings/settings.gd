@@ -596,16 +596,13 @@ func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
 
 
 func _update_graphic_settings_enabled(dynamic_enabled: bool) -> void:
-	# When dynamic graphics is enabled, disable manual graphic profile selection
+	# When dynamic graphics is enabled, hide manual graphic profile selection
 	# Custom profile is always excluded from dynamic adjustment
 	var current_profile: int = Global.get_config().graphic_profile
-	var should_disable: bool = dynamic_enabled and current_profile != ConfigData.PROFILE_CUSTOM
+	var should_hide: bool = dynamic_enabled and current_profile != ConfigData.PROFILE_CUSTOM
 
-	# Disable/enable the graphic profile selector
-	radio_selector_graphic_profile.modulate.a = 0.5 if should_disable else 1.0
-	for child in radio_selector_graphic_profile.get_children():
-		if child is BaseButton:
-			child.disabled = should_disable
+	# Hide/show the graphic profile selector
+	graphic_profile_container.visible = not should_hide
 
 
 func _update_dynamic_graphics_status() -> void:
