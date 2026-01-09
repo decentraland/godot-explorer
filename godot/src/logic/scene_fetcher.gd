@@ -667,7 +667,7 @@ func send_scene_failed_metrics(
 	# LOADING_END (Failed) metric
 	var error_data = {
 		"scene_id": scene_entity_id,
-		"position": "%d,%d" % current_position,
+		"position": "%d,%d" % [current_position.x, current_position.y],
 		"status": "Failed",
 		"error": error_str
 	}
