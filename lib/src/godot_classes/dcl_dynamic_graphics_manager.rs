@@ -2,7 +2,7 @@ use godot::classes::RenderingServer;
 use godot::prelude::*;
 
 use crate::godot_classes::{
-    dcl_android_plugin::DclGodotAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
+    dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
 };
 
 /// Thermal state levels
@@ -113,7 +113,7 @@ impl INode for DclDynamicGraphicsManager {
     fn init(base: Base<Node>) -> Self {
         // Check plugin availability once at init
         let has_ios_plugin = DclIosPlugin::is_available();
-        let has_android_plugin = DclGodotAndroidPlugin::is_available();
+        let has_android_plugin = DclAndroidPlugin::is_available();
 
         Self {
             base,
@@ -274,14 +274,16 @@ impl DclDynamicGraphicsManager {
     /// Get debug info string for troubleshooting
     #[func]
     pub fn get_debug_info(&self) -> GString {
-        format!(
-            "state={:?}, timer={:.1}s, gameplay_active={}, samples={}",
-            self.state,
-            self.state_timer,
-            self.is_gameplay_active,
-            self.frame_time_samples.len()
+        GString::from(
+            format!(
+                "state={:?}, timer={:.1}s, gameplay_active={}, samples={}",
+                self.state,
+                self.state_timer,
+                self.is_gameplay_active,
+                self.frame_time_samples.len()
+            )
+            .as_str(),
         )
-        .into()
     }
 
     /// Called when user manually changes profile in settings
@@ -341,9 +343,13 @@ impl DclDynamicGraphicsManager {
     pub fn get_state_string(&self) -> GString {
         match self.state {
             ManagerState::Disabled => "disabled".into(),
-            ManagerState::WarmingUp => format!("warming_up ({:.0}s)", self.state_timer).into(),
+            ManagerState::WarmingUp => {
+                GString::from(format!("warming_up ({:.0}s)", self.state_timer).as_str())
+            }
             ManagerState::Monitoring => "monitoring".into(),
-            ManagerState::Cooldown => format!("cooldown ({:.0}s)", self.state_timer).into(),
+            ManagerState::Cooldown => {
+                GString::from(format!("cooldown ({:.0}s)", self.state_timer).as_str())
+            }
         }
     }
 
@@ -621,7 +627,7 @@ impl DclDynamicGraphicsManager {
             return DclIosPlugin::get_thermal_state().to_string();
         }
         if self.has_android_plugin {
-            return DclGodotAndroidPlugin::get_thermal_state().to_string();
+            return DclAndroidPlugin::get_thermal_state().to_string();
         }
         "nominal".to_string()
     }
@@ -695,7 +701,7 @@ impl DclDynamicGraphicsManager {
     fn call_apply_graphic_profile(&mut self, profile_index: i32) {
         // Emit signal for GDScript to handle the actual profile change
         self.base_mut().emit_signal(
-            "profile_change_requested".into(),
+            "profile_change_requested",
             &[profile_index.to_variant()],
         );
     }
