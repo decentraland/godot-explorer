@@ -575,9 +575,11 @@ func _setup_dynamic_graphics() -> void:
 	_update_graphic_settings_enabled(is_enabled)
 	_update_dynamic_graphics_status()
 
-	# Connect to manager signal to update status
+	# Connect to manager signal to update UI when profile changes dynamically
 	Global.dynamic_graphics_manager.profile_change_requested.connect(
-		func(_profile: int): _update_dynamic_graphics_status()
+		func(_profile: int):
+			refresh_graphic_settings()
+			_update_dynamic_graphics_status()
 	)
 
 
@@ -616,8 +618,8 @@ func _update_dynamic_graphics_status() -> void:
 		return
 
 	var state_name: String = manager.get_state_name()
-	var profile_names: Array[String] = ["Performance", "Balanced", "Quality", "Custom"]
 	var current_profile: int = Global.get_config().graphic_profile
+	var profile_name: String = GraphicSettings.PROFILE_NAMES[current_profile]
 
 	match state_name:
 		"Disabled":
@@ -626,11 +628,9 @@ func _update_dynamic_graphics_status() -> void:
 			var remaining := int(manager.get_warmup_remaining())
 			label_dynamic_graphics_status.text = "Warming up... (%ds)" % remaining
 		"Monitoring":
-			label_dynamic_graphics_status.text = (
-				"Active - Current: %s" % profile_names[current_profile]
-			)
+			label_dynamic_graphics_status.text = "Active - Current: %s" % profile_name
 		"Cooldown":
 			var remaining := int(manager.get_cooldown_remaining())
 			label_dynamic_graphics_status.text = (
-				"Cooldown (%ds) - Current: %s" % [remaining, profile_names[current_profile]]
+				"Cooldown (%ds) - Current: %s" % [remaining, profile_name]
 			)
