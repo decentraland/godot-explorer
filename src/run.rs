@@ -565,7 +565,8 @@ fn run_tests(
     args: &[&str],
     scene_tests: bool,
     client_tests: bool,
-    _use_tuned_glibc: bool,
+    #[allow(unused_variables)]
+    use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
     // Prepare arguments for client tests
     let mut final_args = args.to_vec();
