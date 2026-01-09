@@ -128,6 +128,7 @@ script = ExtResource("34_gaa2l")
 hide_on_portrait = true
 
 [node name="Button_Wearables" type="Button" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_2iqy8")
@@ -157,6 +158,7 @@ text = "Outfits"
 icon = ExtResource("4_8xgft")
 
 [node name="Button_Emotes" type="Button" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_2iqy8")
@@ -730,18 +732,6 @@ offset_right = 64.0
 offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="ClonedAvatarPreview" parent="." instance=ExtResource("4_4kxkq")]
-unique_name_in_owner = true
-layout_mode = 1
-offset_left = 1280.0
-offset_top = 720.0
-offset_bottom = 256.0
-size_flags_horizontal = 1
-mouse_filter = 0
-stretch = true
-hide_name = true
-show_platform = true
 
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/Button_Wearables" to="." method="_on_button_wearables_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]

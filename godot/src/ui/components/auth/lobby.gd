@@ -135,11 +135,8 @@ func show_avatar_create_screen():
 	show_panel(control_backpack)
 
 
-func async_close_sign_in(generate_snapshots: bool = true):
-	if generate_snapshots:
-		var avatar := current_profile.get_avatar()
-		await backpack.async_prepare_snapshots(avatar, current_profile)
-
+# ADR-290: Snapshots no longer uploaded
+func async_close_sign_in():
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
@@ -158,6 +155,7 @@ func async_close_sign_in(generate_snapshots: bool = true):
 func _ready():
 	# Set version label
 	label_version.set_text("v" + DclGlobal.get_version())
+	button_enter_as_guest.visible = not DclGlobal.is_production()
 
 	Global.music_player.play.call_deferred("music_builder")
 	control_restore_and_choose_name.hide()
@@ -299,8 +297,7 @@ func _on_button_continue_pressed():
 
 func _on_button_start_pressed():
 	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	if not DclGlobal.is_production():
-		button_enter_as_guest.show()
+	button_enter_as_guest.visible = not DclGlobal.is_production()
 	sign_in_title.text = "Create Your Account"
 	create_guest_account_if_needed()
 	is_creating_account = true
@@ -319,11 +316,10 @@ func _on_button_next_pressed():
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
-	await backpack.async_prepare_snapshots(avatar, current_profile)
-
+	# ADR-290: Snapshots are no longer generated/uploaded by clients
 	current_profile.set_avatar(avatar)
 
-	await ProfileService.async_deploy_profile(current_profile, true)
+	await ProfileService.async_deploy_profile(current_profile)
 
 	show_auth_home_screen()
 
@@ -372,7 +368,7 @@ func _on_button_enter_as_guest_pressed():
 
 func _show_avatar_preview():
 	avatar_preview.show()
-	avatar_preview.avatar.emote_controller.async_play_emote("raiseHand")
+	avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
 
 # gdlint:ignore = async-function-name
@@ -415,10 +411,10 @@ func _check_button_finish():
 		button_next.disabled = line_edit_choose_name.text.is_empty()
 		if (
 			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
-			or _playing != "clap"
+			or _playing != "fistpump"
 		):
-			avatar_preview.avatar.emote_controller.async_play_emote("clap")
-			_playing = "clap"
+			avatar_preview.avatar.emote_controller.async_play_emote("fistpump")
+			_playing = "fistpump"
 		panel_container_error_border.self_modulate = Color.TRANSPARENT
 
 

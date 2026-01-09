@@ -274,6 +274,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Space-separated list of features to activate")
                         .takes_value(true)
                         .multiple_values(true),
+                ).arg(
+                    Arg::new("use-tuned-glibc")
+                        .long("use-tuned-glibc")
+                        .help("Tune glibc malloc for better memory release (Linux only)")
+                        .takes_value(false),
                 ),
         ).subcommand(
             Command::new("update-ios-xcode")
@@ -525,6 +530,7 @@ fn main() -> Result<(), anyhow::Error> {
                     .unwrap_or_default(),
                 sm.is_present("stest"),
                 sm.is_present("ctest"),
+                sm.is_present("use-tuned-glibc"),
             )?;
             Ok(())
         }
@@ -690,7 +696,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 
-    run::run(false, true, vec![], false, false)?;
+    run::run(false, true, vec![], false, false, false)?;
 
     let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
     let scene_test_coords: Vec<[i32; 2]> = vec![
@@ -727,7 +733,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 
-    run::run(false, false, extra_args, true, false)?;
+    run::run(false, false, extra_args, true, false, false)?;
 
     ui::print_section("Running Client Tests");
     let client_extra_args = [
@@ -739,7 +745,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .collect();
 
     run::build(false, false, vec![], Some(build_envs.clone()), None)?;
-    run::run(false, false, client_extra_args, false, true)?;
+    run::run(false, false, client_extra_args, false, true, false)?;
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())

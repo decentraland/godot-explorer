@@ -65,6 +65,8 @@ var skybox_time: SkyboxTime = null
 var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
 
+var snapshot: Snapshot
+
 var music_player: MusicPlayer
 
 var preload_assets: PreloadAssets
@@ -88,6 +90,10 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 
 var player_camera_node: DclCamera3D
+var session_id: String
+
+# Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
+var _safe_area_presets: GDScript = null
 
 
 func set_url_popup_instance(popup_instance) -> void:
@@ -122,6 +128,33 @@ func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
 
 
+func is_emulating_safe_area() -> bool:
+	return cli.emulate_ios or cli.emulate_android
+
+
+func _get_safe_area_presets() -> GDScript:
+	if _safe_area_presets == null:
+		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
+	return _safe_area_presets
+
+
+func get_safe_area() -> Rect2i:
+	if cli.emulate_ios:
+		var presets := _get_safe_area_presets()
+		return presets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
+	if cli.emulate_android:
+		var presets := _get_safe_area_presets()
+		return presets.get_android_safe_area(is_orientation_portrait(), get_window().size)
+	return DisplayServer.get_display_safe_area()
+
+
+func _instantiate_phone_frame_overlay() -> void:
+	var overlay_scene = load("res://assets/no-export/phone_frame_overlay.tscn")
+	if overlay_scene:
+		var overlay = overlay_scene.instantiate()
+		add_child(overlay)
+
+
 ## Vibrate handheld device
 func send_haptic_feedback() -> void:
 	if is_mobile():
@@ -132,6 +165,22 @@ func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
+
+	# Handle safe area emulation (enables mobile mode and resizes window)
+	if cli.emulate_ios:
+		_set_is_mobile(true)
+		var presets := _get_safe_area_presets()
+		var target_size: Vector2i = presets.get_ios_window_size(is_orientation_portrait())
+		get_window().size = target_size
+		get_window().move_to_center()
+		_instantiate_phone_frame_overlay()
+	elif cli.emulate_android:
+		_set_is_mobile(true)
+		var presets := _get_safe_area_presets()
+		var target_size: Vector2i = presets.get_android_window_size(is_orientation_portrait())
+		get_window().size = target_size
+		get_window().move_to_center()
+		_instantiate_phone_frame_overlay()
 
 	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
 	if not cli.fake_deeplink.is_empty():
@@ -148,6 +197,7 @@ func _ready():
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
+	snapshot = Snapshot.new()
 	preload_assets = PreloadAssets.new()
 
 	var args = cli.get_all_args()
@@ -200,9 +250,10 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
-	var session_id := DclConfig.generate_uuid_v4()
+	session_id = DclConfig.generate_uuid_v4()
 	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
+	self.metrics.set_debug_level(0)  # 0 off - 1 on
 	self.metrics.set_name("metrics")
 
 	var sentry_user = SentryUser.new()
@@ -344,8 +395,8 @@ func release_mouse():
 func open_webview_url(url):
 	if DclIosPlugin.is_available():
 		DclIosPlugin.open_webview_url(url)
-	elif DclGodotAndroidPlugin.is_available():
-		DclGodotAndroidPlugin.open_custom_tab_url(url)
+	elif DclAndroidPlugin.is_available():
+		DclAndroidPlugin.open_custom_tab_url(url)
 	else:
 		OS.shell_open(url)
 
@@ -354,11 +405,11 @@ func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
 		if DclIosPlugin.is_available():
 			DclIosPlugin.open_auth_url(url)
-		elif DclGodotAndroidPlugin.is_available():
+		elif DclAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
-				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
+				DclAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 			else:
-				DclGodotAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
+				DclAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
 		else:
 			OS.shell_open(url)
 	else:
@@ -438,12 +489,20 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 func set_orientation_landscape():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+	elif cli.emulate_ios:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_ios_window_size(false)
+		get_window().move_to_center()
+	elif cli.emulate_android:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_android_window_size(false)
+		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
 
 
-func is_orientation_portrait():
+func is_orientation_portrait() -> bool:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	return window_size.x < window_size.y
 
@@ -451,6 +510,14 @@ func is_orientation_portrait():
 func set_orientation_portrait():
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+	elif cli.emulate_ios:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_ios_window_size(true)
+		get_window().move_to_center()
+	elif cli.emulate_android:
+		var presets := _get_safe_area_presets()
+		get_window().size = presets.get_android_window_size(true)
+		get_window().move_to_center()
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
@@ -519,9 +586,9 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	return await PromiseUtils.async_awaiter(response_promise)
 
 
-# Save profile without generating new snapshots (for non-visual changes)
+# Save profile (ADR-290: snapshots are no longer uploaded)
 func async_save_profile_metadata(profile: DclUserProfile):
-	await ProfileService.async_deploy_profile(profile, false)
+	await ProfileService.async_deploy_profile(profile)
 
 
 func shorten_address(address: String) -> String:
@@ -562,8 +629,8 @@ func _process(_delta: float) -> void:
 func check_deep_link_teleport_to():
 	if Global.is_mobile():
 		var new_deep_link_url: String = ""
-		if DclGodotAndroidPlugin.is_available():
-			var args = DclGodotAndroidPlugin.get_deeplink_args()
+		if DclAndroidPlugin.is_available():
+			var args = DclAndroidPlugin.get_deeplink_args()
 			print("[DEEPLINK] Android args: ", args)
 			new_deep_link_url = args.get("data", "")
 		elif DclIosPlugin.is_available():
@@ -627,8 +694,8 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile():
-			if DclGodotAndroidPlugin.is_available():
-				deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			if DclAndroidPlugin.is_available():
+				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
 			elif DclIosPlugin.is_available():
 				deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
 

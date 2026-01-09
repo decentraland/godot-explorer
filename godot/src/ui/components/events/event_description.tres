@@ -9,5 +9,5 @@ base_font = ExtResource("1_qnuo4")
 
 [resource]
 font = SubResource("FontVariation_5a6jb")
-font_size = 14
+font_size = 18
 font_color = Color(0, 0, 0, 1)

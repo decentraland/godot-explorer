@@ -95,11 +95,6 @@ func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
-func _on_portrait_button_profile_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		Global.open_own_profile.emit()
-
-
 func close_from_discover_button():
 	button.set_pressed_no_signal(false)
 	animation_player.play("close")

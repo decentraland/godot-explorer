@@ -134,6 +134,9 @@ func _ready():
 	# Connect to notification clicks to handle friend request notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
+	# Connect on open emotes backpack
+	Global.open_backpack.connect(_on_backpack_emote_opened)
+
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
@@ -153,6 +156,11 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
+	# LOADING_START metric
+	var loading_data = {
+		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
+	}
+	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 	# --spawn-avatars
 	if Global.cli.spawn_avatars:
@@ -441,6 +449,14 @@ func _on_panel_chat_submit_message(message: String):
 			)
 			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
+			# LOADING_START metric
+			var loading_data = {
+				"position": str(Global.scene_fetcher.current_position),
+				"realm": params[1],
+				"when": "on_changerealm"
+			}
+			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
@@ -483,6 +499,13 @@ func move_to(position: Vector3, skip_loading: bool):
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 			loading_ui.enable_loading_screen()
+			# LOADING_START metric
+			var loading_data = {
+				"position": str(position),
+				"realm": Global.realm.get_realm_string(),
+				"when": "on_moveto"
+			}
+			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
@@ -861,6 +884,13 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
 
 
+func _on_backpack_emote_opened(on_emotes := false) -> void:
+	if not on_emotes:
+		return
+	navbar.open_navbar_silently()
+	navbar.set_button_pressed(navbar.BUTTON.BACKPACK)
+
+
 func _close_all_panels():
 	control_menu.close()
 	_on_friends_panel_closed()
@@ -874,7 +904,6 @@ func _on_discover_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	navbar.set_manually_hidden(true)
-	control_menu.show_discover()
 	release_mouse()
 
 
@@ -914,7 +943,7 @@ func _share_place():
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
-		DclGodotAndroidPlugin.share_text(msg)
+		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(msg)
 
