@@ -768,18 +768,19 @@ fn deploy_and_run_ios(_release: bool) -> anyhow::Result<()> {
         ));
     }
 
-    // Install and run
-    let spinner = create_spinner("Installing and launching on iOS device...");
+    // Install and run with console output streaming
+    print_message(MessageType::Step, "Installing and launching on iOS device...");
+    print_message(MessageType::Info, "Press Ctrl+C to stop logging");
+
     let deploy_status = std::process::Command::new("ios-deploy")
-        .args(["--bundle", &ipa_path, "--justlaunch", "--debug"])
+        .args(["--bundle", &ipa_path, "--debug"])
         .status()?;
-    spinner.finish();
 
     if !deploy_status.success() {
         return Err(anyhow::anyhow!("Failed to deploy to iOS device"));
     }
 
-    print_message(MessageType::Success, "Application launched on iOS device");
+    print_message(MessageType::Success, "iOS session ended");
     Ok(())
 }
 
