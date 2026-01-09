@@ -13,6 +13,7 @@ mod runtime;
 mod testing;
 mod websocket;
 
+use crate::comms::truncate_utf8_safe;
 use crate::dcl::common::{
     is_scene_log_enabled, CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogLevel,
     SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
@@ -548,7 +549,7 @@ fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate:
 
     if message.len() > 8192 {
         tracing::warn!("log message too long, truncating");
-        message = message[..8192].to_string();
+        message = truncate_utf8_safe(&message, 8192).to_string();
     }
 
     if immediate {
@@ -577,7 +578,7 @@ fn op_error(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediat
 
     if message.len() > 8192 {
         tracing::warn!("log message too long, truncating");
-        message = message[..8192].to_string();
+        message = truncate_utf8_safe(&message, 8192).to_string();
     }
 
     if immediate {

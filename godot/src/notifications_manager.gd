@@ -821,6 +821,10 @@ func _check_and_handle_version_change() -> bool:
 func async_sync_attended_events() -> void:
 	_debug_log("Starting attended events sync...")
 
+	# Skip on desktop - no local notification plugin available
+	if OS.get_name() != "Android" and OS.get_name() != "iOS":
+		return
+
 	# Check version and clear all notifications if version changed
 	_check_and_handle_version_change()
 
@@ -848,25 +852,18 @@ func async_sync_attended_events() -> void:
 		push_warning("Invalid attended events response format")
 		return
 
-	var events: Array = json.get("data", [])
-	_debug_log("Found %d attended events" % events.size())
+	var all_events: Array = json.get("data", [])
 
-	# Debug: Print all attended events
-	_debug_log("=".repeat(70))
-	_debug_log("ATTENDED EVENTS (only_attendee=true)")
-	_debug_log("=".repeat(70))
-	for i in range(events.size()):
-		var ev = events[i]
-		var ev_id = ev.get("id", "")
-		var ev_name = ev.get("name", "")
-		var ev_start = ev.get("next_start_at", ev.get("start_at", ""))
-		var ev_x = ev.get("x", 0)
-		var ev_y = ev.get("y", 0)
-		_debug_log("  [%d] id=%s" % [i + 1, ev_id])
-		_debug_log("      name: %s" % ev_name)
-		_debug_log("      start_at: %s" % ev_start)
-		_debug_log("      position: %d,%d" % [ev_x, ev_y])
-	_debug_log("=".repeat(70))
+	# Filter locally to only use events where attending=true
+	# This is a workaround until the API's only_attendee parameter is fixed
+	var events: Array = []
+	for event_data in all_events:
+		if event_data.get("attending", false) == true:
+			events.append(event_data)
+
+	_debug_log(
+		"Found %d attended events (filtered from %d total)" % [events.size(), all_events.size()]
+	)
 
 	# Build set of attended event notification IDs
 	var attended_notification_ids: Dictionary = {}
@@ -896,9 +893,6 @@ func async_sync_attended_events() -> void:
 			_debug_log("Removed notification for unsubscribed event: %s" % existing_id)
 
 	# ADD notifications for attended events not yet scheduled
-	_debug_log("-".repeat(70))
-	_debug_log("PROCESSING EVENTS FOR SCHEDULING")
-	_debug_log("-".repeat(70))
 
 	for notification_id in attended_notification_ids:
 		var event_data = attended_notification_ids[notification_id]

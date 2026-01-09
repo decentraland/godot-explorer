@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=30 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -14,6 +14,7 @@
 [ext_resource type="Texture2D" uid="uid://bcm628h2i3wnd" path="res://assets/ui/account-icon.svg" id="8_hdct4"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="8_wyn32"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
+[ext_resource type="LabelSettings" uid="uid://c8st3oitu2gpy" path="res://src/ui/components/events/event_title.tres" id="15_7krp8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_drkw7"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -51,6 +52,8 @@ CheckBox/font_sizes/font_size = 19
 Button/font_sizes/font_size = 20
 
 [sub_resource type="Theme" id="Theme_nuccv"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_h5vs5"]
 
 [node name="Control_SettingsPanel" type="VBoxContainer"]
 anchors_preset = 15
@@ -844,6 +847,11 @@ theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
+[node name="Label_Account" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+layout_mode = 2
+text = "ACCOUNT"
+label_settings = ExtResource("15_7krp8")
+
 [node name="Button_DeleteAccount" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
@@ -857,9 +865,51 @@ visible = false
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme = ExtResource("12_sa1v7")
 disabled = true
 text = "LOG OUT"
+
+[node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+custom_minimum_size = Vector2(0, 23)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_h5vs5")
+
+[node name="Label_Notifications" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+layout_mode = 2
+text = "NOTIFICATIONS"
+label_settings = ExtResource("15_7krp8")
+
+[node name="Button_AllNotifications" type="CheckButton" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 22
+disabled = true
+button_pressed = true
+text = "ALL NOTIFICATIONS"
+
+[node name="HSeparator2" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(0, 23)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_h5vs5")
+
+[node name="Label_Help" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+layout_mode = 2
+text = "HELP"
+label_settings = ExtResource("15_7krp8")
+
+[node name="Button_ReportBug" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(300, 80)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 22
+text = "REPORT BUG"
 
 [node name="Control" type="Control" parent="ColorRect_Content/SafeMarginContainer/MarginContainer"]
 custom_minimum_size = Vector2(120, 0)
@@ -903,3 +953,4 @@ hide_on_portrait = true
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
