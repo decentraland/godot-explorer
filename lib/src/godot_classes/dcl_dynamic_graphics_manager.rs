@@ -1,9 +1,7 @@
 use godot::classes::RenderingServer;
 use godot::prelude::*;
 
-use crate::godot_classes::{
-    dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
-};
+use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
 
 /// Thermal state levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -582,7 +580,10 @@ impl DclDynamicGraphicsManager {
         let p95_index = ((sorted.len() as f64) * 0.95) as usize;
         let p95_index = p95_index.min(sorted.len().saturating_sub(1));
 
-        sorted.get(p95_index).copied().unwrap_or(self.target_frame_time_ms)
+        sorted
+            .get(p95_index)
+            .copied()
+            .unwrap_or(self.target_frame_time_ms)
     }
 
     /// Convert FPS limit mode to target frame time in milliseconds
@@ -700,10 +701,8 @@ impl DclDynamicGraphicsManager {
 
     fn call_apply_graphic_profile(&mut self, profile_index: i32) {
         // Emit signal for GDScript to handle the actual profile change
-        self.base_mut().emit_signal(
-            "profile_change_requested",
-            &[profile_index.to_variant()],
-        );
+        self.base_mut()
+            .emit_signal("profile_change_requested", &[profile_index.to_variant()]);
     }
 
     fn reset_samples(&mut self) {
