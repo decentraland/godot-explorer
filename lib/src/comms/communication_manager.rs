@@ -1097,7 +1097,11 @@ impl CommunicationManager {
         self.block_auto_reconnect = false; // Reset block flag to allow this reconnection
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
-        tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
+        tracing::warn!(
+            "🔌 Comms reconnection attempt - protocol: '{}', address: '{}'",
+            protocol,
+            comms_address
+        );
 
         let current_ephemeral_auth_chain = player_identity
             .bind()

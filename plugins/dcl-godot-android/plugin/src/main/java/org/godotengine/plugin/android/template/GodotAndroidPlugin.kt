@@ -127,6 +127,28 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     @UsedByGodot
+    fun showDecentralandMobileToast() {
+        runOnUiThread {
+            Toast.makeText(activity, "Decentraland Mobile", Toast.LENGTH_LONG).show()
+            Log.v(pluginName, "Decentraland Mobile")
+        }
+    }
+
+    @UsedByGodot
+    fun openUrl(url: String) {
+        runOnUiThread {
+            activity?.let {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                try {
+                    it.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e(pluginName, "Error opening URL: $e")
+                }
+            } ?: Log.e(pluginName, "Activity is null, cannot open URL")
+        }
+    }
+
+    @UsedByGodot
     fun openCustomTabUrl(url: String) {
         runOnUiThread {
             activity?.let {
@@ -141,7 +163,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 }
 
                 if (!done) {
-                    openUrl(it, url)
+                    openUrlFallback(it, url)
                     Log.d(pluginName, "No Custom Tabs available, using fallback to open URL")
                 }
             } ?: Log.e(pluginName, "Activity is null, cannot open URL.")
@@ -163,7 +185,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
-    private fun openUrl(activity: Activity, url: String) {
+    private fun openUrlFallback(activity: Activity, url: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         try {
             activity.startActivity(intent)
