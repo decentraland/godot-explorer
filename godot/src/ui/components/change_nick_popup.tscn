@@ -166,3 +166,4 @@ text = "CLAIM NAME"
 [connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/DclTextEdit_NewNick" to="." method="_on_dcl_text_edit_new_nick_dcl_text_edit_changed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Save" to="." method="_on_button_save_pressed"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer/Button_ClaimName" to="." method="_on_button_claim_name_pressed"]

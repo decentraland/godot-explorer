@@ -5,7 +5,7 @@ use godot::{
 };
 
 use crate::godot_classes::{
-    dcl_android_plugin::DclGodotAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
+    dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
 };
 
 use std::alloc::{GlobalAlloc, Layout, System};
@@ -227,8 +227,8 @@ impl MemoryDebugger {
         // Get metrics from the appropriate mobile plugin
         let metrics_data = if DclIosPlugin::is_available() {
             DclIosPlugin::get_mobile_metrics_internal()
-        } else if DclGodotAndroidPlugin::is_available() {
-            DclGodotAndroidPlugin::get_mobile_metrics_internal()
+        } else if DclAndroidPlugin::is_available() {
+            DclAndroidPlugin::get_mobile_metrics_internal()
         } else {
             None
         };
@@ -503,8 +503,8 @@ impl MemoryDebugger {
         // Get total memory from mobile metrics
         let total_memory_mb = if DclIosPlugin::is_available() {
             DclIosPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
-        } else if DclGodotAndroidPlugin::is_available() {
-            DclGodotAndroidPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
+        } else if DclAndroidPlugin::is_available() {
+            DclAndroidPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
         } else {
             None
         };

@@ -4,7 +4,7 @@ use godot::{classes::Timer, prelude::*};
 
 use crate::{
     godot_classes::{
-        dcl_android_plugin::DclGodotAndroidPlugin,
+        dcl_android_plugin::DclAndroidPlugin,
         dcl_global::DclGlobal,
         dcl_ios_plugin::{DclIosPlugin, DclMobileDeviceInfo},
     },
@@ -94,9 +94,9 @@ impl INode for Metrics {
             self.mobile_platform = Some(MobilePlatform::Ios);
             self.device_info = DclIosPlugin::get_mobile_device_info_internal();
             tracing::info!("iOS mobile platform detected for metrics collection");
-        } else if DclGodotAndroidPlugin::is_available() {
+        } else if DclAndroidPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Android);
-            self.device_info = DclGodotAndroidPlugin::get_mobile_device_info_internal();
+            self.device_info = DclAndroidPlugin::get_mobile_device_info_internal();
             tracing::info!("Android mobile platform detected for metrics collection");
         }
     }
@@ -347,7 +347,7 @@ impl Metrics {
             let mobile_metrics = match self.mobile_platform {
                 Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
                 Some(MobilePlatform::Android) => {
-                    DclGodotAndroidPlugin::get_mobile_metrics_internal()
+                    DclAndroidPlugin::get_mobile_metrics_internal()
                 }
                 None => None,
             };
