@@ -20,18 +20,13 @@ var _playing: String
 
 @onready var control_main = %Main
 
+@onready var dcl_line_edit: VBoxContainer = %DclLineEdit
+
 @onready var control_loading = %Loading
 @onready var control_signin = %SignIn
 @onready var control_start = %Start
 @onready var control_backpack = %BackpackContainer
 @onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
-@onready var label_length: Label = %Label_Length
-@onready var label_error: RichTextLabel = %Label_Error
-@onready var label_advise: Label = %Label_Advise
-
-@onready var panel_container_error_border: PanelContainer = %PanelContainer_ErrorBorder
-
-@onready var line_edit_choose_name: LineEdit = %LineEdit_ChooseName
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
@@ -94,7 +89,6 @@ func show_avatar_naming_screen():
 	choose_name_head.show()
 	choose_name_footer.show()
 	show_panel(control_restore_and_choose_name)
-	_check_button_finish()
 
 
 func show_loading_screen():
@@ -155,6 +149,7 @@ func async_close_sign_in():
 func _ready():
 	# Set version label
 	label_version.set_text("v" + DclGlobal.get_version())
+	button_enter_as_guest.visible = not DclGlobal.is_production()
 
 	Global.music_player.play.call_deferred("music_builder")
 	control_restore_and_choose_name.hide()
@@ -218,66 +213,9 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 	)
 
 
-# ADR-290: Generate local snapshots if the server doesn't provide them
-func _async_generate_local_snapshots_if_needed(profile: DclUserProfile):
-	var avatar = profile.get_avatar()
-	var face_url = avatar.get_snapshots_face_url()
-
-	# If snapshots are already available (from server or locally), skip generation
-	if not face_url.is_empty():
-		return
-
-	# Store original parent and settings
-	var original_parent = avatar_preview.get_parent()
-	var original_show_platform = avatar_preview.show_platform
-	var original_hide_name = avatar_preview.hide_name
-	var original_can_move = avatar_preview.can_move
-
-	# Reparent to root to ensure visibility (parent panels might be hidden during sign-in)
-	avatar_preview.reparent(get_tree().root)
-	avatar_preview.set_position(get_tree().root.get_visible_rect().size)
-	avatar_preview.show()
-
-	# Configure for snapshot capture
-	avatar_preview.show_platform = false
-	avatar_preview.hide_name = true
-	avatar_preview.can_move = false
-
-	# Wait for avatar to fully render
-	await get_tree().process_frame
-	await get_tree().process_frame
-
-	var face = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 25)
-	var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
-
-	# Restore original parent and settings
-	avatar_preview.reparent(original_parent)
-	avatar_preview.show_platform = original_show_platform
-	avatar_preview.hide_name = original_hide_name
-	avatar_preview.can_move = original_can_move
-
-	var body_data: PackedByteArray = body.save_png_to_buffer()
-	var body_hash = DclHashing.hash_v1(body_data)
-	await PromiseUtils.async_awaiter(Global.content_provider.store_file(body_hash, body_data))
-
-	var face_data: PackedByteArray = face.save_png_to_buffer()
-	var face_hash = DclHashing.hash_v1(face_data)
-	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
-
-	# Store local snapshot hashes for UI display
-	avatar.set_snapshots(face_hash, body_hash)
-	profile.set_avatar(avatar)
-
-	# Notify UI components that the profile has updated snapshots
-	Global.player_identity.set_profile(profile)
-
-
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
-
-	# ADR-290: Generate local snapshots if not available from server
-	await _async_generate_local_snapshots_if_needed(new_profile)
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -353,8 +291,7 @@ func _on_button_continue_pressed():
 
 func _on_button_start_pressed():
 	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	if not DclGlobal.is_production():
-		button_enter_as_guest.show()
+	button_enter_as_guest.visible = not DclGlobal.is_production()
 	sign_in_title.text = "Create Your Account"
 	create_guest_account_if_needed()
 	is_creating_account = true
@@ -364,12 +301,12 @@ func _on_button_start_pressed():
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
 	Global.metrics.track_click_button("next", current_screen_name, "")
-	if line_edit_choose_name.text.is_empty():
+	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
 	avatar_preview.hide()
 	show_loading_screen()
-	current_profile.set_name(line_edit_choose_name.text)
+	current_profile.set_name(dcl_line_edit.line_edit.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
@@ -382,8 +319,7 @@ func _on_button_next_pressed():
 
 
 func _on_button_random_name_pressed():
-	line_edit_choose_name.set_text_value(RandomGeneratorUtil.generate_unique_name())
-	_check_button_finish()
+	dcl_line_edit.set_text_value(RandomGeneratorUtil.generate_unique_name())
 
 
 func _on_button_go_to_sign_in_pressed():
@@ -425,7 +361,7 @@ func _on_button_enter_as_guest_pressed():
 
 func _show_avatar_preview():
 	avatar_preview.show()
-	avatar_preview.avatar.emote_controller.async_play_emote("raiseHand")
+	avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
 
 # gdlint:ignore = async-function-name
@@ -434,61 +370,31 @@ func _on_button_jump_in_pressed():
 	await async_close_sign_in()
 
 
-func _on_check_box_terms_and_privacy_toggled(_toggled_on):
-	_check_button_finish()
-
-
-func _on_line_edit_choose_name_text_changed(_new_text):
-	_check_button_finish()
-
-
-func _check_button_finish():
-	var color: Color = Color.WHITE
-	label_length.text = (
-		str(line_edit_choose_name.text.length()) + "/" + str(line_edit_choose_name.character_limit)
-	)
-	if line_edit_choose_name.text.length() > line_edit_choose_name.character_limit:
-		color = Color.RED
-	else:
-		color = Color.WHITE
-	label_length.label_settings.font_color = color
-
-	if line_edit_choose_name.error:
-		label_error.show()
-		label_advise.hide()
-		label_error.text = line_edit_choose_name.error_message
-		button_next.disabled = true
-		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
-			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
-			_playing = "shrug"
-		panel_container_error_border.self_modulate = Color.RED
-	else:
-		label_error.hide()
-		label_advise.show()
-		button_next.disabled = line_edit_choose_name.text.is_empty()
-		if (
-			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
-			or _playing != "clap"
-		):
-			avatar_preview.avatar.emote_controller.async_play_emote("clap")
-			_playing = "clap"
-		panel_container_error_border.self_modulate = Color.TRANSPARENT
-
-
 func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if not avatar_preview.avatar.emote_controller.is_playing():
-				if line_edit_choose_name.text.contains("dancer"):
+				if dcl_line_edit.line_edit.text.contains("dancer"):
 					avatar_preview.avatar.emote_controller.async_play_emote("dance")
 				else:
 					avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
 
-func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
-	_check_button_finish()
-
-
 func _on_deep_link_received():
 	if ready_for_redirect_by_deep_link:
 		go_to_explorer.call_deferred()
+
+
+func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
+	button_next.disabled = dcl_line_edit.error
+	if dcl_line_edit.error:
+		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
+			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
+			_playing = "shrug"
+	else:
+		if (
+			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
+			or _playing != "fistpump"
+		):
+			avatar_preview.avatar.emote_controller.async_play_emote("fistpump")
+			_playing = "fistpump"

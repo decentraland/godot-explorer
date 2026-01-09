@@ -259,8 +259,19 @@ fn spawn_livekit_task(
     let rt2 = rt.clone();
 
     let task = rt.spawn(async move {
-        tracing::info!("🔌 Connecting to LiveKit room '{}' with auto_subscribe={}", room_id, auto_subscribe);
-        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
+        tracing::warn!("🔌 LiveKit connecting - room: '{}', auto_subscribe: {}", room_id, auto_subscribe);
+        let connect_result = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await;
+
+        let (room, mut network_rx) = match connect_result {
+            Ok(result) => {
+                tracing::warn!("🔌 LiveKit connection successful - room: '{}'", room_id);
+                result
+            }
+            Err(e) => {
+                tracing::warn!("🔌 LiveKit connection failed - room: '{}', error: {:?}", room_id, e);
+                return;
+            }
+        };
 
         // Only initialize microphone if voice chat feature is enabled
         #[cfg(feature = "use_voice_chat")]
@@ -304,7 +315,7 @@ fn spawn_livekit_task(
             tokio::select!(
                 incoming = network_rx.recv() => {
                     let Some(incoming) = incoming else {
-                        tracing::debug!("network pipe broken, exiting loop");
+                        tracing::warn!("🔌 LiveKit session ended - room: '{}', reason: network pipe broken", room_id);
                         break 'stream;
                     };
 
@@ -640,6 +651,13 @@ fn spawn_livekit_task(
                             }
                         }
                         livekit::RoomEvent::Disconnected { reason } => {
+                            // Log LiveKit session end with reason
+                            tracing::warn!(
+                                "🔌 LiveKit session ended - room: '{}', reason: {:?}",
+                                room_id,
+                                reason
+                            );
+
                             // Map LiveKit disconnect reason to our DisconnectReason
                             use super::message_processor::DisconnectReason;
                             let disconnect_reason = match reason {
@@ -664,7 +682,7 @@ fn spawn_livekit_task(
                 }
                 outgoing = receiver.recv() => {
                     let Some(outgoing) = outgoing else {
-                        tracing::debug!("app pipe broken, exiting loop");
+                        tracing::warn!("🔌 LiveKit session ended - room: '{}', reason: app pipe broken", room_id);
                         break 'stream;
                     };
 
@@ -688,8 +706,9 @@ fn spawn_livekit_task(
             );
         }
 
+        tracing::warn!("🔌 LiveKit room closing - room: '{}'", room_id);
         if let Err(e) = room.close().await {
-            tracing::debug!("room.close() failed (may already be closed): {e}");
+            tracing::warn!("🔌 LiveKit room.close() failed - room: '{}', error: {}", room_id, e);
         }
     });
 

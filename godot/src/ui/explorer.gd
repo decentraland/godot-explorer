@@ -457,6 +457,23 @@ func _on_panel_chat_submit_message(message: String):
 			}
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
+		elif command_str == "/world" and params.size() > 1:
+			var world_realm = params[1] + ".dcl.eth"
+			Global.on_chat_message.emit(
+				"system",
+				"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+				Time.get_unix_time_from_system()
+			)
+			Global.realm.async_set_realm(world_realm, true)
+			loading_ui.enable_loading_screen()
+			# LOADING_START metric
+			var loading_data = {
+				"position": str(Global.scene_fetcher.current_position),
+				"realm": world_realm,
+				"when": "on_world"
+			}
+			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
@@ -943,7 +960,7 @@ func _share_place():
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
-		DclGodotAndroidPlugin.share_text(msg)
+		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(msg)
 
