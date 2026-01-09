@@ -4,6 +4,12 @@ on:
     secrets:
       DEPLOY_SSH_KEY:
         required: true
+      SENTRY_AUTH_TOKEN:
+        required: false
+      SENTRY_ORG:
+        required: false
+      SENTRY_PROJECT:
+        required: false
   push:
     branches:
       - main
@@ -37,6 +43,9 @@ jobs:
       - name: Validate required secrets
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           echo "Validating required secrets..."
@@ -54,6 +63,10 @@ jobs:
           fi
 
           # Optional secrets (build will continue but some features disabled)
+          if [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "⚠️  Sentry secrets not configured (SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT)"
+            echo "   libdclgodot upload will be skipped."
+          fi
           if [ -z "$SLACK_WEBHOOK_URL" ]; then
             echo "⚠️  SLACK_WEBHOOK_URL not configured"
             echo "   Slack notifications will be skipped."
@@ -194,6 +207,45 @@ jobs:
         if: always()
         run: |
           rm -f ~/.ssh/deploy_key
+
+      # Upload libdclgodot debug symbols to Sentry
+      # Note: Only libdclgodot is uploaded here since it's built by CI and UUID matches
+      # The main app dSYM is uploaded by Xcode Cloud via ci_post_xcodebuild.sh
+      - name: Upload libdclgodot to Sentry
+        if: success()
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "⚠️  Sentry secrets not configured, skipping upload"
+            exit 0
+          fi
+
+          # Install sentry-cli
+          curl -sL https://sentry.io/get-cli/ | bash
+
+          # Find libdclgodot.dylib
+          LIBDCLGODOT_PATH="lib/target/libdclgodot_ios/libdclgodot.dylib"
+
+          if [ -f "$LIBDCLGODOT_PATH" ]; then
+            echo "Found libdclgodot at: $LIBDCLGODOT_PATH"
+
+            # Upload to Sentry
+            sentry-cli upload-dif \
+              --org "$SENTRY_ORG" \
+              --project "$SENTRY_PROJECT" \
+              --auth-token "$SENTRY_AUTH_TOKEN" \
+              --include-sources \
+              --wait \
+              "$LIBDCLGODOT_PATH"
+
+            echo "✅ libdclgodot uploaded to Sentry"
+          else
+            echo "⚠️  libdclgodot not found at $LIBDCLGODOT_PATH"
+            find lib/target -name "libdclgodot*" -type f 2>/dev/null || true
+          fi
 
       - name: Notify Slack on Failure
         if: failure() && !cancelled()
