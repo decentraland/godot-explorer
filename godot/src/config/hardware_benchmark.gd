@@ -114,8 +114,8 @@ func _get_system_ram_gb() -> float:
 	# Try to get RAM from mobile plugins first (more reliable on mobile)
 	var ram_mb: int = -1
 
-	if DclGodotAndroidPlugin.is_available():
-		ram_mb = DclGodotAndroidPlugin.get_total_ram_mb()
+	if DclAndroidPlugin.is_available():
+		ram_mb = DclAndroidPlugin.get_total_ram_mb()
 	elif DclIosPlugin.is_available():
 		ram_mb = DclIosPlugin.get_total_ram_mb()
 
