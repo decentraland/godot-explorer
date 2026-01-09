@@ -12,8 +12,8 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::{
         consts::{
-            DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS, MAX_CHAT_MESSAGES,
-            MAX_CHAT_MESSAGE_SIZE, MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE,
+            truncate_utf8_safe, DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS,
+            MAX_CHAT_MESSAGES, MAX_CHAT_MESSAGE_SIZE, MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE,
             MESSAGE_CHANNEL_SIZE, OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS,
             PROFILE_UPDATE_CHANNEL_SIZE,
         },
@@ -931,7 +931,10 @@ impl MessageProcessor {
                 }
                 let chat = if chat.message.len() > MAX_CHAT_MESSAGE_SIZE {
                     rfc4::Chat {
-                        message: format!("{}...", &chat.message[..MAX_CHAT_MESSAGE_SIZE]),
+                        message: format!(
+                            "{}...",
+                            truncate_utf8_safe(&chat.message, MAX_CHAT_MESSAGE_SIZE)
+                        ),
                         timestamp: chat.timestamp,
                     }
                 } else {
