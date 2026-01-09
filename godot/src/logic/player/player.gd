@@ -173,6 +173,19 @@ func _physics_process(dt: float) -> void:
 		input_dir = Vector2(0, 0)
 
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+
+	# Determine movement basis: use active camera when virtual camera is active
+	var movement_basis: Basis
+	var active_camera = get_viewport().get_camera_3d()
+	if active_camera != camera and is_instance_valid(active_camera):
+		# Virtual camera is active - use its Y rotation (yaw) for movement direction
+		movement_basis = Basis(Vector3.UP, active_camera.global_rotation.y)
+	else:
+		# Player camera is active - use player's transform
+		movement_basis = transform.basis
+
+	direction = (movement_basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+
 	current_direction = current_direction.move_toward(direction, 8 * dt)
 
 	var on_floor = is_on_floor() or position.y <= 0.0

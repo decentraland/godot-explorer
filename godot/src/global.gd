@@ -608,6 +608,9 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
+	# Forward Rust tracing errors/warnings to Sentry
+	_forward_rust_logs_to_sentry()
+
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
@@ -624,6 +627,23 @@ func _process(_delta: float) -> void:
 		):
 			last_emitted_height = current_height
 			change_virtual_keyboard.emit(last_emitted_height)
+
+
+func _forward_rust_logs_to_sentry() -> void:
+	var logs = DclGlobal.drain_rust_logs()
+	for log_entry in logs:
+		var level: String = log_entry.get("level", "error")
+		var message: String = log_entry.get("message", "")
+		var target: String = log_entry.get("target", "")
+
+		# Format: [target] message
+		var formatted_message = "[Rust:%s] %s" % [target, message]
+
+		# Map Rust log levels to Sentry levels
+		if level == "error":
+			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_ERROR)
+		elif level == "warning":
+			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_WARNING)
 
 
 func check_deep_link_teleport_to():
