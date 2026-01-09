@@ -226,12 +226,6 @@ jobs:
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
           fi
 
-      # SSH debug session (runs on failure or always for debugging)
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ failure() }}
-        timeout-minutes: 15
-
       # Build Report Comment
       - name: Prepare Build Report
         if: github.event_name == 'pull_request' && always()
