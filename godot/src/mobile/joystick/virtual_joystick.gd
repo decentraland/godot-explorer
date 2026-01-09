@@ -43,6 +43,10 @@ enum VisibilityMode { ALWAYS, TOUCHSCREEN_ONLY }
 @export var action_walk := "ia_walk"
 @export var action_sprint := "ia_sprint"
 
+## Margin node, to offset allowing to
+## render on the entire screen
+@export var margin_control: Control
+
 # PUBLIC VARIABLES
 
 ## If the joystick is receiving inputs.
@@ -78,6 +82,13 @@ func _ready() -> void:
 
 	_active_area.connect("input_received", _on_input)
 
+	Global.loading_started.connect(_on_loading_scene)
+	_on_loading_scene()
+
+
+func _on_loading_scene() -> void:
+	_dynamic_material.set_shader_parameter("state", 0)
+
 
 func _on_input(event: InputEvent) -> void:
 	if Global.is_mobile():
@@ -92,18 +103,19 @@ func _on_input(event: InputEvent) -> void:
 						)
 					):
 						if joystick_mode == JoystickMode.DYNAMIC:
-							_move_base(event.position - get_screen_position())
-							_dynamic_material.set_shader_parameter("show_guide", false)
+							_move_base(event.position)
+							_dynamic_material.set_shader_parameter("state", 1)
 						_touch_index = event.index
-						_update_joystick(event.position - get_screen_position())
+						_update_joystick(event.position)
 						get_viewport().set_input_as_handled()
 			elif event.index == _touch_index:
 				_reset()
+				_dynamic_material.set_shader_parameter("state", 2)
 				emit_signal("stick_position", Vector2.ZERO)
 				get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
 			if event.index == _touch_index:
-				_update_joystick(event.position - get_screen_position())
+				_update_joystick(event.position)
 				get_viewport().set_input_as_handled()
 
 
@@ -207,14 +219,28 @@ func _reset():
 	emit_signal("is_holded", false)
 	output = Vector2.ZERO
 	_touch_index = -1
-	var pos := _joystick_default_position
-	pos.y = size.y - pos.y
-	_move_base(pos)
+
+	var base_position := _joystick_default_position
+	base_position.y = size.y - base_position.y
+
+	if margin_control:
+		var margin_top: float = margin_control.get_theme_constant("margin_top")
+		var margin_left: float = margin_control.get_theme_constant("margin_left")
+		var margin_right: float = margin_control.get_theme_constant("margin_right")
+		var margin_bottom: float = margin_control.get_theme_constant("margin_bottom")
+		offset_left = -margin_left
+		offset_top = -margin_top
+		offset_right = -margin_right
+		offset_bottom = -margin_bottom
+		base_position.y += margin_bottom
+		base_position.x += margin_left
+
+	_dynamic_material.set_shader_parameter("max_chain_length", size.length() * 0.25)
+
+	_move_base(base_position)
 
 	_tip_position = _tip_default_position
 	_move_tip(_tip_position)
-
-	_dynamic_material.set_shader_parameter("show_guide", true)
 
 	if use_input_actions:
 		if Input.is_action_pressed(action_left) or Input.is_action_just_pressed(action_left):

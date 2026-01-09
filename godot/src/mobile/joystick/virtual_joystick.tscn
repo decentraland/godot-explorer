@@ -1,14 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://dmr0fcamx7t56"]
+[gd_scene load_steps=4 format=3 uid="uid://dmr0fcamx7t56"]
 
 [ext_resource type="Script" uid="uid://bu1t2cfib3j0n" path="res://src/mobile/joystick/virtual_joystick.gd" id="1_8x4dy"]
 [ext_resource type="Script" uid="uid://dbghjmvuruo85" path="res://src/mobile/joystick/active_area.gd" id="2_gh23i"]
-[ext_resource type="Shader" uid="uid://ed0cprk8sc8m" path="res://shaders/joystick.gdshader" id="3_naunr"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_gh23i"]
-shader = ExtResource("3_naunr")
-shader_parameter/joystick_position = Vector2(0, 0)
-shader_parameter/tip_position = Vector2(0, 0)
-shader_parameter/show_guide = true
+[ext_resource type="Material" uid="uid://beinfjlq7dgke" path="res://src/mobile/joystick/joystick_material.tres" id="3_naunr"]
 
 [node name="VirtualJoystick" type="Control"]
 layout_mode = 3
@@ -48,7 +42,7 @@ mouse_filter = 2
 color = Color(1, 0, 1, 0.1764706)
 
 [node name="Dynamic" type="ColorRect" parent="."]
-material = SubResource("ShaderMaterial_gh23i")
+material = ExtResource("3_naunr")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

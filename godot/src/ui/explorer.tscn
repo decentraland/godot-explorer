@@ -155,12 +155,16 @@ mouse_filter = 2
 
 [node name="Joypad" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" instance=ExtResource("7_admxk")]
 unique_name_in_owner = true
+editor_description = "Action buttons, to jump and interact."
 layout_mode = 1
 
-[node name="VirtualJoystick_Left" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" instance=ExtResource("9_lxw33")]
+[node name="VirtualJoystick_Left" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" node_paths=PackedStringArray("margin_control") instance=ExtResource("9_lxw33")]
 unique_name_in_owner = true
+editor_description = "Virtual joystick to control avatar movement."
 layout_mode = 1
+anchors_preset = 15
 deadzone_size = 0.0
+margin_control = NodePath("../../..")
 
 [node name="MarginContainer_ChatPanel" type="MarginContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 unique_name_in_owner = true
