@@ -64,6 +64,8 @@ var _dirty_connected: bool = false
 @onready var radio_selector_aa = %RadioSelector_AA
 
 @onready var radio_selector_limit_fps = %RadioSelector_LimitFps
+@onready var limit_fps_container = %RadioSelector_LimitFps.get_parent()
+@onready var rendering_scale_container = %HSlider_Resolution3DScale.get_parent()
 
 #Advanced items:
 @onready var option_button_realm = %OptionButton_Realm
@@ -596,13 +598,15 @@ func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
 
 
 func _update_graphic_settings_enabled(dynamic_enabled: bool) -> void:
-	# When dynamic graphics is enabled, hide manual graphic profile selection
+	# When dynamic graphics is enabled, hide manual graphic settings
 	# Custom profile is always excluded from dynamic adjustment
 	var current_profile: int = Global.get_config().graphic_profile
 	var should_hide: bool = dynamic_enabled and current_profile != ConfigData.PROFILE_CUSTOM
 
-	# Hide/show the graphic profile selector
+	# Hide/show the graphic settings that are controlled by dynamic graphics
 	graphic_profile_container.visible = not should_hide
+	limit_fps_container.visible = not should_hide
+	rendering_scale_container.visible = not should_hide
 
 
 func _update_dynamic_graphics_status() -> void:
