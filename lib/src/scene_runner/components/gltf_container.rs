@@ -167,6 +167,29 @@ pub fn sync_gltf_loading_state(
             || current_state_godot == GltfContainerLoadingState::NotFound
         {
             scene.gltf_loading.remove(entity);
+
+            // When GLTF finishes loading, mark entity for GltfNodeModifiers re-application
+            // (modifiers need to be applied to newly loaded nodes)
+            // Only add if entity actually has the GltfNodeModifiers component
+            if current_state_godot == GltfContainerLoadingState::Finished {
+                let has_state = scene.gltf_node_modifier_states.contains_key(entity);
+                let has_dirty = scene
+                    .current_dirty
+                    .lww_components
+                    .get(&SceneComponentId::GLTF_NODE_MODIFIERS)
+                    .is_some_and(|dirty| dirty.contains(entity));
+                tracing::debug!(
+                    "sync_gltf_loading_state: entity {:?} state=Finished, has_modifier_state={}, has_modifier_dirty={}, gltf_loading.len()={}",
+                    entity,
+                    has_state,
+                    has_dirty,
+                    scene.gltf_loading.len()
+                );
+                if has_state || has_dirty {
+                    tracing::debug!("sync_gltf_loading_state: Adding entity {:?} to gltf_node_modifiers_pending (will be removed from gltf_loading)", entity);
+                    scene.gltf_node_modifiers_pending.insert(*entity);
+                }
+            }
         }
 
         current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
