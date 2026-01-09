@@ -115,10 +115,17 @@ func _ready():
 
 
 func refresh_graphic_settings():
-	# We only show the custom settings if the graphic profile is custom
-	box_container_custom.visible = Global.get_config().graphic_profile == 3
 	var graphic_profile = Global.get_config().graphic_profile
+	var is_custom_profile: bool = graphic_profile == ConfigData.PROFILE_CUSTOM
+
+	# We only show the custom settings if the graphic profile is custom
+	box_container_custom.visible = is_custom_profile
 	radio_selector_graphic_profile.selected = graphic_profile
+
+	# Disable FPS limit and 3D resolution scale when using preset profiles
+	# These are controlled by the profile, not manually
+	radio_selector_limit_fps.set_disabled(not is_custom_profile)
+	h_slider_rendering_scale.editable = is_custom_profile
 
 	if Global.is_mobile():
 		v_box_container_windowed.hide()
@@ -377,29 +384,12 @@ func _on_radio_selector_aa_select_item(index, _item):
 
 
 func _on_radio_selector_graphic_profile_select_item(index, _item):
-	Global.get_config().graphic_profile = index
-
-	match index:
-		0:  # Performance
-			Global.get_config().anti_aliasing = 0  # off
-			Global.get_config().shadow_quality = 0  # disabled
-			Global.get_config().bloom_quality = 0  # off
-			Global.get_config().skybox = 0  # low
-			Global.get_config().texture_quality = 0  # low
-		1:  # Balanced
-			Global.get_config().anti_aliasing = 1  # x2
-			Global.get_config().shadow_quality = 1  # normal
-			Global.get_config().bloom_quality = 1  # low
-			Global.get_config().skybox = 1  # medium
-			Global.get_config().texture_quality = 1  # medium
-		2:  # Quality
-			Global.get_config().anti_aliasing = 3  # x8
-			Global.get_config().shadow_quality = 2  # high quality
-			Global.get_config().bloom_quality = 2  # high
-			Global.get_config().skybox = 2  # high
-			Global.get_config().texture_quality = 2  # high
-		3:  # Custom
-			pass
+	# Use centralized profile application (handles all parameters)
+	# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
+	if index < ConfigData.PROFILE_CUSTOM:
+		GraphicSettings.apply_graphic_profile(index)
+	else:
+		Global.get_config().graphic_profile = index  # Custom - keep current settings
 
 	refresh_graphic_settings()
 	Global.get_config().save_to_settings_file()
@@ -605,9 +595,9 @@ func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
 
 func _update_graphic_settings_enabled(dynamic_enabled: bool) -> void:
 	# When dynamic graphics is enabled, disable manual graphic profile selection
-	# Custom profile (index 3) is always excluded from dynamic adjustment
+	# Custom profile is always excluded from dynamic adjustment
 	var current_profile: int = Global.get_config().graphic_profile
-	var should_disable: bool = dynamic_enabled and current_profile != 3
+	var should_disable: bool = dynamic_enabled and current_profile != ConfigData.PROFILE_CUSTOM
 
 	# Disable/enable the graphic profile selector
 	radio_selector_graphic_profile.modulate.a = 0.5 if should_disable else 1.0

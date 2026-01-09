@@ -95,6 +95,8 @@ var session_id: String
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
+var _hardware_benchmark: HardwareBenchmark = null
+
 
 func set_url_popup_instance(popup_instance) -> void:
 	url_popup_instance = popup_instance
@@ -342,6 +344,50 @@ func _init_dynamic_graphics_manager() -> void:
 	# Listen for FPS limit changes
 	get_config().param_changed.connect(_on_config_param_changed)
 
+	# Run hardware benchmark on first launch (mobile only)
+	# In debug builds, always run to help with testing
+	var should_run_benchmark: bool = (
+		is_mobile() and (not get_config().first_launch_completed or OS.is_debug_build())
+	)
+	if should_run_benchmark:
+		_run_first_launch_benchmark.call_deferred()
+
+
+func _run_first_launch_benchmark() -> void:
+	print("[HardwareBenchmark] Running first launch benchmark...")
+	_hardware_benchmark = HardwareBenchmark.new()
+	_hardware_benchmark.benchmark_completed.connect(_on_first_launch_benchmark_completed)
+	get_tree().root.add_child(_hardware_benchmark)
+	_hardware_benchmark.run_benchmark()
+
+
+func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb: float) -> void:
+	print(
+		(
+			"[HardwareBenchmark] First launch complete: profile=%d, gpu=%.1fms, ram=%.1fGB"
+			% [profile, gpu_score, ram_gb]
+		)
+	)
+
+	# Store benchmark results for debugging/analytics
+	get_config().benchmark_gpu_score = gpu_score
+	get_config().benchmark_ram_gb = ram_gb
+	get_config().first_launch_completed = true
+
+	# Apply the detected profile
+	GraphicSettings.apply_graphic_profile(profile)
+
+	# Sync the dynamic graphics manager with the new profile
+	dynamic_graphics_manager.on_manual_profile_change(profile)
+
+	# Save configuration
+	get_config().save_to_settings_file()
+
+	# Cleanup benchmark
+	if is_instance_valid(_hardware_benchmark):
+		_hardware_benchmark.queue_free()
+		_hardware_benchmark = null
+
 
 func _on_config_param_changed(param: int) -> void:
 	if param == ConfigData.ConfigParams.LIMIT_FPS:
@@ -350,17 +396,27 @@ func _on_config_param_changed(param: int) -> void:
 
 func _on_dynamic_profile_change(new_profile: int) -> void:
 	var old_profile: int = get_config().graphic_profile
-	var profile_names: Array[String] = ["Performance", "Balanced", "Quality", "Custom"]
-	print(
-		(
-			"[DynamicGraphics] Profile changed: %s -> %s"
-			% [profile_names[old_profile], profile_names[new_profile]]
-		)
-	)
+	if old_profile == new_profile:
+		# No actual change, skip
+		return
+
+	var old_name: String = GraphicSettings.PROFILE_NAMES[old_profile]
+	var new_name: String = GraphicSettings.PROFILE_NAMES[new_profile]
+	var is_downgrade: bool = new_profile < old_profile
+
+	print("[DynamicGraphics] Profile changed: %s -> %s" % [old_name, new_name])
 
 	# Apply the profile change requested by the dynamic graphics manager
 	GraphicSettings.apply_graphic_profile(new_profile)
 	get_config().save_to_settings_file()
+
+	# Show toast notification to user
+	var title: String = "Graphics %s" % ("Reduced" if is_downgrade else "Improved")
+	var description: String = (
+		"Profile changed to %s for better %s"
+		% [new_name, "performance" if is_downgrade else "quality"]
+	)
+	NotificationsManager.show_system_toast(title, description, "graphics_profile")
 
 
 func set_raycast_debugger_enable(enable: bool):

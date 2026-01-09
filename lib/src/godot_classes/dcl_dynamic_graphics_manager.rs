@@ -23,10 +23,11 @@ enum ManagerState {
 }
 
 /// Timing constants (in seconds)
-const WARMUP_DURATION: f64 = 180.0; // 3 minutes before monitoring
+const WARMUP_DURATION: f64 = 60.0; // 1 minute before monitoring
 const DOWNGRADE_WINDOW: f64 = 60.0; // Window for downgrade evaluation
 const UPGRADE_WINDOW: f64 = 120.0; // Window for upgrade evaluation
-const COOLDOWN_DURATION: f64 = 300.0; // 5 minutes after profile change
+const COOLDOWN_AFTER_DOWNGRADE: f64 = 120.0; // 2 minutes after downgrade (want to stabilize quickly)
+const COOLDOWN_AFTER_UPGRADE: f64 = 300.0; // 5 minutes after upgrade (more conservative)
 const THERMAL_HIGH_DOWNGRADE_TIME: f64 = 30.0; // Seconds of HIGH thermal before downgrade
 const SAMPLE_INTERVAL: f64 = 1.0; // Sample frame time every second
 
@@ -37,9 +38,18 @@ const FRAME_TIME_UPGRADE_RATIO: f64 = 0.5; // Upgrade if frame time < target * 0
 const FRAME_SPIKE_THRESHOLD_MS: f64 = 50.0; // Frames > 50ms are considered spikes/hiccups
 const FRAME_SPIKE_RATIO_THRESHOLD: f64 = 0.1; // 10% of frames with spikes triggers downgrade
 
-/// Profile bounds (0=Low, 1=Medium, 2=High, 3=Custom is excluded)
-const MIN_PROFILE: i32 = 0;
-const MAX_PROFILE: i32 = 2;
+/// Profile indices
+const PROFILE_VERY_LOW: i32 = 0;
+#[allow(dead_code)]
+const PROFILE_LOW: i32 = 1;
+#[allow(dead_code)]
+const PROFILE_MEDIUM: i32 = 2;
+const PROFILE_HIGH: i32 = 3;
+const PROFILE_CUSTOM: i32 = 4;
+
+/// Profile bounds for dynamic adjustment (Custom is excluded)
+const MIN_PROFILE: i32 = PROFILE_VERY_LOW;
+const MAX_PROFILE: i32 = PROFILE_HIGH;
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -93,6 +103,9 @@ pub struct DclDynamicGraphicsManager {
 
     /// Whether render time measurement is enabled
     render_time_enabled: bool,
+
+    /// Current cooldown duration (varies based on whether last change was upgrade or downgrade)
+    current_cooldown_duration: f64,
 }
 
 #[godot_api]
@@ -122,6 +135,7 @@ impl INode for DclDynamicGraphicsManager {
             has_android_plugin,
             viewport_rid: None,
             render_time_enabled: false,
+            current_cooldown_duration: COOLDOWN_AFTER_DOWNGRADE,
         }
     }
 
@@ -138,14 +152,14 @@ impl INode for DclDynamicGraphicsManager {
             RenderingServer::singleton().viewport_set_measure_render_time(rid, true);
             self.render_time_enabled = true;
 
-            tracing::info!(
-                "DclDynamicGraphicsManager ready: render time measurement enabled (iOS={}, Android={})",
+            godot_print!(
+                "[DynamicGraphics] ready: render time measurement enabled (iOS={}, Android={})",
                 self.has_ios_plugin,
                 self.has_android_plugin
             );
         } else {
-            tracing::warn!(
-                "DclDynamicGraphicsManager ready: could not get viewport (iOS={}, Android={})",
+            godot_print!(
+                "[DynamicGraphics] WARNING: could not get viewport (iOS={}, Android={})",
                 self.has_ios_plugin,
                 self.has_android_plugin
             );
@@ -198,28 +212,20 @@ impl DclDynamicGraphicsManager {
     fn profile_change_requested(new_profile: i32);
 
     /// Initialize the manager with config values. Call this from GDScript after Global is ready.
-    /// fps_limit: The FPS limit mode (0=VSYNC, 1=NO_LIMIT, 2=30, 3=60, 4=120)
+    /// fps_limit: The FPS limit mode (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
     #[func]
     pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {
         self.enabled = enabled;
         self.current_profile = current_profile;
-
-        // Calculate target frame time based on FPS limit
-        self.target_frame_time_ms = match fps_limit {
-            0 | 1 => 16.6, // VSYNC or NO_LIMIT - assume 60 FPS target
-            2 => 33.3,     // 30 FPS
-            3 => 16.6,     // 60 FPS
-            4 => 8.3,      // 120 FPS
-            _ => 33.3,     // Default to 30 FPS
-        };
+        self.target_frame_time_ms = Self::fps_limit_to_target_ms(fps_limit);
 
         // Start warmup if enabled and not custom profile
         if self.should_enable() {
             self.start_warmup();
         }
 
-        tracing::info!(
-            "DclDynamicGraphicsManager initialized: enabled={}, profile={}, fps_limit={}, target_frame_time={}ms",
+        godot_print!(
+            "[DynamicGraphics] initialized: enabled={}, profile={}, fps_limit={}, target_frame_time={}ms",
             self.enabled,
             self.current_profile,
             fps_limit,
@@ -230,15 +236,9 @@ impl DclDynamicGraphicsManager {
     /// Update target frame time when FPS limit changes
     #[func]
     pub fn on_fps_limit_changed(&mut self, fps_limit: i32) {
-        self.target_frame_time_ms = match fps_limit {
-            0 | 1 => 16.6, // VSYNC or NO_LIMIT - assume 60 FPS target
-            2 => 33.3,     // 30 FPS
-            3 => 16.6,     // 60 FPS
-            4 => 8.3,      // 120 FPS
-            _ => 33.3,     // Default to 30 FPS
-        };
-        tracing::debug!(
-            "DynamicGraphicsManager: FPS limit changed, new target_frame_time={}ms",
+        self.target_frame_time_ms = Self::fps_limit_to_target_ms(fps_limit);
+        godot_print!(
+            "[DynamicGraphics] FPS limit changed, new target_frame_time={}ms",
             self.target_frame_time_ms
         );
     }
@@ -248,7 +248,7 @@ impl DclDynamicGraphicsManager {
     pub fn on_loading_started(&mut self) {
         self.is_gameplay_active = false;
         self.reset_samples();
-        tracing::debug!("DynamicGraphicsManager: loading started, pausing monitoring");
+        godot_print!("[DynamicGraphics] loading started, pausing monitoring");
     }
 
     /// Called when loading finishes (from GDScript signal)
@@ -259,7 +259,29 @@ impl DclDynamicGraphicsManager {
         if self.state == ManagerState::Monitoring {
             self.start_warmup();
         }
-        tracing::debug!("DynamicGraphicsManager: loading finished, resuming");
+        godot_print!(
+            "[DynamicGraphics] loading finished, resuming (state={:?})",
+            self.state
+        );
+    }
+
+    /// Check if gameplay is currently active (not loading)
+    #[func]
+    pub fn is_gameplay_active(&self) -> bool {
+        self.is_gameplay_active
+    }
+
+    /// Get debug info string for troubleshooting
+    #[func]
+    pub fn get_debug_info(&self) -> GString {
+        format!(
+            "state={:?}, timer={:.1}s, gameplay_active={}, samples={}",
+            self.state,
+            self.state_timer,
+            self.is_gameplay_active,
+            self.frame_time_samples.len()
+        )
+        .into()
     }
 
     /// Called when user manually changes profile in settings
@@ -267,13 +289,13 @@ impl DclDynamicGraphicsManager {
     pub fn on_manual_profile_change(&mut self, new_profile: i32) {
         self.current_profile = new_profile;
 
-        // If user selects Custom (3), disable dynamic adjustment
-        if new_profile == 3 {
+        // If user selects Custom, disable dynamic adjustment
+        if new_profile == PROFILE_CUSTOM {
             self.state = ManagerState::Disabled;
-            tracing::info!("DynamicGraphicsManager: disabled (custom profile selected)");
+            godot_print!("[DynamicGraphics] disabled (custom profile selected)");
         } else if self.should_enable() && self.state == ManagerState::Disabled {
             self.start_warmup();
-            tracing::info!("DynamicGraphicsManager: re-enabled after manual change");
+            godot_print!("[DynamicGraphics] re-enabled after manual change");
         }
     }
 
@@ -288,7 +310,7 @@ impl DclDynamicGraphicsManager {
             self.state = ManagerState::Disabled;
         }
 
-        tracing::info!("DclDynamicGraphicsManager: set_enabled({})", enabled);
+        godot_print!("[DynamicGraphics] set_enabled({})", enabled);
     }
 
     /// Check if dynamic adjustment is currently active
@@ -339,7 +361,7 @@ impl DclDynamicGraphicsManager {
     #[func]
     pub fn get_cooldown_remaining(&self) -> f64 {
         if self.state == ManagerState::Cooldown {
-            (COOLDOWN_DURATION - self.state_timer).max(0.0)
+            (self.current_cooldown_duration - self.state_timer).max(0.0)
         } else {
             0.0
         }
@@ -386,11 +408,11 @@ impl DclDynamicGraphicsManager {
 
 impl DclDynamicGraphicsManager {
     fn should_enable(&self) -> bool {
-        // Disabled if dynamic graphics is off or profile is Custom (3)
+        // Disabled if dynamic graphics is off or profile is Custom
         if !self.enabled {
             return false;
         }
-        if self.current_profile == 3 {
+        if self.current_profile == PROFILE_CUSTOM {
             return false;
         }
         true
@@ -400,7 +422,7 @@ impl DclDynamicGraphicsManager {
         self.state = ManagerState::WarmingUp;
         self.state_timer = 0.0;
         self.reset_samples();
-        tracing::debug!("DynamicGraphicsManager: starting warmup");
+        godot_print!("[DynamicGraphics] starting warmup ({}s)", WARMUP_DURATION);
     }
 
     fn process_warmup(&mut self, delta: f64) {
@@ -408,12 +430,25 @@ impl DclDynamicGraphicsManager {
             return;
         }
 
+        let old_timer = self.state_timer;
         self.state_timer += delta;
+
+        // Log progress every 30 seconds
+        let old_30s = (old_timer / 30.0) as i32;
+        let new_30s = (self.state_timer / 30.0) as i32;
+        if new_30s > old_30s {
+            godot_print!(
+                "[DynamicGraphics] warmup progress {:.0}s / {:.0}s",
+                self.state_timer,
+                WARMUP_DURATION
+            );
+        }
+
         if self.state_timer >= WARMUP_DURATION {
             self.state = ManagerState::Monitoring;
             self.state_timer = 0.0;
             self.reset_samples();
-            tracing::info!("DynamicGraphicsManager: warmup complete, starting monitoring");
+            godot_print!("[DynamicGraphics] warmup complete, starting monitoring");
         }
     }
 
@@ -430,15 +465,16 @@ impl DclDynamicGraphicsManager {
 
         // Check downgrade conditions (need DOWNGRADE_WINDOW seconds of samples)
         if self.frame_time_samples.len() >= DOWNGRADE_WINDOW as usize {
-            let avg_frame_time = self.calculate_average_frame_time(DOWNGRADE_WINDOW as usize);
-            let frame_time_ratio = avg_frame_time / self.target_frame_time_ms;
+            // Use P95 for downgrade evaluation (better at catching stutters than average)
+            let p95_frame_time = self.calculate_p95_frame_time(DOWNGRADE_WINDOW as usize);
+            let frame_time_ratio = p95_frame_time / self.target_frame_time_ms;
             let spike_ratio = self.calculate_spike_ratio();
 
-            // Downgrade if frame time too high (ratio > 1.2 means 20% over budget)
+            // Downgrade if P95 frame time too high (ratio > 1.2 means 20% over budget)
             if frame_time_ratio > FRAME_TIME_DOWNGRADE_RATIO {
                 self.try_downgrade(&format!(
-                    "high frame time ({:.1}ms, {:.0}% of budget)",
-                    avg_frame_time,
+                    "high P95 frame time ({:.1}ms, {:.0}% of budget)",
+                    p95_frame_time,
                     frame_time_ratio * 100.0
                 ));
                 return;
@@ -481,11 +517,11 @@ impl DclDynamicGraphicsManager {
 
     fn process_cooldown(&mut self, delta: f64) {
         self.state_timer += delta;
-        if self.state_timer >= COOLDOWN_DURATION {
+        if self.state_timer >= self.current_cooldown_duration {
             self.state = ManagerState::Monitoring;
             self.state_timer = 0.0;
             self.reset_samples();
-            tracing::debug!("DynamicGraphicsManager: cooldown complete, resuming monitoring");
+            godot_print!("[DynamicGraphics] cooldown complete, resuming monitoring");
         }
     }
 
@@ -523,6 +559,36 @@ impl DclDynamicGraphicsManager {
             return 0.0;
         }
         self.spike_count as f64 / self.frame_count as f64
+    }
+
+    /// Calculate the 95th percentile frame time (better at catching spikes than average)
+    fn calculate_p95_frame_time(&self, sample_count: usize) -> f64 {
+        if self.frame_time_samples.is_empty() {
+            return self.target_frame_time_ms;
+        }
+
+        let count = sample_count.min(self.frame_time_samples.len());
+        let start_index = self.frame_time_samples.len() - count;
+        let mut sorted: Vec<f64> = self.frame_time_samples[start_index..].to_vec();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Get the 95th percentile index
+        let p95_index = ((sorted.len() as f64) * 0.95) as usize;
+        let p95_index = p95_index.min(sorted.len().saturating_sub(1));
+
+        sorted.get(p95_index).copied().unwrap_or(self.target_frame_time_ms)
+    }
+
+    /// Convert FPS limit mode to target frame time in milliseconds
+    fn fps_limit_to_target_ms(fps_limit: i32) -> f64 {
+        match fps_limit {
+            0 | 1 => 16.6, // VSYNC or NO_LIMIT - assume 60 FPS target
+            2 => 55.6,     // 18 FPS (Very Low profile)
+            3 => 33.3,     // 30 FPS
+            4 => 16.6,     // 60 FPS
+            5 => 8.3,      // 120 FPS
+            _ => 33.3,     // Default to 30 FPS
+        }
     }
 
     fn update_thermal_state(&mut self, delta: f64) {
@@ -590,6 +656,7 @@ impl DclDynamicGraphicsManager {
         }
 
         let new_profile = self.current_profile - 1;
+        self.current_cooldown_duration = COOLDOWN_AFTER_DOWNGRADE;
         self.apply_profile_change(new_profile, "downgrade", reason);
     }
 
@@ -600,6 +667,7 @@ impl DclDynamicGraphicsManager {
         }
 
         let new_profile = self.current_profile + 1;
+        self.current_cooldown_duration = COOLDOWN_AFTER_UPGRADE;
         self.apply_profile_change(new_profile, "upgrade", reason);
     }
 
@@ -615,8 +683,8 @@ impl DclDynamicGraphicsManager {
         self.state_timer = 0.0;
         self.reset_samples();
 
-        tracing::info!(
-            "DynamicGraphicsManager: Profile {}: {} -> {} (reason: {})",
+        godot_print!(
+            "[DynamicGraphics] Profile {}: {} -> {} (reason: {})",
             action,
             old_profile,
             new_profile,
