@@ -51,30 +51,41 @@ func install_audio(node: Node):
 		return
 
 	var sound_added = true
+	var attenuated = node.has_meta("attenuated_sound")
 
 	if node is WearableItem:
-		node.equip.connect(self.play_sound.bind(&"backpack_item_equip"))
+		node.equip.connect(self.play_sound.bind(&"backpack_item_equip", attenuated))
 	elif node is EmoteItemUi:
-		node.play_emote.connect(func(_data): self.play_sound(&"backpack_item_equip"))
+		var emote_attenuated = node.has_meta("attenuated_sound")
+		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover", emote_attenuated))
+		node.button_down.connect(self.play_sound.bind(&"generic_button_press", emote_attenuated))
+		node.button_up.connect(self.play_sound.bind(&"generic_button_release", emote_attenuated))
+		node.play_emote.connect(
+			func(_data): self.play_sound(&"backpack_item_equip", emote_attenuated)
+		)
 	elif node is EmoteEditorItem:
-		node.select_emote.connect(func(_data): self.play_sound(&"mainmenu_tile_highlight"))
+		node.select_emote.connect(
+			func(_data): self.play_sound(&"mainmenu_tile_highlight", attenuated)
+		)
 	elif node is PlaceItem:
-		node.item_pressed.connect(func(_data): play_sound(&"mainmenu_tile_highlight"))
+		node.item_pressed.connect(func(_data): play_sound(&"mainmenu_tile_highlight", attenuated))
 	elif node is CheckBox or node is OptionButton:
-		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover"))
+		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover", attenuated))
 		node.toggled.connect(
-			func(toggled_on): play_sound(&"toggle_enable" if toggled_on else &"toggle_disable")
+			func(toggled_on):
+				play_sound(&"toggle_enable" if toggled_on else &"toggle_disable", attenuated)
 		)
 	elif node is Button:
-		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover"))
-		node.button_down.connect(self.play_sound.bind(&"generic_button_press"))
-		node.button_up.connect(self.play_sound.bind(&"generic_button_release"))
+		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover", attenuated))
+		node.button_down.connect(self.play_sound.bind(&"generic_button_press", attenuated))
+		node.button_up.connect(self.play_sound.bind(&"generic_button_release", attenuated))
 		if node.toggle_mode:
 			node.toggled.connect(
-				func(toggled_on): play_sound(&"toggle_enable" if toggled_on else &"toggle_disable")
+				func(toggled_on):
+					play_sound(&"toggle_enable" if toggled_on else &"toggle_disable", attenuated)
 			)
 	elif node is LineEdit:
-		node.text_changed.connect(func(_new_text): play_sound(&"inputfield_entertext"))
+		node.text_changed.connect(func(_new_text): play_sound(&"inputfield_entertext", attenuated))
 	else:
 		sound_added = false
 
@@ -94,9 +105,13 @@ func _play_sound_toggle(name_on: StringName, name_off: StringName, toggled_on: b
 	play_sound(name_on if toggled_on else name_off)
 
 
-func play_sound(sound_name: StringName):
+func play_sound(sound_name: StringName, attenuated: bool = false):
 	var audio_stream: AudioStreamPlayer = _sounds.get(sound_name)
+
 	if is_instance_valid(audio_stream):
+		audio_stream.volume_db = 0
+		if attenuated:
+			audio_stream.volume_db = -20
 		audio_stream.play()
 	else:
 		printerr("Audio %s doesn't exists.", sound_name)
