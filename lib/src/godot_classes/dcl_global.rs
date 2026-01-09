@@ -35,6 +35,7 @@ use super::{
 
 #[cfg(target_os = "android")]
 mod android {
+    use crate::tools::sentry_logger::SentryTracingLayer;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
@@ -66,12 +67,16 @@ mod android {
             .with_ansi(false) // Disable ANSI color codes for cleaner logcat output
             .with_filter(filter);
 
-        registry().with(android_layer).init();
+        // Add Sentry layer to capture errors and warnings
+        let sentry_layer = SentryTracingLayer;
+
+        registry().with(android_layer).with(sentry_layer).init();
     }
 }
 
 #[cfg(target_os = "ios")]
 mod ios {
+    use crate::tools::sentry_logger::SentryTracingLayer;
     use tracing_oslog::OsLogger;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
@@ -100,7 +105,28 @@ mod ios {
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
         let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
-        registry().with(oslog_layer).init();
+        // Add Sentry layer to capture errors and warnings
+        let sentry_layer = SentryTracingLayer;
+
+        registry().with(oslog_layer).with(sentry_layer).init();
+    }
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod desktop {
+    use crate::tools::sentry_logger::SentryTracingLayer;
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::registry;
+
+    pub fn init_logger() {
+        let fmt_layer = tracing_subscriber::fmt::layer();
+        let sentry_layer = SentryTracingLayer;
+
+        registry()
+            .with(fmt_layer)
+            .with(sentry_layer)
+            .try_init()
+            .ok();
     }
 }
 
@@ -198,7 +224,7 @@ impl INode for DclGlobal {
         ios::init_logger();
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
-        let _ = tracing_subscriber::fmt::try_init();
+        desktop::init_logger();
 
         tracing::info!(
             "DclGlobal init invoked version={}",
@@ -438,5 +464,25 @@ impl DclGlobal {
                 .bind()
                 .get_sender(),
         )
+    }
+
+    /// Drains and returns all pending Rust log entries (errors and warnings) for Sentry.
+    /// Returns an Array of Dictionaries with keys: "level" (String), "message" (String), "target" (String)
+    #[func]
+    pub fn drain_rust_logs() -> VarArray {
+        use crate::tools::sentry_logger::drain_sentry_logs;
+
+        let logs = drain_sentry_logs();
+        let mut result = VarArray::new();
+
+        for entry in logs {
+            let mut dict = VarDictionary::new();
+            dict.set("level", entry.level.as_str());
+            dict.set("message", entry.message);
+            dict.set("target", entry.target);
+            result.push(&dict.to_variant());
+        }
+
+        result
     }
 }
