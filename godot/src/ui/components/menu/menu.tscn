@@ -94,7 +94,6 @@ grow_vertical = 2
 
 [node name="Control_Discover" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("4_5qyiw")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 
 [node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("3_1stdy")]
@@ -134,6 +133,7 @@ stretch_mode = 6
 
 [node name="Control_ProfileSettings" parent="VBoxContainer/ColorRect_Background/Menus" node_paths=PackedStringArray("backpack") instance=ExtResource("18_x0kg3")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 

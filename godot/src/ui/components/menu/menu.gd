@@ -104,7 +104,8 @@ func close():
 
 func show_discover():
 	select_discover_screen()
-	hud_button_discover.toggled.emit(true)
+	if is_instance_valid(hud_button_discover):
+		hud_button_discover.toggled.emit(true)
 	_open()
 
 
