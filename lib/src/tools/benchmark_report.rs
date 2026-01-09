@@ -64,9 +64,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::{
-    dcl_android_plugin::DclGodotAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
-};
+use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
 
 use std::fs::{self, File};
 use std::io::Write as IoWrite;
@@ -551,8 +549,8 @@ impl BenchmarkReport {
     fn get_mobile_metrics(&self) -> (Option<i32>, Option<f32>, Option<i32>) {
         let metrics_data = if DclIosPlugin::is_available() {
             DclIosPlugin::get_mobile_metrics_internal()
-        } else if DclGodotAndroidPlugin::is_available() {
-            DclGodotAndroidPlugin::get_mobile_metrics_internal()
+        } else if DclAndroidPlugin::is_available() {
+            DclAndroidPlugin::get_mobile_metrics_internal()
         } else {
             None
         };

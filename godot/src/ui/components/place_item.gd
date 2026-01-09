@@ -656,8 +656,8 @@ func schedule_event() -> void:
 		var start_time_millis = start_timestamp * 1000
 		var end_time_millis = finish_timestamp * 1000
 		var event_location: String = "Decentraland at " + str(location.x) + "," + str(location.y)
-		if DclGodotAndroidPlugin.is_available():
-			DclGodotAndroidPlugin.add_calendar_event(
+		if DclAndroidPlugin.is_available():
+			DclAndroidPlugin.add_calendar_event(
 				event_name, details, start_time_millis, end_time_millis, event_location
 			)
 		elif DclIosPlugin.is_available():
@@ -686,7 +686,7 @@ func _on_button_share_pressed() -> void:
 	var text = "Visit the event '" + event_title + "' following this link " + event_url
 
 	if Global.is_android():
-		DclGodotAndroidPlugin.share_text(text)
+		DclAndroidPlugin.share_text(text)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(text)
 

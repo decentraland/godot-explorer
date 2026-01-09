@@ -65,6 +65,8 @@ var skybox_time: SkyboxTime = null
 var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
 
+var snapshot: Snapshot
+
 var music_player: MusicPlayer
 
 var preload_assets: PreloadAssets
@@ -195,6 +197,7 @@ func _ready():
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
+	snapshot = Snapshot.new()
 	preload_assets = PreloadAssets.new()
 
 	var args = cli.get_all_args()
@@ -400,8 +403,8 @@ func release_mouse():
 func open_webview_url(url):
 	if DclIosPlugin.is_available():
 		DclIosPlugin.open_webview_url(url)
-	elif DclGodotAndroidPlugin.is_available():
-		DclGodotAndroidPlugin.open_custom_tab_url(url)
+	elif DclAndroidPlugin.is_available():
+		DclAndroidPlugin.open_custom_tab_url(url)
 	else:
 		OS.shell_open(url)
 
@@ -410,11 +413,11 @@ func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
 		if DclIosPlugin.is_available():
 			DclIosPlugin.open_auth_url(url)
-		elif DclGodotAndroidPlugin.is_available():
+		elif DclAndroidPlugin.is_available():
 			if player_identity.target_config_id == "androidSocial":
-				DclGodotAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
+				DclAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 			else:
-				DclGodotAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
+				DclAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
 		else:
 			OS.shell_open(url)
 	else:
@@ -634,8 +637,8 @@ func _process(_delta: float) -> void:
 func check_deep_link_teleport_to():
 	if Global.is_mobile():
 		var new_deep_link_url: String = ""
-		if DclGodotAndroidPlugin.is_available():
-			var args = DclGodotAndroidPlugin.get_deeplink_args()
+		if DclAndroidPlugin.is_available():
+			var args = DclAndroidPlugin.get_deeplink_args()
 			print("[DEEPLINK] Android args: ", args)
 			new_deep_link_url = args.get("data", "")
 		elif DclIosPlugin.is_available():
@@ -699,8 +702,8 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile():
-			if DclGodotAndroidPlugin.is_available():
-				deep_link_url = DclGodotAndroidPlugin.get_deeplink_args().get("data", "")
+			if DclAndroidPlugin.is_available():
+				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
 			elif DclIosPlugin.is_available():
 				deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
 
