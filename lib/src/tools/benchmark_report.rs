@@ -64,9 +64,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::{
-    dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
-};
+use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
 
 use std::fs::{self, File};
 use std::io::Write as IoWrite;

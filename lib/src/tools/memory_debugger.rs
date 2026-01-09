@@ -4,9 +4,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::{
-    dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
-};
+use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};

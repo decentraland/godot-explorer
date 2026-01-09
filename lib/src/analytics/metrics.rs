@@ -346,9 +346,7 @@ impl Metrics {
             // Fetch dynamic mobile metrics ONLY when event is about to be sent
             let mobile_metrics = match self.mobile_platform {
                 Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
-                Some(MobilePlatform::Android) => {
-                    DclAndroidPlugin::get_mobile_metrics_internal()
-                }
+                Some(MobilePlatform::Android) => DclAndroidPlugin::get_mobile_metrics_internal(),
                 None => None,
             };
 
