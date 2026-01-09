@@ -16,6 +16,7 @@ use super::{
         billboard::update_billboard,
         camera_mode_area::update_camera_mode_area,
         gltf_container::{sync_gltf_loading_state, update_gltf_container},
+        input_modifier::update_input_modifier,
         material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
@@ -263,6 +264,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::CameraModeArea => {
                 update_camera_mode_area(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::InputModifier => {
+                update_input_modifier(scene, crdt_state, current_parcel_scene_id);
                 false
             }
             SceneUpdateState::TriggerArea => {
