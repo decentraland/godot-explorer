@@ -105,6 +105,15 @@ impl DclAndroidPlugin {
             .unwrap_or_default()
     }
 
+    /// Get total device RAM in megabytes
+    /// Returns -1 if unavailable
+    #[func]
+    pub fn get_total_ram_mb() -> i32 {
+        Self::get_mobile_device_info_internal()
+            .map(|info| info.total_ram_mb)
+            .unwrap_or(-1)
+    }
+
     /// Add a calendar event with title, description, start time, end time, and location
     /// Times are in milliseconds since Unix epoch (Jan 1, 1970)
     /// Returns true if the calendar UI was shown successfully, false otherwise
