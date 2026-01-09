@@ -16,16 +16,23 @@ var combo_opened: bool = false
 func _ready() -> void:
 	for btn in _combo_action_buttons:
 		btn.touch_action_changed.connect(_on_combo_action_changed)
+	_set_attenuated_sound_for_buttons(self)
+
+
+func _set_attenuated_sound_for_buttons(node: Node) -> void:
+	if node is Button:
+		node.set_meta("attenuated_sound", true)
+
+	for child in node.get_children():
+		_set_attenuated_sound_for_buttons(child)
 
 
 func _on_button_combo_toggled(toggled_on: bool) -> void:
 	combo_opened = toggled_on
 	if toggled_on:
 		animation_player.play("open_combo")
-		UiSounds.play_sound("widget_emotes_open")
 	else:
 		animation_player.play_backwards("open_combo")
-		UiSounds.play_sound("widget_emotes_close")
 
 
 func _on_combo_action_changed(pressed: bool) -> void:
