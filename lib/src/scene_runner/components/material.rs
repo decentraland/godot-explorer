@@ -73,15 +73,27 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 // Always request texture fetches for new textures
                 for tex in dcl_material.get_textures().into_iter().flatten() {
-                    if let DclSourceTex::Texture(hash) = &tex.source {
-                        content_provider.call_deferred(
-                            "fetch_texture_by_hash",
-                            &[
-                                hash.to_godot().to_variant(),
-                                DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
-                                    .to_variant(),
-                            ],
-                        );
+                    match &tex.source {
+                        DclSourceTex::Texture(hash) => {
+                            content_provider.call_deferred(
+                                "fetch_texture_by_hash",
+                                &[
+                                    hash.to_godot().to_variant(),
+                                    DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
+                                        .to_variant(),
+                                ],
+                            );
+                        }
+                        DclSourceTex::AvatarTexture(user_id) => {
+                            // Prefetch avatar texture immediately when material is created
+                            content_provider.call_deferred(
+                                "fetch_avatar_texture",
+                                &[user_id.to_godot().to_variant()],
+                            );
+                        }
+                        DclSourceTex::VideoTexture(_) => {
+                            // Video textures are handled separately
+                        }
                     }
                 }
 
@@ -409,13 +421,28 @@ fn check_texture(
                 {
                     material.set_texture(param, &resource.upcast::<Texture2D>());
                 }
-                return true;
+                true
             } else {
-                return false;
+                false
             }
         }
-        DclSourceTex::AvatarTexture(_user_id) => {
-            // TODO: implement load avatar texture
+        DclSourceTex::AvatarTexture(user_id) => {
+            if content_provider.is_avatar_texture_loaded(user_id.to_godot()) {
+                let texture_result = content_provider.get_avatar_texture(user_id.to_godot());
+                if let Some(texture) = texture_result {
+                    material.set_texture(param, &texture.upcast::<Texture2D>());
+                } else {
+                    // Promise was rejected (invalid user, no profile, no snapshots, etc.)
+                    // Clear the texture to avoid showing stale data
+                    let no_texture: Option<&Gd<Texture2D>> = None;
+                    material.set_texture(param, no_texture);
+                }
+                true
+            } else {
+                // Start fetching if not already in progress (only logs once due to caching)
+                content_provider.fetch_avatar_texture(user_id.to_godot());
+                false
+            }
         }
         DclSourceTex::VideoTexture(_video_entity_id) => {
             // Video textures need special handling:
@@ -428,11 +455,9 @@ fn check_texture(
             //
             // The actual texture binding happens in update_video_material_textures()
             // which is called after the main material loop.
-            return false;
+            false
         }
     }
-
-    true
 }
 
 /// Update video textures on materials.

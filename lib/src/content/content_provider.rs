@@ -1386,6 +1386,216 @@ impl ContentProvider {
         promise
     }
 
+    /// Fetches an avatar's face texture by user ID.
+    /// This handles the two-step process of:
+    /// 1. Fetching the user's profile
+    /// 2. Extracting the face256 URL and fetching the texture
+    ///
+    /// The result is cached with key `avatar_texture_{user_id_hex}`.
+    #[func]
+    pub fn fetch_avatar_texture(&mut self, user_id: GString) -> Gd<Promise> {
+        let user_id_str = user_id.to_string();
+
+        // Try to parse as H160, use normalized cache key if valid, otherwise use raw string
+        let (user_id_h160, cache_key) = match user_id_str.as_str().as_h160() {
+            Some(h160) => (Some(h160), format!("avatar_texture_{:x}", h160)),
+            None => (None, format!("avatar_texture_invalid_{}", user_id_str)),
+        };
+
+        // Check cache first (works for both valid and invalid user IDs)
+        if let Some(entry) = self.cached.get_mut(&cache_key) {
+            entry.last_access = Instant::now();
+            tracing::debug!(
+                "fetch_avatar_texture: Returning cached promise for {}",
+                cache_key
+            );
+            return entry.promise.clone();
+        }
+
+        // If invalid user ID, cache a rejected promise and return
+        let Some(user_id_h160) = user_id_h160 else {
+            tracing::warn!("fetch_avatar_texture: Invalid user id: {}", user_id);
+            let rejected_promise = Promise::from_rejected("Invalid user id".to_string());
+            self.cached.insert(
+                cache_key,
+                ContentEntry {
+                    last_access: Instant::now(),
+                    promise: rejected_promise.clone(),
+                },
+            );
+            return rejected_promise;
+        };
+
+        tracing::info!(
+            "fetch_avatar_texture: Starting fetch for user_id={:x}",
+            user_id_h160
+        );
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        TokioRuntime::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            // Step 1: Fetch the profile
+            tracing::info!(
+                "fetch_avatar_texture: Fetching profile for {:x}",
+                user_id_h160
+            );
+            let profile_result = request_lambda_profile(
+                user_id_h160,
+                lambda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let profile = match profile_result {
+                Ok(profile) => {
+                    tracing::info!(
+                        "fetch_avatar_texture: Profile fetched for {:x}",
+                        user_id_h160
+                    );
+                    profile
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "fetch_avatar_texture: Failed to fetch profile for {:x}: {}",
+                        user_id_h160,
+                        e
+                    );
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            // Step 2: Extract face256 URL from snapshots
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                tracing::error!(
+                    "fetch_avatar_texture: Profile has no snapshots for {:x}",
+                    user_id_h160
+                );
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no snapshots")),
+                );
+                return;
+            };
+
+            let face256_url = snapshots
+                .face_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.face256));
+
+            tracing::info!(
+                "fetch_avatar_texture: Fetching texture from {} for {:x}",
+                face256_url,
+                user_id_h160
+            );
+
+            let texture_hash = format!("avatar_face_{:x}", user_id_h160);
+
+            // Step 3: Fetch the texture
+            let result = load_image_texture(face256_url, texture_hash, ctx).await;
+
+            match &result {
+                Ok(_) => tracing::info!(
+                    "fetch_avatar_texture: Texture loaded successfully for {:x}",
+                    user_id_h160
+                ),
+                Err(e) => tracing::error!(
+                    "fetch_avatar_texture: Failed to load texture for {:x}: {}",
+                    user_id_h160,
+                    e
+                ),
+            }
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cached.insert(
+            cache_key,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    /// Gets the avatar face texture from cache if available.
+    #[func]
+    pub fn get_avatar_texture(&mut self, user_id: GString) -> Option<Gd<Texture2D>> {
+        let user_id_str = user_id.to_string();
+
+        // Use the same cache key logic as fetch_avatar_texture
+        let cache_key = match user_id_str.as_str().as_h160() {
+            Some(h160) => format!("avatar_texture_{:x}", h160),
+            None => format!("avatar_texture_invalid_{}", user_id_str),
+        };
+
+        let entry = self.cached.get_mut(&cache_key)?;
+        entry.last_access = Instant::now();
+        let promise = entry.promise.bind();
+        if promise.is_rejected() {
+            let promise_data = promise.get_data();
+            if let Ok(error) =
+                promise_data.try_to::<Gd<crate::godot_classes::promise::PromiseError>>()
+            {
+                tracing::debug!(
+                    "get_avatar_texture: Promise was rejected for {}, reason: {}",
+                    cache_key,
+                    error.bind().error_description
+                );
+            }
+            return None;
+        }
+        let promise_data = promise.get_data();
+        drop(promise);
+        let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
+        let texture = texture_entry.bind().texture.clone();
+        Some(texture)
+    }
+
+    /// Checks if an avatar texture is loaded for the given user ID.
+    #[func]
+    pub fn is_avatar_texture_loaded(&self, user_id: GString) -> bool {
+        let user_id_str = user_id.to_string();
+
+        // Use the same cache key logic as fetch_avatar_texture
+        let cache_key = match user_id_str.as_str().as_h160() {
+            Some(h160) => format!("avatar_texture_{:x}", h160),
+            None => format!("avatar_texture_invalid_{}", user_id_str),
+        };
+
+        if let Some(entry) = self.cached.get(&cache_key) {
+            let is_resolved = entry.promise.bind().is_resolved();
+            let is_rejected = entry.promise.bind().is_rejected();
+            if is_rejected {
+                tracing::debug!(
+                    "is_avatar_texture_loaded: Promise rejected for {}, returning true to stop polling",
+                    cache_key
+                );
+                return true; // Return true to stop polling, get_avatar_texture will return None
+            }
+            return is_resolved;
+        }
+        false
+    }
+
     #[func]
     pub fn purge_file(&mut self, file_hash: GString) -> Gd<Promise> {
         let file_hash_str = file_hash.to_string();
