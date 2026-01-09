@@ -79,8 +79,10 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                                 "fetch_texture_by_hash",
                                 &[
                                     hash.to_godot().to_variant(),
-                                    DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
-                                        .to_variant(),
+                                    DclContentMappingAndUrl::from_ref(
+                                        scene.content_mapping.clone(),
+                                    )
+                                    .to_variant(),
                                 ],
                             );
                         }
