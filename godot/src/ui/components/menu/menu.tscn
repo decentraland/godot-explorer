@@ -99,6 +99,7 @@ layout_mode = 1
 
 [node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("3_1stdy")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 offset_bottom = 19.0
 
@@ -133,7 +134,6 @@ stretch_mode = 6
 
 [node name="Control_ProfileSettings" parent="VBoxContainer/ColorRect_Background/Menus" node_paths=PackedStringArray("backpack") instance=ExtResource("18_x0kg3")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 

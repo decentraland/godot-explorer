@@ -491,7 +491,7 @@ func _on_button_report_bug_pressed() -> void:
 	var os_version = OS.get_name()
 	var app_version = Global.get_version()
 	var environment = ""
-	if DclGodotAndroidPlugin.is_available():
+	if DclAndroidPlugin.is_available():
 		var android_singleton = Engine.get_singleton("dcl-godot-android")
 		if android_singleton:
 			var device_info = android_singleton.getMobileDeviceInfo()

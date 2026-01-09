@@ -302,6 +302,7 @@ icon_alignment = 2
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -457,12 +458,13 @@ size_flags_vertical = 3
 
 [node name="AvatarPreview" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect" instance=ExtResource("15_n5dun")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 100)
 layout_mode = 1
 offset_top = -50.0
 offset_bottom = -50.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_mode = 0
+mouse_filter = 2
 stretch = true
 hide_name = true
 can_move = false
@@ -492,6 +494,7 @@ horizontal_alignment = 1
 
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 11
 alignment = 2
@@ -545,7 +548,6 @@ text = "USE ANOTHER ACCOUNT"
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn"]
@@ -603,7 +605,7 @@ layout_mode = 2
 
 [node name="HSeparator6" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1"]
 layout_mode = 2
-theme_override_constants/separation = 45
+theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_EnterAsGuest" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1"]

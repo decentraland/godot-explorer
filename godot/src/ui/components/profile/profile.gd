@@ -308,6 +308,8 @@ func _update_elements_visibility() -> void:
 				button_claim_name.hide()
 			else:
 				button_claim_name.show()
+		if Global.is_ios():
+			button_claim_name.hide()
 	else:
 		button_block_user.show()
 		button_mute_user.show()
@@ -327,7 +329,7 @@ func _update_elements_visibility() -> void:
 			texture_rect_claimed_checkmark.hide()
 			label_tag.show()
 			label_tag.text = "#" + address.substr(address.length() - 4, 4)
-			if is_own_passport:
+			if !Global.is_ios() and is_own_passport:
 				button_claim_name.show()
 
 	_turn_links_editing(false)
