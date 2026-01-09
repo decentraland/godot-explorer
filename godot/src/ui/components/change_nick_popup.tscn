@@ -68,8 +68,9 @@ layout_mode = 2
 [node name="DclLineEdit" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer" instance=ExtResource("3_v0a8f")]
 unique_name_in_owner = true
 layout_mode = 2
-advise = "*Avoid using your real name for safety"
+advice = "*Avoid using your real name for safety"
 hint = "Username"
+show_tag = false
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 38)

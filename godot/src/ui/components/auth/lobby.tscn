@@ -275,7 +275,6 @@ icon_alignment = 2
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -323,8 +322,9 @@ theme_override_constants/separation = 12
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-advise = "*Avoid using your real name for safety"
+advice = "*Avoid using your real name for safety"
 hint = "Username"
+show_tag = false
 
 [node name="VBoxContainer" type="MarginContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
 layout_mode = 2
@@ -475,6 +475,7 @@ text = "USE ANOTHER ACCOUNT"
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn"]
