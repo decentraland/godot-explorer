@@ -50,7 +50,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--force-mobile --emulate-ios --realm kuruk.dcl.eth --skip-lobby"
+run/main_run_args="--force-mobile --skip-lobby --position 0,1 --realm http://localhost:8000"
 
 [editor_plugins]
 
