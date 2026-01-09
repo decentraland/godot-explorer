@@ -98,11 +98,6 @@ impl DclUiBackground {
         let user_id = self.waiting_hash.to_string();
         let user_id = user_id.strip_prefix("avatar:").unwrap_or(&user_id);
 
-        tracing::info!(
-            "UI _on_avatar_texture_loaded called for user_id={}",
-            user_id
-        );
-
         let global = DclGlobal::singleton();
         let mut content_provider = global.bind().get_content_provider();
 
@@ -115,13 +110,6 @@ impl DclUiBackground {
             .bind_mut()
             .get_avatar_texture(user_id.to_godot());
 
-        tracing::info!(
-            "UI _on_avatar_texture_loaded: user_id={}, is_loaded={}, texture_found={}",
-            user_id,
-            is_loaded,
-            texture_result.is_some()
-        );
-
         let Some(godot_texture) = texture_result else {
             // If loading is complete (promise resolved or rejected) but no texture,
             // reset to white pixel immediately
@@ -133,10 +121,6 @@ impl DclUiBackground {
                 self._set_white_pixel();
             } else if self.first_texture_load_shot {
                 // Still loading, wait for signal
-                tracing::info!(
-                    "UI _on_avatar_texture_loaded: first shot, will retry for user_id={}",
-                    user_id
-                );
                 self.first_texture_load_shot = false;
             } else {
                 tracing::warn!(
@@ -147,12 +131,6 @@ impl DclUiBackground {
             }
             return;
         };
-
-        tracing::info!(
-            "UI Applying avatar texture for user_id={}, texture_size={:?}",
-            user_id,
-            godot_texture.get_size()
-        );
 
         self.texture_loaded = true;
         self.base_mut()
@@ -326,30 +304,16 @@ impl DclUiBackground {
                         // TODO: implement video texture
                     }
                     DclSourceTex::AvatarTexture(user_id) => {
-                        tracing::info!(
-                            "UI change_value: Requesting avatar texture for user_id={}",
-                            user_id
-                        );
-
                         let global = DclGlobal::singleton();
                         let mut content_provider = global.bind().get_content_provider();
                         let mut promise = content_provider
                             .bind_mut()
                             .fetch_avatar_texture(user_id.to_godot());
 
-                        let is_resolved = promise.bind().is_resolved();
-                        let is_rejected = promise.bind().is_rejected();
-                        tracing::info!(
-                            "UI change_value: Avatar texture promise for user_id={}, resolved={}, rejected={}",
-                            user_id,
-                            is_resolved,
-                            is_rejected
-                        );
-
                         // Store user_id with prefix so callback knows it's an avatar texture
                         self.waiting_hash = format!("avatar:{}", user_id).to_godot();
 
-                        if !is_resolved {
+                        if !promise.bind().is_resolved() {
                             promise.connect(
                                 "on_resolved",
                                 &self.base().callable("_on_avatar_texture_loaded"),

@@ -1426,7 +1426,7 @@ impl ContentProvider {
             return rejected_promise;
         };
 
-        tracing::info!(
+        tracing::debug!(
             "fetch_avatar_texture: Starting fetch for user_id={:x}",
             user_id_h160
         );
@@ -1444,7 +1444,7 @@ impl ContentProvider {
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
             // Step 1: Fetch the profile
-            tracing::info!(
+            tracing::debug!(
                 "fetch_avatar_texture: Fetching profile for {:x}",
                 user_id_h160
             );
@@ -1458,7 +1458,7 @@ impl ContentProvider {
 
             let profile = match profile_result {
                 Ok(profile) => {
-                    tracing::info!(
+                    tracing::debug!(
                         "fetch_avatar_texture: Profile fetched for {:x}",
                         user_id_h160
                     );
@@ -1498,7 +1498,7 @@ impl ContentProvider {
                 .clone()
                 .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.face256));
 
-            tracing::info!(
+            tracing::debug!(
                 "fetch_avatar_texture: Fetching texture from {} for {:x}",
                 face256_url,
                 user_id_h160
@@ -1509,16 +1509,12 @@ impl ContentProvider {
             // Step 3: Fetch the texture
             let result = load_image_texture(face256_url, texture_hash, ctx).await;
 
-            match &result {
-                Ok(_) => tracing::info!(
-                    "fetch_avatar_texture: Texture loaded successfully for {:x}",
-                    user_id_h160
-                ),
-                Err(e) => tracing::error!(
+            if let Err(e) = &result {
+                tracing::error!(
                     "fetch_avatar_texture: Failed to load texture for {:x}: {}",
                     user_id_h160,
                     e
-                ),
+                );
             }
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
