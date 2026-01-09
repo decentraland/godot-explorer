@@ -18,9 +18,10 @@ func _ready():
 
 	# Hardcoded for not displaying on iOS
 	if Global.is_ios():
-		items.remove_at(5)
-		items.remove_at(4)
-		items.remove_at(1)
+		items.remove_at(6)  # DAO
+		items.remove_at(5)  # Wearables & Emotes
+		items.remove_at(4)  # LAND
+		items.remove_at(1)  # MANA
 
 
 func item_count():
