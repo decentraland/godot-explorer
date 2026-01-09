@@ -165,15 +165,15 @@ jobs:
 
             # Upload libgodot_android debug symbols from native-debug-symbols.zip
             # Search for the file as the path varies by build variant
-            NATIVE_DEBUG_ZIP=$(find godot/android/build/build/outputs/native-debug-symbols -name "native-debug-symbols.zip" 2>/dev/null | head -1)
+            NATIVE_DEBUG_ZIP=$(find godot/android/build/build/outputs/native-debug-symbols -name "native-debug-symbols.zip" 2>/dev/null | head -1 || true)
 
             if [ -n "$NATIVE_DEBUG_ZIP" ] && [ -f "$NATIVE_DEBUG_ZIP" ]; then
               echo "Found native-debug-symbols.zip at: $NATIVE_DEBUG_ZIP"
               echo "Extracting Godot debug symbols..."
               mkdir -p /tmp/godot-debug-symbols
-              unzip -o "$NATIVE_DEBUG_ZIP" "*/libgodot_android.so.dbg" -d /tmp/godot-debug-symbols
+              unzip -o "$NATIVE_DEBUG_ZIP" "*/libgodot_android.so.dbg" -d /tmp/godot-debug-symbols || true
 
-              GODOT_DBG=$(find /tmp/godot-debug-symbols -name "libgodot_android.so.dbg" | head -1)
+              GODOT_DBG=$(find /tmp/godot-debug-symbols -name "libgodot_android.so.dbg" 2>/dev/null | head -1 || true)
               if [ -n "$GODOT_DBG" ]; then
                 echo "Uploading libgodot_android debug symbols..."
                 ls -lh "$GODOT_DBG"
@@ -199,7 +199,7 @@ jobs:
                 mkdir -p /tmp/godot-aar
                 unzip -o "$GODOT_AAR" "jni/arm64-v8a/libgodot_android.so" -d /tmp/godot-aar
 
-                GODOT_SO=$(find /tmp/godot-aar -name "libgodot_android.so" | head -1)
+                GODOT_SO=$(find /tmp/godot-aar -name "libgodot_android.so" 2>/dev/null | head -1 || true)
                 if [ -n "$GODOT_SO" ]; then
                   echo "Uploading libgodot_android from AAR..."
                   ls -lh "$GODOT_SO"
@@ -225,6 +225,12 @@ jobs:
           else
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
           fi
+
+      # SSH debug session (runs on failure or always for debugging)
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
+        timeout-minutes: 15
 
       # Build Report Comment
       - name: Prepare Build Report
