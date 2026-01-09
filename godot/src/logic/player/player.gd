@@ -161,6 +161,19 @@ func _physics_process(dt: float) -> void:
 	if not Global.explorer_has_focus():  # ignore input
 		input_dir = Vector2(0, 0)
 
+	# Check input modifiers from current scene
+	var all_disabled := Global.is_all_input_disabled()
+	var walk_disabled := Global.is_walk_disabled()
+	var jog_disabled := Global.is_jog_disabled()
+	var run_disabled := Global.is_run_disabled()
+	var jump_disabled := Global.is_jump_disabled()
+
+	# If all input is disabled, clear input direction
+	if all_disabled:
+		input_dir = Vector2(0, 0)
+
+	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+
 	# Determine movement basis: use active camera when virtual camera is active
 	var movement_basis: Basis
 	var active_camera = get_viewport().get_camera_3d()
@@ -172,6 +185,7 @@ func _physics_process(dt: float) -> void:
 		movement_basis = transform.basis
 
 	direction = (movement_basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+
 	current_direction = current_direction.move_toward(direction, 8 * dt)
 
 	var on_floor = is_on_floor() or position.y <= 0.0
@@ -190,7 +204,7 @@ func _physics_process(dt: float) -> void:
 		avatar.rise = velocity.y > .3
 		avatar.fall = velocity.y < -.3 && !in_grace_time
 		velocity.y -= gravity * dt
-	elif Input.is_action_pressed("ia_jump") and jump_time < 0:
+	elif Input.is_action_pressed("ia_jump") and jump_time < 0 and not jump_disabled:
 		velocity.y = jump_velocity_0
 		avatar.land = false
 		avatar.rise = true
@@ -206,16 +220,25 @@ func _physics_process(dt: float) -> void:
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
-		if Input.is_action_pressed("ia_walk"):
-			velocity.x = current_direction.x * walk_speed
-			velocity.z = current_direction.z * walk_speed
-		elif Input.is_action_pressed("ia_sprint"):
+		var wants_walk := Input.is_action_pressed("ia_walk")
+		var wants_sprint := Input.is_action_pressed("ia_sprint")
+
+		# Determine the effective speed based on input modifiers
+		var effective_speed := 0.0
+		if wants_walk and not walk_disabled:
+			effective_speed = walk_speed
+		elif wants_sprint and not run_disabled:
 			camera.set_target_fov(SPRINTING_CAMERA_FOV)
-			velocity.x = current_direction.x * run_speed
-			velocity.z = current_direction.z * run_speed
-		else:
-			velocity.x = current_direction.x * jog_speed
-			velocity.z = current_direction.z * jog_speed
+			effective_speed = run_speed
+		elif not jog_disabled:
+			effective_speed = jog_speed
+		elif not walk_disabled:
+			# Fallback to walk if jog is disabled but walk is allowed
+			effective_speed = walk_speed
+		# else: effective_speed remains 0, no movement allowed
+
+		velocity.x = current_direction.x * effective_speed
+		velocity.z = current_direction.z * effective_speed
 
 		avatar.look_at(current_direction.normalized() + position)
 		avatar.rotation.x = 0.0

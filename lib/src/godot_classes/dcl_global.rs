@@ -209,6 +209,20 @@ pub struct DclGlobal {
     pub cli: Gd<DclCli>,
 
     pub selected_avatar: Option<Gd<DclAvatar>>,
+
+    // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
+    #[var]
+    pub input_modifier_disable_all: bool,
+    #[var]
+    pub input_modifier_disable_walk: bool,
+    #[var]
+    pub input_modifier_disable_jog: bool,
+    #[var]
+    pub input_modifier_disable_run: bool,
+    #[var]
+    pub input_modifier_disable_jump: bool,
+    #[var]
+    pub input_modifier_disable_emote: bool,
 }
 
 #[godot_api]
@@ -347,6 +361,14 @@ impl INode for DclGlobal {
             has_javascript_debugger: false,
             cli,
             selected_avatar: None,
+
+            // Input modifiers start as false (no modification)
+            input_modifier_disable_all: false,
+            input_modifier_disable_walk: false,
+            input_modifier_disable_jog: false,
+            input_modifier_disable_run: false,
+            input_modifier_disable_jump: false,
+            input_modifier_disable_emote: false,
         }
     }
 }
@@ -464,6 +486,52 @@ impl DclGlobal {
                 .bind()
                 .get_sender(),
         )
+    }
+
+    /// Reset all input modifiers to false (no modification)
+    pub fn reset_input_modifiers(&mut self) {
+        self.input_modifier_disable_all = false;
+        self.input_modifier_disable_walk = false;
+        self.input_modifier_disable_jog = false;
+        self.input_modifier_disable_run = false;
+        self.input_modifier_disable_jump = false;
+        self.input_modifier_disable_emote = false;
+    }
+
+    /// Check if walk input is disabled (either by disable_all or disable_walk)
+    #[func]
+    pub fn is_walk_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_walk
+    }
+
+    /// Check if jog input is disabled (either by disable_all or disable_jog)
+    #[func]
+    pub fn is_jog_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_jog
+    }
+
+    /// Check if run input is disabled (either by disable_all or disable_run)
+    #[func]
+    pub fn is_run_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_run
+    }
+
+    /// Check if jump input is disabled (either by disable_all or disable_jump)
+    #[func]
+    pub fn is_jump_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_jump
+    }
+
+    /// Check if emote input is disabled (either by disable_all or disable_emote)
+    #[func]
+    pub fn is_emote_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_emote
+    }
+
+    /// Check if all movement input is disabled
+    #[func]
+    pub fn is_all_input_disabled(&self) -> bool {
+        self.input_modifier_disable_all
     }
 
     /// Drains and returns all pending Rust log entries (errors and warnings) for Sentry.
