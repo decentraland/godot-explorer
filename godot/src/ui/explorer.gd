@@ -960,7 +960,7 @@ func _share_place():
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
-		DclGodotAndroidPlugin.share_text(msg)
+		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(msg)
 

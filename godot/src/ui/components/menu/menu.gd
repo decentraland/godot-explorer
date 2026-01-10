@@ -104,7 +104,8 @@ func close():
 
 func show_discover():
 	select_discover_screen()
-	hud_button_discover.toggled.emit(true)
+	if is_instance_valid(hud_button_discover):
+		hud_button_discover.toggled.emit(true)
 	_open()
 
 
@@ -237,12 +238,12 @@ func _on_size_changed() -> void:
 		top = max(top, safe_area.position.y * y_factor)
 		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
 
-	if Global.is_orientation_portrait():
+	if (
+		is_instance_valid(color_rect_portrait_top_safe_area)
+		and is_instance_valid(color_rect_portrait_bottom_safe_area)
+	):
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
-	else:
-		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
-		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0
 
 
 func _on_notification_clicked(notification: Dictionary) -> void:

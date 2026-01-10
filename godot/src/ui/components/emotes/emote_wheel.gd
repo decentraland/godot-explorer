@@ -28,6 +28,7 @@ var last_selected_emote_urn: String = ""
 
 
 func _ready():
+	button_emotes.set_meta("attenuated_sound", true)
 	control_wheel.hide()
 
 	for child in emote_wheel_container.get_children():
@@ -61,6 +62,11 @@ func _update_wheel(emote_urns: Array):
 
 func _on_play_emote(emote_urn: String):
 	close()
+
+	# Check if emotes are disabled by the current scene
+	if Global.is_emote_disabled():
+		return
+
 	if avatar_node != null:
 		var emote_controller = avatar_node.emote_controller
 		# Use async_play_emote to ensure base emotes are loaded from remote
@@ -81,17 +87,15 @@ func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 
 	last_selected_emote_urn = emote_urn
 	label_emote_name.text = child.emote_name
-	UiSounds.play_sound("backpack_item_highlight")
+	UiSounds.play_sound("backpack_item_highlight", child.has_meta("attenuated_sound"))
 
 
-func close(play_sound: bool = false) -> void:
+func close() -> void:
 	if not control_wheel.visible:
 		return
 	control_wheel.hide()
 	emote_wheel_closed.emit()
 	Global.explorer_grab_focus()
-	if play_sound:
-		UiSounds.play_sound("widget_emotes_close")
 	if button_emotes != null and button_emotes.button_pressed:
 		button_emotes.set_pressed_no_signal(false)
 
@@ -100,7 +104,6 @@ func open() -> void:
 	if control_wheel.visible:
 		return
 	control_wheel.show()
-	UiSounds.play_sound("widget_emotes_open")
 	emote_wheel_opened.emit()
 	grab_focus()
 	Global.release_mouse()
@@ -108,7 +111,6 @@ func open() -> void:
 
 func _on_control_wheel_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
-		UiSounds.play_sound("widget_emotes_close")
 		close()
 
 
@@ -116,10 +118,10 @@ func _on_button_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		open()
 	else:
-		close(true)
+		close()
 
 
 func _on_button_edit_pressed() -> void:
 	Global.open_backpack.emit(true)
 	Global.send_haptic_feedback()
-	close(false)
+	close()

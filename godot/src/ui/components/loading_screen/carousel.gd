@@ -16,6 +16,13 @@ func _ready():
 		items.push_back(item)
 		i += 1
 
+	# Hardcoded for not displaying on iOS
+	if Global.is_ios():
+		items.remove_at(6)  # DAO
+		items.remove_at(5)  # Wearables & Emotes
+		items.remove_at(4)  # LAND
+		items.remove_at(1)  # MANA
+
 
 func item_count():
 	return items.size()
