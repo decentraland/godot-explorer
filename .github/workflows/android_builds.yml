@@ -143,12 +143,12 @@ jobs:
             # Install sentry-cli
             curl -sL https://sentry.io/get-cli/ | bash
 
-            # Upload libdclgodot.so directly (contains embedded debug symbols)
-            DEBUG_SYMBOLS_PATH="lib/target/libdclgodot_android/libdclgodot.so"
+            # Upload libdclgodot.so (our Rust library with embedded debug symbols)
+            LIBDCLGODOT_PATH="lib/target/libdclgodot_android/libdclgodot.so"
 
-            if [ -f "$DEBUG_SYMBOLS_PATH" ]; then
-              echo "Uploading debug symbols from: $DEBUG_SYMBOLS_PATH"
-              ls -lh "$DEBUG_SYMBOLS_PATH"
+            if [ -f "$LIBDCLGODOT_PATH" ]; then
+              echo "Uploading libdclgodot debug symbols..."
+              ls -lh "$LIBDCLGODOT_PATH"
 
               sentry-cli upload-dif \
                 --org ${{ secrets.SENTRY_ORG }} \
@@ -156,13 +156,72 @@ jobs:
                 --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
                 --include-sources \
                 --wait \
-                "$DEBUG_SYMBOLS_PATH"
+                "$LIBDCLGODOT_PATH"
 
-              echo "Debug symbols uploaded successfully to release: $RELEASE_NAME"
+              echo "✅ libdclgodot debug symbols uploaded"
             else
-              echo "⚠️  libdclgodot.so not found at $DEBUG_SYMBOLS_PATH"
-              ls -la lib/target/libdclgodot_android/ 2>/dev/null || true
+              echo "⚠️  libdclgodot.so not found at $LIBDCLGODOT_PATH"
             fi
+
+            # Upload libgodot_android debug symbols from native-debug-symbols.zip
+            # Search for the file as the path varies by build variant
+            NATIVE_DEBUG_ZIP=$(find godot/android/build/build/outputs/native-debug-symbols -name "native-debug-symbols.zip" 2>/dev/null | head -1 || true)
+
+            if [ -n "$NATIVE_DEBUG_ZIP" ] && [ -f "$NATIVE_DEBUG_ZIP" ]; then
+              echo "Found native-debug-symbols.zip at: $NATIVE_DEBUG_ZIP"
+              echo "Extracting Godot debug symbols..."
+              mkdir -p /tmp/godot-debug-symbols
+              unzip -o "$NATIVE_DEBUG_ZIP" "*/libgodot_android.so.dbg" -d /tmp/godot-debug-symbols || true
+
+              GODOT_DBG=$(find /tmp/godot-debug-symbols -name "libgodot_android.so.dbg" 2>/dev/null | head -1 || true)
+              if [ -n "$GODOT_DBG" ]; then
+                echo "Uploading libgodot_android debug symbols..."
+                ls -lh "$GODOT_DBG"
+
+                sentry-cli upload-dif \
+                  --org ${{ secrets.SENTRY_ORG }} \
+                  --project ${{ secrets.SENTRY_PROJECT }} \
+                  --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+                  --wait \
+                  "$GODOT_DBG"
+
+                echo "✅ libgodot_android debug symbols uploaded"
+              else
+                echo "⚠️  libgodot_android.so.dbg not found in zip"
+              fi
+            else
+              echo "⚠️  native-debug-symbols.zip not found, trying AAR fallback..."
+
+              # Fallback: extract from godot-lib AAR (contains unstripped .so with debug symbols)
+              GODOT_AAR="godot/android/build/libs/release/godot-lib.template_release.aar"
+              if [ -f "$GODOT_AAR" ]; then
+                echo "Extracting libgodot_android.so from AAR..."
+                mkdir -p /tmp/godot-aar
+                unzip -o "$GODOT_AAR" "jni/arm64-v8a/libgodot_android.so" -d /tmp/godot-aar
+
+                GODOT_SO=$(find /tmp/godot-aar -name "libgodot_android.so" 2>/dev/null | head -1 || true)
+                if [ -n "$GODOT_SO" ]; then
+                  echo "Uploading libgodot_android from AAR..."
+                  ls -lh "$GODOT_SO"
+
+                  sentry-cli upload-dif \
+                    --org ${{ secrets.SENTRY_ORG }} \
+                    --project ${{ secrets.SENTRY_PROJECT }} \
+                    --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
+                    --wait \
+                    "$GODOT_SO"
+
+                  echo "✅ libgodot_android uploaded from AAR"
+                else
+                  echo "⚠️  libgodot_android.so not found in AAR"
+                fi
+              else
+                echo "⚠️  Godot AAR not found at $GODOT_AAR"
+                find godot/android/build -name "*.aar" 2>/dev/null || true
+              fi
+            fi
+
+            echo "Debug symbols uploaded successfully to release: $RELEASE_NAME"
           else
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
           fi
