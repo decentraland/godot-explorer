@@ -85,6 +85,7 @@ func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
 
 func _ready():
 	if not Engine.is_editor_hint():
+		set_meta("attenuated_sound", true)
 		UiSounds.install_audio_recusirve(self)
 
 		mouse_entered.connect(self._on_mouse_entered)

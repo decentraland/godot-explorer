@@ -93,46 +93,50 @@ impl DclUiBackground {
     }
 
     #[func]
-    fn _on_profile_for_texture_loaded(&mut self) {
-        let current_user_id = match self.current_value.texture.as_ref() {
-            Some(texture) => match texture.tex.as_ref() {
-                Some(crate::dcl::components::proto_components::common::texture_union::Tex::AvatarTexture(user_id)) => user_id.user_id.as_str(),
-                _ => return,
-            },
-            None => return,
-        };
+    fn _on_avatar_texture_loaded(&mut self) {
+        // Extract user_id from waiting_hash (stored with "avatar:" prefix)
+        let user_id = self.waiting_hash.to_string();
+        let user_id = user_id.strip_prefix("avatar:").unwrap_or(&user_id);
 
-        let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
-        let Some(profile) = content_provider
+        let global = DclGlobal::singleton();
+        let mut content_provider = global.bind().get_content_provider();
+
+        // Check if loading is complete (resolved or rejected)
+        let is_loaded = content_provider
             .bind_mut()
-            .get_profile(current_user_id.to_godot())
-        else {
+            .is_avatar_texture_loaded(user_id.to_godot());
+
+        let texture_result = content_provider
+            .bind_mut()
+            .get_avatar_texture(user_id.to_godot());
+
+        let Some(godot_texture) = texture_result else {
+            // If loading is complete (promise resolved or rejected) but no texture,
+            // reset to white pixel immediately
+            if is_loaded {
+                tracing::warn!(
+                    "UI Avatar texture failed for user: {}, resetting to white pixel",
+                    user_id
+                );
+                self._set_white_pixel();
+            } else if self.first_texture_load_shot {
+                // Still loading, wait for signal
+                self.first_texture_load_shot = false;
+            } else {
+                tracing::warn!(
+                    "UI Avatar texture not found for user: {}, resetting to white pixel",
+                    user_id
+                );
+                self._set_white_pixel();
+            }
             return;
         };
 
-        let binded_profile = profile.bind();
-        let Some(snapshots) = binded_profile.inner.content.avatar.snapshots.as_ref() else {
-            return;
-        };
-        let face256_url = snapshots.face_url.clone().unwrap_or(format!(
-            "{}{}",
-            binded_profile.inner.base_url, snapshots.face256
-        ));
+        self.texture_loaded = true;
+        self.base_mut()
+            .set_texture(&godot_texture.clone().upcast::<Texture2D>());
 
-        println!("face256_url: {}", face256_url);
-
-        let mut promise = content_provider
-            .bind_mut()
-            .fetch_texture_by_url(snapshots.face256.to_godot(), face256_url.to_godot());
-
-        self.waiting_hash = GString::from(snapshots.face256.as_str());
-
-        if !promise.bind().is_resolved() {
-            promise.connect("on_resolved", &self.base().callable("_on_texture_loaded"));
-        }
-
-        self.first_texture_load_shot = true;
-        self.base_mut().call_deferred("_on_texture_loaded", &[]);
+        self._set_texture_params();
     }
 
     #[func]
@@ -304,17 +308,21 @@ impl DclUiBackground {
                         let mut content_provider = global.bind().get_content_provider();
                         let mut promise = content_provider
                             .bind_mut()
-                            .fetch_profile(user_id.to_godot());
+                            .fetch_avatar_texture(user_id.to_godot());
+
+                        // Store user_id with prefix so callback knows it's an avatar texture
+                        self.waiting_hash = format!("avatar:{}", user_id).to_godot();
 
                         if !promise.bind().is_resolved() {
                             promise.connect(
                                 "on_resolved",
-                                &self.base().callable("_on_profile_for_texture_loaded"),
+                                &self.base().callable("_on_avatar_texture_loaded"),
                             );
-                        } else {
-                            self.base_mut()
-                                .call_deferred("_on_profile_for_texture_loaded", &[]);
                         }
+
+                        self.first_texture_load_shot = true;
+                        self.base_mut()
+                            .call_deferred("_on_avatar_texture_loaded", &[]);
                     }
                 }
             } else {

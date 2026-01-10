@@ -37,7 +37,9 @@ use crate::{
 };
 
 use super::{
-    components::{trigger_area::TriggerAreaState, tween::Tween},
+    components::{
+        gltf_node_modifiers::GltfNodeModifierState, trigger_area::TriggerAreaState, tween::Tween,
+    },
     godot_dcl_scene::GodotDclScene,
 };
 
@@ -107,6 +109,7 @@ pub enum SceneUpdateState {
     MeshCollider,
     GltfContainer,
     SyncGltfContainer,
+    GltfNodeModifiers,
     NftShape,
     Animator,
     AvatarShape,
@@ -118,6 +121,7 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
+    InputModifier,
     TriggerArea,
     VirtualCameras,
     AudioSource,
@@ -143,7 +147,8 @@ impl SceneUpdateState {
             Self::Billboard => Self::MeshCollider,
             Self::MeshCollider => Self::GltfContainer,
             Self::GltfContainer => Self::SyncGltfContainer,
-            Self::SyncGltfContainer => Self::NftShape,
+            Self::SyncGltfContainer => Self::GltfNodeModifiers,
+            Self::GltfNodeModifiers => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -152,7 +157,8 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::CameraModeArea,
-            Self::CameraModeArea => Self::TriggerArea,
+            Self::CameraModeArea => Self::InputModifier,
+            Self::InputModifier => Self::TriggerArea,
             Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
@@ -250,6 +256,11 @@ pub struct Scene {
 
     // Trigger Areas
     pub trigger_areas: TriggerAreaState,
+
+    // GltfNodeModifiers - state tracking for restoration
+    pub gltf_node_modifier_states: HashMap<SceneEntityId, GltfNodeModifierState>,
+    // Entities pending GltfNodeModifiers re-application after GLTF loads
+    pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -363,6 +374,8 @@ impl Scene {
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            gltf_node_modifier_states: HashMap::new(),
+            gltf_node_modifiers_pending: HashSet::new(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -434,6 +447,8 @@ impl Scene {
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            gltf_node_modifier_states: HashMap::new(),
+            gltf_node_modifiers_pending: HashSet::new(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

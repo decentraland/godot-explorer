@@ -207,11 +207,10 @@ impl SceneManager {
                 None
             };
 
-        // The SDK expects the base_url to don´t end with /
-        let base_url = base_url
-            .clone()
-            .strip_suffix('/')
-            .map_or(base_url, |trimmed| trimmed.to_string());
+        // The SDK expects only the origin (protocol://hostname) without path or trailing /
+        let base_url = url::Url::parse(&base_url)
+            .map(|u| u.origin().ascii_serialization())
+            .unwrap_or(base_url);
 
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(SpawnDclSceneData {
             scene_id: new_scene_id,
@@ -1242,6 +1241,12 @@ impl SceneManager {
     }
 
     fn on_current_parcel_scene_changed(&mut self) {
+        // Reset input modifiers when changing scenes
+        // The new scene's InputModifier (if any) will be applied on the next update tick
+        if let Some(mut global) = DclGlobal::try_singleton() {
+            global.bind_mut().reset_input_modifiers();
+        }
+
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();

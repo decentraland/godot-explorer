@@ -84,9 +84,10 @@ func _hide_loading_screen():
 	loading_screen.async_hide_loading_screen_effect()
 
 	# LOADING_END (Success) metric
+	var pos = Global.scene_fetcher.current_position
 	var end_data = {
 		"scene_id": Global.scene_fetcher.current_scene_entity_id,
-		"position": "%d,%d" % Global.scene_fetcher.current_position,
+		"position": "%d,%d" % [pos.x, pos.y],
 		"status": "Success"
 	}
 	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))

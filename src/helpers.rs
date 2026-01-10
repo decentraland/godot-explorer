@@ -212,3 +212,30 @@ pub fn get_default_android_sdk_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
     PathBuf::from(home).join("Android/Sdk")
 }
+
+/// Get the path to the host platform's built library
+pub fn get_host_library_path() -> PathBuf {
+    let target = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else {
+        "linux"
+    };
+
+    let lib_prefix = if cfg!(target_os = "windows") { "" } else { "lib" };
+    let lib_ext = get_lib_extension(target);
+    let file_name = format!("{}dclgodot{}", lib_prefix, lib_ext);
+
+    let output_folder = match target {
+        "windows" => "libdclgodot_windows",
+        "linux" => "libdclgodot_linux",
+        "macos" => "libdclgodot_macos",
+        _ => "libdclgodot_linux",
+    };
+
+    PathBuf::from(RUST_LIB_PROJECT_FOLDER)
+        .join("target")
+        .join(output_folder)
+        .join(file_name)
+}

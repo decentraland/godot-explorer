@@ -7,9 +7,9 @@ var new_nickname: String
 @onready var button_cancel: Button = %Button_Cancel
 @onready var button_save: Button = %Button_Save
 @onready var button_claim_name: Button = %Button_ClaimName
-@onready var dcl_text_edit_new_nick: VBoxContainer = %DclTextEdit_NewNick
 @onready var label_tag: Label = %Label_Tag
 @onready var claim_name_container: MarginContainer = %ClaimNameContainer
+@onready var dcl_line_edit: VBoxContainer = %DclLineEdit
 
 
 func _ready():
@@ -23,7 +23,7 @@ func _on_gui_input(event: InputEvent) -> void:
 
 
 func close() -> void:
-	dcl_text_edit_new_nick.text_edit.text = ""
+	dcl_line_edit.line_edit.text = ""
 	hide()
 
 
@@ -32,25 +32,12 @@ func open() -> void:
 	var address = profile.get_ethereum_address()
 	new_nickname = profile.get_name()
 	label_tag.text = "#" + address.substr(address.length() - 4, 4)
-	dcl_text_edit_new_nick.set_text(new_nickname)
-	_check_error()
+	dcl_line_edit.set_text_value(new_nickname)
 	show()
-
-
-func _check_error() -> void:
-	if dcl_text_edit_new_nick.error or dcl_text_edit_new_nick.text_edit.text.length() <= 0:
-		button_save.disabled = true
-	else:
-		button_save.disabled = false
 
 
 func _on_button_new_link_cancel_pressed() -> void:
 	close()
-
-
-func _on_dcl_text_edit_new_nick_dcl_text_edit_changed() -> void:
-	new_nickname = dcl_text_edit_new_nick.text_edit.text
-	_check_error()
 
 
 func _on_button_cancel_pressed() -> void:
@@ -66,3 +53,8 @@ func _on_button_save_pressed() -> void:
 
 func _on_button_claim_name_pressed() -> void:
 	Global.open_url("https://decentraland.org/marketplace/names/claim")
+
+
+func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
+	new_nickname = dcl_line_edit.line_edit.text
+	button_save.disabled = dcl_line_edit.error
