@@ -183,11 +183,10 @@ impl SceneManager {
                 None
             };
 
-        // The SDK expects the base_url to don´t end with /
-        let base_url = base_url
-            .clone()
-            .strip_suffix('/')
-            .map_or(base_url, |trimmed| trimmed.to_string());
+        // The SDK expects only the origin (protocol://hostname) without path or trailing /
+        let base_url = url::Url::parse(&base_url)
+            .map(|u| u.origin().ascii_serialization())
+            .unwrap_or(base_url);
 
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(SpawnDclSceneData {
             scene_id: new_scene_id,
