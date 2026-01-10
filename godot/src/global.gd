@@ -256,9 +256,18 @@ func _ready():
 	self.metrics.set_debug_level(0)  # 0 off - 1 on
 	self.metrics.set_name("metrics")
 
+	# Configure Sentry for both Godot and Rust SDKs
 	var sentry_user = SentryUser.new()
 	sentry_user.id = self.config.analytics_user_id
 	SentrySDK.set_tag("dcl_session_id", session_id)
+
+	# Sync Sentry configuration to Rust SDK
+	DclGlobal.set_sentry_user_id(self.config.analytics_user_id)
+	DclGlobal.set_sentry_session_id(session_id)
+
+	# Emit test messages if sentry debug mode is enabled
+	if DclGlobal.is_sentry_debug_mode():
+		_emit_sentry_godot_test_messages()
 
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
@@ -608,9 +617,6 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
-	# Forward Rust tracing errors/warnings to Sentry
-	_forward_rust_logs_to_sentry()
-
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
@@ -629,21 +635,23 @@ func _process(_delta: float) -> void:
 			change_virtual_keyboard.emit(last_emitted_height)
 
 
-func _forward_rust_logs_to_sentry() -> void:
-	var logs = DclGlobal.drain_rust_logs()
-	for log_entry in logs:
-		var level: String = log_entry.get("level", "error")
-		var message: String = log_entry.get("message", "")
-		var target: String = log_entry.get("target", "")
-
-		# Format: [target] message
-		var formatted_message = "[Rust:%s] %s" % [target, message]
-
-		# Map Rust log levels to Sentry levels
-		if level == "error":
-			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_ERROR)
-		elif level == "warning":
-			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_WARNING)
+func _emit_sentry_godot_test_messages() -> void:
+	print("[Sentry Test] GDScript: This is a print() message - should appear as breadcrumb")
+	print_rich("[Sentry Test] GDScript: This is a print_rich() message")
+	push_warning(
+		"[Sentry Test] GDScript: This is a push_warning() message - should appear in Sentry"
+	)
+	push_error("[Sentry Test] GDScript: This is a push_error() message - should appear in Sentry")
+	# Also test SentrySDK.capture_message directly
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: Direct capture_message at INFO level", SentrySDK.LEVEL_INFO
+	)
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: Direct capture_message at WARNING level", SentrySDK.LEVEL_WARNING
+	)
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: Direct capture_message at ERROR level", SentrySDK.LEVEL_ERROR
+	)
 
 
 func check_deep_link_teleport_to():

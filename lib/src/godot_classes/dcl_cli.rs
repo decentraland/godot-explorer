@@ -80,6 +80,8 @@ pub struct DclCli {
     pub emulate_ios: bool,
     #[var(get)]
     pub emulate_android: bool,
+    #[var(get)]
+    pub sentry_debug: bool,
 
     // Arguments with values
     #[var(get)]
@@ -291,6 +293,15 @@ impl DclCli {
                 arg_type: ArgType::Value("<URL>".to_string()),
                 category: "Testing".to_string(),
             },
+            // Sentry
+            ArgDefinition {
+                name: "--sentry-debug".to_string(),
+                description:
+                    "Enable Sentry error reporting in dev builds (for testing Sentry locally)"
+                        .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
         ]
     }
 
@@ -411,6 +422,7 @@ impl INode for DclCli {
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
+        let sentry_debug = args_map.contains_key("--sentry-debug");
 
         // Extract arguments with values
         let realm = args_map
@@ -474,6 +486,7 @@ impl INode for DclCli {
             help_requested,
             emulate_ios,
             emulate_android,
+            sentry_debug,
             realm,
             location,
             scene_input_file,

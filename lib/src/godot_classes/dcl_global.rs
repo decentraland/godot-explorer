@@ -35,13 +35,18 @@ use super::{
 
 #[cfg(target_os = "android")]
 mod android {
-    use crate::tools::sentry_logger::SentryTracingLayer;
+    use crate::tools::sentry_logger::{
+        emit_sentry_test_messages, init_sentry, is_sentry_debug_mode, sentry_layer,
+    };
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{self, registry};
 
     pub fn init_logger() {
+        // Initialize Sentry first
+        init_sentry();
+
         // Configure logging filters for Android
         // By default, filter everything to WARN level
         // You can customize specific modules here:
@@ -67,22 +72,29 @@ mod android {
             .with_ansi(false) // Disable ANSI color codes for cleaner logcat output
             .with_filter(filter);
 
-        // Add Sentry layer to capture errors and warnings
-        let sentry_layer = SentryTracingLayer;
+        registry().with(android_layer).with(sentry_layer()).init();
 
-        registry().with(android_layer).with(sentry_layer).init();
+        // Emit test messages if sentry debug mode is enabled
+        if is_sentry_debug_mode() {
+            emit_sentry_test_messages();
+        }
     }
 }
 
 #[cfg(target_os = "ios")]
 mod ios {
-    use crate::tools::sentry_logger::SentryTracingLayer;
+    use crate::tools::sentry_logger::{
+        emit_sentry_test_messages, init_sentry, is_sentry_debug_mode, sentry_layer,
+    };
     use tracing_oslog::OsLogger;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
     pub fn init_logger() {
+        // Initialize Sentry first
+        init_sentry();
+
         // Configure logging filters for iOS
         // By default, filter everything to INFO level
         // You can customize specific modules here:
@@ -105,28 +117,39 @@ mod ios {
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
         let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
-        // Add Sentry layer to capture errors and warnings
-        let sentry_layer = SentryTracingLayer;
+        registry().with(oslog_layer).with(sentry_layer()).init();
 
-        registry().with(oslog_layer).with(sentry_layer).init();
+        // Emit test messages if sentry debug mode is enabled
+        if is_sentry_debug_mode() {
+            emit_sentry_test_messages();
+        }
     }
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod desktop {
-    use crate::tools::sentry_logger::SentryTracingLayer;
+    use crate::tools::sentry_logger::{
+        emit_sentry_test_messages, init_sentry, is_sentry_debug_mode, sentry_layer,
+    };
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
     pub fn init_logger() {
+        // Initialize Sentry first
+        init_sentry();
+
         let fmt_layer = tracing_subscriber::fmt::layer();
-        let sentry_layer = SentryTracingLayer;
 
         registry()
             .with(fmt_layer)
-            .with(sentry_layer)
+            .with(sentry_layer())
             .try_init()
             .ok();
+
+        // Emit test messages if sentry debug mode is enabled
+        if is_sentry_debug_mode() {
+            emit_sentry_test_messages();
+        }
     }
 }
 
@@ -534,23 +557,40 @@ impl DclGlobal {
         self.input_modifier_disable_all
     }
 
-    /// Drains and returns all pending Rust log entries (errors and warnings) for Sentry.
-    /// Returns an Array of Dictionaries with keys: "level" (String), "message" (String), "target" (String)
+    /// Sets the Sentry user ID for the Rust SDK.
+    /// This should be called after the user is authenticated to correlate errors with users.
     #[func]
-    pub fn drain_rust_logs() -> VarArray {
-        use crate::tools::sentry_logger::drain_sentry_logs;
+    pub fn set_sentry_user_id(user_id: GString) {
+        use crate::tools::sentry_logger::set_sentry_user;
+        set_sentry_user(&user_id.to_string());
+    }
 
-        let logs = drain_sentry_logs();
-        let mut result = VarArray::new();
+    /// Sets the Sentry session ID tag for the Rust SDK.
+    /// This should be called when the session is created to correlate errors with sessions.
+    #[func]
+    pub fn set_sentry_session_id(session_id: GString) {
+        use crate::tools::sentry_logger::set_sentry_session_id;
+        set_sentry_session_id(&session_id.to_string());
+    }
 
-        for entry in logs {
-            let mut dict = VarDictionary::new();
-            dict.set("level", entry.level.as_str());
-            dict.set("message", entry.message);
-            dict.set("target", entry.target);
-            result.push(&dict.to_variant());
-        }
+    /// Sets a custom tag on the Sentry scope for the Rust SDK.
+    #[func]
+    pub fn set_sentry_tag(key: GString, value: GString) {
+        use crate::tools::sentry_logger::set_sentry_tag;
+        set_sentry_tag(&key.to_string(), &value.to_string());
+    }
 
-        result
+    /// Returns true if Sentry debug mode is enabled (--sentry-debug flag or SENTRY_FORCE_ENABLE env var).
+    #[func]
+    pub fn is_sentry_debug_mode() -> bool {
+        use crate::tools::sentry_logger::is_sentry_debug_mode;
+        is_sentry_debug_mode()
+    }
+
+    /// Emits test messages at various Rust tracing levels to verify Sentry integration.
+    #[func]
+    pub fn emit_sentry_rust_test_messages() {
+        use crate::tools::sentry_logger::emit_sentry_test_messages;
+        emit_sentry_test_messages();
     }
 }
