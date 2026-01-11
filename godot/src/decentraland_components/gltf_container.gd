@@ -17,6 +17,8 @@ var dcl_gltf_hash := ""
 var optimized := false
 # Track if this GLTF has static colliders (for STATIC->KINEMATIC optimization)
 var _has_static_colliders := false
+# Track specific error reason from loading (for better error reporting)
+var _last_load_error := ""
 
 @onready var timer = $Timer
 
@@ -128,7 +130,8 @@ func _async_load_optimized_asset(gltf_hash: String):
 	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
 	var gltf_node := await _async_load_and_instantiate(scene_file)
 	if gltf_node == null:
-		_finish_with_error("failed to instantiate optimized scene")
+		var reason = _last_load_error if not _last_load_error.is_empty() else "failed to instantiate optimized scene"
+		_finish_with_error(reason)
 		return
 
 	# Add to scene tree
@@ -179,7 +182,8 @@ func _async_load_runtime_gltf():
 	# Load and instantiate the PackedScene
 	var gltf_node := await _async_load_and_instantiate(scene_path)
 	if gltf_node == null:
-		_finish_with_error("failed to instantiate scene")
+		var reason = _last_load_error if not _last_load_error.is_empty() else "failed to instantiate scene"
+		_finish_with_error(reason)
 		return
 
 	# Add to scene tree
@@ -193,21 +197,27 @@ func _async_load_runtime_gltf():
 
 ## Load a PackedScene via ResourceLoader and instantiate it
 ## Used by both optimized and runtime paths
+## Sets _last_load_error on failure for specific error reporting
 func _async_load_and_instantiate(scene_path: String) -> Node3D:
+	_last_load_error = ""
+
 	# Check file exists (for user:// paths, .remap for res:// paths)
 	if scene_path.begins_with("res://"):
 		if not FileAccess.file_exists(scene_path + ".remap"):
-			printerr("File doesn't exist: ", scene_path)
+			_last_load_error = "file not found: " + scene_path
+			printerr("GltfContainer: ", _last_load_error)
 			return null
 	else:
 		if not FileAccess.file_exists(scene_path):
-			printerr("File doesn't exist: ", scene_path)
+			_last_load_error = "file not found: " + scene_path
+			printerr("GltfContainer: ", _last_load_error)
 			return null
 
 	# Request threaded load
 	var err := ResourceLoader.load_threaded_request(scene_path)
 	if err != OK:
-		printerr("Failed to request load for: ", scene_path)
+		_last_load_error = "ResourceLoader request failed (error " + str(err) + ")"
+		printerr("GltfContainer: ", _last_load_error, " for ", scene_path)
 		return null
 
 	# Wait for load to complete
@@ -219,10 +229,22 @@ func _async_load_and_instantiate(scene_path: String) -> Node3D:
 		await main_tree.process_frame
 		status = ResourceLoader.load_threaded_get_status(scene_path)
 
+	# Check for load failures BEFORE trying to get the resource
+	if status != ResourceLoader.THREAD_LOAD_LOADED:
+		if status == ResourceLoader.THREAD_LOAD_FAILED:
+			_last_load_error = "ResourceLoader THREAD_LOAD_FAILED"
+		elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			_last_load_error = "ResourceLoader THREAD_LOAD_INVALID_RESOURCE"
+		else:
+			_last_load_error = "ResourceLoader unexpected status " + str(status)
+		printerr("GltfContainer: ", _last_load_error, " for ", scene_path)
+		return null
+
 	# Get the loaded resource
 	var resource := ResourceLoader.load_threaded_get(scene_path)
 	if resource == null:
-		printerr("Failed to load resource: ", scene_path)
+		_last_load_error = "loaded resource is null"
+		printerr("GltfContainer: ", _last_load_error, " for ", scene_path)
 		return null
 
 	var gltf_node: Node3D = resource.instantiate()
