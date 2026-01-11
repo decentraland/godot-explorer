@@ -181,7 +181,10 @@ impl ResourceProvider {
         } else if status == reqwest::StatusCode::NOT_FOUND {
             Ok(false)
         } else {
-            Err(format!("Unexpected status checking file existence: {:?}", status))
+            Err(format!(
+                "Unexpected status checking file existence: {:?}",
+                status
+            ))
         }
     }
 

@@ -130,7 +130,11 @@ func _async_load_optimized_asset(gltf_hash: String):
 	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
 	var gltf_node := await _async_load_and_instantiate(scene_file)
 	if gltf_node == null:
-		var reason = _last_load_error if not _last_load_error.is_empty() else "failed to instantiate optimized scene"
+		var reason = (
+			_last_load_error
+			if not _last_load_error.is_empty()
+			else "failed to instantiate optimized scene"
+		)
 		_finish_with_error(reason)
 		return
 
@@ -182,7 +186,9 @@ func _async_load_runtime_gltf():
 	# Load and instantiate the PackedScene
 	var gltf_node := await _async_load_and_instantiate(scene_path)
 	if gltf_node == null:
-		var reason = _last_load_error if not _last_load_error.is_empty() else "failed to instantiate scene"
+		var reason = (
+			_last_load_error if not _last_load_error.is_empty() else "failed to instantiate scene"
+		)
 		_finish_with_error(reason)
 		return
 

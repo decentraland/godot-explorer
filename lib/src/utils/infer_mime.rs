@@ -52,7 +52,7 @@ pub fn is_animated_webp(buf: &[u8]) -> bool {
         let is_vp8x = buf[12] == 0x56  // 'V'
             && buf[13] == 0x50         // 'P'
             && buf[14] == 0x38         // '8'
-            && buf[15] == 0x58;        // 'X'
+            && buf[15] == 0x58; // 'X'
 
         if is_vp8x {
             // Check animation flag (bit 1 of flags byte at offset 20)
@@ -135,7 +135,7 @@ pub fn is_avif(buffer: &[u8]) -> bool {
     let is_ftyp = buffer[4] == 0x66 // 'f'
         && buffer[5] == 0x74        // 't'
         && buffer[6] == 0x79        // 'y'
-        && buffer[7] == 0x70;       // 'p'
+        && buffer[7] == 0x70; // 'p'
 
     if !is_ftyp {
         return false;
@@ -156,7 +156,7 @@ pub fn is_heic(buffer: &[u8]) -> bool {
     let is_ftyp = buffer[4] == 0x66 // 'f'
         && buffer[5] == 0x74        // 't'
         && buffer[6] == 0x79        // 'y'
-        && buffer[7] == 0x70;       // 'p'
+        && buffer[7] == 0x70; // 'p'
 
     if !is_ftyp {
         return false;

@@ -1086,7 +1086,9 @@ impl ContentProvider {
 
         // Validate file_hash is not empty to prevent "Is a directory" errors
         if file_hash.is_empty() {
-            tracing::warn!("fetch_texture_by_hash_original: empty file_hash, returning rejected promise");
+            tracing::warn!(
+                "fetch_texture_by_hash_original: empty file_hash, returning rejected promise"
+            );
             return Promise::from_rejected("Empty texture hash".to_string());
         }
 

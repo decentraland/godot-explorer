@@ -89,7 +89,8 @@ fn decode_gif_to_animated_texture(
     max_size: i32,
 ) -> Result<(Gd<Texture2D>, Vector2i, Gd<Image>), String> {
     let cursor = Cursor::new(bytes);
-    let decoder = GifDecoder::new(cursor).map_err(|e| format!("Failed to create GIF decoder: {}", e))?;
+    let decoder =
+        GifDecoder::new(cursor).map_err(|e| format!("Failed to create GIF decoder: {}", e))?;
 
     let frames: Vec<_> = decoder
         .into_frames()
@@ -134,16 +135,15 @@ fn decode_gif_to_animated_texture(
         }
 
         // Create texture for this frame (compressed on mobile)
-        let frame_texture: Gd<Texture2D> = if std::env::consts::OS == "ios"
-            || std::env::consts::OS == "android"
-        {
-            create_compressed_texture(&mut image, max_size)
-        } else {
-            resize_image(&mut image, max_size);
-            ImageTexture::create_from_image(&image)
-                .ok_or_else(|| format!("Failed to create ImageTexture for GIF frame {}", i))?
-                .upcast()
-        };
+        let frame_texture: Gd<Texture2D> =
+            if std::env::consts::OS == "ios" || std::env::consts::OS == "android" {
+                create_compressed_texture(&mut image, max_size)
+            } else {
+                resize_image(&mut image, max_size);
+                ImageTexture::create_from_image(&image)
+                    .ok_or_else(|| format!("Failed to create ImageTexture for GIF frame {}", i))?
+                    .upcast()
+            };
 
         animated_texture.set_frame_texture(i as i32, &frame_texture);
         animated_texture.set_frame_duration(i as i32, duration_secs);
@@ -161,7 +161,8 @@ fn decode_animated_webp_to_texture(
     max_size: i32,
 ) -> Result<(Gd<Texture2D>, Vector2i, Gd<Image>), String> {
     let cursor = Cursor::new(bytes);
-    let decoder = WebPDecoder::new(cursor).map_err(|e| format!("Failed to create WebP decoder: {}", e))?;
+    let decoder =
+        WebPDecoder::new(cursor).map_err(|e| format!("Failed to create WebP decoder: {}", e))?;
 
     let frames: Vec<_> = decoder
         .into_frames()
@@ -206,16 +207,15 @@ fn decode_animated_webp_to_texture(
         }
 
         // Create texture for this frame (compressed on mobile)
-        let frame_texture: Gd<Texture2D> = if std::env::consts::OS == "ios"
-            || std::env::consts::OS == "android"
-        {
-            create_compressed_texture(&mut image, max_size)
-        } else {
-            resize_image(&mut image, max_size);
-            ImageTexture::create_from_image(&image)
-                .ok_or_else(|| format!("Failed to create ImageTexture for WebP frame {}", i))?
-                .upcast()
-        };
+        let frame_texture: Gd<Texture2D> =
+            if std::env::consts::OS == "ios" || std::env::consts::OS == "android" {
+                create_compressed_texture(&mut image, max_size)
+            } else {
+                resize_image(&mut image, max_size);
+                ImageTexture::create_from_image(&image)
+                    .ok_or_else(|| format!("Failed to create ImageTexture for WebP frame {}", i))?
+                    .upcast()
+            };
 
         animated_texture.set_frame_texture(i as i32, &frame_texture);
         animated_texture.set_frame_duration(i as i32, duration_secs);
@@ -265,17 +265,19 @@ pub async fn load_image_texture(
         let mut image = image;
 
         let max_size = ctx.texture_quality.to_max_size();
-        let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios"
-            || std::env::consts::OS == "android"
-        {
-            create_compressed_texture(&mut image, max_size)
-        } else {
-            resize_image(&mut image, max_size);
-            let texture = ImageTexture::create_from_image(&image.clone()).ok_or(anyhow::Error::msg(
-                format!("Error creating texture from AVIF image {}", absolute_file_path),
-            ))?;
-            texture.upcast()
-        };
+        let mut texture: Gd<Texture2D> =
+            if std::env::consts::OS == "ios" || std::env::consts::OS == "android" {
+                create_compressed_texture(&mut image, max_size)
+            } else {
+                resize_image(&mut image, max_size);
+                let texture = ImageTexture::create_from_image(&image.clone()).ok_or(
+                    anyhow::Error::msg(format!(
+                        "Error creating texture from AVIF image {}",
+                        absolute_file_path
+                    )),
+                )?;
+                texture.upcast()
+            };
 
         texture.set_name(&GString::from(&url));
 
@@ -329,7 +331,11 @@ pub async fn load_image_texture(
             match decode_animated_webp_to_texture(&bytes_vec, max_size) {
                 Ok(result) => result,
                 Err(e) => {
-                    tracing::warn!("Failed to decode animated WebP ({}): {}, using fallback", url, e);
+                    tracing::warn!(
+                        "Failed to decode animated WebP ({}): {}, using fallback",
+                        url,
+                        e
+                    );
                     DirAccess::remove_absolute(&GString::from(&absolute_file_path));
                     return Ok(Some(create_fallback_texture_entry().to_variant()));
                 }
@@ -367,14 +373,17 @@ pub async fn load_image_texture(
     } else {
         // Unknown format - use fallback texture
         let format_hint = if bytes_vec.len() >= 4 {
-            format!("magic bytes: {:02x} {:02x} {:02x} {:02x}",
-                bytes_vec[0], bytes_vec[1], bytes_vec[2], bytes_vec[3])
+            format!(
+                "magic bytes: {:02x} {:02x} {:02x} {:02x}",
+                bytes_vec[0], bytes_vec[1], bytes_vec[2], bytes_vec[3]
+            )
         } else {
             "insufficient data".to_string()
         };
         tracing::warn!(
             "Unknown/unsupported image format ({}) for {}, using fallback",
-            format_hint, url
+            format_hint,
+            url
         );
         DirAccess::remove_absolute(&GString::from(&absolute_file_path));
         return Ok(Some(create_fallback_texture_entry().to_variant()));
@@ -384,7 +393,8 @@ pub async fn load_image_texture(
         let err_code = err.to_variant().to::<i32>();
         tracing::warn!(
             "Error loading texture {}: error code {}, using fallback",
-            absolute_file_path, err_code
+            absolute_file_path,
+            err_code
         );
         DirAccess::remove_absolute(&GString::from(&absolute_file_path));
         return Ok(Some(create_fallback_texture_entry().to_variant()));
