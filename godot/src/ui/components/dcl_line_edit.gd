@@ -99,7 +99,8 @@ func _check_error():
 
 
 func _ready() -> void:
-	line_edit.text_changed.connect(_on_line_edit_text_changed)
+	if !line_edit.text_changed.is_connected(_on_line_edit_text_changed):
+		line_edit.text_changed.connect(_on_line_edit_text_changed)
 	label_advice.text = advice
 	line_edit.placeholder_text = hint
 	label_tag.visible = show_tag
