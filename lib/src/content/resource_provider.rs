@@ -164,6 +164,27 @@ impl ResourceProvider {
         }
     }
 
+    /// Check if a remote file exists using a HEAD request.
+    /// Returns Ok(true) if file exists (2xx response), Ok(false) if not found (404),
+    /// or Err for other errors (network issues, server errors, etc.)
+    pub async fn check_remote_file_exists(&self, url: &str) -> Result<bool, String> {
+        let response = self
+            .client
+            .head(url)
+            .send()
+            .await
+            .map_err(|e| format!("HEAD request error: {:?}", e))?;
+
+        let status = response.status();
+        if status.is_success() {
+            Ok(true)
+        } else if status == reqwest::StatusCode::NOT_FOUND {
+            Ok(false)
+        } else {
+            Err(format!("Unexpected status checking file existence: {:?}", status))
+        }
+    }
+
     async fn download_file(
         &self,
         url: &str,
@@ -254,6 +275,10 @@ impl ResourceProvider {
             .send()
             .await
             .map_err(|e| format!("Request error: {:?}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Failed to download file: {:?}", response.status()));
+        }
 
         #[cfg(feature = "use_resource_tracking")]
         self.download_tracking.start(file_hash.clone()).await;

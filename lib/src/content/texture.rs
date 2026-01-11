@@ -44,6 +44,29 @@ pub async fn load_image_texture(
         .await
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
+    // Check for unsupported formats first and return clear error messages
+    if infer_mime::is_avif(&bytes_vec) {
+        DirAccess::remove_absolute(&GString::from(&absolute_file_path));
+        return Err(anyhow::Error::msg(format!(
+            "Unsupported image format: AVIF ({})",
+            url
+        )));
+    }
+    if infer_mime::is_heic(&bytes_vec) {
+        DirAccess::remove_absolute(&GString::from(&absolute_file_path));
+        return Err(anyhow::Error::msg(format!(
+            "Unsupported image format: HEIC ({})",
+            url
+        )));
+    }
+    if infer_mime::is_gif(&bytes_vec) {
+        DirAccess::remove_absolute(&GString::from(&absolute_file_path));
+        return Err(anyhow::Error::msg(format!(
+            "Unsupported image format: GIF ({})",
+            url
+        )));
+    }
+
     let bytes = PackedByteArray::from_vec(&bytes_vec);
 
     let mut image = Image::new_gd();
@@ -62,8 +85,18 @@ pub async fn load_image_texture(
     } else if infer_mime::is_svg(&bytes_vec) {
         image.load_svg_from_buffer(&bytes)
     } else {
-        // if we don't know the format... we try to load as png
-        image.load_png_from_buffer(&bytes)
+        // Unknown format - try to detect what it might be for a better error message
+        let format_hint = if bytes_vec.len() >= 4 {
+            format!("magic bytes: {:02x} {:02x} {:02x} {:02x}",
+                bytes_vec[0], bytes_vec[1], bytes_vec[2], bytes_vec[3])
+        } else {
+            "insufficient data".to_string()
+        };
+        DirAccess::remove_absolute(&GString::from(&absolute_file_path));
+        return Err(anyhow::Error::msg(format!(
+            "Unknown/unsupported image format ({}) for {}",
+            format_hint, url
+        )));
     };
 
     if err != Error::OK {

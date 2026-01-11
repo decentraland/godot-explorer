@@ -43,7 +43,7 @@ class Asset:
 		background_color = Color.TRANSPARENT
 
 		# image
-		image_url = nft.get("image_url", "")
+		image_url = _get_or_empty_string(nft, "image_url")
 
 		# top ownership
 		var owners = nft.get("owners", null)
@@ -72,7 +72,8 @@ class Asset:
 		self.texture = result.texture
 
 	func get_hash() -> String:
-		return contract_address + ":" + token_id
+		# Use underscore instead of colon - colons are invalid in file paths on macOS
+		return contract_address + "_" + token_id
 
 
 var cached_promises: Dictionary

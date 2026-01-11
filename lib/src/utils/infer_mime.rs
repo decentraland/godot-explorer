@@ -80,3 +80,46 @@ pub fn is_ktx(buffer: &[u8]) -> bool {
     // Check if the buffer starts with the KTX signature
     buffer.starts_with(&signature)
 }
+
+/// Returns whether a buffer is AVIF image data.
+/// AVIF uses ISOBMFF container format with ftyp box and 'avif' or 'avis' brand.
+pub fn is_avif(buffer: &[u8]) -> bool {
+    if buffer.len() < 12 {
+        return false;
+    }
+
+    // Check for ftyp box at offset 4
+    let is_ftyp = buffer[4] == 0x66 // 'f'
+        && buffer[5] == 0x74        // 't'
+        && buffer[6] == 0x79        // 'y'
+        && buffer[7] == 0x70;       // 'p'
+
+    if !is_ftyp {
+        return false;
+    }
+
+    // Check for 'avif' or 'avis' brand at offset 8
+    let brand = &buffer[8..12];
+    brand == b"avif" || brand == b"avis" || brand == b"mif1"
+}
+
+/// Returns whether a buffer is HEIC/HEIF image data.
+pub fn is_heic(buffer: &[u8]) -> bool {
+    if buffer.len() < 12 {
+        return false;
+    }
+
+    // Check for ftyp box at offset 4
+    let is_ftyp = buffer[4] == 0x66 // 'f'
+        && buffer[5] == 0x74        // 't'
+        && buffer[6] == 0x79        // 'y'
+        && buffer[7] == 0x70;       // 'p'
+
+    if !is_ftyp {
+        return false;
+    }
+
+    // Check for HEIC brands at offset 8
+    let brand = &buffer[8..12];
+    brand == b"heic" || brand == b"heix" || brand == b"hevc" || brand == b"hevx"
+}

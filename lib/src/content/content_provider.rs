@@ -1525,6 +1525,31 @@ impl ContentProvider {
         ASSET_OPTIMIZED_BASE_URL.to_godot()
     }
 
+    /// Check if a remote file exists using a HEAD request.
+    /// Returns a Promise that resolves with:
+    /// - true: file exists (2xx response)
+    /// - false: file not found (404)
+    /// - rejects with error for other failures (network issues, server errors)
+    #[func]
+    pub fn check_remote_file_exists(&self, url: GString) -> Gd<Promise> {
+        let url = url.to_string();
+        let resource_provider = self.resource_provider.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        TokioRuntime::spawn(async move {
+            match resource_provider.check_remote_file_exists(&url).await {
+                Ok(exists) => {
+                    then_promise(get_promise, Ok(Some(exists.to_variant())));
+                }
+                Err(e) => {
+                    then_promise(get_promise, Err(anyhow::anyhow!(e)));
+                }
+            }
+        });
+
+        promise
+    }
+
     #[func]
     pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
         let Some(user_id) = user_id.to_string().as_str().as_h160() else {

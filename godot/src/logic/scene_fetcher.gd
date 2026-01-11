@@ -634,34 +634,51 @@ func async_load_scene(
 
 	var download_success := false
 	var download_error: PromiseError = null
+	var file_not_found_remotely := false
 	if not skip_optimized:
 		# Check if optimized zip already exists to avoid re-download hang
 		var zip_file_path = "user://content/" + scene_hash_zip
 		if FileAccess.file_exists(zip_file_path):
 			download_success = true
 		else:
-			var download_promise: Promise = Global.content_provider.fetch_file_by_url(
-				scene_hash_zip, asset_url
-			)
-			var download_res = await PromiseUtils.async_awaiter(download_promise)
-			if download_res is PromiseError:
-				download_error = download_res
+			# First check if the file exists remotely (HEAD request)
+			# This avoids treating 404s as errors - scenes without optimized versions are expected
+			var exists_promise = Global.content_provider.check_remote_file_exists(asset_url)
+			var exists_res = await PromiseUtils.async_awaiter(exists_promise)
+
+			if exists_res is PromiseError or exists_res == false:
+				# File doesn't exist remotely or check failed - this is expected for non-optimized scenes
+				file_not_found_remotely = true
 			else:
-				download_success = true
+				# File exists remotely, proceed with download
+				var download_promise: Promise = Global.content_provider.fetch_file_by_url(
+					scene_hash_zip, asset_url
+				)
+				var download_res = await PromiseUtils.async_awaiter(download_promise)
+				if download_res is PromiseError:
+					download_error = download_res
+				else:
+					download_success = true
 
 	if skip_optimized:
 		pass  # Scene optimization skipped (XR, testing, or --only-no-optimized)
+	elif file_not_found_remotely:
+		# Optimized version not available - expected for non-optimized scenes
+		# --only-optimized: Skip scene if it's not optimized
+		if Global.cli.only_optimized:
+			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
+			# Still report as fetched so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
+			loaded_scenes.erase(scene_entity_id)
+			return PromiseUtils.resolved(false)
 	elif download_error != null or not download_success:
 		printerr(
-			"Scene ",
-			scene_entity_id,
-			" is not optimized, failed to download zip asset_url=",
-			asset_url
+			"Scene ", scene_entity_id, " failed to download optimized zip asset_url=", asset_url
 		)
 
 		send_scene_failed_metrics(scene_entity_id, "zip_download_failed")
 
-		# --only-optimized: Skip scene if it's not optimized
+		# --only-optimized: Skip scene if download failed
 		if Global.cli.only_optimized:
 			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
 			# Still report as fetched so loading session can progress
