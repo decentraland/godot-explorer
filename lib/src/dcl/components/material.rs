@@ -270,16 +270,10 @@ impl DclTexture {
     ) -> Option<Self> {
         let value: Option<DclTexture> = texture.as_ref()?.into();
 
-        if let Some(mut value) = value {
-            if value.with_hash(content_mapping_files) {
-                Some(value)
-            } else {
-                // Hash lookup failed - return None to prevent invalid texture requests
-                None
-            }
-        } else {
-            None
-        }
+        value.and_then(|mut value| {
+            // Hash lookup failed - return None to prevent invalid texture requests
+            value.with_hash(content_mapping_files).then_some(value)
+        })
     }
 }
 
