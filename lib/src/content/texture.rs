@@ -15,7 +15,7 @@ use godot::{
     obj::Gd,
     prelude::*,
 };
-use image::{codecs::gif::GifDecoder, codecs::webp::WebPDecoder, AnimationDecoder, ImageReader};
+use image::{codecs::gif::GifDecoder, codecs::webp::WebPDecoder, AnimationDecoder};
 use std::io::Cursor;
 
 /// Gets the fallback texture for unsupported image formats.
@@ -45,31 +45,6 @@ fn create_fallback_texture_entry() -> Gd<TextureEntry> {
     })
 }
 
-/// Decodes an image using the Rust `image` crate and creates a Godot Image from the raw pixels.
-/// This is used for formats not natively supported by Godot (AVIF, etc.)
-fn decode_image_with_rust_crate(bytes: &[u8]) -> Result<Gd<Image>, String> {
-    let cursor = Cursor::new(bytes);
-    let reader = ImageReader::new(cursor)
-        .with_guessed_format()
-        .map_err(|e| format!("Failed to read image format: {}", e))?;
-
-    let dynamic_image = reader
-        .decode()
-        .map_err(|e| format!("Failed to decode image: {}", e))?;
-
-    // Convert to RGBA8 format
-    let rgba_image = dynamic_image.to_rgba8();
-    let width = rgba_image.width() as i32;
-    let height = rgba_image.height() as i32;
-    let raw_pixels = rgba_image.into_raw();
-
-    // Create Godot Image from raw RGBA8 data
-    let pixels = PackedByteArray::from_vec(&raw_pixels);
-    let image = Image::create_from_data(width, height, false, GodotFormat::RGBA8, &pixels)
-        .ok_or_else(|| "Failed to create Godot Image from decoded pixels".to_string())?;
-
-    Ok(image)
-}
 
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
@@ -247,47 +222,11 @@ pub async fn load_image_texture(
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
     // Check for formats that need special handling
-    // AVIF: Decode using Rust image crate (Godot doesn't support AVIF natively)
+    // AVIF: Not supported - use fallback texture (no pure Rust decoder available yet)
     if infer_mime::is_avif(&bytes_vec) {
-        tracing::debug!("Decoding AVIF image using Rust image crate: {}", url);
-        let image = match decode_image_with_rust_crate(&bytes_vec) {
-            Ok(img) => img,
-            Err(e) => {
-                DirAccess::remove_absolute(&GString::from(&absolute_file_path));
-                return Err(anyhow::Error::msg(format!(
-                    "Failed to decode AVIF image ({}): {}",
-                    url, e
-                )));
-            }
-        };
-
-        let original_size = image.get_size();
-        let mut image = image;
-
-        let max_size = ctx.texture_quality.to_max_size();
-        let mut texture: Gd<Texture2D> =
-            if std::env::consts::OS == "ios" || std::env::consts::OS == "android" {
-                create_compressed_texture(&mut image, max_size)
-            } else {
-                resize_image(&mut image, max_size);
-                let texture = ImageTexture::create_from_image(&image.clone()).ok_or(
-                    anyhow::Error::msg(format!(
-                        "Error creating texture from AVIF image {}",
-                        absolute_file_path
-                    )),
-                )?;
-                texture.upcast()
-            };
-
-        texture.set_name(&GString::from(&url));
-
-        let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
-            image,
-            texture,
-            original_size,
-        });
-
-        return Ok(Some(texture_entry.to_variant()));
+        tracing::warn!("Unsupported image format: AVIF ({}), using fallback", url);
+        DirAccess::remove_absolute(&GString::from(&absolute_file_path));
+        return Ok(Some(create_fallback_texture_entry().to_variant()));
     }
 
     // HEIC: Not supported - use fallback texture
