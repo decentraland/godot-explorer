@@ -316,6 +316,12 @@ impl ContentProvider {
                     file_hash_clone,
                     scene_path
                 );
+                // Track cached resource so it appears in resource report
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    report_resource_start(&file_hash_clone, "gltf_cached");
+                    report_resource_loaded(&file_hash_clone);
+                }
                 ctx.resource_provider.touch_file_async(&scene_path).await;
                 Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
@@ -427,6 +433,12 @@ impl ContentProvider {
                     file_hash_clone,
                     scene_path
                 );
+                // Track cached resource so it appears in resource report
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    report_resource_start(&file_hash_clone, "wearable_cached");
+                    report_resource_loaded(&file_hash_clone);
+                }
                 ctx.resource_provider.touch_file_async(&scene_path).await;
                 Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
@@ -535,6 +547,12 @@ impl ContentProvider {
                     file_hash_clone,
                     scene_path
                 );
+                // Track cached resource so it appears in resource report
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    report_resource_start(&file_hash_clone, "emote_cached");
+                    report_resource_loaded(&file_hash_clone);
+                }
                 ctx.resource_provider.touch_file_async(&scene_path).await;
                 Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
