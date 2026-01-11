@@ -22,6 +22,10 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 		return ""
 
 	var content_mapping = emote.get_content_mapping()
+	if content_mapping == null:
+		printerr("EmoteLoader: null content_mapping for ", emote_urn)
+		return ""
+
 	var file_hash = content_mapping.get_hash(file_name)
 	if file_hash.is_empty():
 		printerr("EmoteLoader: empty file_hash for ", emote_urn)

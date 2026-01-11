@@ -32,6 +32,9 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 		if Wearables.is_texture(category):
 			var texture_hashes = Wearables.get_wearable_facial_hashes(wearable, body_shape_id)
 			var content_mapping = wearable.get_content_mapping()
+			if content_mapping == null:
+				printerr("WearableLoader: null content_mapping for texture ", wearable_key)
+				continue
 			for file_name in content_mapping.get_files():
 				for file_hash in texture_hashes:
 					if content_mapping.get_hash(file_name) == file_hash:
@@ -49,6 +52,9 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 
 		# Start loading - ContentProvider handles caching and deduplication
 		var content_mapping = wearable.get_content_mapping()
+		if content_mapping == null:
+			printerr("WearableLoader: null content_mapping for ", wearable_key)
+			continue
 		var main_file = wearable.get_representation_main_file(body_shape_id)
 		var promise = Global.content_provider.load_wearable_gltf(main_file, content_mapping)
 		if promise != null:

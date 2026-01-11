@@ -260,6 +260,16 @@ impl LoadingSession {
                 // Transition conditions:
                 // 1. Grace period passed AND discovery stable AND (have assets that are all loaded, OR no assets)
                 if grace_period_passed && discovery_stable && all_loaded {
+                    // Log a warning if no assets were discovered - this could indicate a bug
+                    // where GLTF components weren't registered properly, or an empty scene
+                    if self.expected_assets.is_empty() && !self.spawned_scenes.is_empty() {
+                        tracing::warn!(
+                            "LoadingSession {}: Assets phase completed with 0 assets discovered for {} spawned scenes. \
+                             This may indicate scenes without GLTF content or a registration issue.",
+                            self.id,
+                            self.spawned_scenes.len()
+                        );
+                    }
                     self.phase = LoadingPhase::Ready;
                 }
             }

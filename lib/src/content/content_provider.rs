@@ -284,7 +284,9 @@ impl ContentProvider {
                 return Some(existing);
             }
             // File was evicted from cache - remove stale promise and re-download
-            tracing::debug!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
+            // NOTE: Any caller still holding the old promise may try to load a non-existent file.
+            // This is handled gracefully in GDScript by checking file existence before loading.
+            tracing::info!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
             self.promises.remove(&file_hash);
         }
 
@@ -390,7 +392,9 @@ impl ContentProvider {
                 return Some(existing);
             }
             // File was evicted from cache - remove stale promise and re-download
-            tracing::debug!(
+            // NOTE: Any caller still holding the old promise may try to load a non-existent file.
+            // This is handled gracefully in GDScript by checking file existence before loading.
+            tracing::info!(
                 "Wearable GLTF cache EVICTED: {} - re-downloading",
                 file_hash
             );
@@ -499,7 +503,9 @@ impl ContentProvider {
                 return Some(existing);
             }
             // File was evicted from cache - remove stale promise and re-download
-            tracing::debug!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
+            // NOTE: Any caller still holding the old promise may try to load a non-existent file.
+            // This is handled gracefully in GDScript by checking file existence before loading.
+            tracing::info!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
             self.promises.remove(&file_hash);
         }
 

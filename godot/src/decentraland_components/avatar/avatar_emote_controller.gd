@@ -531,6 +531,12 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 
 
 func _reactivate_animation_system(_was_active: bool):
+	# Safety check: avatar may have been freed during deferred call
+	if not is_instance_valid(animation_tree):
+		_is_modifying_animations = false
+		_queued_emote_urn = ""
+		return
+
 	# Reactivate animation system after modifications
 	# This is called via call_deferred to ensure all changes are applied
 	# Always set to true - the tree should be active for animations to play

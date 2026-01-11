@@ -290,6 +290,9 @@ func async_fetch_wearables_dependencies():
 				async_calls_info.push_back(emote_urn)
 
 	# Use signal-based wearable loading with threaded ResourceLoader
+	# Safety check: avatar may have been freed during async operations
+	if not is_instance_valid(wearable_loader) or not is_inside_tree():
+		return
 	await wearable_loader.async_load_wearables(wearables_dict.keys(), body_shape_id)
 
 	var promises_result: Array = await PromiseUtils.async_all(async_calls)
@@ -301,6 +304,9 @@ func async_fetch_wearables_dependencies():
 
 
 func async_try_to_set_body_shape(body_shape_hash):
+	# Safety check: avatar may have been freed during async operations
+	if not is_instance_valid(wearable_loader) or not is_inside_tree():
+		return
 	var body_shape: Node3D = await wearable_loader.async_get_wearable_node(body_shape_hash)
 	if body_shape == null:
 		printerr("Avatar: Failed to load body shape ", body_shape_hash)
@@ -340,6 +346,10 @@ func apply_unshaded_mode(node_to_apply: Node):
 
 
 func async_load_wearables():
+	# Safety check: avatar may have been freed during async operations
+	if not is_instance_valid(wearable_loader) or not is_inside_tree():
+		return
+
 	var curated_wearables := Wearables.get_curated_wearable_list(
 		avatar_data.get_body_shape(), avatar_data.get_wearables(), avatar_data.get_force_render()
 	)
@@ -359,6 +369,9 @@ func async_load_wearables():
 			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
 		)
 		await PromiseUtils.async_all(need_to_fetch_promise)
+		# Safety check: avatar may have been freed during async operations
+		if not is_instance_valid(wearable_loader) or not is_inside_tree():
+			return
 		# Use signal-based wearable loading with threaded ResourceLoader
 		await wearable_loader.async_load_wearables(
 			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
@@ -382,6 +395,10 @@ func async_load_wearables():
 	var has_own_head = false
 
 	for category in wearables_by_category:
+		# Safety check: avatar may have been freed during async operations
+		if not is_instance_valid(wearable_loader) or not is_inside_tree():
+			return
+
 		var wearable = wearables_by_category[category]
 
 		# Skip texture-based wearables (eyes, eyebrows, mouth)
