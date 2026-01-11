@@ -45,7 +45,6 @@ fn create_fallback_texture_entry() -> Gd<TextureEntry> {
     })
 }
 
-
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct TextureEntry {
