@@ -45,7 +45,7 @@ text = "View:"
 unique_name_in_owner = true
 layout_mode = 2
 item_count = 2
-selected = 0
+selected = 1
 popup/item_0/text = "Table"
 popup/item_0/id = 0
 popup/item_1/text = "Waterfall"
@@ -108,7 +108,7 @@ text = "Timeline:"
 unique_name_in_owner = true
 layout_mode = 2
 item_count = 3
-selected = 0
+selected = 2
 popup/item_0/text = "Fit"
 popup/item_0/id = 0
 popup/item_1/text = "Explore"
@@ -127,7 +127,6 @@ text = "Period:"
 [node name="OptionButton_Period" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row2"]
 unique_name_in_owner = true
 layout_mode = 2
-disabled = true
 item_count = 4
 selected = 1
 popup/item_0/text = "15s"
@@ -155,6 +154,7 @@ text = "0mb/s"
 
 [node name="Tree" type="Tree" parent="VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 columns = 7
@@ -164,7 +164,6 @@ hide_root = true
 
 [node name="WaterfallChart" type="Control" parent="VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2_waterfall")

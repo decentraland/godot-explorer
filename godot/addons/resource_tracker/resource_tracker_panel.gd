@@ -33,6 +33,12 @@ func _ready():
 	# Cache for tree items
 	resource_statuses = {}
 
+	# Apply default settings: VIEW=Waterfall, TIMELINE=Live, FILTER=None
+	# (UI defaults are set in .tscn, but we need to initialize the waterfall chart)
+	if waterfall_chart:
+		var period_ms = PERIOD_VALUES[period_button.get_selected_id()]
+		waterfall_chart.set_timeline_mode(TimelineMode.LIVE, period_ms)
+
 	# Update the resource status regularly
 	set_process(true)
 
