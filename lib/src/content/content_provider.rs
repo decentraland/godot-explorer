@@ -975,6 +975,13 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
+
+        // Validate file_hash is not empty to prevent "Is a directory" errors
+        if file_hash.is_empty() {
+            tracing::warn!("fetch_texture_by_hash: empty file_hash, returning rejected promise");
+            return Promise::from_rejected("Empty texture hash".to_string());
+        }
+
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
         }
@@ -1076,6 +1083,13 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
+
+        // Validate file_hash is not empty to prevent "Is a directory" errors
+        if file_hash.is_empty() {
+            tracing::warn!("fetch_texture_by_hash_original: empty file_hash, returning rejected promise");
+            return Promise::from_rejected("Empty texture hash".to_string());
+        }
+
         let cache_key = format!("{}_original", file_hash);
 
         if let Some(promise) = self.get_cached_promise(&cache_key) {
@@ -1157,6 +1171,8 @@ impl ContentProvider {
 
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
+        #[cfg(feature = "use_resource_tracking")]
+        let url_for_error = url.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id, "texture_url_original");
@@ -1167,7 +1183,7 @@ impl ContentProvider {
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
+                report_resource_error(&hash_id, &format!("url={} error={}", url_for_error, error));
             } else {
                 report_resource_loaded(&hash_id);
             }
@@ -1198,6 +1214,8 @@ impl ContentProvider {
 
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
+        #[cfg(feature = "use_resource_tracking")]
+        let url_for_error = url.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id, "texture_url");
@@ -1208,7 +1226,7 @@ impl ContentProvider {
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
+                report_resource_error(&hash_id, &format!("url={} error={}", url_for_error, error));
             } else {
                 report_resource_loaded(&hash_id);
             }
@@ -1434,11 +1452,25 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn clear_cache_folder(&self) {
+    pub fn clear_cache_folder(&mut self) -> Gd<Promise> {
+        // Clear the promises cache to prevent stale references to deleted files
+        let promises_count = self.promises.len();
+        self.promises.clear();
+        tracing::info!(
+            "clear_cache_folder: Clearing {} cached promises and disk cache",
+            promises_count
+        );
+
+        let (promise, get_promise) = Promise::make_to_async();
         let resource_provider = self.resource_provider.clone();
+
         TokioRuntime::spawn(async move {
             resource_provider.clear().await;
+            tracing::info!("clear_cache_folder: Disk cache cleared");
+            then_promise(get_promise, Ok(None));
         });
+
+        promise
     }
 
     #[func]

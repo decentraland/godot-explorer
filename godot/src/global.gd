@@ -161,6 +161,7 @@ func send_haptic_feedback() -> void:
 		Input.vibrate_handheld(20)
 
 
+# gdlint: ignore=async-function-name
 func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
@@ -186,6 +187,14 @@ func _ready():
 	if not cli.fake_deeplink.is_empty():
 		deep_link_url = cli.fake_deeplink
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(cli.fake_deeplink)
+		print(
+			"[DEEPLINK] Parsed fake deep_link_obj: location=",
+			deep_link_obj.location,
+			" realm=",
+			deep_link_obj.realm,
+			" preview=",
+			deep_link_obj.preview
+		)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -228,17 +237,8 @@ func _ready():
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
-	if cli.clear_cache_startup or true:  # REVERT THIS! TESTING!
-		printerr("# REVERT THIS! TESTING!")
-		prints("Clear cache startup!")
-		Global.content_provider.clear_cache_folder()
-
-	# Clear cache if local assets cache version changed
-	if config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION:
-		prints("Local assets cache version changed, clearing cache!")
-		Global.content_provider.clear_cache_folder()
-		config.local_assets_cache_version = Global.LOCAL_ASSETS_CACHE_VERSION
-		config.save_to_settings_file()
+	# Clear cache if needed (startup flag or version changed) - await completion
+	await _async_clear_cache_if_needed()
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -325,6 +325,26 @@ func _ready():
 		self.network_inspector.set_is_active(false)
 
 	DclMeshRenderer.init_primitive_shapes()
+
+
+## Async helper to clear cache and wait for completion before anything loads.
+func _async_clear_cache_if_needed() -> void:
+	var should_clear_startup = cli.clear_cache_startup
+	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
+
+	if should_clear_startup or version_changed:
+		if should_clear_startup:
+			prints("Clear cache startup!")
+		if version_changed:
+			prints("Local assets cache version changed, clearing cache!")
+
+		var clear_promise = Global.content_provider.clear_cache_folder()
+		await PromiseUtils.async_awaiter(clear_promise)
+		prints("Cache cleared successfully!")
+
+		if version_changed:
+			config.local_assets_cache_version = Global.LOCAL_ASSETS_CACHE_VERSION
+			config.save_to_settings_file()
 
 
 func set_raycast_debugger_enable(enable: bool):
