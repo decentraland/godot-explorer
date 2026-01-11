@@ -20,7 +20,7 @@ class Asset:
 	var token_id: String = ""
 	var image_url: String = ""
 	var background_color: Color
-	var texture: ImageTexture = null
+	var texture: Texture2D = null
 	var username: String = ""  # TODO: Need to fetch to users
 	var address: String = ""
 
