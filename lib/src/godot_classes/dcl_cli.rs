@@ -390,14 +390,23 @@ impl DclCli {
 #[godot_api]
 impl INode for DclCli {
     fn init(base: Base<Node>) -> Self {
-        let args = Os::singleton().get_cmdline_args();
+        // Get both cmdline_args and cmdline_user_args (args after --)
+        // This ensures we capture arguments regardless of how they're passed
+        let cmdline_args = Os::singleton().get_cmdline_args();
+        let user_args = Os::singleton().get_cmdline_user_args();
+
+        // Combine both sources of arguments
+        let mut combined_args: Vec<GString> = cmdline_args.to_vec();
+        for arg in user_args.to_vec() {
+            if !combined_args.contains(&arg) {
+                combined_args.push(arg);
+            }
+        }
+
         let mut args_map = HashMap::new();
 
-        // Add default arguments
-        //args_map.insert("--skip-lobby".to_string(), None); // debug
-
         // Parse command line arguments into a map
-        let args_vec = args.to_vec();
+        let args_vec = combined_args;
         let mut i = 0;
         while i < args_vec.len() {
             let arg = args_vec[i].to_string();
@@ -482,8 +491,21 @@ impl INode for DclCli {
         let fake_deeplink = args_map
             .get("--fake-deeplink")
             .and_then(|v| v.as_ref())
-            .map(GString::from)
+            .map(|s| {
+                // Strip surrounding quotes if present (Godot editor adds them from project.godot)
+                let trimmed = s.trim();
+                if (trimmed.starts_with('"') && trimmed.ends_with('"'))
+                    || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
+                {
+                    GString::from(&trimmed[1..trimmed.len() - 1])
+                } else {
+                    GString::from(s.as_str())
+                }
+            })
             .unwrap_or_default();
+
+        // Convert combined args back to PackedStringArray for storage
+        let args: PackedStringArray = args_vec.iter().cloned().collect();
 
         Self {
             _base: base,
