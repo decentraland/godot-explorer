@@ -238,17 +238,30 @@ impl From<&TextureUnion> for Option<DclTexture> {
 }
 
 impl DclTexture {
-    fn with_hash(&mut self, content_mapping_files: &ContentMappingAndUrlRef) {
+    /// Resolves the texture file path to a content hash.
+    /// Returns true if the hash was found or if the source is a URL (which doesn't need hash lookup).
+    /// Returns false if the hash lookup failed for a local file path.
+    fn with_hash(&mut self, content_mapping_files: &ContentMappingAndUrlRef) -> bool {
         if let DclSourceTex::Texture(file_path) = &mut self.source {
+            // HTTP URLs don't need hash lookup - they're used directly
+            if file_path.starts_with("http://") || file_path.starts_with("https://") {
+                return true;
+            }
+
             let content_hash = content_mapping_files.get_hash(file_path.as_str());
 
-            if content_hash.is_none() {
-                return;
-            }
             if let Some(content_hash) = content_hash {
                 *file_path = content_hash.to_string();
+                return true;
+            } else {
+                tracing::warn!(
+                    "DclTexture::with_hash: Failed to find hash for texture path: {}",
+                    file_path
+                );
+                return false;
             }
         }
+        true // Non-texture sources (Avatar, Video) don't need hash lookup
     }
 
     pub fn from_proto_with_hash(
@@ -258,8 +271,12 @@ impl DclTexture {
         let value: Option<DclTexture> = texture.as_ref()?.into();
 
         if let Some(mut value) = value {
-            value.with_hash(content_mapping_files);
-            Some(value)
+            if value.with_hash(content_mapping_files) {
+                Some(value)
+            } else {
+                // Hash lookup failed - return None to prevent invalid texture requests
+                None
+            }
         } else {
             None
         }
