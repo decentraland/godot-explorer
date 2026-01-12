@@ -29,6 +29,18 @@ const COOLDOWN_AFTER_UPGRADE: f64 = 300.0; // 5 minutes after upgrade (more cons
 const THERMAL_HIGH_DOWNGRADE_TIME: f64 = 30.0; // Seconds of HIGH thermal before downgrade
 const SAMPLE_INTERVAL: f64 = 1.0; // Sample frame time every second
 
+/// Thermal FPS cap timing constants (in seconds)
+const THERMAL_FPS_NORMAL_DURATION_FOR_UPGRADE: f64 = 120.0; // 2 minutes of Normal thermal before upgrading FPS cap
+const THERMAL_FPS_CHANGE_COOLDOWN: f64 = 60.0; // 1 minute cooldown between FPS cap changes
+
+/// Thermal FPS cap values
+/// These caps are applied based on thermal state and charging status
+/// The cap is a hard limit on FPS, independent of graphics profile
+const THERMAL_FPS_CAP_30: i32 = 30;
+const THERMAL_FPS_CAP_45: i32 = 45;
+const THERMAL_FPS_CAP_60: i32 = 60;
+const THERMAL_FPS_NO_CAP: i32 = 0; // 0 means no thermal cap (use user setting)
+
 /// Threshold constants based on frame time ratio to target
 /// If target is 33.3ms (30 FPS), these ratios determine thresholds
 const FRAME_TIME_DOWNGRADE_RATIO: f64 = 1.2; // Downgrade if frame time > target * 1.2
@@ -104,6 +116,22 @@ pub struct DclDynamicGraphicsManager {
 
     /// Current cooldown duration (varies based on whether last change was upgrade or downgrade)
     current_cooldown_duration: f64,
+
+    // === Thermal FPS Cap State ===
+    /// Current thermal FPS cap (0 = no cap, use user setting)
+    thermal_fps_cap: i32,
+
+    /// Timer tracking consecutive seconds of Normal thermal state
+    thermal_fps_normal_timer: f64,
+
+    /// Cooldown timer for FPS cap changes
+    thermal_fps_cooldown_timer: f64,
+
+    /// Whether device is currently charging
+    is_charging: bool,
+
+    /// Whether thermal FPS cap system is enabled (separate from profile management)
+    thermal_fps_cap_enabled: bool,
 }
 
 #[godot_api]
@@ -134,6 +162,12 @@ impl INode for DclDynamicGraphicsManager {
             viewport_rid: None,
             render_time_enabled: false,
             current_cooldown_duration: COOLDOWN_AFTER_DOWNGRADE,
+            // Thermal FPS cap state
+            thermal_fps_cap: THERMAL_FPS_NO_CAP,
+            thermal_fps_normal_timer: 0.0,
+            thermal_fps_cooldown_timer: 0.0,
+            is_charging: false,
+            thermal_fps_cap_enabled: true, // Enabled by default on mobile
         }
     }
 
@@ -165,6 +199,16 @@ impl INode for DclDynamicGraphicsManager {
     }
 
     fn process(&mut self, delta: f64) {
+        // Update thermal state and charging state (always, even when profile management is disabled)
+        self.update_thermal_state(delta);
+        self.update_charging_state();
+
+        // Process thermal FPS cap (independent of profile management state)
+        if self.thermal_fps_cap_enabled {
+            self.process_thermal_fps_cap(delta);
+        }
+
+        // Profile management is disabled, skip the rest
         if self.state == ManagerState::Disabled {
             return;
         }
@@ -190,9 +234,6 @@ impl INode for DclDynamicGraphicsManager {
             self.collect_frame_time_sample();
         }
 
-        // Update thermal state
-        self.update_thermal_state(delta);
-
         // Process state machine
         match self.state {
             ManagerState::Disabled => {}
@@ -208,6 +249,11 @@ impl DclDynamicGraphicsManager {
     /// Signal emitted when profile should change. GDScript handles the actual change.
     #[signal]
     fn profile_change_requested(new_profile: i32);
+
+    /// Signal emitted when thermal FPS cap changes. GDScript handles applying the cap.
+    /// fps_cap: The new FPS cap value (30, 45, 60) or 0 for no cap (use user setting)
+    #[signal]
+    fn thermal_fps_cap_changed(fps_cap: i32);
 
     /// Initialize the manager with config values. Call this from GDScript after Global is ready.
     /// fps_limit: The FPS limit mode (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
@@ -407,6 +453,62 @@ impl DclDynamicGraphicsManager {
             ThermalState::High => "high".into(),
             ThermalState::Critical => "critical".into(),
         }
+    }
+
+    // === Thermal FPS Cap Public API ===
+
+    /// Enable or disable thermal FPS cap system
+    #[func]
+    pub fn set_thermal_fps_cap_enabled(&mut self, enabled: bool) {
+        let was_enabled = self.thermal_fps_cap_enabled;
+        self.thermal_fps_cap_enabled = enabled;
+
+        if !enabled && was_enabled && self.thermal_fps_cap != THERMAL_FPS_NO_CAP {
+            // Reset to no cap when disabled
+            self.apply_thermal_fps_cap(THERMAL_FPS_NO_CAP, "disabled by user");
+        }
+
+        godot_print!(
+            "[DynamicGraphics] thermal FPS cap enabled={}",
+            self.thermal_fps_cap_enabled
+        );
+    }
+
+    /// Check if thermal FPS cap system is enabled
+    #[func]
+    pub fn is_thermal_fps_cap_enabled(&self) -> bool {
+        self.thermal_fps_cap_enabled
+    }
+
+    /// Get current thermal FPS cap value (0 = no cap)
+    #[func]
+    pub fn get_thermal_fps_cap(&self) -> i32 {
+        self.thermal_fps_cap
+    }
+
+    /// Get current charging state
+    #[func]
+    pub fn is_device_charging(&self) -> bool {
+        self.is_charging
+    }
+
+    /// Get thermal FPS cap debug info
+    #[func]
+    pub fn get_thermal_fps_cap_debug_info(&self) -> GString {
+        GString::from(
+            format!(
+                "thermal_fps_cap={}, normal_timer={:.1}s, cooldown={:.1}s, charging={}",
+                if self.thermal_fps_cap == THERMAL_FPS_NO_CAP {
+                    "none".to_string()
+                } else {
+                    format!("{}fps", self.thermal_fps_cap)
+                },
+                self.thermal_fps_normal_timer,
+                self.thermal_fps_cooldown_timer,
+                self.is_charging
+            )
+            .as_str(),
+        )
     }
 }
 
@@ -713,5 +815,155 @@ impl DclDynamicGraphicsManager {
         self.frame_count = 0;
         self.thermal_high_timer = 0.0;
         self.sample_timer = 0.0;
+    }
+
+    // === Thermal FPS Cap Internal Functions ===
+
+    /// Update charging state from platform
+    fn update_charging_state(&mut self) {
+        let charging_string = self.get_charging_state_from_platform();
+        self.is_charging = charging_string == "charging";
+    }
+
+    /// Get charging state from platform plugins
+    fn get_charging_state_from_platform(&self) -> String {
+        if self.has_ios_plugin {
+            return DclIosPlugin::get_charging_state().to_string();
+        }
+        if self.has_android_plugin {
+            return DclAndroidPlugin::get_charging_state().to_string();
+        }
+        "unknown".to_string()
+    }
+
+    /// Process thermal FPS cap logic
+    /// This runs independently of the profile management state machine
+    fn process_thermal_fps_cap(&mut self, delta: f64) {
+        // Update cooldown timer
+        if self.thermal_fps_cooldown_timer > 0.0 {
+            self.thermal_fps_cooldown_timer -= delta;
+            if self.thermal_fps_cooldown_timer < 0.0 {
+                self.thermal_fps_cooldown_timer = 0.0;
+            }
+        }
+
+        // Calculate the target FPS cap based on current thermal state and charging
+        let target_cap = self.calculate_target_fps_cap();
+
+        // Check if we need to change the cap
+        if target_cap != self.thermal_fps_cap {
+            // Determine if this is a downgrade (more restrictive) or upgrade (less restrictive)
+            let is_downgrade = self.is_fps_cap_downgrade(self.thermal_fps_cap, target_cap);
+
+            if is_downgrade {
+                // Downgrade immediately (no cooldown check for downgrade)
+                self.apply_thermal_fps_cap(target_cap, "thermal downgrade");
+                self.thermal_fps_cooldown_timer = THERMAL_FPS_CHANGE_COOLDOWN;
+                self.thermal_fps_normal_timer = 0.0; // Reset normal timer on downgrade
+            } else {
+                // Upgrade requires sustained Normal thermal and cooldown to be clear
+                if self.thermal_fps_cooldown_timer <= 0.0 {
+                    // Check if we've had enough time at Normal thermal to upgrade
+                    if self.thermal_state == ThermalState::Normal {
+                        self.thermal_fps_normal_timer += delta;
+
+                        if self.thermal_fps_normal_timer >= THERMAL_FPS_NORMAL_DURATION_FOR_UPGRADE
+                        {
+                            self.apply_thermal_fps_cap(
+                                target_cap,
+                                "thermal upgrade after stable period",
+                            );
+                            self.thermal_fps_cooldown_timer = THERMAL_FPS_CHANGE_COOLDOWN;
+                            self.thermal_fps_normal_timer = 0.0;
+                        }
+                    } else {
+                        // Not Normal thermal, reset the timer
+                        self.thermal_fps_normal_timer = 0.0;
+                    }
+                }
+            }
+        } else {
+            // Already at target cap
+            // Update normal timer if at Normal thermal
+            if self.thermal_state == ThermalState::Normal {
+                self.thermal_fps_normal_timer += delta;
+            } else {
+                self.thermal_fps_normal_timer = 0.0;
+            }
+        }
+    }
+
+    /// Calculate the target FPS cap based on thermal state and charging
+    /// Returns the FPS cap value, or THERMAL_FPS_NO_CAP (0) for no cap
+    ///
+    /// FPS Cap Rules:
+    /// | Thermal State | Charging | Max FPS Cap    |
+    /// |---------------|----------|----------------|
+    /// | Normal        | No       | No Limit       |
+    /// | Normal        | Yes      | 60 FPS         |
+    /// | High          | No       | 45 FPS         |
+    /// | High          | Yes      | 30 FPS         |
+    /// | Critical      | Any      | 30 FPS         |
+    fn calculate_target_fps_cap(&self) -> i32 {
+        match self.thermal_state {
+            ThermalState::Normal => {
+                if self.is_charging {
+                    THERMAL_FPS_CAP_60
+                } else {
+                    THERMAL_FPS_NO_CAP // No limit
+                }
+            }
+            ThermalState::High => {
+                if self.is_charging {
+                    THERMAL_FPS_CAP_30
+                } else {
+                    THERMAL_FPS_CAP_45
+                }
+            }
+            ThermalState::Critical => THERMAL_FPS_CAP_30,
+        }
+    }
+
+    /// Check if changing from current_cap to new_cap is a downgrade (more restrictive)
+    /// A lower FPS cap or going from no cap to any cap is a downgrade
+    fn is_fps_cap_downgrade(&self, current_cap: i32, new_cap: i32) -> bool {
+        // No cap (0) is the least restrictive
+        if current_cap == THERMAL_FPS_NO_CAP {
+            // Going from no cap to any cap is a downgrade
+            return new_cap != THERMAL_FPS_NO_CAP;
+        }
+        if new_cap == THERMAL_FPS_NO_CAP {
+            // Going from any cap to no cap is an upgrade
+            return false;
+        }
+        // Lower FPS cap value = more restrictive = downgrade
+        new_cap < current_cap
+    }
+
+    /// Apply a new thermal FPS cap
+    fn apply_thermal_fps_cap(&mut self, new_cap: i32, reason: &str) {
+        let old_cap = self.thermal_fps_cap;
+        self.thermal_fps_cap = new_cap;
+
+        // Emit signal for GDScript to apply the cap
+        self.base_mut()
+            .emit_signal("thermal_fps_cap_changed", &[new_cap.to_variant()]);
+
+        godot_print!(
+            "[DynamicGraphics] Thermal FPS cap: {} -> {} (reason: {}, charging: {}, thermal: {:?})",
+            if old_cap == THERMAL_FPS_NO_CAP {
+                "none".to_string()
+            } else {
+                format!("{}fps", old_cap)
+            },
+            if new_cap == THERMAL_FPS_NO_CAP {
+                "none".to_string()
+            } else {
+                format!("{}fps", new_cap)
+            },
+            reason,
+            self.is_charging,
+            self.thermal_state
+        );
     }
 }

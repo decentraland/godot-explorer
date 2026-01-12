@@ -105,34 +105,64 @@ static func apply_window_config() -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
 
+## Convert FpsLimitMode enum to actual FPS value (0 = unlimited)
+static func fps_limit_mode_to_fps(mode: int) -> int:
+	match mode:
+		ConfigData.FpsLimitMode.VSYNC:
+			return 0  # VSYNC handles limiting
+		ConfigData.FpsLimitMode.NO_LIMIT:
+			return 0  # No limit
+		ConfigData.FpsLimitMode.FPS_18:
+			return 18
+		ConfigData.FpsLimitMode.FPS_30:
+			return 30
+		ConfigData.FpsLimitMode.FPS_60:
+			return 60
+		ConfigData.FpsLimitMode.FPS_120:
+			return 120
+		_:
+			return 30  # Default to 30
+
+
 static func apply_fps_limit():
+	# Apply FPS limit without considering thermal cap (legacy function)
+	apply_fps_limit_with_thermal_cap(Global.get_config().limit_fps, 0)
+
+
+## Apply FPS limit considering both user setting and thermal cap
+## thermal_fps_cap: 0 = no thermal cap, otherwise the max FPS allowed by thermal state
+static func apply_fps_limit_with_thermal_cap(fps_limit_mode: int, thermal_fps_cap: int):
+	var user_fps := fps_limit_mode_to_fps(fps_limit_mode)
+
+	# Determine effective FPS (use more restrictive of user setting and thermal cap)
+	var effective_fps: int = user_fps
+	if thermal_fps_cap > 0:
+		if user_fps == 0:
+			# User has no limit, use thermal cap
+			effective_fps = thermal_fps_cap
+		else:
+			# Use the more restrictive (lower) of the two
+			effective_fps = mini(user_fps, thermal_fps_cap)
+
 	# Physics FPS matches render FPS but capped at 60 (default 30)
 	var physics_fps := 30
-	match Global.get_config().limit_fps:
-		ConfigData.FpsLimitMode.VSYNC:
-			Engine.max_fps = 0
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
-			physics_fps = 60  # Cap at 60 for vsync (could be higher)
-		ConfigData.FpsLimitMode.NO_LIMIT:
-			Engine.max_fps = 0
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-			physics_fps = 60  # Cap at 60 for unlimited
-		ConfigData.FpsLimitMode.FPS_18:
-			Engine.max_fps = 18
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-			physics_fps = 18
-		ConfigData.FpsLimitMode.FPS_30:
-			Engine.max_fps = 30
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-			physics_fps = 30
-		ConfigData.FpsLimitMode.FPS_60:
-			Engine.max_fps = 60
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-			physics_fps = 60
-		ConfigData.FpsLimitMode.FPS_120:
-			Engine.max_fps = 120
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-			physics_fps = 60  # Cap physics at 60
+
+	# Handle VSYNC specially
+	if fps_limit_mode == ConfigData.FpsLimitMode.VSYNC and thermal_fps_cap == 0:
+		# Pure VSYNC mode (no thermal cap)
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+		physics_fps = 60  # Cap at 60 for vsync
+	elif effective_fps == 0:
+		# No limit (thermal cap of 0 and user has no limit)
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		physics_fps = 60  # Cap at 60 for unlimited
+	else:
+		# Apply the effective FPS limit
+		Engine.max_fps = effective_fps
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		physics_fps = mini(effective_fps, 60)  # Physics capped at 60
 
 	Engine.physics_ticks_per_second = physics_fps
 
