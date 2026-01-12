@@ -6,6 +6,7 @@ uniform sampler2D alpha_texture : filter_linear_mipmap, repeat_enable;
 uniform vec4 diffuse_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform vec2 uv_offset = vec2(0.0, 0.0);
 uniform vec2 uv_scale = vec2(1.0, 1.0);
+uniform float alpha_test : hint_range(0.0, 1.0) = 0.5;
 
 void fragment() {
     vec2 uv = UV * uv_scale + uv_offset;
@@ -13,4 +14,5 @@ void fragment() {
 
     ALBEDO = albedo.rgb;
     ALPHA = texture(alpha_texture, uv).r;
+    ALPHA_SCISSOR_THRESHOLD = alpha_test;
 }

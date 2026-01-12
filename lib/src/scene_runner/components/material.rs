@@ -426,6 +426,9 @@ fn apply_unlit_shader_properties(shader_mat: &mut Gd<ShaderMaterial>, unlit: &Dc
         shader_mat.set_shader_parameter("uv_offset", &Vector2::new(0.0, 0.0).to_variant());
         shader_mat.set_shader_parameter("uv_scale", &Vector2::new(1.0, 1.0).to_variant());
     }
+
+    // Set alpha test threshold
+    shader_mat.set_shader_parameter("alpha_test", &unlit.alpha_test.0.to_variant());
 }
 
 /// Clear textures from a material that are no longer present in the new material definition.
