@@ -416,7 +416,6 @@ mouse_filter = 2
 script = ExtResource("1_il1fe")
 
 [node name="Button_Press" parent="." instance=ExtResource("1_81cx4")]
-unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -468,7 +467,6 @@ pivot_offset = Vector2(232.5, 0)
 mouse_filter = 2
 
 [node name="Button_Jump" parent="Button_Press/Control/HBoxContainer" instance=ExtResource("1_81cx4")]
-unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5

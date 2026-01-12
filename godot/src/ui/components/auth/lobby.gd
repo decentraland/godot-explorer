@@ -20,18 +20,13 @@ var _playing: String
 
 @onready var control_main = %Main
 
+@onready var dcl_line_edit: VBoxContainer = %DclLineEdit
+
 @onready var control_loading = %Loading
 @onready var control_signin = %SignIn
 @onready var control_start = %Start
 @onready var control_backpack = %BackpackContainer
 @onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
-@onready var label_length: Label = %Label_Length
-@onready var label_error: RichTextLabel = %Label_Error
-@onready var label_advise: Label = %Label_Advise
-
-@onready var panel_container_error_border: PanelContainer = %PanelContainer_ErrorBorder
-
-@onready var line_edit_choose_name: LineEdit = %LineEdit_ChooseName
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
@@ -94,7 +89,6 @@ func show_avatar_naming_screen():
 	choose_name_head.show()
 	choose_name_footer.show()
 	show_panel(control_restore_and_choose_name)
-	_check_button_finish()
 
 
 func show_loading_screen():
@@ -307,12 +301,12 @@ func _on_button_start_pressed():
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
 	Global.metrics.track_click_button("next", current_screen_name, "")
-	if line_edit_choose_name.text.is_empty():
+	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
 	avatar_preview.hide()
 	show_loading_screen()
-	current_profile.set_name(line_edit_choose_name.text)
+	current_profile.set_name(dcl_line_edit.line_edit.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
@@ -325,8 +319,7 @@ func _on_button_next_pressed():
 
 
 func _on_button_random_name_pressed():
-	line_edit_choose_name.set_text_value(RandomGeneratorUtil.generate_unique_name())
-	_check_button_finish()
+	dcl_line_edit.set_text_value(RandomGeneratorUtil.generate_unique_name())
 
 
 func _on_button_go_to_sign_in_pressed():
@@ -377,61 +370,31 @@ func _on_button_jump_in_pressed():
 	await async_close_sign_in()
 
 
-func _on_check_box_terms_and_privacy_toggled(_toggled_on):
-	_check_button_finish()
+func _on_avatar_preview_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if not avatar_preview.avatar.emote_controller.is_playing():
+				if dcl_line_edit.line_edit.text.contains("dancer"):
+					avatar_preview.avatar.emote_controller.async_play_emote("dance")
+				else:
+					avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
 
-func _on_line_edit_choose_name_text_changed(_new_text):
-	_check_button_finish()
+func _on_deep_link_received():
+	if ready_for_redirect_by_deep_link:
+		go_to_explorer.call_deferred()
 
 
-func _check_button_finish():
-	var color: Color = Color.WHITE
-	label_length.text = (
-		str(line_edit_choose_name.text.length()) + "/" + str(line_edit_choose_name.character_limit)
-	)
-	if line_edit_choose_name.text.length() > line_edit_choose_name.character_limit:
-		color = Color.RED
-	else:
-		color = Color.WHITE
-	label_length.label_settings.font_color = color
-
-	if line_edit_choose_name.error:
-		label_error.show()
-		label_advise.hide()
-		label_error.text = line_edit_choose_name.error_message
-		button_next.disabled = true
+func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
+	button_next.disabled = dcl_line_edit.error
+	if dcl_line_edit.error:
 		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
 			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
 			_playing = "shrug"
-		panel_container_error_border.self_modulate = Color.RED
 	else:
-		label_error.hide()
-		label_advise.show()
-		button_next.disabled = line_edit_choose_name.text.is_empty()
 		if (
 			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
 			or _playing != "fistpump"
 		):
 			avatar_preview.avatar.emote_controller.async_play_emote("fistpump")
 			_playing = "fistpump"
-		panel_container_error_border.self_modulate = Color.TRANSPARENT
-
-
-func _on_avatar_preview_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			if not avatar_preview.avatar.emote_controller.is_playing():
-				if line_edit_choose_name.text.contains("dancer"):
-					avatar_preview.avatar.emote_controller.async_play_emote("dance")
-				else:
-					avatar_preview.avatar.emote_controller.async_play_emote("wave")
-
-
-func _on_line_edit_choose_name_dcl_line_edit_changed() -> void:
-	_check_button_finish()
-
-
-func _on_deep_link_received():
-	if ready_for_redirect_by_deep_link:
-		go_to_explorer.call_deferred()

@@ -1,9 +1,8 @@
-[gd_scene load_steps=9 format=3 uid="uid://bndmt8hl1n5ke"]
+[gd_scene load_steps=7 format=3 uid="uid://bndmt8hl1n5ke"]
 
 [ext_resource type="Script" uid="uid://b0oiqklpfigfm" path="res://src/ui/components/change_nick_popup.gd" id="1_3hx3u"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="1_v1ppy"]
-[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="3_r8goi"]
-[ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/dcl_text_edit.tscn" id="3_xy6kt"]
+[ext_resource type="PackedScene" uid="uid://fc5fxcmfp4pq" path="res://src/ui/components/dcl_line_edit.tscn" id="3_v0a8f"]
 [ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="4_xy6kt"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="5_r18gj"]
 
@@ -13,11 +12,6 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
-
-[sub_resource type="LabelSettings" id="LabelSettings_usboe"]
-font = ExtResource("3_r8goi")
-font_size = 14
-font_color = Color(0.687215, 0.687215, 0.687215, 1)
 
 [node name="ChangeNickPopup" type="ColorRect"]
 anchors_preset = 15
@@ -58,8 +52,9 @@ theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
+custom_minimum_size = Vector2(0, 303)
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 25
 
 [node name="Label" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -67,44 +62,20 @@ text = "Edit Username"
 label_settings = ExtResource("1_v1ppy")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 
-[node name="Control" type="Control" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-
-[node name="DclTextEdit_NewNick" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control" instance=ExtResource("3_xy6kt")]
-unique_name_in_owner = true
-layout_mode = 0
-offset_top = 4.0
-offset_right = 390.0
-offset_bottom = 71.0
-place_holder = "Type your new name here..."
-is_optional = false
-
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 18
-
-[node name="Label_Tag" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/MarginContainer"]
+[node name="DclLineEdit" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer" instance=ExtResource("3_v0a8f")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 0
-text = "#####"
-label_settings = SubResource("LabelSettings_usboe")
-horizontal_alignment = 2
-vertical_alignment = 1
+advice = "*Avoid using your real name for safety"
+hint = "Username"
+show_tag = false
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 15
 alignment = 2
 
@@ -113,6 +84,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 0
 theme_type_variation = &"DarkButton"
 text = "CANCEL"
 
@@ -121,6 +93,8 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 0
+focus_mode = 0
 theme = ExtResource("5_r18gj")
 text = "SAVE"
 
@@ -163,7 +137,7 @@ text = "CLAIM NAME"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/DclTextEdit_NewNick" to="." method="_on_dcl_text_edit_new_nick_dcl_text_edit_changed"]
+[connection signal="dcl_line_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/DclLineEdit" to="." method="_on_dcl_line_edit_dcl_line_edit_changed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Save" to="." method="_on_button_save_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer/Button_ClaimName" to="." method="_on_button_claim_name_pressed"]
