@@ -267,7 +267,7 @@ func load_from_settings_file():
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
 
-	self.limit_fps = settings_file.get_value("config", "fps_limit", data_default.limit_fps)
+	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(
 		"config", "shadow_quality", data_default.shadow_quality
@@ -378,7 +378,7 @@ func save_to_settings_file():
 
 	var new_settings_file: ConfigFile = ConfigFile.new()
 	new_settings_file.set_value("config", "process_tick_quota_ms", self.process_tick_quota_ms)
-	new_settings_file.set_value("config", "fps_limit", self.limit_fps)
+	new_settings_file.set_value("config", "limit_fps", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)
 	new_settings_file.set_value("config", "shadow_quality", self.shadow_quality)
 	new_settings_file.set_value("config", "bloom_quality", self.bloom_quality)
