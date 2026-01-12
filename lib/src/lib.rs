@@ -18,6 +18,7 @@ pub mod av;
 pub mod avatars;
 pub mod comms;
 pub mod content;
+#[cfg(feature = "use_converter_server")]
 pub mod converter_server;
 pub mod dcl;
 pub mod godot_classes;

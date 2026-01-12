@@ -683,9 +683,15 @@ fn main() -> Result<(), anyhow::Error> {
             let port = sm.value_of("port").unwrap_or("3000");
             let cache_folder = sm.value_of("cache-folder").unwrap_or("./converter-cache");
 
-            // Build the library first
+            // Build the library first with the converter server feature enabled
             print_message(MessageType::Step, "Building Rust library for converter server...");
-            run::build(sm.is_present("release"), false, vec![], None, None)?;
+            run::build(
+                sm.is_present("release"),
+                false,
+                vec!["--features", "use_converter_server"],
+                None,
+                None,
+            )?;
 
             // Launch Godot in headless mode with converter server args
             print_message(
