@@ -10,7 +10,7 @@ pub struct PromiseError {
 #[godot_api]
 impl PromiseError {
     #[func]
-    fn get_error(&self) -> GString {
+    pub fn get_error(&self) -> GString {
         self.error_description.clone()
     }
 }

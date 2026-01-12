@@ -4,18 +4,19 @@
  * Runs an HTTP server that accepts file uploads and converts them to
  * optimized Godot resources for mobile platforms.
  *
- * Reuses the existing content_provider pipeline for GLTF and texture conversion.
+ * Uses the full ContentProvider infrastructure with promises, threading, and caching.
  */
 
+use godot::classes::Os;
+use godot::obj::InstanceId;
 use godot::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use tokio::sync::Semaphore;
 
-use crate::content::content_provider::SceneGltfContext;
-use crate::content::resource_provider::ResourceProvider;
-use crate::godot_classes::dcl_config::TextureQuality;
+use crate::content::content_provider::ContentProvider;
+use crate::godot_classes::promise::Promise;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 use super::handlers;
@@ -40,9 +41,10 @@ pub struct ConverterState {
     pub cache_folder: PathBuf,
     pub assets: RwLock<HashMap<String, CachedAsset>>,
     pub port: u16,
-    pub resource_provider: Arc<ResourceProvider>,
+    /// InstanceId of the ContentProvider node (for accessing from async handlers)
+    pub content_provider_id: RwLock<Option<InstanceId>>,
+    /// Semaphore for Godot thread safety
     pub godot_single_thread: Arc<Semaphore>,
-    pub texture_quality: TextureQuality,
 }
 
 impl ConverterState {
@@ -52,22 +54,12 @@ impl ConverterState {
             std::fs::create_dir_all(&cache_folder).ok();
         }
 
-        let cache_folder_str = cache_folder.to_string_lossy().to_string();
-
-        // Create ResourceProvider for managing downloads and file caching
-        let resource_provider = Arc::new(ResourceProvider::new(
-            &cache_folder_str,
-            2048 * 1000 * 1000, // 2GB cache
-            32,                 // Max concurrent downloads
-        ));
-
         Self {
             cache_folder,
             assets: RwLock::new(HashMap::new()),
             port,
-            resource_provider,
+            content_provider_id: RwLock::new(None),
             godot_single_thread: Arc::new(Semaphore::new(1)),
-            texture_quality: TextureQuality::Low, // Mobile-optimized by default
         }
     }
 
@@ -81,14 +73,99 @@ impl ConverterState {
         }
     }
 
-    /// Create a SceneGltfContext for use with the GLTF pipeline
-    pub fn create_gltf_context(&self) -> SceneGltfContext {
-        SceneGltfContext {
-            content_folder: Arc::new(self.cache_folder.to_string_lossy().to_string()),
-            resource_provider: self.resource_provider.clone(),
-            godot_single_thread: self.godot_single_thread.clone(),
-            texture_quality: self.texture_quality.clone(),
+    /// Get the ContentProvider instance from its stored InstanceId
+    pub fn get_content_provider(&self) -> Option<Gd<ContentProvider>> {
+        let id = self.content_provider_id.read().ok()?.as_ref()?.clone();
+        Gd::<ContentProvider>::try_from_instance_id(id).ok()
+    }
+
+    /// Set the ContentProvider InstanceId
+    pub fn set_content_provider(&self, provider: &Gd<ContentProvider>) {
+        if let Ok(mut id) = self.content_provider_id.write() {
+            *id = Some(provider.instance_id());
         }
+    }
+}
+
+/// Result of waiting for a promise - uses primitive types that are Send
+pub enum PromiseResult {
+    /// Promise resolved successfully with serialized data
+    Resolved(String),
+    /// Promise rejected with error message
+    Rejected(String),
+}
+
+/// Wait for a Promise to resolve or reject
+/// Takes InstanceId instead of Gd<Promise> to be Send-safe
+/// Returns the result as a PromiseResult enum with serialized data
+pub async fn wait_for_promise(
+    promise_id: InstanceId,
+    semaphore: Arc<Semaphore>,
+) -> Result<PromiseResult, String> {
+    use crate::content::thread_safety::set_thread_safety_checks_enabled;
+    use crate::godot_classes::promise::PromiseError;
+
+    loop {
+        // Acquire semaphore to safely access Godot API
+        let _guard = semaphore
+            .clone()
+            .acquire_owned()
+            .await
+            .map_err(|e| format!("Semaphore error: {}", e))?;
+
+        set_thread_safety_checks_enabled(false);
+
+        // Access Godot types in a block that ends before await
+        let poll_result: Result<Option<PromiseResult>, String> = (|| {
+            // Recreate the Gd<Promise> from InstanceId each iteration
+            let promise = match Gd::<Promise>::try_from_instance_id(promise_id) {
+                Ok(p) => p,
+                Err(_) => {
+                    return Err("Promise no longer valid".to_string());
+                }
+            };
+
+            let promise_ref = promise.bind();
+            let is_resolved = promise_ref.is_resolved();
+            let is_rejected = promise_ref.is_rejected();
+
+            if is_resolved {
+                let data = promise_ref.get_data();
+
+                // Convert Variant to String while we have thread safety disabled
+                let data_str = data.to_string();
+                let error_str = if is_rejected {
+                    match data.try_to::<Gd<PromiseError>>() {
+                        Ok(err) => err.bind().get_error().to_string(),
+                        Err(_) => "Unknown error".to_string(),
+                    }
+                } else {
+                    String::new()
+                };
+
+                if is_rejected {
+                    return Ok(Some(PromiseResult::Rejected(error_str)));
+                }
+                return Ok(Some(PromiseResult::Resolved(data_str)));
+            }
+
+            Ok(None) // Not yet resolved
+        })();
+
+        set_thread_safety_checks_enabled(true);
+        drop(_guard);
+
+        // Now check the result without holding any Godot types
+        match poll_result {
+            Err(e) => return Err(e),
+            Ok(Some(result)) => return Ok(result),
+            Ok(None) => {
+                // Not resolved yet, continue polling
+            }
+        }
+
+        // Small delay before checking again
+        tokio::time::sleep(tokio::time::Duration::from_millis(16)).await;
     }
 }
 
@@ -105,6 +182,7 @@ pub struct ConverterServer {
     cache_folder: GString,
 
     state: Option<Arc<ConverterState>>,
+    content_provider: Option<Gd<ContentProvider>>,
     running: bool,
 }
 
@@ -112,7 +190,7 @@ pub struct ConverterServer {
 impl INode for ConverterServer {
     fn ready(&mut self) {
         // Check command line args for converter server mode
-        let args = godot::classes::Os::singleton().get_cmdline_args();
+        let args = Os::singleton().get_cmdline_args();
         let args: Vec<String> = args.to_vec().iter().map(|s| s.to_string()).collect();
 
         let mut is_converter_mode = false;
@@ -164,14 +242,25 @@ impl ConverterServer {
         }
 
         let cache_path = if self.cache_folder.to_string().starts_with("user://") {
-            let user_path = godot::classes::Os::singleton().get_user_data_dir();
+            let user_path = Os::singleton().get_user_data_dir();
             PathBuf::from(user_path.to_string())
                 .join(self.cache_folder.to_string().trim_start_matches("user://"))
         } else {
             PathBuf::from(self.cache_folder.to_string())
         };
 
+        // Create state first
         let state = Arc::new(ConverterState::new(cache_path, self.port));
+
+        // Create ContentProvider as a child node
+        let content_provider = ContentProvider::new_alloc();
+        self.base_mut()
+            .add_child(&content_provider.clone().upcast::<Node>());
+
+        // Store ContentProvider's InstanceId in state
+        state.set_content_provider(&content_provider);
+        self.content_provider = Some(content_provider);
+
         self.state = Some(state.clone());
 
         let port = self.port;
@@ -203,12 +292,22 @@ impl ConverterServer {
             tracing::info!("Converter server stopped");
             self.running = false;
         }
+        // Remove ContentProvider child
+        if let Some(mut content_provider) = self.content_provider.take() {
+            content_provider.queue_free();
+        }
         self.state = None;
     }
 
     #[func]
     pub fn is_running(&self) -> bool {
         self.running
+    }
+
+    /// Get the ContentProvider instance for conversion operations
+    #[func]
+    pub fn get_content_provider(&self) -> Option<Gd<ContentProvider>> {
+        self.content_provider.clone()
     }
 }
 
