@@ -308,7 +308,10 @@ pub fn apply_dcl_material_properties(
 
             godot_material.set_shading_mode(ShadingMode::UNSHADED);
             godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
-            godot_material.set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
+            // Unity ignores diffuse_color alpha for unlit materials, force alpha to 1.0
+            let mut albedo_color = unlit.diffuse_color.0.to_godot().linear_to_srgb();
+            albedo_color.a = 1.0;
+            godot_material.set_albedo(albedo_color);
 
             // Apply UV offset/tiling from main texture (only main texture supports this)
             if let Some(texture) = &unlit.texture {
@@ -329,10 +332,8 @@ pub fn apply_dcl_material_properties(
             }
 
             // Handle transparency for unlit materials
-            if unlit.alpha_texture.is_some()
-                || unlit.diffuse_color.0.a < 1.0
-                || unlit.texture.is_some()
-            {
+            // Note: Unity ignores diffuse_color alpha for unlit materials
+            if unlit.alpha_texture.is_some() || unlit.texture.is_some() {
                 // Use alpha blend for smooth transparency
                 godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
             } else {
@@ -408,8 +409,9 @@ pub fn apply_dcl_material_properties(
 
 /// Apply DCL unlit material properties to a ShaderMaterial.
 fn apply_unlit_shader_properties(shader_mat: &mut Gd<ShaderMaterial>, unlit: &DclUnlitMaterial) {
-    // Set diffuse color
-    let color = unlit.diffuse_color.0.to_godot().linear_to_srgb();
+    // Set diffuse color (Unity ignores alpha for unlit, shader only uses .rgb)
+    let mut color = unlit.diffuse_color.0.to_godot();
+    color.a = 1.0;
     shader_mat.set_shader_parameter("diffuse_color", &color.to_variant());
 
     // Set UV offset and scale from main texture
@@ -426,9 +428,6 @@ fn apply_unlit_shader_properties(shader_mat: &mut Gd<ShaderMaterial>, unlit: &Dc
         shader_mat.set_shader_parameter("uv_offset", &Vector2::new(0.0, 0.0).to_variant());
         shader_mat.set_shader_parameter("uv_scale", &Vector2::new(1.0, 1.0).to_variant());
     }
-
-    // Set alpha test threshold
-    shader_mat.set_shader_parameter("alpha_test", &unlit.alpha_test.0.to_variant());
 }
 
 /// Clear textures from a material that are no longer present in the new material definition.
