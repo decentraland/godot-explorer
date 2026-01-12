@@ -3,12 +3,16 @@
  *
  * Accepts GLB/GLTF file uploads and converts them to Godot .scn files
  * with mobile optimizations (ETC2 compression).
+ *
+ * Uses the existing content pipeline from content_provider.
  */
 
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::content::content_mapping::ContentMappingAndUrl;
+use crate::content::gltf::load_and_save_scene_gltf;
 use crate::converter_server::server::{AssetType, CachedAsset, ConverterState};
 
 use super::json_success_response;
@@ -19,11 +23,8 @@ pub async fn handle(
     headers: &HashMap<String, String>,
     body: &[u8],
 ) -> String {
-    // For now, we'll implement a simple version that saves the file
-    // and returns a hash. Full GLTF conversion will require Godot main thread access.
-
     if body.is_empty() {
-        return super::json_error_response(400, "Empty request body");
+        return json_error_response(400, "Empty request body");
     }
 
     // Compute hash of the content
@@ -45,40 +46,64 @@ pub async fn handle(
         .cloned()
         .unwrap_or_else(|| format!("{}.glb", &hash[..8]));
 
-    // Save the uploaded file
-    let glb_path = state.cache_folder.join(format!("{}.glb", hash));
+    // Save the uploaded file to cache
+    let glb_path = state.cache_folder.join(&hash);
     if let Err(e) = std::fs::write(&glb_path, body) {
-        return super::json_error_response(500, &format!("Failed to save file: {}", e));
+        return json_error_response(500, &format!("Failed to save file: {}", e));
     }
 
-    // TODO: Queue conversion on Godot main thread
-    // For now, we'll just save the GLB and return success
-    // The actual conversion needs to happen on the Godot main thread using:
-    // - GltfDocument for loading
-    // - create_scene_colliders for colliders
-    // - save_node_as_scene for saving
+    // Create content mapping for the uploaded file
+    // For a single GLB file with embedded textures, we only need the main file mapping
+    let mut content_mapping = ContentMappingAndUrl::new();
+    content_mapping.base_url = format!("file://{}/", state.cache_folder.to_string_lossy());
 
-    // Create a placeholder .scn path (actual conversion pending)
-    let scn_path = state.cache_folder.join(format!("{}.scn", hash));
+    // The file path is just the filename (hash), and the hash is the same
+    // This creates a mapping: original_name -> hash
+    let content_mapping = Arc::new(ContentMappingAndUrl::from_base_url_and_content(
+        format!("file://{}/", state.cache_folder.to_string_lossy()),
+        vec![crate::dcl::common::content_entity::TypedIpfsRef {
+            file: original_name.clone(),
+            hash: hash.clone(),
+        }],
+    ));
 
-    // Register the asset (for now, pointing to the GLB file)
-    let asset = CachedAsset {
-        hash: hash.clone(),
-        asset_type: AssetType::Scene,
-        file_path: glb_path.clone(),
-        original_name,
-    };
-    state.add_asset(asset);
+    // Create the GLTF context from state
+    let ctx = state.create_gltf_context();
 
-    json_success_response(serde_json::json!({
-        "hash": hash,
-        "scene_path": format!("res://glbs/{}.scn", hash),
-        "cached": false,
-        "glb_saved": glb_path.to_string_lossy(),
-        "scn_path": scn_path.to_string_lossy(),
-        "status": "pending_conversion",
-        "note": "GLTF conversion requires Godot main thread - conversion will be queued"
-    }))
+    // Call the existing GLTF pipeline
+    let result = load_and_save_scene_gltf(
+        original_name.clone(),
+        hash.clone(),
+        content_mapping,
+        ctx,
+    )
+    .await;
+
+    match result {
+        Ok(scene_path) => {
+            // Register the asset
+            let asset = CachedAsset {
+                hash: hash.clone(),
+                asset_type: AssetType::Scene,
+                file_path: std::path::PathBuf::from(&scene_path),
+                original_name,
+            };
+            state.add_asset(asset);
+
+            json_success_response(serde_json::json!({
+                "hash": hash,
+                "scene_path": format!("res://glbs/{}.scn", hash),
+                "file_path": scene_path,
+                "cached": false,
+                "status": "converted",
+            }))
+        }
+        Err(e) => {
+            // Clean up the saved GLB file on error
+            std::fs::remove_file(&glb_path).ok();
+            json_error_response(500, &format!("GLTF conversion failed: {}", e))
+        }
+    }
 }
 
 /// Compute SHA256 hash of data

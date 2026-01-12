@@ -3,13 +3,19 @@
  *
  * Runs an HTTP server that accepts file uploads and converts them to
  * optimized Godot resources for mobile platforms.
+ *
+ * Reuses the existing content_provider pipeline for GLTF and texture conversion.
  */
 
 use godot::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use tokio::sync::Semaphore;
 
+use crate::content::content_provider::SceneGltfContext;
+use crate::content::resource_provider::ResourceProvider;
+use crate::godot_classes::dcl_config::TextureQuality;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 use super::handlers;
@@ -34,6 +40,9 @@ pub struct ConverterState {
     pub cache_folder: PathBuf,
     pub assets: RwLock<HashMap<String, CachedAsset>>,
     pub port: u16,
+    pub resource_provider: Arc<ResourceProvider>,
+    pub godot_single_thread: Arc<Semaphore>,
+    pub texture_quality: TextureQuality,
 }
 
 impl ConverterState {
@@ -43,10 +52,22 @@ impl ConverterState {
             std::fs::create_dir_all(&cache_folder).ok();
         }
 
+        let cache_folder_str = cache_folder.to_string_lossy().to_string();
+
+        // Create ResourceProvider for managing downloads and file caching
+        let resource_provider = Arc::new(ResourceProvider::new(
+            &cache_folder_str,
+            2048 * 1000 * 1000, // 2GB cache
+            32,                 // Max concurrent downloads
+        ));
+
         Self {
             cache_folder,
             assets: RwLock::new(HashMap::new()),
             port,
+            resource_provider,
+            godot_single_thread: Arc::new(Semaphore::new(1)),
+            texture_quality: TextureQuality::Low, // Mobile-optimized by default
         }
     }
 
@@ -57,6 +78,16 @@ impl ConverterState {
     pub fn add_asset(&self, asset: CachedAsset) {
         if let Ok(mut assets) = self.assets.write() {
             assets.insert(asset.hash.clone(), asset);
+        }
+    }
+
+    /// Create a SceneGltfContext for use with the GLTF pipeline
+    pub fn create_gltf_context(&self) -> SceneGltfContext {
+        SceneGltfContext {
+            content_folder: Arc::new(self.cache_folder.to_string_lossy().to_string()),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
         }
     }
 }
