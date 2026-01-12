@@ -669,7 +669,12 @@ fn check_and_combine_textures(
             combined.set_pixel(
                 x,
                 y,
-                godot::builtin::Color::from_rgba(main_pixel.r, main_pixel.g, main_pixel.b, alpha_value),
+                godot::builtin::Color::from_rgba(
+                    main_pixel.r,
+                    main_pixel.g,
+                    main_pixel.b,
+                    alpha_value,
+                ),
             );
         }
     }
