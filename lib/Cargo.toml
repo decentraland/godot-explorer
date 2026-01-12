@@ -78,6 +78,9 @@ modular-bitfield = "0.11"
 # Image decoding for formats not natively supported by Godot (GIF, animated WebP)
 image = { version = "0.25", default-features = false, features = ["gif", "webp"] }
 
+# Content hashing for converter server
+sha2 = "0.10"
+
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"

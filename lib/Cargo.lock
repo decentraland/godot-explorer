@@ -894,6 +894,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sha2",
  "simple-easing",
  "taffy",
  "thiserror 1.0.69",

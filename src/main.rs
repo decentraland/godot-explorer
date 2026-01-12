@@ -364,6 +364,32 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(true)
                         .multiple_values(true),
                 ),
+        )
+        .subcommand(
+            Command::new("converter-server")
+                .about("Run content converter HTTP server for converting GLB/GLTF/Images to optimized Godot resources")
+                .arg(
+                    Arg::new("port")
+                        .short('p')
+                        .long("port")
+                        .help("Server port")
+                        .takes_value(true)
+                        .default_value("3000"),
+                )
+                .arg(
+                    Arg::new("cache-folder")
+                        .long("cache-folder")
+                        .help("Cache folder for converted assets")
+                        .takes_value(true)
+                        .default_value("./converter-cache"),
+                )
+                .arg(
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .help("Build in release mode")
+                        .takes_value(false),
+                ),
         );
     let matches = cli.get_matches();
 
@@ -650,6 +676,44 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
+        ("converter-server", sm) => {
+            // Check dependencies first
+            dependencies::check_command_dependencies("run", None)?;
+
+            let port = sm.value_of("port").unwrap_or("3000");
+            let cache_folder = sm.value_of("cache-folder").unwrap_or("./converter-cache");
+
+            // Build the library first
+            print_message(MessageType::Step, "Building Rust library for converter server...");
+            run::build(sm.is_present("release"), false, vec![], None, None)?;
+
+            // Launch Godot in headless mode with converter server args
+            print_message(
+                MessageType::Step,
+                &format!("Starting converter server on port {}...", port),
+            );
+
+            let godot_path = helpers::get_godot_executable();
+            let status = std::process::Command::new(&godot_path)
+                .args([
+                    "--headless",
+                    "--",
+                    "--converter-server",
+                    "--port",
+                    port,
+                    "--cache-folder",
+                    cache_folder,
+                ])
+                .current_dir(consts::GODOT_PROJECT_FOLDER)
+                .status()
+                .context("Failed to start Godot converter server")?;
+
+            if !status.success() {
+                anyhow::bail!("Godot converter server exited with error");
+            }
+
+            Ok(())
+        }
         _ => unreachable!("unreachable branch"),
     };
 
