@@ -81,7 +81,7 @@ async fn wait_for_texture_promise(
                     Ok(te) => te,
                     Err(_) => {
                         return Err(
-                            "Invalid texture entry returned from ContentProvider".to_string(),
+                            "Invalid texture entry returned from ContentProvider".to_string()
                         );
                     }
                 };

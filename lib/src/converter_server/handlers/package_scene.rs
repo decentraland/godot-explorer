@@ -110,10 +110,7 @@ fn create_zip_package(
     let mut zip = ZipPacker::new_gd();
 
     // Open ZIP file for writing
-    let err = zip
-        .open_ex(zip_path)
-        .append(ZipAppend::CREATE)
-        .done();
+    let err = zip.open_ex(zip_path).append(ZipAppend::CREATE).done();
     if err != godot::global::Error::OK {
         return Err(format!("Failed to create ZIP: {:?}", err));
     }

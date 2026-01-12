@@ -406,3 +406,158 @@ async fn handle_connection(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    fn create_test_state() -> (Arc<ConverterState>, TempDir) {
+        let temp_dir = TempDir::new().unwrap();
+        let state = Arc::new(ConverterState::new(temp_dir.path().to_path_buf(), 3000));
+        (state, temp_dir)
+    }
+
+    #[test]
+    fn test_converter_state_new() {
+        let temp_dir = TempDir::new().unwrap();
+        let state = ConverterState::new(temp_dir.path().to_path_buf(), 8080);
+
+        assert_eq!(state.port, 8080);
+        assert_eq!(state.cache_folder, temp_dir.path().to_path_buf());
+        assert!(state.assets.read().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_converter_state_creates_cache_folder() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("new_cache");
+
+        assert!(!cache_path.exists());
+        let _state = ConverterState::new(cache_path.clone(), 3000);
+        assert!(cache_path.exists());
+    }
+
+    #[test]
+    fn test_add_and_get_asset() {
+        let (state, _temp_dir) = create_test_state();
+
+        let asset = CachedAsset {
+            hash: "abc123".to_string(),
+            asset_type: AssetType::Scene,
+            file_path: PathBuf::from("/tmp/abc123.scn"),
+            original_name: "model.glb".to_string(),
+        };
+
+        state.add_asset(asset.clone());
+
+        let retrieved = state.get_asset("abc123");
+        assert!(retrieved.is_some());
+        let retrieved = retrieved.unwrap();
+        assert_eq!(retrieved.hash, "abc123");
+        assert_eq!(retrieved.asset_type, AssetType::Scene);
+        assert_eq!(retrieved.original_name, "model.glb");
+    }
+
+    #[test]
+    fn test_get_nonexistent_asset() {
+        let (state, _temp_dir) = create_test_state();
+
+        let retrieved = state.get_asset("nonexistent");
+        assert!(retrieved.is_none());
+    }
+
+    #[test]
+    fn test_add_multiple_assets() {
+        let (state, _temp_dir) = create_test_state();
+
+        let scene_asset = CachedAsset {
+            hash: "scene123".to_string(),
+            asset_type: AssetType::Scene,
+            file_path: PathBuf::from("/tmp/scene123.scn"),
+            original_name: "model.glb".to_string(),
+        };
+
+        let texture_asset = CachedAsset {
+            hash: "texture456".to_string(),
+            asset_type: AssetType::Texture,
+            file_path: PathBuf::from("/tmp/texture456.res"),
+            original_name: "texture.png".to_string(),
+        };
+
+        state.add_asset(scene_asset);
+        state.add_asset(texture_asset);
+
+        assert!(state.get_asset("scene123").is_some());
+        assert!(state.get_asset("texture456").is_some());
+        assert_eq!(state.assets.read().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_asset_type_equality() {
+        assert_eq!(AssetType::Scene, AssetType::Scene);
+        assert_eq!(AssetType::Texture, AssetType::Texture);
+        assert_ne!(AssetType::Scene, AssetType::Texture);
+    }
+
+    #[test]
+    fn test_cached_asset_clone() {
+        let asset = CachedAsset {
+            hash: "test123".to_string(),
+            asset_type: AssetType::Scene,
+            file_path: PathBuf::from("/tmp/test.scn"),
+            original_name: "test.glb".to_string(),
+        };
+
+        let cloned = asset.clone();
+        assert_eq!(cloned.hash, asset.hash);
+        assert_eq!(cloned.asset_type, asset.asset_type);
+        assert_eq!(cloned.file_path, asset.file_path);
+        assert_eq!(cloned.original_name, asset.original_name);
+    }
+
+    #[test]
+    fn test_promise_result_enum() {
+        let resolved = PromiseResult::Resolved("test_data".to_string());
+        let rejected = PromiseResult::Rejected("error message".to_string());
+
+        match resolved {
+            PromiseResult::Resolved(data) => assert_eq!(data, "test_data"),
+            _ => panic!("Expected Resolved variant"),
+        }
+
+        match rejected {
+            PromiseResult::Rejected(error) => assert_eq!(error, "error message"),
+            _ => panic!("Expected Rejected variant"),
+        }
+    }
+
+    #[test]
+    fn test_overwrite_asset_with_same_hash() {
+        let (state, _temp_dir) = create_test_state();
+
+        let asset1 = CachedAsset {
+            hash: "same_hash".to_string(),
+            asset_type: AssetType::Scene,
+            file_path: PathBuf::from("/tmp/first.scn"),
+            original_name: "first.glb".to_string(),
+        };
+
+        let asset2 = CachedAsset {
+            hash: "same_hash".to_string(),
+            asset_type: AssetType::Texture,
+            file_path: PathBuf::from("/tmp/second.res"),
+            original_name: "second.png".to_string(),
+        };
+
+        state.add_asset(asset1);
+        state.add_asset(asset2);
+
+        // Second asset should overwrite the first
+        let retrieved = state.get_asset("same_hash").unwrap();
+        assert_eq!(retrieved.asset_type, AssetType::Texture);
+        assert_eq!(retrieved.original_name, "second.png");
+        assert_eq!(state.assets.read().unwrap().len(), 1);
+    }
+}

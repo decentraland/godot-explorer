@@ -185,3 +185,67 @@ pub fn binary_response(data: &[u8], content_type: &str, filename: &str) -> Strin
     // This is a placeholder - actual binary handling would need raw bytes
     header
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_json_error_response_400() {
+        let response = json_error_response(400, "Invalid request");
+        assert!(response.starts_with("HTTP/1.1 400 Bad Request"));
+        assert!(response.contains("Content-Type: application/json"));
+        assert!(response.contains("Access-Control-Allow-Origin: *"));
+        assert!(response.contains("\"error\":\"Invalid request\""));
+    }
+
+    #[test]
+    fn test_json_error_response_404() {
+        let response = json_error_response(404, "Not found");
+        assert!(response.starts_with("HTTP/1.1 404 Not Found"));
+        assert!(response.contains("\"error\":\"Not found\""));
+    }
+
+    #[test]
+    fn test_json_error_response_500() {
+        let response = json_error_response(500, "Server error");
+        assert!(response.starts_with("HTTP/1.1 500 Internal Server Error"));
+        assert!(response.contains("\"error\":\"Server error\""));
+    }
+
+    #[test]
+    fn test_json_success_response() {
+        let data = serde_json::json!({
+            "hash": "abc123",
+            "status": "converted"
+        });
+        let response = json_success_response(data);
+
+        assert!(response.starts_with("HTTP/1.1 200 OK"));
+        assert!(response.contains("Content-Type: application/json"));
+        assert!(response.contains("Access-Control-Allow-Origin: *"));
+        assert!(response.contains("abc123"));
+        assert!(response.contains("converted"));
+    }
+
+    #[test]
+    fn test_json_success_response_content_length() {
+        let data = serde_json::json!({"key": "value"});
+        let response = json_success_response(data.clone());
+
+        let body = data.to_string();
+        let expected_length = format!("Content-Length: {}", body.len());
+        assert!(response.contains(&expected_length));
+    }
+
+    #[test]
+    fn test_binary_response_headers() {
+        let data = b"test binary data";
+        let response = binary_response(data, "application/octet-stream", "test.bin");
+
+        assert!(response.starts_with("HTTP/1.1 200 OK"));
+        assert!(response.contains("Content-Type: application/octet-stream"));
+        assert!(response.contains("Content-Disposition: attachment; filename=\"test.bin\""));
+        assert!(response.contains("Content-Length: 16"));
+    }
+}

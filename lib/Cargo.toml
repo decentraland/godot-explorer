@@ -107,6 +107,9 @@ prost-build = "0.11.8"
 chrono = "0.4.31"
 dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", branch = "main", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
+[dev-dependencies]
+tempfile = "3.10"
+
 [profile.release]
 opt-level = 3
 lto = true
