@@ -23,7 +23,7 @@ void vertex() {
 float circle(vec2 uv, vec2 position, float radius, float feather)
 {
 	float dist = distance(uv, position);
-	if (dist ==0.0) return 0.0;
+	if (dist == 0.0) return 0.0;
 	return 1.0 - smoothstep(radius, radius + feather, dist);
 }
 
@@ -88,8 +88,8 @@ void fragment() {
 			float chain_link_distance = max(0.0, tip_distance - (float(n+1) * 1.0/float(link_amount+1)) - (tip_radius / max_chain_length) * 0.6);
 			if (chain_link_distance == 0.0) continue;
 			
-			float link_alpha = interpolation(chain_link_distance, 0.0, link_max_alpha_at, 0.15, 0.8);
-			float link_radius = interpolation(chain_link_distance, 0.0, link_max_size_at, 3.0, bubble_radius);
+			float link_alpha = interpolation(chain_link_distance, 0.0, link_max_alpha_at, 0.25, 0.8);
+			float link_radius = interpolation(chain_link_distance, 0.0, link_max_size_at, 5.0, bubble_radius);
 			
 			float chain_link = circle(
 				canvas_point,
