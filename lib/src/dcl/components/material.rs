@@ -272,6 +272,7 @@ pub struct DclUnlitMaterial {
     pub alpha_test: RoundedFloat,
     pub cast_shadows: bool,
     pub diffuse_color: RoundedColor4,
+    pub alpha_texture: Option<DclTexture>,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -304,7 +305,7 @@ impl DclMaterial {
     pub fn get_textures(&self) -> Vec<&Option<DclTexture>> {
         match self {
             DclMaterial::Unlit(unlit_material) => {
-                vec![&unlit_material.texture]
+                vec![&unlit_material.texture, &unlit_material.alpha_texture]
             }
             DclMaterial::Pbr(pbr) => {
                 vec![
@@ -349,6 +350,7 @@ impl Default for DclUnlitMaterial {
             alpha_test: RoundedFloat(0.5),
             cast_shadows: true,
             diffuse_color: RoundedColor4(Color4::white()),
+            alpha_texture: None,
         }
     }
 }
@@ -423,6 +425,10 @@ impl DclMaterial {
                 let mut value = DclUnlitMaterial {
                     texture: DclTexture::from_proto_with_hash(
                         &unlit.texture,
+                        content_mapping_files,
+                    ),
+                    alpha_texture: DclTexture::from_proto_with_hash(
+                        &unlit.alpha_texture,
                         content_mapping_files,
                     ),
                     ..Default::default()

@@ -18,7 +18,8 @@ use crate::{
 use godot::{
     classes::{
         base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode, Transparency},
-        Material, MeshInstance3D, StandardMaterial3D, Texture2D,
+        image::Format,
+        Image, ImageTexture, Material, MeshInstance3D, StandardMaterial3D, Texture2D,
     },
     global::weakref,
     prelude::*,
@@ -101,7 +102,9 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 let waiting_textures = {
                     match &dcl_material {
-                        DclMaterial::Unlit(unlit) => unlit.texture.is_some(),
+                        DclMaterial::Unlit(unlit) => {
+                            unlit.texture.is_some() || unlit.alpha_texture.is_some()
+                        }
                         DclMaterial::Pbr(pbr) => {
                             pbr.texture.is_some()
                                 || pbr.bump_texture.is_some()
@@ -181,13 +184,35 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 match dcl_material {
                     DclMaterial::Unlit(unlit_material) => {
-                        ready &= check_texture(
-                            godot::classes::base_material_3d::TextureParam::ALBEDO,
-                            &unlit_material.texture,
-                            &mut material,
-                            content_provider.bind_mut(),
-                            scene,
-                        );
+                        if unlit_material.texture.is_some()
+                            && unlit_material.alpha_texture.is_some()
+                        {
+                            // Both textures present - combine RGB from texture with alpha from alpha_texture
+                            ready &= check_and_combine_textures(
+                                &unlit_material.texture,
+                                &unlit_material.alpha_texture,
+                                &mut material,
+                                content_provider.bind_mut(),
+                            );
+                        } else if unlit_material.texture.is_some() {
+                            // Only main texture
+                            ready &= check_texture(
+                                godot::classes::base_material_3d::TextureParam::ALBEDO,
+                                &unlit_material.texture,
+                                &mut material,
+                                content_provider.bind_mut(),
+                                scene,
+                            );
+                        } else if unlit_material.alpha_texture.is_some() {
+                            // Only alpha_texture - use it as albedo (grayscale as alpha)
+                            ready &= check_texture(
+                                godot::classes::base_material_3d::TextureParam::ALBEDO,
+                                &unlit_material.alpha_texture,
+                                &mut material,
+                                content_provider.bind_mut(),
+                                scene,
+                            );
+                        }
                     }
                     DclMaterial::Pbr(pbr) => {
                         ready &= check_texture(
@@ -276,8 +301,12 @@ pub fn apply_dcl_material_properties(
                 godot_material.set_uv1_scale(godot::builtin::Vector3::new(1.0, 1.0, 1.0));
             }
 
-            // Handle transparency for unlit materials (auto-detect)
-            if unlit.diffuse_color.0.a < 1.0 || unlit.texture.is_some() {
+            // Handle transparency for unlit materials
+            if unlit.alpha_texture.is_some()
+                || unlit.diffuse_color.0.a < 1.0
+                || unlit.texture.is_some()
+            {
+                // Use alpha blend for smooth transparency
                 godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
             } else {
                 godot_material.set_transparency(Transparency::DISABLED);
@@ -357,8 +386,8 @@ fn clear_removed_textures(material: &mut Gd<StandardMaterial3D>, dcl_material: &
 
     match dcl_material {
         DclMaterial::Unlit(unlit) => {
-            if unlit.texture.is_none() {
-                // Clear albedo texture if not present
+            // Clear albedo texture if neither main texture nor alpha_texture is present
+            if unlit.texture.is_none() && unlit.alpha_texture.is_none() {
                 material.call(
                     "set_texture",
                     &[TextureParam::ALBEDO.ord().to_variant(), Variant::nil()],
@@ -540,4 +569,118 @@ pub fn update_video_material_textures(scene: &mut Scene) {
             }
         }
     }
+}
+
+/// Check if both textures are loaded and combine them (RGB from texture, alpha from alpha_texture).
+/// Returns true if both are ready (or don't need loading), false if still waiting.
+fn check_and_combine_textures(
+    texture: &Option<DclTexture>,
+    alpha_texture: &Option<DclTexture>,
+    material: &mut Gd<StandardMaterial3D>,
+    mut content_provider: GdMut<ContentProvider>,
+) -> bool {
+    let tex = texture.as_ref().unwrap();
+    let alpha_tex = alpha_texture.as_ref().unwrap();
+
+    // Only handle static textures for now (not avatar or video)
+    let (tex_hash, alpha_hash) = match (&tex.source, &alpha_tex.source) {
+        (DclSourceTex::Texture(t), DclSourceTex::Texture(a)) => (t.clone(), a.clone()),
+        _ => {
+            // For non-static textures, fall back to just using the main texture
+            if let DclSourceTex::Texture(hash) = &tex.source {
+                if content_provider.is_resource_from_hash_loaded(hash.to_godot()) {
+                    if let Some(resource) = content_provider.get_texture_from_hash(hash.to_godot())
+                    {
+                        material.set_texture(
+                            godot::classes::base_material_3d::TextureParam::ALBEDO,
+                            &resource.upcast::<Texture2D>(),
+                        );
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+
+    // Check if both textures are loaded
+    let tex_loaded = content_provider.is_resource_from_hash_loaded(tex_hash.to_godot());
+    let alpha_loaded = content_provider.is_resource_from_hash_loaded(alpha_hash.to_godot());
+
+    if !tex_loaded || !alpha_loaded {
+        return false;
+    }
+
+    // Get both textures
+    let main_texture = content_provider.get_texture_from_hash(tex_hash.to_godot());
+    let alpha_texture = content_provider.get_texture_from_hash(alpha_hash.to_godot());
+
+    if main_texture.is_none() || alpha_texture.is_none() {
+        return true; // Consider ready even if textures failed to load
+    }
+
+    let main_tex = main_texture.unwrap();
+    let alpha_tex = alpha_texture.unwrap();
+
+    // Get images from textures
+    let main_image = main_tex.get_image();
+    let alpha_image = alpha_tex.get_image();
+
+    if main_image.is_none() || alpha_image.is_none() {
+        // Fallback: just use main texture
+        material.set_texture(
+            godot::classes::base_material_3d::TextureParam::ALBEDO,
+            &main_tex.upcast::<Texture2D>(),
+        );
+        return true;
+    }
+
+    let mut main_img = main_image.unwrap();
+    let mut alpha_img = alpha_image.unwrap();
+
+    // Decompress if needed
+    if main_img.is_compressed() {
+        main_img.decompress();
+    }
+    if alpha_img.is_compressed() {
+        alpha_img.decompress();
+    }
+
+    let width = main_img.get_width();
+    let height = main_img.get_height();
+
+    // Resize alpha image if dimensions don't match
+    if alpha_img.get_width() != width || alpha_img.get_height() != height {
+        alpha_img.resize(width, height);
+    }
+
+    // Create new RGBA image combining RGB from main and alpha from alpha_texture
+    let mut combined = Image::create(width, height, false, Format::RGBA8).unwrap();
+
+    for y in 0..height {
+        for x in 0..width {
+            let main_pixel = main_img.get_pixel(x, y);
+            let alpha_pixel = alpha_img.get_pixel(x, y);
+
+            // Use RGB from main texture, and grayscale value of alpha_texture as alpha
+            // Alpha texture is typically grayscale, so we use the red channel (or could average RGB)
+            let alpha_value = alpha_pixel.r; // Use red channel as alpha
+
+            combined.set_pixel(
+                x,
+                y,
+                godot::builtin::Color::from_rgba(main_pixel.r, main_pixel.g, main_pixel.b, alpha_value),
+            );
+        }
+    }
+
+    // Create ImageTexture from combined image
+    let combined_texture = ImageTexture::create_from_image(&combined).unwrap();
+
+    material.set_texture(
+        godot::classes::base_material_3d::TextureParam::ALBEDO,
+        &combined_texture.upcast::<Texture2D>(),
+    );
+
+    true
 }
