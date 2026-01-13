@@ -488,10 +488,19 @@ func _on_button_test_notification_pressed() -> void:
 	var test_body = "Esta es una notificación de prueba con emojis 🚀 y acentos: áéíóú ÁÉÍÓÚ ñ Ñ"
 	var notification_id = "test_notification_" + str(Time.get_unix_time_from_system())
 	var delay_seconds = 5  # Show notification in 5 seconds
-	
-	if NotificationsManager.schedule_local_notification(notification_id, test_title, test_body, delay_seconds):
-		print("Test notification scheduled: id=%s, title=%s, body=%s" % [notification_id, test_title, test_body])
-		print("Expected: Emojis and accents should be preserved. If they show as symbols, enable sanitization.")
+
+	if NotificationsManager.schedule_local_notification(
+		notification_id, test_title, test_body, delay_seconds
+	):
+		print(
+			(
+				"Test notification scheduled: id=%s, title=%s, body=%s"
+				% [notification_id, test_title, test_body]
+			)
+		)
+		print(
+			"Expected: Emojis and accents should be preserved. If they show as symbols, enable sanitization."
+		)
 	else:
 		printerr("Failed to schedule test notification")
 

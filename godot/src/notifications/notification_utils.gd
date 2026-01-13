@@ -72,7 +72,9 @@ static func is_user_authenticated() -> bool:
 ## @param remove_emojis: If true, removes emojis. If false, preserves them (default: false)
 ## @param normalize_accents: If true, normalizes accented characters. If false, preserves them (default: false)
 ## @return: Sanitized text
-static func sanitize_notification_text(text: String, remove_emojis: bool = false, normalize_accents: bool = false) -> String:
+static func sanitize_notification_text(
+	text: String, remove_emojis: bool = false, normalize_accents: bool = false
+) -> String:
 	if text.is_empty():
 		return text
 
