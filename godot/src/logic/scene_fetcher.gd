@@ -522,11 +522,11 @@ func _regenerate_floating_islands() -> void:
 		# Spawn player after terrain is generated
 		var terrain_gen = scene.get_node("TerrainGenerator")
 		terrain_gen.terrain_generated.connect(
-			_on_empty_parcel_terrain_ready.bind(empty_parcel_center), CONNECT_ONE_SHOT
+			_async_spawn_on_empty_parcel.bind(empty_parcel_center), CONNECT_ONE_SHOT
 		)
 
 
-func _on_empty_parcel_terrain_ready(parcel: Vector2i) -> void:
+func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
 	# Wait one more physics frame to ensure collision shape is ready
 	await get_tree().physics_frame
 	var parcel_center := Vector3(parcel.x * 16 + 8, 0, -parcel.y * 16 - 8)
