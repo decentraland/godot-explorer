@@ -1,54 +1,17 @@
-//! Sentry integration for Rust-side error tracking and crash reporting.
+//! Sentry integration for Rust-side error tracking.
 //!
-//! This module initializes the Sentry SDK in Rust, providing:
-//! - Panic capture with full Rust stack traces
-//! - Tracing integration for error/warning events
+//! This module provides:
+//! - Forwarding of Rust tracing logs to Godot's Sentry SDK as breadcrumbs
+//! - Custom panic handler that captures stack traces and sends them to Sentry
 //! - Session and user ID synchronization with the Godot SDK
 
-use std::sync::OnceLock;
-
-use sentry::ClientInitGuard;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::Subscriber;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
-/// The Sentry DSN for the Decentraland Godot Explorer project.
-/// This is the same DSN used by the Godot Sentry SDK.
-const SENTRY_DSN: &str =
-    "https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984";
-
-/// Global guard to keep Sentry initialized for the lifetime of the application.
-static SENTRY_GUARD: OnceLock<ClientInitGuard> = OnceLock::new();
-
-/// Determines the environment based on the version string.
-fn get_environment() -> &'static str {
-    let version = env!("GODOT_EXPLORER_VERSION");
-    if version.contains("-prod") {
-        "production"
-    } else if version.contains("-staging") {
-        "staging"
-    } else {
-        "development"
-    }
-}
-
-/// Checks if Sentry should be enabled (only for production and staging builds).
-/// Use `--sentry-debug` CLI flag or `SENTRY_FORCE_ENABLE=1` env var to enable in dev builds.
-pub fn is_sentry_enabled() -> bool {
-    // Check if force-enabled via environment variable (useful for local testing)
-    if std::env::var("SENTRY_FORCE_ENABLE").is_ok() {
-        return true;
-    }
-
-    // Check if force-enabled via CLI flag (check raw args since DclCli isn't initialized yet)
-    if check_cli_flag("--sentry-debug") {
-        return true;
-    }
-
-    let version = env!("GODOT_EXPLORER_VERSION");
-    // Dev builds should not send to Sentry by default
-    !version.contains("-dev")
-}
+/// Flag to track if the panic handler has been installed
+static PANIC_HANDLER_INSTALLED: AtomicBool = AtomicBool::new(false);
 
 /// Check for a CLI flag in the raw command line arguments.
 /// This is used before DclCli is initialized.
@@ -70,43 +33,87 @@ pub fn is_sentry_debug_mode() -> bool {
     std::env::var("SENTRY_FORCE_ENABLE").is_ok() || check_cli_flag("--sentry-debug")
 }
 
-/// Initializes the Sentry SDK with the appropriate configuration.
-/// This should be called once during application startup, before setting up the tracing subscriber.
-pub fn init_sentry() {
-    if !is_sentry_enabled() {
+/// Checks if Sentry should be enabled.
+/// Returns true always - Sentry is enabled for all builds including dev.
+pub fn is_sentry_enabled() -> bool {
+    true
+}
+
+/// Installs the custom panic handler that sends panics to Godot's Sentry SDK.
+/// This should be called once during application startup.
+pub fn install_panic_handler() {
+    // Only install once
+    if PANIC_HANDLER_INSTALLED.swap(true, Ordering::SeqCst) {
         return;
     }
 
-    let release = format!(
-        "org.decentraland.godotexplorer@{}",
-        env!("GODOT_EXPLORER_VERSION")
+    let default_hook = std::panic::take_hook();
+
+    std::panic::set_hook(Box::new(move |panic_info| {
+        // Capture the backtrace
+        let backtrace = std::backtrace::Backtrace::force_capture();
+
+        // Format the panic message
+        let message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "Unknown panic".to_string()
+        };
+
+        // Get location info
+        let location = if let Some(loc) = panic_info.location() {
+            format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
+        } else {
+            "unknown location".to_string()
+        };
+
+        // Format the full error message with backtrace
+        let full_message = format!(
+            "Rust panic at {}: {}\n\nBacktrace:\n{}",
+            location, message, backtrace
+        );
+
+        // Send to Godot's Sentry SDK
+        send_panic_to_sentry(&full_message);
+
+        // Call the default hook (which will print to stderr)
+        default_hook(panic_info);
+    }));
+}
+
+/// Sends a panic message to Godot's Sentry SDK as a fatal error.
+fn send_panic_to_sentry(message: &str) {
+    use godot::classes::Engine;
+    use godot::prelude::*;
+
+    // Get SentrySDK singleton
+    let Some(mut sentry_sdk) = Engine::singleton().get_singleton("SentrySDK") else {
+        eprintln!("[Rust Panic Handler] SentrySDK singleton not found, cannot report panic");
+        return;
+    };
+
+    // SentrySDK.LEVEL_FATAL = 4
+    let level_fatal: i64 = 4;
+
+    // Capture the message as a fatal error
+    sentry_sdk.call(
+        "capture_message",
+        &[message.to_variant(), level_fatal.to_variant()],
     );
 
-    let guard = sentry::init((
-        SENTRY_DSN,
-        sentry::ClientOptions {
-            release: Some(release.into()),
-            environment: Some(get_environment().into()),
-            // Capture 100% of errors
-            sample_rate: 1.0,
-            // Enable session tracking
-            auto_session_tracking: true,
-            // Attach stack traces to all events
-            attach_stacktrace: true,
-            ..Default::default()
-        },
-    ));
-
-    // Store the guard globally to prevent it from being dropped
-    let _ = SENTRY_GUARD.set(guard);
+    // Try to flush - give Sentry time to send before potential crash
+    // Note: This may not work if the SDK doesn't expose a flush method
+    if sentry_sdk.has_method("flush") {
+        sentry_sdk.call("flush", &[]);
+    }
 }
 
 /// Creates a tracing layer that forwards events to Godot's Sentry SDK as breadcrumbs.
 /// This ensures all Rust logs appear as breadcrumbs in Godot Sentry events.
-/// The Rust Sentry SDK is kept only for panic capture (better stack traces).
 pub fn godot_sentry_layer() -> Option<GodotSentryLayer> {
-    // Use is_sentry_enabled OR is_sentry_debug_mode to allow debug mode to enable the layer
-    if is_sentry_enabled() || is_sentry_debug_mode() {
+    if is_sentry_enabled() {
         Some(GodotSentryLayer)
     } else {
         None
@@ -158,9 +165,7 @@ struct MessageVisitor {
 
 impl tracing::field::Visit for MessageVisitor {
     fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        if field.name() == "message" {
-            self.message = format!("{:?}", value);
-        } else if self.message.is_empty() {
+        if field.name() == "message" || self.message.is_empty() {
             self.message = format!("{:?}", value);
         }
     }
@@ -180,8 +185,6 @@ fn add_breadcrumb_to_godot(message: &str, level: &str) {
 
     // Get SentrySDK singleton
     let Some(mut sentry_sdk) = Engine::singleton().get_singleton("SentrySDK") else {
-        // Use eprintln to avoid infinite recursion (tracing would call this function again)
-        eprintln!("[Sentry Bridge] SentrySDK singleton not found");
         return;
     };
 
@@ -216,35 +219,51 @@ fn add_breadcrumb_to_godot(message: &str, level: &str) {
 }
 
 /// Emits test messages at various log levels to verify Sentry integration.
-/// Called automatically when --sentry-debug is enabled.
 pub fn emit_sentry_test_messages() {
     tracing::trace!("[Sentry Test] This is a TRACE message - ignored");
-    tracing::debug!("[Sentry Test] This is a DEBUG message - breadcrumb");
+    tracing::debug!("[Sentry Test] This is a DEBUG message - ignored");
     tracing::info!("[Sentry Test] This is an INFO message - breadcrumb");
     tracing::warn!("[Sentry Test] This is a WARN message - breadcrumb");
-    tracing::error!("[Sentry Test] This is an ERROR message - event");
+    tracing::error!("[Sentry Test] This is an ERROR message - breadcrumb");
 }
 
-/// Sets the Sentry user ID. Call this after the user is authenticated.
+/// Triggers a test panic to verify the panic handler.
+pub fn trigger_test_panic() {
+    panic!("Test panic triggered via trigger_test_panic()");
+}
+
+/// Sets the Sentry user ID by adding a breadcrumb (syncs with Godot SDK scope).
 pub fn set_sentry_user(user_id: &str) {
-    sentry::configure_scope(|scope| {
-        scope.set_user(Some(sentry::User {
-            id: Some(user_id.to_string()),
-            ..Default::default()
-        }));
-    });
+    use godot::classes::Engine;
+    use godot::prelude::*;
+
+    let Some(mut sentry_sdk) = Engine::singleton().get_singleton("SentrySDK") else {
+        return;
+    };
+
+    // Create a SentryUser and set it
+    let user_variant = godot::classes::ClassDb::singleton().instantiate("SentryUser");
+    if !user_variant.is_nil() {
+        if let Ok(mut user) = user_variant.try_to::<Gd<RefCounted>>() {
+            user.set("id", &user_id.to_variant());
+            sentry_sdk.call("set_user", &[user.to_variant()]);
+        }
+    }
 }
 
-/// Sets the Sentry session ID tag. Call this when the session is created.
-pub fn set_sentry_session_id(session_id: &str) {
-    sentry::configure_scope(|scope| {
-        scope.set_tag("dcl_session_id", session_id);
-    });
-}
-
-/// Sets a custom tag on the Sentry scope.
+/// Sets a Sentry tag (syncs with Godot SDK scope).
 pub fn set_sentry_tag(key: &str, value: &str) {
-    sentry::configure_scope(|scope| {
-        scope.set_tag(key, value);
-    });
+    use godot::classes::Engine;
+    use godot::prelude::*;
+
+    let Some(mut sentry_sdk) = Engine::singleton().get_singleton("SentrySDK") else {
+        return;
+    };
+
+    sentry_sdk.call("set_tag", &[key.to_variant(), value.to_variant()]);
+}
+
+/// Sets the Sentry session ID tag.
+pub fn set_sentry_session_id(session_id: &str) {
+    set_sentry_tag("dcl_session_id", session_id);
 }

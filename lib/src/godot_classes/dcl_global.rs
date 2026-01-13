@@ -35,15 +35,15 @@ use super::{
 
 #[cfg(target_os = "android")]
 mod android {
-    use crate::tools::sentry_logger::{godot_sentry_layer, init_sentry};
+    use crate::tools::sentry_logger::{godot_sentry_layer, install_panic_handler};
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{self, registry};
 
     pub fn init_logger() {
-        // Initialize Sentry first
-        init_sentry();
+        // Install custom panic handler for Sentry
+        install_panic_handler();
 
         // Configure logging filters for Android
         // By default, filter everything to WARN level
@@ -79,15 +79,15 @@ mod android {
 
 #[cfg(target_os = "ios")]
 mod ios {
-    use crate::tools::sentry_logger::{godot_sentry_layer, init_sentry};
+    use crate::tools::sentry_logger::{godot_sentry_layer, install_panic_handler};
     use tracing_oslog::OsLogger;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
     pub fn init_logger() {
-        // Initialize Sentry first
-        init_sentry();
+        // Install custom panic handler for Sentry
+        install_panic_handler();
 
         // Configure logging filters for iOS
         // By default, filter everything to INFO level
@@ -120,14 +120,14 @@ mod ios {
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod desktop {
-    use crate::tools::sentry_logger::{godot_sentry_layer, init_sentry};
+    use crate::tools::sentry_logger::{godot_sentry_layer, install_panic_handler};
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
     pub fn init_logger() {
-        // Initialize Sentry first
-        init_sentry();
+        // Install custom panic handler for Sentry
+        install_panic_handler();
 
         // Configure logging filters for desktop
         // By default, filter everything to INFO level (TRACE and DEBUG are hidden)
