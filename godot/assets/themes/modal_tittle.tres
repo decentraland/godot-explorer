@@ -1,0 +1,9 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://b4jgney45syyy"]
+
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="1_osmqd"]
+
+[resource]
+line_spacing = -4.0
+font = ExtResource("1_osmqd")
+font_size = 58
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
