@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://beinfjlq7dgke"]
+
+[ext_resource type="Shader" uid="uid://ed0cprk8sc8m" path="res://shaders/joystick.gdshader" id="1_j862r"]
+
+[resource]
+shader = ExtResource("1_j862r")
+shader_parameter/joystick_position = Vector2(0, 0)
+shader_parameter/tip_position = Vector2(0, 0)
+shader_parameter/state = 0
+shader_parameter/tip_radius = 35.0
+shader_parameter/tip_center_radius = 14.0
+shader_parameter/bubble_radius = 14.0
+shader_parameter/max_bubble_distance = 40.0
+shader_parameter/max_chain_length = 100.0
