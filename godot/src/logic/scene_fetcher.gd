@@ -101,7 +101,9 @@ func on_loading_finished():
 	if scene_data != null:
 		var target_position = scene_data.scene_entity_definition.get_global_spawn_position()
 		if target_position != null:
-			Global.get_explorer().move_to(target_position, true)
+			# Try raycast to find ground, fallback to original position
+			var ground_position := _raycast_to_ground(target_position)
+			Global.get_explorer().move_to(ground_position, true)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -516,6 +518,38 @@ func _regenerate_floating_islands() -> void:
 		scene.set_corner_configuration.call_deferred(config)
 
 		loaded_empty_scenes[parcel_string] = scene
+
+		# Spawn player after terrain is generated
+		var terrain_gen = scene.get_node("TerrainGenerator")
+		terrain_gen.terrain_generated.connect(
+			_on_empty_parcel_terrain_ready.bind(empty_parcel_center), CONNECT_ONE_SHOT
+		)
+
+
+func _on_empty_parcel_terrain_ready(parcel: Vector2i) -> void:
+	# Wait one more physics frame to ensure collision shape is ready
+	await get_tree().physics_frame
+	var parcel_center := Vector3(parcel.x * 16 + 8, 0, -parcel.y * 16 - 8)
+	var ground_position := _raycast_to_ground(parcel_center)
+	Global.get_explorer().move_to(ground_position, true)
+
+
+func _raycast_to_ground(from_position: Vector3) -> Vector3:
+	var space_state := get_tree().root.get_world_3d().direct_space_state
+	var ray_origin := Vector3(from_position.x, 100.0, from_position.z)
+	var ray_end := Vector3(from_position.x, -10.0, from_position.z)
+
+	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	# Layer 1 = scene geometry, Layer 2 = empty parcel terrain
+	query.collision_mask = 3
+
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		# No ground found, use original position or default height
+		return Vector3(from_position.x, maxf(from_position.y, 2.0), from_position.z)
+
+	# Position player slightly above ground
+	return result.position + Vector3(0, 1.0, 0)
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:

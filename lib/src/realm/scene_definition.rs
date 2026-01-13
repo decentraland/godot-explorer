@@ -98,13 +98,57 @@ impl SceneEntityDefinition {
             (Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 0.0))
         };
 
-        self.get_godot_3d_position()
-            + Vector3::new(
-                godot::global::randf_range(bounding_box.0.x as f64, bounding_box.1.x as f64) as f32,
-                godot::global::randf_range(bounding_box.0.y as f64, bounding_box.1.y as f64) as f32,
-                -godot::global::randf_range(bounding_box.0.z as f64, bounding_box.1.z as f64)
-                    as f32,
-            )
+        // Calculate scene bounds in local coordinates (relative to base parcel)
+        let scene_bounds = self.get_local_scene_bounds();
+
+        // Generate random position within spawn point bounding box
+        let spawn_x =
+            godot::global::randf_range(bounding_box.0.x as f64, bounding_box.1.x as f64) as f32;
+        let spawn_y =
+            godot::global::randf_range(bounding_box.0.y as f64, bounding_box.1.y as f64) as f32;
+        let spawn_z =
+            godot::global::randf_range(bounding_box.0.z as f64, bounding_box.1.z as f64) as f32;
+
+        // Clamp spawn position to scene bounds to handle invalid spawn points
+        let clamped_x = spawn_x.clamp(scene_bounds.0.x, scene_bounds.1.x);
+        let clamped_y = spawn_y.clamp(0.0, 100.0); // Height limit
+        let clamped_z = spawn_z.clamp(scene_bounds.0.z, scene_bounds.1.z);
+
+        self.get_godot_3d_position() + Vector3::new(clamped_x, clamped_y, -clamped_z)
+    }
+
+    /// Returns the scene bounds in local coordinates (min, max) relative to the base parcel.
+    /// X and Z are in meters, where each parcel is 16m.
+    fn get_local_scene_bounds(&self) -> (Vector3, Vector3) {
+        let base = self.scene_meta_scene.scene.base;
+        let parcels = &self.scene_meta_scene.scene.parcels;
+
+        if parcels.is_empty() {
+            return (Vector3::new(0.0, 0.0, 0.0), Vector3::new(16.0, 0.0, 16.0));
+        }
+
+        let mut min_x = i32::MAX;
+        let mut max_x = i32::MIN;
+        let mut min_y = i32::MAX;
+        let mut max_y = i32::MIN;
+
+        for parcel in parcels {
+            min_x = min_x.min(parcel.x);
+            max_x = max_x.max(parcel.x);
+            min_y = min_y.min(parcel.y);
+            max_y = max_y.max(parcel.y);
+        }
+
+        // Convert to local coordinates relative to base parcel, then to meters
+        let local_min_x = ((min_x - base.x) * 16) as f32;
+        let local_max_x = ((max_x - base.x + 1) * 16) as f32;
+        let local_min_z = ((min_y - base.y) * 16) as f32;
+        let local_max_z = ((max_y - base.y + 1) * 16) as f32;
+
+        (
+            Vector3::new(local_min_x, 0.0, local_min_z),
+            Vector3::new(local_max_x, 0.0, local_max_z),
+        )
     }
 }
 
