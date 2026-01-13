@@ -67,7 +67,7 @@ fn check_cli_flag(flag: &str) -> bool {
 
 /// Returns true if Sentry debug mode is enabled (via CLI flag or env var).
 pub fn is_sentry_debug_mode() -> bool {
-    std::env::var("SENTRY_FORCE_ENABLE").is_ok() || check_cli_flag("--sentry-debug") || true
+    std::env::var("SENTRY_FORCE_ENABLE").is_ok() || check_cli_flag("--sentry-debug")
 }
 
 /// Initializes the Sentry SDK with the appropriate configuration.
@@ -130,12 +130,12 @@ where
         let level = *event.metadata().level();
 
         // Map tracing level to Sentry level string
+        // Skip DEBUG and TRACE to reduce noise in Sentry breadcrumbs
         let sentry_level = match level {
             Level::ERROR => "error",
             Level::WARN => "warning",
             Level::INFO => "info",
-            Level::DEBUG => "debug",
-            Level::TRACE => return, // Skip trace level
+            Level::DEBUG | Level::TRACE => return, // Skip debug and trace levels
         };
 
         // Extract message from event

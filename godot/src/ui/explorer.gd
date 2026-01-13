@@ -481,7 +481,9 @@ func _on_panel_chat_submit_message(message: String):
 		elif command_str == "/godotcrash":
 			OS.crash("User crashed on purpose")
 		elif command_str == "/instantcrash":
-			DclCrashGenerator.static_crash()
+			DclCrashGenerator.static_crash()  # Native crash (SIGSEGV) - sent on next launch
+		elif command_str == "/rustpanic":
+			DclCrashGenerator.rust_panic()  # Rust panic - sent immediately by Rust Sentry SDK
 		elif command_str == "/delayedcrash":
 			add_child(DclCrashGenerator.new())
 		elif command_str == "/pos":
