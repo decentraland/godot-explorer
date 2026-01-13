@@ -40,7 +40,8 @@ func _initialize() -> void:
 
 func _before_send(event: SentryEvent) -> SentryEvent:
 	# Discard events for dev builds - only prod and staging report to Sentry
-	if self.is_dev_version:
+	# Exception: allow events when --sentry-debug flag is set
+	if self.is_dev_version and not DclGlobal.is_sentry_debug_mode():
 		return null
 
 	# if event.message.contains("Bruno"):

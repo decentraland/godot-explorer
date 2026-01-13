@@ -484,6 +484,48 @@ func _on_panel_chat_submit_message(message: String):
 			DclCrashGenerator.static_crash()
 		elif command_str == "/delayedcrash":
 			add_child(DclCrashGenerator.new())
+		elif command_str == "/pos":
+			# Get player position in Decentraland coordinates (X,Z are swapped and Z is negated)
+			var dcl_x = player.position.x
+			var dcl_y = player.position.y
+			var dcl_z = -player.position.z
+
+			# Get camera forward direction in Decentraland coordinates
+			var forward = -player.camera.global_transform.basis.z
+			var dcl_forward = Vector3(forward.x, forward.y, -forward.z)
+
+			# Get camera angles
+			var yaw_deg = rad_to_deg(player.rotation.y)
+			var pitch_deg = rad_to_deg(player.mount_camera.rotation.x)
+
+			# Get realm name
+			var current_realm = Global.realm.realm_name if Global.realm.has_realm() else "None"
+
+			# Format the message
+			var msg = (
+				(
+					"[color=#0f0]📍 Position[/color]\n"
+					+ "[color=#ccc]Parcel: [/color][color=#fff]%d,%d[/color]\n"
+					+ "[color=#ccc]World: [/color][color=#fff]%.2f, %.2f, %.2f[/color]\n"
+					+ "[color=#ccc]Direction: [/color][color=#fff]%.2f, %.2f, %.2f[/color]\n"
+					+ "[color=#ccc]Camera: [/color][color=#fff]Yaw %.1f° Pitch %.1f°[/color]\n"
+					+ "[color=#ccc]Realm: [/color][color=#fff]%s[/color]"
+				)
+				% [
+					parcel_position.x,
+					parcel_position.y,
+					dcl_x,
+					dcl_y,
+					dcl_z,
+					dcl_forward.x,
+					dcl_forward.y,
+					dcl_forward.z,
+					yaw_deg,
+					pitch_deg,
+					current_realm
+				]
+			)
+			Global.on_chat_message.emit("system", msg, Time.get_unix_time_from_system())
 		else:
 			Global.on_chat_message.emit(
 				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()

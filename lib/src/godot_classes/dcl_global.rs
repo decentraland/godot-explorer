@@ -35,9 +35,7 @@ use super::{
 
 #[cfg(target_os = "android")]
 mod android {
-    use crate::tools::sentry_logger::{
-        emit_sentry_test_messages, init_sentry, is_sentry_debug_mode, sentry_layer,
-    };
+    use crate::tools::sentry_logger::{godot_sentry_layer, init_sentry};
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
@@ -72,20 +70,16 @@ mod android {
             .with_ansi(false) // Disable ANSI color codes for cleaner logcat output
             .with_filter(filter);
 
-        registry().with(android_layer).with(sentry_layer()).init();
-
-        // Emit test messages if sentry debug mode is enabled
-        if is_sentry_debug_mode() {
-            emit_sentry_test_messages();
-        }
+        registry()
+            .with(android_layer)
+            .with(godot_sentry_layer())
+            .init();
     }
 }
 
 #[cfg(target_os = "ios")]
 mod ios {
-    use crate::tools::sentry_logger::{
-        emit_sentry_test_messages, init_sentry, is_sentry_debug_mode, sentry_layer,
-    };
+    use crate::tools::sentry_logger::{godot_sentry_layer, init_sentry};
     use tracing_oslog::OsLogger;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
@@ -117,20 +111,17 @@ mod ios {
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
         let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
-        registry().with(oslog_layer).with(sentry_layer()).init();
-
-        // Emit test messages if sentry debug mode is enabled
-        if is_sentry_debug_mode() {
-            emit_sentry_test_messages();
-        }
+        registry()
+            .with(oslog_layer)
+            .with(godot_sentry_layer())
+            .init();
     }
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod desktop {
-    use crate::tools::sentry_logger::{
-        emit_sentry_test_messages, init_sentry, is_sentry_debug_mode, sentry_layer,
-    };
+    use crate::tools::sentry_logger::{godot_sentry_layer, init_sentry};
+    use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
@@ -138,18 +129,18 @@ mod desktop {
         // Initialize Sentry first
         init_sentry();
 
-        let fmt_layer = tracing_subscriber::fmt::layer();
+        // Configure logging filters for desktop
+        // By default, filter everything to INFO level (TRACE and DEBUG are hidden)
+        // You can customize via RUST_LOG environment variable
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+        let fmt_layer = tracing_subscriber::fmt::layer().with_filter(filter);
 
         registry()
             .with(fmt_layer)
-            .with(sentry_layer())
+            .with(godot_sentry_layer())
             .try_init()
             .ok();
-
-        // Emit test messages if sentry debug mode is enabled
-        if is_sentry_debug_mode() {
-            emit_sentry_test_messages();
-        }
     }
 }
 

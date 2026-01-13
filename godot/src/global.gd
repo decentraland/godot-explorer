@@ -266,7 +266,10 @@ func _ready():
 	DclGlobal.set_sentry_session_id(session_id)
 
 	# Emit test messages if sentry debug mode is enabled
+	# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
+	# and we want Rust breadcrumbs to be included in that event
 	if DclGlobal.is_sentry_debug_mode():
+		DclGlobal.emit_sentry_rust_test_messages()
 		_emit_sentry_godot_test_messages()
 
 	# Create the GDScript-only components
@@ -636,21 +639,19 @@ func _process(_delta: float) -> void:
 
 
 func _emit_sentry_godot_test_messages() -> void:
-	print("[Sentry Test] GDScript: This is a print() message - should appear as breadcrumb")
-	print_rich("[Sentry Test] GDScript: This is a print_rich() message")
-	push_warning(
-		"[Sentry Test] GDScript: This is a push_warning() message - should appear in Sentry"
-	)
-	push_error("[Sentry Test] GDScript: This is a push_error() message - should appear in Sentry")
+	print("[Sentry Test] GDScript: print() - breadcrumb")
+	print_rich("[Sentry Test] GDScript: print_rich() - breadcrumb")
+	push_warning("[Sentry Test] GDScript: push_warning() - breadcrumb")
+	push_error("[Sentry Test] GDScript: push_error() - event")
 	# Also test SentrySDK.capture_message directly
 	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: Direct capture_message at INFO level", SentrySDK.LEVEL_INFO
+		"[Sentry Test] GDScript: capture_message INFO - breadcrumb", SentrySDK.LEVEL_INFO
 	)
 	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: Direct capture_message at WARNING level", SentrySDK.LEVEL_WARNING
+		"[Sentry Test] GDScript: capture_message WARNING - breadcrumb", SentrySDK.LEVEL_WARNING
 	)
 	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: Direct capture_message at ERROR level", SentrySDK.LEVEL_ERROR
+		"[Sentry Test] GDScript: capture_message ERROR - event", SentrySDK.LEVEL_ERROR
 	)
 
 

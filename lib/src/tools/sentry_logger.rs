@@ -101,27 +101,122 @@ pub fn init_sentry() {
     let _ = SENTRY_GUARD.set(guard);
 }
 
-/// Creates the Sentry tracing layer if Sentry is enabled.
-/// This should be called after `init_sentry()` and added to the tracing subscriber.
-pub fn sentry_layer<S>() -> Option<impl Layer<S>>
+/// Creates a tracing layer that forwards events to Godot's Sentry SDK as breadcrumbs.
+/// This ensures all Rust logs appear as breadcrumbs in Godot Sentry events.
+/// The Rust Sentry SDK is kept only for panic capture (better stack traces).
+pub fn godot_sentry_layer() -> Option<GodotSentryLayer> {
+    if is_sentry_enabled() {
+        Some(GodotSentryLayer)
+    } else {
+        None
+    }
+}
+
+/// A tracing layer that forwards log events to Godot's Sentry SDK as breadcrumbs.
+pub struct GodotSentryLayer;
+
+impl<S> Layer<S> for GodotSentryLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    if is_sentry_enabled() {
-        Some(sentry::integrations::tracing::layer())
-    } else {
-        None
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        use tracing::Level;
+
+        let level = *event.metadata().level();
+
+        // Map tracing level to Sentry level string
+        let sentry_level = match level {
+            Level::ERROR => "error",
+            Level::WARN => "warning",
+            Level::INFO => "info",
+            Level::DEBUG => "debug",
+            Level::TRACE => return, // Skip trace level
+        };
+
+        // Extract message from event
+        let mut visitor = MessageVisitor::default();
+        event.record(&mut visitor);
+
+        let target = event.metadata().target();
+        let message = format!("[Rust:{}] {}", target, visitor.message);
+
+        // Forward to Godot Sentry SDK
+        add_breadcrumb_to_godot(&message, sentry_level);
+    }
+}
+
+/// Visitor to extract the message field from a tracing event
+#[derive(Default)]
+struct MessageVisitor {
+    message: String,
+}
+
+impl tracing::field::Visit for MessageVisitor {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        if field.name() == "message" {
+            self.message = format!("{:?}", value);
+        } else if self.message.is_empty() {
+            self.message = format!("{:?}", value);
+        }
+    }
+
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        if field.name() == "message" || self.message.is_empty() {
+            self.message = value.to_string();
+        }
+    }
+}
+
+/// Adds a breadcrumb to the Godot Sentry SDK.
+/// `level` should be one of: "error", "warning", "info", "debug"
+fn add_breadcrumb_to_godot(message: &str, level: &str) {
+    use godot::classes::{ClassDb, Engine};
+    use godot::prelude::*;
+
+    // Get SentrySDK singleton
+    let Some(mut sentry_sdk) = Engine::singleton().get_singleton("SentrySDK") else {
+        return;
+    };
+
+    // Map level string to SentrySDK level constants
+    // SentrySDK.LEVEL_DEBUG = 0, LEVEL_INFO = 1, LEVEL_WARNING = 2, LEVEL_ERROR = 3, LEVEL_FATAL = 4
+    let level_int: i64 = match level {
+        "debug" => 0,
+        "info" => 1,
+        "warning" => 2,
+        "error" => 3,
+        _ => 1, // Default to INFO
+    };
+
+    // Call static method SentryBreadcrumb.create(message)
+    let breadcrumb_variant =
+        ClassDb::singleton().class_call_static("SentryBreadcrumb", "create", &[message.to_variant()]);
+
+    if breadcrumb_variant.is_nil() {
+        return;
+    }
+
+    // Set properties and add to SentrySDK
+    if let Ok(mut breadcrumb) = breadcrumb_variant.try_to::<Gd<Object>>() {
+        breadcrumb.set("category", &"rust".to_variant());
+        breadcrumb.set("level", &level_int.to_variant());
+        breadcrumb.set("type", &"default".to_variant());
+        sentry_sdk.call("add_breadcrumb", &[breadcrumb.to_variant()]);
     }
 }
 
 /// Emits test messages at various log levels to verify Sentry integration.
 /// Called automatically when --sentry-debug is enabled.
 pub fn emit_sentry_test_messages() {
-    tracing::trace!("[Sentry Test] This is a TRACE message - should NOT appear in Sentry");
-    tracing::debug!("[Sentry Test] This is a DEBUG message - should NOT appear in Sentry");
-    tracing::info!("[Sentry Test] This is an INFO message - should appear as breadcrumb in Sentry");
-    tracing::warn!("[Sentry Test] This is a WARN message - should appear in Sentry");
-    tracing::error!("[Sentry Test] This is an ERROR message - should appear in Sentry");
+    tracing::trace!("[Sentry Test] This is a TRACE message - ignored");
+    tracing::debug!("[Sentry Test] This is a DEBUG message - breadcrumb");
+    tracing::info!("[Sentry Test] This is an INFO message - breadcrumb");
+    tracing::warn!("[Sentry Test] This is a WARN message - breadcrumb");
+    tracing::error!("[Sentry Test] This is an ERROR message - event");
 }
 
 /// Sets the Sentry user ID. Call this after the user is authenticated.
