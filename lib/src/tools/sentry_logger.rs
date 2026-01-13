@@ -67,7 +67,7 @@ fn check_cli_flag(flag: &str) -> bool {
 
 /// Returns true if Sentry debug mode is enabled (via CLI flag or env var).
 pub fn is_sentry_debug_mode() -> bool {
-    std::env::var("SENTRY_FORCE_ENABLE").is_ok() || check_cli_flag("--sentry-debug")
+    std::env::var("SENTRY_FORCE_ENABLE").is_ok() || check_cli_flag("--sentry-debug") || true
 }
 
 /// Initializes the Sentry SDK with the appropriate configuration.
@@ -105,9 +105,23 @@ pub fn init_sentry() {
 /// This ensures all Rust logs appear as breadcrumbs in Godot Sentry events.
 /// The Rust Sentry SDK is kept only for panic capture (better stack traces).
 pub fn godot_sentry_layer() -> Option<GodotSentryLayer> {
-    if is_sentry_enabled() {
+    // Use is_sentry_enabled OR is_sentry_debug_mode to allow debug mode to enable the layer
+    let enabled = is_sentry_enabled();
+    let debug_mode = is_sentry_debug_mode();
+    let should_enable = enabled || debug_mode;
+
+    godot::global::godot_print!(
+        "[Sentry Bridge] Layer check: enabled={}, debug_mode={}, should_enable={}",
+        enabled,
+        debug_mode,
+        should_enable
+    );
+
+    if should_enable {
+        godot::global::godot_print!("[Sentry Bridge] GodotSentryLayer ENABLED");
         Some(GodotSentryLayer)
     } else {
+        godot::global::godot_print!("[Sentry Bridge] GodotSentryLayer DISABLED");
         None
     }
 }
@@ -179,6 +193,8 @@ fn add_breadcrumb_to_godot(message: &str, level: &str) {
 
     // Get SentrySDK singleton
     let Some(mut sentry_sdk) = Engine::singleton().get_singleton("SentrySDK") else {
+        // Use eprintln to avoid infinite recursion (tracing would call this function again)
+        eprintln!("[Sentry Bridge] SentrySDK singleton not found");
         return;
     };
 
@@ -193,8 +209,18 @@ fn add_breadcrumb_to_godot(message: &str, level: &str) {
     };
 
     // Call static method SentryBreadcrumb.create(message)
-    let breadcrumb_variant =
-        ClassDb::singleton().class_call_static("SentryBreadcrumb", "create", &[message.to_variant()]);
+    let breadcrumb_variant = ClassDb::singleton().class_call_static(
+        "SentryBreadcrumb",
+        "create",
+        &[message.to_variant()],
+    );
+
+    // Debug: log the variant type
+    godot::global::godot_print!(
+        "[Sentry Bridge] create() returned type: {:?}, is_nil: {}",
+        breadcrumb_variant.get_type(),
+        breadcrumb_variant.is_nil()
+    );
 
     if breadcrumb_variant.is_nil() {
         return;
@@ -205,7 +231,15 @@ fn add_breadcrumb_to_godot(message: &str, level: &str) {
         breadcrumb.set("category", &"rust".to_variant());
         breadcrumb.set("level", &level_int.to_variant());
         breadcrumb.set("type", &"default".to_variant());
+
+        godot::global::godot_print!("[Sentry Bridge] Calling add_breadcrumb...");
         sentry_sdk.call("add_breadcrumb", &[breadcrumb.to_variant()]);
+        godot::global::godot_print!("[Sentry Bridge] add_breadcrumb called successfully");
+    } else {
+        godot::global::godot_print!(
+            "[Sentry Bridge] Failed to cast breadcrumb, type: {:?}",
+            breadcrumb_variant.get_type()
+        );
     }
 }
 

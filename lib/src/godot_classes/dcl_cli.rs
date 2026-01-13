@@ -422,7 +422,7 @@ impl INode for DclCli {
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
-        let sentry_debug = args_map.contains_key("--sentry-debug");
+        let sentry_debug = args_map.contains_key("--sentry-debug") || true;
 
         // Extract arguments with values
         let realm = args_map
