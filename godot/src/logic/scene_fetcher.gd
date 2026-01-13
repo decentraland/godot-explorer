@@ -454,8 +454,21 @@ func _regenerate_floating_islands() -> void:
 			for parcel in scene.parcels:
 				all_scene_parcels.append(parcel)
 
-	if all_scene_parcels.is_empty():
-		return
+	var is_empty_parcel_mode := all_scene_parcels.is_empty()
+	var empty_parcel_center := Vector2i(-1000, -1000)
+
+	if is_empty_parcel_mode:
+		# No scenes loaded - use current position as center of the floating island
+		var target_parcel = current_position
+		if _teleport_target_parcel != Vector2i(-1000, -1000):
+			target_parcel = _teleport_target_parcel
+
+		if target_parcel == Vector2i(-1000, -1000):
+			return
+
+		empty_parcel_center = target_parcel
+		# Treat current position as if it were a "scene" to generate the surrounding island
+		all_scene_parcels = [target_parcel]
 
 	var current_scene_group_hash: String = str(all_scene_parcels.hash())
 
@@ -477,6 +490,32 @@ func _regenerate_floating_islands() -> void:
 
 	# Create floating island platform considering all loaded scenes
 	_create_floating_island_for_cluster(all_scene_parcels)
+
+	# For empty parcel mode, also create an empty parcel at the center
+	if is_empty_parcel_mode and empty_parcel_center != Vector2i(-1000, -1000):
+		var x := empty_parcel_center.x
+		var z := empty_parcel_center.y
+		var parcel_string := "%d,%d" % [x, z]
+
+		var scene: Node3D = EMPTY_SCENE.instantiate()
+		var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+		scene.name = temp
+		add_child(scene)
+		scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+
+		# Center parcel has all neighbors as LOADED (flat terrain with edge strips)
+		var config := CornerConfiguration.new()
+		config.north = CornerConfiguration.ParcelState.LOADED
+		config.south = CornerConfiguration.ParcelState.LOADED
+		config.east = CornerConfiguration.ParcelState.LOADED
+		config.west = CornerConfiguration.ParcelState.LOADED
+		config.northwest = CornerConfiguration.ParcelState.LOADED
+		config.northeast = CornerConfiguration.ParcelState.LOADED
+		config.southwest = CornerConfiguration.ParcelState.LOADED
+		config.southeast = CornerConfiguration.ParcelState.LOADED
+		scene.set_corner_configuration.call_deferred(config)
+
+		loaded_empty_scenes[parcel_string] = scene
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
