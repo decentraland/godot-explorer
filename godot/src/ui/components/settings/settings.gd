@@ -68,6 +68,7 @@ var _dirty_connected: bool = false
 @onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
 
 @onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
+@onready var button_test_notification = %Button_TestNotification
 
 @onready var button_general: Button = %Button_General
 @onready var button_graphics: Button = %Button_Graphics
@@ -478,6 +479,21 @@ func _on_button_account_pressed() -> void:
 
 func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
+
+
+func _on_button_test_notification_pressed() -> void:
+	# Test notification with emojis and accents in both title and body
+	# This will test if iOS can display both correctly
+	var test_title = "🎉 Notificación de Prueba 🎉"
+	var test_body = "Esta es una notificación de prueba con emojis 🚀 y acentos: áéíóú ÁÉÍÓÚ ñ Ñ"
+	var notification_id = "test_notification_" + str(Time.get_unix_time_from_system())
+	var delay_seconds = 5  # Show notification in 5 seconds
+	
+	if NotificationsManager.schedule_local_notification(notification_id, test_title, test_body, delay_seconds):
+		print("Test notification scheduled: id=%s, title=%s, body=%s" % [notification_id, test_title, test_body])
+		print("Expected: Emojis and accents should be preserved. If they show as symbols, enable sanitization.")
+	else:
+		printerr("Failed to schedule test notification")
 
 
 func _on_button_report_bug_pressed() -> void:

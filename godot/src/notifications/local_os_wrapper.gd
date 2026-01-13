@@ -73,9 +73,11 @@ func schedule(notification_id: String, title: String, body: String, delay_second
 		push_warning("Local notifications not supported on this platform")
 		return false
 
-	# Sanitize text to remove emojis and normalize accents for iOS compatibility
-	var sanitized_title = NotificationUtils.sanitize_notification_text(title)
-	var sanitized_body = NotificationUtils.sanitize_notification_text(body)
+	# Sanitize text: by default preserve accents and emojis
+	# Only remove emojis if they cause display issues (set remove_emojis=true)
+	# Only normalize accents if they cause display issues (set normalize_accents=true)
+	var sanitized_title = NotificationUtils.sanitize_notification_text(title, false, false)
+	var sanitized_body = NotificationUtils.sanitize_notification_text(body, false, false)
 
 	# Call appropriate method based on plugin type (Android uses camelCase)
 	if OS.get_name() == "Android":
