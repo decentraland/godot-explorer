@@ -73,11 +73,19 @@ func schedule(notification_id: String, title: String, body: String, delay_second
 		push_warning("Local notifications not supported on this platform")
 		return false
 
+	# Sanitize text to remove emojis and normalize accents for iOS compatibility
+	var sanitized_title = NotificationUtils.sanitize_notification_text(title)
+	var sanitized_body = NotificationUtils.sanitize_notification_text(body)
+
 	# Call appropriate method based on plugin type (Android uses camelCase)
 	if OS.get_name() == "Android":
-		success = plugin.osScheduleNotification(notification_id, title, body, delay_seconds)
+		success = plugin.osScheduleNotification(
+			notification_id, sanitized_title, sanitized_body, delay_seconds
+		)
 	else:
-		success = plugin.os_schedule_notification(notification_id, title, body, delay_seconds)
+		success = plugin.os_schedule_notification(
+			notification_id, sanitized_title, sanitized_body, delay_seconds
+		)
 
 	if success:
 		notification_scheduled.emit(notification_id)
