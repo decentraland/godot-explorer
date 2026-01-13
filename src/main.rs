@@ -472,7 +472,7 @@ fn main() -> Result<(), anyhow::Error> {
                         .unwrap_or_default();
 
                     // Push the .so file to device
-                    run::hotreload_android(sm.is_present("release"), extras)?;
+                    run::hotreload_android(extras)?;
 
                     return Ok(());
                 } else {

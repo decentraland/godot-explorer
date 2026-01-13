@@ -18,8 +18,29 @@ use godot::{
 use image::{codecs::gif::GifDecoder, codecs::webp::WebPDecoder, AnimationDecoder};
 use std::io::Cursor;
 
+/// Creates a valid 2x2 magenta placeholder texture.
+/// This ensures the GPU has valid texture data to work with, preventing crashes
+/// caused by empty textures with invalid GPU resources.
+fn create_placeholder_texture() -> Gd<Texture2D> {
+    // Create a 2x2 RGBA image with magenta pixels (standard "missing texture" color)
+    let magenta: [u8; 4] = [255, 0, 255, 255]; // RGBA
+    let pixels: Vec<u8> = magenta.repeat(4); // 2x2 = 4 pixels
+    let packed_pixels = PackedByteArray::from_vec(&pixels);
+
+    if let Some(image) = Image::create_from_data(2, 2, false, GodotFormat::RGBA8, &packed_pixels) {
+        if let Some(texture) = ImageTexture::create_from_image(&image) {
+            return texture.upcast();
+        }
+    }
+
+    // This should never happen, but if it does, log and return empty texture as last resort
+    tracing::error!("Failed to create placeholder texture - this is a critical error");
+    ImageTexture::new_gd().upcast()
+}
+
 /// Gets the fallback texture for unsupported image formats.
 /// Loads from res://assets/image_not_supported.png (Godot caches loaded resources internally).
+/// If loading fails, creates a valid 2x2 magenta placeholder to prevent GPU crashes.
 fn get_fallback_texture() -> Gd<Texture2D> {
     let mut loader = ResourceLoader::singleton();
     if let Some(resource) = loader.load("res://assets/image_not_supported.png") {
@@ -27,16 +48,26 @@ fn get_fallback_texture() -> Gd<Texture2D> {
             return texture;
         }
     }
-    // Return an empty texture if loading fails
-    tracing::error!("Failed to load fallback texture from res://assets/image_not_supported.png");
-    ImageTexture::new_gd().upcast()
+    // Create a valid placeholder texture instead of an empty one
+    // Empty ImageTexture::new_gd() can cause GPU crashes on Android due to invalid resources
+    tracing::warn!("Failed to load fallback texture from res://assets/image_not_supported.png, using placeholder");
+    create_placeholder_texture()
 }
 
 /// Creates a TextureEntry using the fallback texture for unsupported formats.
+/// Creates a valid 2x2 image with pixel data to ensure GPU resources are valid.
 fn create_fallback_texture_entry() -> Gd<TextureEntry> {
     let texture = get_fallback_texture();
-    let image = Image::new_gd();
-    let original_size = Vector2i::new(256, 256); // Default size for fallback
+
+    // Create a valid 2x2 image with actual pixel data (magenta)
+    // This prevents GPU crashes from empty images on mobile devices
+    let magenta: [u8; 4] = [255, 0, 255, 255]; // RGBA
+    let pixels: Vec<u8> = magenta.repeat(4); // 2x2 = 4 pixels
+    let packed_pixels = PackedByteArray::from_vec(&pixels);
+
+    let image = Image::create_from_data(2, 2, false, GodotFormat::RGBA8, &packed_pixels)
+        .unwrap_or_else(Image::new_gd);
+    let original_size = Vector2i::new(2, 2);
 
     Gd::from_init_fn(|_base| TextureEntry {
         image,

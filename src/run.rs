@@ -808,7 +808,7 @@ fn deploy_ios_with_xcrun(_release: bool) -> anyhow::Result<()> {
 }
 
 /// Hot reload Android .so file by pushing it directly to the device
-pub fn hotreload_android(release: bool, extras: Vec<String>) -> anyhow::Result<()> {
+pub fn hotreload_android(extras: Vec<String>) -> anyhow::Result<()> {
     print_message(MessageType::Step, "Hot reloading Android library...");
 
     // Check if adb is available
@@ -848,11 +848,10 @@ pub fn hotreload_android(release: bool, extras: Vec<String>) -> anyhow::Result<(
         &format!("Found {} connected device(s)", device_lines.len()),
     );
 
-    // Get the .so file path
-    let build_mode = if release { "release" } else { "debug" };
+    // Get the .so file path from the canonical location (copy_library puts it here)
     let so_path = format!(
-        "{}target/aarch64-linux-android/{}/libdclgodot.so",
-        RUST_LIB_PROJECT_FOLDER, build_mode
+        "{}target/libdclgodot_android/libdclgodot.so",
+        RUST_LIB_PROJECT_FOLDER
     );
 
     // Check if .so file exists
