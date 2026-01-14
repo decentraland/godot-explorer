@@ -11,45 +11,36 @@ var emote_loader: EmoteLoader = null
 
 class EmoteSceneUrn:
 	var base_url: String
+	var scene_id: String
 	var glb_hash: String
-	var audio_hash: String
 	var looping: bool
 
 	func _init(emote_urn: String):
+		# Format: urn:decentraland:off-chain:scene-emote:{sceneId}-{glbHash}-{loop}
+		# Parse from the END to handle sceneIds that contain dashes (like b64-xxx)
 		var urn = emote_urn.split(":")
-		# urn:decentraland:off-chain:scene-emote:{audio_hash}-{glb_hash}-{looping}
-		# Note: Server sends audio FIRST (bafkrei* raw), glb SECOND (bafybei* dag-pb)
 		if urn.size() != 5:
 			return
 
-		var content = urn[4]
-		var last_dash = content.rfind("-")
-		if last_dash == -1:
+		var payload = urn[4]
+
+		# Extract loop (last dash-separated part)
+		var last_dash = payload.rfind("-")
+		if last_dash <= 0 or last_dash == payload.length() - 1:
 			return
 
-		# Extract looping flag (always last part)
-		looping = content.substr(last_dash + 1) == "true"
-		var hash_part = content.substr(0, last_dash)
+		var loop_str = payload.substr(last_dash + 1)
+		looping = loop_str == "true"
 
-		# Handle b64- prefix (contains dash in hash itself)
-		if hash_part.begins_with("b64-"):
-			var after_b64 = hash_part.substr(4)
-			var dash_pos = after_b64.find("-")
-			if dash_pos == -1:
-				glb_hash = hash_part
-			else:
-				# b64-xxx is audio (first), second part is glb
-				audio_hash = "b64-" + after_b64.substr(0, dash_pos)
-				glb_hash = after_b64.substr(dash_pos + 1)
-		else:
-			var dash_pos = hash_part.find("-")
-			if dash_pos == -1:
-				# Single hash = GLB only (no audio)
-				glb_hash = hash_part
-			else:
-				# Two hashes: FIRST = audio, SECOND = glb
-				audio_hash = hash_part.substr(0, dash_pos)
-				glb_hash = hash_part.substr(dash_pos + 1)
+		var rest = payload.substr(0, last_dash)
+
+		# Extract glbHash (second to last dash-separated part)
+		var second_last_dash = rest.rfind("-")
+		if second_last_dash <= 0 or second_last_dash == rest.length() - 1:
+			return
+
+		glb_hash = rest.substr(second_last_dash + 1)
+		scene_id = rest.substr(0, second_last_dash)
 
 		base_url = Global.realm.content_base_url
 
@@ -82,7 +73,11 @@ class EmoteItemData:
 		prop_animation_player = _prop_animation_player
 
 
+# Wearable emotes keyed by URN (urn:decentraland:...)
 var loaded_emotes_by_urn: Dictionary
+
+# Scene emotes keyed by glb_hash (simple hash identifier)
+var loaded_scene_emotes: Dictionary
 
 var playing_single: bool = false
 var playing_mixed: bool = false
@@ -102,6 +97,7 @@ var animation_mix_emote_node: AnimationNodeBlendTree
 # Guard to prevent concurrent modifications to animation system
 var _is_modifying_animations: bool = false
 var _queued_emote_urn: String = ""
+var _queued_scene_emote_hash: String = ""
 
 var _last_emote_time: float = 0.0
 
@@ -164,6 +160,8 @@ func stop_emote():
 	playing_loop = false
 
 
+## Play a wearable emote by ID or URN.
+## For scene emotes, use play_scene_emote(glb_hash) instead.
 func play_emote(id: String):
 	# If animation system is being modified, queue this request
 	if _is_modifying_animations:
@@ -327,6 +325,90 @@ func _force_play_emote(emote_urn: String):
 	playing_loop = false
 
 
+## Play a scene emote by its glb_hash.
+## Scene emotes are stored separately from wearable emotes.
+func play_scene_emote(glb_hash: String) -> void:
+	# If animation system is being modified, queue this request
+	if _is_modifying_animations:
+		_queued_scene_emote_hash = glb_hash
+		return
+
+	# Ensure animation tree is active before playing
+	if not animation_tree.active:
+		animation_tree.active = true
+
+	if _play_loaded_scene_emote(glb_hash):
+		avatar.call_deferred("emit_signal", "emote_triggered", glb_hash, playing_loop)
+
+
+func _play_loaded_scene_emote(glb_hash: String) -> bool:
+	if not _has_scene_emote(glb_hash):
+		printerr("Scene emote %s not found from player '%s'" % [glb_hash, avatar.get_avatar_name()])
+		return false
+
+	var emote_item_data: EmoteItemData = loaded_scene_emotes[glb_hash]
+
+	# Validate animation name exists
+	if emote_item_data.default_anim_name.is_empty():
+		printerr("Scene emote %s has no animation" % glb_hash)
+		return false
+
+	playing_loop = emote_item_data.looping
+
+	# Reset avatar state before playing new emote
+	_hide_all_props()
+	_reset_skeleton_to_rest_pose()
+
+	playing_single = true
+	playing_mixed = false
+
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+
+	# Play merged animation (avatar + prop tracks combined) through AnimationTree
+	var anim_path = "emotes/" + emote_item_data.default_anim_name
+	if not animation_player.has_animation(anim_path):
+		printerr("Animation not found in player: %s" % anim_path)
+		return false
+
+	animation_single_emote_node.animation = anim_path
+
+	# Ensure animation tree is active
+	if not animation_tree.active:
+		animation_tree.active = true
+
+	# Ensure state machine is initialized
+	var cur_state = pb.get_current_node()
+	if cur_state.is_empty():
+		pb.start("Idle", true)
+		_deferred_play_scene_emote.call_deferred(glb_hash)
+		return true
+
+	# Set the emote condition BEFORE travel
+	animation_tree.set("parameters/conditions/emote", true)
+	animation_tree.set("parameters/conditions/nemote", false)
+
+	# Use travel() to follow state machine transitions
+	if pb.get_current_node() == "Emote":
+		pb.start("Emote", true)
+	else:
+		pb.travel("Emote")
+
+	_deferred_retry_count = 0
+	return true
+
+
+func _deferred_play_scene_emote(glb_hash: String) -> void:
+	_deferred_retry_count += 1
+	if _deferred_retry_count > MAX_DEFERRED_RETRIES:
+		_deferred_retry_count = 0
+		return
+	play_scene_emote(glb_hash)
+
+
+func _has_scene_emote(glb_hash: String) -> bool:
+	return loaded_scene_emotes.has(glb_hash)
+
+
 func _hide_all_props():
 	# Hide all prop armatures to ensure clean state before playing new emote
 	if not is_instance_valid(avatar):
@@ -363,6 +445,7 @@ func _reset_skeleton_to_rest_pose():
 		skeleton.reset_bone_pose(i)
 
 
+## Load and play a wearable emote. For scene emotes from network, parse URN and use async_play_scene_emote.
 func async_play_emote(emote_id_or_urn: String) -> void:
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -389,6 +472,18 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 			printerr("Unknown emote: %s" % emote_id_or_urn)
 			return
 
+	# Handle scene emotes from network - parse URN and route to async_play_scene_emote
+	if emote_urn.contains("scene-emote"):
+		var parsed = EmoteSceneUrn.new(emote_urn)
+		if parsed.glb_hash.is_empty():
+			printerr("Failed to parse scene emote URN: %s" % emote_urn)
+			return
+		# Create DclSceneEmoteData and use unified scene emote path
+		# Note: audio_hash is not in the URN, so remote players don't get audio
+		var emote_data = DclSceneEmoteData.create(parsed.glb_hash, "", parsed.looping)
+		await async_play_scene_emote(emote_data)
+		return
+
 	# Does it need to be loaded?
 	if _has_emote(emote_urn):
 		play_emote(emote_urn)
@@ -397,10 +492,7 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 	# Set loading lock
 	_is_loading_emote = true
 
-	if emote_urn.contains("scene-emote"):
-		await _async_load_scene_emote(emote_urn)
-	else:
-		await _async_load_emote(emote_urn)
+	await _async_load_emote(emote_urn)
 
 	# Avatar may have been removed from tree during async load
 	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
@@ -447,31 +539,8 @@ func _async_load_emote(emote_urn: String):
 		load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 
-func _async_load_scene_emote(urn: String):
-	var emote_scene_urn = EmoteSceneUrn.new(urn)
-	if emote_scene_urn.glb_hash.is_empty():
-		printerr("Error loading scene-emote ", urn)
-		return
-
-	# Use signal-based emote loading for scene emotes
-	var scene_path = await emote_loader.async_load_scene_emote(
-		emote_scene_urn.glb_hash, emote_scene_urn.audio_hash, Global.realm.content_base_url
-	)
-
-	if scene_path.is_empty():
-		printerr("Error loading scene-emote ", urn, ": failed to load scene")
-		return
-
-	var obj = await emote_loader.async_get_emote_gltf(emote_scene_urn.glb_hash)
-	if obj is DclEmoteGltf:
-		load_emote_from_dcl_emote_gltf(urn, obj, emote_scene_urn.glb_hash)
-		if _has_emote(urn):
-			loaded_emotes_by_urn[urn].looping = emote_scene_urn.looping
-			loaded_emotes_by_urn[urn].from_scene = true
-
-
 ## Play a scene emote using data from Rust DclSceneEmoteData struct.
-## This avoids the fragile URN string encoding/decoding for scene emotes.
+## Scene emotes are stored separately from wearable emotes, keyed by glb_hash.
 func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -491,12 +560,9 @@ func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
 		printerr("Error: empty glb_hash in scene emote")
 		return
 
-	# Create internal URN for tracking (using glb_hash as unique identifier)
-	var internal_urn = "scene-emote:" + glb_hash
-
-	# Does it need to be loaded?
-	if _has_emote(internal_urn):
-		play_emote(internal_urn)
+	# Does it need to be loaded? Check scene emote cache by glb_hash
+	if _has_scene_emote(glb_hash):
+		play_scene_emote(glb_hash)
 		return
 
 	# Set loading lock
@@ -514,10 +580,7 @@ func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
 
 	var obj = await emote_loader.async_get_emote_gltf(glb_hash)
 	if obj is DclEmoteGltf:
-		load_emote_from_dcl_emote_gltf(internal_urn, obj, glb_hash)
-		if _has_emote(internal_urn):
-			loaded_emotes_by_urn[internal_urn].looping = looping
-			loaded_emotes_by_urn[internal_urn].from_scene = true
+		_load_scene_emote_from_gltf(glb_hash, obj, looping)
 
 	# Avatar may have been removed from tree during async load
 	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
@@ -536,11 +599,78 @@ func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
 	_is_loading_emote = false
 
 	# Use call_deferred to ensure playback happens on main thread after async loading
-	play_emote.call_deferred(internal_urn)
+	play_scene_emote.call_deferred(glb_hash)
 
 
 func _has_emote(emote_urn: String) -> bool:
 	return loaded_emotes_by_urn.has(emote_urn)
+
+
+## Load a scene emote from GLTF and store in loaded_scene_emotes by glb_hash.
+func _load_scene_emote_from_gltf(glb_hash: String, obj: DclEmoteGltf, looping: bool) -> void:
+	# Avoid adding the emote twice
+	if _has_scene_emote(glb_hash):
+		return
+
+	# Set guard to prevent concurrent operations
+	_is_modifying_animations = true
+
+	# IMPORTANT: Stop all animation processing while modifying animations
+	var was_tree_active = animation_tree.active
+	animation_tree.active = false
+	animation_player.stop()
+
+	# Reset all animation nodes to safe defaults
+	animation_single_emote_node.animation = "idle/Anim"
+	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
+	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+
+	var armature_prop: Node3D = null
+
+	if obj.armature_prop != null:
+		if not avatar.has_node(NodePath(obj.armature_prop.name)):
+			armature_prop = obj.armature_prop
+			armature_prop.set_owner(null)
+
+			var prop_anim_player = armature_prop.get_node_or_null("AnimationPlayer")
+			if prop_anim_player != null:
+				prop_anim_player.stop()
+				prop_anim_player.queue_free()
+
+			avatar.add_child(armature_prop)
+			armature_prop.hide()
+
+			if not _prop_armature_names.has(armature_prop.name):
+				_prop_armature_names.append(armature_prop.name)
+		else:
+			armature_prop = avatar.get_node(NodePath(obj.armature_prop.name))
+
+	# Create EmoteItemData for scene emote (use glb_hash as urn placeholder)
+	var emote_item_data = EmoteItemData.new(glb_hash, "", "", glb_hash, armature_prop, null)
+	emote_item_data.from_scene = true
+	emote_item_data.looping = looping
+
+	if obj.default_animation != null:
+		var anim_name = obj.default_animation.get_name()
+		if anim_name.is_empty():
+			anim_name = "scene_emote_" + glb_hash.substr(0, 8)
+
+		var final_animation: Animation
+		if obj.prop_animation != null:
+			final_animation = _merge_animations(obj.default_animation, obj.prop_animation)
+		else:
+			final_animation = obj.default_animation.duplicate()
+
+		if not emotes_animation_library.has_animation(anim_name):
+			emotes_animation_library.add_animation(anim_name, final_animation)
+		emote_item_data.default_anim_name = anim_name
+	else:
+		printerr("Error: default_animation is NULL for scene emote: ", glb_hash)
+
+	# Store in scene emotes dictionary by glb_hash
+	loaded_scene_emotes[glb_hash] = emote_item_data
+
+	_reactivate_animation_system.call_deferred(was_tree_active)
 
 
 func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: String):
@@ -625,6 +755,7 @@ func _reactivate_animation_system(_was_active: bool):
 	if not is_instance_valid(animation_tree):
 		_is_modifying_animations = false
 		_queued_emote_urn = ""
+		_queued_scene_emote_hash = ""
 		return
 
 	# Reactivate animation system after modifications
@@ -635,12 +766,18 @@ func _reactivate_animation_system(_was_active: bool):
 	# Clear the modification guard
 	_is_modifying_animations = false
 
-	# Process any queued emote request
+	# Process any queued wearable emote request
 	if not _queued_emote_urn.is_empty():
 		var queued = _queued_emote_urn
 		_queued_emote_urn = ""
 		# Use another deferred call to ensure tree is fully ready
 		play_emote.call_deferred(queued)
+
+	# Process any queued scene emote request
+	if not _queued_scene_emote_hash.is_empty():
+		var queued = _queued_scene_emote_hash
+		_queued_scene_emote_hash = ""
+		play_scene_emote.call_deferred(queued)
 
 
 func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animation:

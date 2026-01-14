@@ -1,8 +1,5 @@
 use crate::{
-    avatars::{
-        avatar_type::DclAvatarWireFormat,
-        scene_emote::{parse_compound_hash, DclSceneEmoteData},
-    },
+    avatars::avatar_type::DclAvatarWireFormat,
     comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
     dcl::{
         components::{proto_components::common::Color3, SceneComponentId},
@@ -171,19 +168,34 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 .expect("emotes should have at least one element");
 
             let local_emote = emote.emote_urn.contains(".glb") || emote.emote_urn.contains(".gltf");
+            tracing::info!(
+                "AvatarEmoteCommand: emote_urn={}, loop={}, is_local={}",
+                emote.emote_urn,
+                emote.r#loop,
+                local_emote
+            );
+
             if local_emote {
-                let Some(file_hash) = scene.content_mapping.get_hash(&emote.emote_urn) else {
+                let Some(emote_hash) = scene.content_mapping.get_scene_emote_hash(&emote.emote_urn)
+                else {
+                    tracing::warn!(
+                        "AvatarEmoteCommand: scene emote '{}' not found in content mapping",
+                        emote.emote_urn
+                    );
                     continue;
                 };
-
-                let (glb_hash, audio_hash) = parse_compound_hash(file_hash);
-                let emote_data = DclSceneEmoteData::create(
-                    glb_hash.as_str().into(),
-                    audio_hash.unwrap_or_default().as_str().into(),
-                    emote.r#loop,
+                tracing::info!(
+                    "AvatarEmoteCommand: playing scene emote glb_hash={}, audio_hash={:?}",
+                    emote_hash.glb_hash,
+                    emote_hash.audio_hash
                 );
+                let emote_data = emote_hash.to_godot_data(emote.r#loop);
                 avatar_node.call_deferred("async_play_scene_emote", &[emote_data.to_variant()]);
             } else {
+                tracing::info!(
+                    "AvatarEmoteCommand: playing wearable emote urn={}",
+                    emote.emote_urn
+                );
                 avatar_node.call_deferred("async_play_emote", &[emote.emote_urn.to_variant()]);
             }
         }

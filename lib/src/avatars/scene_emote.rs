@@ -1,7 +1,33 @@
 use godot::prelude::*;
 
+/// Scene emote data with GLB hash and optional audio hash.
+/// Audio is found by searching content mapping for files with same base name and audio extension.
+#[derive(Debug, Clone)]
+pub struct SceneEmoteHash {
+    pub glb_hash: String,
+    pub audio_hash: Option<String>,
+}
+
+impl SceneEmoteHash {
+    /// Create from GLB hash and optional audio hash
+    pub fn new(glb_hash: String, audio_hash: Option<String>) -> Self {
+        Self {
+            glb_hash,
+            audio_hash,
+        }
+    }
+
+    /// Create DclSceneEmoteData for passing to GDScript
+    pub fn to_godot_data(&self, looping: bool) -> Gd<DclSceneEmoteData> {
+        DclSceneEmoteData::create(
+            self.glb_hash.as_str().into(),
+            self.audio_hash.as_deref().unwrap_or_default().into(),
+            looping,
+        )
+    }
+}
+
 /// Scene emote data passed from Rust to GDScript.
-/// This replaces the fragile URN string encoding for scene emotes.
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct DclSceneEmoteData {
@@ -24,22 +50,5 @@ impl DclSceneEmoteData {
             audio_hash,
             looping,
         })
-    }
-}
-
-/// Parse compound hash from server: "{audio_hash}-{glb_hash}" or just "{glb_hash}"
-///
-/// The server returns compound hashes where:
-/// - First part (bafkrei* raw multicodec) = audio file
-/// - Second part (bafybei* dag-pb) = GLB/GLTF file
-pub fn parse_compound_hash(file_hash: &str) -> (String, Option<String>) {
-    if let Some(dash_pos) = file_hash.find('-') {
-        // Two hashes: first = audio, second = glb
-        let audio = &file_hash[..dash_pos];
-        let glb = &file_hash[dash_pos + 1..];
-        (glb.to_string(), Some(audio.to_string()))
-    } else {
-        // Single hash = GLB only
-        (file_hash.to_string(), None)
     }
 }

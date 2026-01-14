@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use godot::prelude::*;
 
+use crate::avatars::scene_emote::SceneEmoteHash;
 use crate::dcl::common::content_entity::TypedIpfsRef;
 
 #[derive(Debug, Default)]
@@ -33,6 +34,54 @@ impl ContentMappingAndUrl {
     pub fn get_hash(&self, file: &str) -> Option<&String> {
         let file = file.to_lowercase();
         self.content.get(&file)
+    }
+
+    /// Get scene emote data for an emote file.
+    /// Returns GLB hash and searches for associated audio file by extension.
+    pub fn get_scene_emote_hash(&self, emote_file: &str) -> Option<SceneEmoteHash> {
+        // Get the GLB hash
+        let glb_hash = self.get_hash(emote_file)?.clone();
+
+        // Find audio file with same base name but audio extension
+        let emote_file_lower = emote_file.to_lowercase();
+        let base_name = emote_file_lower
+            .strip_suffix(".glb")
+            .or_else(|| emote_file_lower.strip_suffix(".gltf"))
+            .unwrap_or(&emote_file_lower);
+
+        let audio_hash = self.find_audio_for_base_name(base_name);
+
+        tracing::info!(
+            "get_scene_emote_hash: file={}, glb_hash={}, base_name={}, audio_hash={:?}",
+            emote_file,
+            glb_hash,
+            base_name,
+            audio_hash
+        );
+
+        Some(SceneEmoteHash::new(glb_hash, audio_hash))
+    }
+
+    /// Find audio file hash for a given base name (without extension).
+    /// Searches for .mp3 or .ogg files with the same base name.
+    fn find_audio_for_base_name(&self, base_name: &str) -> Option<String> {
+        // Try common audio extensions
+        for ext in &[".mp3", ".ogg"] {
+            let audio_file = format!("{}{}", base_name, ext);
+            if let Some(hash) = self.content.get(&audio_file) {
+                tracing::debug!(
+                    "find_audio_for_base_name: found audio file={}, hash={}",
+                    audio_file,
+                    hash
+                );
+                return Some(hash.clone());
+            }
+        }
+        tracing::debug!(
+            "find_audio_for_base_name: no audio found for base_name={}",
+            base_name
+        );
+        None
     }
 
     pub fn files(&self) -> &HashMap<String, String> {
