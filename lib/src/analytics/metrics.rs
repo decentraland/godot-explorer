@@ -93,11 +93,11 @@ impl INode for Metrics {
         if DclIosPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Ios);
             self.device_info = DclIosPlugin::get_mobile_device_info_internal();
-            tracing::info!("iOS mobile platform detected for metrics collection");
+            tracing::debug!("iOS mobile platform detected for metrics collection");
         } else if DclAndroidPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Android);
             self.device_info = DclAndroidPlugin::get_mobile_device_info_internal();
-            tracing::info!("Android mobile platform detected for metrics collection");
+            tracing::debug!("Android mobile platform detected for metrics collection");
         }
     }
 
@@ -270,7 +270,7 @@ impl Metrics {
 
         let mut accumulated_length: usize = self.serialized_events.iter().map(|s| s.len()).sum();
 
-        tracing::info!("Starting event processing loop");
+        tracing::debug!("Starting event processing loop");
         while let Some(event) = self.events.pop() {
             let raw_event =
                 build_segment_event_batch_item(self.user_id.clone(), &self.common, event);
@@ -302,7 +302,7 @@ impl Metrics {
             self.serialized_events.push(json_body);
         }
 
-        tracing::info!(
+        tracing::debug!(
             "Event processing loop complete. Serialized events: {}",
             self.serialized_events.len()
         );
@@ -311,7 +311,7 @@ impl Metrics {
             let http_requester = http_requester.clone();
             let write_key = self.write_key.clone();
             let serialized_events = std::mem::take(&mut self.serialized_events);
-            tracing::info!(
+            tracing::debug!(
                 "Spawning async task to send {} events",
                 serialized_events.len()
             );
@@ -319,7 +319,7 @@ impl Metrics {
                 Self::send_segment_batch(http_requester, &write_key, &serialized_events).await;
             });
         } else {
-            tracing::info!("No serialized events to send");
+            tracing::debug!("No serialized events to send");
         }
     }
 }
@@ -475,7 +475,7 @@ impl Metrics {
         if let Err(err) = http_requester.request(request, 0).await {
             tracing::error!("Failed to send segment batch: {:?}", err);
         } else {
-            tracing::info!("Segment batch sent successfully");
+            tracing::debug!("Segment batch sent successfully");
         }
     }
 }
