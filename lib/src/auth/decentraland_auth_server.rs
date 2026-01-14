@@ -133,7 +133,7 @@ pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityRespons
 
     if !status.is_success() {
         let status_code = status.as_u16();
-        tracing::warn!(
+        tracing::error!(
             "fetch_identity_by_id: error status={} for identity_id={}",
             status_code,
             identity_id
@@ -252,14 +252,14 @@ async fn fetch_polling_server(
                                 );
                                 Ok((response.sender, response_data))
                             } else if let Some(error) = response.error {
-                                tracing::warn!(
+                                tracing::error!(
                                     "fetch_polling_server: server returned error for req_id={}: {}",
                                     req_id,
                                     error.message
                                 );
                                 Err(anyhow::Error::msg(error.message))
                             } else {
-                                tracing::warn!(
+                                tracing::error!(
                                     "fetch_polling_server: invalid response (no result or error) for req_id={}",
                                     req_id
                                 );
@@ -267,7 +267,7 @@ async fn fetch_polling_server(
                             }
                         }
                         Err(error) => {
-                            tracing::warn!(
+                            tracing::error!(
                                 "fetch_polling_server: failed to parse response JSON for req_id={}: {:?}",
                                 req_id,
                                 error
@@ -279,7 +279,7 @@ async fn fetch_polling_server(
                         }
                     }
                 } else {
-                    tracing::warn!(
+                    tracing::error!(
                         "fetch_polling_server: unexpected status={} for req_id={}",
                         status,
                         req_id
@@ -292,7 +292,7 @@ async fn fetch_polling_server(
             }
             Err(error) => {
                 if let Some(status_code) = error.status() {
-                    tracing::warn!(
+                    tracing::error!(
                         "fetch_polling_server: request error with status={} for req_id={}: {:?}",
                         status_code,
                         req_id,
@@ -303,7 +303,7 @@ async fn fetch_polling_server(
                         status_code, error
                     )))
                 } else {
-                    tracing::warn!(
+                    tracing::error!(
                         "fetch_polling_server: request error (no status) for req_id={}: {:?}",
                         req_id,
                         error
@@ -326,7 +326,7 @@ async fn fetch_polling_server(
             continue;
         }
 
-        tracing::debug!(
+        tracing::error!(
             "fetch_polling_server: completed successfully after {} attempts for req_id={}",
             attempt,
             req_id
@@ -376,7 +376,7 @@ async fn create_new_request(
     } else {
         let status_code = status.as_u16();
         let response_text = response.text().await?;
-        tracing::warn!(
+        tracing::error!(
             "create_new_request: failed with status={}, response={}",
             status_code,
             response_text
@@ -507,7 +507,7 @@ pub async fn do_request(
             );
         }
         Err(e) => {
-            tracing::warn!("do_request: failed for req_id={}: {:?}", req_id, e);
+            tracing::error!("do_request: failed for req_id={}: {:?}", req_id, e);
         }
     }
     result

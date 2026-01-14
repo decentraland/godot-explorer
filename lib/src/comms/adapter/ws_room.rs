@@ -224,7 +224,7 @@ impl WebSocketRoom {
                     while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             ws_packet::Message::ChallengeMessage(challenge_msg) => {
-                                tracing::info!("comms > peer msg {:?}", challenge_msg);
+                                tracing::debug!("comms > peer msg {:?}", challenge_msg);
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
@@ -262,7 +262,7 @@ impl WebSocketRoom {
                                 self.state = WsRoomState::ChallengeMessageSent;
                             }
                             _ => {
-                                tracing::info!(
+                                tracing::debug!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -306,7 +306,7 @@ impl WebSocketRoom {
                                             address: peer.address,
                                             room_id: self.room_id.clone(),
                                         }) {
-                                            tracing::warn!(
+                                            tracing::debug!(
                                                 "Failed to send PeerJoined event: {}",
                                                 e
                                             );
@@ -315,7 +315,7 @@ impl WebSocketRoom {
                                 }
                             }
                             _ => {
-                                tracing::info!(
+                                tracing::debug!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -373,7 +373,7 @@ impl WebSocketRoom {
                                 address: h160,
                                 room_id: self.room_id.clone(),
                             }) {
-                                tracing::warn!(
+                                tracing::debug!(
                                     "Failed to send PeerJoined event for new peer: {}",
                                     e
                                 );
@@ -452,7 +452,7 @@ impl WebSocketRoom {
                     }
                 }
                 ws_packet::Message::PeerKicked(reason) => {
-                    tracing::info!("comms > received PeerKicked {:?}", reason);
+                    tracing::debug!("comms > received PeerKicked {:?}", reason);
                     // TODO: message announcing the kick
                     self.ws_peer.close();
                     self.state = WsRoomState::Connecting;

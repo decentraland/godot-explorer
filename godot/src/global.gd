@@ -655,26 +655,14 @@ func check_deep_link_teleport_to():
 		var new_deep_link_url: String = ""
 		if DclAndroidPlugin.is_available():
 			var args = DclAndroidPlugin.get_deeplink_args()
-			print("[DEEPLINK] Android args: ", args)
 			new_deep_link_url = args.get("data", "")
 		elif DclIosPlugin.is_available():
 			var args = DclIosPlugin.get_deeplink_args()
-			print("[DEEPLINK] iOS args: ", args)
 			new_deep_link_url = args.get("data", "")
-
-		print("[DEEPLINK] check_deep_link_teleport_to: new_deep_link_url = ", new_deep_link_url)
 
 		if not new_deep_link_url.is_empty():
 			deep_link_url = new_deep_link_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
-			print(
-				"[DEEPLINK] Parsed deep_link_obj: location=",
-				deep_link_obj.location,
-				" realm=",
-				deep_link_obj.realm,
-				" preview=",
-				deep_link_obj.preview
-			)
 
 		if Global.deep_link_obj.is_location_defined():
 			# Use preview URL as realm if specified, otherwise use realm, otherwise main
@@ -690,12 +678,9 @@ func check_deep_link_teleport_to():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
 		elif not Global.deep_link_obj.realm.is_empty():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
-		elif deep_link_url.begins_with("https://decentraland.org/events/event/?id="):
-			print("Is event link")
 
 
 func _on_deeplink_received(url: String) -> void:
-	print("[DEEPLINK] Signal received in GDScript: ", url)
 	if not url.is_empty():
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
@@ -708,7 +693,6 @@ func _on_deeplink_received(url: String) -> void:
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:
-	print("[DEEPLINK] Handling signin with identity_id: ", identity_id)
 	if Global.player_identity.has_pending_mobile_auth():
 		Global.player_identity.complete_mobile_connect_account(identity_id)
 	else:

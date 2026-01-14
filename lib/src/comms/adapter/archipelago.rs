@@ -175,7 +175,7 @@ impl ArchipelagoManager {
                     while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             server_packet::Message::ChallengeResponse(challenge_msg) => {
-                                tracing::info!("comms > peer msg {:?}", challenge_msg);
+                                tracing::debug!("comms > peer msg {:?}", challenge_msg);
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
@@ -206,7 +206,7 @@ impl ArchipelagoManager {
                                 self.state = ArchipelagoState::ChallengeMessageSent;
                             }
                             _ => {
-                                tracing::info!(
+                                tracing::debug!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -226,7 +226,7 @@ impl ArchipelagoManager {
                                 self.state = ArchipelagoState::WelcomeMessageReceived;
                             }
                             _ => {
-                                tracing::info!(
+                                tracing::debug!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -289,13 +289,13 @@ impl ArchipelagoManager {
         while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.clone()) {
             match message {
                 server_packet::Message::Kicked(msg) => {
-                    tracing::info!("comms > received PeerKicked {:?}", msg.reason);
+                    tracing::debug!("comms > received PeerKicked {:?}", msg.reason);
                     // TODO: message announcing the kick
                     self.ws_peer.close();
                     self.state = ArchipelagoState::Connecting;
                 }
                 server_packet::Message::IslandChanged(msg) => {
-                    tracing::info!("connecting to island {:?}", msg.island_id);
+                    tracing::debug!("connecting to island {:?}", msg.island_id);
                     let Some((protocol, comms_address)) = msg.conn_str.as_str().split_once(':')
                     else {
                         tracing::error!("unrecognised connection adapter string: {:?}", msg);
@@ -304,7 +304,7 @@ impl ArchipelagoManager {
                     match protocol {
                         "livekit" => {
                             if let Some(shared_sender) = &self.shared_processor_sender {
-                                tracing::info!(
+                                tracing::debug!(
                                     "Using shared MessageProcessor for archipelago LiveKit room"
                                 );
 
@@ -324,7 +324,7 @@ impl ArchipelagoManager {
                             }
                         }
                         _ => {
-                            tracing::info!(
+                            tracing::debug!(
                                 "protocol not supported as child of archipelago {:?}",
                                 msg
                             )
