@@ -175,10 +175,10 @@ func _end_swipe(pos: Vector2) -> void:
 #		"[NotificationToast] Swipe ended at position: ",
 #		pos,
 #		", total delta: ",
-		delta,
-		", length: ",
-		delta.length()
-	)
+#		delta,
+#		", length: ",
+#		delta.length()
+#	)
 
 	# Mark swipe as completed to prevent double execution
 	_swipe_started = false
@@ -216,7 +216,7 @@ func _end_swipe(pos: Vector2) -> void:
 #		", directional velocity: ",
 #		int(directional_velocity),
 #		" px/s"
-	)
+#	)
 
 	# Fast swipe detected - apply inertia and dismiss
 	if directional_velocity >= VELOCITY_DISMISS_THRESHOLD:
