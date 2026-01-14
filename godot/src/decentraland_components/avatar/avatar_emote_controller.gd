@@ -4,6 +4,8 @@ extends RefCounted
 # Cooldown to prevent rapid emote spam that can crash the animation system
 const EMOTE_COOLDOWN_SECONDS: float = 0.5
 const MAX_DEFERRED_RETRIES: int = 3
+# Grace period after teleport where emote won't be cancelled by movement
+const TELEPORT_GRACE_SECONDS: float = 0.5
 
 # Signal-based emote loader for threaded loading
 var emote_loader: EmoteLoader = null
@@ -100,6 +102,8 @@ var _queued_emote_urn: String = ""
 var _queued_scene_emote_hash: String = ""
 
 var _last_emote_time: float = 0.0
+# Time until which emote cancellation is blocked (for teleport grace period)
+var _grace_period_until: float = 0.0
 
 # Lock to prevent concurrent async emote loading
 var _is_loading_emote: bool = false
@@ -922,14 +926,32 @@ func is_playing() -> bool:
 	return playing_single || playing_mixed
 
 
+## Set a grace period during which emote cancellation is blocked.
+## Call this after teleports or movePlayerTo to prevent immediate emote cancellation.
+func set_teleport_grace() -> void:
+	var current_time = Time.get_ticks_msec() / 1000.0
+	_grace_period_until = current_time + TELEPORT_GRACE_SECONDS
+
+
+## Process emote state. Cancel emote if player is moving (not idle).
+## idle: true if player is not moving
 func process(idle: bool):
 	if playing_single or playing_mixed:
-		if not idle:
+		# Check for actual player input - this cancels the grace period
+		var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
+		var has_player_input := input_dir.length() > 0.01 or Input.is_action_pressed("ia_jump")
+
+		# Grace period only applies if there's no player input
+		var current_time = Time.get_ticks_msec() / 1000.0
+		var in_grace_period = current_time < _grace_period_until and not has_player_input
+
+		if not idle and not in_grace_period:
+			# Cancel emote when player moves (unless in grace period without player input)
 			playing_single = false
 			playing_mixed = false
 			# Hide props when interrupted
 			_hide_all_props()
-		else:
+		elif idle:
 			var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 			var cur_node: StringName = pb.get_current_node()
 			if cur_node == "Emote" or cur_node == "Emote_Mix":

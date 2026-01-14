@@ -345,7 +345,10 @@ pub fn trigger_scene_emote(
     );
 
     let Some(emote_hash) = scene.content_mapping.get_scene_emote_hash(emote_src) else {
-        tracing::warn!("triggerSceneEmote failed: Emote '{}' not found in content mapping", emote_src);
+        tracing::warn!(
+            "triggerSceneEmote failed: Emote '{}' not found in content mapping",
+            emote_src
+        );
         return;
     };
 
@@ -364,9 +367,7 @@ pub fn trigger_scene_emote(
     // Format: urn:decentraland:off-chain:scene-emote:{sceneId}-{glbHash}-{loop}
     let urn = format!(
         "urn:decentraland:off-chain:scene-emote:{}-{}-{}",
-        scene.scene_entity_definition.id,
-        emote_hash.glb_hash,
-        looping
+        scene.scene_entity_definition.id, emote_hash.glb_hash, looping
     );
     tracing::info!("triggerSceneEmote: broadcasting URN={}", urn);
     DclGlobal::singleton()
