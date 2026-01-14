@@ -227,7 +227,7 @@ impl Metrics {
 
     #[func]
     pub fn flush(&mut self) {
-        tracing::warn!("Flushing metrics - forcing immediate send of all pending events");
+        tracing::debug!("Flushing metrics - forcing immediate send of all pending events");
 
         // Process all events with ignore_batch_limit = true
         self.process_and_send_events(true);
@@ -250,7 +250,7 @@ impl Metrics {
     }
 
     fn process_and_send_events(&mut self, ignore_batch_limit: bool) {
-        tracing::info!(
+        tracing::debug!(
             "process_and_send_events: events={}, serialized={}, ignore_limit={}",
             self.events.len(),
             self.serialized_events.len(),
@@ -258,7 +258,7 @@ impl Metrics {
         );
 
         if self.events.is_empty() && self.serialized_events.is_empty() {
-            tracing::info!("No events to process, returning early");
+            tracing::debug!("No events to process, returning early");
             return;
         }
 
@@ -338,7 +338,7 @@ impl Metrics {
         let json = serde_json::to_string_pretty(&event_body)
             .unwrap_or_else(|e| format!("<serialization error: {}>", e));
 
-        tracing::info!("[Metrics] Event queued: {}\n{}", event_name, json);
+        tracing::debug!("[Metrics] Event queued: {}\n{}", event_name, json);
     }
 
     fn populate_event_metrics(&self, event: &mut SegmentEvent) {
@@ -443,13 +443,13 @@ impl Metrics {
         events: &[String],
     ) {
         // Log the events being sent
-        tracing::warn!("Sending segment batch with {} events", events.len());
+        tracing::debug!("Sending segment batch with {} events", events.len());
 
         // Parse and log each event name
         for (idx, event) in events.iter().enumerate() {
             if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(event) {
                 if let Some(event_name) = parsed.get("event").and_then(|v| v.as_str()) {
-                    tracing::info!("  Event {}: {}", idx + 1, event_name);
+                    tracing::debug!("  Event {}: {}", idx + 1, event_name);
                 }
             }
         }
