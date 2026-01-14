@@ -346,7 +346,7 @@ func _async_on_desired_scene_changed():
 		loaded_empty_scenes.clear()
 
 	if use_floating_islands:
-		await _regenerate_floating_islands()
+		await _async_regenerate_floating_islands()
 
 	var empty_parcels_coords = []
 	if use_floating_islands and !last_scene_group_hash.is_empty():
@@ -461,7 +461,7 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 		loaded_scenes.erase(scene_id)
 
 
-func _regenerate_floating_islands() -> void:
+func _async_regenerate_floating_islands() -> void:
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
 	var all_scene_parcels = []
 	for scene_id in loaded_scenes.keys():
@@ -494,7 +494,7 @@ func _regenerate_floating_islands() -> void:
 		wall_manager.clear_walls()
 
 	# Create floating island platform considering all loaded scenes (async, chunked)
-	await _create_floating_island_for_cluster(all_scene_parcels)
+	await _async_create_floating_island_for_cluster(all_scene_parcels)
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
@@ -852,7 +852,7 @@ func _cluster_parcels(parcels: Array) -> Array:
 	return clusters
 
 
-func _create_floating_island_for_cluster(cluster: Array):
+func _async_create_floating_island_for_cluster(cluster: Array):
 	if cluster.is_empty():
 		return
 
