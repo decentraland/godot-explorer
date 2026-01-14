@@ -63,11 +63,18 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 
 ## Load a scene emote (from SDK scene, not wearable).
 ## Returns the scene_path if successful, empty string on failure.
-func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
+func async_load_scene_emote(glb_hash: String, audio_hash: String, base_url: String) -> String:
 	# Create content mapping for the scene emote
-	var content_mapping = DclContentMappingAndUrl.from_values(
-		base_url + "contents/", {"emote.glb": glb_hash}
-	)
+	var files_dict = {"emote.glb": glb_hash}
+	if not audio_hash.is_empty():
+		files_dict["emote_audio.mp3"] = audio_hash
+
+	var content_mapping = DclContentMappingAndUrl.from_values(base_url + "contents/", files_dict)
+
+	# Load audio file if provided (in parallel with GLTF)
+	var audio_promise = null
+	if not audio_hash.is_empty():
+		audio_promise = Global.content_provider.fetch_audio("emote_audio.mp3", content_mapping)
 
 	# Start loading - ContentProvider handles caching and deduplication
 	var gltf_promise = Global.content_provider.load_emote_gltf("emote.glb", content_mapping)
@@ -77,6 +84,10 @@ func async_load_scene_emote(glb_hash: String, base_url: String) -> String:
 
 	# Wait for load
 	await PromiseUtils.async_awaiter(gltf_promise)
+
+	# Wait for audio (if any)
+	if audio_promise != null:
+		await PromiseUtils.async_awaiter(audio_promise)
 
 	if gltf_promise.is_resolved() and not gltf_promise.is_rejected():
 		var result = gltf_promise.get_data()

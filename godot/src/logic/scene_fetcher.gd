@@ -11,6 +11,10 @@ const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 
+# Number of empty parcels to create per frame during floating island generation
+# Lower values = smoother but slower loading, higher values = faster but more stuttery
+const PARCELS_PER_FRAME: int = 5
+
 
 class SceneItem:
 	extends RefCounted
@@ -342,7 +346,7 @@ func _async_on_desired_scene_changed():
 		loaded_empty_scenes.clear()
 
 	if use_floating_islands:
-		_regenerate_floating_islands()
+		await _regenerate_floating_islands()
 
 	var empty_parcels_coords = []
 	if use_floating_islands and !last_scene_group_hash.is_empty():
@@ -489,8 +493,8 @@ func _regenerate_floating_islands() -> void:
 	if wall_manager:
 		wall_manager.clear_walls()
 
-	# Create floating island platform considering all loaded scenes
-	_create_floating_island_for_cluster(all_scene_parcels)
+	# Create floating island platform considering all loaded scenes (async, chunked)
+	await _create_floating_island_for_cluster(all_scene_parcels)
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
@@ -774,10 +778,8 @@ func _on_try_spawn_scene(
 	if base_floor_manager:
 		base_floor_manager.add_scene_floors(scene_item.id, scene_item.parcels)
 
-	# Regenerate floating islands after scene spawns (deferred to ensure scene is fully initialized)
-	# Skip in dynamic loading mode - we use simple base floors instead
-	if is_using_floating_islands() and not _use_dynamic_loading:
-		_regenerate_floating_islands.call_deferred()
+	# Note: Floating islands are regenerated in _async_on_desired_scene_changed after all scenes load
+	# This is now tracked by the LoadingSession as a separate phase
 
 	return true
 
@@ -872,32 +874,65 @@ func _create_floating_island_for_cluster(cluster: Array):
 
 	# Create 2-parcel padding around the bounds
 	var padding = 2
+
+	# Collect all parcels to create first (lightweight - just coordinates)
+	var parcels_to_create: Array[Vector2i] = []
 	for x in range(min_x - padding, max_x + padding + 1):
 		for z in range(min_z - padding, max_z + padding + 1):
 			var coord = Vector2i(x, z)
 			# Only add empty parcels if they're not occupied by actual scenes
 			if not scene_parcel_set.has(coord):
-				var parcel_string = "%d,%d" % [x, z]
+				parcels_to_create.append(coord)
 
-				if not loaded_empty_scenes.has(parcel_string):
-					var scene: Node3D = EMPTY_SCENE.instantiate()
-					var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
-					scene.name = temp
-					add_child(scene)
-					scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+	# Report start of floating islands generation to loading session
+	var has_session = Global.scene_runner.has_active_loading_session()
+	if has_session:
+		Global.scene_runner.start_floating_islands(parcels_to_create.size())
 
-					var config = _calculate_parcel_adjacency(
-						x,
-						z,
-						min_x - padding,
-						max_x + padding,
-						min_z - padding,
-						max_z + padding,
-						scene_parcel_set
-					)
-					scene.set_corner_configuration.call_deferred(config)
+	# Create parcels in batches across multiple frames
+	var created = 0
+	while created < parcels_to_create.size():
+		var batch_end = min(created + PARCELS_PER_FRAME, parcels_to_create.size())
 
-					loaded_empty_scenes[parcel_string] = scene
+		for i in range(created, batch_end):
+			var coord = parcels_to_create[i]
+			var x = coord.x
+			var z = coord.y
+			var parcel_string = "%d,%d" % [x, z]
+
+			if not loaded_empty_scenes.has(parcel_string):
+				var scene: Node3D = EMPTY_SCENE.instantiate()
+				var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+				scene.name = temp
+				add_child(scene)
+				scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+
+				var config = _calculate_parcel_adjacency(
+					x,
+					z,
+					min_x - padding,
+					max_x + padding,
+					min_z - padding,
+					max_z + padding,
+					scene_parcel_set
+				)
+				scene.set_corner_configuration.call_deferred(config)
+
+				loaded_empty_scenes[parcel_string] = scene
+
+		created = batch_end
+
+		# Report progress
+		if has_session:
+			Global.scene_runner.report_floating_islands_progress(created)
+
+		# Yield to next frame to spread work (avoid freeze)
+		if created < parcels_to_create.size():
+			await get_tree().process_frame
+
+	# Report completion
+	if has_session:
+		Global.scene_runner.finish_floating_islands()
 
 	if wall_manager:
 		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)

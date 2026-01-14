@@ -263,6 +263,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("For Android: push .so file directly to device instead of full APK deployment")
                         .takes_value(false),
                 ).arg(
+                    Arg::new("skip-export")
+                        .long("skip-export")
+                        .help("Skip build and export steps, deploy existing APK/IPA directly to device")
+                        .takes_value(false),
+                ).arg(
                     Arg::new("no-default-features")
                         .long("no-default-features")
                         .help("Do not activate default features")
@@ -437,6 +442,7 @@ fn main() -> Result<(), anyhow::Error> {
             // Check if target is specified
             let target = sm.value_of("target");
             let is_only_lib = sm.is_present("only-lib");
+            let is_skip_export = sm.is_present("skip-export");
 
             // For android/ios targets, check if we should deploy to device
             let should_deploy = target.is_some()
@@ -473,6 +479,20 @@ fn main() -> Result<(), anyhow::Error> {
 
                     // Push the .so file to device
                     run::hotreload_android(extras)?;
+
+                    return Ok(());
+                } else if is_skip_export {
+                    // Skip export mode: deploy existing APK/IPA directly
+                    print_message(
+                        MessageType::Step,
+                        &format!(
+                            "Deploying existing build to {} (skipping build and export)",
+                            platform
+                        ),
+                    );
+
+                    // Just deploy to device
+                    run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
 
                     return Ok(());
                 } else {

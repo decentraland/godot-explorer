@@ -413,6 +413,35 @@ impl SceneManager {
         }
     }
 
+    /// Start floating islands generation phase
+    #[func]
+    pub fn start_floating_islands(&mut self, count: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.start_floating_islands(count as u32);
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+    }
+
+    /// Report progress on floating islands generation
+    #[func]
+    pub fn report_floating_islands_progress(&mut self, created: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_floating_islands_progress(created as u32);
+            self.emit_loading_progress();
+        }
+    }
+
+    /// Finish floating islands generation
+    #[func]
+    pub fn finish_floating_islands(&mut self) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.finish_floating_islands();
+            self.check_loading_phase_transition();
+            self.emit_loading_progress();
+        }
+    }
+
     /// Cancel the current loading session
     #[func]
     pub fn cancel_loading_session(&mut self) {

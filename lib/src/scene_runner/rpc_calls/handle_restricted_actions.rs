@@ -1,4 +1,5 @@
 use crate::{
+    avatars::scene_emote::{parse_compound_hash, DclSceneEmoteData},
     dcl::{scene_apis::RpcResultSender, SceneId},
     godot_classes::{dcl_confirm_dialog::DclConfirmDialog, dcl_global::DclGlobal},
     scene_runner::{
@@ -342,10 +343,23 @@ pub fn trigger_scene_emote(
         return;
     };
 
-    let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
-    let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("async_play_emote", &[urn.to_variant()]);
+    let (glb_hash, audio_hash) = parse_compound_hash(file_hash);
+    let emote_data = DclSceneEmoteData::create(
+        glb_hash.as_str().into(),
+        audio_hash.as_deref().unwrap_or_default().into(),
+        *looping,
+    );
 
+    let mut avatar_node = get_avatar_node(scene);
+    avatar_node.call("async_play_scene_emote", &[emote_data.to_variant()]);
+
+    // Broadcast to other players - construct URN for network compatibility
+    let urn = format!(
+        "urn:decentraland:off-chain:scene-emote:{}-{}-{}",
+        audio_hash.unwrap_or_default(),
+        glb_hash,
+        looping
+    );
     DclGlobal::singleton()
         .bind()
         .get_comms()

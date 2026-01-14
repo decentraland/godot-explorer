@@ -186,11 +186,29 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 
 
 func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: String):
-	set_avatar_data(new_avatar)
-	set_avatar_name(new_avatar_name)
 	if new_avatar == null:
 		printerr("Trying to update an avatar with an null value")
 		return
+
+	# Skip redundant updates - if avatar data hasn't changed and avatar is already loaded,
+	# no need to re-duplicate all meshes and materials (saves Vulkan descriptor sets)
+	if finish_loading and avatar_data != null and avatar_data.equal(new_avatar):
+		prints("[Avatar] Skipping redundant update - data unchanged")
+		# Only update the name if it changed
+		if get_avatar_name() != new_avatar_name:
+			set_avatar_name(new_avatar_name)
+			var splitted_nickname = new_avatar_name.split("#", false)
+			if splitted_nickname.size() > 1:
+				nickname_ui.nickname = splitted_nickname[0]
+				nickname_ui.tag = splitted_nickname[1]
+			else:
+				nickname_ui.nickname = new_avatar_name
+				nickname_ui.tag = ""
+			nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
+		return
+
+	set_avatar_data(new_avatar)
+	set_avatar_name(new_avatar_name)
 
 	var wearable_to_request := []
 
@@ -659,3 +677,7 @@ func _play_emote_audio(file_hash: String):
 
 func async_play_emote(emote_urn: String):
 	await emote_controller.async_play_emote(emote_urn)
+
+
+func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
+	await emote_controller.async_play_scene_emote(emote_data)

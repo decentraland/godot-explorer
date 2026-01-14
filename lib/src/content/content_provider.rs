@@ -27,6 +27,7 @@ use crate::{
     },
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
+    tools::descriptor_tracker,
 };
 
 #[cfg(feature = "use_resource_tracking")]
@@ -1337,6 +1338,7 @@ impl ContentProvider {
                     let Some(new_material) = new_material.duplicate() else {
                         continue;
                     };
+                    descriptor_tracker::track_material_duplicate();
 
                     mesh.surface_set_material(i, &new_material.cast::<Material>());
                 }

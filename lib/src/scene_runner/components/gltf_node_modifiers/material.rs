@@ -18,6 +18,7 @@ use crate::{
     },
     godot_classes::dcl_global::DclGlobal,
     scene_runner::{components::material::apply_dcl_material_properties, scene::Scene},
+    tools::descriptor_tracker,
 };
 
 /// Capture original material state for a mesh instance
@@ -58,6 +59,10 @@ fn get_or_create_material(mesh: &Gd<MeshInstance3D>, surface_idx: i32) -> Gd<Sta
     if let Some(override_mat) = mesh.get_surface_override_material(surface_idx) {
         if let Ok(std_mat) = override_mat.try_cast::<StandardMaterial3D>() {
             // Already have a StandardMaterial3D override, reuse it directly
+            tracing::info!(
+                "[GltfNodeModifier] Reusing existing override material for surface {}",
+                surface_idx
+            );
             return std_mat;
         }
     }
@@ -68,6 +73,11 @@ fn get_or_create_material(mesh: &Gd<MeshInstance3D>, surface_idx: i32) -> Gd<Sta
             // Duplicate to avoid modifying the shared resource
             if let Some(duplicated) = std_mat.duplicate() {
                 if let Ok(dup_std) = duplicated.try_cast::<StandardMaterial3D>() {
+                    tracing::info!(
+                        "[GltfNodeModifier] DUPLICATED active material for surface {}",
+                        surface_idx
+                    );
+                    descriptor_tracker::track_material_duplicate();
                     return dup_std;
                 }
             }
@@ -75,6 +85,11 @@ fn get_or_create_material(mesh: &Gd<MeshInstance3D>, surface_idx: i32) -> Gd<Sta
     }
 
     // No compatible material found, create a new one
+    tracing::info!(
+        "[GltfNodeModifier] Creating NEW StandardMaterial3D for surface {}",
+        surface_idx
+    );
+    descriptor_tracker::track_material_new();
     StandardMaterial3D::new_gd()
 }
 
@@ -289,6 +304,7 @@ fn check_texture(
                 if let Some(resource) =
                     content_provider.get_texture_from_hash(content_hash.to_godot())
                 {
+                    descriptor_tracker::track_texture_set();
                     material.set_texture(param, &resource.upcast::<Texture2D>());
                 }
                 true
@@ -376,10 +392,12 @@ pub fn update_modifier_video_textures(scene: &mut Scene) {
             // Try get_backend_texture first (works for ExoPlayer's ExternalTexture)
             let backend_texture = video_player.bind_mut().get_backend_texture();
             if let Some(texture) = backend_texture {
+                descriptor_tracker::track_texture_set();
                 material.set_texture(param, &texture.upcast::<Texture2D>());
             } else {
                 // Fallback to dcl_texture (works for LiveKit's ImageTexture)
                 if let Some(texture) = video_player.bind().get_dcl_texture() {
+                    descriptor_tracker::track_texture_set();
                     material.set_texture(param, &texture.upcast::<Texture2D>());
                 }
             }

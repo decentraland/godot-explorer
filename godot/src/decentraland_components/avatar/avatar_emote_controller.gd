@@ -17,19 +17,40 @@ class EmoteSceneUrn:
 
 	func _init(emote_urn: String):
 		var urn = emote_urn.split(":")
-		# urn:decentraland:off-chain:scene-emote:{fileHash}-{looping}
+		# urn:decentraland:off-chain:scene-emote:{audio_hash}-{glb_hash}-{looping}
+		# Note: Server sends audio FIRST (bafkrei* raw), glb SECOND (bafybei* dag-pb)
 		if urn.size() != 5:
 			return
 
-		var content = urn[4].split("-")
-		if urn[4].begins_with("b64"):
-			glb_hash = content[0] + "-" + content[1]
-			looping = content[2] == "true"
-		else:
-			glb_hash = content[0]
-			looping = content[1] == "true"
+		var content = urn[4]
+		var last_dash = content.rfind("-")
+		if last_dash == -1:
+			return
 
-		# TODO: define from the urn
+		# Extract looping flag (always last part)
+		looping = content.substr(last_dash + 1) == "true"
+		var hash_part = content.substr(0, last_dash)
+
+		# Handle b64- prefix (contains dash in hash itself)
+		if hash_part.begins_with("b64-"):
+			var after_b64 = hash_part.substr(4)
+			var dash_pos = after_b64.find("-")
+			if dash_pos == -1:
+				glb_hash = hash_part
+			else:
+				# b64-xxx is audio (first), second part is glb
+				audio_hash = "b64-" + after_b64.substr(0, dash_pos)
+				glb_hash = after_b64.substr(dash_pos + 1)
+		else:
+			var dash_pos = hash_part.find("-")
+			if dash_pos == -1:
+				# Single hash = GLB only (no audio)
+				glb_hash = hash_part
+			else:
+				# Two hashes: FIRST = audio, SECOND = glb
+				audio_hash = hash_part.substr(0, dash_pos)
+				glb_hash = hash_part.substr(dash_pos + 1)
+
 		base_url = Global.realm.content_base_url
 
 
@@ -434,7 +455,7 @@ func _async_load_scene_emote(urn: String):
 
 	# Use signal-based emote loading for scene emotes
 	var scene_path = await emote_loader.async_load_scene_emote(
-		emote_scene_urn.glb_hash, Global.realm.content_base_url
+		emote_scene_urn.glb_hash, emote_scene_urn.audio_hash, Global.realm.content_base_url
 	)
 
 	if scene_path.is_empty():
@@ -447,6 +468,75 @@ func _async_load_scene_emote(urn: String):
 		if _has_emote(urn):
 			loaded_emotes_by_urn[urn].looping = emote_scene_urn.looping
 			loaded_emotes_by_urn[urn].from_scene = true
+
+
+## Play a scene emote using data from Rust DclSceneEmoteData struct.
+## This avoids the fragile URN string encoding/decoding for scene emotes.
+func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
+	# Cooldown check to prevent rapid emote spam
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
+		return
+	_last_emote_time = current_time
+
+	# Prevent concurrent async loading operations
+	if _is_loading_emote:
+		return
+
+	var glb_hash = emote_data.glb_hash
+	var audio_hash = emote_data.audio_hash
+	var looping = emote_data.looping
+
+	if glb_hash.is_empty():
+		printerr("Error: empty glb_hash in scene emote")
+		return
+
+	# Create internal URN for tracking (using glb_hash as unique identifier)
+	var internal_urn = "scene-emote:" + glb_hash
+
+	# Does it need to be loaded?
+	if _has_emote(internal_urn):
+		play_emote(internal_urn)
+		return
+
+	# Set loading lock
+	_is_loading_emote = true
+
+	# Use signal-based emote loading for scene emotes
+	var scene_path = await emote_loader.async_load_scene_emote(
+		glb_hash, audio_hash, Global.realm.content_base_url
+	)
+
+	if scene_path.is_empty():
+		printerr("Error loading scene-emote glb_hash=", glb_hash, ": failed to load scene")
+		_is_loading_emote = false
+		return
+
+	var obj = await emote_loader.async_get_emote_gltf(glb_hash)
+	if obj is DclEmoteGltf:
+		load_emote_from_dcl_emote_gltf(internal_urn, obj, glb_hash)
+		if _has_emote(internal_urn):
+			loaded_emotes_by_urn[internal_urn].looping = looping
+			loaded_emotes_by_urn[internal_urn].from_scene = true
+
+	# Avatar may have been removed from tree during async load
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		_is_loading_emote = false
+		return
+
+	# Wait a frame for any deferred calls to complete
+	await avatar.get_tree().process_frame
+
+	# Check again after waiting
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		_is_loading_emote = false
+		return
+
+	# Clear loading lock
+	_is_loading_emote = false
+
+	# Use call_deferred to ensure playback happens on main thread after async loading
+	play_emote.call_deferred(internal_urn)
 
 
 func _has_emote(emote_urn: String) -> bool:

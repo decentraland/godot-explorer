@@ -54,8 +54,8 @@ pub fn update_video_player(
     let mut livekit_registrations = Vec::new();
 
     if let Some(video_player_dirty) = dirty_lww_components.get(&SceneComponentId::VIDEO_PLAYER) {
-        tracing::debug!(
-            "Video player component has {} dirty entities in scene {}",
+        tracing::info!(
+            "[VideoPlayer] Processing {} dirty entities in scene {}",
             video_player_dirty.len(),
             scene.scene_id.0
         );
@@ -191,8 +191,8 @@ pub fn update_video_player(
                     }
 
                     VideoUpdateMode::FirstSpawnVideo => {
-                        tracing::debug!(
-                            "Video player activated (first spawn) for entity {}: {}",
+                        tracing::info!(
+                            "[VideoPlayer] Creating NEW video player for entity {:?}, src={}",
                             entity,
                             target_src
                         );

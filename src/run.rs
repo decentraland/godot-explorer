@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::BufRead, path::PathBuf};
+use std::{collections::HashMap, io::BufRead, path::PathBuf, thread, time::Duration};
 
 use cargo_metadata::MetadataCommand;
 
@@ -11,6 +11,10 @@ use crate::{
     platform::validate_platform_for_target,
     ui::{create_spinner, print_build_status, print_message, MessageType},
 };
+
+/// Configuration for ADB device detection retry logic
+const ADB_MAX_RETRIES: u32 = 3;
+const ADB_RETRY_DELAY_SECS: u64 = 2;
 
 pub fn run(
     editor: bool,
@@ -626,6 +630,108 @@ fn run_tests(
     }
 }
 
+/// Restart ADB server to fix potential connection issues
+fn restart_adb_server() -> anyhow::Result<()> {
+    print_message(MessageType::Info, "Restarting ADB server...");
+
+    // Kill the server
+    let _ = std::process::Command::new("adb")
+        .args(["kill-server"])
+        .output();
+
+    // Small delay to let it fully shut down
+    thread::sleep(Duration::from_millis(500));
+
+    // Start the server
+    let start_result = std::process::Command::new("adb")
+        .args(["start-server"])
+        .output()?;
+
+    if !start_result.status.success() {
+        return Err(anyhow::anyhow!("Failed to restart ADB server"));
+    }
+
+    // Give it a moment to initialize
+    thread::sleep(Duration::from_secs(1));
+
+    print_message(MessageType::Success, "ADB server restarted");
+    Ok(())
+}
+
+/// Get list of connected Android devices with retry logic
+/// Returns a tuple of (device_id, all_device_lines) on success
+fn get_connected_android_device() -> anyhow::Result<(String, Vec<String>)> {
+    let mut last_error = None;
+
+    for attempt in 1..=ADB_MAX_RETRIES {
+        let spinner = create_spinner(&format!(
+            "Checking for connected Android devices (attempt {}/{})...",
+            attempt, ADB_MAX_RETRIES
+        ));
+
+        let devices_output = std::process::Command::new("adb")
+            .args(["devices", "-l"])
+            .output();
+
+        spinner.finish();
+
+        match devices_output {
+            Ok(output) => {
+                let devices_str = String::from_utf8_lossy(&output.stdout);
+                let device_lines: Vec<String> = devices_str
+                    .lines()
+                    .skip(1) // Skip "List of devices attached" header
+                    .filter(|line| !line.is_empty() && line.contains("device"))
+                    .map(|s| s.to_string())
+                    .collect();
+
+                if !device_lines.is_empty() {
+                    // Extract device ID from the first device line
+                    let device_id = device_lines[0]
+                        .split_whitespace()
+                        .next()
+                        .ok_or_else(|| anyhow::anyhow!("Failed to parse device ID"))?
+                        .to_string();
+
+                    return Ok((device_id, device_lines));
+                }
+
+                last_error = Some(anyhow::anyhow!(
+                    "No Android devices found. Please connect a device and enable USB debugging."
+                ));
+            }
+            Err(e) => {
+                last_error = Some(anyhow::anyhow!("Failed to run adb devices: {}", e));
+            }
+        }
+
+        // If not the last attempt, try restarting ADB and wait before retrying
+        if attempt < ADB_MAX_RETRIES {
+            print_message(
+                MessageType::Warning,
+                &format!(
+                    "No devices found, retrying in {} seconds...",
+                    ADB_RETRY_DELAY_SECS
+                ),
+            );
+
+            // Try restarting ADB server on second attempt
+            if attempt == 2 {
+                if let Err(e) = restart_adb_server() {
+                    print_message(
+                        MessageType::Warning,
+                        &format!("Failed to restart ADB server: {}", e),
+                    );
+                }
+            } else {
+                thread::sleep(Duration::from_secs(ADB_RETRY_DELAY_SECS));
+            }
+        }
+    }
+
+    Err(last_error.unwrap_or_else(|| anyhow::anyhow!("Failed to detect Android devices")))
+}
+
 /// Deploy and run the application on a connected device
 pub fn deploy_and_run_on_device(platform: &str, release: bool) -> anyhow::Result<()> {
     match platform {
@@ -658,35 +764,26 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
         ));
     }
 
-    // Check for connected devices
-    let spinner = create_spinner("Checking for connected Android devices...");
-    let devices_output = std::process::Command::new("adb")
-        .args(["devices", "-l"])
-        .output()?;
-    spinner.finish();
+    // Check for connected devices with retry logic
+    let (device_id, device_lines) = get_connected_android_device()?;
 
-    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
-    let device_lines: Vec<&str> = devices_str
-        .lines()
-        .skip(1) // Skip "List of devices attached" header
-        .filter(|line| !line.is_empty() && line.contains("device"))
-        .collect();
-
-    if device_lines.is_empty() {
-        return Err(anyhow::anyhow!(
-            "No Android devices found. Please connect a device and enable USB debugging."
-        ));
+    if device_lines.len() > 1 {
+        print_message(
+            MessageType::Warning,
+            &format!(
+                "Multiple devices found ({}), using first device: {}",
+                device_lines.len(),
+                device_id
+            ),
+        );
+    } else {
+        print_message(MessageType::Info, &format!("Using device: {}", device_id));
     }
-
-    print_message(
-        MessageType::Info,
-        &format!("Found {} connected device(s)", device_lines.len()),
-    );
 
     // Install APK
     let spinner = create_spinner("Installing APK...");
     let install_status = std::process::Command::new("adb")
-        .args(["install", "-r", &apk_path])
+        .args(["-s", &device_id, "install", "-r", &apk_path])
         .status()?;
     spinner.finish();
 
@@ -700,6 +797,8 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
     let spinner = create_spinner("Launching application...");
     let launch_status = std::process::Command::new("adb")
         .args([
+            "-s",
+            &device_id,
             "shell",
             "am",
             "start",
@@ -718,7 +817,15 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
     // Show logs
     print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
     let _log_status = std::process::Command::new("adb")
-        .args(["logcat", "-s", "godot:V", "GodotApp:V", "dclgodot:V"])
+        .args([
+            "-s",
+            &device_id,
+            "logcat",
+            "-s",
+            "godot:V",
+            "GodotApp:V",
+            "dclgodot:V",
+        ])
         .status()?;
 
     Ok(())
@@ -823,29 +930,16 @@ pub fn hotreload_android(extras: Vec<String>) -> anyhow::Result<()> {
         ));
     }
 
-    // Check for connected devices
-    let spinner = create_spinner("Checking for connected Android devices...");
-    let devices_output = std::process::Command::new("adb")
-        .args(["devices", "-l"])
-        .output()?;
-    spinner.finish();
-
-    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
-    let device_lines: Vec<&str> = devices_str
-        .lines()
-        .skip(1) // Skip "List of devices attached" header
-        .filter(|line| !line.is_empty() && line.contains("device"))
-        .collect();
-
-    if device_lines.is_empty() {
-        return Err(anyhow::anyhow!(
-            "No Android devices found. Please connect a device and enable USB debugging."
-        ));
-    }
+    // Check for connected devices with retry logic
+    let (device_id, device_lines) = get_connected_android_device()?;
 
     print_message(
         MessageType::Info,
-        &format!("Found {} connected device(s)", device_lines.len()),
+        &format!(
+            "Found {} connected device(s), using: {}",
+            device_lines.len(),
+            device_id
+        ),
     );
 
     // Get the .so file path from the canonical location (copy_library puts it here)

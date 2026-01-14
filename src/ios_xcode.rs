@@ -4,7 +4,9 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::android_godot_lib::GodotEngineConfig;
-use crate::consts::{EXPORTS_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER, IOS_EXPORT_NAME};
+use crate::consts::{
+    EXPORTS_FOLDER, GODOT_PROJECT_FOLDER, IOS_EXPORT_NAME, RUST_LIB_PROJECT_FOLDER,
+};
 use crate::export::import_assets;
 use crate::path::get_godot_path;
 use crate::ui::{create_spinner, print_message, print_section, MessageType};
@@ -249,7 +251,11 @@ fn update_pck() -> anyhow::Result<()> {
             let size = fs::metadata(&pck_path)?.len();
             print_message(
                 MessageType::Success,
-                &format!("{}.pck ({:.1} MB)", IOS_EXPORT_NAME, size as f64 / 1024.0 / 1024.0),
+                &format!(
+                    "{}.pck ({:.1} MB)",
+                    IOS_EXPORT_NAME,
+                    size as f64 / 1024.0 / 1024.0
+                ),
             );
         }
         _ => {
@@ -274,7 +280,11 @@ fn update_pck() -> anyhow::Result<()> {
                 let size = fs::metadata(&pck_path)?.len();
                 print_message(
                     MessageType::Success,
-                    &format!("{}.pck ({:.1} MB)", IOS_EXPORT_NAME, size as f64 / 1024.0 / 1024.0),
+                    &format!(
+                        "{}.pck ({:.1} MB)",
+                        IOS_EXPORT_NAME,
+                        size as f64 / 1024.0 / 1024.0
+                    ),
                 );
             } else {
                 print_message(MessageType::Error, "Failed to generate PCK");
@@ -343,7 +353,10 @@ pub fn update_ios_xcode(
     print_message(MessageType::Success, "Xcode project updated!");
     println!();
     print_message(MessageType::Info, "Next steps:");
-    println!("  1. Open Xcode: open exports/{}.xcodeproj", IOS_EXPORT_NAME);
+    println!(
+        "  1. Open Xcode: open exports/{}.xcodeproj",
+        IOS_EXPORT_NAME
+    );
     println!("  2. Build and run on device (Cmd+R)");
 
     Ok(())

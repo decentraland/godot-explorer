@@ -1,5 +1,8 @@
 use crate::{
-    avatars::avatar_type::DclAvatarWireFormat,
+    avatars::{
+        avatar_type::DclAvatarWireFormat,
+        scene_emote::{parse_compound_hash, DclSceneEmoteData},
+    },
     comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
     dcl::{
         components::{proto_components::common::Color3, SceneComponentId},
@@ -59,6 +62,10 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let avatar_shape_component = SceneCrdtStateProtoComponents::get_avatar_shape(crdt_state);
 
     if let Some(avatar_shape_dirty) = dirty_lww_components.get(&SceneComponentId::AVATAR_SHAPE) {
+        tracing::info!(
+            "[AvatarShape] Processing {} dirty entities",
+            avatar_shape_dirty.len()
+        );
         for entity in avatar_shape_dirty {
             let new_value = avatar_shape_component.get(entity);
             if new_value.is_none() {
@@ -111,11 +118,21 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let new_avatar_data = DclAvatarWireFormat::from_gd(new_avatar_data);
 
                 if let Some(mut avatar_node) = existing {
+                    tracing::info!(
+                        "[AvatarShape] UPDATING existing avatar for entity {:?}, name={}",
+                        entity,
+                        avatar_name
+                    );
                     avatar_node.call_deferred(
                         "async_update_avatar",
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
+                    tracing::info!(
+                        "[AvatarShape] Creating NEW avatar for entity {:?}, name={}",
+                        entity,
+                        avatar_name
+                    );
                     let mut new_avatar_shape = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )
@@ -168,20 +185,21 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 .expect("emotes should have at least one element");
 
             let local_emote = emote.emote_urn.contains(".glb") || emote.emote_urn.contains(".gltf");
-            let urn = if local_emote {
+            if local_emote {
                 let Some(file_hash) = scene.content_mapping.get_hash(&emote.emote_urn) else {
                     continue;
                 };
 
-                format!(
-                    "urn:decentraland:off-chain:scene-emote:{file_hash}-{}",
-                    emote.r#loop
-                )
+                let (glb_hash, audio_hash) = parse_compound_hash(file_hash);
+                let emote_data = DclSceneEmoteData::create(
+                    glb_hash.as_str().into(),
+                    audio_hash.unwrap_or_default().as_str().into(),
+                    emote.r#loop,
+                );
+                avatar_node.call_deferred("async_play_scene_emote", &[emote_data.to_variant()]);
             } else {
-                emote.emote_urn.clone()
-            };
-
-            avatar_node.call_deferred("async_play_emote", &[urn.to_variant()]);
+                avatar_node.call_deferred("async_play_emote", &[emote.emote_urn.to_variant()]);
+            }
         }
     }
 }
