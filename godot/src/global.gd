@@ -25,6 +25,8 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal run_anyway
+signal reload_scene
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -78,8 +80,7 @@ var standalone = false
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
 
-var url_popup_instance = null
-var jump_in_popup_instance = null
+var modal_instance = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
@@ -96,33 +97,12 @@ var session_id: String
 var _safe_area_presets: GDScript = null
 
 
-func set_url_popup_instance(popup_instance) -> void:
-	url_popup_instance = popup_instance
+func set_modal_instance(popup_instance) -> void:
+	modal_instance = popup_instance
 
 
-func show_url_popup(url: String) -> void:
-	if url_popup_instance != null:
-		url_popup_instance.open(url)
-
-
-func hide_url_popup() -> void:
-	if url_popup_instance != null:
-		url_popup_instance.close()
-
-
-func set_jump_in_popup_instance(popup_instance) -> void:
-	jump_in_popup_instance = popup_instance
-
-
-func show_jump_in_popup(coordinates: Vector2i) -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.open(coordinates)
-
-
-func hide_jump_in_popup() -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.close()
-
+func get_modal_instance() -> Node:
+	return modal_instance
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr

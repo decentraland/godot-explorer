@@ -39,7 +39,11 @@ const CONNECTION_LOST_PRIMARY = "RETRY"
 const CONNECTION_LOST_SECONDARY = "EXIT APP"
 
 var url: String
+var scene_id: String
 var modal_type: ModalType
+var location: Vector2i = Vector2i(0, 0)
+var realm: String = Realm.MAIN_REALM
+var destination_name: String = "Unknown Place"
 
 @onready var margin_container_modal: MarginContainer = %MarginContainer_Modal
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
@@ -111,6 +115,8 @@ func _set_body(body: String) -> void:
 func _set_modal_type(type: ModalType) -> void:
 	modal_type = type
 	_update_content_visibility()
+	resize_modal()
+	show()
 
 
 func _update_content_visibility() -> void:
@@ -180,9 +186,11 @@ func connection_lost() -> void:
 	_set_modal_type(ModalType.CONNECTION_LOST)
 
 
-func teleport(destination_name: String) -> void:
+func teleport(new_location: Vector2i, new_realm = null) -> void:
+	location = new_location
+	async_load_place_position()
 	_set_title(TELEPORT_TITLE)
-	_set_body(TELEPORT_BODY + destination_name)
+	_set_body(TELEPORT_BODY + str(location))
 	_set_modal_type(ModalType.TELEPORT)
 
 
@@ -202,5 +210,61 @@ func _on_button_3_pressed() -> void:
 
 
 func _on_button_4_pressed() -> void:
-	teleport("{destination_name}")
+	teleport(Vector2(22,5))
 	resize_modal()
+
+func async_load_place_position():
+	var place_url: String = "https://places.decentraland.org/api/places?limit=1"
+	place_url += "&positions=%d,%d" % [location.x, location.y]
+
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		place_url, HTTPClient.METHOD_GET, "", headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("Error request places jump in", result.get_error())
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+
+	if json.data.is_empty():
+		destination_name = "Unknown Place"
+	else:
+		var title = json.data[0].get("title", "interactive-text")
+		if title != "interactive-text":
+			destination_name = title
+		else:
+			destination_name = "Unknown Place"
+	_set_body(TELEPORT_BODY + destination_name)
+
+
+func _on_button_primary_pressed() -> void:
+	match modal_type:
+		ModalType.EXTERNAL_LINK:
+			Global.open_url(url)
+		ModalType.SCENE_TIMEOUT:
+			Global.reload_scene.emit()
+		ModalType.CONNECTION_LOST:
+			pass
+		ModalType.TELEPORT:
+			Global.teleport_to(location, realm)
+		_:
+			pass
+	hide()
+
+
+func _on_button_secondary_pressed() -> void:
+	match modal_type:
+		ModalType.EXTERNAL_LINK:
+			pass
+		ModalType.SCENE_TIMEOUT:
+			Global.run_anyway.emit()
+		ModalType.CONNECTION_LOST:
+			pass
+		ModalType.TELEPORT:
+			pass
+		_:
+			pass
+	hide()

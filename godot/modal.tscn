@@ -152,6 +152,7 @@ scale = Vector2(0.53193825, 0.53193825)
 texture = ExtResource("5_ao2vh")
 
 [node name="TESTING_PORPUSE" type="HBoxContainer" parent="."]
+visible = false
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
@@ -172,6 +173,8 @@ text = "SCENE TIME OUT"
 layout_mode = 2
 text = "TELEPORT"
 
+[connection signal="pressed" from="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Secondary" to="." method="_on_button_secondary_pressed"]
+[connection signal="pressed" from="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Primary" to="." method="_on_button_primary_pressed"]
 [connection signal="pressed" from="TESTING_PORPUSE/Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="TESTING_PORPUSE/Button2" to="." method="_on_button_2_pressed"]
 [connection signal="pressed" from="TESTING_PORPUSE/Button3" to="." method="_on_button_3_pressed"]
