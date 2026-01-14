@@ -553,4 +553,11 @@ impl DclGlobal {
 
         result
     }
+
+    /// Emits test messages at various Rust tracing levels to verify Sentry integration.
+    #[func]
+    pub fn emit_sentry_rust_test_messages() {
+        use crate::tools::sentry_logger::emit_sentry_test_messages;
+        emit_sentry_test_messages();
+    }
 }
