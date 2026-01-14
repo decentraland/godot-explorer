@@ -5,5 +5,5 @@
 [resource]
 line_spacing = -4.0
 font = ExtResource("1_osmqd")
-font_size = 58
+font_size = 38
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

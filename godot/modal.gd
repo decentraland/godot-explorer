@@ -1,22 +1,42 @@
 extends ColorRect
 
-const V_MARGIN_RATIO_LANDSCAPE = 0.1 #Modal max height = 80%
-const V_MARGIN_RATIO_PORTRAIT = 0.2 #Modal max height = 60%
-const H_MARGIN_RATIO_LANDSCAPE = 0.275 #Modal max width = 45%
-const H_MARGIN_RATIO_PORTRAIT = 0.14 #Modal max width = 72%
+enum ModalType { EXTERNAL_LINK, TELEPORT, SCENE_TIMEOUT, CONNECTION_LOST }
 
-const H_MARGIN_CONTENT_LANDSCAPE = 80 * 2/3
-const TOP_MARGIN_CONTENT_LANDSCAPE = 80 * 2/3
-const BOTTOM_MARGIN_CONTENT_LANDSCAPE = 70 * 2/3
-const H_MARGIN_CONTENT_PORTRAIT = 80 * 2/3
-const TOP_MARGIN_CONTENT_PORTRAIT = 100 * 2/3
-const BOTTOM_MARGIN_CONTENT_PORTRAIT = 90 * 2/3
+const V_MARGIN_RATIO_LANDSCAPE = 0.1  #Modal max height = 80%
+const V_MARGIN_RATIO_PORTRAIT = 0.2  #Modal max height = 60%
+const H_MARGIN_RATIO_LANDSCAPE = 0.275  #Modal max width = 45%
+const H_MARGIN_RATIO_PORTRAIT = 0.14  #Modal max width = 72%
 
-enum ModalType {
-	EXTERNAL_LINK,
-	JUMP_TO,
-	TAKING_TOO_LONG
-}
+const H_MARGIN_CONTENT_LANDSCAPE = 80 * 2 / 3
+const TOP_MARGIN_CONTENT_LANDSCAPE = 80 * 2 / 3
+const BOTTOM_MARGIN_CONTENT_LANDSCAPE = 70 * 2 / 3
+const H_MARGIN_CONTENT_PORTRAIT = 80 * 2 / 3
+const TOP_MARGIN_CONTENT_PORTRAIT = 100 * 2 / 3
+const BOTTOM_MARGIN_CONTENT_PORTRAIT = 90 * 2 / 3
+
+const MODAL_ALERT_ICON = preload("res://assets/ui/modal-alert-icon.svg")
+const MODAL_BLOCK_ICON = preload("res://assets/ui/modal-block-icon.svg")
+const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg")
+
+const EXTERNAL_LINK_TITLE = "Open external link?"
+const EXTERNAL_LINK_BODY = "You’re about to visit an external website. Make sure you trust this site before continuing."
+const EXTERNAL_LINK_PRIMARY = "OPEN LINK"
+const EXTERNAL_LINK_SECONDARY = "CANCEL"
+
+const SCENE_TIMEOUT_TITLE = "Loading  is taking longer than expected"
+const SCENE_TIMEOUT_BODY = "You can reload the experience, or jump in now, it should keep loading in the background."
+const SCENE_TIMEOUT_PRIMARY = "RELOAD"
+const SCENE_TIMEOUT_SECONDARY = "START ANYWAY"
+
+const TELEPORT_TITLE = "Teleport"
+const TELEPORT_BODY = "You’ll be traveling to "
+const TELEPORT_PRIMARY = "JUMP TO"
+const TELEPORT_SECONDARY = "CANCEL"
+
+const CONNECTION_LOST_TITLE = "Connection lost"
+const CONNECTION_LOST_BODY = "We can’t connect to Decentraland right now. Please check your connection and try again."
+const CONNECTION_LOST_PRIMARY = "RETRY"
+const CONNECTION_LOST_SECONDARY = "EXIT APP"
 
 var url: String
 var modal_type: ModalType
@@ -27,9 +47,14 @@ var modal_type: ModalType
 @onready var label_body: Label = %Label_Body
 @onready var h_separator_url: HSeparator = %HSeparator_Url
 @onready var label_url: Label = %Label_Url
+@onready var icon: TextureRect = %Icon
+@onready var button_secondary: Button = %Button_Secondary
+@onready var button_primary: Button = %Button_Primary
+
 
 func _ready() -> void:
 	resize_modal()
+
 
 func resize_modal() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
@@ -41,54 +66,141 @@ func resize_modal() -> void:
 		margin_container_modal.add_theme_constant_override("margin_bottom", v_margin)
 		margin_container_modal.add_theme_constant_override("margin_left", h_margin)
 		margin_container_modal.add_theme_constant_override("margin_right", h_margin)
-		margin_container_content.add_theme_constant_override("margin_top", TOP_MARGIN_CONTENT_LANDSCAPE)
-		margin_container_content.add_theme_constant_override("margin_bottom", BOTTOM_MARGIN_CONTENT_LANDSCAPE)
-		margin_container_content.add_theme_constant_override("margin_left", H_MARGIN_CONTENT_LANDSCAPE)
-		margin_container_content.add_theme_constant_override("margin_right", H_MARGIN_CONTENT_LANDSCAPE)
-		
+		margin_container_content.add_theme_constant_override(
+			"margin_top", TOP_MARGIN_CONTENT_LANDSCAPE
+		)
+		margin_container_content.add_theme_constant_override(
+			"margin_bottom", BOTTOM_MARGIN_CONTENT_LANDSCAPE
+		)
+		margin_container_content.add_theme_constant_override(
+			"margin_left", H_MARGIN_CONTENT_LANDSCAPE
+		)
+		margin_container_content.add_theme_constant_override(
+			"margin_right", H_MARGIN_CONTENT_LANDSCAPE
+		)
+
 	else:
-		var v_margin = window_size.y * V_MARGIN_RATIO_PORTRAIT	
-		var h_margin = window_size.x * H_MARGIN_RATIO_PORTRAIT	
+		var v_margin = window_size.y * V_MARGIN_RATIO_PORTRAIT
+		var h_margin = window_size.x * H_MARGIN_RATIO_PORTRAIT
 		margin_container_modal.add_theme_constant_override("margin_top", v_margin)
 		margin_container_modal.add_theme_constant_override("margin_bottom", v_margin)
 		margin_container_modal.add_theme_constant_override("margin_left", h_margin)
 		margin_container_modal.add_theme_constant_override("margin_right", h_margin)
-		margin_container_content.add_theme_constant_override("margin_top", TOP_MARGIN_CONTENT_PORTRAIT)
-		margin_container_content.add_theme_constant_override("margin_bottom", BOTTOM_MARGIN_CONTENT_PORTRAIT)
-		margin_container_content.add_theme_constant_override("margin_left", H_MARGIN_CONTENT_PORTRAIT)
-		margin_container_content.add_theme_constant_override("margin_right", H_MARGIN_CONTENT_PORTRAIT)
+		margin_container_content.add_theme_constant_override(
+			"margin_top", TOP_MARGIN_CONTENT_PORTRAIT
+		)
+		margin_container_content.add_theme_constant_override(
+			"margin_bottom", BOTTOM_MARGIN_CONTENT_PORTRAIT
+		)
+		margin_container_content.add_theme_constant_override(
+			"margin_left", H_MARGIN_CONTENT_PORTRAIT
+		)
+		margin_container_content.add_theme_constant_override(
+			"margin_right", H_MARGIN_CONTENT_PORTRAIT
+		)
+
 
 func _set_title(title: String) -> void:
 	label_title.text = title
-	
-	
+
+
 func _set_body(body: String) -> void:
 	label_body.text = body
-	
-	
-func _on_button_secondary_pressed() -> void:
-	open_external_link("www.google.com")
-	resize_modal()
-	
-	
+
+
 func _set_modal_type(type: ModalType) -> void:
 	modal_type = type
-	_update_object_visibility()
-	
-	
-func open_external_link(external_url: String) -> void:
-	url = external_url
-	_set_title("Open external link?")
-	_set_body("You’re about to visit an external website. Make sure you trust this site before continuing.")
-	_set_modal_type(ModalType.EXTERNAL_LINK)
-	
-func _update_object_visibility() -> void:
-	h_separator_url.hide()
-	label_url.hide()
+	_update_content_visibility()
+
+
+func _update_content_visibility() -> void:
+	_hide_content()
 	match modal_type:
 		ModalType.EXTERNAL_LINK:
-			h_separator_url.show()
-			label_url.text = url
-			label_url.show()
+			_show_external_link_content()
+		ModalType.SCENE_TIMEOUT:
+			_show_scene_timeout_content()
+		ModalType.CONNECTION_LOST:
+			_show_connection_lost_content()
+		ModalType.TELEPORT:
+			_show_teleport_content()
 		_:
 			return
+
+
+func _hide_content() -> void:
+	h_separator_url.hide()
+	label_url.hide()
+	icon.hide()
+
+
+func _show_external_link_content() -> void:
+	h_separator_url.show()
+	label_url.text = url
+	label_url.show()
+	button_secondary.text = EXTERNAL_LINK_SECONDARY
+	button_primary.text = EXTERNAL_LINK_PRIMARY
+
+
+func _show_scene_timeout_content() -> void:
+	icon.texture = MODAL_ALERT_ICON
+	icon.show()
+	button_secondary.text = SCENE_TIMEOUT_SECONDARY
+	button_primary.text = SCENE_TIMEOUT_PRIMARY
+
+
+func _show_connection_lost_content() -> void:
+	icon.texture = MODAL_CONNECTION_ICON
+	icon.show()
+	button_secondary.text = CONNECTION_LOST_SECONDARY
+	button_primary.text = CONNECTION_LOST_PRIMARY
+
+
+func _show_teleport_content() -> void:
+	button_secondary.text = TELEPORT_SECONDARY
+	button_primary.text = TELEPORT_PRIMARY
+
+
+func open_external_link(external_url: String) -> void:
+	url = external_url
+	_set_title(EXTERNAL_LINK_TITLE)
+	_set_body(EXTERNAL_LINK_BODY)
+	_set_modal_type(ModalType.EXTERNAL_LINK)
+
+
+func scene_load_timeout() -> void:
+	_set_title(SCENE_TIMEOUT_TITLE)
+	_set_body(SCENE_TIMEOUT_BODY)
+	_set_modal_type(ModalType.SCENE_TIMEOUT)
+
+
+func connection_lost() -> void:
+	_set_title(CONNECTION_LOST_TITLE)
+	_set_body(CONNECTION_LOST_BODY)
+	_set_modal_type(ModalType.CONNECTION_LOST)
+
+
+func teleport(destination_name: String) -> void:
+	_set_title(TELEPORT_TITLE)
+	_set_body(TELEPORT_BODY + destination_name)
+	_set_modal_type(ModalType.TELEPORT)
+
+
+func _on_button_pressed() -> void:
+	connection_lost()
+	resize_modal()
+
+
+func _on_button_2_pressed() -> void:
+	open_external_link("www.google.com")
+	resize_modal()
+
+
+func _on_button_3_pressed() -> void:
+	scene_load_timeout()
+	resize_modal()
+
+
+func _on_button_4_pressed() -> void:
+	teleport("{destination_name}")
+	resize_modal()

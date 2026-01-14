@@ -101,6 +101,7 @@ layout_mode = 2
 theme_override_constants/separation = 26
 
 [node name="Button_Secondary" type="Button" parent="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -109,6 +110,7 @@ theme_type_variation = &"SecondaryButton"
 text = "SECONDARY"
 
 [node name="Button_Primary" type="Button" parent="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -121,12 +123,14 @@ size_flags_horizontal = 4
 size_flags_vertical = 0
 
 [node name="Icon" type="TextureRect" parent="MarginContainer_Modal/PanelContainer/Control"]
-custom_minimum_size = Vector2(124, 100)
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(82.667, 66.667)
 layout_mode = 0
-offset_left = -62.0
-offset_top = -50.0
-offset_right = 62.0
-offset_bottom = 50.0
+offset_left = -41.333
+offset_top = -33.333
+offset_right = 41.334
+offset_bottom = 33.334
 size_flags_horizontal = 4
 size_flags_vertical = 0
 texture = ExtResource("5_figov")
@@ -147,4 +151,28 @@ position = Vector2(279, 304)
 scale = Vector2(0.53193825, 0.53193825)
 texture = ExtResource("5_ao2vh")
 
-[connection signal="pressed" from="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Secondary" to="." method="_on_button_secondary_pressed"]
+[node name="TESTING_PORPUSE" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Button" type="Button" parent="TESTING_PORPUSE"]
+layout_mode = 2
+text = "CONNECTION LOST"
+
+[node name="Button2" type="Button" parent="TESTING_PORPUSE"]
+layout_mode = 2
+text = "EXTERNAL LINK"
+
+[node name="Button3" type="Button" parent="TESTING_PORPUSE"]
+layout_mode = 2
+text = "SCENE TIME OUT"
+
+[node name="Button4" type="Button" parent="TESTING_PORPUSE"]
+layout_mode = 2
+text = "TELEPORT"
+
+[connection signal="pressed" from="TESTING_PORPUSE/Button" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="TESTING_PORPUSE/Button2" to="." method="_on_button_2_pressed"]
+[connection signal="pressed" from="TESTING_PORPUSE/Button3" to="." method="_on_button_3_pressed"]
+[connection signal="pressed" from="TESTING_PORPUSE/Button4" to="." method="_on_button_4_pressed"]
