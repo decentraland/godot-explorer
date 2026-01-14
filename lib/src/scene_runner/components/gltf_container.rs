@@ -33,11 +33,6 @@ pub fn update_gltf_container(
     let gltf_container_component = SceneCrdtStateProtoComponents::get_gltf_container(crdt_state);
 
     if let Some(mut gltf_container_dirty) = gltf_container_dirty {
-        tracing::info!(
-            "[GltfContainer] Processing {} dirty entities for scene {}",
-            gltf_container_dirty.len(),
-            scene_id
-        );
         for entity in gltf_container_dirty.iter() {
             let new_value = gltf_container_component.get(entity);
             if new_value.is_none() {
@@ -79,11 +74,6 @@ pub fn update_gltf_container(
                     }
                 } else {
                     // TODO: preload this resource
-                    tracing::info!(
-                        "[GltfContainer] Creating NEW container for entity {:?}, src={}",
-                        entity,
-                        new_value.src
-                    );
                     let mut new_gltf = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/gltf_container.tscn",
                     )
@@ -185,12 +175,6 @@ pub fn sync_gltf_loading_state(
             && scene.gltf_loading.remove(entity)
         {
             scene.gltf_loading_finished_count += 1;
-            tracing::info!(
-                "[GltfContainer] Entity {:?} finished loading with state {:?}, total_finished={}",
-                entity,
-                current_state_godot,
-                scene.gltf_loading_finished_count
-            );
 
             // When GLTF finishes loading, mark entity for GltfNodeModifiers re-application
             // (modifiers need to be applied to newly loaded nodes)

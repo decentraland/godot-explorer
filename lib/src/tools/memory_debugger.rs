@@ -5,7 +5,6 @@ use godot::{
 };
 
 use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
-use crate::tools::descriptor_tracker;
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -150,7 +149,6 @@ impl MemoryDebugger {
         self.print_gpu_memory_metrics();
         self.print_godot_object_metrics();
         self.print_godot_render_metrics();
-        self.print_descriptor_stats();
         self.print_mobile_metrics();
         self.print_rust_heap_info();
         self.print_deno_memory_metrics();
@@ -220,25 +218,6 @@ impl MemoryDebugger {
         godot_print!("│  Objects/Frame:     {}", objects_in_frame);
         godot_print!("│  Primitives/Frame:  {}", primitives_in_frame);
         godot_print!("│  Draw Calls/Frame:  {}", draw_calls);
-        godot_print!("└────────────────────────────────────────────────────────────┘");
-    }
-
-    fn print_descriptor_stats(&self) {
-        let counts = descriptor_tracker::get_counts();
-        let estimated_descriptors = descriptor_tracker::get_estimated_descriptor_sets();
-
-        godot_print!("┌─ Descriptor Sets (Vulkan) ─────────────────────────────────┐");
-        godot_print!("│  Materials NEW:     {}", counts.material_new);
-        godot_print!("│  Materials DUP:     {}", counts.material_duplicate);
-        godot_print!(
-            "│  Materials TOTAL:   {}",
-            counts.material_new + counts.material_duplicate
-        );
-        godot_print!("│  Materials FREED:   {}", counts.material_disposed);
-        godot_print!("│  Materials ACTIVE:  ~{}", counts.active_materials());
-        godot_print!("│  Texture SETs:      {}", counts.texture_set);
-        godot_print!("│  Mesh DUPs:         {}", counts.mesh_duplicate);
-        godot_print!("│  Est. Descriptors:  ~{}", estimated_descriptors);
         godot_print!("└────────────────────────────────────────────────────────────┘");
     }
 

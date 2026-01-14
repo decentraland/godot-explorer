@@ -92,10 +92,6 @@ pub fn update_gltf_node_modifiers(
     };
 
     if !entities_to_process.is_empty() {
-        tracing::info!(
-            "[GltfNodeModifier] Processing {} entities",
-            entities_to_process.len()
-        );
         for entity in entities_to_process.iter() {
             let new_value = gltf_node_modifiers_component.get(entity);
 
@@ -194,11 +190,6 @@ pub fn update_gltf_node_modifiers(
             }
 
             // Apply modifiers to each mesh
-            tracing::info!(
-                "[GltfNodeModifier] Entity {:?}: applying modifiers to {} meshes",
-                entity,
-                all_meshes.len()
-            );
             for info in all_meshes {
                 let path = &info.node_path;
                 let mut mesh = info.mesh_instance;

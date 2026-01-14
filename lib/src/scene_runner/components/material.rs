@@ -14,7 +14,6 @@ use crate::{
     },
     godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::{MaterialItem, Scene},
-    tools::descriptor_tracker,
 };
 use godot::{
     classes::{
@@ -114,10 +113,6 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 let mut godot_material = if let Some(material) = existing_material {
                     let mut mat = material.to::<Gd<StandardMaterial3D>>();
-                    tracing::info!(
-                        "[Material] Reusing existing material for entity {:?}",
-                        entity
-                    );
 
                     // Clear textures that are no longer present in the new material
                     // This is needed when changing from a textured material to a non-textured one
@@ -125,11 +120,6 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                     mat
                 } else {
-                    tracing::info!(
-                        "[Material] Creating NEW StandardMaterial3D for entity {:?}",
-                        entity
-                    );
-                    descriptor_tracker::track_material_new();
                     StandardMaterial3D::new_gd()
                 };
 
@@ -439,12 +429,6 @@ fn check_texture(
                 {
                     // Validate texture has actual data before using to prevent GPU crashes
                     if is_valid_texture(&resource) {
-                        tracing::info!(
-                            "[Material] Setting texture param {:?} for hash {}",
-                            param,
-                            content_hash
-                        );
-                        descriptor_tracker::track_texture_set();
                         material.set_texture(param, &resource.upcast::<Texture2D>());
                     } else {
                         tracing::warn!(
@@ -464,7 +448,6 @@ fn check_texture(
                 if let Some(texture) = texture_result {
                     // Validate texture has actual data before using to prevent GPU crashes
                     if is_valid_texture(&texture) {
-                        descriptor_tracker::track_texture_set();
                         material.set_texture(param, &texture.upcast::<Texture2D>());
                     } else {
                         tracing::warn!(
@@ -581,7 +564,6 @@ pub fn update_video_material_textures(scene: &mut Scene) {
                         .as_ref()
                         .is_none_or(|current| current.instance_id() != texture.instance_id());
                     if needs_update {
-                        descriptor_tracker::track_texture_set();
                         material.set_texture(param, &texture.upcast::<Texture2D>());
                     }
                 }
@@ -596,7 +578,6 @@ pub fn update_video_material_textures(scene: &mut Scene) {
                             current.instance_id() != texture_2d.instance_id()
                         });
                         if needs_update {
-                            descriptor_tracker::track_texture_set();
                             material.set_texture(param, &texture_2d);
                         }
                     }

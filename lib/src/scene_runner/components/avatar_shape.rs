@@ -62,10 +62,6 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let avatar_shape_component = SceneCrdtStateProtoComponents::get_avatar_shape(crdt_state);
 
     if let Some(avatar_shape_dirty) = dirty_lww_components.get(&SceneComponentId::AVATAR_SHAPE) {
-        tracing::info!(
-            "[AvatarShape] Processing {} dirty entities",
-            avatar_shape_dirty.len()
-        );
         for entity in avatar_shape_dirty {
             let new_value = avatar_shape_component.get(entity);
             if new_value.is_none() {
@@ -118,21 +114,11 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let new_avatar_data = DclAvatarWireFormat::from_gd(new_avatar_data);
 
                 if let Some(mut avatar_node) = existing {
-                    tracing::info!(
-                        "[AvatarShape] UPDATING existing avatar for entity {:?}, name={}",
-                        entity,
-                        avatar_name
-                    );
                     avatar_node.call_deferred(
                         "async_update_avatar",
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
-                    tracing::info!(
-                        "[AvatarShape] Creating NEW avatar for entity {:?}, name={}",
-                        entity,
-                        avatar_name
-                    );
                     let mut new_avatar_shape = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )

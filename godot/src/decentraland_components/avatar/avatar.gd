@@ -193,7 +193,6 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 	# Skip redundant updates - if avatar data hasn't changed and avatar is already loaded,
 	# no need to re-duplicate all meshes and materials (saves Vulkan descriptor sets)
 	if finish_loading and avatar_data != null and avatar_data.equal(new_avatar):
-		prints("[Avatar] Skipping redundant update - data unchanged")
 		# Only update the name if it changed
 		if get_avatar_name() != new_avatar_name:
 			set_avatar_name(new_avatar_name)
