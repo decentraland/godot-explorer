@@ -10,6 +10,7 @@ const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
+const INVALID_PARCEL := Vector2i(-1000, -1000)
 
 
 class SceneItem:
@@ -24,7 +25,7 @@ class SceneItem:
 	var is_global: bool = false
 
 
-var current_position: Vector2i = Vector2i(-1000, -1000)
+var current_position: Vector2i = INVALID_PARCEL
 var current_scene_entity_id: String = ""
 
 var loaded_empty_scenes: Dictionary = {}
@@ -56,7 +57,7 @@ var _debugging_js_scene_id: String = ""
 var _bypass_loading_check: bool = false
 
 # Track the target parcel during teleport to ensure correct spawn point
-var _teleport_target_parcel: Vector2i = Vector2i(-1000, -1000)
+var _teleport_target_parcel: Vector2i = INVALID_PARCEL
 
 
 func _ready():
@@ -93,15 +94,17 @@ func get_current_spawn_point():
 
 func on_loading_finished():
 	var spawn_parcel = current_position
-	if is_using_floating_islands() and _teleport_target_parcel != Vector2i(-1000, -1000):
+	if is_using_floating_islands() and _teleport_target_parcel != INVALID_PARCEL:
 		spawn_parcel = _teleport_target_parcel
-		_teleport_target_parcel = Vector2i(-1000, -1000)
+		_teleport_target_parcel = INVALID_PARCEL
 
 	var scene_data = get_scene_data(spawn_parcel)
 	if scene_data != null:
 		var target_position = scene_data.scene_entity_definition.get_global_spawn_position()
 		if target_position != null:
-			Global.get_explorer().move_to(target_position, true)
+			# Try raycast to find ground, fallback to original position
+			var ground_position := _raycast_to_ground(target_position)
+			Global.get_explorer().move_to(ground_position, true)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -184,7 +187,7 @@ func _process(_dt):
 	var scene_entity_id := scene_entity_coordinator.get_scene_entity_id(current_position)
 
 	# Skip processing when at invalid initial position to avoid spam
-	var is_invalid_position = current_position == Vector2i(-1000, -1000)
+	var is_invalid_position = current_position == INVALID_PARCEL
 
 	# Check if there's an actual change (not just empty -> empty)
 	var has_actual_change = (
@@ -454,8 +457,21 @@ func _regenerate_floating_islands() -> void:
 			for parcel in scene.parcels:
 				all_scene_parcels.append(parcel)
 
-	if all_scene_parcels.is_empty():
-		return
+	var is_empty_parcel_mode := all_scene_parcels.is_empty()
+	var empty_parcel_center := INVALID_PARCEL
+
+	if is_empty_parcel_mode:
+		# No scenes loaded - use current position as center of the floating island
+		var target_parcel = current_position
+		if _teleport_target_parcel != INVALID_PARCEL:
+			target_parcel = _teleport_target_parcel
+
+		if target_parcel == INVALID_PARCEL:
+			return
+
+		empty_parcel_center = target_parcel
+		# Treat current position as if it were a "scene" to generate the surrounding island
+		all_scene_parcels = [target_parcel]
 
 	var current_scene_group_hash: String = str(all_scene_parcels.hash())
 
@@ -477,6 +493,72 @@ func _regenerate_floating_islands() -> void:
 
 	# Create floating island platform considering all loaded scenes
 	_create_floating_island_for_cluster(all_scene_parcels)
+
+	# For empty parcel mode, also create an empty parcel at the center
+	if is_empty_parcel_mode and empty_parcel_center != INVALID_PARCEL:
+		var x := empty_parcel_center.x
+		var z := empty_parcel_center.y
+		var parcel_string := "%d,%d" % [x, z]
+
+		var scene: Node3D = EMPTY_SCENE.instantiate()
+		var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+		scene.name = temp
+		add_child(scene)
+		scene.global_position = Vector3(
+			x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+			0,
+			-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+		)
+
+		# Center parcel has all neighbors as LOADED (flat terrain with edge strips)
+		var config := CornerConfiguration.new()
+		config.north = CornerConfiguration.ParcelState.LOADED
+		config.south = CornerConfiguration.ParcelState.LOADED
+		config.east = CornerConfiguration.ParcelState.LOADED
+		config.west = CornerConfiguration.ParcelState.LOADED
+		config.northwest = CornerConfiguration.ParcelState.LOADED
+		config.northeast = CornerConfiguration.ParcelState.LOADED
+		config.southwest = CornerConfiguration.ParcelState.LOADED
+		config.southeast = CornerConfiguration.ParcelState.LOADED
+		scene.set_corner_configuration.call_deferred(config)
+
+		loaded_empty_scenes[parcel_string] = scene
+
+		# Spawn player after terrain is generated
+		var terrain_gen = scene.get_node("TerrainGenerator")
+		terrain_gen.terrain_generated.connect(
+			_async_spawn_on_empty_parcel.bind(empty_parcel_center), CONNECT_ONE_SHOT
+		)
+
+
+func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
+	# Wait one more physics frame to ensure collision shape is ready
+	await get_tree().physics_frame
+	var parcel_center := Vector3(
+		parcel.x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+		0,
+		-parcel.y * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+	)
+	var ground_position := _raycast_to_ground(parcel_center)
+	Global.get_explorer().move_to(ground_position, true)
+
+
+func _raycast_to_ground(from_position: Vector3) -> Vector3:
+	var space_state := get_tree().root.get_world_3d().direct_space_state
+	var ray_origin := Vector3(from_position.x, 100.0, from_position.z)
+	var ray_end := Vector3(from_position.x, -10.0, from_position.z)
+
+	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	# Layer 1 = scene geometry, Layer 2 = empty parcel terrain
+	query.collision_mask = 3
+
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		# No ground found, use original position or default height
+		return Vector3(from_position.x, maxf(from_position.y, 2.0), from_position.z)
+
+	# Position player slightly above ground
+	return result.position + Vector3(0, 1.0, 0)
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
@@ -817,7 +899,11 @@ func _create_floating_island_for_cluster(cluster: Array):
 					var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
 					scene.name = temp
 					add_child(scene)
-					scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+					scene.global_position = Vector3(
+						x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+						0,
+						-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+					)
 
 					var config = _calculate_parcel_adjacency(
 						x,
