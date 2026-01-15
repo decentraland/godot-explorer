@@ -263,5 +263,5 @@ func async_dismiss_with_inertia() -> void:
 
 	await tween.finished
 
-#	toast_closed.emit()
-#	queue_free()
+	toast_closed.emit()
+	queue_free()
