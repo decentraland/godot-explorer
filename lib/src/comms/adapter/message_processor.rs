@@ -320,7 +320,7 @@ impl MessageProcessor {
 
                 for blocked_address in newly_blocked {
                     if let Some(peer) = self.peer_identities.get(&blocked_address) {
-                        tracing::info!(
+                        tracing::debug!(
                             "🚫 Hiding avatar for blocked user {:#x} (alias: {})",
                             blocked_address,
                             peer.alias
@@ -337,7 +337,7 @@ impl MessageProcessor {
 
                 for unblocked_address in newly_unblocked {
                     if let Some(peer) = self.peer_identities.get(&unblocked_address) {
-                        tracing::info!(
+                        tracing::debug!(
                             "✅ Showing avatar for unblocked user {:#x} (alias: {})",
                             unblocked_address,
                             peer.alias
@@ -371,7 +371,7 @@ impl MessageProcessor {
     ) {
         self.realm_min = min;
         self.realm_max = max;
-        tracing::info!("Updated realm bounds: min={:?}, max={:?}", min, max);
+        tracing::debug!("Updated realm bounds: min={:?}, max={:?}", min, max);
     }
 
     /// Consumes and returns all pending outgoing messages
@@ -436,7 +436,7 @@ impl MessageProcessor {
                     // Ban profile fetching for 30 seconds after 2 failures
                     peer.profile_fetch_banned_until =
                         Some(Instant::now() + Duration::from_secs(30));
-                    tracing::warn!(
+                    tracing::debug!(
                         "Banning profile fetch for {:#x} for 30 seconds after {} failures (announced version {} not available)",
                         failure.address,
                         peer.profile_fetch_failures,
@@ -494,7 +494,7 @@ impl MessageProcessor {
                 if peer.room_activity.is_empty()
                     && peer.last_activity.elapsed() > inactive_threshold
                 {
-                    tracing::info!(
+                    tracing::debug!(
                         "⏰ Peer {:#x} (alias: {}) has no active rooms and timed out - removing",
                         address,
                         peer.alias
@@ -511,7 +511,7 @@ impl MessageProcessor {
 
             for address in peers_to_remove {
                 if let Some(peer) = self.peer_identities.remove(&address) {
-                    tracing::info!(
+                    tracing::debug!(
                         "🗑️ Removed inactive peer {:#x} (alias: {})",
                         address,
                         peer.alias
@@ -569,7 +569,7 @@ impl MessageProcessor {
             self.peer_alias_counter += 1;
             let new_alias = self.peer_alias_counter;
 
-            tracing::info!(
+            tracing::debug!(
                 "🆕 Creating new peer {:#x} from room '{}' with alias: {}",
                 message.address,
                 message.room_id,
@@ -607,7 +607,7 @@ impl MessageProcessor {
 
                 // If the user is blocked, hide the avatar immediately
                 if self.cached_blocked.contains(&message.address) {
-                    tracing::info!(
+                    tracing::debug!(
                         "🚫 New peer {:#x} (alias: {}) is blocked, hiding avatar",
                         message.address,
                         new_alias
@@ -722,7 +722,7 @@ impl MessageProcessor {
                 }
             }
             MessageType::InitStreamerAudio(audio_init) => {
-                tracing::info!(
+                tracing::debug!(
                     "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
                     audio_init.sample_rate,
                     audio_init.num_channels,
@@ -801,7 +801,7 @@ impl MessageProcessor {
             if peer.room_activity.is_empty() {
                 let alias = peer.alias;
                 self.peer_identities.remove(&address);
-                tracing::info!(
+                tracing::debug!(
                     "🗑️  Removing peer {:#x} (alias: {}) - no longer in any rooms",
                     address,
                     alias
@@ -895,12 +895,12 @@ impl MessageProcessor {
                 );
             }
             rfc4::packet::Message::Chat(chat) => {
-                tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
+                tracing::debug!("Received Chat from {:#x}: {:?}", address, chat);
 
                 // Check if user is muted for chat (using cached set for O(1) lookup)
                 // Note: cached_muted includes both muted AND blocked users
                 if self.cached_muted.contains(&address) {
-                    tracing::info!("Ignoring muted {:#x}", address);
+                    tracing::debug!("Ignoring muted {:#x}", address);
                     return; // muted/blocked - ignore chat messages
                 }
 
@@ -909,7 +909,7 @@ impl MessageProcessor {
                 if let Some(&last_timestamp) = self.last_chat_timestamps.get(&address) {
                     // If the new timestamp is older or within tolerance of the last one, it's a duplicate
                     if compare_f64(&chat.timestamp, &last_timestamp) != Ordering::Greater {
-                        tracing::info!(
+                        tracing::debug!(
                             "Discarding duplicate chat from {:#x}: timestamp {} <= {} (last + tolerance)",
                             address,
                             chat.timestamp,
@@ -1004,7 +1004,7 @@ impl MessageProcessor {
                         .is_some_and(|p| p.profile_fetch_attempted)
                     && !is_banned
                 {
-                    tracing::info!(
+                    tracing::debug!(
                         "Requesting newer profile from {:#x}: announced={}, current={}",
                         address,
                         announced_version,
@@ -1043,7 +1043,7 @@ impl MessageProcessor {
                             // Check if the fetched version matches what was announced
                             let version_mismatch = profile.version < announced_version_for_retry;
                             if version_mismatch {
-                                tracing::warn!(
+                                tracing::debug!(
                                     "Profile version mismatch for {:#x}: announced={}, fetched={}",
                                     address,
                                     announced_version_for_retry,
@@ -1076,7 +1076,7 @@ impl MessageProcessor {
                             );
 
                             // Lambda fetch failed, likely a guest user - send ProfileRequest to peer
-                            tracing::info!(
+                            tracing::debug!(
                                 "Profile not found on lambda for {:#x}, sending ProfileRequest to peer (likely guest user)",
                                 address
                             );
@@ -1097,7 +1097,7 @@ impl MessageProcessor {
                             };
 
                             if let Err(e) = outgoing_sender.try_send(outgoing) {
-                                tracing::warn!(
+                                tracing::debug!(
                                     "Failed to queue ProfileRequest after lambda failure: {}",
                                     e
                                 );
@@ -1163,7 +1163,7 @@ impl MessageProcessor {
                         }
                     }
                 } else {
-                    tracing::warn!(
+                    tracing::debug!(
                         "Invalid address in ProfileRequest: {}",
                         profile_request.address
                     );
@@ -1199,7 +1199,7 @@ impl MessageProcessor {
                     }
                 };
 
-                tracing::info!(
+                tracing::debug!(
                     "ProfileResponse from {:#x} contains profile for {:#x} (version {})",
                     address,
                     profile_address,
@@ -1233,7 +1233,7 @@ impl MessageProcessor {
                     peer.profile = Some(profile);
                     peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
 
-                    tracing::info!(
+                    tracing::debug!(
                         "Updated profile for {:#x} (alias {}) to version {}",
                         profile_address,
                         peer.alias,
@@ -1254,7 +1254,7 @@ impl MessageProcessor {
                     // Remove the oldest scene ID (arbitrary choice - could use LRU)
                     if let Some(oldest_key) = self.incoming_scene_messages.keys().next().cloned() {
                         self.incoming_scene_messages.remove(&oldest_key);
-                        tracing::warn!(
+                        tracing::debug!(
                             "Scene message map full, dropped messages for scene: {}",
                             oldest_key
                         );
@@ -1270,7 +1270,7 @@ impl MessageProcessor {
                 if entry.len() >= MAX_SCENE_MESSAGES_PER_SCENE {
                     let dropped = entry.pop_front();
                     if let Some((addr, _)) = dropped {
-                        tracing::warn!(
+                        tracing::debug!(
                             "Scene {} message queue full, dropping oldest message from {:#x}",
                             scene.scene_id,
                             addr
