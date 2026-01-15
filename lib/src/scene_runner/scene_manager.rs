@@ -523,9 +523,9 @@ impl SceneManager {
         }
     }
 
-    /// Internal: Check loading session timeouts (called from physics_process)
+    /// Internal: Check for individual scene timeouts (called from physics_process)
     fn check_loading_timeouts(&mut self) {
-        let (session_timed_out, timed_out_scenes, session_id) = {
+        let timed_out_scenes = {
             if let Some(session) = &mut self.current_loading_session {
                 let now = Instant::now();
                 let timed_out_scenes = session.get_timed_out_scenes(now);
@@ -535,11 +535,7 @@ impl SceneManager {
                     session.mark_timed_out_scenes_ready(timed_out_scenes.clone());
                 }
 
-                (
-                    session.is_session_timed_out(),
-                    timed_out_scenes,
-                    session.id as i64,
-                )
+                timed_out_scenes
             } else {
                 return;
             }
@@ -554,14 +550,6 @@ impl SceneManager {
             );
             self.check_loading_phase_transition();
             self.emit_loading_progress();
-        }
-
-        // Handle session timeout
-        if session_timed_out {
-            tracing::warn!("Loading session {} timed out", session_id);
-            self.current_loading_session = None;
-            self.base_mut()
-                .emit_signal("loading_timeout", &[session_id.to_variant()]);
         }
     }
 

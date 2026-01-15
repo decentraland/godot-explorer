@@ -86,8 +86,6 @@ pub struct LoadingSession {
 }
 
 impl LoadingSession {
-    /// Session timeout in seconds
-    pub const SESSION_TIMEOUT_SECS: u64 = 60;
     /// Per-scene timeout in seconds (no progress)
     pub const SCENE_TIMEOUT_SECS: u64 = 10;
 
@@ -207,11 +205,6 @@ impl LoadingSession {
         // Never go backwards (high water mark)
         self.max_progress = self.max_progress.max(dampened);
         self.max_progress
-    }
-
-    /// Check if session has timed out
-    pub fn is_session_timed_out(&self) -> bool {
-        self.start_time.elapsed().as_secs() > Self::SESSION_TIMEOUT_SECS
     }
 
     /// Get scenes that have timed out (no progress in SCENE_TIMEOUT_SECS)
