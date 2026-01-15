@@ -520,9 +520,6 @@ func _async_on_button_about_save_pressed() -> void:
 		printerr("No current profile to save")
 
 
-
-
-
 func close() -> void:
 	hide()
 	_hide_all_social_buttons()
