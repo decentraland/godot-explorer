@@ -454,6 +454,21 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").contains("-dev")
     }
 
+    #[func]
+    pub fn get_commit_hash() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_HASH").into()
+    }
+
+    #[func]
+    pub fn get_commit_message() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_MESSAGE").into()
+    }
+
+    #[func]
+    pub fn get_branch_name() -> GString {
+        env!("GODOT_EXPLORER_BRANCH_NAME").into()
+    }
+
     pub fn has_singleton() -> bool {
         let Some(main_loop) = Engine::singleton().get_main_loop() else {
             return false;
