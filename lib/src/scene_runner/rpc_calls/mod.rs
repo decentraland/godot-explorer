@@ -5,7 +5,10 @@ use godot::{meta::ToGodot, obj::NewGd};
 
 use crate::{
     content::content_mapping::DclContentMappingAndUrl,
-    dcl::{scene_apis::RpcCall, SceneId},
+    dcl::{
+        scene_apis::{NetworkMessageRecipient, RpcCall},
+        SceneId,
+    },
     godot_classes::{
         dcl_global::DclGlobal,
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderGetTextureSize,
@@ -93,6 +96,19 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
             }
             RpcCall::SendCommsMessage { body, recipient } => {
                 let scene_id = scene.scene_entity_definition.id.clone();
+
+                // Override recipient to AuthServer if scene has authoritative multiplayer enabled
+                let recipient = if scene
+                    .scene_entity_definition
+                    .scene_meta_scene
+                    .authoritative_multiplayer
+                    .unwrap_or(false)
+                {
+                    NetworkMessageRecipient::AuthServer
+                } else {
+                    recipient
+                };
+
                 let mut comms = DclGlobal::singleton().bind().get_comms();
                 let mut communication_manager = comms.bind_mut();
                 communication_manager.send_scene_message(scene_id, body, recipient);

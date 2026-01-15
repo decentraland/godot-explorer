@@ -1,6 +1,10 @@
 #[cfg(feature = "use_livekit")]
 pub const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
 
+#[cfg(feature = "use_livekit")]
+pub const PREVIEW_GATEKEEPER_URL: &str =
+    "https://comms-gatekeeper-local.decentraland.org/get-scene-adapter";
+
 // Temporary flags for testing different connection scenarios
 #[cfg(feature = "use_livekit")]
 pub const DISABLE_ARCHIPELAGO: bool = false;
