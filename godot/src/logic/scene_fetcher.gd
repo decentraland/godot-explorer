@@ -464,14 +464,28 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 		loaded_scenes.erase(scene_id)
 
 
+## Returns a dictionary of all parcels occupied by non-global scenes (for exclusion)
+## Includes scenes that are still loading (scene_number_id == -1)
+func _get_all_scene_parcels_set() -> Dictionary:
+	var result = {}
+	for scene_id in loaded_scenes.keys():
+		var scene: SceneItem = loaded_scenes[scene_id]
+		if not scene.is_global:
+			for parcel in scene.parcels:
+				result[Vector2i(parcel.x, parcel.y)] = true
+	return result
+
+
 func _async_regenerate_floating_islands() -> void:
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
+	# Note: Include scenes that are still loading (scene_number_id == -1) because
+	# we know their parcels from the moment they start loading
 	var all_scene_parcels = []
 	for scene_id in loaded_scenes.keys():
 		var scene: SceneItem = loaded_scenes[scene_id]
 
-		# Include parcels from all loaded non-global scenes
-		if not scene.is_global and scene.scene_number_id != -1:
+		# Include parcels from all non-global scenes (including those still loading)
+		if not scene.is_global:
 			for parcel in scene.parcels:
 				all_scene_parcels.append(parcel)
 
@@ -514,6 +528,17 @@ func _async_regenerate_floating_islands() -> void:
 
 	# For empty parcel mode, also create an empty parcel at the center
 	if is_empty_parcel_mode and empty_parcel_center != INVALID_PARCEL:
+		# Safety check: verify a scene hasn't loaded at this parcel during async generation
+		var is_occupied := false
+		for scene_item: SceneItem in loaded_scenes.values():
+			if not scene_item.is_global and empty_parcel_center in scene_item.parcels:
+				is_occupied = true
+				break
+
+		if is_occupied:
+			# A scene now occupies this parcel, skip creating empty terrain here
+			return
+
 		var x := empty_parcel_center.x
 		var z := empty_parcel_center.y
 		var parcel_string := "%d,%d" % [x, z]
@@ -982,29 +1007,34 @@ func _async_create_floating_island_for_cluster(cluster: Array):
 			var z = coord.y
 			var parcel_string = "%d,%d" % [x, z]
 
-			if not loaded_empty_scenes.has(parcel_string):
-				var scene: Node3D = EMPTY_SCENE.instantiate()
-				var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
-				scene.name = temp
-				add_child(scene)
-				scene.global_position = Vector3(
-					x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
-					0,
-					-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
-				)
+			# Skip if already created or if a scene now occupies this parcel
+			if loaded_empty_scenes.has(parcel_string):
+				continue
+			if scene_parcel_set.has(coord):
+				continue
 
-				var config = _calculate_parcel_adjacency(
-					x,
-					z,
-					min_x - padding,
-					max_x + padding,
-					min_z - padding,
-					max_z + padding,
-					scene_parcel_set
-				)
-				scene.set_corner_configuration.call_deferred(config)
+			var scene: Node3D = EMPTY_SCENE.instantiate()
+			var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+			scene.name = temp
+			add_child(scene)
+			scene.global_position = Vector3(
+				x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+				0,
+				-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+			)
 
-				loaded_empty_scenes[parcel_string] = scene
+			var config = _calculate_parcel_adjacency(
+				x,
+				z,
+				min_x - padding,
+				max_x + padding,
+				min_z - padding,
+				max_z + padding,
+				scene_parcel_set
+			)
+			scene.set_corner_configuration.call_deferred(config)
+
+			loaded_empty_scenes[parcel_string] = scene
 
 		created = batch_end
 
@@ -1015,6 +1045,8 @@ func _async_create_floating_island_for_cluster(cluster: Array):
 		# Yield to next frame to spread work (avoid freeze)
 		if created < parcels_to_create.size():
 			await get_tree().process_frame
+			# Refresh scene_parcel_set in case new scenes were added during the await
+			scene_parcel_set = _get_all_scene_parcels_set()
 
 	# Report completion
 	if has_session:

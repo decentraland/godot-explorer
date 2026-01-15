@@ -118,52 +118,94 @@ impl LoadingSession {
     }
 
     /// Calculate current progress (0-100), never decreasing
+    /// Uses weight-based accumulation: each phase contributes its weighted portion to total
     pub fn calculate_progress(&mut self) -> f32 {
-        let raw = match self.phase {
-            LoadingPhase::Idle => 0.0,
-            LoadingPhase::Metadata => {
-                // 0-20%: Fetching scene metadata
-                let expected = self.expected_scene_entities.len().max(1) as f32;
-                let fetched = self.fetched_scene_entities.len() as f32;
-                (fetched / expected) * 20.0
-            }
-            LoadingPhase::Spawning => {
-                // 20-40%: Spawning scene nodes
-                let expected = self.expected_scene_entities.len().max(1) as f32;
-                let spawned = self.spawned_scenes.len() as f32;
-                20.0 + (spawned / expected) * 20.0
-            }
-            LoadingPhase::Assets => {
-                // 40-75%: Loading GLTF assets
-                let total_expected: u32 = self.expected_assets.values().sum();
-                let total_loaded: u32 = self.loaded_assets.values().sum();
-                let ratio = if total_expected > 0 {
-                    (total_loaded as f32) / (total_expected as f32)
-                } else {
-                    1.0 // No assets expected = 100% done
-                };
-                40.0 + ratio * 35.0
-            }
-            LoadingPhase::Ready => {
-                // 75-90%: Waiting for scenes to reach tick >= 4
-                let spawned = self.spawned_scenes.len().max(1) as f32;
-                let ready = self.ready_scenes.len() as f32;
-                75.0 + (ready / spawned) * 15.0
-            }
-            LoadingPhase::FloatingIslands => {
-                // 90-100%: Generating floating island terrain
-                let ratio = if self.floating_islands_expected > 0 {
-                    (self.floating_islands_created as f32) / (self.floating_islands_expected as f32)
-                } else {
-                    1.0 // No islands expected = 100% done
-                };
-                90.0 + ratio * 10.0
-            }
-            LoadingPhase::Done => 100.0,
+        if self.phase == LoadingPhase::Idle {
+            return 0.0;
+        }
+        if self.phase == LoadingPhase::Done {
+            self.max_progress = 100.0;
+            return 100.0;
+        }
+
+        // Calculate each phase's contribution based on its weight
+        let expected_scenes = self.expected_scene_entities.len().max(1) as f32;
+
+        // Metadata: weight 5%
+        let metadata_ratio = self.fetched_scene_entities.len() as f32 / expected_scenes;
+        let metadata_contribution = metadata_ratio * Self::WEIGHT_METADATA;
+
+        // Spawning: weight 5%
+        let spawning_ratio = self.spawned_scenes.len() as f32 / expected_scenes;
+        let spawning_contribution = spawning_ratio * Self::WEIGHT_SPAWNING;
+
+        // Assets: weight 60%
+        // Only count assets progress after metadata is ready AND 5 seconds have passed
+        // This gives time for asset discovery before showing progress
+        const ASSET_DISCOVERY_WAIT_SECS: u64 = 5;
+        let metadata_complete =
+            self.fetched_scene_entities.len() >= self.expected_scene_entities.len();
+        let asset_discovery_ready = self
+            .assets_phase_start
+            .map(|start| start.elapsed().as_secs() >= ASSET_DISCOVERY_WAIT_SECS)
+            .unwrap_or(false);
+
+        let total_expected_assets: u32 = self.expected_assets.values().sum();
+        let total_loaded_assets: u32 = self.loaded_assets.values().sum();
+
+        let assets_ratio = if !metadata_complete || !asset_discovery_ready {
+            // Still waiting for metadata or asset discovery period
+            0.0
+        } else if total_expected_assets > 0 {
+            (total_loaded_assets as f32) / (total_expected_assets as f32)
+        } else if self.phase as u8 > LoadingPhase::Assets as u8 {
+            // Assets phase completed with no assets
+            1.0
+        } else {
+            // No assets discovered yet, but discovery period passed
+            0.0
+        };
+        let assets_contribution = assets_ratio * Self::WEIGHT_ASSETS;
+
+        // Ready: weight 15%
+        let spawned_count = self.spawned_scenes.len().max(1) as f32;
+        let ready_ratio = self.ready_scenes.len() as f32 / spawned_count;
+        let ready_contribution = ready_ratio * Self::WEIGHT_READY;
+
+        // FloatingIslands: weight 15%
+        let islands_ratio = if self.floating_islands_expected > 0 {
+            (self.floating_islands_created as f32) / (self.floating_islands_expected as f32)
+        } else if !self.waiting_for_floating_islands
+            && self.phase as u8 >= LoadingPhase::FloatingIslands as u8
+        {
+            // Floating islands phase completed or skipped
+            1.0
+        } else {
+            0.0
+        };
+        let islands_contribution = islands_ratio * Self::WEIGHT_FLOATING_ISLANDS;
+
+        // Sum all contributions
+        let raw = metadata_contribution
+            + spawning_contribution
+            + assets_contribution
+            + ready_contribution
+            + islands_contribution;
+
+        // Apply time-based dampening in early phases (first 20 seconds)
+        // This prevents the bar from jumping to high % before we know actual scope
+        let elapsed_secs = self.start_time.elapsed().as_secs();
+        let dampened = if elapsed_secs < Self::EARLY_PHASE_DURATION_SECS
+            && self.phase != LoadingPhase::FloatingIslands
+            && self.phase != LoadingPhase::Done
+        {
+            raw.min(Self::EARLY_PHASE_MAX_PROGRESS) // Cap at 30% during first 20 seconds
+        } else {
+            raw
         };
 
         // Never go backwards (high water mark)
-        self.max_progress = self.max_progress.max(raw);
+        self.max_progress = self.max_progress.max(dampened);
         self.max_progress
     }
 
@@ -254,6 +296,18 @@ impl LoadingSession {
     const ASSET_DISCOVERY_GRACE_MS: u64 = 500;
     /// Time since last asset registration before we consider discovery complete (milliseconds)
     const ASSET_STABLE_MS: u64 = 200;
+
+    /// Duration in seconds during which we dampen progress to avoid instant jumps
+    const EARLY_PHASE_DURATION_SECS: u64 = 20;
+    /// Maximum progress allowed during early phase (before we know actual scope)
+    const EARLY_PHASE_MAX_PROGRESS: f32 = 30.0;
+
+    // Phase weights (must sum to 100)
+    const WEIGHT_METADATA: f32 = 5.0;
+    const WEIGHT_SPAWNING: f32 = 5.0;
+    const WEIGHT_ASSETS: f32 = 60.0;
+    const WEIGHT_READY: f32 = 15.0;
+    const WEIGHT_FLOATING_ISLANDS: f32 = 15.0;
 
     /// Check and advance loading phase if conditions are met
     /// Returns true if phase changed
@@ -408,9 +462,9 @@ mod tests {
         session.report_asset_loaded(SceneId(1));
         session.report_asset_loaded(SceneId(1));
 
-        // Force grace period to pass by backdating assets_phase_start
-        session.assets_phase_start = Some(Instant::now() - std::time::Duration::from_secs(1));
-        session.last_asset_registered = Some(Instant::now() - std::time::Duration::from_secs(1));
+        // Force grace period to pass by backdating assets_phase_start (6 secs for discovery wait)
+        session.assets_phase_start = Some(Instant::now() - std::time::Duration::from_secs(6));
+        session.last_asset_registered = Some(Instant::now() - std::time::Duration::from_secs(6));
 
         session.check_phase_transition();
         assert_eq!(session.phase, LoadingPhase::Ready);
@@ -425,12 +479,16 @@ mod tests {
     fn test_floating_islands_phase() {
         let mut session = LoadingSession::new(1, vec!["scene1".to_string()]);
 
+        // Backdate session start to bypass time-based dampening (>20 secs)
+        session.start_time = Instant::now() - std::time::Duration::from_secs(25);
+
         // Fast-forward to Ready phase
         session.report_scene_fetched("scene1");
         session.check_phase_transition();
         session.report_scene_spawned(SceneId(1), 0);
         session.check_phase_transition();
-        session.assets_phase_start = Some(Instant::now() - std::time::Duration::from_secs(1));
+        // Need 6 secs to pass the 5-second asset discovery wait period
+        session.assets_phase_start = Some(Instant::now() - std::time::Duration::from_secs(6));
         session.check_phase_transition();
         assert_eq!(session.phase, LoadingPhase::Ready);
 
@@ -444,11 +502,11 @@ mod tests {
         session.check_phase_transition();
         assert_eq!(session.phase, LoadingPhase::FloatingIslands);
 
-        // Progress should be at 90% with 0 islands created
+        // Progress should be at 85% with 0 islands created
         let progress = session.calculate_progress();
         assert!(
-            progress >= 90.0 && progress < 91.0,
-            "Progress should be ~90%, got {}",
+            progress >= 85.0 && progress < 86.0,
+            "Progress should be ~85%, got {}",
             progress
         );
 
@@ -456,8 +514,8 @@ mod tests {
         session.report_floating_islands_progress(50);
         let progress = session.calculate_progress();
         assert!(
-            progress >= 95.0 && progress < 96.0,
-            "Progress should be ~95%, got {}",
+            progress >= 92.0 && progress < 93.0,
+            "Progress should be ~92.5%, got {}",
             progress
         );
 
