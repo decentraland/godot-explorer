@@ -44,7 +44,8 @@ func populate_props():
 		var prop_normal = floor_normal.slerp(Vector3.UP, 0.5)
 
 		var prop_to_duplicate = props_parent.get_child(randi() % available_props)
-		var chosen_prop = prop_to_duplicate.duplicate()
+		# Use DUPLICATE_USE_INSTANTIATION to share materials and reduce descriptor set allocations
+		var chosen_prop = prop_to_duplicate.duplicate(DUPLICATE_USE_INSTANTIATION)
 		chosen_prop.name = "Prop_%d" % i
 		add_child(chosen_prop)
 

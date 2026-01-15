@@ -146,7 +146,7 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 
 var terms_and_conditions_version: int = 0
 
-var optimized_assets_version: int = 0
+var local_assets_cache_version: int = 0
 
 var local_notifications_version: int = 0
 
@@ -363,8 +363,8 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
-	self.optimized_assets_version = settings_file.get_value(
-		"user", "optimized_assets_version", data_default.optimized_assets_version
+	self.local_assets_cache_version = settings_file.get_value(
+		"user", "local_assets_cache_version", data_default.local_assets_cache_version
 	)
 
 	self.local_notifications_version = settings_file.get_value(
@@ -411,7 +411,9 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
-	new_settings_file.set_value("user", "optimized_assets_version", self.optimized_assets_version)
+	new_settings_file.set_value(
+		"user", "local_assets_cache_version", self.local_assets_cache_version
+	)
 	new_settings_file.set_value(
 		"user", "local_notifications_version", self.local_notifications_version
 	)

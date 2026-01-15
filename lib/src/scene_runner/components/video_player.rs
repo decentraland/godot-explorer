@@ -55,7 +55,7 @@ pub fn update_video_player(
 
     if let Some(video_player_dirty) = dirty_lww_components.get(&SceneComponentId::VIDEO_PLAYER) {
         tracing::debug!(
-            "Video player component has {} dirty entities in scene {}",
+            "[VideoPlayer] Processing {} dirty entities in scene {}",
             video_player_dirty.len(),
             scene.scene_id.0
         );
@@ -192,7 +192,7 @@ pub fn update_video_player(
 
                     VideoUpdateMode::FirstSpawnVideo => {
                         tracing::debug!(
-                            "Video player activated (first spawn) for entity {}: {}",
+                            "[VideoPlayer] Creating NEW video player for entity {:?}, src={}",
                             entity,
                             target_src
                         );
@@ -433,7 +433,7 @@ fn poll_video_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 _ => VideoState::VsNone,
             };
 
-            tracing::info!(
+            tracing::debug!(
                 "Video event for entity {}: state={:?}, position={:.2}, length={:.2} (state_changed={}, length_changed={}, position_changed={})",
                 entity_id,
                 sdk_state,

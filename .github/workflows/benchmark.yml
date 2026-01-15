@@ -37,6 +37,9 @@ jobs:
         with:
           toolchain: "1.90"
 
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+
       - name: Setup Vulkan and graphics rendering
         uses: ./.github/actions/setup-vulkan
 

@@ -238,6 +238,12 @@ impl INode3D for DclGltfContainer {
             return;
         }
 
+        // Skip if not in tree (being freed) - prevents signal emission on freed nodes
+        if !self.base().is_inside_tree() {
+            self.transform_tracking_enabled = false;
+            return;
+        }
+
         // Check if transform has changed
         let current_transform = self.base().get_global_transform();
         if current_transform != self.last_global_transform {

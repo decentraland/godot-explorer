@@ -106,3 +106,13 @@ func _async_on_button_cancel_deletion_pressed() -> void:
 	else:
 		printerr("Cancel deletion request failed: ", data.get("error", "Unknown error"))
 		fail_dialog.show()
+
+
+func _on_visibility_changed() -> void:
+	if Global.get_explorer():
+		var navbar = Global.get_explorer().navbar
+		if navbar:
+			if visible:
+				navbar.hide()
+			else:
+				navbar.show()

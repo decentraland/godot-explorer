@@ -18,8 +18,9 @@ class ResourceTrackerDebuggerPlugin:
 			var progress: String = data[2]
 			var size: String = data[3]
 			var metadata: String = data[4]
+			var resource_type: String = data[5] if data.size() > 5 else ""
 
-			profiler_panel.report_resource(hash_id, state, progress, size, metadata)
+			profiler_panel.report_resource(hash_id, state, progress, size, metadata, resource_type)
 			return true
 		if message == "resource_tracker:report_speed":
 			profiler_panel.report_speed(data[0])
