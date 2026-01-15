@@ -54,7 +54,7 @@ pub fn update_video_player(
     let mut livekit_registrations = Vec::new();
 
     if let Some(video_player_dirty) = dirty_lww_components.get(&SceneComponentId::VIDEO_PLAYER) {
-        tracing::info!(
+        tracing::debug!(
             "[VideoPlayer] Processing {} dirty entities in scene {}",
             video_player_dirty.len(),
             scene.scene_id.0
@@ -191,7 +191,7 @@ pub fn update_video_player(
                     }
 
                     VideoUpdateMode::FirstSpawnVideo => {
-                        tracing::info!(
+                        tracing::debug!(
                             "[VideoPlayer] Creating NEW video player for entity {:?}, src={}",
                             entity,
                             target_src
@@ -433,7 +433,7 @@ fn poll_video_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 _ => VideoState::VsNone,
             };
 
-            tracing::info!(
+            tracing::debug!(
                 "Video event for entity {}: state={:?}, position={:.2}, length={:.2} (state_changed={}, length_changed={}, position_changed={})",
                 entity_id,
                 sdk_state,

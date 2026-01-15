@@ -484,7 +484,7 @@ pub async fn load_and_save_emote_gltf(
 
             // Count nodes before freeing
             let node_count = count_nodes(root.clone().upcast());
-            tracing::info!(
+            tracing::debug!(
                 "Emote GLTF processed with embedded animations: {} with {} nodes, saved to {} ({} bytes)",
                 hash,
                 node_count,

@@ -55,7 +55,7 @@ pub async fn load_and_save_scene_gltf(
 
             // Count nodes before freeing
             let node_count = count_nodes(node.clone().upcast());
-            tracing::info!(
+            tracing::debug!(
                 "GLTF processed: {} with {} nodes, saved to {} ({} bytes)",
                 hash,
                 node_count,
