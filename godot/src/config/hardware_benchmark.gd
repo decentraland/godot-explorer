@@ -286,6 +286,10 @@ func _create_benchmark_scene() -> void:
 				mesh_count += 1
 
 
+func _exit_tree() -> void:
+	_cleanup_benchmark_viewport()
+
+
 func _cleanup_benchmark_viewport() -> void:
 	if _benchmark_viewport:
 		_benchmark_viewport.queue_free()
