@@ -107,7 +107,7 @@ impl DclSocialService {
     /// After calling this, you need to call initialize_from_player_identity again
     #[func]
     pub fn disconnect(&mut self) {
-        tracing::info!("DclSocialService: Disconnecting and clearing manager");
+        tracing::debug!("DclSocialService: Disconnecting and clearing manager");
         if let Ok(mut guard) = self.manager.try_write() {
             *guard = None;
         } else {
@@ -388,7 +388,7 @@ impl DclSocialService {
         TokioRuntime::spawn(async move {
             let mut guard = cancel_handle.write().await;
             if let Some(token) = guard.take() {
-                tracing::info!("Cancelling friendship updates subscription");
+                tracing::debug!("Cancelling friendship updates subscription");
                 token.cancel();
             }
         });
@@ -401,7 +401,7 @@ impl DclSocialService {
         TokioRuntime::spawn(async move {
             let mut guard = cancel_handle.write().await;
             if let Some(token) = guard.take() {
-                tracing::info!("Cancelling connectivity updates subscription");
+                tracing::debug!("Cancelling connectivity updates subscription");
                 token.cancel();
             }
         });
@@ -671,7 +671,7 @@ impl DclSocialService {
         loop {
             tokio::select! {
                 _ = cancel_token.cancelled() => {
-                    tracing::info!("Friendship updates subscription cancelled");
+                    tracing::debug!("Friendship updates subscription cancelled");
                     return;
                 }
                 update = rx.recv() => {
@@ -695,7 +695,7 @@ impl DclSocialService {
         // Stream ended - emit subscription_dropped signal (only if not cancelled)
         if !cancel_token.is_cancelled() {
             if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
-                tracing::warn!(
+                tracing::debug!(
                     "Friendship updates stream ended - emitting subscription_dropped signal"
                 );
                 node.call_deferred("emit_signal", &["subscription_dropped".to_variant()]);
@@ -799,7 +799,7 @@ impl DclSocialService {
         loop {
             tokio::select! {
                 _ = cancel_token.cancelled() => {
-                    tracing::info!("Connectivity updates subscription cancelled");
+                    tracing::debug!("Connectivity updates subscription cancelled");
                     return;
                 }
                 update = rx.recv() => {
@@ -835,7 +835,7 @@ impl DclSocialService {
         // Stream ended - emit subscription_dropped signal (only if not cancelled)
         if !cancel_token.is_cancelled() {
             if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
-                tracing::warn!(
+                tracing::debug!(
                     "Connectivity updates stream ended - emitting subscription_dropped signal"
                 );
                 node.call_deferred("emit_signal", &["subscription_dropped".to_variant()]);

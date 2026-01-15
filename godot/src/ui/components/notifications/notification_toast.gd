@@ -68,10 +68,6 @@ func async_hide_toast() -> void:
 	tween.set_trans(Tween.TRANS_BACK)
 	tween.tween_property(self, "position:y", -size.y - 20.0, SLIDE_OUT_DURATION)
 	await tween.finished
-	print(
-		"[NotificationToast] Emitting toast_closed signal for notification: ",
-		notification_data.get("id", "unknown")
-	)
 	toast_closed.emit()  # Emit signal before freeing
 	queue_free()
 
@@ -114,10 +110,8 @@ func _track_notification_opened() -> void:
 func _start_swipe(pos: Vector2) -> void:
 	# Prevent double-start
 	if _swipe_started:
-		print("[NotificationToast] Ignoring duplicate swipe start")
 		return
 
-	print("[NotificationToast] Swipe started at position: ", pos)
 	_swipe_started = true
 	_swipe_start_pos = pos
 	_swipe_previous_pos = pos
@@ -155,46 +149,27 @@ func _update_velocity(pos: Vector2) -> void:
 			if abs_x > abs_y:
 				# Horizontal movement - determine left or right
 				_locked_direction = DragDirection.LEFT if delta.x < 0 else DragDirection.RIGHT
-				print(
-					"[NotificationToast] Direction locked to: ", "LEFT" if delta.x < 0 else "RIGHT"
-				)
 			else:
 				# Vertical movement - only allow upward
 				if delta.y < 0:
 					_locked_direction = DragDirection.UP
-					print("[NotificationToast] Direction locked to: UP")
 				else:
 					# Don't allow downward swipe - treat as cancelled
-					print("[NotificationToast] Downward swipe blocked - cancelling")
 					_cancel_swipe()
 
 
 func _end_swipe(pos: Vector2) -> void:
 	# Prevent double-end or end without start
 	if not _swipe_started:
-		print("[NotificationToast] Ignoring swipe end - no swipe was started")
 		return
 
 	var delta = pos - _swipe_start_pos
-	print(
-		"[NotificationToast] Swipe ended at position: ",
-		pos,
-		", total delta: ",
-		delta,
-		", length: ",
-		delta.length()
-	)
 
 	# Mark swipe as completed to prevent double execution
 	_swipe_started = false
 
 	# Check if it was a tap (small movement)
 	if delta.length() < DRAG_THRESHOLD:
-		# It's a tap - trigger notification clicked
-		print(
-			"[NotificationToast] Tap detected - emitting toast_clicked signal for notification: ",
-			notification_data.get("id", "unknown")
-		)
 		# Resume queue (dequeue will handle showing next) and restore focus before hiding
 		NotificationsManager.resume_queue()
 		Global.explorer_grab_focus()
@@ -215,30 +190,11 @@ func _end_swipe(pos: Vector2) -> void:
 		DragDirection.UP:
 			directional_velocity = abs(_current_velocity.y) if _current_velocity.y < 0 else 0
 
-	print(
-		"[NotificationToast] Current velocity: ",
-		_current_velocity,
-		", directional velocity: ",
-		int(directional_velocity),
-		" px/s"
-	)
-
 	# Fast swipe detected - apply inertia and dismiss
 	if directional_velocity >= VELOCITY_DISMISS_THRESHOLD:
-		print(
-			"[NotificationToast] Fast swipe detected (velocity: ",
-			int(directional_velocity),
-			" px/s) - dismissing with inertia for notification: ",
-			notification_data.get("id", "unknown")
-		)
 		async_dismiss_with_inertia()
 		return
 
-	# Not a fast swipe - just resume timer
-	print(
-		"[NotificationToast] Slow swipe detected - toast continues for notification: ",
-		notification_data.get("id", "unknown")
-	)
 	# Resume queue and restore focus
 	NotificationsManager.resume_queue()
 	Global.explorer_grab_focus()
@@ -271,7 +227,6 @@ func _cancel_swipe() -> void:
 
 
 func async_dismiss_with_inertia() -> void:
-	print("[NotificationToast] Starting inertia dismissal animation")
 	# Dismiss notification with momentum animation
 	# Mark as read and restore state
 	NotificationsManager.resume_queue()
@@ -307,9 +262,6 @@ func async_dismiss_with_inertia() -> void:
 	tween.tween_property(panel, "modulate:a", 0.0, INERTIA_DURATION)
 
 	await tween.finished
-	print(
-		"[NotificationToast] Emitting toast_closed signal for notification: ",
-		notification_data.get("id", "unknown")
-	)
+
 	toast_closed.emit()
 	queue_free()

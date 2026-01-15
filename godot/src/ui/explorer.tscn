@@ -183,16 +183,16 @@ mouse_filter = 2
 
 [node name="Joypad" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" instance=ExtResource("7_admxk")]
 unique_name_in_owner = true
+editor_description = "Action buttons, to jump and interact."
 layout_mode = 1
 
-[node name="VirtualJoystick_Left" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" instance=ExtResource("9_lxw33")]
+[node name="VirtualJoystick_Left" parent="UI/SafeMarginContainerHUD/InteractableHUD/MobileUI" node_paths=PackedStringArray("margin_control") instance=ExtResource("9_lxw33")]
 unique_name_in_owner = true
+editor_description = "Virtual joystick to control avatar movement."
 layout_mode = 1
-anchors_preset = -1
-anchor_right = 0.352
-offset_top = -327.0
-offset_right = -0.560028
+anchors_preset = 15
 deadzone_size = 0.0
+margin_control = NodePath("../../..")
 
 [node name="MarginContainer_ChatPanel" type="MarginContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD"]
 unique_name_in_owner = true
@@ -202,7 +202,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 10
@@ -210,7 +209,6 @@ theme_override_constants/margin_right = 10
 [node name="HBoxContainer_LeftSide" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel"]
 layout_mode = 2
 size_flags_horizontal = 0
-mouse_filter = 2
 
 [node name="VBoxContainer_LeftSide" type="VBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide"]
 unique_name_in_owner = true

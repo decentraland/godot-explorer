@@ -62,6 +62,11 @@ func _update_wheel(emote_urns: Array):
 
 func _on_play_emote(emote_urn: String):
 	close()
+
+	# Check if emotes are disabled by the current scene
+	if Global.is_emote_disabled():
+		return
+
 	if avatar_node != null:
 		var emote_controller = avatar_node.emote_controller
 		# Use async_play_emote to ensure base emotes are loaded from remote

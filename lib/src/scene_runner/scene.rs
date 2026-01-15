@@ -120,6 +120,7 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
+    InputModifier,
     TriggerArea,
     VirtualCameras,
     AudioSource,
@@ -155,7 +156,8 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::CameraModeArea,
-            Self::CameraModeArea => Self::TriggerArea,
+            Self::CameraModeArea => Self::InputModifier,
+            Self::InputModifier => Self::TriggerArea,
             Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
@@ -443,7 +445,7 @@ impl Scene {
 
     pub fn register_livekit_video_player(&mut self, entity_id: SceneEntityId) {
         self.livekit_video_player_entities.insert(entity_id);
-        tracing::info!(
+        tracing::debug!(
             "Registered livekit video player entity {}",
             entity_id.as_i32()
         );
@@ -480,7 +482,7 @@ impl Scene {
         num_channels: u32,
         samples_per_channel: u32,
     ) {
-        tracing::info!(
+        tracing::debug!(
             "Livekit audio initialized: sample_rate={}, channels={}, samples_per_channel={}",
             sample_rate,
             num_channels,
