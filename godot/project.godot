@@ -50,7 +50,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--fake-deeplink \"decentraland://open?dynamic-scene-loading=true&realm=https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest/&position=72,-10\""
+run/main_run_args="--emulate-ios"
 
 [editor_plugins]
 
