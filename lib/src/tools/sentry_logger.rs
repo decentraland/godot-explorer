@@ -1,44 +1,13 @@
-use std::sync::Mutex;
-
-use once_cell::sync::Lazy;
 use tracing::{Level, Subscriber};
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
-/// Represents a log entry captured from tracing
-#[derive(Clone, Debug)]
-pub struct SentryLogEntry {
-    pub level: SentryLogLevel,
-    pub message: String,
-    pub target: String,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SentryLogLevel {
-    Error,
-    Warn,
-}
-
-impl SentryLogLevel {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            SentryLogLevel::Error => "error",
-            SentryLogLevel::Warn => "warning",
-        }
-    }
-}
-
-/// Global queue for Sentry log entries
-static SENTRY_LOG_QUEUE: Lazy<Mutex<Vec<SentryLogEntry>>> = Lazy::new(|| Mutex::new(Vec::new()));
-
-/// Maximum number of entries to keep in the queue to prevent unbounded growth
-const MAX_QUEUE_SIZE: usize = 100;
-
-/// A tracing Layer that captures error and warning events for Sentry
+/// A tracing Layer that forwards logs to Godot's Sentry SDK as breadcrumbs
 pub struct SentryTracingLayer;
 
 impl<S> Layer<S> for SentryTracingLayer
 where
-    S: Subscriber,
+    S: Subscriber + for<'a> LookupSpan<'a>,
 {
     fn on_event(
         &self,
@@ -47,40 +16,64 @@ where
     ) {
         let level = *event.metadata().level();
 
-        // Only capture error and warn levels
+        // Map tracing level to Sentry level string
+        // Skip DEBUG and TRACE to reduce noise in Sentry breadcrumbs
         let sentry_level = match level {
-            Level::ERROR => SentryLogLevel::Error,
-            Level::WARN => SentryLogLevel::Warn,
-            _ => return,
+            Level::ERROR => "error",
+            Level::WARN => "warning",
+            Level::INFO => "info",
+            Level::DEBUG | Level::TRACE => return,
         };
 
         // Extract the message from the event
         let mut visitor = MessageVisitor::default();
         event.record(&mut visitor);
 
-        let entry = SentryLogEntry {
-            level: sentry_level,
-            message: visitor.message,
-            target: event.metadata().target().to_string(),
-        };
+        let target = event.metadata().target();
+        let message = format!("[Rust:{}] {}", target, visitor.message);
 
-        // Add to queue
-        if let Ok(mut queue) = SENTRY_LOG_QUEUE.lock() {
-            // Prevent unbounded growth by removing oldest entries
-            if queue.len() >= MAX_QUEUE_SIZE {
-                queue.remove(0);
-            }
-            queue.push(entry);
-        }
+        // Forward directly to Godot Sentry SDK as breadcrumb
+        add_breadcrumb_to_godot(&message, sentry_level);
     }
 }
 
-/// Drains and returns all pending log entries from the queue
-pub fn drain_sentry_logs() -> Vec<SentryLogEntry> {
-    if let Ok(mut queue) = SENTRY_LOG_QUEUE.lock() {
-        std::mem::take(&mut *queue)
-    } else {
-        Vec::new()
+/// Adds a breadcrumb to the Godot Sentry SDK.
+fn add_breadcrumb_to_godot(message: &str, level: &str) {
+    use godot::classes::{ClassDb, Engine};
+    use godot::prelude::*;
+
+    // Get SentrySDK singleton
+    let Some(mut sentry_sdk) = Engine::singleton().get_singleton("SentrySDK") else {
+        return;
+    };
+
+    // Map level string to SentrySDK level constants
+    // SentrySDK.LEVEL_DEBUG = 0, LEVEL_INFO = 1, LEVEL_WARNING = 2, LEVEL_ERROR = 3, LEVEL_FATAL = 4
+    let level_int: i64 = match level {
+        "debug" => 0,
+        "info" => 1,
+        "warning" => 2,
+        "error" => 3,
+        _ => 1, // Default to INFO
+    };
+
+    // Call static method SentryBreadcrumb.create(message)
+    let breadcrumb_variant = ClassDb::singleton().class_call_static(
+        "SentryBreadcrumb",
+        "create",
+        &[message.to_variant()],
+    );
+
+    if breadcrumb_variant.is_nil() {
+        return;
+    }
+
+    // Set properties and add to SentrySDK
+    if let Ok(mut breadcrumb) = breadcrumb_variant.try_to::<Gd<Object>>() {
+        breadcrumb.set("category", &"rust".to_variant());
+        breadcrumb.set("level", &level_int.to_variant());
+        breadcrumb.set("type", &"default".to_variant());
+        sentry_sdk.call("add_breadcrumb", &[breadcrumb.to_variant()]);
     }
 }
 
@@ -92,16 +85,8 @@ struct MessageVisitor {
 
 impl tracing::field::Visit for MessageVisitor {
     fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        if field.name() == "message" {
+        if field.name() == "message" || self.message.is_empty() {
             self.message = format!("{:?}", value);
-        } else if self.message.is_empty() {
-            // Fallback: if no "message" field, use the first field
-            if self.message.is_empty() {
-                self.message = format!("{:?}", value);
-            } else {
-                self.message
-                    .push_str(&format!(", {}={:?}", field.name(), value));
-            }
         }
     }
 
@@ -110,4 +95,13 @@ impl tracing::field::Visit for MessageVisitor {
             self.message = value.to_string();
         }
     }
+}
+
+/// Emits test messages at various log levels to verify Sentry integration.
+pub fn emit_sentry_test_messages() {
+    tracing::trace!("[Sentry Test] Rust: tracing::trace() - ignored");
+    tracing::debug!("[Sentry Test] Rust: tracing::debug() - ignored");
+    tracing::info!("[Sentry Test] Rust: tracing::info() - breadcrumb");
+    tracing::warn!("[Sentry Test] Rust: tracing::warn() - breadcrumb");
+    tracing::error!("[Sentry Test] Rust: tracing::error() - breadcrumb");
 }
