@@ -145,14 +145,20 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         mat.upcast::<Material>()
                     }
                 } else if let Some(material) = existing_material {
-                    let mut mat = material.to::<Gd<StandardMaterial3D>>();
-
-                    // Clear textures that are no longer present in the new material
-                    // This is needed when changing from a textured material to a non-textured one
-                    clear_removed_textures(&mut mat, &dcl_material);
-                    apply_dcl_material_properties(&mut mat, &dcl_material);
-
-                    mat.upcast::<Material>()
+                    // Try to reuse existing StandardMaterial3D, but if coming from ShaderMaterial
+                    // (e.g., switching from unlit+alpha_texture to pbr), create a new one
+                    if let Ok(mut mat) = material.try_to::<Gd<StandardMaterial3D>>() {
+                        // Clear textures that are no longer present in the new material
+                        // This is needed when changing from a textured material to a non-textured one
+                        clear_removed_textures(&mut mat, &dcl_material);
+                        apply_dcl_material_properties(&mut mat, &dcl_material);
+                        mat.upcast::<Material>()
+                    } else {
+                        // Existing material was ShaderMaterial, create new StandardMaterial3D
+                        let mut mat = StandardMaterial3D::new_gd();
+                        apply_dcl_material_properties(&mut mat, &dcl_material);
+                        mat.upcast::<Material>()
+                    }
                 } else {
                     let mut mat = StandardMaterial3D::new_gd();
                     apply_dcl_material_properties(&mut mat, &dcl_material);
@@ -220,14 +226,14 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             {
                                 // Albedo is optional (shader uses white default)
                                 if unlit_material.texture.is_some() {
-                                    ready &= check_shader_texture(
+                                    ready &= check_unlit_shader_texture(
                                         "albedo_texture",
                                         &unlit_material.texture,
                                         &mut shader_mat,
                                         content_provider.bind_mut(),
                                     );
                                 }
-                                ready &= check_shader_texture(
+                                ready &= check_unlit_shader_texture(
                                     "alpha_texture",
                                     &unlit_material.alpha_texture,
                                     &mut shader_mat,
@@ -544,7 +550,7 @@ fn check_texture(
 
 /// Check and set a texture on a ShaderMaterial.
 /// Returns true if ready (texture loaded), false if still loading.
-fn check_shader_texture(
+fn check_unlit_shader_texture(
     param_name: &str,
     dcl_texture: &Option<DclTexture>,
     shader_mat: &mut Gd<ShaderMaterial>,
