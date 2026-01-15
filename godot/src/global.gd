@@ -46,7 +46,8 @@ enum FriendshipStatus {
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
 const FORCE_TEST = false
 const FORCE_TEST_ARG = "[[52,-52],[52,-54],[52,-56],[52,-58],[52,-60],[52,-62],[52,-64],[52,-66],[52,-68],[54,-52],[54,-54],[54,-56],[54,-58],[54,-60]]"
-const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests"
+const FORCE_TEST_REALM = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+const FORCE_TEST_LOCATION = Vector2i(54, -55)
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
