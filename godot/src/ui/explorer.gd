@@ -66,6 +66,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
 @onready var modal: ColorRect = %Modal
+@onready var control_modal: Control = %Control_Modal
 
 
 func _process(_dt):
@@ -113,7 +114,7 @@ func _ready():
 	Global.music_player.stop()
 
 	# Register popup instances in Global
-	Global.set_modal_instance(modal)
+	control_modal.add_child(Global.modal_instance)
 
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)

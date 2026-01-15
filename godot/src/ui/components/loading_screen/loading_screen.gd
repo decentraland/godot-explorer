@@ -161,7 +161,7 @@ func _on_timer_check_progress_timeout_timeout():
 
 	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_progress_change) / 1000.0))
 	if inactive_seconds > 20:
-		Global.get_modal_instance().scene_load_timeout()
+		Global.modal_instance.open_scene_load_timeout()
 		# LOADING_TIMEOUT metric
 		var timeout_data = {
 			"loaded_resources": loaded_resources,

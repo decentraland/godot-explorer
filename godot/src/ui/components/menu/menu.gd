@@ -37,6 +37,7 @@ var fade_out_tween: Tween = null
 @onready var hud_button_backpack: Button = %HudButton_Backpack
 @onready var hud_button_discover: Button = %HudButton_Discover
 @onready var hud_button_settings: Button = %HudButton_Settings
+@onready var control_modal: Control = %Control_Modal
 
 
 func _ready():
@@ -84,6 +85,7 @@ func _ready():
 	Global.open_own_profile.connect(show_own_profile)
 	Global.close_menu.connect(close)
 	Global.delete_account.connect(_on_account_delete)
+	control_modal.add_child(Global.modal_instance)
 
 
 func _on_button_close_pressed():

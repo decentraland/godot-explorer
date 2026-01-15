@@ -80,8 +80,8 @@ var standalone = false
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
 
-var modal_instance = null
 
+var modal_instance: Modal = load("res://src/ui/components/modal/modal.tscn").instantiate()
 var last_emitted_height: int = 0
 var current_height: int = -1
 var previous_height: int = -1
@@ -96,13 +96,6 @@ var session_id: String
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
-
-func set_modal_instance(popup_instance) -> void:
-	modal_instance = popup_instance
-
-
-func get_modal_instance() -> Node:
-	return modal_instance
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr

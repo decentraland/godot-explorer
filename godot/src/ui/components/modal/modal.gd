@@ -1,3 +1,4 @@
+class_name Modal
 extends ColorRect
 
 enum ModalType { EXTERNAL_LINK, TELEPORT, SCENE_TIMEOUT, CONNECTION_LOST }
@@ -57,7 +58,7 @@ var destination_name: String = "Unknown Place"
 
 
 func _ready() -> void:
-	resize_modal()
+	hide()
 
 
 func resize_modal() -> void:
@@ -174,19 +175,19 @@ func open_external_link(external_url: String) -> void:
 	_set_modal_type(ModalType.EXTERNAL_LINK)
 
 
-func scene_load_timeout() -> void:
+func open_scene_load_timeout() -> void:
 	_set_title(SCENE_TIMEOUT_TITLE)
 	_set_body(SCENE_TIMEOUT_BODY)
 	_set_modal_type(ModalType.SCENE_TIMEOUT)
 
 
-func connection_lost() -> void:
+func open_connection_lost() -> void:
 	_set_title(CONNECTION_LOST_TITLE)
 	_set_body(CONNECTION_LOST_BODY)
 	_set_modal_type(ModalType.CONNECTION_LOST)
 
 
-func teleport(new_location: Vector2i, new_realm = null) -> void:
+func open_for_teleport(new_location: Vector2i, new_realm = null) -> void:
 	location = new_location
 	async_load_place_position()
 	_set_title(TELEPORT_TITLE)
@@ -195,7 +196,7 @@ func teleport(new_location: Vector2i, new_realm = null) -> void:
 
 
 func _on_button_pressed() -> void:
-	connection_lost()
+	open_connection_lost()
 	resize_modal()
 
 
@@ -205,12 +206,12 @@ func _on_button_2_pressed() -> void:
 
 
 func _on_button_3_pressed() -> void:
-	scene_load_timeout()
+	open_scene_load_timeout()
 	resize_modal()
 
 
 func _on_button_4_pressed() -> void:
-	teleport(Vector2(22,5))
+	open_for_teleport(Vector2(22,5))
 	resize_modal()
 
 func async_load_place_position():

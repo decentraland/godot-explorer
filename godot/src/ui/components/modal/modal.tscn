@@ -1,13 +1,13 @@
-[gd_scene load_steps=11 format=3 uid="uid://b1knga8535gvv"]
+[gd_scene load_steps=11 format=3 uid="uid://cwa2ufu3umupb"]
 
-[ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://modal.gd" id="1_o6smb"]
-[ext_resource type="LabelSettings" uid="uid://cp7awd4s8rtcn" path="res://assets/themes/modal_body.tres" id="2_amk0a"]
-[ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="2_g7ajv"]
-[ext_resource type="LabelSettings" uid="uid://cmc7vbpljmiry" path="res://assets/themes/modal_url.tres" id="4_4vfp2"]
-[ext_resource type="Texture2D" uid="uid://dxhx77amrb5ly" path="res://src/ui/components/utils/qwe.png" id="4_ao2vh"]
-[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_figov"]
-[ext_resource type="Texture2D" uid="uid://scwrxbf7tfps" path="res://src/ui/components/utils/qwe2.png" id="5_ao2vh"]
-[ext_resource type="Texture2D" uid="uid://bpsb828rp2tlt" path="res://assets/ui/modal-alert-icon.svg" id="5_figov"]
+[ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://src/ui/components/modal/modal.gd" id="1_146x8"]
+[ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="2_ijrai"]
+[ext_resource type="LabelSettings" uid="uid://cp7awd4s8rtcn" path="res://assets/themes/modal_body.tres" id="3_tquji"]
+[ext_resource type="LabelSettings" uid="uid://cmc7vbpljmiry" path="res://assets/themes/modal_url.tres" id="4_4n1cu"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_bdjpj"]
+[ext_resource type="Texture2D" uid="uid://bpsb828rp2tlt" path="res://assets/ui/modal-alert-icon.svg" id="6_rvkw6"]
+[ext_resource type="Texture2D" uid="uid://dxhx77amrb5ly" path="res://src/ui/components/utils/qwe.png" id="7_uxfn5"]
+[ext_resource type="Texture2D" uid="uid://scwrxbf7tfps" path="res://src/ui/components/utils/qwe2.png" id="8_mymcd"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_figov"]
 bg_color = Color(0.29803923, 0.078431375, 0.6431373, 1)
@@ -19,13 +19,14 @@ corner_radius_bottom_left = 24
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_figov"]
 
 [node name="Modal" type="ColorRect"]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.5019608)
-script = ExtResource("1_o6smb")
+script = ExtResource("1_146x8")
 
 [node name="MarginContainer_Modal" type="MarginContainer" parent="."]
 unique_name_in_owner = true
@@ -58,7 +59,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 10)
 layout_mode = 2
 text = "Loading is taking longer than expected"
-label_settings = ExtResource("2_g7ajv")
+label_settings = ExtResource("2_ijrai")
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -72,7 +73,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 10)
 layout_mode = 2
 text = "You can reload the experience, or jump in now, it should keep loading in the background."
-label_settings = ExtResource("2_amk0a")
+label_settings = ExtResource("3_tquji")
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -87,7 +88,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 10)
 layout_mode = 2
 text = "url"
-label_settings = ExtResource("4_4vfp2")
+label_settings = ExtResource("4_4n1cu")
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -105,7 +106,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 size_flags_horizontal = 3
-theme = ExtResource("4_figov")
+theme = ExtResource("5_bdjpj")
 theme_type_variation = &"SecondaryButton"
 text = "SECONDARY"
 
@@ -114,7 +115,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 size_flags_horizontal = 3
-theme = ExtResource("4_figov")
+theme = ExtResource("5_bdjpj")
 text = "PRIMARY"
 
 [node name="Control" type="Control" parent="MarginContainer_Modal/PanelContainer"]
@@ -133,7 +134,7 @@ offset_right = 41.334
 offset_bottom = 33.334
 size_flags_horizontal = 4
 size_flags_vertical = 0
-texture = ExtResource("5_figov")
+texture = ExtResource("6_rvkw6")
 expand_mode = 1
 stretch_mode = 4
 
@@ -142,14 +143,14 @@ visible = false
 modulate = Color(1, 1, 1, 0.21960784)
 position = Vector2(297, 348.00003)
 scale = Vector2(1.1834284, 1.1834282)
-texture = ExtResource("4_ao2vh")
+texture = ExtResource("7_uxfn5")
 
 [node name="Qwe2" type="Sprite2D" parent="."]
 visible = false
 modulate = Color(1, 1, 1, 0.078431375)
 position = Vector2(279, 304)
 scale = Vector2(0.53193825, 0.53193825)
-texture = ExtResource("5_ao2vh")
+texture = ExtResource("8_mymcd")
 
 [node name="TESTING_PORPUSE" type="HBoxContainer" parent="."]
 visible = false
