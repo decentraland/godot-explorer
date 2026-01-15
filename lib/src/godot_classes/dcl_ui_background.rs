@@ -114,7 +114,7 @@ impl DclUiBackground {
             // If loading is complete (promise resolved or rejected) but no texture,
             // reset to white pixel immediately
             if is_loaded {
-                tracing::warn!(
+                tracing::error!(
                     "UI Avatar texture failed for user: {}, resetting to white pixel",
                     user_id
                 );
@@ -123,7 +123,7 @@ impl DclUiBackground {
                 // Still loading, wait for signal
                 self.first_texture_load_shot = false;
             } else {
-                tracing::warn!(
+                tracing::error!(
                     "UI Avatar texture not found for user: {}, resetting to white pixel",
                     user_id
                 );

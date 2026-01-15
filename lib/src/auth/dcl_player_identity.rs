@@ -428,7 +428,7 @@ impl DclPlayerIdentity {
         profile.content.eth_address = self.get_address_str().to_string();
         let profile = DclUserProfile::from_gd(profile);
         self.profile = Some(profile.clone());
-        tracing::warn!("profile > set default profile",);
+        tracing::info!("profile > set default profile",);
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -443,7 +443,7 @@ impl DclPlayerIdentity {
         profile.content.eth_address = self.get_address_str().to_string();
         let profile = DclUserProfile::from_gd(profile);
         self.profile = Some(profile.clone());
-        tracing::warn!("profile > set random profile",);
+        tracing::info!("profile > set random profile",);
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -454,7 +454,7 @@ impl DclPlayerIdentity {
     #[func]
     pub fn set_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.profile = Some(profile.clone());
-        tracing::warn!("profile > set profile func",);
+        tracing::info!("profile > set profile func",);
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -600,7 +600,7 @@ impl DclPlayerIdentity {
             Ok(profile) => {
                 let new_profile = DclUserProfile::from_gd(profile);
                 self.profile = Some(new_profile.clone());
-                tracing::warn!("profile > set profile from lambda",);
+                tracing::info!("profile > set profile from lambda",);
 
                 self.base_mut().call_deferred(
                     "emit_signal",

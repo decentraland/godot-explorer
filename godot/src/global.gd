@@ -261,6 +261,13 @@ func _ready():
 	sentry_user.id = self.config.analytics_user_id
 	SentrySDK.set_tag("dcl_session_id", session_id)
 
+	# Emit test messages to verify Sentry integration (all builds except production)
+	# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
+	# and we want Rust breadcrumbs to be included in that event
+	if not DclGlobal.is_production():
+		DclGlobal.emit_sentry_rust_test_messages()
+		_emit_sentry_godot_test_messages()
+
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
@@ -636,9 +643,6 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
-	# Forward Rust tracing errors/warnings to Sentry
-	_forward_rust_logs_to_sentry()
-
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
@@ -657,21 +661,21 @@ func _process(_delta: float) -> void:
 			change_virtual_keyboard.emit(last_emitted_height)
 
 
-func _forward_rust_logs_to_sentry() -> void:
-	var logs = DclGlobal.drain_rust_logs()
-	for log_entry in logs:
-		var level: String = log_entry.get("level", "error")
-		var message: String = log_entry.get("message", "")
-		var target: String = log_entry.get("target", "")
-
-		# Format: [target] message
-		var formatted_message = "[Rust:%s] %s" % [target, message]
-
-		# Map Rust log levels to Sentry levels
-		if level == "error":
-			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_ERROR)
-		elif level == "warning":
-			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_WARNING)
+func _emit_sentry_godot_test_messages() -> void:
+	print("[Sentry Test] GDScript: print() - breadcrumb")
+	print_rich("[Sentry Test] GDScript: print_rich() - breadcrumb")
+	push_warning("[Sentry Test] GDScript: push_warning() - breadcrumb")
+	push_error("[Sentry Test] GDScript: push_error() - event")
+	# Also test SentrySDK.capture_message directly
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: capture_message INFO - breadcrumb", SentrySDK.LEVEL_INFO
+	)
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: capture_message WARNING - breadcrumb", SentrySDK.LEVEL_WARNING
+	)
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: capture_message ERROR - event", SentrySDK.LEVEL_ERROR
+	)
 
 
 func check_deep_link_teleport_to():
@@ -679,26 +683,14 @@ func check_deep_link_teleport_to():
 		var new_deep_link_url: String = ""
 		if DclAndroidPlugin.is_available():
 			var args = DclAndroidPlugin.get_deeplink_args()
-			print("[DEEPLINK] Android args: ", args)
 			new_deep_link_url = args.get("data", "")
 		elif DclIosPlugin.is_available():
 			var args = DclIosPlugin.get_deeplink_args()
-			print("[DEEPLINK] iOS args: ", args)
 			new_deep_link_url = args.get("data", "")
-
-		print("[DEEPLINK] check_deep_link_teleport_to: new_deep_link_url = ", new_deep_link_url)
 
 		if not new_deep_link_url.is_empty():
 			deep_link_url = new_deep_link_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
-			print(
-				"[DEEPLINK] Parsed deep_link_obj: location=",
-				deep_link_obj.location,
-				" realm=",
-				deep_link_obj.realm,
-				" preview=",
-				deep_link_obj.preview
-			)
 
 		if Global.deep_link_obj.is_location_defined():
 			# Use preview URL as realm if specified, otherwise use realm, otherwise main
@@ -714,12 +706,9 @@ func check_deep_link_teleport_to():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
 		elif not Global.deep_link_obj.realm.is_empty():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
-		elif deep_link_url.begins_with("https://decentraland.org/events/event/?id="):
-			print("Is event link")
 
 
 func _on_deeplink_received(url: String) -> void:
-	print("[DEEPLINK] Signal received in GDScript: ", url)
 	if not url.is_empty():
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
@@ -732,7 +721,6 @@ func _on_deeplink_received(url: String) -> void:
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:
-	print("[DEEPLINK] Handling signin with identity_id: ", identity_id)
 	if Global.player_identity.has_pending_mobile_auth():
 		Global.player_identity.complete_mobile_connect_account(identity_id)
 	else:

@@ -1184,6 +1184,9 @@ func _os_get_scheduled_ids() -> Array:
 
 ## Print notification queue state for debugging on app launch/refocus
 func _print_queue_state(current_time: int, scheduled_count: int, pending_count: int) -> void:
+	if not _debug_notifications_enabled:
+		return
+
 	var plugin = _get_plugin()
 	if not plugin:
 		return

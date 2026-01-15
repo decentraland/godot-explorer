@@ -99,10 +99,10 @@ pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut Scen
         match FromPrimitive::from_u32(crdt_type) {
             Some(crdt_type) => {
                 if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
-                    tracing::info!("CRDT Buffer error: {:?}", e);
+                    tracing::warn!("CRDT Buffer error: {:?}", e);
                 };
             }
-            None => tracing::info!("CRDT Header error: unhandled crdt message type {crdt_type}"),
+            None => tracing::warn!("CRDT Header error: unhandled crdt message type {crdt_type}"),
         }
     }
 }
