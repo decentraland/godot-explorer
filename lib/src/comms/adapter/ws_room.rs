@@ -262,7 +262,7 @@ impl WebSocketRoom {
                                 self.state = WsRoomState::ChallengeMessageSent;
                             }
                             _ => {
-                                tracing::debug!(
+                                tracing::warn!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -315,7 +315,7 @@ impl WebSocketRoom {
                                 }
                             }
                             _ => {
-                                tracing::debug!(
+                                tracing::warn!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );

@@ -1035,7 +1035,7 @@ impl CommunicationManager {
     fn _on_realm_changed_deferred(&mut self) {
         // Skip automatic reconnection if blocked (e.g., after DuplicateIdentity)
         if self.block_auto_reconnect {
-            tracing::debug!("Skipping automatic reconnection due to block_auto_reconnect flag");
+            tracing::warn!("Skipping automatic reconnection due to block_auto_reconnect flag");
             return;
         }
 
@@ -1043,13 +1043,13 @@ impl CommunicationManager {
 
         let comms = self._internal_get_comms_from_realm();
         if comms.is_none() {
-            tracing::debug!("invalid comms from realm.");
+            tracing::warn!("invalid comms from realm.");
             return;
         }
 
         let (comms_protocol, comms_fixed_adapter) = comms.unwrap();
         if comms_protocol != "v3" {
-            tracing::debug!("Only protocol 'v3' is supported.");
+            tracing::warn!("Only protocol 'v3' is supported.");
             return;
         }
 
@@ -1057,16 +1057,16 @@ impl CommunicationManager {
             #[cfg(feature = "use_livekit")]
             if DISABLE_ARCHIPELAGO {
                 // When archipelago is disabled, fall back to a direct LiveKit connection
-                tracing::debug!(
+                tracing::warn!(
                     "🔄 Archipelago disabled, attempting fallback to direct LiveKit connection"
                 );
                 // Try to create a direct LiveKit connection as fallback
                 self.create_fallback_connection();
             } else {
-                tracing::debug!("As far, only fixedAdapter is supported.");
+                tracing::warn!("As far, only fixedAdapter is supported.");
             }
             #[cfg(not(feature = "use_livekit"))]
-            tracing::debug!("As far, only fixedAdapter is supported.");
+            tracing::warn!("As far, only fixedAdapter is supported.");
             return;
         }
 

@@ -206,7 +206,7 @@ impl ArchipelagoManager {
                                 self.state = ArchipelagoState::ChallengeMessageSent;
                             }
                             _ => {
-                                tracing::debug!(
+                                tracing::warn!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -226,7 +226,7 @@ impl ArchipelagoManager {
                                 self.state = ArchipelagoState::WelcomeMessageReceived;
                             }
                             _ => {
-                                tracing::debug!(
+                                tracing::warn!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -324,7 +324,7 @@ impl ArchipelagoManager {
                             }
                         }
                         _ => {
-                            tracing::debug!(
+                            tracing::warn!(
                                 "protocol not supported as child of archipelago {:?}",
                                 msg
                             )

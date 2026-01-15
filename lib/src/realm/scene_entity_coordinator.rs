@@ -592,7 +592,7 @@ impl SceneEntityCoordinator {
     /// - If no fixed entities: Requests scene at current coordinate (fallback for genesis city teleports)
     pub fn update_position(&mut self, x: i16, z: i16) {
         if self.entities_active_url.is_empty() {
-            tracing::debug!("entities_active_url is empty, cannot update position");
+            tracing::error!("entities_active_url is empty, cannot update position");
             return;
         }
 
@@ -636,14 +636,14 @@ impl SceneEntityCoordinator {
                         self.dirty_loadable_scenes = true;
                     } else {
                         self.cleanup_request_id(response.request_option.id);
-                        tracing::debug!(
+                        tracing::error!(
                             "Bad status code while doing a request: {:?}",
                             response.status_code
                         );
                     }
                 }
                 Err(err) => {
-                    tracing::warn!("Error while doing a request: {err:?}");
+                    tracing::error!("Error while doing a request: {err:?}");
                 }
             }
         }

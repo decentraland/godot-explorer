@@ -326,7 +326,7 @@ async fn fetch_polling_server(
             continue;
         }
 
-        tracing::error!(
+        tracing::info!(
             "fetch_polling_server: completed successfully after {} attempts for req_id={}",
             attempt,
             req_id

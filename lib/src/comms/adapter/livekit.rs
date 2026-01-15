@@ -193,7 +193,7 @@ impl Adapter for LivekitRoom {
 
     fn change_profile(&mut self, _new_profile: UserProfile) {
         // Profile changes are now handled by MessageProcessor
-        tracing::debug!("Profile changes should be handled by MessageProcessor");
+        tracing::error!("Profile changes should be handled by MessageProcessor");
     }
 
     fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
