@@ -402,6 +402,12 @@ fn clear_removed_textures(material: &mut Gd<StandardMaterial3D>, dcl_material: &
     }
 }
 
+/// Validates that a texture has valid GPU resources (non-zero dimensions).
+/// Empty textures can cause crashes on Android due to invalid descriptor sets.
+fn is_valid_texture(texture: &Gd<Texture2D>) -> bool {
+    texture.get_width() > 0 && texture.get_height() > 0
+}
+
 fn check_texture(
     param: godot::classes::base_material_3d::TextureParam,
     dcl_texture: &Option<DclTexture>,
@@ -421,7 +427,15 @@ fn check_texture(
                 if let Some(resource) =
                     content_provider.get_texture_from_hash(content_hash.to_godot())
                 {
-                    material.set_texture(param, &resource.upcast::<Texture2D>());
+                    // Validate texture has actual data before using to prevent GPU crashes
+                    if is_valid_texture(&resource) {
+                        material.set_texture(param, &resource.upcast::<Texture2D>());
+                    } else {
+                        tracing::warn!(
+                            "Skipping invalid texture (0x0) for hash {}, may cause rendering issues",
+                            content_hash
+                        );
+                    }
                 }
                 true
             } else {
@@ -432,7 +446,15 @@ fn check_texture(
             if content_provider.is_avatar_texture_loaded(user_id.to_godot()) {
                 let texture_result = content_provider.get_avatar_texture(user_id.to_godot());
                 if let Some(texture) = texture_result {
-                    material.set_texture(param, &texture.upcast::<Texture2D>());
+                    // Validate texture has actual data before using to prevent GPU crashes
+                    if is_valid_texture(&texture) {
+                        material.set_texture(param, &texture.upcast::<Texture2D>());
+                    } else {
+                        tracing::warn!(
+                            "Skipping invalid avatar texture (0x0) for user {}, may cause rendering issues",
+                            user_id
+                        );
+                    }
                 } else {
                     // Promise was rejected (invalid user, no profile, no snapshots, etc.)
                     // Clear the texture to avoid showing stale data
@@ -528,14 +550,37 @@ pub fn update_video_material_textures(scene: &mut Scene) {
         if let Some(video_player) = scene.video_players.get_mut(&video_entity_id) {
             let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
 
+            // Get current texture to check if update is needed
+            // This prevents calling set_texture every frame which exhausts descriptor pools
+            let current_texture = material.get_texture(param);
+
             // Try get_backend_texture first (works for ExoPlayer's ExternalTexture)
             let backend_texture = video_player.bind_mut().get_backend_texture();
             if let Some(texture) = backend_texture {
-                material.set_texture(param, &texture.upcast::<Texture2D>());
+                // Validate texture has actual data before using to prevent GPU crashes
+                if is_valid_texture(&texture) {
+                    // Only set texture if it's different (compare by instance ID)
+                    let needs_update = current_texture
+                        .as_ref()
+                        .is_none_or(|current| current.instance_id() != texture.instance_id());
+                    if needs_update {
+                        material.set_texture(param, &texture.upcast::<Texture2D>());
+                    }
+                }
             } else {
                 // Fallback to dcl_texture (works for LiveKit's ImageTexture)
                 if let Some(texture) = video_player.bind().get_dcl_texture() {
-                    material.set_texture(param, &texture.upcast::<Texture2D>());
+                    let texture_2d = texture.upcast::<Texture2D>();
+                    // Validate texture has actual data before using to prevent GPU crashes
+                    if is_valid_texture(&texture_2d) {
+                        // Only set texture if it's different (compare by instance ID)
+                        let needs_update = current_texture.as_ref().is_none_or(|current| {
+                            current.instance_id() != texture_2d.instance_id()
+                        });
+                        if needs_update {
+                            material.set_texture(param, &texture_2d);
+                        }
+                    }
                 }
             }
         }

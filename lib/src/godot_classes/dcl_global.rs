@@ -103,6 +103,7 @@ mod ios {
 
         // Use OSLog for iOS - writes to the system log instead of stderr
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
+        // Note: Level is shown in Console.app's "Type" column, target is not included in message
         let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
         // Add Sentry layer to capture errors and warnings
@@ -115,11 +116,18 @@ mod ios {
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod desktop {
     use crate::tools::sentry_logger::SentryTracingLayer;
+    use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
     pub fn init_logger() {
-        let fmt_layer = tracing_subscriber::fmt::layer();
+        // Respect RUST_LOG environment variable, default to "warn" if not set
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
+            eprintln!("RUST_LOG not set or invalid ({e}), defaulting to 'warn'");
+            EnvFilter::new("warn")
+        });
+
+        let fmt_layer = tracing_subscriber::fmt::layer().with_filter(filter);
         let sentry_layer = SentryTracingLayer;
 
         registry()

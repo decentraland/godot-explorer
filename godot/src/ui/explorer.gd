@@ -509,6 +509,10 @@ func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
 
+	# Set grace period on avatar's emote controller to prevent emote cancellation during teleport
+	if player.avatar and player.avatar.emote_controller:
+		player.avatar.emote_controller.set_teleport_grace()
+
 	player.move_to(position)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
