@@ -233,7 +233,6 @@ func _ready():
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
 	control_menu.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
-	control_menu.open()
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)

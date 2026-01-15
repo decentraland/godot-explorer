@@ -162,7 +162,6 @@ layout_mode = 1
 unique_name_in_owner = true
 editor_description = "Virtual joystick to control avatar movement."
 layout_mode = 1
-anchors_preset = 15
 deadzone_size = 0.0
 margin_control = NodePath("../../..")
 

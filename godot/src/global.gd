@@ -609,9 +609,9 @@ func shorten_address(address: String) -> String:
 func get_backpack() -> Backpack:
 	var explorer = Global.get_explorer()
 	if explorer != null and is_instance_valid(explorer.control_menu):
-		return explorer.control_menu.control_backpack
+		return explorer.control_menu.control_backpack.instance
 	var control_menu = get_node_or_null("/root/Menu")
-	return control_menu.control_backpack
+	return control_menu.control_backpack.instance
 
 
 func _process(_delta: float) -> void:

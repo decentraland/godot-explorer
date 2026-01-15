@@ -89,6 +89,7 @@ grow_vertical = 2
 
 [node name="Control_Discover" parent="VBoxContainer/ColorRect_Background/Menus" instance_placeholder="res://src/ui/components/discover/discover.tscn"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance_placeholder="res://src/ui/components/settings/settings.tscn"]

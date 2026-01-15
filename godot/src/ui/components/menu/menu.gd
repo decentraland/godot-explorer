@@ -26,7 +26,6 @@ var fade_out_tween: Tween = null
 #@onready var control_backpack: Backpack = %Control_Backpack
 #@onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
 
-
 @onready var group: ButtonGroup = ButtonGroup.new()
 
 @onready var control_discover := PlaceholderManager.new(%Control_Discover)
@@ -91,8 +90,9 @@ func _ready():
 	Global.open_own_profile.connect(show_own_profile)
 	Global.close_menu.connect(close)
 	Global.delete_account.connect(_on_account_delete)
-	
-	open()
+
+	if not is_in_game:
+		open.call_deferred()
 
 
 func _on_button_close_pressed():
@@ -113,6 +113,8 @@ func close():
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
 	tween_h.tween_callback(hide).set_delay(0.3)
+	if selected_node:
+		selected_node.put_to_sleep()
 
 
 func show_discover():
@@ -134,20 +136,24 @@ func show_backpack(on_emotes := false):
 
 func show_settings():
 	await control_settings._async_instantiate()
-	
-	control_settings.instance.request_pause_scenes.connect(func(enabled): request_pause_scenes.emit(enabled))
-	control_settings.instance.request_debug_panel.connect(func(enabled): request_debug_panel.emit(enabled))
+
+	control_settings.instance.request_pause_scenes.connect(
+		func(enabled): request_pause_scenes.emit(enabled)
+	)
+	control_settings.instance.request_debug_panel.connect(
+		func(enabled): request_debug_panel.emit(enabled)
+	)
 	control_settings.instance.preview_hot_reload.connect(
 		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
 	)
-	
+
 	select_settings_screen()
 	_open()
 
 
 func show_own_profile():
 	await control_profile_settings._async_instantiate()
-	
+
 	select_profile_screen()
 	_open()
 
@@ -205,8 +211,7 @@ func select_node(node: PlaceholderManager, play_sfx: bool = true):
 
 func fade_in(node: PlaceholderManager):
 	selected_node = node
-	#node.show()
-	node.instance.visible = true
+	node.instance.show()
 	var tween = create_tween()
 	tween.tween_property(node.instance, "modulate", Color(1, 1, 1), 0.3)
 
@@ -214,13 +219,13 @@ func fade_in(node: PlaceholderManager):
 func fade_out(node: PlaceholderManager):
 	if is_instance_valid(fade_out_tween):
 		if fade_out_tween.is_running():
-			#selected_node.hide()
-			selected_node.instance.visible = false
+			selected_node.instance.hide()
 			fade_out_tween.stop()
 
 	fade_out_tween = create_tween().set_parallel(true)
 	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
-	fade_out_tween.tween_callback(node.put_to_sleep).set_delay(0.3)
+	fade_out_tween.tween_callback(node.instance.hide).set_delay(0.3)
+	fade_out_tween.tween_callback(node.put_to_sleep)
 
 
 func _on_visibility_changed():
@@ -235,9 +240,9 @@ func _on_visibility_changed():
 
 
 func _async_deploy_if_has_changes():
-	if control_backpack.has_changes():
+	if control_backpack.instance.has_changes():
 		control_deploying_profile.show()
-		await control_backpack.async_save_profile()
+		await control_backpack.instance.async_save_profile()
 		control_deploying_profile.hide()
 
 
