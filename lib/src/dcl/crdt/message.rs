@@ -7,8 +7,35 @@ use crate::dcl::{
     },
 };
 
+#[cfg(feature = "scene_logging")]
+use crate::dcl::components::component_id_to_name;
+
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+
+#[cfg(feature = "scene_logging")]
+use crate::tools::scene_logging::{
+    CrdtDirection, CrdtLogEntry, CrdtOperation, SceneLogEntry, SceneLoggerSender,
+};
+
+/// Context for logging CRDT messages (only used when scene_logging feature is enabled).
+#[cfg(feature = "scene_logging")]
+pub struct CrdtLoggingContext {
+    pub sender: SceneLoggerSender,
+    pub tick: u32,
+    pub direction: CrdtDirection,
+}
+
+#[cfg(feature = "scene_logging")]
+impl CrdtLoggingContext {
+    pub fn new(sender: SceneLoggerSender, tick: u32, direction: CrdtDirection) -> Self {
+        Self {
+            sender,
+            tick,
+            direction,
+        }
+    }
+}
 
 #[derive(FromPrimitive, ToPrimitive, Debug)]
 pub enum CrdtMessageType {
@@ -119,6 +146,8 @@ fn process_message(
     Ok(())
 }
 
+/// Process multiple CRDT messages from a stream.
+#[cfg(not(feature = "scene_logging"))]
 pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut SceneCrdtState) {
     // collect commands
     while stream.len() > CRDT_HEADER_SIZE {
@@ -135,6 +164,126 @@ pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut Scen
             None => tracing::info!("CRDT Header error: unhandled crdt message type {crdt_type}"),
         }
     }
+}
+
+/// Process multiple CRDT messages from a stream with optional logging context.
+#[cfg(feature = "scene_logging")]
+pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut SceneCrdtState) {
+    process_many_messages_with_logging(stream, scene_crdt_state, None);
+}
+
+/// Process multiple CRDT messages from a stream with logging context.
+#[cfg(feature = "scene_logging")]
+pub fn process_many_messages_with_logging(
+    stream: &mut DclReader,
+    scene_crdt_state: &mut SceneCrdtState,
+    logging_ctx: Option<&CrdtLoggingContext>,
+) {
+    // collect commands
+    while stream.len() > CRDT_HEADER_SIZE {
+        let length = stream.read_u32().unwrap() as usize;
+        let crdt_type_raw = stream.read_u32().unwrap();
+        let message_size = length.saturating_sub(8);
+        let mut message_stream = stream.take_reader(message_size);
+
+        match FromPrimitive::from_u32(crdt_type_raw) {
+            Some(crdt_type) => {
+                // Log the message if logging is enabled
+                if let Some(ctx) = logging_ctx {
+                    log_crdt_message(
+                        ctx,
+                        crdt_type_raw,
+                        &crdt_type,
+                        &message_stream,
+                        message_size,
+                    );
+                }
+
+                if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
+                    tracing::info!("CRDT Buffer error: {:?}", e);
+                };
+            }
+            None => {
+                tracing::info!("CRDT Header error: unhandled crdt message type {crdt_type_raw}")
+            }
+        }
+    }
+}
+
+#[cfg(feature = "scene_logging")]
+fn log_crdt_message(
+    ctx: &CrdtLoggingContext,
+    _crdt_type_raw: u32,
+    crdt_type: &CrdtMessageType,
+    message_stream: &DclReader,
+    message_size: usize,
+) {
+    use crate::dcl::components::proto_components::deserialize_component_to_json;
+    use crate::tools::scene_logging::current_timestamp_ms;
+
+    // Parse minimal info from message for logging without consuming the stream
+    let data = message_stream.as_slice();
+    if data.len() < 4 {
+        return;
+    }
+
+    // Entity ID is first 4 bytes (u16 number + u16 version)
+    let entity_number = u16::from_le_bytes([data[0], data[1]]);
+    let entity_version = u16::from_le_bytes([data[2], data[3]]);
+    let entity_id = ((entity_version as u32) << 16) | (entity_number as u32);
+
+    // Component ID, timestamp, and payload depend on message type
+    // Format for PUT: entity(4) + component(4) + timestamp(4) + content_length(4) + payload
+    // Format for DELETE: entity(4) + component(4) + timestamp(4)
+    // Format for DELETE_ENTITY: entity(4)
+    let (component_id, crdt_timestamp, payload, bin_payload) =
+        if matches!(crdt_type, CrdtMessageType::DeleteEntity) {
+            (0, 0, None, None)
+        } else if data.len() >= 12 {
+            let comp_id = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
+            let timestamp = u32::from_le_bytes([data[8], data[9], data[10], data[11]]);
+
+            // For PutComponent and AppendValue, payload starts after content_length field (offset 16)
+            let (payload, bin_payload) = if matches!(
+                crdt_type,
+                CrdtMessageType::PutComponent | CrdtMessageType::AppendValue
+            ) && data.len() > 16
+            {
+                let payload_data = &data[16..];
+                let json_payload = deserialize_component_to_json(comp_id, payload_data);
+                // Encode as hex string
+                let hex_payload: String = payload_data.iter().map(|b| format!("{:02x}", b)).collect();
+                (json_payload, Some(hex_payload))
+            } else {
+                (None, None)
+            };
+
+            (comp_id, timestamp, payload, bin_payload)
+        } else {
+            (0, 0, None, None)
+        };
+
+    let operation = match crdt_type {
+        CrdtMessageType::PutComponent => CrdtOperation::Put,
+        CrdtMessageType::DeleteComponent => CrdtOperation::Delete,
+        CrdtMessageType::DeleteEntity => CrdtOperation::DeleteEntity,
+        CrdtMessageType::AppendValue => CrdtOperation::Append,
+    };
+
+    let entry = CrdtLogEntry {
+        tick: ctx.tick,
+        timestamp_ms: current_timestamp_ms(),
+        direction: ctx.direction,
+        entity_id,
+        component_name: component_id_to_name(component_id).to_string(),
+        operation,
+        crdt_timestamp,
+        payload,
+        bin_payload,
+        raw_size_bytes: message_size,
+    };
+
+    let _ = ctx.sender.try_send(SceneLogEntry::CrdtMessage(entry));
 }
 
 const CRDT_DELETE_ENTITY_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 4;
