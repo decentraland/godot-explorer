@@ -18,6 +18,7 @@ pub fn run(
     extras: Vec<String>,
     scene_tests: bool,
     client_tests: bool,
+    use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
     let program = get_godot_path();
     println!("extras: {:?}", extras);
@@ -42,18 +43,22 @@ pub fn run(
     }
 
     if itest || scene_tests || client_tests {
-        run_tests(&program, &args, scene_tests, client_tests)
+        run_tests(&program, &args, scene_tests, client_tests, use_tuned_glibc)
     } else {
-        run_godot(&program, &args)
+        run_godot(&program, &args, use_tuned_glibc)
     }
 }
 
 pub fn build(
     release_mode: bool,
+    production_mode: bool,
     extra_build_args: Vec<&str>,
     with_build_envs: Option<HashMap<String, String>>,
     target: Option<&str>,
 ) -> anyhow::Result<()> {
+    // Validate flag combinations and determine profile
+    let profile = get_build_profile(release_mode, production_mode)?;
+
     let target = get_target_os(target)?;
 
     // Validate platform requirements
@@ -66,13 +71,13 @@ pub fn build(
         // For now, disable it for Android builds
         let android_build_args = extra_build_args.clone();
 
-        build_with_cargo_ndk(release_mode, android_build_args)?;
+        build_with_cargo_ndk(&profile, android_build_args)?;
     } else if target == "ios" {
         // For now, disable it for iOS builds
         let ios_build_args = extra_build_args.clone();
 
         let (build_args, with_build_envs) = prepare_build_args_envs(
-            release_mode,
+            &profile,
             ios_build_args,
             with_build_envs.unwrap_or_default(),
             &target,
@@ -82,7 +87,7 @@ pub fn build(
         run_cargo_build(&build_cwd, &build_args, &with_build_envs)?;
     } else {
         let (build_args, with_build_envs) = prepare_build_args_envs(
-            release_mode,
+            &profile,
             extra_build_args,
             with_build_envs.unwrap_or_default(),
             &target,
@@ -92,26 +97,65 @@ pub fn build(
         run_cargo_build(&build_cwd, &build_args, &with_build_envs)?;
     }
 
-    copy_library(&target, !release_mode)?;
+    copy_library(&target, profile)?;
 
     print_build_status(&target, "success");
 
     Ok(())
 }
 
+/// Determines the cargo build profile based on release and production/staging flags.
+///
+/// Returns:
+/// - "dev" when neither --release nor --prod/--staging is set
+/// - "dev-release" when --release is set but --prod/--staging is not
+/// - "release" when both --release and --prod/--staging are set
+/// - Error when --prod/--staging is set without --release
+fn get_build_profile(release_mode: bool, production_mode: bool) -> anyhow::Result<&'static str> {
+    match (release_mode, production_mode) {
+        (false, false) => Ok("dev"),
+        (true, false) => Ok("dev-release"),
+        (true, true) => Ok("release"),
+        (false, true) => Err(anyhow::anyhow!(
+            "--prod/--staging flag requires --release flag. Use: cargo run -- build -r --prod (or --staging)"
+        )),
+    }
+}
+
 /// Prepares the build arguments and environment variables based on the target and mode.
 fn prepare_build_args_envs(
-    release_mode: bool,
+    profile: &str,
     extra_build_args: Vec<&str>,
     mut with_build_envs: HashMap<String, String>,
     target: &String,
 ) -> anyhow::Result<(Vec<String>, HashMap<String, String>)> {
     let mut build_args = vec!["build"];
-    if release_mode {
-        build_args.push("--release");
+
+    // Add profile argument based on the determined profile
+    match profile {
+        "dev" => {} // Default profile, no argument needed
+        "release" => {
+            build_args.push("--release");
+        }
+        "dev-release" => {
+            build_args.push("--profile");
+            build_args.push("dev-release");
+        }
+        _ => unreachable!("Invalid profile: {}", profile),
     }
 
     build_args.extend(extra_build_args);
+
+    // Set PROTOC environment variable to use locally installed protoc
+    let protoc_path = BinPaths::protoc_bin();
+    if protoc_path.exists() {
+        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
+            with_build_envs.insert(
+                "PROTOC".to_string(),
+                canonical_path.to_string_lossy().to_string(),
+            );
+        }
+    }
 
     // On Windows, try to auto-set LIBCLANG_PATH if not already set
     #[cfg(windows)]
@@ -340,7 +384,7 @@ fn validate_android_ndk() -> anyhow::Result<String> {
 }
 
 /// Builds for Android using direct cargo build (not cargo-ndk due to libc++ linking issues)
-fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyhow::Result<()> {
+fn build_with_cargo_ndk(profile: &str, extra_build_args: Vec<&str>) -> anyhow::Result<()> {
     print_message(MessageType::Step, "Building Android target...");
 
     // Validate Android NDK is properly installed
@@ -361,6 +405,18 @@ fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyh
 
     // Setup environment similar to android-build.sh
     let mut envs = HashMap::new();
+
+    // Set PROTOC environment variable to use locally installed protoc
+    let protoc_path = BinPaths::protoc_bin();
+    if protoc_path.exists() {
+        if let Ok(canonical_path) = std::fs::canonicalize(&protoc_path) {
+            envs.insert(
+                "PROTOC".to_string(),
+                canonical_path.to_string_lossy().to_string(),
+            );
+        }
+    }
+
     setup_v8_bindings(&mut envs, &"android".to_string())?;
 
     // Use AndroidBuildEnv struct to configure environment
@@ -379,8 +435,17 @@ fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyh
     // Use cargo build directly instead of cargo-ndk
     let mut args = vec!["build"];
 
-    if release_mode {
-        args.push("--release");
+    // Add profile argument based on the determined profile
+    match profile {
+        "dev" => {} // Default profile, no argument needed
+        "release" => {
+            args.push("--release");
+        }
+        "dev-release" => {
+            args.push("--profile");
+            args.push("dev-release");
+        }
+        _ => unreachable!("Invalid profile: {}", profile),
     }
 
     args.extend(&["--target", "aarch64-linux-android"]);
@@ -456,12 +521,33 @@ fn run_cargo_build(
 }
 
 /// Runs Godot with the provided arguments and checks for successful exit.
-fn run_godot(program: &str, args: &[&str]) -> anyhow::Result<()> {
+fn run_godot(program: &str, args: &[&str], use_tuned_glibc: bool) -> anyhow::Result<()> {
     print_message(MessageType::Step, "Starting Godot...");
-    let status = std::process::Command::new(program)
-        .args(args)
-        .status()
-        .expect("Failed to get the status of Godot");
+
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(args);
+
+    // Apply tuned glibc malloc settings on Linux for better memory release
+    #[cfg(target_os = "linux")]
+    if use_tuned_glibc {
+        print_message(MessageType::Info, "Using tuned glibc malloc settings");
+        // Use mmap for allocations >= 128KB (released immediately on free)
+        cmd.env("MALLOC_MMAP_THRESHOLD_", "131072");
+        // Trim heap when free memory exceeds 128KB
+        cmd.env("MALLOC_TRIM_THRESHOLD_", "131072");
+        // Limit arenas to reduce fragmentation (default is 8 * num_cpus)
+        cmd.env("MALLOC_ARENA_MAX", "2");
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    if use_tuned_glibc {
+        print_message(
+            MessageType::Warning,
+            "--use-tuned-glibc is only supported on Linux",
+        );
+    }
+
+    let status = cmd.status().expect("Failed to get the status of Godot");
 
     if !status.success() {
         Err(anyhow::anyhow!(
@@ -479,6 +565,7 @@ fn run_tests(
     args: &[&str],
     scene_tests: bool,
     client_tests: bool,
+    use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
     // Prepare arguments for client tests
     let mut final_args = args.to_vec();
@@ -488,11 +575,19 @@ fn run_tests(
         final_args.push("avatar_outline"); // Run avatar outline tests by default
     }
 
-    let child = std::process::Command::new(program)
-        .args(&final_args)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("Failed to run Godot");
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(&final_args);
+    cmd.stdout(std::process::Stdio::piped());
+
+    // Apply tuned glibc malloc settings on Linux
+    #[cfg(target_os = "linux")]
+    if use_tuned_glibc {
+        cmd.env("MALLOC_MMAP_THRESHOLD_", "131072");
+        cmd.env("MALLOC_TRIM_THRESHOLD_", "131072");
+        cmd.env("MALLOC_ARENA_MAX", "2");
+    }
+
+    let child = cmd.spawn().expect("Failed to run Godot");
 
     let output = child.stdout.expect("Failed to get stdout of Godot");
     let reader = std::io::BufReader::new(output);
