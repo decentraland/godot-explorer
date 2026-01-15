@@ -427,6 +427,7 @@ func _on_dynamic_profile_change(new_profile: int) -> void:
 	)
 	NotificationsManager.show_system_toast(title, description, "graphics_profile")
 
+
 ## Async helper to clear cache and wait for completion before anything loads.
 func _async_clear_cache_if_needed() -> void:
 	var should_clear_startup = cli.clear_cache_startup
