@@ -44,7 +44,8 @@ func populate_rocks():
 		var available_rocks = rocks_parent.get_child_count()
 
 		var rock_to_duplicate = rocks_parent.get_child(randi() % available_rocks)
-		var chosen_rock = rock_to_duplicate.duplicate()
+		# Use DUPLICATE_USE_INSTANTIATION to share materials and reduce descriptor set allocations
+		var chosen_rock = rock_to_duplicate.duplicate(DUPLICATE_USE_INSTANTIATION)
 		chosen_rock.name = "Rock_%d" % i
 		add_child(chosen_rock)
 

@@ -337,15 +337,39 @@ pub fn trigger_scene_emote(
         return;
     }
 
-    let Some(file_hash) = scene.content_mapping.get_hash(emote_src) else {
-        tracing::warn!("triggerSceneEmote failed: Emote not found");
+    tracing::info!(
+        "triggerSceneEmote: emote_src={}, looping={}, scene_id={}",
+        emote_src,
+        looping,
+        scene.scene_entity_definition.id
+    );
+
+    let Some(emote_hash) = scene.content_mapping.get_scene_emote_hash(emote_src) else {
+        tracing::warn!(
+            "triggerSceneEmote failed: Emote '{}' not found in content mapping",
+            emote_src
+        );
         return;
     };
 
-    let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
-    let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("async_play_emote", &[urn.to_variant()]);
+    tracing::info!(
+        "triggerSceneEmote: resolved glb_hash={}, audio_hash={:?}",
+        emote_hash.glb_hash,
+        emote_hash.audio_hash
+    );
 
+    let emote_data = emote_hash.to_godot_data(*looping);
+
+    let mut avatar_node = get_avatar_node(scene);
+    avatar_node.call("async_play_scene_emote", &[emote_data.to_variant()]);
+
+    // Broadcast to other players - construct URN for network compatibility
+    // Format: urn:decentraland:off-chain:scene-emote:{sceneId}-{glbHash}-{loop}
+    let urn = format!(
+        "urn:decentraland:off-chain:scene-emote:{}-{}-{}",
+        scene.scene_entity_definition.id, emote_hash.glb_hash, looping
+    );
+    tracing::info!("triggerSceneEmote: broadcasting URN={}", urn);
     DclGlobal::singleton()
         .bind()
         .get_comms()

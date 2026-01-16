@@ -223,7 +223,11 @@ pub fn get_host_library_path() -> PathBuf {
         "linux"
     };
 
-    let lib_prefix = if cfg!(target_os = "windows") { "" } else { "lib" };
+    let lib_prefix = if cfg!(target_os = "windows") {
+        ""
+    } else {
+        "lib"
+    };
     let lib_ext = get_lib_extension(target);
     let file_name = format!("{}dclgodot{}", lib_prefix, lib_ext);
 

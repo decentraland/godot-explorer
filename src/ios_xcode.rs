@@ -4,14 +4,16 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::android_godot_lib::GodotEngineConfig;
-use crate::consts::{EXPORTS_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER};
+use crate::consts::{
+    EXPORTS_FOLDER, GODOT_PROJECT_FOLDER, IOS_EXPORT_NAME, RUST_LIB_PROJECT_FOLDER,
+};
 use crate::export::import_assets;
 use crate::path::get_godot_path;
 use crate::ui::{create_spinner, print_message, print_section, MessageType};
 
 /// Check if Xcode project exists
 fn xcode_project_exists() -> bool {
-    Path::new(&format!("{}/Decentraland.xcodeproj", EXPORTS_FOLDER)).exists()
+    Path::new(&format!("{}/{}.xcodeproj", EXPORTS_FOLDER, IOS_EXPORT_NAME)).exists()
 }
 
 /// Expand ~ to home directory
@@ -104,8 +106,8 @@ fn update_godot_lib(godot_engine_path: &str) -> anyhow::Result<()> {
         godot_engine_path
     );
     let target = format!(
-        "{}/Decentraland.xcframework/ios-arm64/libgodot.a",
-        EXPORTS_FOLDER
+        "{}/{}.xcframework/ios-arm64/libgodot.a",
+        EXPORTS_FOLDER, IOS_EXPORT_NAME
     );
 
     if !Path::new(&source).exists() {
@@ -130,8 +132,8 @@ fn update_godot_lib(godot_engine_path: &str) -> anyhow::Result<()> {
 fn update_plugin() -> anyhow::Result<()> {
     let source = "plugins/dcl-godot-ios/bin/dcl_godot_ios-device.release_debug.a";
     let target = format!(
-        "{}/Decentraland/dylibs/ios/plugins/dcl_godot_ios/dcl_godot_ios.xcframework/ios-arm64/dcl_godot_ios-device.release_debug.a",
-        EXPORTS_FOLDER
+        "{}/{}/dylibs/ios/plugins/dcl_godot_ios/dcl_godot_ios.xcframework/ios-arm64/dcl_godot_ios-device.release_debug.a",
+        EXPORTS_FOLDER, IOS_EXPORT_NAME
     );
 
     if !Path::new(source).exists() {
@@ -166,8 +168,8 @@ fn update_rust_lib() -> anyhow::Result<()> {
         RUST_LIB_PROJECT_FOLDER
     );
     let target = format!(
-        "{}/Decentraland/lib/target/libdclgodot_ios/libdclgodot.framework/libdclgodot",
-        EXPORTS_FOLDER
+        "{}/{}/lib/target/libdclgodot_ios/libdclgodot.framework/libdclgodot",
+        EXPORTS_FOLDER, IOS_EXPORT_NAME
     );
 
     if !Path::new(&source).exists() {
@@ -221,7 +223,7 @@ fn update_rust_lib() -> anyhow::Result<()> {
 
 /// Update PCK file by re-exporting
 fn update_pck() -> anyhow::Result<()> {
-    let pck_path = format!("{}/Decentraland.pck", EXPORTS_FOLDER);
+    let pck_path = format!("{}/{}.pck", EXPORTS_FOLDER, IOS_EXPORT_NAME);
     let program = get_godot_path();
 
     // Remove old PCK
@@ -237,7 +239,7 @@ fn update_pck() -> anyhow::Result<()> {
             "--headless",
             "--export-pack",
             "ios",
-            &format!("../exports/Decentraland.pck"),
+            &format!("../exports/{}.pck", IOS_EXPORT_NAME),
         ])
         .current_dir(GODOT_PROJECT_FOLDER)
         .status();
@@ -249,7 +251,11 @@ fn update_pck() -> anyhow::Result<()> {
             let size = fs::metadata(&pck_path)?.len();
             print_message(
                 MessageType::Success,
-                &format!("Decentraland.pck ({:.1} MB)", size as f64 / 1024.0 / 1024.0),
+                &format!(
+                    "{}.pck ({:.1} MB)",
+                    IOS_EXPORT_NAME,
+                    size as f64 / 1024.0 / 1024.0
+                ),
             );
         }
         _ => {
@@ -265,7 +271,7 @@ fn update_pck() -> anyhow::Result<()> {
                     "--headless",
                     "--export-pack",
                     "ios",
-                    &format!("../exports/Decentraland.pck"),
+                    &format!("../exports/{}.pck", IOS_EXPORT_NAME),
                 ])
                 .current_dir(GODOT_PROJECT_FOLDER)
                 .status()?;
@@ -274,7 +280,11 @@ fn update_pck() -> anyhow::Result<()> {
                 let size = fs::metadata(&pck_path)?.len();
                 print_message(
                     MessageType::Success,
-                    &format!("Decentraland.pck ({:.1} MB)", size as f64 / 1024.0 / 1024.0),
+                    &format!(
+                        "{}.pck ({:.1} MB)",
+                        IOS_EXPORT_NAME,
+                        size as f64 / 1024.0 / 1024.0
+                    ),
                 );
             } else {
                 print_message(MessageType::Error, "Failed to generate PCK");
@@ -343,7 +353,10 @@ pub fn update_ios_xcode(
     print_message(MessageType::Success, "Xcode project updated!");
     println!();
     print_message(MessageType::Info, "Next steps:");
-    println!("  1. Open Xcode: open exports/Decentraland.xcodeproj");
+    println!(
+        "  1. Open Xcode: open exports/{}.xcodeproj",
+        IOS_EXPORT_NAME
+    );
     println!("  2. Build and run on device (Cmd+R)");
 
     Ok(())
