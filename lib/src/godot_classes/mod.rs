@@ -38,7 +38,6 @@ pub mod dcl_virtual_camera;
 pub mod font;
 pub mod portables;
 pub mod promise;
-pub mod resource_locker;
 pub mod rpc_sender;
 
 pub trait JsonGodotClass
