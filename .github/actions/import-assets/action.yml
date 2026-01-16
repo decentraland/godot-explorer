@@ -18,10 +18,41 @@ runs:
         path: godot/.godot
         key: ${{ runner.os }}-godot-assets-cache-4.5.1
 
-    # Step 2: Run the command that generates/uses the assets
+    # Step 2: Run the command that generates/uses the assets with timeout and retry
     - name: Import assets
       shell: bash
-      run: cargo run -- import-assets
+      run: |
+        MAX_RETRIES=2
+        TIMEOUT_SECONDS=300  # 5 minutes (usually completes in ~1-2 minutes)
+
+        for i in $(seq 1 $MAX_RETRIES); do
+          echo "::group::Import attempt $i of $MAX_RETRIES"
+
+          if timeout --signal=KILL $TIMEOUT_SECONDS cargo run -- import-assets; then
+            echo "::endgroup::"
+            echo "Import succeeded on attempt $i"
+            exit 0
+          else
+            EXIT_CODE=$?
+            echo "::endgroup::"
+
+            if [ $EXIT_CODE -eq 137 ]; then
+              echo "Import timed out after ${TIMEOUT_SECONDS}s (killed by timeout)"
+              echo "Cleaning up .godot cache for retry..."
+              rm -rf godot/.godot/imported
+            else
+              echo "Import failed with exit code $EXIT_CODE"
+            fi
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "Retrying in 5 seconds..."
+              sleep 5
+            fi
+          fi
+        done
+
+        echo "All $MAX_RETRIES import attempts failed"
+        exit 1
 
     # Step 3: Save cache
     - name: Cache Godot assets
