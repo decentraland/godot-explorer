@@ -72,10 +72,10 @@ func _ready():
 	Global.notification_clicked.connect(_on_notification_clicked)
 
 	Global.deep_link_received.connect(_on_deep_link_received)
-	Global.open_settings.connect(show_settings)
-	Global.open_backpack.connect(show_backpack)
-	Global.open_discover.connect(show_discover)
-	Global.open_own_profile.connect(show_own_profile)
+	Global.open_settings.connect(async_show_settings)
+	Global.open_backpack.connect(async_show_backpack)
+	Global.open_discover.connect(async_show_discover)
+	Global.open_own_profile.connect(async_show_own_profile)
 	Global.close_menu.connect(close)
 	Global.delete_account.connect(_on_account_delete)
 
@@ -102,10 +102,10 @@ func close():
 	var tween_h = create_tween()
 	tween_h.tween_callback(hide).set_delay(0.3)
 	if selected_node:
-		selected_node.put_to_sleep()
+		selected_node.async_put_to_sleep()
 
 
-func show_discover():
+func async_show_discover():
 	await control_discover._async_instantiate()
 	select_discover_screen()
 	if is_instance_valid(hud_button_discover):
@@ -113,7 +113,7 @@ func show_discover():
 	_open()
 
 
-func show_backpack(on_emotes := false):
+func async_show_backpack(on_emotes := false):
 	await control_backpack._async_instantiate()
 	select_backpack_screen()
 	if on_emotes:
@@ -122,7 +122,7 @@ func show_backpack(on_emotes := false):
 	_open()
 
 
-func show_settings():
+func async_show_settings():
 	await control_settings._async_instantiate()
 
 	control_settings.instance.request_pause_scenes.connect(
@@ -139,7 +139,7 @@ func show_settings():
 	_open()
 
 
-func show_own_profile():
+func async_show_own_profile():
 	await control_profile_settings._async_instantiate()
 
 	select_profile_screen()
@@ -148,7 +148,7 @@ func show_own_profile():
 
 func _open():
 	if not selected_node:
-		show_discover()
+		async_show_discover()
 	if not visible:
 		show()
 	var tween = create_tween()
@@ -213,7 +213,7 @@ func fade_out(node: PlaceholderManager):
 	fade_out_tween = create_tween().set_parallel(true)
 	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
 	fade_out_tween.tween_callback(node.instance.hide).set_delay(0.3)
-	fade_out_tween.tween_callback(node.put_to_sleep)
+	fade_out_tween.tween_callback(node.async_put_to_sleep)
 
 
 func _on_visibility_changed():
@@ -276,7 +276,7 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 	# Check if this is a reward notification
 	if notif_type in ["reward_assignment", "reward_in_progress"]:
 		# Open the backpack to show the reward
-		show_backpack()
+		async_show_backpack()
 		Global.open_navbar_silently.emit()
 
 
@@ -285,15 +285,15 @@ func _on_deep_link_received() -> void:
 
 
 func _on_portrait_button_discover_pressed() -> void:
-	show_discover()
+	async_show_discover()
 
 
 func _on_portrait_button_backpack_pressed() -> void:
-	show_backpack()
+	async_show_backpack()
 
 
 func _on_portrait_button_settings_pressed() -> void:
-	show_settings()
+	async_show_settings()
 
 
 func _on_account_delete() -> void:

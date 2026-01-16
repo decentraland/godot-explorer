@@ -42,7 +42,7 @@ func _instantiate() -> Node:
 
 
 ## Starts a timer to free the instance
-func put_to_sleep() -> void:
+func async_put_to_sleep() -> void:
 	if status != STATUS.LOADED:
 		return
 	status = STATUS.SLEEPING
