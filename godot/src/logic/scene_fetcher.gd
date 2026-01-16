@@ -12,6 +12,7 @@ const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.or
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 const INVALID_PARCEL := Vector2i(-1000, -1000)
 
+
 class SceneItem:
 	extends RefCounted
 	var main_js_req_id: int = -1
@@ -60,6 +61,13 @@ var _teleport_target_parcel: Vector2i = INVALID_PARCEL
 
 # Track if the coordinator has been configured (config() called)
 var _coordinator_configured: bool = false
+
+# Async floating islands generation state
+var _floating_islands_generating: bool = false
+var _floating_islands_generation_data: Dictionary = {}  # Captured data for generation
+var _floating_islands_queue: Array = []  # Coordinates to generate
+var _floating_islands_total: int = 0
+var _floating_islands_created: int = 0
 
 
 func _ready():
@@ -173,6 +181,9 @@ func is_dynamic_loading_mode() -> bool:
 
 # gdlint:ignore = async-function-name
 func _process(_dt):
+	# Process async floating islands generation (2 parcels per frame)
+	_process_floating_islands_batch()
+
 	scene_entity_coordinator.update()
 
 	var version := scene_entity_coordinator.get_version()
@@ -298,7 +309,6 @@ func _async_on_desired_scene_changed():
 	# Start a loading session for the new scenes (cancels any existing session)
 	var loading_session_started := false
 	if scenes_to_load.size() > 0 and new_loading:
-		print("[LOADING-GD] Starting loading session with %d scenes: %s" % [scenes_to_load.size(), str(scenes_to_load)])
 		Global.scene_runner.start_loading_session(scenes_to_load)
 		loading_session_started = true
 
@@ -383,7 +393,9 @@ func _async_on_desired_scene_changed():
 					return
 
 		if wait_frames >= max_wait_frames:
-			printerr("WARNING: Timed out waiting for scene_entity_coordinator to finish fetching scenes")
+			printerr(
+				"WARNING: Timed out waiting for scene_entity_coordinator to finish fetching scenes"
+			)
 
 		# After waiting, check if new scenes were discovered and load them
 		var final_desired = scene_entity_coordinator.get_desired_scenes()
@@ -396,23 +408,21 @@ func _async_on_desired_scene_changed():
 				var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
 				if scene_definition != null:
 					new_scenes_to_load.append(scene_id)
-					new_loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
+					new_loading_promises.push_back(
+						async_load_scene.bind(scene_id, scene_definition)
+					)
 
 		# Start a loading session for newly discovered scenes
 		if new_scenes_to_load.size() > 0:
-			print("[LOADING-GD] Starting loading session for newly discovered scenes: %d scenes: %s" % [new_scenes_to_load.size(), str(new_scenes_to_load)])
 			Global.scene_runner.start_loading_session(new_scenes_to_load)
 			loading_session_started = true
 
 		if new_loading_promises.size() > 0:
-			print("[LOADING-GD] Awaiting %d new loading promises..." % new_loading_promises.size())
 			await PromiseUtils.async_all(new_loading_promises)
-			print("[LOADING-GD] Loading promises complete")
 			# Check again if a new call was made while loading
 			if counter_this_call != _scene_changed_counter:
 				return
 
-		print("[LOADING-GD] About to regenerate floating islands, loading_session_started=%s" % loading_session_started)
 		_regenerate_floating_islands()
 
 		# If no loading session was started but we're in floating islands mode,
@@ -421,7 +431,6 @@ func _async_on_desired_scene_changed():
 		# - Coordinator was busy at some point (meaning it fetched and found no scenes), OR
 		# - We're not in a reloading state (normal update, not teleport/realm change)
 		if not loading_session_started and (coordinator_was_busy or not is_reloading_now):
-			print("[LOADING-GD] No loading session started, emitting loading_complete manually (coordinator_was_busy=%s, is_reloading_now=%s)" % [coordinator_was_busy, is_reloading_now])
 			Global.scene_runner.loading_complete.emit(-1)
 
 	var empty_parcels_coords = []
@@ -539,7 +548,10 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 
 
 func _regenerate_floating_islands() -> void:
-	print("[LOADING-GD] _regenerate_floating_islands called")
+	# Guard against overlapping generation
+	if _floating_islands_generating:
+		return
+
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
 	var all_scene_parcels = []
 	for scene_id in loaded_scenes.keys():
@@ -561,7 +573,6 @@ func _regenerate_floating_islands() -> void:
 			target_parcel = _teleport_target_parcel
 
 		if target_parcel == INVALID_PARCEL:
-			print("[LOADING-GD] _regenerate_floating_islands: target_parcel is INVALID, returning early")
 			return
 
 		empty_parcel_center = target_parcel
@@ -572,14 +583,55 @@ func _regenerate_floating_islands() -> void:
 
 	# Skip if same scene configuration
 	if !last_scene_group_hash.is_empty() and last_scene_group_hash == current_scene_group_hash:
-		print("[LOADING-GD] _regenerate_floating_islands: same hash, skipping (hash=%s)" % current_scene_group_hash)
 		return
 
 	last_scene_group_hash = current_scene_group_hash
 
-	print("[LOADING-GD] FLOATING ISLANDS START - %d parcels, is_empty_mode=%s" % [all_scene_parcels.size(), is_empty_parcel_mode])
-	# Signal floating islands generation start (0%)
-	Global.scene_runner.start_floating_islands()
+	# Calculate bounds
+	var min_x = all_scene_parcels[0].x
+	var max_x = all_scene_parcels[0].x
+	var min_z = all_scene_parcels[0].y
+	var max_z = all_scene_parcels[0].y
+
+	for parcel in all_scene_parcels:
+		min_x = min(min_x, parcel.x)
+		max_x = max(max_x, parcel.x)
+		min_z = min(min_z, parcel.y)
+		max_z = max(max_z, parcel.y)
+
+	# Create a set of scene parcels for quick lookup (captured data)
+	var scene_parcel_set = {}
+	for parcel in all_scene_parcels:
+		scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
+
+	var padding = 2
+
+	# Build queue of coordinates to generate
+	_floating_islands_queue = []
+	for x in range(min_x - padding, max_x + padding + 1):
+		for z in range(min_z - padding, max_z + padding + 1):
+			var coord = Vector2i(x, z)
+			# Only add empty parcels if they're not occupied by actual scenes
+			if not scene_parcel_set.has(coord):
+				_floating_islands_queue.append(coord)
+
+	_floating_islands_total = _floating_islands_queue.size()
+	_floating_islands_created = 0
+
+	# Capture all needed data for async generation
+	_floating_islands_generation_data = {
+		"scene_parcel_set": scene_parcel_set,
+		"min_x": min_x,
+		"max_x": max_x,
+		"min_z": min_z,
+		"max_z": max_z,
+		"padding": padding,
+		"is_empty_parcel_mode": is_empty_parcel_mode,
+		"empty_parcel_center": empty_parcel_center
+	}
+
+	# Signal floating islands generation start with count
+	Global.scene_runner.start_floating_islands(_floating_islands_total)
 
 	# Clear old empty parcels
 	for parcel in loaded_empty_scenes:
@@ -591,8 +643,81 @@ func _regenerate_floating_islands() -> void:
 	if wall_manager:
 		wall_manager.clear_walls()
 
-	# Create floating island platform considering all loaded scenes
-	_create_floating_island_for_cluster(all_scene_parcels)
+	# Start async generation
+	_floating_islands_generating = true
+
+
+## Process async floating islands generation - 2 parcels per frame
+func _process_floating_islands_batch() -> void:
+	if not _floating_islands_generating:
+		return
+
+	# Process 2 parcels per frame
+	var parcels_this_frame = mini(2, _floating_islands_queue.size())
+	for i in parcels_this_frame:
+		var coord = _floating_islands_queue.pop_front()
+		_create_single_empty_parcel(coord)
+		_floating_islands_created += 1
+
+	# Report progress
+	Global.scene_runner.report_floating_islands_progress(
+		_floating_islands_created, _floating_islands_total
+	)
+
+	# Check if generation is complete
+	if _floating_islands_queue.is_empty():
+		_finish_floating_islands_generation()
+
+
+## Create a single empty parcel at the given coordinate
+func _create_single_empty_parcel(coord: Vector2i) -> void:
+	var x = coord.x
+	var z = coord.y
+	var parcel_string = "%d,%d" % [x, z]
+
+	if loaded_empty_scenes.has(parcel_string):
+		return  # Already exists
+
+	var data = _floating_islands_generation_data
+	var scene_parcel_set = data.get("scene_parcel_set", {})
+	var min_x = data.get("min_x", 0)
+	var max_x = data.get("max_x", 0)
+	var min_z = data.get("min_z", 0)
+	var max_z = data.get("max_z", 0)
+	var padding = data.get("padding", 2)
+
+	var scene: Node3D = EMPTY_SCENE.instantiate()
+	var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+	scene.name = temp
+	add_child(scene)
+	scene.global_position = Vector3(
+		x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+		0,
+		-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+	)
+
+	var config = _calculate_parcel_adjacency(
+		x, z, min_x - padding, max_x + padding, min_z - padding, max_z + padding, scene_parcel_set
+	)
+	scene.set_corner_configuration.call_deferred(config)
+
+	loaded_empty_scenes[parcel_string] = scene
+
+
+## Finish floating islands generation (create walls, handle empty parcel mode, signal completion)
+func _finish_floating_islands_generation() -> void:
+	var data = _floating_islands_generation_data
+	var min_x: int = data.get("min_x", 0)
+	var max_x: int = data.get("max_x", 0)
+	var min_z: int = data.get("min_z", 0)
+	var max_z: int = data.get("max_z", 0)
+	var padding: int = data.get("padding", 2)
+	var is_empty_parcel_mode: bool = data.get("is_empty_parcel_mode", false)
+	var empty_parcel_center: Vector2i = data.get("empty_parcel_center", INVALID_PARCEL)
+
+	# Create walls
+	if wall_manager:
+		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
 
 	# For empty parcel mode, also create an empty parcel at the center
 	if is_empty_parcel_mode and empty_parcel_center != INVALID_PARCEL:
@@ -630,8 +755,12 @@ func _regenerate_floating_islands() -> void:
 			_async_spawn_on_empty_parcel.bind(empty_parcel_center), CONNECT_ONE_SHOT
 		)
 
+	# Clear generation state
+	_floating_islands_generating = false
+	_floating_islands_generation_data = {}
+	_floating_islands_queue = []
+
 	# Signal floating islands generation complete (100%)
-	print("[LOADING-GD] FLOATING ISLANDS FINISH - generated %d empty parcels" % loaded_empty_scenes.size())
 	Global.scene_runner.finish_floating_islands()
 
 
@@ -738,8 +867,12 @@ func async_load_scene(
 	if is_using_floating_islands() and not _use_dynamic_loading:
 		if not last_scene_group_hash.is_empty() and not scene_item.is_global:
 			printerr(
-				"WARNING: Scene ", scene_entity_id, " discovered after floating islands were generated. ",
-				"Parcels: ", parcels, ". Islands will be regenerated."
+				"WARNING: Scene ",
+				scene_entity_id,
+				" discovered after floating islands were generated. ",
+				"Parcels: ",
+				parcels,
+				". Islands will be regenerated."
 			)
 
 	var content_mapping := scene_entity_definition.get_content_mapping()

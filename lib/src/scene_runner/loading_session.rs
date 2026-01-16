@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 use crate::dcl::SceneId;
-use godot::prelude::godot_print;
 
 /// Loading phases with fixed progress ranges
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,6 +81,10 @@ pub struct LoadingSession {
     pub waiting_for_floating_islands: bool,
     /// When floating islands generation started (for asset discovery delay)
     floating_islands_phase_start: Option<Instant>,
+    /// Total expected floating island parcels
+    floating_islands_expected: u32,
+    /// Number of floating island parcels created so far
+    floating_islands_created: u32,
 }
 
 impl LoadingSession {
@@ -110,6 +113,8 @@ impl LoadingSession {
             last_asset_registered: None,
             waiting_for_floating_islands: false,
             floating_islands_phase_start: None,
+            floating_islands_expected: 0,
+            floating_islands_created: 0,
         }
     }
 
@@ -169,13 +174,17 @@ impl LoadingSession {
         let ready_contribution = ready_ratio * Self::WEIGHT_READY;
 
         // FloatingIslands: weight 15%
-        // Simple 0%/100%: 0 while waiting, 1 when done
-        let islands_ratio = if !self.waiting_for_floating_islands
+        // Now percentage-based instead of simple 0%/100%
+        let islands_ratio = if self.floating_islands_expected > 0 {
+            // Use count-based progress during generation
+            (self.floating_islands_created as f32 / self.floating_islands_expected as f32).min(1.0)
+        } else if !self.waiting_for_floating_islands
             && self.phase as u8 >= LoadingPhase::FloatingIslands as u8
         {
-            // Floating islands phase completed or skipped
+            // Floating islands phase completed or skipped (no islands expected)
             1.0
         } else {
+            // Not started yet
             0.0
         };
         let islands_contribution = islands_ratio * Self::WEIGHT_FLOATING_ISLANDS;
@@ -264,9 +273,17 @@ impl LoadingSession {
         }
     }
 
-    /// Start floating islands generation phase (0% progress)
-    pub fn start_floating_islands(&mut self) {
+    /// Start floating islands generation phase with expected count
+    pub fn start_floating_islands(&mut self, count: u32) {
         self.waiting_for_floating_islands = true;
+        self.floating_islands_expected = count;
+        self.floating_islands_created = 0;
+    }
+
+    /// Report floating islands generation progress
+    pub fn report_floating_islands_progress(&mut self, created: u32, total: u32) {
+        self.floating_islands_created = created;
+        self.floating_islands_expected = total;
     }
 
     /// Finish floating islands generation (100% progress)
@@ -274,6 +291,8 @@ impl LoadingSession {
     pub fn finish_floating_islands(&mut self) {
         self.waiting_for_floating_islands = false;
         self.floating_islands_phase_start = Some(Instant::now());
+        // Ensure counts reflect completion
+        self.floating_islands_created = self.floating_islands_expected;
     }
 
     /// Minimum time to wait in Assets phase for asset discovery (milliseconds)
@@ -321,7 +340,9 @@ impl LoadingSession {
 
                 // Use floating_islands_phase_start if available (after islands finish),
                 // otherwise fall back to assets_phase_start
-                let grace_start = self.floating_islands_phase_start.or(self.assets_phase_start);
+                let grace_start = self
+                    .floating_islands_phase_start
+                    .or(self.assets_phase_start);
                 let grace_period_ms = grace_start
                     .map(|start| now.duration_since(start).as_millis())
                     .unwrap_or(0);
@@ -345,7 +366,7 @@ impl LoadingSession {
                 // Transition conditions:
                 // 1. Grace period passed AND discovery stable AND (have assets that are all loaded, OR no assets)
                 if grace_period_passed && discovery_stable && all_loaded {
-                    godot_print!(
+                    tracing::debug!(
                         "[LOADING] Assets->Ready: grace={}ms, stable={}, loaded={}/{}, expected_assets={}",
                         grace_period_ms,
                         discovery_stable,
@@ -373,7 +394,7 @@ impl LoadingSession {
                     || (self.spawned_scenes.is_empty() && self.expected_scene_entities.is_empty());
 
                 if all_scenes_ready {
-                    godot_print!(
+                    tracing::debug!(
                         "[LOADING] Ready->next: ready_scenes={}/{}, waiting_for_islands={}",
                         self.ready_scenes.len(),
                         self.spawned_scenes.len(),
@@ -497,8 +518,10 @@ mod tests {
         assert_eq!(session.phase, LoadingPhase::Ready);
 
         // Start floating islands before scene is ready (0% floating islands progress)
-        session.start_floating_islands();
+        session.start_floating_islands(10); // 10 expected parcels
         assert!(session.waiting_for_floating_islands);
+        assert_eq!(session.floating_islands_expected, 10);
+        assert_eq!(session.floating_islands_created, 0);
 
         // Scene ready - should transition to FloatingIslands, not Done
         session.report_scene_ready(SceneId(1));

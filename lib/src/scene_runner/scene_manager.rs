@@ -319,7 +319,7 @@ impl SceneManager {
     pub fn start_loading_session(&mut self, scene_entity_ids: PackedStringArray) {
         // Cancel any existing session
         if let Some(old_session) = self.current_loading_session.take() {
-            godot_print!("[LOADING] Cancelling previous session {}", old_session.id);
+            tracing::debug!("[LOADING] Cancelling previous session {}", old_session.id);
             self.base_mut()
                 .emit_signal("loading_cancelled", &[(old_session.id as i64).to_variant()]);
         }
@@ -334,7 +334,7 @@ impl SceneManager {
         let count = ids.len() as i32;
         let session_id = self.next_session_id as i64;
 
-        godot_print!(
+        tracing::debug!(
             "[LOADING] START session {} with {} scenes: {:?}",
             session_id,
             count,
@@ -343,7 +343,7 @@ impl SceneManager {
 
         // Handle empty case - complete immediately
         if ids.is_empty() {
-            godot_print!("[LOADING] Empty session, completing immediately");
+            tracing::debug!("[LOADING] Empty session, completing immediately");
             self.base_mut()
                 .emit_signal("loading_complete", &[session_id.to_variant()]);
             return;
@@ -422,30 +422,40 @@ impl SceneManager {
         }
     }
 
-    /// Start floating islands generation phase (0% progress)
+    /// Start floating islands generation phase with expected count
     #[func]
-    pub fn start_floating_islands(&mut self) {
-        godot_print!("[LOADING] FLOATING ISLANDS START");
+    pub fn start_floating_islands(&mut self, count: i32) {
+        tracing::debug!("[LOADING] FLOATING ISLANDS START (count={})", count);
         if let Some(session) = &mut self.current_loading_session {
-            godot_print!(
-                "[LOADING] Session {} - floating islands starting, phase: {:?}",
+            tracing::debug!(
+                "[LOADING] Session {} - floating islands starting, phase: {:?}, count: {}",
                 session.id,
-                session.phase
+                session.phase,
+                count
             );
-            session.start_floating_islands();
+            session.start_floating_islands(count as u32);
             self.check_loading_phase_transition();
             self.emit_loading_progress();
         } else {
-            godot_print!("[LOADING] No active session for floating islands start");
+            tracing::debug!("[LOADING] No active session for floating islands start");
+        }
+    }
+
+    /// Report floating islands generation progress
+    #[func]
+    pub fn report_floating_islands_progress(&mut self, created: i32, total: i32) {
+        if let Some(session) = &mut self.current_loading_session {
+            session.report_floating_islands_progress(created as u32, total as u32);
+            self.emit_loading_progress();
         }
     }
 
     /// Finish floating islands generation (100% progress)
     #[func]
     pub fn finish_floating_islands(&mut self) {
-        godot_print!("[LOADING] FLOATING ISLANDS FINISH");
+        tracing::debug!("[LOADING] FLOATING ISLANDS FINISH");
         if let Some(session) = &mut self.current_loading_session {
-            godot_print!(
+            tracing::debug!(
                 "[LOADING] Session {} - floating islands finished, phase before: {:?}",
                 session.id,
                 session.phase
@@ -454,7 +464,7 @@ impl SceneManager {
             self.check_loading_phase_transition();
             self.emit_loading_progress();
         } else {
-            godot_print!("[LOADING] No active session for floating islands finish");
+            tracing::debug!("[LOADING] No active session for floating islands finish");
         }
     }
 
@@ -510,7 +520,7 @@ impl SceneManager {
         };
 
         if phase_changed {
-            godot_print!(
+            tracing::debug!(
                 "[LOADING] Phase changed to {:?} for session {}",
                 new_phase,
                 session_id
@@ -522,7 +532,7 @@ impl SceneManager {
         }
 
         if is_complete {
-            godot_print!("[LOADING] COMPLETE - session {} finished", session_id);
+            tracing::debug!("[LOADING] COMPLETE - session {} finished", session_id);
             self.current_loading_session = None;
             self.base_mut()
                 .emit_signal("loading_complete", &[session_id.to_variant()]);
@@ -620,7 +630,7 @@ impl SceneManager {
                 && scene.tick_number >= 10
                 && scene.gltf_loading.is_empty()
             {
-                godot_print!(
+                tracing::debug!(
                     "[LOADING] Scene {:?} marked ready - tick={}, gltf_loading_count={}",
                     scene_id,
                     scene.tick_number,
@@ -635,7 +645,7 @@ impl SceneManager {
         let session = self.current_loading_session.as_mut().unwrap();
 
         for (scene_id, count) in assets_started {
-            godot_print!(
+            tracing::debug!(
                 "[LOADING] Scene {:?} - {} assets STARTED loading",
                 scene_id,
                 count
@@ -646,7 +656,7 @@ impl SceneManager {
         }
 
         for (scene_id, count) in assets_finished {
-            godot_print!(
+            tracing::debug!(
                 "[LOADING] Scene {:?} - {} assets FINISHED loading (total: {}/{})",
                 scene_id,
                 count,
@@ -659,7 +669,7 @@ impl SceneManager {
         }
 
         for scene_id in scenes_ready {
-            godot_print!("[LOADING] Scene {:?} reported READY", scene_id);
+            tracing::debug!("[LOADING] Scene {:?} reported READY", scene_id);
             session.report_scene_ready(scene_id);
         }
 
