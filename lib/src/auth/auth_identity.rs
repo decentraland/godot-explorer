@@ -73,26 +73,18 @@ pub async fn try_create_remote_ephemeral(
     Ok((ephemeral_auth_chain, chain_id))
 }
 
-/// Pending mobile auth state - just tracks whether mobile auth is in progress.
-/// The actual identity data comes from the server via deep link.
-pub struct PendingMobileAuth {
-    pub request_id: String,
-}
-
 /// Starts mobile auth flow by opening the browser with auth URL.
 /// Returns the pending auth state that should be saved to complete auth when deep link arrives.
 /// Note: For mobile, the server generates the ephemeral identity, so we don't create it locally.
 pub async fn start_mobile_auth(
     url_reporter_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
     target_config_id: Option<String>,
-) -> Result<PendingMobileAuth, anyhow::Error> {
+) -> Result<(), anyhow::Error> {
     // For mobile auth, we use an empty request since the server will generate everything
     let request = CreateRequest::from_new_ephemeral("");
-    let mobile_request = do_request_mobile(request, url_reporter_sender, target_config_id).await?;
+    do_request_mobile(request, url_reporter_sender, target_config_id).await?;
 
-    Ok(PendingMobileAuth {
-        request_id: mobile_request.request_id,
-    })
+    Ok(())
 }
 
 /// Completes mobile auth flow by fetching the identity result using the ID from deep link.
