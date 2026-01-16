@@ -15,18 +15,18 @@ var is_in_game: bool = false  # when it is playing in the 3D Game or not
 var buttons_quantity: int = 0
 var pressed_index: int = 0
 
-var selected_node: Control
+var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
 
-@onready var control_discover = %Control_Discover
-@onready var control_settings = %Control_Settings
-@onready var control_backpack: Backpack = %Control_Backpack
-@onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
+@onready var control_discover := PlaceholderManager.new(%Control_Discover)
+@onready var control_settings := PlaceholderManager.new(%Control_Settings)
+@onready var control_backpack := PlaceholderManager.new(%Control_Backpack)
+@onready var control_profile_settings := PlaceholderManager.new(%Control_ProfileSettings)
 
-@onready var control_deploying_profile = %Control_DeployingProfile
+@onready var control_deploying_profile := %Control_DeployingProfile
 
 @onready var portrait_button_profile: Button = %Portrait_Button_Profile
 
@@ -56,11 +56,6 @@ func _ready():
 	_on_size_changed()
 
 	control_deploying_profile.hide()
-	control_settings.request_pause_scenes.connect(func(enabled): request_pause_scenes.emit(enabled))
-	control_settings.request_debug_panel.connect(func(enabled): request_debug_panel.emit(enabled))
-	control_settings.preview_hot_reload.connect(
-		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
-	)
 
 	self.modulate = Color(1, 1, 1, 1)
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
@@ -68,26 +63,32 @@ func _ready():
 		Global.metrics.track_screen_viewed(current_screen_name, '{"function": "ready"}')
 		Global.metrics.flush()
 
-	selected_node = control_discover
-	control_settings.hide()
-	control_discover.show()
-	control_backpack.hide()
-	control_profile_settings.hide()
+	control_settings.placeholder.visible = false
+	control_discover.placeholder.visible = false
+	control_backpack.placeholder.visible = false
+	control_profile_settings.placeholder.visible = false
 
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
 	Global.deep_link_received.connect(_on_deep_link_received)
-	Global.open_settings.connect(show_settings)
-	Global.open_backpack.connect(show_backpack)
-	Global.open_discover.connect(show_discover)
-	Global.open_own_profile.connect(show_own_profile)
+	Global.open_settings.connect(async_show_settings)
+	Global.open_backpack.connect(async_show_backpack)
+	Global.open_discover.connect(async_show_discover)
+	Global.open_own_profile.connect(async_show_own_profile)
 	Global.close_menu.connect(close)
 	Global.delete_account.connect(_on_account_delete)
+
+	if not is_in_game:
+		open.call_deferred()
 
 
 func _on_button_close_pressed():
 	_async_request_hide_menu()
+
+
+func open():
+	_open()
 
 
 # gdlint:ignore = async-function-name
@@ -100,34 +101,54 @@ func close():
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
 	tween_h.tween_callback(hide).set_delay(0.3)
+	if selected_node:
+		selected_node.async_put_to_sleep()
 
 
-func show_discover():
+func async_show_discover():
+	await control_discover._async_instantiate()
 	select_discover_screen()
 	if is_instance_valid(hud_button_discover):
 		hud_button_discover.toggled.emit(true)
 	_open()
 
 
-func show_backpack(on_emotes := false):
+func async_show_backpack(on_emotes := false):
+	await control_backpack._async_instantiate()
 	select_backpack_screen()
 	if on_emotes:
-		control_backpack.show_emotes()
-		control_backpack.press_button_emotes()
+		control_backpack.instance.show_emotes()
+		control_backpack.instance.press_button_emotes()
 	_open()
 
 
-func show_settings():
+func async_show_settings():
+	await control_settings._async_instantiate()
+
+	control_settings.instance.request_pause_scenes.connect(
+		func(enabled): request_pause_scenes.emit(enabled)
+	)
+	control_settings.instance.request_debug_panel.connect(
+		func(enabled): request_debug_panel.emit(enabled)
+	)
+	control_settings.instance.preview_hot_reload.connect(
+		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
+	)
+
 	select_settings_screen()
 	_open()
 
 
-func show_own_profile():
+func async_show_own_profile():
+	await control_profile_settings._async_instantiate()
+
 	select_profile_screen()
 	_open()
 
 
 func _open():
+	if not selected_node:
+		async_show_discover()
 	if not visible:
 		show()
 	var tween = create_tween()
@@ -166,31 +187,33 @@ func select_profile_screen(play_sfx: bool = true):
 	select_node(control_profile_settings, play_sfx)
 
 
-func select_node(node: Node, play_sfx: bool = true):
+func select_node(node: PlaceholderManager, play_sfx: bool = true):
 	if selected_node != node:
-		fade_out(selected_node)
+		if selected_node:
+			fade_out(selected_node)
 		fade_in(node)
 
 		if play_sfx:
 			UiSounds.play_sound("generic_button_press")
 
 
-func fade_in(node: Control):
+func fade_in(node: PlaceholderManager):
 	selected_node = node
-	node.show()
+	node.instance.show()
 	var tween = create_tween()
-	tween.tween_property(node, "modulate", Color(1, 1, 1), 0.3)
+	tween.tween_property(node.instance, "modulate", Color(1, 1, 1), 0.3)
 
 
-func fade_out(node: Control):
+func fade_out(node: PlaceholderManager):
 	if is_instance_valid(fade_out_tween):
 		if fade_out_tween.is_running():
-			selected_node.hide()
+			selected_node.instance.hide()
 			fade_out_tween.stop()
 
 	fade_out_tween = create_tween().set_parallel(true)
-	fade_out_tween.tween_property(node, "modulate", Color(1, 1, 1, 0), 0.3)
-	fade_out_tween.tween_callback(node.hide).set_delay(0.3)
+	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
+	fade_out_tween.tween_callback(node.instance.hide).set_delay(0.3)
+	fade_out_tween.tween_callback(node.async_put_to_sleep)
 
 
 func _on_visibility_changed():
@@ -205,9 +228,9 @@ func _on_visibility_changed():
 
 
 func _async_deploy_if_has_changes():
-	if control_backpack.has_changes():
+	if control_backpack.instance.has_changes():
 		control_deploying_profile.show()
-		await control_backpack.async_save_profile()
+		await control_backpack.instance.async_save_profile()
 		control_deploying_profile.hide()
 
 
@@ -253,7 +276,7 @@ func _on_notification_clicked(notification: Dictionary) -> void:
 	# Check if this is a reward notification
 	if notif_type in ["reward_assignment", "reward_in_progress"]:
 		# Open the backpack to show the reward
-		show_backpack()
+		async_show_backpack()
 		Global.open_navbar_silently.emit()
 
 
@@ -262,15 +285,15 @@ func _on_deep_link_received() -> void:
 
 
 func _on_portrait_button_discover_pressed() -> void:
-	show_discover()
+	async_show_discover()
 
 
 func _on_portrait_button_backpack_pressed() -> void:
-	show_backpack()
+	async_show_backpack()
 
 
 func _on_portrait_button_settings_pressed() -> void:
-	show_settings()
+	async_show_settings()
 
 
 func _on_account_delete() -> void:

@@ -152,7 +152,7 @@ func _on_gui_input(event: InputEvent) -> void:
 			if avatar != null and is_instance_valid(avatar):
 				var explorer = Global.get_explorer()
 				if avatar.avatar_id == Global.player_identity.get_address_str():
-					explorer.control_menu.show_own_profile()
+					explorer.control_menu.async_show_own_profile()
 				else:
 					Global.open_profile_by_avatar.emit(avatar)
 

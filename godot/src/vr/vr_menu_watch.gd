@@ -2,7 +2,7 @@ extends Control
 
 
 func _on_button_discover_pressed() -> void:
-	Global.get_explorer().control_menu.show_discover()
+	Global.get_explorer().control_menu.async_show_discover()
 
 
 func _on_button_map_pressed() -> void:
@@ -10,8 +10,8 @@ func _on_button_map_pressed() -> void:
 
 
 func _on_button_backpack_pressed() -> void:
-	Global.get_explorer().control_menu.show_backpack()
+	Global.get_explorer().control_menu.async_show_backpack()
 
 
 func _on_button_settings_pressed() -> void:
-	Global.get_explorer().control_menu.show_settings()
+	Global.get_explorer().control_menu.async_show_settings()
