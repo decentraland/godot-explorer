@@ -15,11 +15,11 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kjivd"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q5i5r"]
 bg_color = Color(1, 1, 1, 0)
 
-[sub_resource type="Theme" id="Theme_pb0jp"]
-LinkButton/styles/normal = SubResource("StyleBoxFlat_kjivd")
+[sub_resource type="Theme" id="Theme_rb0rw"]
+LinkButton/styles/normal = SubResource("StyleBoxFlat_q5i5r")
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fq752"]
 bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
@@ -28,11 +28,11 @@ corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h5jj7"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kjivd"]
 bg_color = Color(1, 1, 1, 0)
 
-[sub_resource type="Theme" id="Theme_a6tuv"]
-LinkButton/styles/normal = SubResource("StyleBoxFlat_h5jj7")
+[sub_resource type="Theme" id="Theme_pb0jp"]
+LinkButton/styles/normal = SubResource("StyleBoxFlat_kjivd")
 
 [node name="ChatMessage" type="VBoxContainer"]
 offset_right = 237.0
@@ -58,6 +58,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 8
+mouse_filter = 1
 picture_size = 3
 
 [node name="PanelContainer_Extended" type="PanelContainer" parent="MarginContainer/HBoxContainer_ExtendedChat"]
@@ -141,7 +142,8 @@ expand_mode = 1
 [node name="RichTextLabel_Message" type="RichTextLabel" parent="MarginContainer/HBoxContainer_ExtendedChat/PanelContainer_Extended/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme = SubResource("Theme_pb0jp")
+mouse_filter = 1
+theme = SubResource("Theme_rb0rw")
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_fonts/normal_font = ExtResource("5_q5i5r")
 theme_override_fonts/bold_font = ExtResource("6_rb0rw")
@@ -189,6 +191,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 8
+mouse_filter = 1
 picture_size = 3
 
 [node name="PanelContainer_Compact" type="PanelContainer" parent="MarginContainer/HBoxContainer_CompactChat"]
@@ -197,6 +200,7 @@ custom_minimum_size = Vector2(109, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_fq752")
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer_CompactChat/PanelContainer_Compact"]
@@ -214,7 +218,8 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme = SubResource("Theme_a6tuv")
+mouse_filter = 1
+theme = SubResource("Theme_pb0jp")
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_fonts/normal_font = ExtResource("5_q5i5r")
 theme_override_fonts/bold_font = ExtResource("6_rb0rw")
