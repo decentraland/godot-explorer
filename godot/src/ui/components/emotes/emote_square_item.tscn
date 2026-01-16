@@ -64,6 +64,7 @@ custom_minimum_size = Vector2(118, 118)
 offset_right = 118.0
 offset_bottom = 118.0
 pivot_offset = Vector2(-38, 215)
+mouse_filter = 1
 toggle_mode = true
 script = ExtResource("1_hlkld")
 
