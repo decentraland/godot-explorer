@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 use crate::dcl::SceneId;
+use godot::prelude::godot_print;
 
 /// Loading phases with fixed progress ranges
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,12 +78,10 @@ pub struct LoadingSession {
     last_asset_registered: Option<Instant>,
 
     // Floating islands tracking
-    /// Total number of floating island parcels expected
-    pub floating_islands_expected: u32,
-    /// Number of floating island parcels created so far
-    pub floating_islands_created: u32,
     /// Whether we're waiting for floating islands generation
     pub waiting_for_floating_islands: bool,
+    /// When floating islands generation started (for asset discovery delay)
+    floating_islands_phase_start: Option<Instant>,
 }
 
 impl LoadingSession {
@@ -109,9 +108,8 @@ impl LoadingSession {
             max_progress: 0.0,
             assets_phase_start: None,
             last_asset_registered: None,
-            floating_islands_expected: 0,
-            floating_islands_created: 0,
             waiting_for_floating_islands: false,
+            floating_islands_phase_start: None,
         }
     }
 
@@ -138,13 +136,13 @@ impl LoadingSession {
         let spawning_contribution = spawning_ratio * Self::WEIGHT_SPAWNING;
 
         // Assets: weight 60%
-        // Only count assets progress after metadata is ready AND 5 seconds have passed
+        // Only count assets progress after floating islands started AND 5 seconds have passed
         // This gives time for asset discovery before showing progress
         const ASSET_DISCOVERY_WAIT_SECS: u64 = 5;
         let metadata_complete =
             self.fetched_scene_entities.len() >= self.expected_scene_entities.len();
         let asset_discovery_ready = self
-            .assets_phase_start
+            .floating_islands_phase_start
             .map(|start| start.elapsed().as_secs() >= ASSET_DISCOVERY_WAIT_SECS)
             .unwrap_or(false);
 
@@ -171,9 +169,8 @@ impl LoadingSession {
         let ready_contribution = ready_ratio * Self::WEIGHT_READY;
 
         // FloatingIslands: weight 15%
-        let islands_ratio = if self.floating_islands_expected > 0 {
-            (self.floating_islands_created as f32) / (self.floating_islands_expected as f32)
-        } else if !self.waiting_for_floating_islands
+        // Simple 0%/100%: 0 while waiting, 1 when done
+        let islands_ratio = if !self.waiting_for_floating_islands
             && self.phase as u8 >= LoadingPhase::FloatingIslands as u8
         {
             // Floating islands phase completed or skipped
@@ -267,22 +264,16 @@ impl LoadingSession {
         }
     }
 
-    /// Start floating islands generation phase
-    pub fn start_floating_islands(&mut self, count: u32) {
-        self.floating_islands_expected = count;
-        self.floating_islands_created = 0;
+    /// Start floating islands generation phase (0% progress)
+    pub fn start_floating_islands(&mut self) {
         self.waiting_for_floating_islands = true;
     }
 
-    /// Report progress on floating islands generation
-    pub fn report_floating_islands_progress(&mut self, created: u32) {
-        self.floating_islands_created = created;
-    }
-
-    /// Finish floating islands generation
+    /// Finish floating islands generation (100% progress)
+    /// Also starts the 5-second asset discovery delay timer
     pub fn finish_floating_islands(&mut self) {
-        self.floating_islands_created = self.floating_islands_expected;
         self.waiting_for_floating_islands = false;
+        self.floating_islands_phase_start = Some(Instant::now());
     }
 
     /// Minimum time to wait in Assets phase for asset discovery (milliseconds)
@@ -323,14 +314,18 @@ impl LoadingSession {
                 }
             }
             LoadingPhase::Assets => {
-                // Wait for asset discovery grace period
-                let grace_period_passed = self
-                    .assets_phase_start
-                    .map(|start| {
-                        now.duration_since(start).as_millis()
-                            >= Self::ASSET_DISCOVERY_GRACE_MS as u128
-                    })
-                    .unwrap_or(false);
+                // Don't transition while floating islands are being generated (blocks the game loop)
+                if self.waiting_for_floating_islands {
+                    return false;
+                }
+
+                // Use floating_islands_phase_start if available (after islands finish),
+                // otherwise fall back to assets_phase_start
+                let grace_start = self.floating_islands_phase_start.or(self.assets_phase_start);
+                let grace_period_ms = grace_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                let grace_period_passed = grace_period_ms >= Self::ASSET_DISCOVERY_GRACE_MS as u128;
 
                 // Check if asset discovery has stabilized (no new assets registered recently)
                 let discovery_stable = self
@@ -341,6 +336,8 @@ impl LoadingSession {
                     .unwrap_or(true); // If no assets ever registered, consider stable
 
                 // Check if all registered assets are loaded
+                let total_expected: u32 = self.expected_assets.values().sum();
+                let total_loaded: u32 = self.loaded_assets.values().sum();
                 let all_loaded = self.expected_assets.iter().all(|(scene_id, expected)| {
                     self.loaded_assets.get(scene_id).unwrap_or(&0) >= expected
                 });
@@ -348,6 +345,14 @@ impl LoadingSession {
                 // Transition conditions:
                 // 1. Grace period passed AND discovery stable AND (have assets that are all loaded, OR no assets)
                 if grace_period_passed && discovery_stable && all_loaded {
+                    godot_print!(
+                        "[LOADING] Assets->Ready: grace={}ms, stable={}, loaded={}/{}, expected_assets={}",
+                        grace_period_ms,
+                        discovery_stable,
+                        total_loaded,
+                        total_expected,
+                        self.expected_assets.len()
+                    );
                     // Log a warning if no assets were discovered - this could indicate a bug
                     // where GLTF components weren't registered properly, or an empty scene
                     if self.expected_assets.is_empty() && !self.spawned_scenes.is_empty() {
@@ -368,6 +373,12 @@ impl LoadingSession {
                     || (self.spawned_scenes.is_empty() && self.expected_scene_entities.is_empty());
 
                 if all_scenes_ready {
+                    godot_print!(
+                        "[LOADING] Ready->next: ready_scenes={}/{}, waiting_for_islands={}",
+                        self.ready_scenes.len(),
+                        self.spawned_scenes.len(),
+                        self.waiting_for_floating_islands
+                    );
                     // If waiting for floating islands, transition to that phase
                     // Otherwise, go directly to Done
                     if self.waiting_for_floating_islands {
@@ -378,10 +389,8 @@ impl LoadingSession {
                 }
             }
             LoadingPhase::FloatingIslands => {
-                // Transition when all floating islands are created or generation finished
-                if !self.waiting_for_floating_islands
-                    || self.floating_islands_created >= self.floating_islands_expected
-                {
+                // Transition when floating islands generation is finished
+                if !self.waiting_for_floating_islands {
                     self.phase = LoadingPhase::Done;
                 }
             }
@@ -475,47 +484,46 @@ mod tests {
         // Backdate session start to bypass time-based dampening (>20 secs)
         session.start_time = Instant::now() - std::time::Duration::from_secs(25);
 
-        // Fast-forward to Ready phase
+        // Fast-forward through Metadata -> Spawning -> Assets
         session.report_scene_fetched("scene1");
         session.check_phase_transition();
         session.report_scene_spawned(SceneId(1), 0);
         session.check_phase_transition();
-        // Need 6 secs to pass the 5-second asset discovery wait period
+        assert_eq!(session.phase, LoadingPhase::Assets);
+
+        // Backdate assets_phase_start to allow Assets -> Ready transition
         session.assets_phase_start = Some(Instant::now() - std::time::Duration::from_secs(6));
         session.check_phase_transition();
         assert_eq!(session.phase, LoadingPhase::Ready);
 
-        // Start floating islands before scene is ready
-        session.start_floating_islands(100);
+        // Start floating islands before scene is ready (0% floating islands progress)
+        session.start_floating_islands();
         assert!(session.waiting_for_floating_islands);
-        assert_eq!(session.floating_islands_expected, 100);
 
         // Scene ready - should transition to FloatingIslands, not Done
         session.report_scene_ready(SceneId(1));
         session.check_phase_transition();
         assert_eq!(session.phase, LoadingPhase::FloatingIslands);
 
-        // Progress should be at 85% with 0 islands created
+        // Progress should be ~25% (metadata + spawning + ready = 5 + 5 + 15)
+        // Assets are NOT counted yet because floating_islands_phase_start is None
         let progress = session.calculate_progress();
         assert!(
-            progress >= 85.0 && progress < 86.0,
-            "Progress should be ~85%, got {}",
+            progress >= 25.0 && progress < 26.0,
+            "Progress should be ~25%, got {}",
             progress
         );
 
-        // Report partial progress
-        session.report_floating_islands_progress(50);
-        let progress = session.calculate_progress();
-        assert!(
-            progress >= 92.0 && progress < 93.0,
-            "Progress should be ~92.5%, got {}",
-            progress
-        );
-
-        // Finish floating islands
+        // Finish floating islands (100% floating islands progress)
+        // This also starts the 5-second asset discovery delay
         session.finish_floating_islands();
+        assert!(!session.waiting_for_floating_islands);
+        assert!(session.floating_islands_phase_start.is_some());
+
         session.check_phase_transition();
         assert_eq!(session.phase, LoadingPhase::Done);
+
+        // Done phase always returns 100% progress
         assert_eq!(session.calculate_progress(), 100.0);
     }
 }
