@@ -857,6 +857,29 @@ theme = ExtResource("12_sa1v7")
 theme_override_font_sizes/font_size = 20
 text = "Test Notification with Emojis"
 
+[node name="VBoxContainer_OpenUserData" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label_OpenUserData" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
+layout_mode = 2
+theme = SubResource("Theme_nuccv")
+text = "User Data"
+
+[node name="Button_OpenUserData" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 20
+text = "Open User Data Folder"
+
 [node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
@@ -976,5 +999,6 @@ hide_on_portrait = true
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
