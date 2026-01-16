@@ -58,6 +58,8 @@ const TERMS_AND_CONDITIONS_VERSION: int = 1
 const LOCAL_ASSETS_CACHE_VERSION: int = 3
 
 ## Global classes (singleton pattern)
+var is_portrait: bool = true
+
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
@@ -95,8 +97,6 @@ var session_id: String
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
-
-var is_portrait: bool = true
 
 
 func set_url_popup_instance(popup_instance) -> void:
