@@ -12,9 +12,7 @@ use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
-use super::auth_identity::{
-    complete_mobile_auth, create_local_ephemeral, start_mobile_auth, PendingMobileAuth,
-};
+use super::auth_identity::{complete_mobile_auth, create_local_ephemeral, start_mobile_auth};
 use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
@@ -40,7 +38,7 @@ pub struct DclPlayerIdentity {
 
     /// Pending mobile auth state, stored between start_mobile_connect_account
     /// and complete_mobile_connect_account (when deep link arrives)
-    pending_mobile_auth: Option<PendingMobileAuth>,
+    pending_mobile_auth: Option<()>,
 
     #[var]
     is_guest: bool,
@@ -267,10 +265,7 @@ impl DclPlayerIdentity {
 
             match result {
                 Ok(pending) => {
-                    tracing::info!(
-                        "Mobile auth started, waiting for deep link with request_id: {}",
-                        pending.request_id
-                    );
+                    tracing::info!("Mobile auth started, waiting for deep link");
                     this.bind_mut().pending_mobile_auth = Some(pending);
                 }
                 Err(err) => {
