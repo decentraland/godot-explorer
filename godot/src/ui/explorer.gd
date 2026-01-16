@@ -102,6 +102,8 @@ func get_params_from_cmd():
 
 
 func _ready():
+	GraphicSettings.apply_full_processor_mode()
+
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
 	Global.change_parcel.connect(_on_change_parcel)
 
