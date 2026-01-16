@@ -167,7 +167,7 @@ impl DclIosPlugin {
     #[func]
     pub fn get_thermal_state() -> GString {
         Self::get_mobile_metrics_internal()
-            .map(|m| GString::from(m.device_thermal_state))
+            .map(|m| GString::from(&m.device_thermal_state))
             .unwrap_or_default()
     }
 
