@@ -19,13 +19,6 @@ var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 
-#var control_settings_manager := PlaceholderManager.new(%Control_Settings)
-
-#@onready var control_discover := %Control_Discover
-#@onready var control_settings :VBoxContainer
-#@onready var control_backpack: Backpack = %Control_Backpack
-#@onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
-
 @onready var group: ButtonGroup = ButtonGroup.new()
 
 @onready var control_discover := PlaceholderManager.new(%Control_Discover)
@@ -70,11 +63,6 @@ func _ready():
 		Global.metrics.track_screen_viewed(current_screen_name, '{"function": "ready"}')
 		Global.metrics.flush()
 
-	#selected_node = control_discover
-	#control_settings_placeholder.hide()
-	#control_discover.show()
-	#control_backpack.hide()
-	#control_profile_settings.hide()
 	control_settings.placeholder.visible = false
 	control_discover.placeholder.visible = false
 	control_backpack.placeholder.visible = false
