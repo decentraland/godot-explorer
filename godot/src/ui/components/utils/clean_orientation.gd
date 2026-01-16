@@ -9,10 +9,10 @@ func _ready() -> void:
 
 
 func _check_orientation_and_clean() -> void:
-	if clean_on_landscape and !Global.is_portrait:
+	if clean_on_landscape and !Global.is_orientation_portrait():
 		queue_free()
 		return
 
-	if clean_on_portrait and Global.is_portrait:
+	if clean_on_portrait and Global.is_orientation_portrait():
 		queue_free()
 		return
