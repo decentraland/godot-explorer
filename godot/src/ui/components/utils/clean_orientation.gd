@@ -5,6 +5,7 @@ extends Control
 
 
 func _ready() -> void:
+	await get_tree().process_frame
 	_check_orientation_and_clean.call_deferred()
 
 
