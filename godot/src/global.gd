@@ -96,6 +96,8 @@ var session_id: String
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
+var is_portrait: bool = true
+
 
 func set_url_popup_instance(popup_instance) -> void:
 	url_popup_instance = popup_instance
@@ -536,11 +538,11 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
+	is_portrait = false
 
 
 func is_orientation_portrait() -> bool:
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	return window_size.x < window_size.y
+	return is_portrait
 
 
 func set_orientation_portrait():
@@ -557,10 +559,7 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
-
-
-func set_orientation_sensor():
-	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+	is_portrait = true
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
