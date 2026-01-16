@@ -4,6 +4,7 @@ extends Control
 @export var clean_on_portrait: bool = false
 
 
+# gdlint:ignore = async-function-name
 func _ready() -> void:
 	await get_tree().process_frame
 	_check_orientation_and_clean.call_deferred()
