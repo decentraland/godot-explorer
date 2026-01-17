@@ -1,6 +1,17 @@
 name: 🍏 iOS
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: 'Branch to build'
+        required: false
+        type: string
+        default: 'main'
+      pr_number:
+        description: 'PR number to update with build status (optional)'
+        required: false
+        type: string
+        default: ''
     secrets:
       DEPLOY_SSH_KEY:
         required: true
@@ -10,20 +21,16 @@ on:
         required: false
       SENTRY_PROJECT:
         required: false
-  push:
-    branches:
-      - main
-      - release
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch or commit to build'
-        required: false
+        description: 'Branch to build'
+        required: true
+        type: choice
         default: 'main'
-      pr_number:
-        description: 'PR number to update with build status (optional)'
-        required: false
-        default: ''
+        options:
+          - main
+          - release
 permissions:
   pull-requests: write
   contents: read
@@ -76,7 +83,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.sha }}
+          ref: ${{ inputs.ref || github.event.inputs.ref }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -135,10 +142,12 @@ jobs:
         timeout-minutes: 10
         run: |
           # Use PR-{number}-{branch} format for PR builds, otherwise use the ref name
-          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
-            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+            BRANCH_NAME="${REF}"
           fi
           echo "Deploying to branch: $BRANCH_NAME"
 
@@ -147,10 +156,11 @@ jobs:
           cp .github/scripts/ci_post_xcodebuild.sh exports/ci_scripts/
           chmod +x exports/ci_scripts/ci_post_xcodebuild.sh
 
-          # Clone the target repository using SSH
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git clone git@github.com:decentraland/godot-mobile-deploy-pipeline.git deploy-repo
-
-          cd deploy-repo
+          # Initialize fresh repo (no need to clone since we create orphan branch anyway)
+          # This avoids downloading potentially GBs of LFS data
+          mkdir deploy-repo && cd deploy-repo
+          git init
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:decentraland/godot-mobile-deploy-pipeline.git
 
           # Configure git
           git config user.name "github-actions[bot]"
@@ -169,8 +179,8 @@ jobs:
           git lfs track "*.dylib"
           git lfs track "*.ipa"
           git lfs track "*.app"
-          git lfs track "*.framework"
-          git lfs track "*.xcframework"
+          git lfs track "*.framework/**"
+          git lfs track "*.xcframework/**"
           git lfs track "*.a"
           git lfs track "*.pck"
           git lfs track "*.so"
@@ -252,10 +262,12 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
-            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+            BRANCH_NAME="${REF}"
           fi
           COMMIT_SHA="${{ github.sha }}"
           COMMIT_SHORT="${COMMIT_SHA:0:7}"
@@ -313,10 +325,12 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
-            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+            BRANCH_NAME="${REF}"
           fi
           COMMIT_SHA="${{ github.sha }}"
           COMMIT_SHORT="${COMMIT_SHA:0:7}"
@@ -369,11 +383,13 @@ jobs:
           }" "$SLACK_WEBHOOK_URL"
 
       - name: Update PR Comment - Success
-        if: success() && github.event.inputs.pr_number != ''
+        if: success() && (inputs.pr_number || github.event.inputs.pr_number)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
 
@@ -392,20 +408,22 @@ jobs:
           🔄 **Completed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
           # Find and update the existing iOS comment
-          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
 
           if [ -n "$COMMENT_ID" ]; then
             gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
           else
-            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
+            gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments -f body="${COMMENT_BODY}"
           fi
 
       - name: Update PR Comment - Failure
-        if: failure() && !cancelled() && github.event.inputs.pr_number != ''
+        if: failure() && !cancelled() && (inputs.pr_number || github.event.inputs.pr_number)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           COMMENT_BODY="---
@@ -421,20 +439,22 @@ jobs:
           🔄 **Failed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
           # Find and update the existing iOS comment
-          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
 
           if [ -n "$COMMENT_ID" ]; then
             gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
           else
-            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
+            gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments -f body="${COMMENT_BODY}"
           fi
 
       - name: Update PR Comment - Cancelled
-        if: cancelled() && github.event.inputs.pr_number != ''
+        if: cancelled() && (inputs.pr_number || github.event.inputs.pr_number)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           COMMENT_BODY="---
@@ -450,10 +470,10 @@ jobs:
           🔄 **Cancelled**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
           # Find and update the existing iOS comment
-          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
 
           if [ -n "$COMMENT_ID" ]; then
             gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
           else
-            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
+            gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments -f body="${COMMENT_BODY}"
           fi

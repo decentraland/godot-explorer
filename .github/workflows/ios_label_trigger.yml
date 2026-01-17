@@ -1,4 +1,5 @@
 name: 🏷️ iOS Label Trigger
+
 on:
   pull_request:
     types: [labeled]
@@ -9,8 +10,8 @@ permissions:
   actions: write
 
 jobs:
-  trigger-ios-build:
-    name: Trigger iOS Build
+  pre-build:
+    name: Prepare iOS Build
     runs-on: ubuntu-latest
     if: ${{ github.event.label.name == 'build-ios-internal' }}
     steps:
@@ -51,52 +52,37 @@ jobs:
             fi
           done
 
-      - name: Trigger iOS build workflow
-        id: trigger
+      - name: Post build started comment
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run ios_builds.yml \
-            --repo ${{ github.repository }} \
-            --ref ${{ github.event.pull_request.head.ref }} \
-            -f ref=${{ github.event.pull_request.head.ref }} \
-            -f pr_number=${{ github.event.pull_request.number }}
-          echo "✅ iOS build triggered for branch: ${{ github.event.pull_request.head.ref }}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          # Wait for the workflow run to appear
-          sleep 5
+          COMMENT_BODY="---
 
-          # Get the most recent run ID for the iOS workflow on this branch
-          RUN_ID=$(gh run list --workflow=ios_builds.yml --repo ${{ github.repository }} --branch ${{ github.event.pull_request.head.ref }} --limit 1 --json databaseId --jq '.[0].databaseId')
+          ### 🍏 iOS Build Triggered
 
-          if [ -n "$RUN_ID" ]; then
-            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-            echo "📍 Workflow Run ID: $RUN_ID"
+          🔗 **iOS Workflow**: [View iOS build](${WORKFLOW_URL})
+
+          📍 **Branch**: \`${{ github.event.pull_request.head.ref }}\`
+
+          🔄 **Triggered**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+          # Find and update existing iOS comment or create new one
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
           else
-            echo "⚠️ Could not retrieve workflow run ID"
+            gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments -f body="${COMMENT_BODY}"
           fi
 
-      - name: Prepare iOS Build Report Update
-        env:
-          RUN_ID: ${{ steps.trigger.outputs.run_id }}
-        run: |
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}"
-
-          {
-            echo ""
-            echo "---"
-            echo ""
-            echo "### 🍏 iOS Build Triggered"
-            echo ""
-            echo "🔗 **iOS Workflow**: [View iOS build](${WORKFLOW_URL})"
-            echo ""
-            echo "📍 **Branch**: \`${{ github.event.pull_request.head.ref }}\`"
-            echo ""
-            echo "🔄 **Triggered**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-          } > ios-build-report.md
-
-      - name: Update Build Report with iOS Status
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: build-report-ios
-          path: ios-build-report.md
+  ios-build:
+    name: iOS Build
+    needs: pre-build
+    if: ${{ github.event.label.name == 'build-ios-internal' }}
+    uses: ./.github/workflows/ios_builds.yml
+    with:
+      ref: ${{ github.event.pull_request.head.ref }}
+      pr_number: ${{ github.event.pull_request.number }}
+    secrets: inherit

@@ -1,0 +1,125 @@
+name: 🧹 Cleanup Deploy Branches
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  cleanup:
+    name: Cleanup stale branches
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH for deployment
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "❌ DEPLOY_SSH_KEY not configured, cannot cleanup deploy repo"
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Cleanup stale branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DEPLOY_REPO="decentraland/godot-mobile-deploy-pipeline"
+          SOURCE_REPO="${{ github.repository }}"
+
+          echo "🔍 Fetching branches from deploy repo: $DEPLOY_REPO"
+          DEPLOY_BRANCHES=$(gh api repos/$DEPLOY_REPO/branches --paginate --jq '.[].name' 2>/dev/null || echo "")
+
+          if [ -z "$DEPLOY_BRANCHES" ]; then
+            echo "⚠️  Could not fetch branches from deploy repo or no branches found"
+            exit 0
+          fi
+
+          echo "🔍 Fetching branches from source repo: $SOURCE_REPO"
+          SOURCE_BRANCHES=$(gh api repos/$SOURCE_REPO/branches --paginate --jq '.[].name' 2>/dev/null || echo "")
+
+          echo ""
+          echo "📋 Deploy repo branches:"
+          echo "$DEPLOY_BRANCHES" | while read -r branch; do echo "  - $branch"; done
+          echo ""
+
+          # Protected branches that should never be deleted
+          PROTECTED_BRANCHES="main release"
+
+          DELETED_COUNT=0
+          KEPT_COUNT=0
+
+          # Clone deploy repo to delete branches (need push access)
+          mkdir -p /tmp/deploy-repo && cd /tmp/deploy-repo
+          git init
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:$DEPLOY_REPO.git
+
+          echo "🧹 Checking branches for cleanup..."
+          echo ""
+
+          for BRANCH in $DEPLOY_BRANCHES; do
+            SHOULD_DELETE=false
+            REASON=""
+
+            # Check if protected
+            if echo "$PROTECTED_BRANCHES" | grep -qw "$BRANCH"; then
+              echo "🛡️  KEEP: $BRANCH (protected)"
+              KEPT_COUNT=$((KEPT_COUNT + 1))
+              continue
+            fi
+
+            # Check if it's a PR branch (format: PR-{number}-{branch})
+            if [[ "$BRANCH" =~ ^PR-([0-9]+)- ]]; then
+              PR_NUMBER="${BASH_REMATCH[1]}"
+
+              # Check if PR is still open
+              PR_STATE=$(gh api repos/$SOURCE_REPO/pulls/$PR_NUMBER --jq '.state' 2>/dev/null || echo "not_found")
+
+              if [ "$PR_STATE" = "open" ]; then
+                echo "✅ KEEP: $BRANCH (PR #$PR_NUMBER is open)"
+                KEPT_COUNT=$((KEPT_COUNT + 1))
+                continue
+              else
+                SHOULD_DELETE=true
+                REASON="PR #$PR_NUMBER is $PR_STATE"
+              fi
+            else
+              # Regular branch - check if it exists in source repo
+              if echo "$SOURCE_BRANCHES" | grep -qx "$BRANCH"; then
+                echo "✅ KEEP: $BRANCH (exists in source repo)"
+                KEPT_COUNT=$((KEPT_COUNT + 1))
+                continue
+              else
+                SHOULD_DELETE=true
+                REASON="no matching branch in source repo"
+              fi
+            fi
+
+            if [ "$SHOULD_DELETE" = true ]; then
+              echo "🗑️  DELETE: $BRANCH ($REASON)"
+              if GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push origin --delete "$BRANCH" 2>/dev/null; then
+                DELETED_COUNT=$((DELETED_COUNT + 1))
+              else
+                echo "    ⚠️  Failed to delete $BRANCH"
+              fi
+            fi
+          done
+
+          echo ""
+          echo "📊 Summary:"
+          echo "   Branches kept: $KEPT_COUNT"
+          echo "   Branches deleted: $DELETED_COUNT"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
