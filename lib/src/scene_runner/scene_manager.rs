@@ -1737,12 +1737,18 @@ impl INode for SceneManager {
             }
         }
 
-        // Add avatar profile tooltip if there's an avatar under crosshair
-        if let Some(RaycastResult::Avatar(_)) = &current_raycast {
-            let mut profile_dict = VarDictionary::new();
-            profile_dict.set("text_pet_down", "View profile");
-            profile_dict.set("action", "ia_pointer");
-            tooltips.push(&profile_dict.to_variant());
+        // Add avatar profile tooltip if there's an avatar under crosshair with a valid ID
+        // Skip AvatarShapes (NPCs from scenes) which don't have valid profile IDs
+        if let Some(RaycastResult::Avatar(avatar)) = &current_raycast {
+            // Check if avatar has a valid avatar_id (non-empty and not just "npc-*")
+            let avatar_id: GString = avatar.get("avatar_id").try_to().unwrap_or_default();
+            let is_avatar_shape: bool = avatar.get("is_avatar_shape").try_to().unwrap_or(false);
+            if !is_avatar_shape && !avatar_id.is_empty() {
+                let mut profile_dict = VarDictionary::new();
+                profile_dict.set("text_pet_down", "View profile");
+                profile_dict.set("action", "ia_pointer");
+                tooltips.push(&profile_dict.to_variant());
+            }
         }
 
         if self.pointer_tooltips != tooltips {

@@ -92,6 +92,12 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             })
                             .collect(),
                     ),
+                    force_render: if new_value.force_render.is_empty() {
+                        None
+                    } else {
+                        Some(new_value.force_render)
+                    },
+                    show_only_wearables: new_value.show_only_wearables.unwrap_or(false),
                     ..Default::default()
                 };
 
@@ -110,10 +116,25 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 let new_avatar_data = DclAvatarWireFormat::from_gd(new_avatar_data);
 
+                // Build AvatarShape-specific config dictionary
+                let mut avatar_shape_config = VarDictionary::new();
+                avatar_shape_config.set("is_avatar_shape", true);
+                if let Some(expression_trigger_id) = &new_value.expression_trigger_id {
+                    avatar_shape_config.set("expression_trigger_id", expression_trigger_id.clone());
+                }
+                if let Some(expression_trigger_timestamp) = new_value.expression_trigger_timestamp {
+                    avatar_shape_config
+                        .set("expression_trigger_timestamp", expression_trigger_timestamp);
+                }
+
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
                         "async_update_avatar",
-                        &[new_avatar_data.to_variant(), avatar_name.to_variant()],
+                        &[
+                            new_avatar_data.to_variant(),
+                            avatar_name.to_variant(),
+                            avatar_shape_config.to_variant(),
+                        ],
                     );
                 } else {
                     let mut new_avatar_shape = godot::tools::load::<PackedScene>(
@@ -131,7 +152,11 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                     new_avatar_shape.call_deferred(
                         "async_update_avatar",
-                        &[new_avatar_data.to_variant(), avatar_name.to_variant()],
+                        &[
+                            new_avatar_data.to_variant(),
+                            avatar_name.to_variant(),
+                            avatar_shape_config.to_variant(),
+                        ],
                     );
                 }
             }

@@ -568,7 +568,10 @@ class CuratedWearableList:
 
 
 static func get_curated_wearable_list(
-	body_shape_id: String, wearables: PackedStringArray, force_render: PackedStringArray
+	body_shape_id: String,
+	wearables: PackedStringArray,
+	force_render: PackedStringArray,
+	show_only_wearables: bool = false
 ) -> CuratedWearableList:
 	var ret = CuratedWearableList.new()
 
@@ -584,8 +587,15 @@ static func get_curated_wearable_list(
 			var category = wearable.get_category()
 			if not ret.wearables_by_category.has(category):
 				ret.wearables_by_category[category] = wearable
+				if show_only_wearables:
+					print(
+						"[show_only_wearables] Added wearable: ",
+						wearable_id,
+						" category=",
+						category
+					)
 		else:
-			printerr("invalid wearable ", wearable_id)
+			printerr("invalid wearable ", wearable_id, " for body_shape ", body_shape_id)
 
 	var unused_wearables = compose_hidden_categories(
 		body_shape_id, force_render, ret.wearables_by_category
@@ -598,9 +608,48 @@ static func get_curated_wearable_list(
 		body_shape_id, force_render, ret.wearables_by_category, true
 	)
 
+	# When show_only_wearables is true, hide all body parts and facial features
+	# This prevents fallback wearables from being added for these categories
+	# BUT we keep explicitly provided wearables in wearables_by_category
+	if show_only_wearables:
+		var body_categories = [
+			Categories.UPPER_BODY,
+			Categories.LOWER_BODY,
+			Categories.FEET,
+			Categories.HANDS,
+			Categories.HEAD,
+			Categories.HAIR,
+			Categories.FACIAL_HAIR,
+			Categories.EYES,
+			Categories.EYEBROWS,
+			Categories.MOUTH,
+			Categories.SKIN
+		]
+		# Store which categories have explicit wearables (not fallbacks)
+		var explicit_wearable_categories: Array = []
+		for wearable_id in wearables:
+			var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(
+				wearable_id
+			)
+			if wearable != null:
+				explicit_wearable_categories.append(wearable.get_category())
+
+		for category in body_categories:
+			# Only add to hidden_categories if it's NOT an explicit wearable
+			# This allows the explicit wearable to be rendered while hiding fallbacks
+			if not explicit_wearable_categories.has(category):
+				if not ret.hidden_categories.has(category):
+					ret.hidden_categories.append(category)
+
 	ret.need_to_fetch = set_fallback_for_missing_needed_categories(
 		body_shape_id, ret.wearables_by_category, ret.hidden_categories
 	)
+
+	if show_only_wearables:
+		print(
+			"[show_only_wearables] Final wearables_by_category: ", ret.wearables_by_category.keys()
+		)
+		print("[show_only_wearables] hidden_categories: ", ret.hidden_categories)
 
 	return ret
 
