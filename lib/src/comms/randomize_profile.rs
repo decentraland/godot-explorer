@@ -237,6 +237,7 @@ impl AvatarWireFormat {
             hair,
             skin,
             force_render: Some(force_render.iter().map(|s| s.to_string()).collect()),
+            show_only_wearables: false,
         }
     }
 

@@ -23,6 +23,10 @@ var hidden: bool = false
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
+# AvatarShape-specific state (NPCs from scene SDK)
+var is_avatar_shape: bool = false
+var last_expression_trigger_timestamp: int = -1
+
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
 
@@ -185,10 +189,39 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	await async_update_avatar(avatar, new_avatar_name)
 
 
-func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: String):
+func async_update_avatar(
+	new_avatar: DclAvatarWireFormat, new_avatar_name: String, avatar_shape_config: Dictionary = {}
+):
 	if new_avatar == null:
 		printerr("Trying to update an avatar with an null value")
 		return
+
+	# Handle AvatarShape-specific config (NPCs from scene SDK)
+	is_avatar_shape = avatar_shape_config.get("is_avatar_shape", false)
+
+	# Update metadata for raycast detection
+	if click_area:
+		click_area.set_meta("is_avatar_shape", is_avatar_shape)
+
+	# Handle expression_trigger for AvatarShape emotes
+	if is_avatar_shape:
+		var expression_trigger_id = avatar_shape_config.get("expression_trigger_id", "")
+		var expression_trigger_timestamp: int = avatar_shape_config.get(
+			"expression_trigger_timestamp", -1
+		)
+
+		# Trigger emote if timestamp changed (Lamport timestamp pattern)
+		if (
+			expression_trigger_timestamp > last_expression_trigger_timestamp
+			and not expression_trigger_id.is_empty()
+		):
+			last_expression_trigger_timestamp = expression_trigger_timestamp
+			# Defer emote play to after avatar is loaded if needed
+			if avatar_ready:
+				_async_play_expression_trigger(expression_trigger_id)
+			else:
+				# Store pending emote to play after avatar loads
+				set_meta("pending_expression_trigger", expression_trigger_id)
 
 	# Skip redundant updates - if avatar data hasn't changed and avatar is already loaded,
 	# no need to re-duplicate all meshes and materials (saves Vulkan descriptor sets)
@@ -222,7 +255,10 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
-	if hide_name:
+	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
+	if is_avatar_shape:
+		nickname_quad.hide()
+	elif hide_name:
 		nickname_quad.hide()
 	else:
 		nickname_quad.show()
@@ -367,8 +403,16 @@ func async_load_wearables():
 	if not is_instance_valid(wearable_loader) or not is_inside_tree():
 		return
 
+	# Hide skeleton immediately if show_only_wearables to prevent flash of default body
+	var show_only_wearables = avatar_data.get_show_only_wearables()
+	if show_only_wearables:
+		body_shape_skeleton_3d.visible = false
+
 	var curated_wearables := Wearables.get_curated_wearable_list(
-		avatar_data.get_body_shape(), avatar_data.get_wearables(), avatar_data.get_force_render()
+		avatar_data.get_body_shape(),
+		avatar_data.get_wearables(),
+		avatar_data.get_force_render(),
+		avatar_data.get_show_only_wearables()
 	)
 	if curated_wearables.wearables_by_category.is_empty():
 		printerr("couldn't get curated wearables")
@@ -458,16 +502,41 @@ func async_load_wearables():
 
 	# Here hidings is an alias
 	var hidings = curated_wearables.hidden_categories
+
+	# When show_only_wearables is true, hide all body parts (skin, hair, facial features)
 	var base_bodyshape_hidings = {
-		"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has("upper_body"),
-		"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has("lower_body"),
-		"feet_basemesh": has_own_skin or has_own_feet or hidings.has("feet"),
-		"hands_basemesh": has_own_skin or has_own_hands or hidings.has("hands"),
-		"head_basemesh": has_own_skin or has_own_head or hidings.has("head"),
-		"mask_eyes": has_own_skin or has_own_head or hidings.has("eyes") or hidings.has("head"),
+		"ubody_basemesh":
+		show_only_wearables or has_own_skin or has_own_upper_body or hidings.has("upper_body"),
+		"lbody_basemesh":
+		show_only_wearables or has_own_skin or has_own_lower_body or hidings.has("lower_body"),
+		"feet_basemesh": show_only_wearables or has_own_skin or has_own_feet or hidings.has("feet"),
+		"hands_basemesh":
+		show_only_wearables or has_own_skin or has_own_hands or hidings.has("hands"),
+		"head_basemesh": show_only_wearables or has_own_skin or has_own_head or hidings.has("head"),
+		"mask_eyes":
+		(
+			show_only_wearables
+			or has_own_skin
+			or has_own_head
+			or hidings.has("eyes")
+			or hidings.has("head")
+		),
 		"mask_eyebrows":
-		has_own_skin or has_own_head or hidings.has("eyebrows") or hidings.has("head"),
-		"mask_mouth": has_own_skin or has_own_head or hidings.has("mouth") or hidings.has("head"),
+		(
+			show_only_wearables
+			or has_own_skin
+			or has_own_head
+			or hidings.has("eyebrows")
+			or hidings.has("head")
+		),
+		"mask_mouth":
+		(
+			show_only_wearables
+			or has_own_skin
+			or has_own_head
+			or hidings.has("mouth")
+			or hidings.has("head")
+		),
 	}
 
 	# Final computation of hidings
@@ -500,6 +569,11 @@ func async_load_wearables():
 	for child in body_shape_skeleton_3d.get_children():
 		apply_unshaded_mode(child)
 
+	# For show_only_wearables, reset skeleton to T-pose so wearable doesn't animate
+	if show_only_wearables:
+		for i in range(body_shape_skeleton_3d.get_bone_count()):
+			body_shape_skeleton_3d.reset_bone_pose(i)
+
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
 
@@ -523,6 +597,12 @@ func async_load_wearables():
 	emote_controller.clean_unused_emotes()
 	avatar_ready = true
 	avatar_loaded.emit()
+
+	# Play any pending expression trigger that was set before avatar was ready
+	if has_meta("pending_expression_trigger"):
+		var pending_emote = get_meta("pending_expression_trigger")
+		remove_meta("pending_expression_trigger")
+		_async_play_expression_trigger(pending_emote)
 
 
 func apply_color_and_facial():
@@ -599,6 +679,15 @@ func _process(delta):
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
+
+	# Skip animations for show_only_wearables avatars (no body to animate)
+	if is_avatar_shape and avatar_data != null and avatar_data.get_show_only_wearables():
+		animation_tree.active = false
+		return
+
+	# Ensure animation tree is active for normal avatars
+	if not animation_tree.active:
+		animation_tree.active = true
 
 	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
 	emote_controller.process(self_idle)
@@ -680,3 +769,17 @@ func async_play_emote(emote_urn: String):
 
 func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
 	await emote_controller.async_play_scene_emote(emote_data)
+
+
+## Play emote triggered by AvatarShape's expression_trigger_id field.
+## Supports: default emotes (e.g. "wave"), URN emotes, and local scene emotes (.glb/.gltf)
+func _async_play_expression_trigger(emote_id: String) -> void:
+	if emote_id.is_empty():
+		return
+
+	# URN emotes (wearable emotes)
+	if emote_id.begins_with("urn:"):
+		await async_play_emote(emote_id)
+	# Default emotes (wave, clap, dance, etc.) - play via emote controller
+	else:
+		await emote_controller.async_play_emote(emote_id)
