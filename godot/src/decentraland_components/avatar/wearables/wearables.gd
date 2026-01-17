@@ -587,13 +587,6 @@ static func get_curated_wearable_list(
 			var category = wearable.get_category()
 			if not ret.wearables_by_category.has(category):
 				ret.wearables_by_category[category] = wearable
-				if show_only_wearables:
-					print(
-						"[show_only_wearables] Added wearable: ",
-						wearable_id,
-						" category=",
-						category
-					)
 		else:
 			printerr("invalid wearable ", wearable_id, " for body_shape ", body_shape_id)
 
@@ -644,12 +637,6 @@ static func get_curated_wearable_list(
 	ret.need_to_fetch = set_fallback_for_missing_needed_categories(
 		body_shape_id, ret.wearables_by_category, ret.hidden_categories
 	)
-
-	if show_only_wearables:
-		print(
-			"[show_only_wearables] Final wearables_by_category: ", ret.wearables_by_category.keys()
-		)
-		print("[show_only_wearables] hidden_categories: ", ret.hidden_categories)
 
 	return ret
 

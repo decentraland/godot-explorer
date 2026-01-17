@@ -451,18 +451,14 @@ func _reset_skeleton_to_rest_pose():
 
 ## Load and play a wearable emote. For scene emotes from network, parse URN and use async_play_scene_emote.
 func async_play_emote(emote_id_or_urn: String) -> void:
-	print("[EmoteController] async_play_emote called with: ", emote_id_or_urn)
-
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
 	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
-		print("[EmoteController] Blocked by cooldown")
 		return
 	_last_emote_time = current_time
 
 	# Prevent concurrent async loading operations
 	if _is_loading_emote:
-		print("[EmoteController] Blocked by concurrent loading")
 		return
 
 	var emote_urn: String = emote_id_or_urn
@@ -471,13 +467,11 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 	if not emote_id_or_urn.begins_with("urn"):
 		# Utility emotes are local, play directly
 		if Emotes.is_emote_utility(emote_id_or_urn):
-			print("[EmoteController] Playing utility emote: ", emote_id_or_urn)
 			play_emote(emote_id_or_urn)
 			return
 		# Base emotes need to be converted to URN for remote fetch
 		if Emotes.is_emote_default(emote_id_or_urn):
 			emote_urn = Emotes.get_base_emote_urn(emote_id_or_urn)
-			print("[EmoteController] Converted to URN: ", emote_urn)
 		else:
 			printerr("Unknown emote: %s" % emote_id_or_urn)
 			return
@@ -496,16 +490,13 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 
 	# Does it need to be loaded?
 	if _has_emote(emote_urn):
-		print("[EmoteController] Emote already loaded, playing: ", emote_urn)
 		play_emote(emote_urn)
 		return
 
 	# Set loading lock
 	_is_loading_emote = true
-	print("[EmoteController] Loading emote: ", emote_urn)
 
 	await _async_load_emote(emote_urn)
-	print("[EmoteController] Emote load completed for: ", emote_urn)
 
 	# Avatar may have been removed from tree during async load
 	if not is_instance_valid(avatar) or not avatar.is_inside_tree():

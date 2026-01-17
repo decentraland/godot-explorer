@@ -697,7 +697,6 @@ func async_load_scene(
 		var optimized_zip_path = "user://content/" + scene_entity_id + "-mobile.zip"
 		if FileAccess.file_exists(optimized_zip_path):
 			DirAccess.remove_absolute(optimized_zip_path)
-		print("preview-mode > purged ", files.size(), " cached files for fresh load")
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null

@@ -210,17 +210,6 @@ func async_update_avatar(
 			"expression_trigger_timestamp", -1
 		)
 
-		print(
-			"[AvatarShape] expression_trigger: id=",
-			expression_trigger_id,
-			" ts=",
-			expression_trigger_timestamp,
-			" last_ts=",
-			last_expression_trigger_timestamp,
-			" avatar_ready=",
-			avatar_ready
-		)
-
 		# Trigger emote if timestamp changed (Lamport timestamp pattern)
 		if (
 			expression_trigger_timestamp > last_expression_trigger_timestamp
@@ -229,11 +218,9 @@ func async_update_avatar(
 			last_expression_trigger_timestamp = expression_trigger_timestamp
 			# Defer emote play to after avatar is loaded if needed
 			if avatar_ready:
-				print("[AvatarShape] Playing emote immediately: ", expression_trigger_id)
 				_async_play_expression_trigger(expression_trigger_id)
 			else:
 				# Store pending emote to play after avatar loads
-				print("[AvatarShape] Storing pending emote: ", expression_trigger_id)
 				set_meta("pending_expression_trigger", expression_trigger_id)
 
 	# Skip redundant updates - if avatar data hasn't changed and avatar is already loaded,
@@ -615,7 +602,6 @@ func async_load_wearables():
 	if has_meta("pending_expression_trigger"):
 		var pending_emote = get_meta("pending_expression_trigger")
 		remove_meta("pending_expression_trigger")
-		print("[AvatarShape] Playing pending emote after avatar load: ", pending_emote)
 		_async_play_expression_trigger(pending_emote)
 
 
@@ -791,14 +777,9 @@ func _async_play_expression_trigger(emote_id: String) -> void:
 	if emote_id.is_empty():
 		return
 
-	print("[AvatarShape] _async_play_expression_trigger called with: ", emote_id)
-
 	# URN emotes (wearable emotes)
 	if emote_id.begins_with("urn:"):
-		print("[AvatarShape] Playing URN emote: ", emote_id)
 		await async_play_emote(emote_id)
 	# Default emotes (wave, clap, dance, etc.) - play via emote controller
 	else:
-		# Try to play as a default emote
-		print("[AvatarShape] Playing default emote: ", emote_id)
 		await emote_controller.async_play_emote(emote_id)
