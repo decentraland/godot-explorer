@@ -29,9 +29,6 @@ pub struct DclPlayerIdentity {
     wallet: Option<CurrentWallet>,
     ephemeral_auth_chain: Option<EphemeralAuthChain>,
 
-    #[var]
-    target_config_id: GString,
-
     profile: Option<Gd<DclUserProfile>>,
 
     try_connect_account_handle: Option<JoinHandle<()>>,
@@ -57,7 +54,6 @@ impl INode for DclPlayerIdentity {
             is_guest: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
-            target_config_id: GString::default(),
         }
     }
 }
@@ -175,7 +171,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn try_connect_account(&mut self, target_config_id: GString) {
+    fn try_connect_account(&mut self) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -187,15 +183,8 @@ impl DclPlayerIdentity {
             .bind()
             .get_sender();
 
-        self.target_config_id = target_config_id.clone();
-        let target_config_id = if target_config_id.is_empty() {
-            None
-        } else {
-            Some(target_config_id.to_string())
-        };
-
         let try_connect_account_handle = handle.spawn(async move {
-            let wallet = RemoteWallet::with_auth_identity(sender, target_config_id).await;
+            let wallet = RemoteWallet::with_auth_identity(sender).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -238,7 +227,7 @@ impl DclPlayerIdentity {
     /// The app should wait for a deep link with signin identity ID,
     /// then call complete_mobile_connect_account with that ID.
     #[func]
-    fn start_mobile_connect_account(&mut self, target_config_id: GString) {
+    fn start_mobile_connect_account(&mut self, provider: GString) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -250,15 +239,14 @@ impl DclPlayerIdentity {
             .bind()
             .get_sender();
 
-        self.target_config_id = target_config_id.clone();
-        let target_config_id = if target_config_id.is_empty() {
+        let provider = if provider.is_empty() {
             None
         } else {
-            Some(target_config_id.to_string())
+            Some(provider.to_string())
         };
 
         handle.spawn(async move {
-            let result = start_mobile_auth(sender, target_config_id).await;
+            let result = start_mobile_auth(sender, provider).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -661,11 +649,8 @@ impl DclPlayerIdentity {
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let target_config_id = self.target_config_id.to_string();
             handle.spawn(async move {
-                let result = do_request(body, url_sender, Some(target_config_id))
-                    .await
-                    .map(|(_, result)| result);
+                let result = do_request(body, url_sender).await.map(|(_, result)| result);
                 response.send(result.map_err(|err| err.to_string()));
             });
         }

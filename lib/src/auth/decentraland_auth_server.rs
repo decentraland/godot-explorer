@@ -394,31 +394,26 @@ async fn create_new_request(
 /// Instead of polling, the app should wait for a deep link with the identity ID.
 /// Returns the request_id that will be received via deep link `decentraland://open?signin=${request_id}`
 pub async fn do_request_mobile(
-    message: CreateRequest,
+    _message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
-    target_config_id: Option<String>,
+    provider: Option<String>,
 ) -> Result<(), anyhow::Error> {
     tracing::debug!(
-        "do_request_mobile: starting mobile auth request, method={}, target_config_id={:?}",
-        message.method,
-        target_config_id
+        "do_request_mobile: starting mobile auth request, provider={:?}",
+        provider
     );
 
-    // Determine target_config_id based on OS or use the provided one
-    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
-        "ios" => "ios".to_string(),
-        "android" => "android".to_string(),
-        _ => "alternative".to_string(),
-    });
-    tracing::debug!(
-        "do_request_mobile: resolved target_config_id={}, os={}",
-        target_config_id,
-        std::env::consts::OS
-    );
+    // Build URL with optional provider parameter
+    let url = if let Some(provider) = provider {
+        format!("{}?provider={}", AUTH_MOBILE_FRONT_URL, provider)
+    } else {
+        AUTH_MOBILE_FRONT_URL.to_string()
+    };
+    tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter
         .send(GodotTokioCall::OpenUrl {
-            url: AUTH_MOBILE_FRONT_URL.into(),
+            url,
             description: "".into(),
             use_webview: true,
         })
@@ -432,12 +427,10 @@ pub async fn do_request_mobile(
 pub async fn do_request(
     message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
-    target_config_id: Option<String>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     tracing::debug!(
-        "do_request: starting auth request, method={}, target_config_id={:?}",
-        message.method,
-        target_config_id
+        "do_request: starting auth request, method={}",
+        message.method
     );
 
     let request = create_new_request(message).await?;
@@ -449,19 +442,7 @@ pub async fn do_request(
         code
     );
 
-    // Determine target_config_id based on OS or use the provided one
-    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
-        "ios" => "ios".to_string(),
-        "android" => "android".to_string(),
-        _ => "alternative".to_string(),
-    });
-    tracing::debug!(
-        "do_request: resolved target_config_id={}, os={}",
-        target_config_id,
-        std::env::consts::OS
-    );
-
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
+    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
     tracing::debug!("do_request: opening auth URL={}", url);
 
     url_reporter
@@ -575,7 +556,6 @@ mod test {
                 auth_chain: None,
             },
             sx,
-            None,
         )
         .await;
 

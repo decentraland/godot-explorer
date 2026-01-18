@@ -24,20 +24,14 @@ func set_lobby(new_lobby: Lobby):
 	lobby = new_lobby
 
 
-func async_login(social: bool):
-	var target_config_id := ""
-	if Global.is_android():
-		target_config_id = "androidSocial" if social else "androidWeb3"
-	elif Global.is_ios():
-		target_config_id = "ios"
-
+func async_login(social: bool, provider: String = ""):
 	# Use mobile auth flow (deep link based) only for ACTUAL mobile platforms (Android/iOS)
 	# Desktop uses polling-based flow even when --force-mobile is used for UI testing
 	var is_real_mobile = Global.is_android() or Global.is_ios()
 	if is_real_mobile:
-		Global.player_identity.start_mobile_connect_account(target_config_id)
+		Global.player_identity.start_mobile_connect_account(provider)
 	else:
-		Global.player_identity.try_connect_account(target_config_id)
+		Global.player_identity.try_connect_account()
 
 	lobby.waiting_for_new_wallet = true
 	lobby.show_auth_browser_open_screen()
@@ -58,25 +52,25 @@ func switch_google_with_apple():
 
 
 func _on_button_wallet_connect_pressed() -> void:
-	async_login(false)
+	async_login(false, "wallet-connect")
 	Global.metrics.track_click_button("wallet_connect", lobby.current_screen_name, "")
 
 
 func _on_button_google_pressed() -> void:
-	async_login(true)
+	async_login(true, "google")
 	Global.metrics.track_click_button("google", lobby.current_screen_name, "")
 
 
 func _on_button_discord_pressed() -> void:
-	async_login(true)
+	async_login(true, "discord")
 	Global.metrics.track_click_button("discord", lobby.current_screen_name, "")
 
 
 func _on_button_x_pressed() -> void:
-	async_login(true)
+	async_login(true, "x")
 	Global.metrics.track_click_button("x", lobby.current_screen_name, "")
 
 
 func _on_button_apple_pressed() -> void:
-	async_login(true)
+	async_login(true, "apple")
 	Global.metrics.track_click_button("apple", lobby.current_screen_name, "")
