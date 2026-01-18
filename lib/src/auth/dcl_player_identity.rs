@@ -69,6 +69,9 @@ impl DclPlayerIdentity {
     #[signal]
     fn profile_changed(new_profile: Gd<DclUserProfile>);
 
+    #[signal]
+    fn auth_error(error_message: GString);
+
     #[func]
     fn try_set_remote_wallet(
         &mut self,
@@ -160,6 +163,8 @@ impl DclPlayerIdentity {
     #[func]
     fn _error_getting_wallet(&mut self, error_str: GString) {
         tracing::error!("error getting wallet {:?}", error_str);
+        self.base_mut()
+            .emit_signal("auth_error", &[error_str.to_variant()]);
     }
 
     #[func]
