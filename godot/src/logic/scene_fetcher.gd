@@ -693,10 +693,6 @@ func async_load_scene(
 		for file_path in files:
 			var file_hash = content_mapping.get_hash(file_path)
 			Global.content_provider.purge_file(file_hash)
-		# Also purge the optimized zip file if it exists
-		var optimized_zip_path = "user://content/" + scene_entity_id + "-mobile.zip"
-		if FileAccess.file_exists(optimized_zip_path):
-			DirAccess.remove_absolute(optimized_zip_path)
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null
