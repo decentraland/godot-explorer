@@ -58,6 +58,8 @@ var _dirty_connected: bool = false
 @onready var radio_selector_aa = %RadioSelector_AA
 
 @onready var radio_selector_limit_fps = %RadioSelector_LimitFps
+@onready var container_limit_fps = %LimitFps
+@onready var container_resolution_3d_scale = %Resolution3DScale
 
 #Advanced items:
 @onready var option_button_realm = %OptionButton_Realm
@@ -115,10 +117,10 @@ func refresh_graphic_settings():
 	box_container_custom.visible = is_custom_profile
 	radio_selector_graphic_profile.selected = graphic_profile
 
-	# Disable FPS limit and 3D resolution scale when using preset profiles
-	# These are controlled by the profile, not manually
-	radio_selector_limit_fps.set_disabled(not is_custom_profile)
-	h_slider_rendering_scale.editable = is_custom_profile
+	# Hide FPS limit and 3D resolution scale when using preset profiles
+	# These are controlled by the profile, not user-configurable
+	container_limit_fps.visible = is_custom_profile
+	container_resolution_3d_scale.visible = is_custom_profile
 
 	if Global.is_mobile():
 		v_box_container_windowed.hide()
