@@ -58,6 +58,7 @@ const TERMS_AND_CONDITIONS_VERSION: int = 1
 const LOCAL_ASSETS_CACHE_VERSION: int = 3
 
 ## Global classes (singleton pattern)
+
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
@@ -92,6 +93,8 @@ var deep_link_url: String = ""
 
 var player_camera_node: DclCamera3D
 var session_id: String
+
+var _is_portrait: bool = true
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
@@ -579,11 +582,11 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
+	_is_portrait = false
 
 
 func is_orientation_portrait() -> bool:
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	return window_size.x < window_size.y
+	return _is_portrait
 
 
 func set_orientation_portrait():
@@ -600,10 +603,7 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
-
-
-func set_orientation_sensor():
-	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+	_is_portrait = true
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):

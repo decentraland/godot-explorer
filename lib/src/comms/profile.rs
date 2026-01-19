@@ -83,6 +83,8 @@ pub struct AvatarWireFormat {
     pub emotes: Option<Vec<AvatarEmote>>,
     pub snapshots: Option<AvatarSnapshots>,
     pub force_render: Option<Vec<String>>,
+    #[serde(default)]
+    pub show_only_wearables: bool,
 }
 
 #[derive(Deserialize)]
@@ -169,6 +171,7 @@ impl Default for AvatarWireFormat {
                 },
             }),
             force_render: Some(vec![]),
+            show_only_wearables: false,
         }
     }
 }

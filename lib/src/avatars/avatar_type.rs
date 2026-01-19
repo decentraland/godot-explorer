@@ -125,6 +125,11 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
+    fn get_show_only_wearables(&self) -> bool {
+        self.inner.show_only_wearables
+    }
+
+    #[func]
     fn get_snapshots_body_url(&self) -> GString {
         self.inner
             .snapshots

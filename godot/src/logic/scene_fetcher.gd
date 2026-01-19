@@ -53,6 +53,11 @@ var _use_dynamic_loading: bool = false
 # This is a one-shot flag that gets reset after use
 var _is_reloading: bool = false
 
+# Flag to purge cache on first scene load in preview mode
+# This prevents the race condition where cached content is used before
+# the WebSocket SCENE_UPDATE can trigger a reload
+var _purge_cache_on_first_load: bool = false
+
 # This counter is to control the async-flow
 var _scene_changed_counter: int = 0
 
@@ -377,6 +382,13 @@ func _on_realm_changed():
 	Global.get_config().last_realm_joined = Global.realm.realm_url
 	Global.get_config().save_to_settings_file()
 
+	# In preview mode, purge cache on first scene load to avoid using stale cached content
+	# This prevents the race condition where cached content is used before
+	# the WebSocket SCENE_UPDATE can trigger a reload
+	var is_preview_mode = Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty()
+	if is_preview_mode:
+		_purge_cache_on_first_load = true
+
 	# Check if we should use dynamic loading mode
 	# Dynamic loading is enabled via deep link parameter: &dynamic-scene-loading=true
 	# This works for any realm including Genesis City
@@ -671,6 +683,16 @@ func async_load_scene(
 	loaded_scenes[scene_entity_id] = scene_item
 
 	var content_mapping := scene_entity_definition.get_content_mapping()
+
+	# In preview mode, purge cached files on first load to ensure fresh content
+	# This prevents the race condition where cached content is used before
+	# the WebSocket SCENE_UPDATE can trigger a reload
+	if _purge_cache_on_first_load:
+		_purge_cache_on_first_load = false
+		var files: PackedStringArray = content_mapping.get_files()
+		for file_path in files:
+			var file_hash = content_mapping.get_hash(file_path)
+			Global.content_provider.purge_file(file_hash)
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null
