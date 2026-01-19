@@ -563,4 +563,30 @@ impl DclGlobal {
         use crate::tools::sentry_logger::emit_sentry_test_messages;
         emit_sentry_test_messages();
     }
+
+    /// Set the Decentraland environment for URL transformation.
+    /// Valid values: "org", "zone", "today"
+    #[func]
+    pub fn set_dcl_environment(env: GString) {
+        if let Some(dcl_env) = crate::env::DclEnvironment::from_str(&env.to_string()) {
+            crate::env::set_environment(dcl_env);
+        } else {
+            tracing::warn!("Invalid environment value: {}", env);
+        }
+    }
+
+    /// Get the current Decentraland environment suffix.
+    /// Returns: "org", "zone", or "today"
+    #[func]
+    pub fn get_dcl_environment() -> GString {
+        GString::from(crate::env::get_environment().suffix())
+    }
+
+    /// Transform a URL to use the current environment's domain.
+    /// Replaces decentraland.org with decentraland.{env}
+    #[func]
+    pub fn transform_url(url: GString) -> GString {
+        let transformed = crate::env::transform_url(&url.to_string());
+        GString::from(transformed.as_str())
+    }
 }

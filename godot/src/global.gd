@@ -225,6 +225,12 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
+	# Initialize environment from deep link or default to "org"
+	var env = deep_link_obj.dclenv if not deep_link_obj.dclenv.is_empty() else "org"
+	DclGlobal.set_dcl_environment(env)
+	if env != "org":
+		print("[GLOBAL] Environment set to: ", env)
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 

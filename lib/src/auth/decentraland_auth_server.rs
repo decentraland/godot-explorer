@@ -6,20 +6,25 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 
 use super::wallet::SimpleAuthChain;
 
-// Production
+// Production URLs (will be transformed based on environment)
 const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
 const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
 
-// Localhost with .zone auth-api
-// const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
+/// Get the auth front URL transformed for the current environment
+fn get_auth_front_url() -> String {
+    crate::env::transform_url(AUTH_FRONT_URL)
+}
 
-// Staging with .zone frontend + .zone auth-api
-// const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
+/// Get the auth server endpoint URL transformed for the current environment
+fn get_auth_server_endpoint_url() -> String {
+    crate::env::transform_url(AUTH_SERVER_ENDPOINT_URL)
+}
+
+/// Get the auth server endpoint base URL transformed for the current environment
+fn get_auth_server_endpoint_base_url() -> String {
+    crate::env::transform_url(AUTH_SERVER_ENDPOINT_BASE_URL)
+}
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
@@ -101,7 +106,7 @@ pub struct AuthLink {
 /// instead of polling for the result.
 /// Returns the full AuthIdentity including ephemeral private key and auth chain.
 pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityResponse, anyhow::Error> {
-    let url = format!("{AUTH_SERVER_ENDPOINT_BASE_URL}/identities/{identity_id}");
+    let url = format!("{}/identities/{identity_id}", get_auth_server_endpoint_base_url());
     tracing::debug!(
         "fetch_identity_by_id: requesting identity_id={}, url={}",
         identity_id,
@@ -172,7 +177,7 @@ pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityRespons
 async fn fetch_polling_server(
     req_id: String,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
-    let url = format!("{AUTH_SERVER_ENDPOINT_URL}/{req_id}");
+    let url = format!("{}/{req_id}", get_auth_server_endpoint_url());
     tracing::debug!(
         "fetch_polling_server: starting polling for req_id={}, url={}, max_retries={}, timeout={}s",
         req_id,
@@ -346,9 +351,10 @@ async fn create_new_request(
     );
 
     let body = serde_json::to_string(&message).expect("valid json");
+    let endpoint_url = get_auth_server_endpoint_url();
     tracing::trace!(
         "create_new_request: POST to {} with body length={}",
-        AUTH_SERVER_ENDPOINT_URL,
+        endpoint_url,
         body.len()
     );
 
@@ -356,7 +362,7 @@ async fn create_new_request(
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
         .expect("reqwest build error")
-        .post(AUTH_SERVER_ENDPOINT_URL)
+        .post(&endpoint_url)
         .header("Content-Type", "application/json")
         .body(body)
         .send()
@@ -428,7 +434,7 @@ pub async fn do_request_mobile(
         std::env::consts::OS
     );
 
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}&flow=deeplink");
+    let url = format!("{}/{req_id}?targetConfigId={target_config_id}&flow=deeplink", get_auth_front_url());
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter
@@ -481,7 +487,7 @@ pub async fn do_request(
         std::env::consts::OS
     );
 
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
+    let url = format!("{}/{req_id}?targetConfigId={target_config_id}", get_auth_front_url());
     tracing::debug!("do_request: opening auth URL={}", url);
 
     url_reporter
