@@ -103,6 +103,7 @@ mod ios {
 
         // Use OSLog for iOS - writes to the system log instead of stderr
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
+        // Note: Level is shown in Console.app's "Type" column, target is not included in message
         let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
         // Add Sentry layer to capture errors and warnings
@@ -115,11 +116,18 @@ mod ios {
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod desktop {
     use crate::tools::sentry_logger::SentryTracingLayer;
+    use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
     pub fn init_logger() {
-        let fmt_layer = tracing_subscriber::fmt::layer();
+        // Respect RUST_LOG environment variable, default to "warn" if not set
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
+            eprintln!("RUST_LOG not set or invalid ({e}), defaulting to 'warn'");
+            EnvFilter::new("warn")
+        });
+
+        let fmt_layer = tracing_subscriber::fmt::layer().with_filter(filter);
         let sentry_layer = SentryTracingLayer;
 
         registry()
@@ -454,6 +462,21 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").contains("-dev")
     }
 
+    #[func]
+    pub fn get_commit_hash() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_HASH").into()
+    }
+
+    #[func]
+    pub fn get_commit_message() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_MESSAGE").into()
+    }
+
+    #[func]
+    pub fn get_branch_name() -> GString {
+        env!("GODOT_EXPLORER_BRANCH_NAME").into()
+    }
+
     pub fn has_singleton() -> bool {
         let Some(main_loop) = Engine::singleton().get_main_loop() else {
             return false;
@@ -534,23 +557,10 @@ impl DclGlobal {
         self.input_modifier_disable_all
     }
 
-    /// Drains and returns all pending Rust log entries (errors and warnings) for Sentry.
-    /// Returns an Array of Dictionaries with keys: "level" (String), "message" (String), "target" (String)
+    /// Emits test messages at various Rust tracing levels to verify Sentry integration.
     #[func]
-    pub fn drain_rust_logs() -> VarArray {
-        use crate::tools::sentry_logger::drain_sentry_logs;
-
-        let logs = drain_sentry_logs();
-        let mut result = VarArray::new();
-
-        for entry in logs {
-            let mut dict = VarDictionary::new();
-            dict.set("level", entry.level.as_str());
-            dict.set("message", entry.message);
-            dict.set("target", entry.target);
-            result.push(&dict.to_variant());
-        }
-
-        result
+    pub fn emit_sentry_rust_test_messages() {
+        use crate::tools::sentry_logger::emit_sentry_test_messages;
+        emit_sentry_test_messages();
     }
 }

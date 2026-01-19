@@ -14,3 +14,14 @@ runs:
           echo "PROD_FLAG=--staging" >> $GITHUB_ENV
           echo "Running on ${{ github.ref }} - setting PROD_FLAG=--staging"
         fi
+    - name: Set branch name for Sentry tags
+      shell: bash
+      run: |
+        # For PRs, use head_ref (the source branch), otherwise use ref_name
+        if [ -n "${{ github.head_ref }}" ]; then
+          echo "BRANCH_NAME=${{ github.head_ref }}" >> $GITHUB_ENV
+          echo "Setting BRANCH_NAME=${{ github.head_ref }}"
+        else
+          echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "Setting BRANCH_NAME=${{ github.ref_name }}"
+        fi

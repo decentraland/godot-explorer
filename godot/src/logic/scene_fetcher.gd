@@ -10,6 +10,7 @@ const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
+const INVALID_PARCEL := Vector2i(-1000, -1000)
 
 
 class SceneItem:
@@ -24,7 +25,7 @@ class SceneItem:
 	var is_global: bool = false
 
 
-var current_position: Vector2i = Vector2i(-1000, -1000)
+var current_position: Vector2i = INVALID_PARCEL
 var current_scene_entity_id: String = ""
 
 var loaded_empty_scenes: Dictionary = {}
@@ -48,6 +49,11 @@ var _use_dynamic_loading: bool = false
 # This is a one-shot flag that gets reset after use
 var _is_reloading: bool = false
 
+# Flag to purge cache on first scene load in preview mode
+# This prevents the race condition where cached content is used before
+# the WebSocket SCENE_UPDATE can trigger a reload
+var _purge_cache_on_first_load: bool = false
+
 # This counter is to control the async-flow
 var _scene_changed_counter: int = 0
 
@@ -56,7 +62,17 @@ var _debugging_js_scene_id: String = ""
 var _bypass_loading_check: bool = false
 
 # Track the target parcel during teleport to ensure correct spawn point
-var _teleport_target_parcel: Vector2i = Vector2i(-1000, -1000)
+var _teleport_target_parcel: Vector2i = INVALID_PARCEL
+
+# Track if the coordinator has been configured (config() called)
+var _coordinator_configured: bool = false
+
+# Async floating islands generation state
+var _floating_islands_generating: bool = false
+var _floating_islands_generation_data: Dictionary = {}  # Captured data for generation
+var _floating_islands_queue: Array = []  # Coordinates to generate
+var _floating_islands_total: int = 0
+var _floating_islands_created: int = 0
 
 
 func _ready():
@@ -76,7 +92,7 @@ func _ready():
 	# Set scene radius based on mode:
 	# - Floating islands: radius 5 to load scenes within range (avoids loading all scattered scenes)
 	# - City/test mode: radius 0 for precise coordinate-based loading
-	var scene_radius = 5 if is_using_floating_islands() else 0
+	var scene_radius = 5 if _use_dynamic_loading else 0
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
@@ -93,15 +109,17 @@ func get_current_spawn_point():
 
 func on_loading_finished():
 	var spawn_parcel = current_position
-	if is_using_floating_islands() and _teleport_target_parcel != Vector2i(-1000, -1000):
+	if is_using_floating_islands() and _teleport_target_parcel != INVALID_PARCEL:
 		spawn_parcel = _teleport_target_parcel
-		_teleport_target_parcel = Vector2i(-1000, -1000)
+		_teleport_target_parcel = INVALID_PARCEL
 
 	var scene_data = get_scene_data(spawn_parcel)
 	if scene_data != null:
 		var target_position = scene_data.scene_entity_definition.get_global_spawn_position()
 		if target_position != null:
-			Global.get_explorer().move_to(target_position, true)
+			# Try raycast to find ground, fallback to original position
+			var ground_position := _raycast_to_ground(target_position)
+			Global.get_explorer().move_to(ground_position, true)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -147,6 +165,8 @@ func set_dynamic_loading_mode(enabled: bool) -> void:
 		return
 
 	_use_dynamic_loading = enabled
+	var scene_radius = 5 if _use_dynamic_loading else 0
+	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	if enabled:
 		# Clear floating island state when enabling dynamic mode
@@ -166,6 +186,9 @@ func is_dynamic_loading_mode() -> bool:
 
 # gdlint:ignore = async-function-name
 func _process(_dt):
+	# Process async floating islands generation (2 parcels per frame)
+	_process_floating_islands_batch()
+
 	scene_entity_coordinator.update()
 
 	var version := scene_entity_coordinator.get_version()
@@ -184,7 +207,7 @@ func _process(_dt):
 	var scene_entity_id := scene_entity_coordinator.get_scene_entity_id(current_position)
 
 	# Skip processing when at invalid initial position to avoid spam
-	var is_invalid_position = current_position == Vector2i(-1000, -1000)
+	var is_invalid_position = current_position == INVALID_PARCEL
 
 	# Check if there's an actual change (not just empty -> empty)
 	var has_actual_change = (
@@ -244,25 +267,29 @@ func _async_on_desired_scene_changed():
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
+	# Capture reloading flag - only consume it when there are scenes to load
+	# This ensures we don't lose the flag if coordinator hasn't discovered scenes yet
+	var is_reloading_now := _is_reloading
+	if not loadable_scenes.is_empty():
+		_is_reloading = false  # Only reset when we have scenes to consider
+
 	# Determine if we should show a loading screen
-	# Show loading screen ONLY when:
-	# - We have no scenes loaded AND there are scenes to load (initial load)
-	# - We're in floating islands mode (not dynamic loading)
-	# - We're NOT in dynamic loading mode
-	# - We're NOT reloading (teleport, reload_scene, etc.)
+	# Show loading screen when:
+	# - We have no scenes loaded AND there are scenes to load
+	# - We're in floating islands mode
+	# - Either NOT in dynamic loading mode, OR this is a teleport (user expects to wait)
 	var new_loading = (
 		loaded_scenes.is_empty()
 		and not loadable_scenes.is_empty()
 		and is_using_floating_islands()
-		and not _use_dynamic_loading
+		and (not _use_dynamic_loading or is_reloading_now)
 	)
 
-	# Skip loading screen for any reload scenario (teleports, scene reloads, etc.)
-	if new_loading and _is_reloading:
-		_is_reloading = false  # Reset the flag after use (one-shot)
-		new_loading = false
-
+	# Start a new loading session if we need to load scenes
+	# The loading session tracks progress through the Rust-based LoadingSession
+	var scenes_to_load: PackedStringArray = PackedStringArray()
 	var loading_promises: Array = []
+
 	for scene_id in loadable_scenes:
 		var should_load = false
 		if not loaded_scenes.has(scene_id):
@@ -277,10 +304,20 @@ func _async_on_desired_scene_changed():
 		if should_load:
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
 			if scene_definition != null:
+				scenes_to_load.append(scene_id)
 				loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
 			else:
 				printerr("should load scene_id ", scene_id, " but data is empty")
+				# Report as fetched (with null definition) so loading session can progress
+				Global.scene_runner.report_scene_fetched(scene_id)
 
+	# Start a loading session for the new scenes (cancels any existing session)
+	var loading_session_started := false
+	if scenes_to_load.size() > 0 and new_loading:
+		Global.scene_runner.start_loading_session(scenes_to_load)
+		loading_session_started = true
+
+	# Keep the old signal for backwards compatibility
 	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
 	await PromiseUtils.async_all(loading_promises)
@@ -328,7 +365,78 @@ func _async_on_desired_scene_changed():
 		loaded_empty_scenes.clear()
 
 	if use_floating_islands:
+		# Wait for coordinator to finish fetching all scene metadata before generating islands
+		# This ensures we know all occupied parcels before creating the terrain
+		var max_wait_frames := 300  # ~5 seconds at 60fps
+		var wait_frames := 0
+		var coordinator_was_busy := scene_entity_coordinator.is_busy()
+
+		while scene_entity_coordinator.is_busy() and wait_frames < max_wait_frames:
+			coordinator_was_busy = true
+			await get_tree().process_frame
+			wait_frames += 1
+			# Check if a new call to this function was made while waiting
+			if counter_this_call != _scene_changed_counter:
+				return
+
+		# If coordinator was never busy and we're reloading, wait a bit for it to start
+		# This handles the case where realm just changed and coordinator hasn't queued requests yet
+		if not coordinator_was_busy and is_reloading_now:
+			var startup_wait := 0
+			while not scene_entity_coordinator.is_busy() and startup_wait < 30:  # ~0.5s at 60fps
+				await get_tree().process_frame
+				startup_wait += 1
+				if counter_this_call != _scene_changed_counter:
+					return
+
+			# Now wait for it to finish
+			while scene_entity_coordinator.is_busy() and wait_frames < max_wait_frames:
+				coordinator_was_busy = true
+				await get_tree().process_frame
+				wait_frames += 1
+				if counter_this_call != _scene_changed_counter:
+					return
+
+		if wait_frames >= max_wait_frames:
+			printerr(
+				"WARNING: Timed out waiting for scene_entity_coordinator to finish fetching scenes"
+			)
+
+		# After waiting, check if new scenes were discovered and load them
+		var final_desired = scene_entity_coordinator.get_desired_scenes()
+		var final_loadable = final_desired.get("loadable_scenes", [])
+		var new_scenes_to_load: PackedStringArray = PackedStringArray()
+		var new_loading_promises: Array = []
+
+		for scene_id in final_loadable:
+			if not loaded_scenes.has(scene_id):
+				var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
+				if scene_definition != null:
+					new_scenes_to_load.append(scene_id)
+					new_loading_promises.push_back(
+						async_load_scene.bind(scene_id, scene_definition)
+					)
+
+		# Start a loading session for newly discovered scenes
+		if new_scenes_to_load.size() > 0:
+			Global.scene_runner.start_loading_session(new_scenes_to_load)
+			loading_session_started = true
+
+		if new_loading_promises.size() > 0:
+			await PromiseUtils.async_all(new_loading_promises)
+			# Check again if a new call was made while loading
+			if counter_this_call != _scene_changed_counter:
+				return
+
 		_regenerate_floating_islands()
+
+		# If no loading session was started but we're in floating islands mode,
+		# emit loading_complete to hide the loading screen (e.g., teleporting to empty parcel)
+		# Only emit if:
+		# - Coordinator was busy at some point (meaning it fetched and found no scenes), OR
+		# - We're not in a reloading state (normal update, not teleport/realm change)
+		if not loading_session_started and (coordinator_was_busy or not is_reloading_now):
+			Global.scene_runner.loading_complete.emit(-1)
 
 	var empty_parcels_coords = []
 	if use_floating_islands and !last_scene_group_hash.is_empty():
@@ -356,6 +464,13 @@ func _on_realm_changed():
 	Global.get_config().last_realm_joined = Global.realm.realm_url
 	Global.get_config().save_to_settings_file()
 
+	# In preview mode, purge cache on first scene load to avoid using stale cached content
+	# This prevents the race condition where cached content is used before
+	# the WebSocket SCENE_UPDATE can trigger a reload
+	var is_preview_mode = Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty()
+	if is_preview_mode:
+		_purge_cache_on_first_load = true
+
 	# Check if we should use dynamic loading mode
 	# Dynamic loading is enabled via deep link parameter: &dynamic-scene-loading=true
 	# This works for any realm including Genesis City
@@ -380,6 +495,7 @@ func _on_realm_changed():
 	scene_entity_coordinator.config(
 		content_base_url + "entities/active", content_base_url, should_load_city_pointers
 	)
+	_coordinator_configured = true
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
@@ -444,18 +560,36 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 
 
 func _regenerate_floating_islands() -> void:
+	# Guard against overlapping generation
+	if _floating_islands_generating:
+		return
+
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
 	var all_scene_parcels = []
 	for scene_id in loaded_scenes.keys():
 		var scene: SceneItem = loaded_scenes[scene_id]
 
-		# Include parcels from all loaded non-global scenes
-		if not scene.is_global and scene.scene_number_id != -1:
+		# Include parcels from all non-global scenes (including those still loading)
+		# We know their parcels from metadata even before they're fully spawned
+		if not scene.is_global:
 			for parcel in scene.parcels:
 				all_scene_parcels.append(parcel)
 
-	if all_scene_parcels.is_empty():
-		return
+	var is_empty_parcel_mode := all_scene_parcels.is_empty()
+	var empty_parcel_center := INVALID_PARCEL
+
+	if is_empty_parcel_mode:
+		# No scenes loaded - use current position as center of the floating island
+		var target_parcel = current_position
+		if _teleport_target_parcel != INVALID_PARCEL:
+			target_parcel = _teleport_target_parcel
+
+		if target_parcel == INVALID_PARCEL:
+			return
+
+		empty_parcel_center = target_parcel
+		# Treat current position as if it were a "scene" to generate the surrounding island
+		all_scene_parcels = [target_parcel]
 
 	var current_scene_group_hash: String = str(all_scene_parcels.hash())
 
@@ -464,6 +598,52 @@ func _regenerate_floating_islands() -> void:
 		return
 
 	last_scene_group_hash = current_scene_group_hash
+
+	# Calculate bounds
+	var min_x = all_scene_parcels[0].x
+	var max_x = all_scene_parcels[0].x
+	var min_z = all_scene_parcels[0].y
+	var max_z = all_scene_parcels[0].y
+
+	for parcel in all_scene_parcels:
+		min_x = min(min_x, parcel.x)
+		max_x = max(max_x, parcel.x)
+		min_z = min(min_z, parcel.y)
+		max_z = max(max_z, parcel.y)
+
+	# Create a set of scene parcels for quick lookup (captured data)
+	var scene_parcel_set = {}
+	for parcel in all_scene_parcels:
+		scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
+
+	var padding = 2
+
+	# Build queue of coordinates to generate
+	_floating_islands_queue = []
+	for x in range(min_x - padding, max_x + padding + 1):
+		for z in range(min_z - padding, max_z + padding + 1):
+			var coord = Vector2i(x, z)
+			# Only add empty parcels if they're not occupied by actual scenes
+			if not scene_parcel_set.has(coord):
+				_floating_islands_queue.append(coord)
+
+	_floating_islands_total = _floating_islands_queue.size()
+	_floating_islands_created = 0
+
+	# Capture all needed data for async generation
+	_floating_islands_generation_data = {
+		"scene_parcel_set": scene_parcel_set,
+		"min_x": min_x,
+		"max_x": max_x,
+		"min_z": min_z,
+		"max_z": max_z,
+		"padding": padding,
+		"is_empty_parcel_mode": is_empty_parcel_mode,
+		"empty_parcel_center": empty_parcel_center
+	}
+
+	# Signal floating islands generation start with count
+	Global.scene_runner.start_floating_islands(_floating_islands_total)
 
 	# Clear old empty parcels
 	for parcel in loaded_empty_scenes:
@@ -475,8 +655,155 @@ func _regenerate_floating_islands() -> void:
 	if wall_manager:
 		wall_manager.clear_walls()
 
-	# Create floating island platform considering all loaded scenes
-	_create_floating_island_for_cluster(all_scene_parcels)
+	# Start async generation
+	_floating_islands_generating = true
+
+
+## Process async floating islands generation - 2 parcels per frame
+func _process_floating_islands_batch() -> void:
+	if not _floating_islands_generating:
+		return
+
+	# Process 2 parcels per frame
+	var parcels_this_frame = mini(2, _floating_islands_queue.size())
+	for i in parcels_this_frame:
+		var coord = _floating_islands_queue.pop_front()
+		_create_single_empty_parcel(coord)
+		_floating_islands_created += 1
+
+	# Report progress
+	Global.scene_runner.report_floating_islands_progress(
+		_floating_islands_created, _floating_islands_total
+	)
+
+	# Check if generation is complete
+	if _floating_islands_queue.is_empty():
+		_finish_floating_islands_generation()
+
+
+## Create a single empty parcel at the given coordinate
+func _create_single_empty_parcel(coord: Vector2i) -> void:
+	var x = coord.x
+	var z = coord.y
+	var parcel_string = "%d,%d" % [x, z]
+
+	if loaded_empty_scenes.has(parcel_string):
+		return  # Already exists
+
+	var data = _floating_islands_generation_data
+	var scene_parcel_set = data.get("scene_parcel_set", {})
+	var min_x = data.get("min_x", 0)
+	var max_x = data.get("max_x", 0)
+	var min_z = data.get("min_z", 0)
+	var max_z = data.get("max_z", 0)
+	var padding = data.get("padding", 2)
+
+	var scene: Node3D = EMPTY_SCENE.instantiate()
+	var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+	scene.name = temp
+	add_child(scene)
+	scene.global_position = Vector3(
+		x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+		0,
+		-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+	)
+
+	var config = _calculate_parcel_adjacency(
+		x, z, min_x - padding, max_x + padding, min_z - padding, max_z + padding, scene_parcel_set
+	)
+	scene.set_corner_configuration.call_deferred(config)
+
+	loaded_empty_scenes[parcel_string] = scene
+
+
+## Finish floating islands generation (create walls, handle empty parcel mode, signal completion)
+func _finish_floating_islands_generation() -> void:
+	var data = _floating_islands_generation_data
+	var min_x: int = data.get("min_x", 0)
+	var max_x: int = data.get("max_x", 0)
+	var min_z: int = data.get("min_z", 0)
+	var max_z: int = data.get("max_z", 0)
+	var padding: int = data.get("padding", 2)
+	var is_empty_parcel_mode: bool = data.get("is_empty_parcel_mode", false)
+	var empty_parcel_center: Vector2i = data.get("empty_parcel_center", INVALID_PARCEL)
+
+	# Create walls
+	if wall_manager:
+		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
+
+	# For empty parcel mode, also create an empty parcel at the center
+	if is_empty_parcel_mode and empty_parcel_center != INVALID_PARCEL:
+		var x := empty_parcel_center.x
+		var z := empty_parcel_center.y
+		var parcel_string := "%d,%d" % [x, z]
+
+		var scene: Node3D = EMPTY_SCENE.instantiate()
+		var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
+		scene.name = temp
+		add_child(scene)
+		scene.global_position = Vector3(
+			x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+			0,
+			-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+		)
+
+		# Center parcel has all neighbors as LOADED (flat terrain with edge strips)
+		var config := CornerConfiguration.new()
+		config.north = CornerConfiguration.ParcelState.LOADED
+		config.south = CornerConfiguration.ParcelState.LOADED
+		config.east = CornerConfiguration.ParcelState.LOADED
+		config.west = CornerConfiguration.ParcelState.LOADED
+		config.northwest = CornerConfiguration.ParcelState.LOADED
+		config.northeast = CornerConfiguration.ParcelState.LOADED
+		config.southwest = CornerConfiguration.ParcelState.LOADED
+		config.southeast = CornerConfiguration.ParcelState.LOADED
+		scene.set_corner_configuration.call_deferred(config)
+
+		loaded_empty_scenes[parcel_string] = scene
+
+		# Spawn player after terrain is generated
+		var terrain_gen = scene.get_node("TerrainGenerator")
+		terrain_gen.terrain_generated.connect(
+			_async_spawn_on_empty_parcel.bind(empty_parcel_center), CONNECT_ONE_SHOT
+		)
+
+	# Clear generation state
+	_floating_islands_generating = false
+	_floating_islands_generation_data = {}
+	_floating_islands_queue = []
+
+	# Signal floating islands generation complete (100%)
+	Global.scene_runner.finish_floating_islands()
+
+
+func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
+	# Wait one more physics frame to ensure collision shape is ready
+	await get_tree().physics_frame
+	var parcel_center := Vector3(
+		parcel.x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+		0,
+		-parcel.y * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+	)
+	var ground_position := _raycast_to_ground(parcel_center)
+	Global.get_explorer().move_to(ground_position, true)
+
+
+func _raycast_to_ground(from_position: Vector3) -> Vector3:
+	var space_state := get_tree().root.get_world_3d().direct_space_state
+	var ray_origin := Vector3(from_position.x, 100.0, from_position.z)
+	var ray_end := Vector3(from_position.x, -10.0, from_position.z)
+
+	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	# Layer 1 = scene geometry, Layer 2 = empty parcel terrain
+	query.collision_mask = 3
+
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		# No ground found, use original position or default height
+		return Vector3(from_position.x, maxf(from_position.y, 2.0), from_position.z)
+
+	# Position player slightly above ground
+	return result.position + Vector3(0, 1.0, 0)
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
@@ -492,8 +819,8 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	if is_teleport:
 		_teleport_target_parcel = new_position
 
-		# Always skip loading screen for teleports (both same and different positions)
-		# Teleports are user-initiated and should feel seamless
+		# Mark as reloading to show loading screen even in dynamic loading mode
+		# This ensures scenes are properly loaded before user interaction
 		_is_reloading = true
 
 		# If teleporting to the same position, force scene processing even if we're in the same scene entity
@@ -517,8 +844,10 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	# - Not using floating islands (test/renderer mode)
 	# - OR is a teleport
 	# - OR dynamic loading mode is enabled (need continuous position updates)
-	if not is_using_floating_islands() or is_teleport or _use_dynamic_loading:
-		scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
+	# Only if coordinator has been configured (to avoid errors during initialization)
+	if _coordinator_configured:
+		if not is_using_floating_islands() or is_teleport or _use_dynamic_loading:
+			scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 	player_parcel_changed.emit(new_position)
 
@@ -545,7 +874,30 @@ func async_load_scene(
 
 	loaded_scenes[scene_entity_id] = scene_item
 
+	# Warn if floating islands were already generated before this scene was discovered
+	# This indicates a timing issue where scene_entity_coordinator discovered scenes late
+	if is_using_floating_islands() and not _use_dynamic_loading:
+		if not last_scene_group_hash.is_empty() and not scene_item.is_global:
+			printerr(
+				"WARNING: Scene ",
+				scene_entity_id,
+				" discovered after floating islands were generated. ",
+				"Parcels: ",
+				parcels,
+				". Islands will be regenerated."
+			)
+
 	var content_mapping := scene_entity_definition.get_content_mapping()
+
+	# In preview mode, purge cached files on first load to ensure fresh content
+	# This prevents the race condition where cached content is used before
+	# the WebSocket SCENE_UPDATE can trigger a reload
+	if _purge_cache_on_first_load:
+		_purge_cache_on_first_load = false
+		var files: PackedStringArray = content_mapping.get_files()
+		for file_path in files:
+			var file_hash = content_mapping.get_hash(file_path)
+			Global.content_provider.purge_file(file_hash)
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null
@@ -575,6 +927,8 @@ func async_load_scene(
 				" fail getting the script code content, error message: ",
 				script_res.get_error()
 			)
+			# Still report as fetched (with error) so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
 
 			send_scene_failed_metrics(
 				scene_entity_id, "script_fetch_failed", script_res.get_error()
@@ -596,6 +950,8 @@ func async_load_scene(
 				" fail getting the main crdt content, error message: ",
 				res.get_error()
 			)
+			# Still report as fetched (with error) so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
 
 			send_scene_failed_metrics(scene_entity_id, "crdt_fetch_failed", res.get_error())
 
@@ -606,23 +962,67 @@ func async_load_scene(
 		"%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
 	)
 
-	# Check if optimized zip already exists to avoid re-download hang
-	var zip_file_path = "user://content/" + scene_hash_zip
-	var download_res = null
-	if FileAccess.file_exists(zip_file_path):
-		download_res = true  # Pretend success since file exists
-	else:
-		var download_promise: Promise = Global.content_provider.fetch_file_by_url(
-			scene_hash_zip, asset_url
-		)
-		download_res = await PromiseUtils.async_awaiter(download_promise)
+	# Skip optimized zip download when:
+	# - XR mode (handled separately)
+	# - Testing scene mode (handled separately)
+	# - --only-no-optimized flag (explicitly loading non-optimized scenes)
+	var skip_optimized = (
+		Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
+	)
 
-	if Global.is_xr() or Global.get_testing_scene_mode():
-		pass  # Scene optimization skipped (XR/testing mode)
-	elif download_res is PromiseError:
-		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
+	var download_success := false
+	var download_error: PromiseError = null
+	var file_not_found_remotely := false
+	if not skip_optimized:
+		# Check if optimized zip already exists to avoid re-download hang
+		var zip_file_path = "user://content/" + scene_hash_zip
+		if FileAccess.file_exists(zip_file_path):
+			download_success = true
+		else:
+			# First check if the file exists remotely (HEAD request)
+			# This avoids treating 404s as errors - scenes without optimized versions are expected
+			var exists_promise = Global.content_provider.check_remote_file_exists(asset_url)
+			var exists_res = await PromiseUtils.async_awaiter(exists_promise)
+
+			if exists_res is PromiseError or exists_res == false:
+				# File doesn't exist remotely or check failed - this is expected for non-optimized scenes
+				file_not_found_remotely = true
+			else:
+				# File exists remotely, proceed with download
+				var download_promise: Promise = Global.content_provider.fetch_file_by_url(
+					scene_hash_zip, asset_url
+				)
+				var download_res = await PromiseUtils.async_awaiter(download_promise)
+				if download_res is PromiseError:
+					download_error = download_res
+				else:
+					download_success = true
+
+	if skip_optimized:
+		pass  # Scene optimization skipped (XR, testing, or --only-no-optimized)
+	elif file_not_found_remotely:
+		# Optimized version not available - expected for non-optimized scenes
+		# --only-optimized: Skip scene if it's not optimized
+		if Global.cli.only_optimized:
+			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
+			# Still report as fetched so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
+			loaded_scenes.erase(scene_entity_id)
+			return PromiseUtils.resolved(false)
+	elif download_error != null or not download_success:
+		printerr(
+			"Scene ", scene_entity_id, " failed to download optimized zip asset_url=", asset_url
+		)
 
 		send_scene_failed_metrics(scene_entity_id, "zip_download_failed")
+
+		# --only-optimized: Skip scene if download failed
+		if Global.cli.only_optimized:
+			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
+			# Still report as fetched so loading session can progress
+			Global.scene_runner.report_scene_fetched(scene_entity_id)
+			loaded_scenes.erase(scene_entity_id)
+			return PromiseUtils.resolved(false)
 	else:
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
 		if not ok:
@@ -652,8 +1052,13 @@ func async_load_scene(
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
 		printerr("Scene was removed while loading:", scene_entity_id)
+		# Still report as fetched so loading session can progress
+		Global.scene_runner.report_scene_fetched(scene_entity_id)
 		send_scene_failed_metrics(scene_entity_id, "scene_removed_while_loading")
 		return PromiseUtils.resolved(false)
+
+	# Report that this scene's metadata/content has been fetched
+	Global.scene_runner.report_scene_fetched(scene_entity_id)
 
 	var scene_in_dict = loaded_scenes[scene_entity_id]
 	_on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)
@@ -817,7 +1222,11 @@ func _create_floating_island_for_cluster(cluster: Array):
 					var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
 					scene.name = temp
 					add_child(scene)
-					scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
+					scene.global_position = Vector3(
+						x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
+						0,
+						-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+					)
 
 					var config = _calculate_parcel_adjacency(
 						x,

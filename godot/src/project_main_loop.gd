@@ -37,6 +37,23 @@ func _initialize() -> void:
 			options.sample_rate = 1.0
 	)
 
+	# Add Sentry tags for staging and development builds (for filtering)
+	if self.is_staging_version or self.is_dev_version:
+		var branch_name = DclGlobal.get_branch_name()
+		var commit_message = DclGlobal.get_commit_message()
+
+		if not branch_name.is_empty():
+			SentrySDK.set_tag("branch_name", branch_name)
+
+		if not commit_message.is_empty():
+			SentrySDK.set_tag("commit_message", commit_message)
+
+		# Only add commit hash for staging (not for development)
+		if self.is_staging_version:
+			var commit_hash = DclGlobal.get_commit_hash()
+			if not commit_hash.is_empty():
+				SentrySDK.set_tag("commit_hash", commit_hash)
+
 
 func _before_send(event: SentryEvent) -> SentryEvent:
 	# Discard events for dev builds - only prod and staging report to Sentry

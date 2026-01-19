@@ -16,6 +16,12 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          clean: true
+
+      # Clean up stale state from previous runs on self-hosted runner
+      - name: Clean workspace
+        run: git clean -xdf
 
       # To host test-realm local server
       - name: Use Node.js 16.x

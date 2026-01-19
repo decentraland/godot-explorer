@@ -24,6 +24,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
+@onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -104,6 +105,8 @@ func get_params_from_cmd():
 
 
 func _ready():
+	GraphicSettings.apply_full_processor_mode()
+
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
 	Global.change_parcel.connect(_on_change_parcel)
 
@@ -157,6 +160,8 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
+	if Global.FORCE_TEST and cmd_location == null:
+		cmd_location = Global.FORCE_TEST_LOCATION
 	# LOADING_START metric
 	var loading_data = {
 		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
@@ -510,6 +515,10 @@ func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
 
+	# Set grace period on avatar's emote controller to prevent emote cancellation during teleport
+	if player.avatar and player.avatar.emote_controller:
+		player.avatar.emote_controller.set_teleport_grace()
+
 	player.move_to(position)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
@@ -582,11 +591,10 @@ func _on_control_menu_request_debug_panel(enabled):
 	if enabled:
 		if not is_instance_valid(debug_panel):
 			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
-			ui_root.add_child(debug_panel)
-			ui_root.move_child(debug_panel, control_menu.get_index() - 1)
+			safe_margin_container_debug.add_child(debug_panel)
 	else:
 		if is_instance_valid(debug_panel):
-			ui_root.remove_child(debug_panel)
+			safe_margin_container_debug.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 

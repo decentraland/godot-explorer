@@ -48,17 +48,19 @@ enum FriendshipStatus {
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
 const FORCE_TEST = false
 const FORCE_TEST_ARG = "[[52,-52],[52,-54],[52,-56],[52,-58],[52,-60],[52,-62],[52,-64],[52,-66],[52,-68],[54,-52],[54,-54],[54,-56],[54,-58],[54,-60]]"
-const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests"
+const FORCE_TEST_REALM = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+const FORCE_TEST_LOCATION = Vector2i(54, -55)
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
-# Increase this value when optimized assets change (invalidates cache)
-const OPTIMIZED_ASSETS_VERSION: int = 2
+# Increase this value when local assets cache format changes (invalidates cache)
+const LOCAL_ASSETS_CACHE_VERSION: int = 3
 
 ## Global classes (singleton pattern)
+
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
@@ -92,6 +94,8 @@ var deep_link_url: String = ""
 
 var player_camera_node: DclCamera3D
 var session_id: String
+
+var _is_portrait: bool = true
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
@@ -134,6 +138,7 @@ func send_haptic_feedback() -> void:
 		Input.vibrate_handheld(20)
 
 
+# gdlint: ignore=async-function-name
 func _ready():
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
@@ -159,6 +164,14 @@ func _ready():
 	if not cli.fake_deeplink.is_empty():
 		deep_link_url = cli.fake_deeplink
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(cli.fake_deeplink)
+		print(
+			"[DEEPLINK] Parsed fake deep_link_obj: location=",
+			deep_link_obj.location,
+			" realm=",
+			deep_link_obj.realm,
+			" preview=",
+			deep_link_obj.preview
+		)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -201,16 +214,8 @@ func _ready():
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
-	if cli.clear_cache_startup:
-		prints("Clear cache startup!")
-		Global.content_provider.clear_cache_folder()
-
-	# Clear cache if optimized assets version changed
-	if config.optimized_assets_version != Global.OPTIMIZED_ASSETS_VERSION:
-		prints("Optimized assets version changed, clearing cache!")
-		Global.content_provider.clear_cache_folder()
-		config.optimized_assets_version = Global.OPTIMIZED_ASSETS_VERSION
-		config.save_to_settings_file()
+	# Clear cache if needed (startup flag or version changed) - await completion
+	await _async_clear_cache_if_needed()
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -232,6 +237,13 @@ func _ready():
 	var sentry_user = SentryUser.new()
 	sentry_user.id = self.config.analytics_user_id
 	SentrySDK.set_tag("dcl_session_id", session_id)
+
+	# Emit test messages to verify Sentry integration (all builds except production)
+	# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
+	# and we want Rust breadcrumbs to be included in that event
+	if not DclGlobal.is_production():
+		DclGlobal.emit_sentry_rust_test_messages()
+		_emit_sentry_godot_test_messages()
 
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
@@ -277,6 +289,13 @@ func _ready():
 			"BenchmarkReport requires --features use_memory_debugger to be enabled during build"
 		)
 
+	# Add stress test controller if stress testing is enabled
+	if cli.stress_test:
+		print("✓ StressTest initialized for scene loading/unloading stress test")
+		var stress_test_controller = load("res://src/tools/stress_test_controller.gd").new()
+		stress_test_controller.set_name("StressTestController")
+		get_tree().root.add_child.call_deferred(stress_test_controller)
+
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
@@ -290,6 +309,26 @@ func _ready():
 		self.network_inspector.set_is_active(false)
 
 	DclMeshRenderer.init_primitive_shapes()
+
+
+## Async helper to clear cache and wait for completion before anything loads.
+func _async_clear_cache_if_needed() -> void:
+	var should_clear_startup = cli.clear_cache_startup
+	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
+
+	if should_clear_startup or version_changed:
+		if should_clear_startup:
+			prints("Clear cache startup!")
+		if version_changed:
+			prints("Local assets cache version changed, clearing cache!")
+
+		var clear_promise = Global.content_provider.clear_cache_folder()
+		await PromiseUtils.async_awaiter(clear_promise)
+		prints("Cache cleared successfully!")
+
+		if version_changed:
+			config.local_assets_cache_version = Global.LOCAL_ASSETS_CACHE_VERSION
+			config.save_to_settings_file()
 
 
 func set_raycast_debugger_enable(enable: bool):
@@ -473,11 +512,11 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
+	_is_portrait = false
 
 
 func is_orientation_portrait() -> bool:
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	return window_size.x < window_size.y
+	return _is_portrait
 
 
 func set_orientation_portrait():
@@ -494,10 +533,7 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
-
-
-func set_orientation_sensor():
-	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+	_is_portrait = true
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
@@ -581,9 +617,6 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
-	# Forward Rust tracing errors/warnings to Sentry
-	_forward_rust_logs_to_sentry()
-
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
@@ -602,21 +635,21 @@ func _process(_delta: float) -> void:
 			change_virtual_keyboard.emit(last_emitted_height)
 
 
-func _forward_rust_logs_to_sentry() -> void:
-	var logs = DclGlobal.drain_rust_logs()
-	for log_entry in logs:
-		var level: String = log_entry.get("level", "error")
-		var message: String = log_entry.get("message", "")
-		var target: String = log_entry.get("target", "")
-
-		# Format: [target] message
-		var formatted_message = "[Rust:%s] %s" % [target, message]
-
-		# Map Rust log levels to Sentry levels
-		if level == "error":
-			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_ERROR)
-		elif level == "warning":
-			SentrySDK.capture_message(formatted_message, SentrySDK.LEVEL_WARNING)
+func _emit_sentry_godot_test_messages() -> void:
+	print("[Sentry Test] GDScript: print() - breadcrumb")
+	print_rich("[Sentry Test] GDScript: print_rich() - breadcrumb")
+	push_warning("[Sentry Test] GDScript: push_warning() - breadcrumb")
+	push_error("[Sentry Test] GDScript: push_error() - event")
+	# Also test SentrySDK.capture_message directly
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: capture_message INFO - breadcrumb", SentrySDK.LEVEL_INFO
+	)
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: capture_message WARNING - breadcrumb", SentrySDK.LEVEL_WARNING
+	)
+	SentrySDK.capture_message(
+		"[Sentry Test] GDScript: capture_message ERROR - event", SentrySDK.LEVEL_ERROR
+	)
 
 
 func check_deep_link_teleport_to():
@@ -624,26 +657,14 @@ func check_deep_link_teleport_to():
 		var new_deep_link_url: String = ""
 		if DclAndroidPlugin.is_available():
 			var args = DclAndroidPlugin.get_deeplink_args()
-			print("[DEEPLINK] Android args: ", args)
 			new_deep_link_url = args.get("data", "")
 		elif DclIosPlugin.is_available():
 			var args = DclIosPlugin.get_deeplink_args()
-			print("[DEEPLINK] iOS args: ", args)
 			new_deep_link_url = args.get("data", "")
-
-		print("[DEEPLINK] check_deep_link_teleport_to: new_deep_link_url = ", new_deep_link_url)
 
 		if not new_deep_link_url.is_empty():
 			deep_link_url = new_deep_link_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
-			print(
-				"[DEEPLINK] Parsed deep_link_obj: location=",
-				deep_link_obj.location,
-				" realm=",
-				deep_link_obj.realm,
-				" preview=",
-				deep_link_obj.preview
-			)
 
 		if Global.deep_link_obj.is_location_defined():
 			# Use preview URL as realm if specified, otherwise use realm, otherwise main
@@ -659,12 +680,9 @@ func check_deep_link_teleport_to():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
 		elif not Global.deep_link_obj.realm.is_empty():
 			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
-		elif deep_link_url.begins_with("https://decentraland.org/events/event/?id="):
-			print("Is event link")
 
 
 func _on_deeplink_received(url: String) -> void:
-	print("[DEEPLINK] Signal received in GDScript: ", url)
 	if not url.is_empty():
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
@@ -677,7 +695,6 @@ func _on_deeplink_received(url: String) -> void:
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:
-	print("[DEEPLINK] Handling signin with identity_id: ", identity_id)
 	if Global.player_identity.has_pending_mobile_auth():
 		Global.player_identity.complete_mobile_connect_account(identity_id)
 	else:

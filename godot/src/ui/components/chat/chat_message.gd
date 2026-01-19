@@ -438,6 +438,8 @@ func _on_url_clicked(meta):
 		_handle_mention_click(mention_str)
 	else:
 		Global.show_url_popup(meta_str)
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_hide()
 
 
 func _handle_coordinate_click(coord_str: String):
@@ -463,7 +465,7 @@ func _handle_mention_click(mention_str: String):
 				var avatar_name = avatar.get_avatar_name()
 				if avatar_name == mention_without_at:
 					# Show some kind of user profile or interaction
-					Global.get_explorer()._async_open_profile(avatar.avatar_id)
+					Global.get_explorer()._async_open_profile_by_address(avatar.avatar_id)
 					break
 
 
