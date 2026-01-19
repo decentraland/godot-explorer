@@ -24,6 +24,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
+@onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -102,6 +103,8 @@ func get_params_from_cmd():
 
 
 func _ready():
+	GraphicSettings.apply_full_processor_mode()
+
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
 	Global.change_parcel.connect(_on_change_parcel)
 
@@ -156,6 +159,8 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
+	if Global.FORCE_TEST and cmd_location == null:
+		cmd_location = Global.FORCE_TEST_LOCATION
 	# LOADING_START metric
 	var loading_data = {
 		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
@@ -457,6 +462,23 @@ func _on_panel_chat_submit_message(message: String):
 			}
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
+		elif command_str == "/world" and params.size() > 1:
+			var world_realm = params[1] + ".dcl.eth"
+			Global.on_chat_message.emit(
+				"system",
+				"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+				Time.get_unix_time_from_system()
+			)
+			Global.realm.async_set_realm(world_realm, true)
+			loading_ui.enable_loading_screen()
+			# LOADING_START metric
+			var loading_data = {
+				"position": str(Global.scene_fetcher.current_position),
+				"realm": world_realm,
+				"when": "on_world"
+			}
+			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
@@ -491,6 +513,10 @@ func _on_control_menu_request_pause_scenes(enabled):
 func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
+
+	# Set grace period on avatar's emote controller to prevent emote cancellation during teleport
+	if player.avatar and player.avatar.emote_controller:
+		player.avatar.emote_controller.set_teleport_grace()
 
 	player.move_to(position)
 	var cur_parcel_position = Vector2i(
@@ -564,11 +590,10 @@ func _on_control_menu_request_debug_panel(enabled):
 	if enabled:
 		if not is_instance_valid(debug_panel):
 			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
-			ui_root.add_child(debug_panel)
-			ui_root.move_child(debug_panel, control_menu.get_index() - 1)
+			safe_margin_container_debug.add_child(debug_panel)
 	else:
 		if is_instance_valid(debug_panel):
-			ui_root.remove_child(debug_panel)
+			safe_margin_container_debug.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 
@@ -943,7 +968,7 @@ func _share_place():
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
-		DclGodotAndroidPlugin.share_text(msg)
+		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(msg)
 

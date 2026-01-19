@@ -4,7 +4,6 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    time::{Duration, Instant},
 };
 
 use futures_util::future::try_join_all;
@@ -25,7 +24,6 @@ use crate::{
         dcl_config::{DclConfig, TextureQuality},
         dcl_global::DclGlobal,
         promise::Promise,
-        resource_locker::ResourceLocker,
     },
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
@@ -33,19 +31,20 @@ use crate::{
 
 #[cfg(feature = "use_resource_tracking")]
 use crate::godot_classes::dcl_resource_tracker::{
-    report_download_speed, report_resource_deleted, report_resource_download_done,
-    report_resource_downloading, report_resource_error, report_resource_loaded,
-    report_resource_start,
+    check_and_report_timeouts, report_download_speed, report_resource_deleted,
+    report_resource_download_done, report_resource_downloading, report_resource_error,
+    report_resource_loaded, report_resource_start,
 };
 
 use super::{
     audio::load_audio,
     gltf::{
-        apply_update_set_mask_colliders, load_gltf_emote, load_gltf_scene_content,
-        load_gltf_wearable, DclEmoteGltf,
+        build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
+        load_and_save_scene_gltf, load_and_save_wearable_gltf, DclEmoteGltf,
     },
     profile::{prepare_request_requirements, request_lambda_profile},
     resource_provider::ResourceProvider,
+    scene_saver::{get_emote_path_for_hash, get_scene_path_for_hash, get_wearable_path_for_hash},
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
     video::download_video,
@@ -54,12 +53,6 @@ use super::{
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
-
-#[derive(Clone)]
-pub struct ContentEntry {
-    promise: Gd<Promise>,
-    last_access: Instant,
-}
 
 pub struct OptimizedData {
     // Set of optimized hashes that we know that exists...
@@ -89,12 +82,15 @@ struct ImageSize {
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct ContentProvider {
+    base: Base<Node>,
     content_folder: Arc<String>,
     resource_provider: Arc<ResourceProvider>,
     #[cfg(feature = "use_resource_tracking")]
     resource_download_tracking: Arc<ResourceDownloadTracking>,
     http_queue_requester: Arc<HttpQueueRequester>,
-    cached: HashMap<String, ContentEntry>,
+    // InstanceId of Promise - if nobody holds the promise, it gets garbage collected
+    // and try_from_instance_id will fail, allowing us to clean up the entry
+    promises: HashMap<String, InstanceId>,
     godot_single_thread: Arc<Semaphore>,
     texture_quality: TextureQuality, // copy from DclGlobal on startup
     every_second_tick: f64,
@@ -122,17 +118,29 @@ pub struct ContentProviderContext {
 
 unsafe impl Send for ContentProviderContext {}
 
+/// Context for scene GLTF loading (simpler than ContentProviderContext)
+#[derive(Clone)]
+pub struct SceneGltfContext {
+    pub content_folder: Arc<String>,
+    pub resource_provider: Arc<ResourceProvider>,
+    pub godot_single_thread: Arc<Semaphore>,
+    pub texture_quality: TextureQuality,
+}
+
+unsafe impl Send for SceneGltfContext {}
+
 const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v2";
 
 #[godot_api]
 impl INode for ContentProvider {
-    fn init(_base: Base<Node>) -> Self {
+    fn init(base: Base<Node>) -> Self {
         let content_folder = Arc::new(format!("{}/content/", Os::singleton().get_user_data_dir()));
 
         #[cfg(feature = "use_resource_tracking")]
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
 
         Self {
+            base,
             resource_provider: Arc::new(ResourceProvider::new(
                 content_folder.clone().as_str(),
                 2048 * 1000 * 1000,
@@ -147,7 +155,7 @@ impl INode for ContentProvider {
                 DclGlobal::get_network_inspector_sender(),
             )),
             content_folder,
-            cached: HashMap::new(),
+            promises: HashMap::new(),
             godot_single_thread: Arc::new(Semaphore::new(1)),
             texture_quality: DclConfig::static_get_texture_quality(),
             every_second_tick: 0.0,
@@ -169,7 +177,7 @@ impl INode for ContentProvider {
     }
     fn ready(&mut self) {}
     fn exit_tree(&mut self) {
-        self.cached.clear();
+        self.promises.clear();
         tracing::info!("ContentProvider::exit_tree");
     }
 
@@ -195,6 +203,9 @@ impl INode for ContentProvider {
                     speed += state_info.speed;
                 }
                 report_download_speed(speed);
+
+                // Check for timed out resources (no progress for 20 seconds)
+                check_and_report_timeouts();
             }
         }
 
@@ -218,37 +229,12 @@ impl INode for ContentProvider {
                 self.network_download_history_mb.pop_front();
             }
 
-            // Clean cache
-            self.cached.retain(|_hash_id, entry| {
-                // don't add a timeout for promise to be resolved,
-                // that timeout should be done on the fetch process
-                // resolved doesn't mean that is resolved correctly
-                let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
-                    && entry.promise.bind().is_resolved();
-                if process_promise {
-                    let data = entry.promise.bind().get_data();
-                    if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
-                        if let Some(resource_locker) =
-                            node_3d.get_node_or_null(&NodePath::from("ResourceLocker"))
-                        {
-                            if let Ok(resource_locker) =
-                                resource_locker.try_cast::<ResourceLocker>()
-                            {
-                                let reference_count = resource_locker.bind().get_reference_count();
-                                if reference_count == 1 {
-                                    #[cfg(feature = "use_resource_tracking")]
-                                    report_resource_deleted(&_hash_id);
-                                    node_3d.queue_free();
-                                    return false;
-                                }
-                            }
-                        }
-                    } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
-                        let reference_count = ref_counted.get_reference_count();
-                        if reference_count == 1 {
-                            return false;
-                        }
-                    }
+            // Clean up dead promises - if nobody holds the promise, the InstanceId becomes invalid
+            self.promises.retain(|_hash_id, instance_id| {
+                if Gd::<Promise>::try_from_instance_id(*instance_id).is_err() {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_deleted(_hash_id);
+                    return false;
                 }
                 true
             });
@@ -258,6 +244,436 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
+    // =========================================================================
+    // Scene GLTF Loading Functions (Promise-based)
+    // =========================================================================
+
+    /// Request to load a scene GLTF (for non-optimized assets)
+    ///
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
+    ///
+    /// Note: Colliders are created with mask=0. Caller should set masks after instantiating.
+    #[func]
+    pub fn load_scene_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&file_hash) {
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash);
+            if std::path::Path::new(&scene_path).exists() {
+                return Some(existing);
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            // NOTE: Any caller still holding the old promise may try to load a non-existent file.
+            // This is handled gracefully in GDScript by checking file existence before loading.
+            tracing::info!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
+            self.promises.remove(&file_hash);
+        }
+
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(file_hash.clone(), &promise);
+
+        // Create context for async operation
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+        };
+
+        let file_hash_clone = file_hash.clone();
+
+        // Spawn async task - cache check and loading all happens here
+        TokioRuntime::spawn(async move {
+            // Check if scene is already cached on disk
+            let scene_path = get_scene_path_for_hash(&ctx.content_folder, &file_hash_clone);
+
+            let result = if ctx.resource_provider.file_exists_by_path(&scene_path).await {
+                // Cache HIT - just touch and return the path
+                tracing::debug!(
+                    "Scene GLTF cache HIT: {} -> {}",
+                    file_hash_clone,
+                    scene_path
+                );
+                // Track cached resource so it appears in resource report
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    report_resource_start(&file_hash_clone, "gltf_cached");
+                    report_resource_loaded(&file_hash_clone);
+                }
+                ctx.resource_provider.touch_file_async(&scene_path).await;
+                Ok(Some(GString::from(&scene_path).to_variant()))
+            } else {
+                // Cache MISS - load, process, and save
+                tracing::debug!("Scene GLTF cache MISS: {} - loading", file_hash_clone);
+                match load_and_save_scene_gltf(
+                    file_path_str,
+                    file_hash_clone.clone(),
+                    content_mapping_ref,
+                    ctx,
+                )
+                .await
+                {
+                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Err(e) => Err(e),
+                }
+            };
+
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
+    /// Check if a scene is cached on disk
+    #[func]
+    pub fn is_scene_cached(&self, file_hash: GString) -> bool {
+        let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
+        std::path::Path::new(&scene_path).exists()
+    }
+
+    /// Get the path where a scene would be cached
+    #[func]
+    pub fn get_scene_cache_path(&self, file_hash: GString) -> GString {
+        let path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
+        GString::from(path.as_str())
+    }
+
+    // =========================================================================
+    // Wearable GLTF Loading Functions (Promise-based)
+    // =========================================================================
+
+    /// Request to load a wearable GLTF (for non-optimized assets)
+    ///
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
+    #[func]
+    pub fn load_wearable_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&file_hash) {
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let scene_path = get_wearable_path_for_hash(&self.content_folder, &file_hash);
+            if std::path::Path::new(&scene_path).exists() {
+                return Some(existing);
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            // NOTE: Any caller still holding the old promise may try to load a non-existent file.
+            // This is handled gracefully in GDScript by checking file existence before loading.
+            tracing::info!(
+                "Wearable GLTF cache EVICTED: {} - re-downloading",
+                file_hash
+            );
+            self.promises.remove(&file_hash);
+        }
+
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(file_hash.clone(), &promise);
+
+        // Create context for async operation
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+        };
+
+        let file_hash_clone = file_hash.clone();
+
+        // Spawn async task - cache check and loading all happens here
+        TokioRuntime::spawn(async move {
+            // Check if wearable is already cached on disk
+            let scene_path = get_wearable_path_for_hash(&ctx.content_folder, &file_hash_clone);
+
+            let result = if ctx.resource_provider.file_exists_by_path(&scene_path).await {
+                // Cache HIT - just touch and return the path
+                tracing::debug!(
+                    "Wearable GLTF cache HIT: {} -> {}",
+                    file_hash_clone,
+                    scene_path
+                );
+                // Track cached resource so it appears in resource report
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    report_resource_start(&file_hash_clone, "wearable_cached");
+                    report_resource_loaded(&file_hash_clone);
+                }
+                ctx.resource_provider.touch_file_async(&scene_path).await;
+                Ok(Some(GString::from(&scene_path).to_variant()))
+            } else {
+                // Cache MISS - load, process, and save
+                tracing::debug!("Wearable GLTF cache MISS: {} - loading", file_hash_clone);
+                match load_and_save_wearable_gltf(
+                    file_path_str,
+                    file_hash_clone.clone(),
+                    content_mapping_ref,
+                    ctx,
+                )
+                .await
+                {
+                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Err(e) => Err(e),
+                }
+            };
+
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
+    /// Check if a wearable is cached on disk
+    #[func]
+    pub fn is_wearable_cached(&self, file_hash: GString) -> bool {
+        let scene_path = get_wearable_path_for_hash(&self.content_folder, &file_hash.to_string());
+        std::path::Path::new(&scene_path).exists()
+    }
+
+    /// Get the path where a wearable would be cached
+    #[func]
+    pub fn get_wearable_cache_path(&self, file_hash: GString) -> GString {
+        let path = get_wearable_path_for_hash(&self.content_folder, &file_hash.to_string());
+        GString::from(path.as_str())
+    }
+
+    // =========================================================================
+    // Emote GLTF Loading Functions (Promise-based)
+    // =========================================================================
+
+    /// Request to load an emote GLTF (for non-optimized assets)
+    ///
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
+    #[func]
+    pub fn load_emote_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&file_hash) {
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let scene_path = get_emote_path_for_hash(&self.content_folder, &file_hash);
+            if std::path::Path::new(&scene_path).exists() {
+                return Some(existing);
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            // NOTE: Any caller still holding the old promise may try to load a non-existent file.
+            // This is handled gracefully in GDScript by checking file existence before loading.
+            tracing::info!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
+            self.promises.remove(&file_hash);
+        }
+
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(file_hash.clone(), &promise);
+
+        // Create context for async operation
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+        };
+
+        let file_hash_clone = file_hash.clone();
+
+        // Spawn async task - cache check and loading all happens here
+        TokioRuntime::spawn(async move {
+            // Check if emote is already cached on disk
+            let scene_path = get_emote_path_for_hash(&ctx.content_folder, &file_hash_clone);
+
+            let result = if ctx.resource_provider.file_exists_by_path(&scene_path).await {
+                // Cache HIT - just touch and return the path
+                tracing::debug!(
+                    "Emote GLTF cache HIT: {} -> {}",
+                    file_hash_clone,
+                    scene_path
+                );
+                // Track cached resource so it appears in resource report
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    report_resource_start(&file_hash_clone, "emote_cached");
+                    report_resource_loaded(&file_hash_clone);
+                }
+                ctx.resource_provider.touch_file_async(&scene_path).await;
+                Ok(Some(GString::from(&scene_path).to_variant()))
+            } else {
+                // Cache MISS - load, process, and save
+                tracing::debug!("Emote GLTF cache MISS: {} - loading", file_hash_clone);
+                match load_and_save_emote_gltf(
+                    file_path_str,
+                    file_hash_clone.clone(),
+                    content_mapping_ref,
+                    ctx,
+                )
+                .await
+                {
+                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Err(e) => Err(e),
+                }
+            };
+
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
+    /// Check if an emote is cached on disk
+    #[func]
+    pub fn is_emote_cached(&self, file_hash: GString) -> bool {
+        let scene_path = get_emote_path_for_hash(&self.content_folder, &file_hash.to_string());
+        std::path::Path::new(&scene_path).exists()
+    }
+
+    /// Get the path where an emote would be cached
+    #[func]
+    pub fn get_emote_cache_path(&self, file_hash: GString) -> GString {
+        let path = get_emote_path_for_hash(&self.content_folder, &file_hash.to_string());
+        GString::from(path.as_str())
+    }
+
+    // =========================================================================
+    // Cache Loaders (load from disk cache)
+    // =========================================================================
+
+    /// Load a cached wearable scene from disk
+    ///
+    /// This instantiates the PackedScene that was previously saved by load_wearable_gltf.
+    /// Returns the Node3D ready to be added to the scene tree.
+    #[func]
+    pub fn load_cached_wearable(&self, scene_path: GString) -> Option<Gd<Node3D>> {
+        let packed_scene = godot::tools::load::<godot::classes::PackedScene>(&scene_path);
+        let instance = packed_scene.instantiate()?;
+        instance.try_cast::<Node3D>().ok()
+    }
+
+    /// Extract emote data from an already-loaded PackedScene.
+    ///
+    /// This takes a pre-loaded PackedScene (loaded via ResourceLoader.load_threaded_request)
+    /// and extracts the animations and armature prop from it.
+    /// Use this for non-blocking emote loading.
+    #[func]
+    pub fn extract_emote_from_scene(
+        &self,
+        packed_scene: Gd<godot::classes::PackedScene>,
+        file_hash: GString,
+    ) -> Option<Gd<DclEmoteGltf>> {
+        use godot::classes::AnimationPlayer;
+
+        let instance = packed_scene.instantiate()?;
+        let root = instance.try_cast::<Node3D>().ok()?;
+
+        // Read armature_prop (first Node3D child that's not AnimationPlayer)
+        let mut armature_prop: Option<Gd<Node3D>> = None;
+        for child in root.get_children().iter_shared() {
+            if child.is_class("AnimationPlayer") {
+                continue;
+            }
+            if let Ok(node3d) = child.try_cast::<Node3D>() {
+                armature_prop = Some(node3d);
+                break;
+            }
+        }
+
+        // Read animations from embedded AnimationPlayer
+        let anim_player = root.try_get_node_as::<AnimationPlayer>("EmoteAnimations")?;
+
+        let hash_suffix = get_last_16_alphanumeric(&file_hash.to_string());
+        let default_anim_name = StringName::from(&hash_suffix);
+        let prop_anim_name = StringName::from(&format!("{}_prop", hash_suffix));
+
+        // Check if animations exist before getting them to avoid Godot errors
+        let default_animation = if anim_player.has_animation(&default_anim_name) {
+            anim_player.get_animation(&default_anim_name)
+        } else {
+            None
+        };
+        let prop_animation = if anim_player.has_animation(&prop_anim_name) {
+            anim_player.get_animation(&prop_anim_name)
+        } else {
+            None
+        };
+
+        // Remove armature_prop from root before freeing (so it survives)
+        // Animations are Resources, they survive independently
+        if let Some(ref mut prop) = armature_prop {
+            if let Some(mut parent) = prop.get_parent() {
+                parent.remove_child(&prop.clone().upcast::<Node>());
+            }
+        }
+
+        // Free the loaded scene root
+        root.free();
+
+        Some(build_dcl_emote_gltf(
+            armature_prop,
+            default_animation,
+            prop_animation,
+        ))
+    }
+
+    // DEPRECATED: The promise/cache pattern here is being phased out.
+    // This function still loads pre-baked optimized assets via ResourceLoader,
+    // but the promise-based caching will be removed in favor of direct loading.
     #[func]
     pub fn fetch_optimized_asset_with_dependencies(&mut self, file_hash: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
@@ -270,13 +686,25 @@ impl ContentProvider {
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&file_hash);
+            report_resource_start(&file_hash, "optimized_asset");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let _ =
-                ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, true)
-                    .await;
+            #[allow(unused_variables)]
+            let result = ContentProvider::async_fetch_optimized_asset(
+                file_hash.clone(),
+                ctx,
+                optimized_data,
+                true,
+            )
+            .await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&file_hash, &error.to_string());
+            } else {
+                report_resource_loaded(&file_hash);
+            }
 
             then_promise(get_promise, Ok(None));
 
@@ -305,13 +733,26 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&file_hash);
+            report_resource_start(&file_hash, "optimized_asset");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let _ =
-                ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, false)
-                    .await;
+            #[allow(unused_variables)]
+            let result = ContentProvider::async_fetch_optimized_asset(
+                file_hash.clone(),
+                ctx,
+                optimized_data,
+                false,
+            )
+            .await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&file_hash, &error.to_string());
+            } else {
+                report_resource_loaded(&file_hash);
+            }
+
             then_promise(get_promise, Ok(None));
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
@@ -369,206 +810,6 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn fetch_wearable_gltf(
-        &mut self,
-        file_path: GString,
-        content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Promise> {
-        let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
-            return Promise::from_rejected(format!("File not found: {}", file_path));
-        };
-
-        let cache_key = format!("wearable:{}", file_hash);
-        if let Some(entry) = self.cached.get_mut(&cache_key) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
-        }
-
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_file_path = file_path.to_string();
-        let content_provider_context = self.get_context();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.to_string();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result =
-                load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context).await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cached.insert(
-            cache_key,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
-
-        promise
-    }
-
-    #[func]
-    pub fn fetch_scene_gltf(
-        &mut self,
-        file_path: GString,
-        content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Promise> {
-        let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
-            return Promise::from_rejected(format!("File not found: {}", file_path));
-        };
-
-        if let Some(entry) = self.cached.get_mut(file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
-        }
-
-        let file_hash = file_hash.clone();
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_file_path = file_path.to_string();
-        let content_provider_context = self.get_context();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result =
-                load_gltf_scene_content(gltf_file_path, content_mapping, content_provider_context)
-                    .await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
-
-        promise
-    }
-
-    #[func]
-    pub fn fetch_emote_gltf(
-        &mut self,
-        file_path: GString,
-        content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Promise> {
-        let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
-            return Promise::from_rejected(format!("File not found: {}", file_path));
-        };
-
-        let cache_key = format!("emote:{}", file_hash);
-        if let Some(entry) = self.cached.get_mut(&cache_key) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
-        }
-
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_file_path = file_path.to_string();
-        let content_provider_context = self.get_context();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.to_string();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result =
-                load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cached.insert(
-            cache_key,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
-
-        promise
-    }
-
-    #[func]
-    pub fn instance_gltf_colliders(
-        &mut self,
-        gltf_node: Gd<Node>,
-        dcl_visible_cmask: i32,
-        dcl_invisible_cmask: i32,
-        dcl_scene_id: i32,
-        dcl_entity_id: i32,
-    ) -> Gd<Promise> {
-        let (promise, get_promise) = Promise::make_to_async();
-        let gltf_node_instance_id = gltf_node.instance_id();
-        let content_provider_context = self.get_context();
-        TokioRuntime::spawn(async move {
-            let result = apply_update_set_mask_colliders(
-                gltf_node_instance_id,
-                dcl_visible_cmask,
-                dcl_invisible_cmask,
-                dcl_scene_id,
-                dcl_entity_id,
-                content_provider_context,
-            )
-            .await;
-            then_promise(get_promise, result);
-        });
-
-        promise
-    }
-
-    #[func]
     pub fn fetch_file(
         &mut self,
         file_path: GString,
@@ -585,9 +826,16 @@ impl ContentProvider {
         let file_hash = file_hash.to_string();
 
         // Check cache first - prevent duplicate downloads of the same file
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        // Note: For raw file downloads, we only cache in-flight promises.
+        // Once resolved, we don't cache because the file might be evicted from disk.
+        // The async task will check if file exists before downloading.
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            if !promise.bind().is_resolved() {
+                return promise;
+            }
+            // Promise is resolved - remove it so we create a fresh one that will
+            // verify the file exists in the async task
+            self.promises.remove(&file_hash);
         }
 
         let url = url.to_string();
@@ -599,7 +847,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "file");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -627,13 +875,7 @@ impl ContentProvider {
         });
 
         // Insert into cache to prevent duplicate downloads
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -674,9 +916,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get_mut(file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(file_hash) {
+            return promise;
         }
 
         let file_hash = file_hash.clone();
@@ -690,7 +931,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "audio");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -708,13 +949,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -740,9 +975,15 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+
+        // Validate file_hash is not empty to prevent "Is a directory" errors
+        if file_hash.is_empty() {
+            tracing::warn!("fetch_texture_by_hash: empty file_hash, returning rejected promise");
+            return Promise::from_rejected("Empty texture hash".to_string());
+        }
+
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
         }
 
         // TODO: In the future, this would be handled by each component handler
@@ -752,13 +993,7 @@ impl ContentProvider {
             // get file_hash from url
             let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
             let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
-            self.cached.insert(
-                file_hash,
-                ContentEntry {
-                    last_access: Instant::now(),
-                    promise: promise.clone(),
-                },
-            );
+            self.cache_promise(file_hash, &promise);
             return promise;
         }
 
@@ -815,7 +1050,7 @@ impl ContentProvider {
             let hash_id = file_hash.clone();
             TokioRuntime::spawn(async move {
                 #[cfg(feature = "use_resource_tracking")]
-                report_resource_start(&hash_id);
+                report_resource_start(&hash_id, "texture");
 
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -834,13 +1069,7 @@ impl ContentProvider {
             });
         }
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -854,11 +1083,19 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
+
+        // Validate file_hash is not empty to prevent "Is a directory" errors
+        if file_hash.is_empty() {
+            tracing::warn!(
+                "fetch_texture_by_hash_original: empty file_hash, returning rejected promise"
+            );
+            return Promise::from_rejected("Empty texture hash".to_string());
+        }
+
         let cache_key = format!("{}_original", file_hash);
 
-        if let Some(entry) = self.cached.get_mut(&cache_key) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
         }
 
         // Handle URL-based textures
@@ -866,13 +1103,7 @@ impl ContentProvider {
             let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash_u32());
             let promise =
                 self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
-            self.cached.insert(
-                cache_key,
-                ContentEntry {
-                    last_access: Instant::now(),
-                    promise: promise.clone(),
-                },
-            );
+            self.cache_promise(cache_key, &promise);
             return promise;
         }
 
@@ -894,7 +1125,7 @@ impl ContentProvider {
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "texture_original");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -912,13 +1143,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            cache_key,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(cache_key, &promise);
 
         promise
     }
@@ -931,9 +1156,8 @@ impl ContentProvider {
         url: GString,
     ) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
         }
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
@@ -949,9 +1173,11 @@ impl ContentProvider {
 
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
+        #[cfg(feature = "use_resource_tracking")]
+        let url_for_error = url.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "texture_url_original");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -959,7 +1185,7 @@ impl ContentProvider {
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
+                report_resource_error(&hash_id, &format!("url={} error={}", url_for_error, error));
             } else {
                 report_resource_loaded(&hash_id);
             }
@@ -969,13 +1195,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -983,9 +1203,8 @@ impl ContentProvider {
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
-        if let Some(entry) = self.cached.get_mut(&file_hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
         }
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
@@ -997,9 +1216,11 @@ impl ContentProvider {
 
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
+        #[cfg(feature = "use_resource_tracking")]
+        let url_for_error = url.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "texture_url");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1007,7 +1228,7 @@ impl ContentProvider {
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
+                report_resource_error(&hash_id, &format!("url={} error={}", url_for_error, error));
             } else {
                 report_resource_loaded(&hash_id);
             }
@@ -1017,64 +1238,31 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
 
     #[func]
     pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<Texture2D>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
-        entry.last_access = Instant::now();
-        let promise_data = entry.promise.bind().get_data();
+        let promise = self.get_cached_promise(&file_hash.to_string())?;
+        let promise_data = promise.bind().get_data();
         let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
         let texture = texture_entry.bind().texture.clone();
         Some(texture)
     }
 
     #[func]
-    pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
-        let cache_key = format!("wearable:{}", file_hash);
-        let entry = self.cached.get_mut(&cache_key)?;
-        entry.last_access = Instant::now();
-        entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
-    }
-
-    #[func]
-    pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        let cache_key = format!("emote:{}", file_hash);
-        let entry = self.cached.get_mut(&cache_key)?;
-        entry.last_access = Instant::now();
-        entry
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<DclEmoteGltf>>()
-            .ok()
-    }
-
-    #[func]
     pub fn get_audio_from_hash(&mut self, file_hash: GString) -> Option<Gd<AudioStream>> {
-        let entry = self.cached.get_mut(&file_hash.to_string())?;
-        entry.last_access = Instant::now();
-        entry
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<AudioStream>>()
-            .ok()
+        let promise = self.get_cached_promise(&file_hash.to_string())?;
+        let promise_data = promise.bind().get_data();
+        promise_data.try_to::<Gd<AudioStream>>().ok()
     }
 
     #[func]
     pub fn is_resource_from_hash_loaded(&self, file_hash: GString) -> bool {
-        if let Some(entry) = self.cached.get(&file_hash.to_string()) {
-            return entry.promise.bind().is_resolved();
+        if let Some(promise) = self.get_cached_promise(&file_hash.to_string()) {
+            return promise.bind().is_resolved();
         }
         false
     }
@@ -1097,7 +1285,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&hash_id, "video");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1116,13 +1304,7 @@ impl ContentProvider {
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
-        self.cached.insert(
-            file_hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(file_hash, &promise);
 
         promise
     }
@@ -1185,9 +1367,8 @@ impl ContentProvider {
                 .unwrap_or(wearable_id.len());
             let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
 
-            if let Some(entry) = self.cached.get_mut(&wearable_id) {
-                entry.last_access = Instant::now();
-                promise_ids.insert(entry.promise.instance_id());
+            if let Some(promise) = self.get_cached_promise(&wearable_id) {
+                promise_ids.insert(promise.instance_id());
             } else {
                 wearable_to_fetch.insert(wearable_id.clone());
                 if new_promise.is_none() {
@@ -1196,13 +1377,7 @@ impl ContentProvider {
                     new_promise = Some((promise, get_promise));
                 }
 
-                self.cached.insert(
-                    wearable_id,
-                    ContentEntry {
-                        last_access: Instant::now(),
-                        promise: new_promise.as_ref().unwrap().0.clone(),
-                    },
-                );
+                self.cache_promise(wearable_id, &new_promise.as_ref().unwrap().0);
             }
         }
 
@@ -1227,13 +1402,7 @@ impl ContentProvider {
                 .await;
                 then_promise(get_promise, result);
             });
-            self.cached.insert(
-                "wearables".to_string(),
-                ContentEntry {
-                    last_access: Instant::now(),
-                    promise: promise.clone(),
-                },
-            );
+            self.cache_promise("wearables".to_string(), &promise);
         }
 
         Array::from_iter(promise_ids.into_iter().map(Gd::from_instance_id))
@@ -1245,10 +1414,8 @@ impl ContentProvider {
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
 
-        if let Some(entry) = self.cached.get_mut(&id) {
-            entry.last_access = Instant::now();
-            if let Ok(results) = entry
-                .promise
+        if let Some(promise) = self.get_cached_promise(&id) {
+            if let Ok(results) = promise
                 .bind()
                 .get_data()
                 .try_to::<Gd<WearableManyResolved>>()
@@ -1263,21 +1430,23 @@ impl ContentProvider {
 
     #[func]
     pub fn get_pending_promises(&self) -> Array<Gd<Promise>> {
-        Array::from_iter(
-            self.cached
-                .iter()
-                .filter(|(_, entry)| !entry.promise.bind().is_resolved())
-                .map(|(_, entry)| entry.promise.clone()),
-        )
+        let mut result = Array::new();
+        for instance_id in self.promises.values() {
+            if let Ok(promise) = Gd::<Promise>::try_from_instance_id(*instance_id) {
+                if !promise.bind().is_resolved() {
+                    result.push(&promise);
+                }
+            }
+        }
+        result
     }
 
     #[func]
     pub fn get_profile(&mut self, user_id: GString) -> Option<Gd<DclUserProfile>> {
         let user_id = user_id.to_string().as_str().as_h160()?;
         let hash = format!("profile_{:x}", user_id);
-        if let Some(entry) = self.cached.get_mut(&hash) {
-            entry.last_access = Instant::now();
-            let promise_data = entry.promise.bind().get_data();
+        if let Some(promise) = self.get_cached_promise(&hash) {
+            let promise_data = promise.bind().get_data();
             promise_data.try_to::<Gd<DclUserProfile>>().ok()
         } else {
             None
@@ -1285,11 +1454,25 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn clear_cache_folder(&self) {
+    pub fn clear_cache_folder(&mut self) -> Gd<Promise> {
+        // Clear the promises cache to prevent stale references to deleted files
+        let promises_count = self.promises.len();
+        self.promises.clear();
+        tracing::info!(
+            "clear_cache_folder: Clearing {} cached promises and disk cache",
+            promises_count
+        );
+
+        let (promise, get_promise) = Promise::make_to_async();
         let resource_provider = self.resource_provider.clone();
+
         TokioRuntime::spawn(async move {
             resource_provider.clear().await;
+            tracing::info!("clear_cache_folder: Disk cache cleared");
+            then_promise(get_promise, Ok(None));
         });
+
+        promise
     }
 
     #[func]
@@ -1300,6 +1483,12 @@ impl ContentProvider {
     #[func]
     pub fn get_cache_folder_total_size(&mut self) -> i64 {
         self.resource_provider.get_cache_total_size()
+    }
+
+    /// Get current disk cache size in MiB for memory diagnostics
+    #[func]
+    pub fn get_cache_size_mb(&mut self) -> f64 {
+        self.resource_provider.get_cache_total_size() as f64 / 1_048_576.0
     }
 
     #[func]
@@ -1338,6 +1527,31 @@ impl ContentProvider {
         ASSET_OPTIMIZED_BASE_URL.to_godot()
     }
 
+    /// Check if a remote file exists using a HEAD request.
+    /// Returns a Promise that resolves with:
+    /// - true: file exists (2xx response)
+    /// - false: file not found (404)
+    /// - rejects with error for other failures (network issues, server errors)
+    #[func]
+    pub fn check_remote_file_exists(&self, url: GString) -> Gd<Promise> {
+        let url = url.to_string();
+        let resource_provider = self.resource_provider.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        TokioRuntime::spawn(async move {
+            match resource_provider.check_remote_file_exists(&url).await {
+                Ok(exists) => {
+                    then_promise(get_promise, Ok(Some(exists.to_variant())));
+                }
+                Err(e) => {
+                    then_promise(get_promise, Err(anyhow::anyhow!(e)));
+                }
+            }
+        });
+
+        promise
+    }
+
     #[func]
     pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
         let Some(user_id) = user_id.to_string().as_str().as_h160() else {
@@ -1345,9 +1559,8 @@ impl ContentProvider {
         };
 
         let hash = format!("profile_{:x}", user_id);
-        if let Some(entry) = self.cached.get_mut(&hash) {
-            entry.last_access = Instant::now();
-            return entry.promise.clone();
+        if let Some(promise) = self.get_cached_promise(&hash) {
+            return promise;
         }
 
         let (lamda_server_base_url, profile_base_url, http_requester) =
@@ -1375,15 +1588,215 @@ impl ContentProvider {
             then_promise(get_promise, result)
         });
 
-        self.cached.insert(
-            hash,
-            ContentEntry {
-                last_access: Instant::now(),
-                promise: promise.clone(),
-            },
-        );
+        self.cache_promise(hash, &promise);
 
         promise
+    }
+
+    /// Report a resource as failed (for use by GDScript when loading times out)
+    #[cfg(feature = "use_resource_tracking")]
+    #[func]
+    pub fn report_resource_failed(&self, file_hash: GString, reason: GString) {
+        report_resource_error(&file_hash.to_string(), &reason.to_string());
+    }
+
+    /// Stub for when resource tracking is disabled
+    #[cfg(not(feature = "use_resource_tracking"))]
+    #[func]
+    pub fn report_resource_failed(&self, _file_hash: GString, _reason: GString) {
+        // No-op when resource tracking is disabled
+    }
+
+    /// Fetches an avatar's face texture by user ID.
+    /// This handles the two-step process of:
+    /// 1. Fetching the user's profile
+    /// 2. Extracting the face256 URL and fetching the texture
+    ///
+    /// The result is cached with key `avatar_texture_{user_id_hex}`.
+    #[func]
+    pub fn fetch_avatar_texture(&mut self, user_id: GString) -> Gd<Promise> {
+        let user_id_str = user_id.to_string();
+
+        // Try to parse as H160, use normalized cache key if valid, otherwise use raw string
+        let (user_id_h160, cache_key) = match user_id_str.as_str().as_h160() {
+            Some(h160) => (Some(h160), format!("avatar_texture_{:x}", h160)),
+            None => (None, format!("avatar_texture_invalid_{}", user_id_str)),
+        };
+
+        // Check cache first (works for both valid and invalid user IDs)
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            tracing::debug!(
+                "fetch_avatar_texture: Returning cached promise for {}",
+                cache_key
+            );
+            return promise;
+        }
+
+        // If invalid user ID, cache a rejected promise and return
+        let Some(user_id_h160) = user_id_h160 else {
+            tracing::warn!("fetch_avatar_texture: Invalid user id: {}", user_id);
+            let rejected_promise = Promise::from_rejected("Invalid user id".to_string());
+            self.cache_promise(cache_key, &rejected_promise);
+            return rejected_promise;
+        };
+
+        tracing::debug!(
+            "fetch_avatar_texture: Starting fetch for user_id={:x}",
+            user_id_h160
+        );
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        TokioRuntime::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            // Step 1: Fetch the profile
+            tracing::debug!(
+                "fetch_avatar_texture: Fetching profile for {:x}",
+                user_id_h160
+            );
+            let profile_result = request_lambda_profile(
+                user_id_h160,
+                lambda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let profile = match profile_result {
+                Ok(profile) => {
+                    tracing::debug!(
+                        "fetch_avatar_texture: Profile fetched for {:x}",
+                        user_id_h160
+                    );
+                    profile
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "fetch_avatar_texture: Failed to fetch profile for {:x}: {}",
+                        user_id_h160,
+                        e
+                    );
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            // Step 2: Extract face256 URL from snapshots
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                tracing::error!(
+                    "fetch_avatar_texture: Profile has no snapshots for {:x}",
+                    user_id_h160
+                );
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no snapshots")),
+                );
+                return;
+            };
+
+            let face256_url = snapshots
+                .face_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.face256));
+
+            tracing::debug!(
+                "fetch_avatar_texture: Fetching texture from {} for {:x}",
+                face256_url,
+                user_id_h160
+            );
+
+            let texture_hash = format!("avatar_face_{:x}", user_id_h160);
+
+            // Step 3: Fetch the texture
+            let result = load_image_texture(face256_url, texture_hash, ctx).await;
+
+            if let Err(e) = &result {
+                tracing::error!(
+                    "fetch_avatar_texture: Failed to load texture for {:x}: {}",
+                    user_id_h160,
+                    e
+                );
+            }
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    /// Gets the avatar face texture from cache if available.
+    #[func]
+    pub fn get_avatar_texture(&mut self, user_id: GString) -> Option<Gd<Texture2D>> {
+        let user_id_str = user_id.to_string();
+
+        // Use the same cache key logic as fetch_avatar_texture
+        let cache_key = match user_id_str.as_str().as_h160() {
+            Some(h160) => format!("avatar_texture_{:x}", h160),
+            None => format!("avatar_texture_invalid_{}", user_id_str),
+        };
+
+        let promise = self.get_cached_promise(&cache_key)?;
+        let promise_bind = promise.bind();
+        if promise_bind.is_rejected() {
+            let promise_data = promise_bind.get_data();
+            if let Ok(error) =
+                promise_data.try_to::<Gd<crate::godot_classes::promise::PromiseError>>()
+            {
+                tracing::debug!(
+                    "get_avatar_texture: Promise was rejected for {}, reason: {}",
+                    cache_key,
+                    error.bind().error_description
+                );
+            }
+            return None;
+        }
+        let promise_data = promise_bind.get_data();
+        drop(promise_bind);
+        let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
+        let texture = texture_entry.bind().texture.clone();
+        Some(texture)
+    }
+
+    /// Checks if an avatar texture is loaded for the given user ID.
+    #[func]
+    pub fn is_avatar_texture_loaded(&self, user_id: GString) -> bool {
+        let user_id_str = user_id.to_string();
+
+        // Use the same cache key logic as fetch_avatar_texture
+        let cache_key = match user_id_str.as_str().as_h160() {
+            Some(h160) => format!("avatar_texture_{:x}", h160),
+            None => format!("avatar_texture_invalid_{}", user_id_str),
+        };
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            let is_resolved = promise.bind().is_resolved();
+            let is_rejected = promise.bind().is_rejected();
+            if is_rejected {
+                tracing::debug!(
+                    "is_avatar_texture_loaded: Promise rejected for {}, returning true to stop polling",
+                    cache_key
+                );
+                return true; // Return true to stop polling, get_avatar_texture will return None
+            }
+            return is_resolved;
+        }
+        false
     }
 
     #[func]
@@ -1394,7 +1807,7 @@ impl ContentProvider {
         let resource_provider = self.resource_provider.clone();
         let (promise, get_promise) = Promise::make_to_async();
 
-        self.cached.remove(&file_hash_str);
+        self.promises.remove(&file_hash_str);
 
         TokioRuntime::spawn(async move {
             resource_provider.delete_file(&absolute_file_path).await;
@@ -1414,6 +1827,17 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
         }
+    }
+
+    /// Get a promise from the cache if it still exists (InstanceId is valid)
+    fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
+        let instance_id = self.promises.get(key)?;
+        Gd::<Promise>::try_from_instance_id(*instance_id).ok()
+    }
+
+    /// Insert a promise into the cache using its InstanceId
+    fn cache_promise(&mut self, key: String, promise: &Gd<Promise>) {
+        self.promises.insert(key, promise.instance_id());
     }
 
     pub async fn async_fetch_optimized_asset(
@@ -1466,12 +1890,29 @@ impl ContentProvider {
 
             // Fetch the resource if it's either a new dependency or missing in cache
 
-            let future = ctx.resource_provider.fetch_resource(
-                asset_url.clone(),
-                hash_dependency_zip.clone(),
-                absolute_file_path,
-            );
-            futures_to_wait.push(future);
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_dependency_zip, "optimized_asset_dep");
+
+            #[cfg(feature = "use_resource_tracking")]
+            let hash_for_tracking = hash_dependency_zip.clone();
+
+            let ctx_clone = ctx.clone();
+            let future = async move {
+                let result = ctx_clone
+                    .resource_provider
+                    .fetch_resource(asset_url, hash_dependency_zip, absolute_file_path)
+                    .await;
+
+                #[cfg(feature = "use_resource_tracking")]
+                if let Err(ref e) = result {
+                    report_resource_error(&hash_for_tracking, &e.to_string());
+                } else {
+                    report_resource_loaded(&hash_for_tracking);
+                }
+
+                result
+            };
+            futures_to_wait.push(Box::pin(future));
         }
 
         // 1.1 We ensure that the file_hash (the scene who is requesting) is the last dependency to load
@@ -1503,5 +1944,12 @@ impl ContentProvider {
         }
 
         Ok(())
+    }
+}
+
+impl ContentProvider {
+    /// Get the resource provider for sharing with other systems (like ContentProvider2)
+    pub fn get_resource_provider(&self) -> Arc<ResourceProvider> {
+        self.resource_provider.clone()
     }
 }

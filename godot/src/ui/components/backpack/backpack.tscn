@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=46 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -10,6 +10,7 @@
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_18vfg"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="5_ldi16"]
 [ext_resource type="Texture2D" uid="uid://dra4ek5p0o6jj" path="res://assets/ui/wearable_categories/body_shape-icon.svg" id="6_4rdaw"]
+[ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/components/utils/clean_orientation.gd" id="6_cb3xs"]
 [ext_resource type="Texture2D" uid="uid://bg68xlkrhus8m" path="res://assets/ui/wearable_categories/eyebrows-icon.svg" id="7_a6yyg"]
 [ext_resource type="PackedScene" uid="uid://cyf8k77w3gdih" path="res://src/ui/color_picker/color_picker_button.tscn" id="7_i1fkq"]
 [ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="7_w8hgg"]
@@ -112,7 +113,7 @@ theme_override_fonts/font = ExtResource("2_m8ron")
 theme_override_font_sizes/font_size = 28
 text = "Backpack"
 label_settings = ExtResource("5_18vfg")
-script = ExtResource("34_gaa2l")
+script = ExtResource("6_cb3xs")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -732,18 +733,6 @@ offset_right = 64.0
 offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="ClonedAvatarPreview" parent="." instance=ExtResource("4_4kxkq")]
-unique_name_in_owner = true
-layout_mode = 1
-offset_left = 1280.0
-offset_top = 720.0
-offset_bottom = 256.0
-size_flags_horizontal = 1
-mouse_filter = 0
-stretch = true
-hide_name = true
-show_platform = true
 
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/Button_Wearables" to="." method="_on_button_wearables_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]

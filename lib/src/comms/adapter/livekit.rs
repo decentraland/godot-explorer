@@ -72,7 +72,7 @@ impl LivekitRoom {
         } else {
             "Scene"
         };
-        tracing::info!(
+        tracing::debug!(
             "🔧 Creating {} LiveKit room '{}' with auto_subscribe={}",
             room_type,
             room_id,
@@ -193,7 +193,7 @@ impl Adapter for LivekitRoom {
 
     fn change_profile(&mut self, _new_profile: UserProfile) {
         // Profile changes are now handled by MessageProcessor
-        tracing::warn!("Profile changes should be handled by MessageProcessor");
+        tracing::error!("Profile changes should be handled by MessageProcessor");
     }
 
     fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
@@ -259,8 +259,19 @@ fn spawn_livekit_task(
     let rt2 = rt.clone();
 
     let task = rt.spawn(async move {
-        tracing::info!("🔌 Connecting to LiveKit room '{}' with auto_subscribe={}", room_id, auto_subscribe);
-        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
+        tracing::debug!("🔌 LiveKit connecting - room: '{}', auto_subscribe: {}", room_id, auto_subscribe);
+        let connect_result = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await;
+
+        let (room, mut network_rx) = match connect_result {
+            Ok(result) => {
+                tracing::debug!("🔌 LiveKit connection successful - room: '{}'", room_id);
+                result
+            }
+            Err(e) => {
+                tracing::warn!("🔌 LiveKit connection failed - room: '{}', error: {:?}", room_id, e);
+                return;
+            }
+        };
 
         // Only initialize microphone if voice chat feature is enabled
         #[cfg(feature = "use_voice_chat")]
@@ -304,13 +315,13 @@ fn spawn_livekit_task(
             tokio::select!(
                 incoming = network_rx.recv() => {
                     let Some(incoming) = incoming else {
-                        tracing::debug!("network pipe broken, exiting loop");
+                        tracing::debug!("🔌 LiveKit session ended - room: '{}', reason: network pipe broken", room_id);
                         break 'stream;
                     };
 
                     match incoming {
                         livekit::RoomEvent::Connected { participants_with_tracks } => {
-                            tracing::info!("Connected to LiveKit room with {} participants", participants_with_tracks.len());
+                            tracing::debug!("Connected to LiveKit room with {} participants", participants_with_tracks.len());
 
                             // Subscribe to video tracks from streamers already in the room
                             for (participant, publications) in participants_with_tracks {
@@ -319,9 +330,9 @@ fn spawn_livekit_task(
 
                                 // Check if this is a streamer (identity ends with "-streamer")
                                 if identity_str.ends_with("-streamer") {
-                                    tracing::info!("Found streamer {} with {} publications", identity_str, publications.len());
+                                    tracing::debug!("Found streamer {} with {} publications", identity_str, publications.len());
                                     for publication in publications {
-                                        tracing::info!("Subscribing to streamer publication: {:?} (kind: {:?})",
+                                        tracing::debug!("Subscribing to streamer publication: {:?} (kind: {:?})",
                                             publication.sid(), publication.kind());
                                         publication.set_subscribed(true);
                                     }
@@ -334,7 +345,7 @@ fn spawn_livekit_task(
 
                             // Auto-subscribe to video tracks from streamers
                             if identity_str.ends_with("-streamer") {
-                                tracing::info!("Streamer {} published track: {:?} (kind: {:?})",
+                                tracing::debug!("Streamer {} published track: {:?} (kind: {:?})",
                                     identity_str, publication.sid(), publication.kind());
                                 publication.set_subscribed(true);
                             }
@@ -389,7 +400,7 @@ fn spawn_livekit_task(
                                         rt2.spawn(async move {
                                             let mut stream = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
 
-                                            tracing::info!("streamer audio track from {:?}", identity_owned);
+                                            tracing::debug!("streamer audio track from {:?}", identity_owned);
 
                                             // get first frame to set sample rate
                                             let Some(frame) = stream.next().await else {
@@ -397,7 +408,7 @@ fn spawn_livekit_task(
                                                 return;
                                             };
 
-                                            tracing::info!(
+                                            tracing::debug!(
                                                 "Streamer audio first frame: sample_rate={}, num_channels={}, samples_per_channel={}, data_len={}",
                                                 frame.sample_rate,
                                                 frame.num_channels,
@@ -429,7 +440,7 @@ fn spawn_livekit_task(
                                                 }) {
                                                     Ok(()) => (),
                                                     Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
-                                                        tracing::warn!("Streamer audio frame dropped: channel full");
+                                                        tracing::debug!("Streamer audio frame dropped: channel full");
                                                     }
                                                     Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
                                                         tracing::warn!("streamer audio receiver dropped, exiting task");
@@ -438,7 +449,7 @@ fn spawn_livekit_task(
                                                 }
                                             }
 
-                                            tracing::warn!("streamer audio track ended, exiting task");
+                                            tracing::debug!("streamer audio track ended, exiting task");
                                         });
                                     } else if let Some(address) = address {
                                         // Regular participant audio -> voice chat
@@ -487,7 +498,7 @@ fn spawn_livekit_task(
                                                 }
                                             }
 
-                                            tracing::warn!("audio track ended, exiting task");
+                                            tracing::debug!("audio track ended, exiting task");
                                         });
                                     }
                                 },
@@ -507,7 +518,7 @@ fn spawn_livekit_task(
 
                                             let mut stream = NativeVideoStream::new(video.rtc_track());
 
-                                            tracing::info!("video track subscribed from {:?}", identity_owned);
+                                            tracing::debug!("video track subscribed from {:?}", identity_owned);
 
                                             // Get first frame for initialization
                                             let Some(frame) = stream.next().await else {
@@ -520,7 +531,7 @@ fn spawn_livekit_task(
                                             let width = buffer.width();
                                             let height = buffer.height();
 
-                                            tracing::info!("Received first video frame: {}x{}, type: {:?}", width, height, buffer.buffer_type());
+                                            tracing::debug!("Received first video frame: {}x{}, type: {:?}", width, height, buffer.buffer_type());
 
                                             // Send init message
                                             if let Err(e) = sender.send(IncomingMessage {
@@ -598,7 +609,6 @@ fn spawn_livekit_task(
                                                     }) {
                                                         Ok(()) => (),
                                                         Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
-                                                            tracing::warn!("Dropping frame due to full channel");
                                                             // Drop frame if channel is full (backpressure)
                                                         },
                                                         Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
@@ -609,7 +619,7 @@ fn spawn_livekit_task(
                                                 }
                                             }
 
-                                            tracing::warn!("video track ended, exiting task");
+                                            tracing::debug!("video track ended, exiting task");
                                         });
                                     }
                                 },
@@ -617,7 +627,7 @@ fn spawn_livekit_task(
                         }
                         livekit::RoomEvent::ParticipantConnected(participant) => {
                             if let Some(address) = participant.identity().0.as_str().as_h160() {
-                                tracing::info!("👋 Participant {:#x} connected to LiveKit room", address);
+                                tracing::debug!("👋 Participant {:#x} connected to LiveKit room", address);
                                 if let Err(e) = sender.send(IncomingMessage {
                                     message: MessageType::PeerJoined,
                                     address,
@@ -629,7 +639,7 @@ fn spawn_livekit_task(
                         }
                         livekit::RoomEvent::ParticipantDisconnected(participant) => {
                             if let Some(address) = participant.identity().0.as_str().as_h160() {
-                                tracing::info!("👋 Participant {:#x} disconnected from LiveKit room", address);
+                                tracing::debug!("👋 Participant {:#x} disconnected from LiveKit room", address);
                                 if let Err(e) = sender.send(IncomingMessage {
                                     message: MessageType::PeerLeft,
                                     address,
@@ -640,6 +650,13 @@ fn spawn_livekit_task(
                             }
                         }
                         livekit::RoomEvent::Disconnected { reason } => {
+                            // Log LiveKit session end with reason
+                            tracing::debug!(
+                                "🔌 LiveKit session ended - room: '{}', reason: {:?}",
+                                room_id,
+                                reason
+                            );
+
                             // Map LiveKit disconnect reason to our DisconnectReason
                             use super::message_processor::DisconnectReason;
                             let disconnect_reason = match reason {
@@ -664,7 +681,7 @@ fn spawn_livekit_task(
                 }
                 outgoing = receiver.recv() => {
                     let Some(outgoing) = outgoing else {
-                        tracing::debug!("app pipe broken, exiting loop");
+                        tracing::debug!("🔌 LiveKit session ended - room: '{}', reason: app pipe broken", room_id);
                         break 'stream;
                     };
 
@@ -688,8 +705,9 @@ fn spawn_livekit_task(
             );
         }
 
+        tracing::debug!("🔌 LiveKit room closing - room: '{}'", room_id);
         if let Err(e) = room.close().await {
-            tracing::debug!("room.close() failed (may already be closed): {e}");
+            tracing::warn!("🔌 LiveKit room.close() failed - room: '{}', error: {}", room_id, e);
         }
     });
 

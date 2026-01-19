@@ -22,8 +22,8 @@ var icon_visible: Texture2D = preload(
 	"res://src/ui/components/debug_panel/icons/GuiVisibilityVisible.svg"
 )
 
-@onready var expression_text_edit = $TabContainer_DebugPanel/Expression/TextEdit
-@onready var expression_label = $TabContainer_DebugPanel/Expression/Label
+@onready var text_edit_expression: TextEdit = %TextEdit_Expression
+@onready var label_expression: TextEdit = %Label_Expression
 
 @onready var tree_console: Tree = %Tree_Console
 @onready var tab_container_debug_panel: TabContainer = %TabContainer_DebugPanel
@@ -31,7 +31,7 @@ var icon_visible: Texture2D = preload(
 @onready var popup_menu: PopupMenu = %PopupMenu
 @onready var button_debug_js = %Button_DebugJS
 @onready var button_open_source = %Button_OpenSource
-@onready var label_debug_info = $"TabContainer_DebugPanel/Misc&Debugger/Label_DebugInfo"
+@onready var label_debug_info: Label = %Label_DebugInfo
 
 
 func _ready():
@@ -179,18 +179,18 @@ func _on_button_copy_pressed():
 
 func _on_text_edit_text_changed():
 	var expression = Expression.new()
-	var err = expression.parse(expression_text_edit.text, ["Global"])
+	var err = expression.parse(text_edit_expression.text, ["Global"])
 
 	if err != OK:
-		expression_label.text = "Parse failed: " + expression.get_error_text()
+		label_expression.text = "Parse failed: " + expression.get_error_text()
 		return
 
 	var result = expression.execute([Global], self)
 	if expression.has_execute_failed():
-		expression_label.text = "Execution failed: " + expression.get_error_text()
+		label_expression.text = "Execution failed: " + expression.get_error_text()
 		return
 
-	expression_label.text = "Ok: " + str(result)
+	label_expression.text = "Ok: " + str(result)
 
 
 func _on_tab_container_debug_panel_visibility_changed():

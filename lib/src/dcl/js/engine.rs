@@ -184,7 +184,7 @@ async fn op_crdt_recv_from_renderer(
                         component_id,
                         &mut data_writter,
                     ) {
-                        tracing::info!("error writing crdt message: {err}");
+                        tracing::error!("error writing crdt message: {err}");
                     }
                 }
             }
@@ -213,7 +213,7 @@ async fn op_crdt_recv_from_renderer(
                         element_count,
                         &mut data_writter,
                     ) {
-                        tracing::info!("error writing crdt message: {err}");
+                        tracing::error!("error writing crdt message: {err}");
                     }
                 }
             }
@@ -265,7 +265,7 @@ async fn op_crdt_recv_from_renderer(
         }
         _ => {
             // channel has been closed, shutdown gracefully
-            tracing::info!("{}: shutting down", std::thread::current().name().unwrap());
+            tracing::debug!("{}: shutting down", std::thread::current().name().unwrap());
 
             // TODO: handle recv from renderer
             op_state.put(SceneDying(true));

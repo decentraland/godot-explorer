@@ -1,4 +1,4 @@
-[gd_scene load_steps=51 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=50 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
@@ -24,7 +24,6 @@
 [ext_resource type="Texture2D" uid="uid://bk8rmfac3ul7j" path="res://assets/ui/friends.svg" id="12_jcjsg"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_oyuqo"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="13_ltw05"]
-[ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="13_ood4l"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="13_quy3q"]
 [ext_resource type="Texture2D" uid="uid://bjc0grtm3cyvg" path="res://assets/ui/profile/pronouns.svg" id="13_wt1aa"]
 [ext_resource type="Texture2D" uid="uid://bxi281gjgk05i" path="res://assets/ui/unfriend.svg" id="14_ur8se"]
@@ -147,7 +146,7 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 
-[node name="Control_LeftBar" type="Control" parent="MarginContainer/HBoxContainer"]
+[node name="Control_landscape_avatar" type="Control" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
@@ -157,7 +156,7 @@ mouse_filter = 2
 script = ExtResource("3_oe5oo")
 hide_on_portrait = true
 
-[node name="AvatarPreviewLandscape" parent="MarginContainer/HBoxContainer/Control_LeftBar" instance=ExtResource("5_yx7pe")]
+[node name="AvatarPreview" parent="MarginContainer/HBoxContainer/Control_landscape_avatar" instance=ExtResource("5_yx7pe")]
 unique_name_in_owner = true
 layout_mode = 1
 size_flags_horizontal = 1
@@ -194,7 +193,7 @@ theme_override_constants/separation = 10
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 0
+theme_override_constants/separation = 5
 
 [node name="Label_Nickname" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -235,16 +234,16 @@ stretch_mode = 4
 [node name="Button_CopyNick" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(30, 30)
+custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_type_variation = &"FlatButton"
-theme_override_constants/icon_max_width = 30
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 40
 icon = ExtResource("9_oyuqo")
-flat = true
-expand_icon = true
+icon_alignment = 1
 
 [node name="Button_EditNick" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer"]
 unique_name_in_owner = true
@@ -412,15 +411,15 @@ text = "0x1...a92"
 [node name="Button_CopyAddress" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer2/HBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(30, 30)
+custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_type_variation = &"FlatButton"
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"SecondaryLittle"
 icon = ExtResource("9_oyuqo")
-flat = true
-expand_icon = true
+icon_alignment = 1
 
 [node name="MutualFriends" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader" instance=ExtResource("18_61jmm")]
 unique_name_in_owner = true
@@ -441,14 +440,14 @@ theme_override_constants/separation = 30
 
 [node name="Control_Avatar" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(300, 500)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 script = ExtResource("3_oe5oo")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar"]
+[node name="MarginContainer_PortraitAvatar" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -457,16 +456,6 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 100
 theme_override_constants/margin_right = 100
-
-[node name="AvatarPreviewPortrait" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar/MarginContainer" instance=ExtResource("5_yx7pe")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 1
-mouse_filter = 0
-mouse_force_pass_scroll_events = false
-stretch = true
-hide_name = true
-custom_environment = ExtResource("13_ood4l")
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -997,11 +986,13 @@ visible = false
 layout_mode = 2
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer/Button_CopyNick" to="." method="_on_copy_nick_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/Button_EditNick" to="." method="_on_button_edit_nick_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/Button_ClaimName" to="." method="_on_button_claim_name_pressed"]
 [connection signal="toggled" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_MuteUser" to="." method="_on_button_mute_user_toggled"]
 [connection signal="toggled" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_Menu" to="." method="_on_button_menu_toggled"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_CloseProfile" to="." method="close"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer2/HBoxContainer/Button_CopyAddress" to="." method="_on_copy_address_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button_EditAbout" to="." method="_on_button_edit_about_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutCancel" to="." method="_on_button_about_cancel_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutSave" to="." method="_async_on_button_about_save_pressed"]

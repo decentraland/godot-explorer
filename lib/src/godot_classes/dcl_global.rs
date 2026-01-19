@@ -38,6 +38,7 @@ use super::{
 
 #[cfg(target_os = "android")]
 mod android {
+    use crate::tools::sentry_logger::SentryTracingLayer;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
@@ -69,12 +70,16 @@ mod android {
             .with_ansi(false) // Disable ANSI color codes for cleaner logcat output
             .with_filter(filter);
 
-        registry().with(android_layer).init();
+        // Add Sentry layer to capture errors and warnings
+        let sentry_layer = SentryTracingLayer;
+
+        registry().with(android_layer).with(sentry_layer).init();
     }
 }
 
 #[cfg(target_os = "ios")]
 mod ios {
+    use crate::tools::sentry_logger::SentryTracingLayer;
     use tracing_oslog::OsLogger;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
@@ -101,9 +106,38 @@ mod ios {
 
         // Use OSLog for iOS - writes to the system log instead of stderr
         // This avoids crashes when stderr is not available (e.g., running without Xcode)
+        // Note: Level is shown in Console.app's "Type" column, target is not included in message
         let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
 
-        registry().with(oslog_layer).init();
+        // Add Sentry layer to capture errors and warnings
+        let sentry_layer = SentryTracingLayer;
+
+        registry().with(oslog_layer).with(sentry_layer).init();
+    }
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod desktop {
+    use crate::tools::sentry_logger::SentryTracingLayer;
+    use tracing_subscriber::filter::EnvFilter;
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::registry;
+
+    pub fn init_logger() {
+        // Respect RUST_LOG environment variable, default to "warn" if not set
+        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
+            eprintln!("RUST_LOG not set or invalid ({e}), defaulting to 'warn'");
+            EnvFilter::new("warn")
+        });
+
+        let fmt_layer = tracing_subscriber::fmt::layer().with_filter(filter);
+        let sentry_layer = SentryTracingLayer;
+
+        registry()
+            .with(fmt_layer)
+            .with(sentry_layer)
+            .try_init()
+            .ok();
     }
 }
 
@@ -186,6 +220,20 @@ pub struct DclGlobal {
     pub cli: Gd<DclCli>,
 
     pub selected_avatar: Option<Gd<DclAvatar>>,
+
+    // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
+    #[var]
+    pub input_modifier_disable_all: bool,
+    #[var]
+    pub input_modifier_disable_walk: bool,
+    #[var]
+    pub input_modifier_disable_jog: bool,
+    #[var]
+    pub input_modifier_disable_run: bool,
+    #[var]
+    pub input_modifier_disable_jump: bool,
+    #[var]
+    pub input_modifier_disable_emote: bool,
 }
 
 #[godot_api]
@@ -201,7 +249,7 @@ impl INode for DclGlobal {
         ios::init_logger();
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
-        let _ = tracing_subscriber::fmt::try_init();
+        desktop::init_logger();
 
         tracing::info!(
             "DclGlobal init invoked version={}",
@@ -337,6 +385,14 @@ impl INode for DclGlobal {
             has_javascript_debugger: false,
             cli,
             selected_avatar: None,
+
+            // Input modifiers start as false (no modification)
+            input_modifier_disable_all: false,
+            input_modifier_disable_walk: false,
+            input_modifier_disable_jog: false,
+            input_modifier_disable_run: false,
+            input_modifier_disable_jump: false,
+            input_modifier_disable_emote: false,
         }
     }
 }
@@ -422,6 +478,21 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").contains("-dev")
     }
 
+    #[func]
+    pub fn get_commit_hash() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_HASH").into()
+    }
+
+    #[func]
+    pub fn get_commit_message() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_MESSAGE").into()
+    }
+
+    #[func]
+    pub fn get_branch_name() -> GString {
+        env!("GODOT_EXPLORER_BRANCH_NAME").into()
+    }
+
     pub fn has_singleton() -> bool {
         let Some(main_loop) = Engine::singleton().get_main_loop() else {
             return false;
@@ -454,5 +525,58 @@ impl DclGlobal {
                 .bind()
                 .get_sender(),
         )
+    }
+
+    /// Reset all input modifiers to false (no modification)
+    pub fn reset_input_modifiers(&mut self) {
+        self.input_modifier_disable_all = false;
+        self.input_modifier_disable_walk = false;
+        self.input_modifier_disable_jog = false;
+        self.input_modifier_disable_run = false;
+        self.input_modifier_disable_jump = false;
+        self.input_modifier_disable_emote = false;
+    }
+
+    /// Check if walk input is disabled (either by disable_all or disable_walk)
+    #[func]
+    pub fn is_walk_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_walk
+    }
+
+    /// Check if jog input is disabled (either by disable_all or disable_jog)
+    #[func]
+    pub fn is_jog_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_jog
+    }
+
+    /// Check if run input is disabled (either by disable_all or disable_run)
+    #[func]
+    pub fn is_run_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_run
+    }
+
+    /// Check if jump input is disabled (either by disable_all or disable_jump)
+    #[func]
+    pub fn is_jump_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_jump
+    }
+
+    /// Check if emote input is disabled (either by disable_all or disable_emote)
+    #[func]
+    pub fn is_emote_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_emote
+    }
+
+    /// Check if all movement input is disabled
+    #[func]
+    pub fn is_all_input_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+    }
+
+    /// Emits test messages at various Rust tracing levels to verify Sentry integration.
+    #[func]
+    pub fn emit_sentry_rust_test_messages() {
+        use crate::tools::sentry_logger::emit_sentry_test_messages;
+        emit_sentry_test_messages();
     }
 }

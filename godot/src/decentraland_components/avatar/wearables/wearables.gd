@@ -568,7 +568,10 @@ class CuratedWearableList:
 
 
 static func get_curated_wearable_list(
-	body_shape_id: String, wearables: PackedStringArray, force_render: PackedStringArray
+	body_shape_id: String,
+	wearables: PackedStringArray,
+	force_render: PackedStringArray,
+	show_only_wearables: bool = false
 ) -> CuratedWearableList:
 	var ret = CuratedWearableList.new()
 
@@ -585,7 +588,7 @@ static func get_curated_wearable_list(
 			if not ret.wearables_by_category.has(category):
 				ret.wearables_by_category[category] = wearable
 		else:
-			printerr("invalid wearable ", wearable_id)
+			printerr("invalid wearable ", wearable_id, " for body_shape ", body_shape_id)
 
 	var unused_wearables = compose_hidden_categories(
 		body_shape_id, force_render, ret.wearables_by_category
@@ -597,6 +600,39 @@ static func get_curated_wearable_list(
 	ret.hidden_categories = compose_hidden_categories(
 		body_shape_id, force_render, ret.wearables_by_category, true
 	)
+
+	# When show_only_wearables is true, hide all body parts and facial features
+	# This prevents fallback wearables from being added for these categories
+	# BUT we keep explicitly provided wearables in wearables_by_category
+	if show_only_wearables:
+		var body_categories = [
+			Categories.UPPER_BODY,
+			Categories.LOWER_BODY,
+			Categories.FEET,
+			Categories.HANDS,
+			Categories.HEAD,
+			Categories.HAIR,
+			Categories.FACIAL_HAIR,
+			Categories.EYES,
+			Categories.EYEBROWS,
+			Categories.MOUTH,
+			Categories.SKIN
+		]
+		# Store which categories have explicit wearables (not fallbacks)
+		var explicit_wearable_categories: Array = []
+		for wearable_id in wearables:
+			var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(
+				wearable_id
+			)
+			if wearable != null:
+				explicit_wearable_categories.append(wearable.get_category())
+
+		for category in body_categories:
+			# Only add to hidden_categories if it's NOT an explicit wearable
+			# This allows the explicit wearable to be rendered while hiding fallbacks
+			if not explicit_wearable_categories.has(category):
+				if not ret.hidden_categories.has(category):
+					ret.hidden_categories.append(category)
 
 	ret.need_to_fetch = set_fallback_for_missing_needed_categories(
 		body_shape_id, ret.wearables_by_category, ret.hidden_categories
@@ -631,59 +667,3 @@ static func set_fallback_for_missing_needed_categories(
 				need_to_fetch.push_back(fallback_wearable_id)
 
 	return need_to_fetch
-
-
-static func promise_get_wearable(wearable: DclItemEntityDefinition, body_shape_id: String) -> Array:
-	if not DclItemEntityDefinition.is_valid_wearable(wearable, body_shape_id, true):
-		return []
-
-	var hashes_to_fetch: Array
-	if Wearables.is_texture(wearable.get_category()):
-		hashes_to_fetch = Wearables.get_wearable_facial_hashes(wearable, body_shape_id)
-	else:
-		hashes_to_fetch = [Wearables.get_item_main_file_hash(wearable, body_shape_id)]
-
-	if hashes_to_fetch.is_empty():
-		return []
-
-	var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
-	var files: Array = []
-	for file_name in content_mapping.get_files():
-		for file_hash in hashes_to_fetch:
-			if content_mapping.get_hash(file_name) == file_hash:
-				files.push_back(file_name)
-
-	var ret: Array = []
-	for file_name in files:
-		var promise
-		if file_name.ends_with(".png"):
-			promise = Global.content_provider.fetch_texture(file_name, content_mapping)
-		else:
-			promise = Global.content_provider.fetch_wearable_gltf(file_name, content_mapping)
-		ret.push_back(promise)
-	return ret
-
-
-static func async_load_wearables(wearable_keys: Array, body_shape_id: String):
-	var async_calls_info: Array = []
-	var promises_array: Array = []
-
-	for wearable_key in wearable_keys:
-		var wearable = Global.content_provider.get_wearable(wearable_key)
-		if wearable == null:
-			printerr("wearable ", wearable_key, " null")
-			continue
-
-		var wearable_promises: Array = Wearables.promise_get_wearable(wearable, body_shape_id)
-		for promises in wearable_promises:
-			promises_array.push_back(promises)
-			async_calls_info.push_back(wearable_key)
-
-	var promises_result: Array = await PromiseUtils.async_all(promises_array)
-	for i in range(promises_result.size()):
-		if not is_instance_valid(promises_result[i]):
-			printerr("Error loading instance invalid ", async_calls_info[i], ":", promises_result)
-		elif promises_result[i] is PromiseError:
-			printerr("Error loading ", async_calls_info[i], ":", promises_result[i].get_error())
-
-	return promises_array

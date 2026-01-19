@@ -546,4 +546,63 @@ fn set_godot_explorer_version() {
     };
 
     println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
+
+    // Get full commit hash for Sentry tags
+    let full_commit_hash = commit_hash.clone().unwrap_or_default();
+
+    // Get commit message (first 30 characters) for Sentry tags
+    let commit_message = if commit_hash.is_some() {
+        if let Ok(output) = Command::new("git")
+            .args(["log", "-1", "--format=%s"])
+            .output()
+        {
+            let msg = String::from_utf8(output.stdout)
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            // Take first 30 characters
+            msg.chars().take(30).collect::<String>()
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
+    // Get branch name from environment variable (set by CI) or from git
+    let branch_name = env::var("BRANCH_NAME").unwrap_or_else(|_| {
+        // Fallback: try to get branch name from git
+        if let Ok(output) = Command::new("git")
+            .args(["rev-parse", "--abbrev-ref", "HEAD"])
+            .output()
+        {
+            String::from_utf8(output.stdout)
+                .unwrap_or_default()
+                .trim()
+                .to_string()
+        } else {
+            String::new()
+        }
+    });
+
+    println!(
+        "cargo:rustc-env=GODOT_EXPLORER_COMMIT_HASH={}",
+        full_commit_hash
+    );
+    println!(
+        "cargo:rustc-env=GODOT_EXPLORER_COMMIT_MESSAGE={}",
+        commit_message
+    );
+    println!("cargo:rustc-env=GODOT_EXPLORER_BRANCH_NAME={}", branch_name);
+
+    // Write checkpoint file for version verification
+    let checkpoint_path = Path::new("../.build.version");
+    if let Err(e) = fs::write(checkpoint_path, &full_version) {
+        println!(
+            "cargo:warning=Failed to write version checkpoint file: {}",
+            e
+        );
+    } else {
+        println!("cargo:warning=Version checkpoint written: {}", full_version);
+    }
 }

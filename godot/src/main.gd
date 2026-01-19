@@ -24,7 +24,7 @@ func start():
 		# Apply basic config
 		var main_window: Window = get_node("/root")
 		GraphicSettings.apply_window_config()
-		GraphicSettings.apply_fps_limit()
+		GraphicSettings.apply_low_processor_mode()
 		main_window.move_to_center()
 		GraphicSettings.connect_global_signal(main_window)
 		GraphicSettings.apply_ui_zoom(main_window)
@@ -47,6 +47,9 @@ func _start():
 		print("Running in XR mode")
 		Global.set_orientation_landscape()
 		get_tree().change_scene_to_file("res://src/vr/vr_lobby.tscn")
+	elif Global.cli.emote_test_mode:
+		print("Running in Emote Test mode")
+		get_tree().change_scene_to_file("res://src/test/emote/emote_tester_standalone.tscn")
 	elif Global.cli.avatar_renderer_mode:
 		print("Running in Avatar-Renderer mode")
 		get_tree().change_scene_to_file(

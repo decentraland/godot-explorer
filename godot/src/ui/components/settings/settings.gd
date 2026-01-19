@@ -68,6 +68,7 @@ var _dirty_connected: bool = false
 @onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
 
 @onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
+@onready var button_test_notification = %Button_TestNotification
 
 @onready var button_general: Button = %Button_General
 @onready var button_graphics: Button = %Button_Graphics
@@ -480,6 +481,30 @@ func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
 
 
+func _on_button_test_notification_pressed() -> void:
+	# Test notification with emojis and accents in both title and body
+	# This will test if iOS can display both correctly
+	var test_title = "🎉 Notificación de Prueba 🎉"
+	var test_body = "Esta es una notificación de prueba con emojis 🚀 y acentos: áéíóú ÁÉÍÓÚ ñ Ñ"
+	var notification_id = "test_notification_" + str(Time.get_unix_time_from_system())
+	var delay_seconds = 5  # Show notification in 5 seconds
+
+	if NotificationsManager.schedule_local_notification(
+		notification_id, test_title, test_body, delay_seconds
+	):
+		print(
+			(
+				"Test notification scheduled: id=%s, title=%s, body=%s"
+				% [notification_id, test_title, test_body]
+			)
+		)
+		print(
+			"Expected: Emojis and accents should be preserved. If they show as symbols, enable sanitization."
+		)
+	else:
+		printerr("Failed to schedule test notification")
+
+
 func _on_button_report_bug_pressed() -> void:
 	var form_id = "1FAIpQLScWjnb3Ya7yV8xFn0R-yf_SMejzBGDiDTZbHaddOFEmJwAM6g"
 	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
@@ -491,7 +516,7 @@ func _on_button_report_bug_pressed() -> void:
 	var os_version = OS.get_name()
 	var app_version = Global.get_version()
 	var environment = ""
-	if DclGodotAndroidPlugin.is_available():
+	if DclAndroidPlugin.is_available():
 		var android_singleton = Engine.get_singleton("dcl-godot-android")
 		if android_singleton:
 			var device_info = android_singleton.getMobileDeviceInfo()
@@ -533,3 +558,16 @@ func _on_button_report_bug_pressed() -> void:
 		url += "?" + "&".join(params)
 
 	Global.open_url(url)
+
+
+func _on_button_open_user_data_pressed() -> void:
+	var user_data_path = OS.get_user_data_dir()
+	print("Opening user data folder: ", user_data_path)
+
+	# On mobile, we can't open the file explorer directly, so we copy the path to clipboard
+	if Global.is_mobile():
+		DisplayServer.clipboard_set(user_data_path)
+		print("User data path copied to clipboard: ", user_data_path)
+	else:
+		# On desktop (Windows, macOS, Linux), open the file explorer
+		OS.shell_open(user_data_path)

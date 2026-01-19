@@ -48,27 +48,6 @@ pub enum CrdtMessageType {
 
 const CRDT_HEADER_SIZE: usize = 8;
 
-#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-fn debug_check_component(component: SceneComponentId, entity: SceneEntityId, operation: &str) {
-    // List of component IDs to debug with their names
-    const DEBUG_COMPONENTS: &[(u32, &str)] = &[
-        (1078, "PBInputModifier"),
-        (1079, "PBLightSource"),
-        (1099, "PBGltfNodeModifiers"),
-        // Add more components here as needed
-    ];
-
-    if let Some((_, name)) = DEBUG_COMPONENTS.iter().find(|(id, _)| *id == component.0) {
-        tracing::warn!(
-            "{} ({}) detected in {} for entity {:?}",
-            name,
-            component.0,
-            operation,
-            entity
-        );
-    }
-}
-
 fn process_message(
     scene_crdt_state: &mut SceneCrdtState,
     crdt_type: CrdtMessageType,
@@ -78,9 +57,6 @@ fn process_message(
         CrdtMessageType::PutComponent => {
             let entity = stream.read()?;
             let component: SceneComponentId = stream.read()?;
-
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-            debug_check_component(component, entity, "PutComponent");
 
             let timestamp: SceneCrdtTimestamp = stream.read()?;
             let _content_len = stream.read_u32()? as usize;
@@ -99,9 +75,6 @@ fn process_message(
         CrdtMessageType::DeleteComponent => {
             let entity = stream.read()?;
             let component: SceneComponentId = stream.read()?;
-
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-            debug_check_component(component, entity, "DeleteComponent");
 
             let timestamp: SceneCrdtTimestamp = stream.read()?;
 
@@ -123,9 +96,6 @@ fn process_message(
         CrdtMessageType::AppendValue => {
             let entity = stream.read()?;
             let component: SceneComponentId = stream.read()?;
-
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-            debug_check_component(component, entity, "AppendValue");
 
             let timestamp: SceneCrdtTimestamp = stream.read()?;
             let _content_len = stream.read_u32()? as usize;
@@ -158,10 +128,10 @@ pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut Scen
         match FromPrimitive::from_u32(crdt_type) {
             Some(crdt_type) => {
                 if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
-                    tracing::info!("CRDT Buffer error: {:?}", e);
+                    tracing::warn!("CRDT Buffer error: {:?}", e);
                 };
             }
-            None => tracing::info!("CRDT Header error: unhandled crdt message type {crdt_type}"),
+            None => tracing::warn!("CRDT Header error: unhandled crdt message type {crdt_type}"),
         }
     }
 }

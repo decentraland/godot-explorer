@@ -57,7 +57,8 @@ func populate_trees():
 		if _tree_would_overlap_loaded_parcel(tree_to_duplicate, final_transform):
 			continue
 
-		var chosen_tree = tree_to_duplicate.duplicate()
+		# Use DUPLICATE_USE_INSTANTIATION to share materials and reduce descriptor set allocations
+		var chosen_tree = tree_to_duplicate.duplicate(DUPLICATE_USE_INSTANTIATION)
 		chosen_tree.name = "Tree_%d" % i
 		add_child(chosen_tree)
 

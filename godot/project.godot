@@ -50,7 +50,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--force-mobile "
+run/main_run_args="--force-mobile --debug-panel"
 
 [editor_plugins]
 
@@ -217,6 +217,7 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
+rendering_device/vulkan/max_descriptors_per_pool=256
 rendering_device/driver.ios="vulkan"
 rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
