@@ -18,6 +18,7 @@ var pressed_index: int = 0
 var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var fade_out_tween: Tween = null
+var fade_in_tween: Tween = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
 
@@ -96,13 +97,15 @@ func close():
 	# Wait for profile deploy if backpack has changes before closing
 	if selected_node == control_backpack:
 		await _async_deploy_if_has_changes()
-
 	var tween_m = create_tween()
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
 	tween_h.tween_callback(hide).set_delay(0.3)
-	if selected_node:
-		selected_node.async_put_to_sleep()
+	tween_h.tween_callback(
+		func():
+			if selected_node:
+				selected_node.queue_free_instance()
+	)
 
 
 func async_show_discover():
@@ -147,6 +150,8 @@ func async_show_own_profile():
 
 
 func _open():
+	if selected_node and not selected_node.instance:
+		selected_node = null
 	if not selected_node:
 		async_show_discover()
 	if not visible:
@@ -188,31 +193,42 @@ func select_profile_screen(play_sfx: bool = true):
 
 
 func select_node(node: PlaceholderManager, play_sfx: bool = true):
+	if selected_node and not selected_node.instance:
+		selected_node = null
 	if selected_node != node:
-		if selected_node:
+		if selected_node and selected_node.instance:
 			fade_out(selected_node)
 		fade_in(node)
 
 		if play_sfx:
 			UiSounds.play_sound("generic_button_press")
+	if selected_node == node:
+		if selected_node.instance:
+			selected_node.instance.show()
 
 
 func fade_in(node: PlaceholderManager):
 	selected_node = node
 	node.instance.show()
-	var tween = create_tween()
-	tween.tween_property(node.instance, "modulate", Color(1, 1, 1), 0.3)
+	if is_instance_valid(fade_in_tween):
+		if fade_in_tween.is_running():
+			fade_out_tween.custom_step(100.0)
+			fade_in_tween.kill()
+	node.instance.modulate.a = 0.0
+	fade_in_tween = create_tween()
+	fade_in_tween.tween_property(node.instance, "modulate", Color(1, 1, 1), 0.3)
 
 
 func fade_out(node: PlaceholderManager):
 	if is_instance_valid(fade_out_tween):
 		if fade_out_tween.is_running():
-			selected_node.instance.hide()
-			fade_out_tween.stop()
+			fade_out_tween.custom_step(100.0)
+			fade_out_tween.kill()
 
-	fade_out_tween = create_tween().set_parallel(true)
+	node.instance.modulate.a = 1.0
+	fade_out_tween = create_tween()
 	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
-	fade_out_tween.tween_callback(node.instance.hide).set_delay(0.3)
+	fade_out_tween.tween_callback(node.instance.hide)
 	fade_out_tween.tween_callback(node.async_put_to_sleep)
 
 
@@ -228,6 +244,8 @@ func _on_visibility_changed():
 
 
 func _async_deploy_if_has_changes():
+	if control_backpack.instance == null:
+		return
 	if control_backpack.instance.has_changes():
 		control_deploying_profile.show()
 		await control_backpack.instance.async_save_profile()
@@ -269,9 +287,9 @@ func _on_size_changed() -> void:
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
 
 
-func _on_notification_clicked(notification: Dictionary) -> void:
+func _on_notification_clicked(notification_dict: Dictionary) -> void:
 	# Handle notification clicks - open backpack for reward notifications
-	var notif_type = notification.get("type", "")
+	var notif_type = notification_dict.get("type", "")
 
 	# Check if this is a reward notification
 	if notif_type in ["reward_assignment", "reward_in_progress"]:

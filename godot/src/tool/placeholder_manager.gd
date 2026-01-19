@@ -5,7 +5,7 @@ enum STATUS { UNLOADED, LOADING, LOADED, SLEEPING }
 var placeholder: Node
 var instance: Node
 
-var sleep_time := 20000.0  # In milliseconds
+var sleep_time := 5000.0  # In milliseconds
 var status := STATUS.UNLOADED
 
 
@@ -37,6 +37,7 @@ func _async_instantiate() -> Node:
 func _instantiate() -> Node:
 	if not instance:
 		instance = placeholder.create_instance()
+		instance.set_name(placeholder.get_name() + "_instance")
 		status = STATUS.LOADED
 	return instance
 
@@ -60,6 +61,10 @@ func async_put_to_sleep() -> void:
 func _remove_instance() -> void:
 	if status != STATUS.SLEEPING:
 		return
+	queue_free_instance()
+
+
+func queue_free_instance() -> void:
 	if instance:
 		instance.queue_free()
 		instance = null

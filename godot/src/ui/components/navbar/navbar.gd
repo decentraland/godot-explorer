@@ -48,6 +48,7 @@ func _on_size_changed():
 		if (
 			explorer.control_menu != null
 			and explorer.control_menu.visible
+			and explorer.control_menu.control_discover.instance != null
 			and explorer.control_menu.control_discover.instance.visible
 		):
 			# If discover is open, keep hidden
