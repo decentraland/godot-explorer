@@ -24,6 +24,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
+@onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -589,11 +590,10 @@ func _on_control_menu_request_debug_panel(enabled):
 	if enabled:
 		if not is_instance_valid(debug_panel):
 			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
-			ui_root.add_child(debug_panel)
-			ui_root.move_child(debug_panel, control_menu.get_index() - 1)
+			safe_margin_container_debug.add_child(debug_panel)
 	else:
 		if is_instance_valid(debug_panel):
-			ui_root.remove_child(debug_panel)
+			safe_margin_container_debug.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 
