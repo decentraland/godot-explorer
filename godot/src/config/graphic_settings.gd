@@ -84,3 +84,17 @@ static func apply_fps_limit():
 			physics_fps = 60
 
 	Engine.physics_ticks_per_second = physics_fps
+
+
+static func apply_low_processor_mode() -> void:
+	# For lobby/menus - reduce CPU usage
+	OS.low_processor_usage_mode = true
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+	Engine.max_fps = 0  # Let VSync control frame rate
+	Engine.physics_ticks_per_second = 60
+
+
+static func apply_full_processor_mode() -> void:
+	# For world exploration - full performance
+	OS.low_processor_usage_mode = false
+	apply_fps_limit()  # Apply user's configured FPS limit

@@ -104,14 +104,15 @@ static func build_plane_arrays() -> Array:
 	vertices.append(Vector3(-h, -h, 0.0))
 
 	var uvs = PackedVector2Array()
+	# Match Unity's UV layout but with Y inverted for Godot's coordinate system
+	uvs.append(Vector2(0, 1))
 	uvs.append(Vector2(0, 0))
-	uvs.append(Vector2(0, -1))
-	uvs.append(Vector2(1, -1))
+	uvs.append(Vector2(1, 0))
+	uvs.append(Vector2(1, 1))
+	uvs.append(Vector2(1, 1))
 	uvs.append(Vector2(1, 0))
 	uvs.append(Vector2(0, 0))
-	uvs.append(Vector2(0, -1))
-	uvs.append(Vector2(1, -1))
-	uvs.append(Vector2(1, 0))
+	uvs.append(Vector2(0, 1))
 
 	var triangles = PackedInt32Array()
 	triangles.append_array([0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4])

@@ -63,6 +63,7 @@ offset_right = 75.0
 offset_bottom = 108.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 1
 theme_override_styles/normal = SubResource("StyleBoxEmpty_avwi3")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxEmpty_w001v")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_fhkhl")
@@ -134,6 +135,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 4
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_4co5n")
 
 [node name="Label_Rarity" type="Label" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer_Rarity"]
@@ -150,6 +152,7 @@ uppercase = true
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 1
 theme = ExtResource("5_ykumo")
 text = "VIEW"
 

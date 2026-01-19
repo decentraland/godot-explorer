@@ -77,6 +77,14 @@ pub struct DclCli {
     #[var(get)]
     pub help_requested: bool,
     #[var(get)]
+    pub only_optimized: bool,
+    #[var(get)]
+    pub only_no_optimized: bool,
+    #[var(get)]
+    pub emote_test_mode: bool,
+    #[var(get)]
+    pub stress_test: bool,
+    #[var(get)]
     pub emulate_ios: bool,
     #[var(get)]
     pub emulate_android: bool,
@@ -203,6 +211,13 @@ impl DclCli {
                 category: "Testing".to_string(),
             },
             ArgDefinition {
+                name: "--emote-test".to_string(),
+                description: "Run emote batch test (cycles through all emotes then exits)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
                 name: "--avatars".to_string(),
                 description: "Path to avatars input file for renderer".to_string(),
                 arg_type: ArgType::Value("<file>".to_string()),
@@ -283,12 +298,34 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Maintenance".to_string(),
             },
+            // Asset Loading
+            ArgDefinition {
+                name: "--only-optimized".to_string(),
+                description: "Only load optimized assets (skip scenes without optimized assets)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Asset Loading".to_string(),
+            },
+            ArgDefinition {
+                name: "--only-no-optimized".to_string(),
+                description: "Only load non-optimized assets (ignore optimized assets)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Asset Loading".to_string(),
+            },
             // Deep Link
             ArgDefinition {
                 name: "--fake-deeplink".to_string(),
                 description: "Simulate a deep link URL (e.g., decentraland:///?location=52,-52)"
                     .to_string(),
                 arg_type: ArgType::Value("<URL>".to_string()),
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--stress-test".to_string(),
+                description:
+                    "Run stress test with rapid teleportation to test scene loading/unloading"
+                        .to_string(),
+                arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
         ]
@@ -353,14 +390,23 @@ impl DclCli {
 #[godot_api]
 impl INode for DclCli {
     fn init(base: Base<Node>) -> Self {
-        let args = Os::singleton().get_cmdline_args();
+        // Get both cmdline_args and cmdline_user_args (args after --)
+        // This ensures we capture arguments regardless of how they're passed
+        let cmdline_args = Os::singleton().get_cmdline_args();
+        let user_args = Os::singleton().get_cmdline_user_args();
+
+        // Combine both sources of arguments
+        let mut combined_args: Vec<GString> = cmdline_args.to_vec();
+        for arg in user_args.to_vec() {
+            if !combined_args.contains(&arg) {
+                combined_args.push(arg);
+            }
+        }
+
         let mut args_map = HashMap::new();
 
-        // Add default arguments
-        //args_map.insert("--skip-lobby".to_string(), None); // debug
-
         // Parse command line arguments into a map
-        let args_vec = args.to_vec();
+        let args_vec = combined_args;
         let mut i = 0;
         while i < args_vec.len() {
             let arg = args_vec[i].to_string();
@@ -409,6 +455,10 @@ impl INode for DclCli {
         let benchmark_report = args_map.contains_key("--benchmark-report");
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
+        let only_optimized = args_map.contains_key("--only-optimized");
+        let only_no_optimized = true; // args_map.contains_key("--only-no-optimized");
+        let emote_test_mode = args_map.contains_key("--emote-test");
+        let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
 
@@ -441,8 +491,21 @@ impl INode for DclCli {
         let fake_deeplink = args_map
             .get("--fake-deeplink")
             .and_then(|v| v.as_ref())
-            .map(GString::from)
+            .map(|s| {
+                // Strip surrounding quotes if present (Godot editor adds them from project.godot)
+                let trimmed = s.trim();
+                if (trimmed.starts_with('"') && trimmed.ends_with('"'))
+                    || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
+                {
+                    GString::from(&trimmed[1..trimmed.len() - 1])
+                } else {
+                    GString::from(s.as_str())
+                }
+            })
             .unwrap_or_default();
+
+        // Convert combined args back to PackedStringArray for storage
+        let args: PackedStringArray = args_vec.iter().cloned().collect();
 
         Self {
             _base: base,
@@ -472,6 +535,10 @@ impl INode for DclCli {
             fixed_skybox_time,
             developer_mode,
             help_requested,
+            only_optimized,
+            only_no_optimized,
+            emote_test_mode,
+            stress_test,
             emulate_ios,
             emulate_android,
             realm,

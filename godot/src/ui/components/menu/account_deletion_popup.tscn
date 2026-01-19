@@ -359,6 +359,7 @@ size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer/Button_ConfirmDeleteAccount" to="." method="_async_on_button_confirm_delete_account_pressed"]
 [connection signal="pressed" from="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2/Button_CancelDeleteAccount" to="." method="_on_button_cancel_delete_account_pressed"]
 [connection signal="pressed" from="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer/Button_Ok" to="." method="_on_button_ok_pressed"]

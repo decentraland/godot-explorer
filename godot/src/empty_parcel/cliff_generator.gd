@@ -566,7 +566,8 @@ func _generate_cliff_rocks(
 
 		# Choose a random rock mesh
 		var rock_to_duplicate = rocks_parent.get_child(randi() % available_rocks)
-		var chosen_rock = rock_to_duplicate.duplicate()
+		# Use DUPLICATE_USE_INSTANTIATION to share materials and reduce descriptor set allocations
+		var chosen_rock = rock_to_duplicate.duplicate(DUPLICATE_USE_INSTANTIATION)
 		chosen_rock.name = "CliffRock_%s_%d" % [cliff_name, i]
 		add_child(chosen_rock)
 

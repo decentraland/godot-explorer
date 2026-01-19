@@ -520,14 +520,6 @@ func _async_on_button_about_save_pressed() -> void:
 		printerr("No current profile to save")
 
 
-func _on_button_copy_nick_pressed() -> void:
-	_copy_name_and_tag()
-
-
-func _on_button_copy_address_pressed() -> void:
-	_copy_address()
-
-
 func close() -> void:
 	hide()
 	_hide_all_social_buttons()
@@ -1272,3 +1264,11 @@ func _relocate_avatar_preview():
 		avatar_preview.reparent(control_landscape_avatar)
 	else:
 		avatar_preview.reparent(margin_container_portrait_avatar)
+
+
+func _on_copy_nick_pressed() -> void:
+	_copy_name_and_tag()
+
+
+func _on_copy_address_pressed() -> void:
+	_copy_address()
