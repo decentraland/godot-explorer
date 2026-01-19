@@ -32,29 +32,26 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_right = 65
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 120
 theme_override_constants/margin_bottom = 20
 
 [node name="Control_Panel" type="Control" parent="MarginContainer"]
-custom_minimum_size = Vector2(500, 350)
+custom_minimum_size = Vector2(500, 280)
 layout_mode = 2
 size_flags_horizontal = 8
-size_flags_vertical = 8
+size_flags_vertical = 0
 mouse_filter = 2
 
 [node name="TabContainer_DebugPanel" type="TabContainer" parent="MarginContainer/Control_Panel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 250)
 layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -500.0
-offset_top = -250.0
-grow_horizontal = 0
-grow_vertical = 0
+grow_horizontal = 2
+grow_vertical = 2
 theme = ExtResource("1_c8oen")
 current_tab = 2
 tab_focus_mode = 0
@@ -117,11 +114,13 @@ metadata/_tab_index = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="Label_Expression" type="TextEdit" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Expression"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="Misc&Debugger" type="VBoxContainer" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel"]
 layout_mode = 2
