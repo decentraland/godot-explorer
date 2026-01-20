@@ -23,7 +23,7 @@ pub(crate) fn prepare_request_requirements() -> (String, String, Arc<HttpQueueRe
         .get_http_queue_requester();
 
     let lamda_server_base_url = if lamda_server_base_url.is_empty() {
-        "https://peer.decentraland.org/lambdas/".to_string()
+        "https://peer-testing.decentraland.org/lambdas/".to_string()
     } else {
         lamda_server_base_url
     };

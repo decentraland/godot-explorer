@@ -166,8 +166,13 @@ func select_profile_screen(play_sfx: bool = true):
 	select_node(control_profile_settings, play_sfx)
 
 
+# gdlint:ignore = async-function-name
 func select_node(node: Node, play_sfx: bool = true):
 	if selected_node != node:
+		# Deploy profile changes when leaving backpack
+		if selected_node == control_backpack:
+			await _async_deploy_if_has_changes()
+
 		fade_out(selected_node)
 		fade_in(node)
 

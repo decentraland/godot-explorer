@@ -295,7 +295,12 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
-		await async_close_sign_in()
+		if profile_has_name():
+			await async_close_sign_in()
+		else:
+			# New user signed in but has no profile name - go to naming screen
+			_show_avatar_preview()
+			show_avatar_naming_screen()
 	else:
 		ready_for_redirect_by_deep_link = true
 		if _should_go_to_explorer_from_deeplink():
@@ -366,7 +371,10 @@ func _on_button_next_pressed():
 
 	await ProfileService.async_deploy_profile(current_profile)
 
-	show_auth_home_screen()
+	if is_creating_account:
+		show_auth_home_screen()
+	else:
+		await async_close_sign_in()
 
 
 func _on_button_random_name_pressed():
