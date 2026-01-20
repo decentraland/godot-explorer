@@ -166,7 +166,7 @@ func _on_timer_check_progress_timeout_timeout():
 
 	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_activity_time) / 1000.0))
 	if inactive_seconds > 20:
-
+		ModalManager.show_scene_timeout_modal()
 		# LOADING_TIMEOUT metric
 		var timeout_data = {
 			"loaded_resources": loaded_resources,
@@ -179,24 +179,6 @@ func _on_timer_check_progress_timeout_timeout():
 
 		timer_check_progress_timeout.stop()
 
-
-func async_hide_popup_warning():
-	pass
-
-func _on_button_continue_pressed():
-	# LOADING_RUNANYWAY metric
-	Global.metrics.track_click_button("run_anyway", "LOADING", "")
-
-	loading_screen_progress_logic.hide_loading_screen()
-	async_hide_popup_warning()
-
-
-func _on_button_reload_pressed():
-	# LOADING_RELOAD metric
-	Global.metrics.track_click_button("reload", "LOADING", "")
-
-	Global.realm.async_set_realm(Global.realm.get_realm_string())
-	async_hide_popup_warning()
 
 
 func _on_loading_screen_progress_logic_loading_show_requested():

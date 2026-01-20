@@ -217,11 +217,13 @@ func _on_external_link_primary(url: String) -> void:
 
 
 func _on_scene_timeout_primary() -> void:
+	Global.metrics.track_click_button("reload", "LOADING", "")
 	Global.reload_scene.emit()
 	_remove_modal()
 
 
 func _on_scene_timeout_secondary() -> void:
+	Global.metrics.track_click_button("run_anyway", "LOADING", "")
 	Global.run_anyway.emit()
 	_remove_modal()
 
