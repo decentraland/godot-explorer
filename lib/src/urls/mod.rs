@@ -84,10 +84,6 @@ pub enum DecentralandUrl {
     /// OpenSea proxy: https://opensea.decentraland.{ENV}
     OpenSeaProxy,
 
-    // CDN (fixed, not transformed)
-    /// Adaptation layer (fixed): https://sdk-team-cdn.decentraland.org/ipfs
-    AdaptationLayer,
-
     // Origin (for signed fetch headers - always .org)
     /// Origin for signed fetch: https://decentraland.org
     Origin,
@@ -225,12 +221,6 @@ impl DecentralandUrl {
             Self::OpenSeaProxy => UrlTemplate {
                 template: "https://opensea.decentraland.org",
                 transform_type: UrlTransformType::Standard,
-            },
-
-            // CDN (fixed, not transformed)
-            Self::AdaptationLayer => UrlTemplate {
-                template: "https://sdk-team-cdn.decentraland.org/ipfs",
-                transform_type: UrlTransformType::Fixed,
             },
 
             // Origin (always .org for signed fetch)
@@ -457,11 +447,6 @@ pub fn opensea_proxy() -> String {
     get_url(DecentralandUrl::OpenSeaProxy)
 }
 
-/// Get the adaptation layer URL (SDK Team CDN)
-pub fn adaptation_layer() -> String {
-    get_url(DecentralandUrl::AdaptationLayer)
-}
-
 /// Get the origin URL for signed fetch (always decentraland.org)
 pub fn origin() -> String {
     get_url(DecentralandUrl::Origin)
@@ -547,10 +532,6 @@ mod tests {
         // Origin should always be .org
         let template = DecentralandUrl::Origin.template();
         assert_eq!(template.transform_type, UrlTransformType::Fixed);
-
-        // Adaptation layer should always be .org
-        let template = DecentralandUrl::AdaptationLayer.template();
-        assert_eq!(template.transform_type, UrlTransformType::Fixed);
     }
 
     #[test]
@@ -594,7 +575,6 @@ mod tests {
             DecentralandUrl::JumpEvents,
             DecentralandUrl::AccountDeletion,
             DecentralandUrl::OpenSeaProxy,
-            DecentralandUrl::AdaptationLayer,
             DecentralandUrl::Origin,
         ];
 

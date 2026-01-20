@@ -231,17 +231,6 @@ impl DclUrls {
     }
 
     // ========================================================================
-    // CDN URLs (fixed, not transformed)
-    // ========================================================================
-
-    /// Get the adaptation layer URL (SDK Team CDN).
-    /// Returns: https://sdk-team-cdn.decentraland.org/ipfs (always .org)
-    #[func]
-    pub fn adaptation_layer() -> GString {
-        urls::adaptation_layer().to_godot()
-    }
-
-    // ========================================================================
     // Origin URL (for signed fetch)
     // ========================================================================
 

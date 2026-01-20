@@ -68,10 +68,7 @@ mod tests {
         assert_eq!(DclEnvironment::parse("org"), Some(DclEnvironment::Org));
         assert_eq!(DclEnvironment::parse("ORG"), Some(DclEnvironment::Org));
         assert_eq!(DclEnvironment::parse("zone"), Some(DclEnvironment::Zone));
-        assert_eq!(
-            DclEnvironment::parse("today"),
-            Some(DclEnvironment::Today)
-        );
+        assert_eq!(DclEnvironment::parse("today"), Some(DclEnvironment::Today));
         assert_eq!(DclEnvironment::parse("invalid"), None);
     }
 }
