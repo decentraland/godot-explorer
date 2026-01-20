@@ -558,3 +558,16 @@ func _on_button_report_bug_pressed() -> void:
 		url += "?" + "&".join(params)
 
 	Global.open_url(url)
+
+
+func _on_button_open_user_data_pressed() -> void:
+	var user_data_path = OS.get_user_data_dir()
+	print("Opening user data folder: ", user_data_path)
+
+	# On mobile, we can't open the file explorer directly, so we copy the path to clipboard
+	if Global.is_mobile():
+		DisplayServer.clipboard_set(user_data_path)
+		print("User data path copied to clipboard: ", user_data_path)
+	else:
+		# On desktop (Windows, macOS, Linux), open the file explorer
+		OS.shell_open(user_data_path)

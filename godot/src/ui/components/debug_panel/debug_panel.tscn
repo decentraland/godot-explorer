@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://dua04n3geh0yf"]
+[gd_scene load_steps=8 format=3 uid="uid://dua04n3geh0yf"]
 
 [ext_resource type="Theme" uid="uid://yt0vgau51udk" path="res://src/ui/components/debug_panel/dark_theme/Dark.theme" id="1_c8oen"]
 [ext_resource type="Script" uid="uid://csxkemel3hrdv" path="res://src/ui/components/debug_panel/debug_panel.gd" id="2_juhlr"]
@@ -6,26 +6,44 @@
 [ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_k7442"]
 [ext_resource type="Texture2D" uid="uid://cqwsvinsujxri" path="res://src/ui/components/debug_panel/icons/ActionCopy.svg" id="5_0aohs"]
 [ext_resource type="Texture2D" uid="uid://c0x4ssitmbcrg" path="res://src/ui/components/debug_panel/icons/GuiVisibilityHidden.svg" id="5_34smo"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_nlnrl"]
 
 [node name="DebugPanel" type="Control"]
 custom_minimum_size = Vector2(500, 300)
 layout_mode = 3
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -505.0
-offset_top = -305.0
-offset_right = -5.0
-offset_bottom = -5.0
-grow_horizontal = 0
-grow_vertical = 0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 theme = ExtResource("1_c8oen")
 script = ExtResource("2_juhlr")
 
-[node name="TabContainer_DebugPanel" type="TabContainer" parent="."]
+[node name="PopupMenu" type="PopupMenu" parent="."]
+unique_name_in_owner = true
+oversampling_override = 1.0
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 120
+theme_override_constants/margin_bottom = 20
+
+[node name="Control_Panel" type="Control" parent="MarginContainer"]
+custom_minimum_size = Vector2(500, 280)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+mouse_filter = 2
+
+[node name="TabContainer_DebugPanel" type="TabContainer" parent="MarginContainer/Control_Panel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 250)
 layout_mode = 1
@@ -38,18 +56,19 @@ theme = ExtResource("1_c8oen")
 current_tab = 2
 tab_focus_mode = 0
 
-[node name="Console" type="VBoxContainer" parent="TabContainer_DebugPanel"]
+[node name="Console" type="VBoxContainer" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel"]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TabContainer_DebugPanel/Console"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
+[node name="Label" type="Label" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer"]
 layout_mode = 2
 text = "Filter:"
 
-[node name="LineEdit_Filter" type="LineEdit" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
+[node name="LineEdit_Filter" type="LineEdit" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -57,26 +76,26 @@ focus_mode = 1
 placeholder_text = "Filter Messages"
 right_icon = ExtResource("3_nth2r")
 
-[node name="Button_Clear" type="Button" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
+[node name="Button_Clear" type="Button" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer"]
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("4_k7442")
 
-[node name="Button_Copy" type="Button" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
+[node name="Button_Copy" type="Button" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer"]
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("5_0aohs")
 
-[node name="Tree_Console" type="Tree" parent="TabContainer_DebugPanel/Console"]
+[node name="Tree_Console" type="Tree" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 focus_mode = 1
 theme_override_constants/scroll_speed = 100
-theme_override_constants/scrollbar_margin_left = 5
 theme_override_constants/scrollbar_margin_top = 5
 theme_override_constants/scrollbar_margin_right = 5
 theme_override_constants/scrollbar_margin_bottom = 5
+theme_override_constants/scrollbar_margin_left = 5
 theme_override_constants/scrollbar_h_separation = 5
 theme_override_constants/scrollbar_v_separation = 5
 theme_override_font_sizes/font_size = 12
@@ -86,72 +105,83 @@ allow_rmb_select = true
 hide_root = true
 select_mode = 1
 
-[node name="Expression" type="VBoxContainer" parent="TabContainer_DebugPanel"]
+[node name="Expression" type="VBoxContainer" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel"]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 1
 
-[node name="TextEdit" type="TextEdit" parent="TabContainer_DebugPanel/Expression"]
+[node name="TextEdit_Expression" type="TextEdit" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Expression"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="Label" type="TextEdit" parent="TabContainer_DebugPanel/Expression"]
+[node name="Label_Expression" type="TextEdit" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Expression"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="Misc&Debugger" type="VBoxContainer" parent="TabContainer_DebugPanel"]
+[node name="Misc&Debugger" type="VBoxContainer" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel"]
 layout_mode = 2
+metadata/_tab_index = 2
 
-[node name="Button_ShowNetwork" type="Button" parent="TabContainer_DebugPanel/Misc&Debugger"]
+[node name="Button_ShowNetwork" type="Button" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Open Network Inpector"
 
-[node name="Button_DebugJS" type="Button" parent="TabContainer_DebugPanel/Misc&Debugger"]
+[node name="Button_DebugJS" type="Button" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "JS Debugger not available"
 
-[node name="Button_OpenSource" type="Button" parent="TabContainer_DebugPanel/Misc&Debugger"]
+[node name="Button_OpenSource" type="Button" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Open Scene Source Code"
 
-[node name="Label_DebugInfo" type="Label" parent="TabContainer_DebugPanel/Misc&Debugger"]
+[node name="Label_DebugInfo" type="Label" parent="MarginContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger"]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 text = "Open chromium browser with url chrome://inspect and pick the scene debugger."
 
-[node name="Button_ShowHide" type="Button" parent="."]
-unique_name_in_owner = true
+[node name="MarginContainer2" type="MarginContainer" parent="."]
 layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -101.0
-offset_top = -22.0
-offset_bottom = 3.0
-grow_horizontal = 0
-grow_vertical = 0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/margin_top = 25
+theme_override_constants/margin_right = 120
+
+[node name="Button_ShowHide" type="Button" parent="MarginContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
 focus_mode = 0
+theme = ExtResource("7_nlnrl")
+theme_type_variation = &"SecondaryLittle"
 text = "Debug Panel"
 icon = ExtResource("5_34smo")
 
-[node name="PopupMenu" type="PopupMenu" parent="."]
-unique_name_in_owner = true
-
-[connection signal="visibility_changed" from="TabContainer_DebugPanel" to="." method="_on_tab_container_debug_panel_visibility_changed"]
-[connection signal="text_changed" from="TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
-[connection signal="pressed" from="TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]
-[connection signal="pressed" from="TabContainer_DebugPanel/Console/HBoxContainer/Button_Copy" to="." method="_on_button_copy_pressed"]
-[connection signal="item_mouse_selected" from="TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_mouse_selected"]
-[connection signal="text_changed" from="TabContainer_DebugPanel/Expression/TextEdit" to="." method="_on_text_edit_text_changed"]
-[connection signal="pressed" from="TabContainer_DebugPanel/Misc&Debugger/Button_ShowNetwork" to="." method="_on_button_show_network_pressed"]
-[connection signal="pressed" from="TabContainer_DebugPanel/Misc&Debugger/Button_DebugJS" to="." method="_on_button_debug_js_pressed"]
-[connection signal="pressed" from="TabContainer_DebugPanel/Misc&Debugger/Button_OpenSource" to="." method="_on_button_open_source_pressed"]
-[connection signal="pressed" from="Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
 [connection signal="index_pressed" from="PopupMenu" to="." method="_on_popup_menu_index_pressed"]
+[connection signal="visibility_changed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel" to="." method="_on_tab_container_debug_panel_visibility_changed"]
+[connection signal="text_changed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
+[connection signal="pressed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]
+[connection signal="pressed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/Button_Copy" to="." method="_on_button_copy_pressed"]
+[connection signal="item_mouse_selected" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_mouse_selected"]
+[connection signal="text_changed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Expression/TextEdit_Expression" to="." method="_on_text_edit_text_changed"]
+[connection signal="pressed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger/Button_ShowNetwork" to="." method="_on_button_show_network_pressed"]
+[connection signal="pressed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger/Button_DebugJS" to="." method="_on_button_debug_js_pressed"]
+[connection signal="pressed" from="MarginContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger/Button_OpenSource" to="." method="_on_button_open_source_pressed"]
+[connection signal="pressed" from="MarginContainer2/Button_ShowHide" to="." method="_on_button_show_hide_pressed"]

@@ -50,7 +50,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--emulate-ios"
+run/main_run_args="--force-mobile --debug-panel"
 
 [editor_plugins]
 

@@ -24,7 +24,7 @@ func start():
 		# Apply basic config
 		var main_window: Window = get_node("/root")
 		GraphicSettings.apply_window_config()
-		GraphicSettings.apply_fps_limit()
+		GraphicSettings.apply_low_processor_mode()
 		main_window.move_to_center()
 		GraphicSettings.connect_global_signal(main_window)
 		GraphicSettings.apply_ui_zoom(main_window)
