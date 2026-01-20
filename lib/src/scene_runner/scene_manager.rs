@@ -319,6 +319,7 @@ impl SceneManager {
     pub fn start_loading_session(&mut self, scene_entity_ids: PackedStringArray) {
         // Cancel any existing session
         if let Some(old_session) = self.current_loading_session.take() {
+            tracing::debug!("[LOADING] Cancelling previous session {}", old_session.id);
             self.base_mut()
                 .emit_signal("loading_cancelled", &[(old_session.id as i64).to_variant()]);
         }
@@ -333,8 +334,16 @@ impl SceneManager {
         let count = ids.len() as i32;
         let session_id = self.next_session_id as i64;
 
+        tracing::debug!(
+            "[LOADING] START session {} with {} scenes: {:?}",
+            session_id,
+            count,
+            ids
+        );
+
         // Handle empty case - complete immediately
         if ids.is_empty() {
+            tracing::debug!("[LOADING] Empty session, completing immediately");
             self.base_mut()
                 .emit_signal("loading_complete", &[session_id.to_variant()]);
             return;
@@ -413,32 +422,49 @@ impl SceneManager {
         }
     }
 
-    /// Start floating islands generation phase
+    /// Start floating islands generation phase with expected count
     #[func]
     pub fn start_floating_islands(&mut self, count: i32) {
+        tracing::debug!("[LOADING] FLOATING ISLANDS START (count={})", count);
         if let Some(session) = &mut self.current_loading_session {
+            tracing::debug!(
+                "[LOADING] Session {} - floating islands starting, phase: {:?}, count: {}",
+                session.id,
+                session.phase,
+                count
+            );
             session.start_floating_islands(count as u32);
             self.check_loading_phase_transition();
             self.emit_loading_progress();
+        } else {
+            tracing::debug!("[LOADING] No active session for floating islands start");
         }
     }
 
-    /// Report progress on floating islands generation
+    /// Report floating islands generation progress
     #[func]
-    pub fn report_floating_islands_progress(&mut self, created: i32) {
+    pub fn report_floating_islands_progress(&mut self, created: i32, total: i32) {
         if let Some(session) = &mut self.current_loading_session {
-            session.report_floating_islands_progress(created as u32);
+            session.report_floating_islands_progress(created as u32, total as u32);
             self.emit_loading_progress();
         }
     }
 
-    /// Finish floating islands generation
+    /// Finish floating islands generation (100% progress)
     #[func]
     pub fn finish_floating_islands(&mut self) {
+        tracing::debug!("[LOADING] FLOATING ISLANDS FINISH");
         if let Some(session) = &mut self.current_loading_session {
+            tracing::debug!(
+                "[LOADING] Session {} - floating islands finished, phase before: {:?}",
+                session.id,
+                session.phase
+            );
             session.finish_floating_islands();
             self.check_loading_phase_transition();
             self.emit_loading_progress();
+        } else {
+            tracing::debug!("[LOADING] No active session for floating islands finish");
         }
     }
 
@@ -494,6 +520,11 @@ impl SceneManager {
         };
 
         if phase_changed {
+            tracing::debug!(
+                "[LOADING] Phase changed to {:?} for session {}",
+                new_phase,
+                session_id
+            );
             self.base_mut().emit_signal(
                 "loading_phase_changed",
                 &[GString::from(new_phase.as_str()).to_variant()],
@@ -501,6 +532,7 @@ impl SceneManager {
         }
 
         if is_complete {
+            tracing::debug!("[LOADING] COMPLETE - session {} finished", session_id);
             self.current_loading_session = None;
             self.base_mut()
                 .emit_signal("loading_complete", &[session_id.to_variant()]);
@@ -559,6 +591,13 @@ impl SceneManager {
             return;
         }
 
+        // Get spawned scene IDs from the current session
+        let spawned_in_session: HashSet<SceneId> = self
+            .current_loading_session
+            .as_ref()
+            .map(|s| s.spawned_scenes.clone())
+            .unwrap_or_default();
+
         // Collect all loading events from scenes
         let mut assets_started: Vec<(SceneId, u32)> = Vec::new();
         let mut assets_finished: Vec<(SceneId, u32)> = Vec::new();
@@ -567,6 +606,11 @@ impl SceneManager {
         for (scene_id, scene) in self.scenes.iter_mut() {
             // Skip non-alive scenes
             if !matches!(scene.state, SceneState::Alive) {
+                continue;
+            }
+
+            // Only track scenes that are part of this loading session
+            if !spawned_in_session.contains(scene_id) {
                 continue;
             }
 
@@ -580,11 +624,18 @@ impl SceneManager {
                 scene.gltf_loading_finished_count = 0;
             }
 
-            // Check if scene is ready (tick >= 4 and no GLTF loading)
+            // Check if scene is ready (tick >= 10 and no GLTF loading)
+            // We wait for tick 10 instead of 4 to give GLTFs time to start loading
             if !scene.loading_reported_ready
-                && scene.tick_number >= 4
+                && scene.tick_number >= 10
                 && scene.gltf_loading.is_empty()
             {
+                tracing::debug!(
+                    "[LOADING] Scene {:?} marked ready - tick={}, gltf_loading_count={}",
+                    scene_id,
+                    scene.tick_number,
+                    scene.gltf_loading.len()
+                );
                 scene.loading_reported_ready = true;
                 scenes_ready.push(*scene_id);
             }
@@ -594,18 +645,31 @@ impl SceneManager {
         let session = self.current_loading_session.as_mut().unwrap();
 
         for (scene_id, count) in assets_started {
+            tracing::debug!(
+                "[LOADING] Scene {:?} - {} assets STARTED loading",
+                scene_id,
+                count
+            );
             for _ in 0..count {
                 session.report_asset_loading_started(scene_id);
             }
         }
 
         for (scene_id, count) in assets_finished {
+            tracing::debug!(
+                "[LOADING] Scene {:?} - {} assets FINISHED loading (total: {}/{})",
+                scene_id,
+                count,
+                session.loaded_assets.get(&scene_id).unwrap_or(&0) + count,
+                session.expected_assets.get(&scene_id).unwrap_or(&0)
+            );
             for _ in 0..count {
                 session.report_asset_loaded(scene_id);
             }
         }
 
         for scene_id in scenes_ready {
+            tracing::debug!("[LOADING] Scene {:?} reported READY", scene_id);
             session.report_scene_ready(scene_id);
         }
 
@@ -1737,12 +1801,18 @@ impl INode for SceneManager {
             }
         }
 
-        // Add avatar profile tooltip if there's an avatar under crosshair
-        if let Some(RaycastResult::Avatar(_)) = &current_raycast {
-            let mut profile_dict = VarDictionary::new();
-            profile_dict.set("text_pet_down", "View profile");
-            profile_dict.set("action", "ia_pointer");
-            tooltips.push(&profile_dict.to_variant());
+        // Add avatar profile tooltip if there's an avatar under crosshair with a valid ID
+        // Skip AvatarShapes (NPCs from scenes) which don't have valid profile IDs
+        if let Some(RaycastResult::Avatar(avatar)) = &current_raycast {
+            // Check if avatar has a valid avatar_id (non-empty and not just "npc-*")
+            let avatar_id: GString = avatar.get("avatar_id").try_to().unwrap_or_default();
+            let is_avatar_shape: bool = avatar.get("is_avatar_shape").try_to().unwrap_or(false);
+            if !is_avatar_shape && !avatar_id.is_empty() {
+                let mut profile_dict = VarDictionary::new();
+                profile_dict.set("text_pet_down", "View profile");
+                profile_dict.set("action", "ia_pointer");
+                tooltips.push(&profile_dict.to_variant());
+            }
         }
 
         if self.pointer_tooltips != tooltips {
