@@ -85,7 +85,6 @@ func _ready():
 	Global.open_own_profile.connect(show_own_profile)
 	Global.close_menu.connect(close)
 	Global.delete_account.connect(_on_account_delete)
-	control_modal.add_child(Global.modal_instance)
 
 
 func _on_button_close_pressed():

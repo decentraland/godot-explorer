@@ -218,7 +218,7 @@ func _on_external_link_primary(url: String) -> void:
 
 func _on_scene_timeout_primary() -> void:
 	Global.metrics.track_click_button("reload", "LOADING", "")
-	Global.reload_scene.emit()
+	Global.realm.async_set_realm(Global.realm.get_realm_string())
 	_remove_modal()
 
 

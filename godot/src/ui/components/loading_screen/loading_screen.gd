@@ -53,6 +53,7 @@ func enable_loading_screen():
 
 
 func async_hide_loading_screen_effect():
+	Global.close_navbar.emit()
 	debug_chronometer.lap("Finished loading scene")
 	Global.loading_finished.emit()
 	timer_check_progress_timeout.stop()
