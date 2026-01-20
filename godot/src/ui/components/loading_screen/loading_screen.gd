@@ -181,7 +181,6 @@ func _on_timer_check_progress_timeout_timeout():
 		timer_check_progress_timeout.stop()
 
 
-
 func _on_loading_screen_progress_logic_loading_show_requested():
 	last_activity_time = Time.get_ticks_msec()
 	timer_check_progress_timeout.start()

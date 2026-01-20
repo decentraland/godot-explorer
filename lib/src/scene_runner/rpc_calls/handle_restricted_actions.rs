@@ -290,7 +290,7 @@ pub fn teleport_to(
     // Show modal using ModalManager
     // The modal will handle teleportation when user confirms via Global.teleport_to
     modal_manager.call_deferred(
-        "show_teleport_modal",
+        "async_show_teleport_modal",
         &[target_parcel.to_variant()],
     );
 

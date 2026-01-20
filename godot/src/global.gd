@@ -82,7 +82,6 @@ var standalone = false
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
 
-
 var modal_instance: Modal = load("res://src/ui/components/modal/modal.tscn").instantiate()
 var last_emitted_height: int = 0
 var current_height: int = -1
