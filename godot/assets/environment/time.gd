@@ -3,11 +3,11 @@ extends Node
 
 # Time syncing singleton for the sky shader
 
-# Debug mode - set to true to make a full day/night cycle every 10 seconds
-@export var debug_time_rotation: bool = false
-
 # Transition speed: how fast to interpolate when SDK changes the time
 const TRANSITION_SPEED: float = 0.5  # normalized time per second (0.5 = half day in 1 second)
+
+# Debug mode - set to true to make a full day/night cycle every 10 seconds
+@export var debug_time_rotation: bool = false
 
 var config: DclConfig
 var last_value: float
