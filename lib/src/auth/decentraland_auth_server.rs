@@ -18,11 +18,11 @@ use super::wallet::SimpleAuthChain;
 // const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 // const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
 
-// Staging with .zone frontend + .zone auth-api
-const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
-const AUTH_MOBILE_FRONT_URL: &str = "https://decentraland.zone/auth/mobile";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
+// Production
+const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
+const AUTH_MOBILE_FRONT_URL: &str = "https://decentraland.org/auth/mobile";
+const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
+const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
