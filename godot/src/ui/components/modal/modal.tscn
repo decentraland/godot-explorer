@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://cwa2ufu3umupb"]
+[gd_scene load_steps=9 format=3 uid="uid://cwa2ufu3umupb"]
 
 [ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://src/ui/components/modal/modal.gd" id="1_146x8"]
 [ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="2_ijrai"]
@@ -6,8 +6,6 @@
 [ext_resource type="LabelSettings" uid="uid://cmc7vbpljmiry" path="res://assets/themes/modal_url.tres" id="4_4n1cu"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_bdjpj"]
 [ext_resource type="Texture2D" uid="uid://bpsb828rp2tlt" path="res://assets/ui/modal-alert-icon.svg" id="6_rvkw6"]
-[ext_resource type="Texture2D" uid="uid://dxhx77amrb5ly" path="res://src/ui/components/utils/qwe.png" id="7_uxfn5"]
-[ext_resource type="Texture2D" uid="uid://scwrxbf7tfps" path="res://src/ui/components/utils/qwe2.png" id="8_mymcd"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_figov"]
 bg_color = Color(0.29803923, 0.078431375, 0.6431373, 1)
@@ -19,7 +17,6 @@ corner_radius_bottom_left = 24
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_figov"]
 
 [node name="Modal" type="ColorRect"]
-visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -99,7 +96,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 26
+theme_override_constants/separation = 40
 
 [node name="Button_Secondary" type="Button" parent="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -138,45 +135,5 @@ texture = ExtResource("6_rvkw6")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="Qwe" type="Sprite2D" parent="."]
-visible = false
-modulate = Color(1, 1, 1, 0.21960784)
-position = Vector2(297, 348.00003)
-scale = Vector2(1.1834284, 1.1834282)
-texture = ExtResource("7_uxfn5")
-
-[node name="Qwe2" type="Sprite2D" parent="."]
-visible = false
-modulate = Color(1, 1, 1, 0.078431375)
-position = Vector2(279, 304)
-scale = Vector2(0.53193825, 0.53193825)
-texture = ExtResource("8_mymcd")
-
-[node name="TESTING_PORPUSE" type="HBoxContainer" parent="."]
-visible = false
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="Button" type="Button" parent="TESTING_PORPUSE"]
-layout_mode = 2
-text = "CONNECTION LOST"
-
-[node name="Button2" type="Button" parent="TESTING_PORPUSE"]
-layout_mode = 2
-text = "EXTERNAL LINK"
-
-[node name="Button3" type="Button" parent="TESTING_PORPUSE"]
-layout_mode = 2
-text = "SCENE TIME OUT"
-
-[node name="Button4" type="Button" parent="TESTING_PORPUSE"]
-layout_mode = 2
-text = "TELEPORT"
-
 [connection signal="pressed" from="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Secondary" to="." method="_on_button_secondary_pressed"]
 [connection signal="pressed" from="MarginContainer_Modal/PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Primary" to="." method="_on_button_primary_pressed"]
-[connection signal="pressed" from="TESTING_PORPUSE/Button" to="." method="_on_button_pressed"]
-[connection signal="pressed" from="TESTING_PORPUSE/Button2" to="." method="_on_button_2_pressed"]
-[connection signal="pressed" from="TESTING_PORPUSE/Button3" to="." method="_on_button_3_pressed"]
-[connection signal="pressed" from="TESTING_PORPUSE/Button4" to="." method="_on_button_4_pressed"]

@@ -29,7 +29,6 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 @onready var background: ColorRect = $VBox_Loading/ColorRect_Background
 
 @onready var timer_auto_move_carousel = $Timer_AutoMoveCarousel
-@onready var popup_warning = $PopupWarning
 
 @onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
@@ -38,8 +37,6 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 
 func _ready():
 	last_activity_time = Time.get_ticks_msec()
-	popup_warning.hide()
-	popup_warning_pos_y = popup_warning.position.y
 	item_count = carousel.item_count()
 	set_item(randi_range(0, item_count - 1))
 
@@ -169,12 +166,6 @@ func _on_timer_check_progress_timeout_timeout():
 
 	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_activity_time) / 1000.0))
 	if inactive_seconds > 20:
-		var tween = get_tree().create_tween()
-		popup_warning.position.y = -popup_warning.size.y
-		tween.tween_property(popup_warning, "position:y", popup_warning_pos_y, 1.0).set_trans(
-			Tween.TRANS_ELASTIC
-		)
-		popup_warning.show()
 
 		# LOADING_TIMEOUT metric
 		var timeout_data = {
@@ -190,14 +181,7 @@ func _on_timer_check_progress_timeout_timeout():
 
 
 func async_hide_popup_warning():
-	var tween = get_tree().create_tween()
-	popup_warning.position.y = popup_warning_pos_y
-	tween.tween_property(popup_warning, "position:y", -popup_warning.size.y, 1.0).set_trans(
-		Tween.TRANS_ELASTIC
-	)
-	await tween.finished
-	popup_warning.hide()
-
+	pass
 
 func _on_button_continue_pressed():
 	# LOADING_RUNANYWAY metric
@@ -217,7 +201,6 @@ func _on_button_reload_pressed():
 
 func _on_loading_screen_progress_logic_loading_show_requested():
 	last_activity_time = Time.get_ticks_msec()
-	popup_warning.hide()
 	timer_check_progress_timeout.start()
 	loaded_resources_offset = Global.content_provider.count_loaded_resources()
 

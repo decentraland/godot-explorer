@@ -447,7 +447,7 @@ func _handle_coordinate_click(coord_str: String):
 	if coords.size() == 2:
 		var x = int(coords[0])
 		var y = int(coords[1])
-		Global.modal_instance.open_for_teleport(Vector2i(x, y))
+		ModalManager.show_teleport_modal(Vector2i(x, y))
 
 
 func _handle_mention_click(mention_str: String):

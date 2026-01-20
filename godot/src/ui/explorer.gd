@@ -117,7 +117,7 @@ func _ready():
 	Global.music_player.stop()
 
 	# Register popup instances in Global
-	control_modal.add_child(Global.modal_instance)
+	#control_modal.add_child(Global.modal_instance)
 
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)
