@@ -101,7 +101,7 @@ func request_last_places() -> void:
 		item.item_pressed.connect(discover.on_item_pressed)
 
 	if not genesis_city_places.is_empty():
-		var url = "https://places.decentraland.org/api/places?limit=%d" % genesis_city_places.size()
+		var url = DclUrls.places_api() + "/places?limit=%d" % genesis_city_places.size()
 
 		for place in genesis_city_places:
 			var position: Vector2i = place.get("position")
@@ -110,7 +110,7 @@ func request_last_places() -> void:
 		_async_fetch_places(url)
 
 	if not worlds_names.is_empty():
-		var url = "https://places.decentraland.org/api/worlds?limit=%d" % worlds_names.size()
+		var url = DclUrls.places_api() + "/worlds?limit=%d" % worlds_names.size()
 
 		for place in worlds_names:
 			var realm: String = place.get("realm")
@@ -130,7 +130,7 @@ func on_request(offset: int, limit: int) -> void:
 		request_last_places()
 		return
 
-	var url = "https://places.decentraland.org/api/"
+	var url = DclUrls.places_api() + "/"
 	url += "worlds" if only_worlds else "places"
 
 	url += "?offset=%d&limit=%d" % [offset, limit]

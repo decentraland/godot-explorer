@@ -638,8 +638,7 @@ func schedule_event() -> void:
 
 	# Create jump in URL with location coordinates
 	var jump_in_url = (
-		"https://decentraland.org/jump/events?position=%d%%2C%d&realm=main"
-		% [location.x, location.y]
+		DclUrls.jump_events() + "?position=%d%%2C%d&realm=main" % [location.x, location.y]
 	)
 
 	# Combine description with jump in URL
@@ -679,7 +678,7 @@ func _on_button_share_pressed() -> void:
 		printerr("Event ID not available")
 		return
 
-	var event_url = "https://decentraland.org/events/event/?id=" + event_id
+	var event_url = DclUrls.host() + "/events/event/?id=" + event_id
 
 	var event_title = _data.get("name", "Decentraland Event")
 

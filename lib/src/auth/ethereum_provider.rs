@@ -1,7 +1,7 @@
-const PROVIDER_URL: &str = "wss://rpc.decentraland.org/mainnet?project=kernel-local";
-
 use ethers_providers::{Provider, Ws};
 use tokio::sync::Mutex;
+
+use crate::urls;
 
 pub struct EthereumProvider {
     provider: Mutex<Option<Provider<Ws>>>,
@@ -28,7 +28,8 @@ impl EthereumProvider {
         let mut this_provider = self.provider.lock().await;
 
         if this_provider.is_none() {
-            let provider = Provider::<Ws>::connect(PROVIDER_URL).await?;
+            let provider_url = urls::ethereum_rpc_with_project("kernel-local");
+            let provider = Provider::<Ws>::connect(&provider_url).await?;
             this_provider.replace(provider);
         }
 

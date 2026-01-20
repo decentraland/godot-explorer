@@ -35,7 +35,7 @@ func _on_button_jump_in_pressed() -> void:
 
 
 func async_load_place_position():
-	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	var url: String = DclUrls.places_api() + "/places?limit=1"
 	url += "&positions=%d,%d" % [location.x, location.y]
 
 	var headers = {"Content-Type": "application/json"}

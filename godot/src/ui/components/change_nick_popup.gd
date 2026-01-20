@@ -52,7 +52,7 @@ func _on_button_save_pressed() -> void:
 
 
 func _on_button_claim_name_pressed() -> void:
-	Global.open_url("https://decentraland.org/marketplace/names/claim")
+	Global.open_url(DclUrls.marketplace_claim_name())
 
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:

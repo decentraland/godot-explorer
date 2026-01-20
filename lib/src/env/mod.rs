@@ -29,7 +29,7 @@ impl DclEnvironment {
     }
 
     /// Parse environment from string
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "org" => Some(Self::Org),
             "zone" => Some(Self::Zone),
@@ -52,21 +52,6 @@ pub fn set_environment(env: DclEnvironment) {
     tracing::info!("Environment set to: {:?} ({})", env, env.suffix());
 }
 
-/// Transform a URL to use the current environment's domain
-/// Replaces decentraland.org with decentraland.{suffix}
-pub fn transform_url(url: &str) -> String {
-    let env = get_environment();
-    if env == DclEnvironment::Org {
-        // No transformation needed for production
-        return url.to_string();
-    }
-
-    let suffix = env.suffix();
-
-    // Transform various Decentraland domains
-    url.replace("decentraland.org", &format!("decentraland.{}", suffix))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,21 +65,13 @@ mod tests {
 
     #[test]
     fn test_environment_from_str() {
-        assert_eq!(DclEnvironment::from_str("org"), Some(DclEnvironment::Org));
-        assert_eq!(DclEnvironment::from_str("ORG"), Some(DclEnvironment::Org));
-        assert_eq!(DclEnvironment::from_str("zone"), Some(DclEnvironment::Zone));
+        assert_eq!(DclEnvironment::parse("org"), Some(DclEnvironment::Org));
+        assert_eq!(DclEnvironment::parse("ORG"), Some(DclEnvironment::Org));
+        assert_eq!(DclEnvironment::parse("zone"), Some(DclEnvironment::Zone));
         assert_eq!(
-            DclEnvironment::from_str("today"),
+            DclEnvironment::parse("today"),
             Some(DclEnvironment::Today)
         );
-        assert_eq!(DclEnvironment::from_str("invalid"), None);
-    }
-
-    #[test]
-    fn test_transform_url_org() {
-        // When environment is org (default), no transformation
-        let url = "https://decentraland.org/auth/requests";
-        // Note: Since we can't set environment in tests (OnceLock), we test the logic
-        assert!(url.contains("decentraland.org"));
+        assert_eq!(DclEnvironment::parse("invalid"), None);
     }
 }

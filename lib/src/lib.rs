@@ -29,6 +29,7 @@ pub mod scene_runner;
 pub mod social;
 pub mod test_runner;
 pub mod tools;
+pub mod urls;
 pub mod utils;
 
 struct DecentralandGodotLibrary;

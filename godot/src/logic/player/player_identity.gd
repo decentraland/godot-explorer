@@ -1,6 +1,6 @@
 class_name PlayerIdentity extends DclPlayerIdentity
 
-var _current_lambda_server_base_url: String = "https://peer.decentraland.org/lambdas/"
+var _current_lambda_server_base_url: String = DclUrls.peer_lambdas()
 
 
 func _ready():

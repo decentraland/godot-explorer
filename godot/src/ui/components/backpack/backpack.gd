@@ -447,7 +447,7 @@ func async_save_profile_metadata_only():
 
 
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
-	Global.open_url("https://decentraland.org/marketplace/browse?section=wearables")
+	Global.open_url(DclUrls.marketplace() + "/browse?section=wearables")
 
 
 func has_changes():

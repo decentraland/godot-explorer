@@ -568,7 +568,7 @@ impl DclGlobal {
     /// Valid values: "org", "zone", "today"
     #[func]
     pub fn set_dcl_environment(env: GString) {
-        if let Some(dcl_env) = crate::env::DclEnvironment::from_str(&env.to_string()) {
+        if let Some(dcl_env) = crate::env::DclEnvironment::parse(&env.to_string()) {
             crate::env::set_environment(dcl_env);
         } else {
             tracing::warn!("Invalid environment value: {}", env);
@@ -580,13 +580,5 @@ impl DclGlobal {
     #[func]
     pub fn get_dcl_environment() -> GString {
         GString::from(crate::env::get_environment().suffix())
-    }
-
-    /// Transform a URL to use the current environment's domain.
-    /// Replaces decentraland.org with decentraland.{env}
-    #[func]
-    pub fn transform_url(url: GString) -> GString {
-        let transformed = crate::env::transform_url(&url.to_string());
-        GString::from(transformed.as_str())
     }
 }

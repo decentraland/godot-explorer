@@ -395,7 +395,7 @@ func _async_fetch_place_data() -> void:
 	if parcel.size() < 2:
 		return
 
-	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	var url: String = DclUrls.places_api() + "/places?limit=1"
 	url += "&positions=%d,%d" % [parcel[0], parcel[1]]
 
 	var headers = {"Content-Type": "application/json"}

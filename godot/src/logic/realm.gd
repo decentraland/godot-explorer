@@ -3,17 +3,6 @@ extends DclRealm
 
 signal realm_changed
 
-const _MAIN_REALM_BASE: String = "https://realm-provider-ea.decentraland.org/main"
-const _WORLDS_URL_BASE: String = "https://worlds-content-server.decentraland.org/world/"
-
-static var MAIN_REALM: String:
-	get:
-		return DclGlobal.transform_url(_MAIN_REALM_BASE)
-
-static var WORLDS_URL: String:
-	get:
-		return DclGlobal.transform_url(_WORLDS_URL_BASE)
-
 const DAO_SERVERS: Array[String] = [
 	"https://peer-ec1.decentraland.org/",
 	"https://peer-ec2.decentraland.org/",
@@ -31,6 +20,16 @@ const DAO_SERVERS: Array[String] = [
 ]
 
 var _has_realm = false
+
+# gdlint: ignore=class-variable-name
+static var MAIN_REALM: String:
+	get:
+		return DclUrls.genesis()
+
+# gdlint: ignore=class-variable-name
+static var WORLDS_URL: String:
+	get:
+		return DclUrls.worlds_content_server()
 
 
 static func is_dcl_ens(str_param: String) -> bool:
@@ -190,7 +189,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 			)
 
 		var new_lambda_server_base_url = realm_about.get("lambdas", {}).get(
-			"publicUrl", "https://peer.decentraland.org/lambdas/"
+			"publicUrl", DclUrls.peer_lambdas()
 		)
 		if not new_lambda_server_base_url.is_empty():
 			new_lambda_server_base_url = Realm.ensure_ends_with_slash(new_lambda_server_base_url)
