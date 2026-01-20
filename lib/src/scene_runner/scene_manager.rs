@@ -11,7 +11,7 @@ use crate::{
                     PbAvatarEmoteCommand, PbUiCanvasInformation, TransitionMode,
                 },
             },
-            SceneEntityId,
+            SceneComponentId, SceneEntityId,
         },
         crdt::SceneCrdtStateProtoComponents,
         DclScene, DclSceneRealmData, RendererResponse, SceneId, SceneResponse, SpawnDclSceneData,
@@ -941,8 +941,19 @@ impl SceneManager {
         // Process loading session updates from all scenes
         self.update_loading_session_from_scenes();
 
-        // Read SkyboxTime component from the current parcel scene
-        self.update_sdk_skybox_time();
+        // Read SkyboxTime component from the current parcel scene (only if dirty)
+        // Scene changes are handled in on_current_parcel_scene_changed()
+        let skybox_dirty = self
+            .scenes
+            .get(&self.current_parcel_scene_id)
+            .is_some_and(|s| {
+                s.current_dirty
+                    .lww_components
+                    .contains_key(&SceneComponentId::SKYBOX_TIME)
+            });
+        if skybox_dirty {
+            self.update_sdk_skybox_time();
+        }
 
         for scene_id in self.dying_scene_ids.iter() {
             let scene = self.scenes.get_mut(scene_id).unwrap();
@@ -1363,6 +1374,23 @@ impl SceneManager {
             }
         }
 
+        // Log state changes for debugging
+        if active != self.sdk_skybox_time_active {
+            tracing::debug!(
+                "SkyboxTime SDK control changed: active={}, time={}, forward={}",
+                active,
+                fixed_time,
+                transition_forward
+            );
+        } else if active && fixed_time != self.sdk_skybox_fixed_time {
+            tracing::debug!(
+                "SkyboxTime value changed: time={} (was {}), forward={}",
+                fixed_time,
+                self.sdk_skybox_fixed_time,
+                transition_forward
+            );
+        }
+
         self.sdk_skybox_time_active = active;
         self.sdk_skybox_fixed_time = fixed_time;
         self.sdk_skybox_transition_forward = transition_forward;
@@ -1424,6 +1452,10 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+
+        // Update skybox time from the new scene (or reset if no SkyboxTime component)
+        self.update_sdk_skybox_time();
+
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
             .emit_signal("on_change_scene_id", &[scene_id]);
