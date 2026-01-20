@@ -29,17 +29,17 @@ jobs:
           echo "Branch '$BRANCH_NAME' was deleted from source repository"
           echo "Attempting to delete it from deploy pipeline..."
 
-          # Clone the target repository using SSH
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git clone git@github.com:decentraland/godot-mobile-deploy-pipeline.git deploy-repo
-
-          cd deploy-repo
+          # Initialize fresh repo (no need to clone, we only need to delete a remote branch)
+          mkdir deploy-repo && cd deploy-repo
+          git init
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:decentraland/godot-mobile-deploy-pipeline.git
 
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Check if branch exists in deploy repo
-          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+          if GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
             echo "Branch '$BRANCH_NAME' exists in deploy pipeline. Deleting..."
             GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push origin --delete "$BRANCH_NAME"
             echo "✅ Branch '$BRANCH_NAME' deleted from deploy pipeline"
