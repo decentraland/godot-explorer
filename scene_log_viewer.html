@@ -85,6 +85,10 @@
         .comp-item { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; display: flex; justify-content: space-between; border-radius: 3px; }
         .comp-item:hover { background: #1a1a2e; }
         .comp-item.hidden-comp { opacity: 0.4; }
+
+        /* Clickable bar rows */
+        .bar-row.clickable:hover { background: rgba(0, 217, 255, 0.1); border-radius: 3px; }
+        .bar-row.clickable .bar-label { text-decoration: underline; text-decoration-style: dotted; }
     </style>
 </head>
 <body>
@@ -112,6 +116,8 @@
                     <button class="tab active" data-view="timeline">Timeline</button>
                     <button class="tab" data-view="stats">Stats</button>
                     <button class="tab" data-view="tree">Tree</button>
+                    <button class="tab" data-view="tick-analysis">Tick Analysis</button>
+                    <button class="tab" data-view="playground">Playground</button>
                 </div>
             </div>
 
@@ -227,6 +233,196 @@
                 </div>
             </div>
 
+            <div id="tick-analysis-view" class="entries-container hidden" style="padding: 1rem;">
+                <div class="panel" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <h2 style="margin: 0;">Tick Range:</h2>
+                    <input type="number" id="tick-analysis-from" value="0" min="0" style="width: 80px;" placeholder="From">
+                    <span style="color: #666;">to</span>
+                    <input type="number" id="tick-analysis-to" value="0" min="0" style="width: 80px;" placeholder="To">
+                    <span id="tick-analysis-max" style="color: #666;">/ 0</span>
+                    <button class="btn primary" id="analyze-ticks-btn">Analyze</button>
+                    <span style="color: #888; margin-left: auto;">
+                        <span id="tick-analysis-summary"></span>
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <!-- S2R Column -->
+                    <div class="stat-card">
+                        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #2ecc71;">S→R (Scene to Renderer)</span>
+                            <span id="tick-s2r-total" style="color: #888; font-size: 0.85rem;"></span>
+                        </h3>
+                        <div id="tick-s2r-chart" class="bar-chart" style="margin-top: 0.5rem; max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+
+                    <!-- R2S Column -->
+                    <div class="stat-card">
+                        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #9b59b6;">R→S (Renderer to Scene)</span>
+                            <span id="tick-r2s-total" style="color: #888; font-size: 0.85rem;"></span>
+                        </h3>
+                        <div id="tick-r2s-chart" class="bar-chart" style="margin-top: 0.5rem; max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Combined table -->
+                <div class="stat-card" style="margin-top: 1rem;">
+                    <h3>Component Comparison <span style="font-size: 0.75rem; color: #666;">(click component for timeline)</span></h3>
+                    <div style="overflow-x: auto;">
+                        <table id="tick-comparison-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.5rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <th style="text-align: left; padding: 0.5rem; color: #888;">Component</th>
+                                    <th style="text-align: right; padding: 0.5rem; color: #2ecc71;">S→R</th>
+                                    <th style="text-align: right; padding: 0.5rem; color: #9b59b6;">R→S</th>
+                                    <th style="text-align: right; padding: 0.5rem; color: #888;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tick-comparison-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Timeline chart for selected component -->
+                <div id="component-timeline-container" class="stat-card hidden" style="margin-top: 1rem;">
+                    <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Timeline: <span id="timeline-component-name" style="color: #f39c12;"></span></span>
+                        <button class="btn" onclick="closeComponentTimeline()">Close</button>
+                    </h3>
+                    <div style="display: flex; gap: 1rem; margin: 0.5rem 0; font-size: 0.8rem;">
+                        <label style="color: #888;">
+                            <input type="checkbox" id="timeline-show-s2r" checked>
+                            <span style="color: #2ecc71;">S→R</span>
+                        </label>
+                        <label style="color: #888;">
+                            <input type="checkbox" id="timeline-show-r2s" checked>
+                            <span style="color: #9b59b6;">R→S</span>
+                        </label>
+                        <span style="color: #666; margin-left: auto;" id="timeline-stats"></span>
+                    </div>
+                    <div id="component-timeline-chart" style="height: 200px; position: relative; background: #1a1a2e; border-radius: 4px; overflow: hidden;">
+                        <canvas id="timeline-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-top: 0.25rem;">
+                        <span id="timeline-start-tick">Tick 0</span>
+                        <span id="timeline-end-tick">Tick 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="playground-view" class="entries-container hidden" style="padding: 0.5rem; display: flex; flex-direction: column; height: 100%;">
+                <div class="panel" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <h2 style="margin: 0;">Playground</h2>
+                    <span style="color: #666; font-size: 0.8rem;">Live JavaScript console with access to scene data</span>
+                    <button class="btn" id="playground-help-btn" style="margin-left: auto;">Help</button>
+                </div>
+
+                <!-- Code editor -->
+                <div style="flex: 1; min-height: 150px; display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <span style="font-size: 0.75rem; color: #666;">Code (auto-executes on change)</span>
+                        <span id="playground-status" style="font-size: 0.75rem; color: #666;"></span>
+                    </div>
+                    <textarea id="playground-code" spellcheck="false" style="
+                        flex: 1;
+                        width: 100%;
+                        background: #0a0a15;
+                        color: #eee;
+                        border: 1px solid #333;
+                        border-radius: 4px;
+                        padding: 0.75rem;
+                        font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+                        font-size: 0.85rem;
+                        resize: none;
+                        tab-size: 2;
+                    ">// Example: Get all entities with Transform at tick 100
+const state = getState(100);
+const entities = state.getEntitiesWithComponent("Transform");
+return { entityCount: entities.length, entities: entities.slice(0, 20) };</textarea>
+                </div>
+
+                <!-- Results -->
+                <div style="flex: 1; min-height: 150px; display: flex; flex-direction: column; margin-top: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <span style="font-size: 0.75rem; color: #666;">Result</span>
+                        <span id="playground-exec-time" style="font-size: 0.75rem; color: #666;"></span>
+                    </div>
+                    <pre id="playground-result" style="
+                        flex: 1;
+                        margin: 0;
+                        background: #0a0a15;
+                        border: 1px solid #333;
+                        border-radius: 4px;
+                        padding: 0.75rem;
+                        overflow: auto;
+                        font-size: 0.8rem;
+                    "></pre>
+                </div>
+
+                <!-- Help modal -->
+                <div id="playground-help-modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: #0f0f23; padding: 1.5rem; border-radius: 8px; max-width: 700px; max-height: 80vh; overflow-y: auto; border: 1px solid #333;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="color: #00d9ff;">Playground API Reference</h3>
+                            <button class="btn" onclick="document.getElementById('playground-help-modal').classList.add('hidden')">Close</button>
+                        </div>
+                        <div style="font-size: 0.85rem; line-height: 1.6;">
+                            <h4 style="color: #f39c12; margin-top: 0;">State Functions</h4>
+                            <pre style="background: #1a1a2e; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+<span style="color:#2ecc71">getState(tick)</span>
+  Returns state object at given tick with methods:
+  - .getEntitiesWithComponent(name) → [entityId, ...]
+  - .getComponent(entityId, name) → payload or null
+  - .getAllComponents(entityId) → {name: payload, ...}
+  - .entities → {entityId: {components, parent}, ...}
+
+<span style="color:#2ecc71">getChangesForEntity(entityId)</span>
+  Returns all CRDT changes for an entity:
+  → [{tick, component, operation, direction, payload}, ...]
+
+<span style="color:#2ecc71">getChangesForComponent(componentName)</span>
+  Returns all CRDT changes for a component:
+  → [{tick, entityId, operation, direction, payload}, ...]
+
+<span style="color:#2ecc71">getChangesBetweenTicks(fromTick, toTick)</span>
+  Returns all changes in tick range:
+  → [{tick, entityId, component, operation, direction}, ...]
+</pre>
+                            <h4 style="color: #f39c12;">Global Variables</h4>
+                            <pre style="background: #1a1a2e; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+<span style="color:#9b59b6">maxTick</span>        - Maximum tick number
+<span style="color:#9b59b6">crdtEntries</span>   - All CRDT log entries (raw)
+<span style="color:#9b59b6">allEntries</span>    - All log entries (CRDT + ops)
+</pre>
+                            <h4 style="color: #f39c12;">Examples</h4>
+                            <pre style="background: #1a1a2e; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+// Find entities with most component changes
+const counts = {};
+crdtEntries.forEach(e => {
+  counts[e._eid] = (counts[e._eid] || 0) + 1;
+});
+return Object.entries(counts)
+  .sort((a,b) => b[1] - a[1])
+  .slice(0, 10);
+
+// Get Transform changes for entity 512
+return getChangesForEntity(512)
+  .filter(c => c.component === "Transform");
+
+// Compare state between two ticks
+const s1 = getState(100);
+const s2 = getState(200);
+return {
+  tick100: s1.getEntitiesWithComponent("GltfContainer").length,
+  tick200: s2.getEntitiesWithComponent("GltfContainer").length
+};
+</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="pagination" id="pagination">
                 <button class="btn" id="prev-page" disabled>← Prev</button>
                 <span id="page-info">Page 1</span>
@@ -261,6 +457,7 @@
     let hideTransform = true;
     let showTransformInChart = false;
     let maxTick = 0;
+    let selectedTreeEntityId = null;
 
     // Component name to ID mapping (from Decentraland SDK)
     const COMPONENT_NAME_TO_ID = {
@@ -610,11 +807,15 @@ export interface ExportedState {
             document.getElementById('timeline-view').classList.toggle('hidden', currentView !== 'timeline');
             document.getElementById('stats-view').classList.toggle('hidden', currentView !== 'stats');
             document.getElementById('tree-view').classList.toggle('hidden', currentView !== 'tree');
+            document.getElementById('tick-analysis-view').classList.toggle('hidden', currentView !== 'tick-analysis');
+            document.getElementById('playground-view').classList.toggle('hidden', currentView !== 'playground');
             document.getElementById('pagination').classList.toggle('hidden', currentView !== 'timeline');
-            document.getElementById('filters-panel').classList.toggle('hidden', currentView === 'stats');
-            document.getElementById('components-panel').classList.toggle('hidden', currentView !== 'timeline');
+            document.getElementById('filters-panel').classList.toggle('hidden', currentView === 'stats' || currentView === 'tick-analysis' || currentView === 'playground');
+            document.getElementById('components-panel').classList.toggle('hidden', currentView !== 'timeline' && currentView !== 'tree');
 
             if (currentView === 'tree') renderTree();
+            if (currentView === 'tick-analysis') initTickAnalysis();
+            if (currentView === 'playground') initPlayground();
         });
     });
 
@@ -651,6 +852,14 @@ export interface ExportedState {
         document.getElementById('filter-op').value = '';
         currentPage = 0;
         applyFilters();
+
+        // Re-select entity in tree if we're in tree view and have a selection
+        if (currentView === 'tree' && selectedTreeEntityId !== null) {
+            setTimeout(() => {
+                highlightTreeEntity(selectedTreeEntityId);
+                showTreeEntityDetails(selectedTreeEntityId);
+            }, 50);
+        }
     });
 
     // Timeline slider
@@ -897,6 +1106,16 @@ export interface ExportedState {
     }
 
     function selectTreeEntity(eid) {
+        selectedTreeEntityId = eid;
+
+        // Highlight the selected entity
+        document.querySelectorAll('#tree-content .tree-item').forEach(item => {
+            item.classList.remove('selected');
+            if (item.querySelector('.entity-id')?.textContent === `E${eid}`) {
+                item.classList.add('selected');
+            }
+        });
+
         const entity = currentTreeState[eid];
 
         if (entity) {
@@ -905,13 +1124,72 @@ export interface ExportedState {
                 .filter(([_, v]) => Array.isArray(v))
                 .map(([k, v]) => `${k}: ${v.length} items`);
 
+            const changesCount = crdtEntries.filter(e => e._eid === eid).length;
+
             document.getElementById('detail-content').innerHTML = `
                 <h3 style="margin-bottom: 0.5rem;">Entity ${eid}</h3>
                 <p style="color: #666; margin-bottom: 0.5rem;">Parent: ${entity.parent || 0} | Components: ${compCount}</p>
+                <p style="color: #888; margin-bottom: 0.5rem; font-size: 0.8rem;">Total changes: ${changesCount}</p>
                 ${gosComps.length ? `<p style="color: #f39c12; font-size: 0.8rem; margin-bottom: 0.5rem;">GOS: ${gosComps.join(', ')}</p>` : ''}
+                <div style="margin-bottom: 0.5rem;">
+                    <button class="btn" onclick="filterTreeEntityInTimeline(${eid})">View in Timeline</button>
+                    <button class="btn" onclick="showEntityChangesInPlayground(${eid})">Analyze</button>
+                </div>
                 <pre>${JSON.stringify(entity.components, null, 2)}</pre>
             `;
         }
+    }
+
+    function filterTreeEntityInTimeline(eid) {
+        document.getElementById('filter-entity').value = eid;
+        document.querySelectorAll('.tab[data-view]').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="timeline"]').classList.add('active');
+        currentView = 'timeline';
+
+        document.getElementById('timeline-view').classList.remove('hidden');
+        document.getElementById('tree-view').classList.add('hidden');
+        document.getElementById('stats-view').classList.add('hidden');
+        document.getElementById('tick-analysis-view').classList.add('hidden');
+        document.getElementById('playground-view').classList.add('hidden');
+        document.getElementById('pagination').classList.remove('hidden');
+        document.getElementById('filters-panel').classList.remove('hidden');
+        document.getElementById('components-panel').classList.remove('hidden');
+
+        currentPage = 0;
+        applyFilters();
+    }
+
+    function showEntityChangesInPlayground(eid) {
+        document.getElementById('playground-code').value = `// Changes for Entity ${eid}
+const changes = getChangesForEntity(${eid});
+return {
+    totalChanges: changes.length,
+    byComponent: changes.reduce((acc, c) => {
+        acc[c.component] = (acc[c.component] || 0) + 1;
+        return acc;
+    }, {}),
+    byDirection: {
+        s2r: changes.filter(c => c.direction === 's2r').length,
+        r2s: changes.filter(c => c.direction === 'r2s').length
+    },
+    changes: changes.slice(0, 50)
+};`;
+
+        document.querySelectorAll('.tab[data-view]').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="playground"]').classList.add('active');
+        currentView = 'playground';
+
+        document.getElementById('playground-view').classList.remove('hidden');
+        document.getElementById('tree-view').classList.add('hidden');
+        document.getElementById('timeline-view').classList.add('hidden');
+        document.getElementById('stats-view').classList.add('hidden');
+        document.getElementById('tick-analysis-view').classList.add('hidden');
+        document.getElementById('pagination').classList.add('hidden');
+        document.getElementById('filters-panel').classList.add('hidden');
+        document.getElementById('components-panel').classList.add('hidden');
+
+        initPlayground();
+        executePlayground();
     }
 
     // Export state functionality
@@ -990,6 +1268,421 @@ export interface ExportedState {
             btn.textContent = 'Copied!';
             setTimeout(() => btn.textContent = orig, 1000);
         });
+    }
+
+    // Tick Analysis
+    function initTickAnalysis() {
+        document.getElementById('tick-analysis-to').value = maxTick;
+        document.getElementById('tick-analysis-to').max = maxTick;
+        document.getElementById('tick-analysis-from').max = maxTick;
+        document.getElementById('tick-analysis-max').textContent = `/ ${maxTick}`;
+        analyzeTickRange();
+    }
+
+    document.getElementById('analyze-ticks-btn').addEventListener('click', analyzeTickRange);
+    document.getElementById('tick-analysis-from').addEventListener('change', analyzeTickRange);
+    document.getElementById('tick-analysis-to').addEventListener('change', analyzeTickRange);
+
+    function analyzeTickRange() {
+        const fromTick = parseInt(document.getElementById('tick-analysis-from').value) || 0;
+        const toTick = parseInt(document.getElementById('tick-analysis-to').value) || maxTick;
+
+        // Filter CRDT entries within tick range
+        const entriesInRange = crdtEntries.filter(e => e._tk >= fromTick && e._tk <= toTick);
+
+        // Separate by direction
+        const s2rEntries = entriesInRange.filter(e => (e.d || 's2r') === 's2r');
+        const r2sEntries = entriesInRange.filter(e => e.d === 'r2s');
+
+        // Count by component for each direction
+        const s2rByComponent = {};
+        const r2sByComponent = {};
+
+        s2rEntries.forEach(e => {
+            const comp = e._comp || 'Unknown';
+            s2rByComponent[comp] = (s2rByComponent[comp] || 0) + 1;
+        });
+
+        r2sEntries.forEach(e => {
+            const comp = e._comp || 'Unknown';
+            r2sByComponent[comp] = (r2sByComponent[comp] || 0) + 1;
+        });
+
+        // Update summary
+        document.getElementById('tick-analysis-summary').textContent =
+            `Ticks ${fromTick}-${toTick} | ${entriesInRange.length} changes`;
+
+        // Render S2R chart
+        renderTickChart('tick-s2r-chart', s2rByComponent, '#2ecc71');
+        document.getElementById('tick-s2r-total').textContent = `${s2rEntries.length} total`;
+
+        // Render R2S chart
+        renderTickChart('tick-r2s-chart', r2sByComponent, '#9b59b6');
+        document.getElementById('tick-r2s-total').textContent = `${r2sEntries.length} total`;
+
+        // Build comparison table
+        const allComponents = new Set([...Object.keys(s2rByComponent), ...Object.keys(r2sByComponent)]);
+        const tableData = Array.from(allComponents).map(comp => ({
+            name: comp,
+            s2r: s2rByComponent[comp] || 0,
+            r2s: r2sByComponent[comp] || 0,
+            total: (s2rByComponent[comp] || 0) + (r2sByComponent[comp] || 0)
+        })).sort((a, b) => b.total - a.total);
+
+        document.getElementById('tick-comparison-tbody').innerHTML = tableData.map(row => `
+            <tr style="border-bottom: 1px solid #222; cursor: pointer;" onclick="showComponentTimeline('${row.name}')" onmouseover="this.style.background='#1a1a2e'" onmouseout="this.style.background=''">
+                <td style="padding: 0.4rem 0.5rem; color: #f39c12;">${row.name}</td>
+                <td style="padding: 0.4rem 0.5rem; text-align: right; color: #2ecc71;">${row.s2r || '-'}</td>
+                <td style="padding: 0.4rem 0.5rem; text-align: right; color: #9b59b6;">${row.r2s || '-'}</td>
+                <td style="padding: 0.4rem 0.5rem; text-align: right; color: #fff; font-weight: bold;">${row.total}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderTickChart(containerId, data, color) {
+        const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
+        const max = sorted[0]?.[1] || 1;
+
+        document.getElementById(containerId).innerHTML = sorted.length ? sorted.map(([name, count]) => `
+            <div class="bar-row clickable" style="cursor: pointer;" onclick="showComponentTimeline('${name}')">
+                <span class="bar-label" title="${name}" style="color: #f39c12;">${name}</span>
+                <div class="bar-container"><div class="bar" style="width: ${(count/max)*100}%; background: ${color};"></div></div>
+                <span class="bar-value">${count}</span>
+            </div>
+        `).join('') : '<p style="color: #666; text-align: center;">No changes</p>';
+    }
+
+    // Component Timeline Chart
+    let selectedTimelineComponent = null;
+
+    function showComponentTimeline(componentName) {
+        selectedTimelineComponent = componentName;
+        document.getElementById('timeline-component-name').textContent = componentName;
+        document.getElementById('component-timeline-container').classList.remove('hidden');
+        renderComponentTimeline();
+    }
+
+    function closeComponentTimeline() {
+        document.getElementById('component-timeline-container').classList.add('hidden');
+        selectedTimelineComponent = null;
+    }
+
+    document.getElementById('timeline-show-s2r').addEventListener('change', renderComponentTimeline);
+    document.getElementById('timeline-show-r2s').addEventListener('change', renderComponentTimeline);
+    window.addEventListener('resize', () => { if (selectedTimelineComponent) renderComponentTimeline(); });
+
+    function renderComponentTimeline() {
+        if (!selectedTimelineComponent) return;
+
+        const showS2R = document.getElementById('timeline-show-s2r').checked;
+        const showR2S = document.getElementById('timeline-show-r2s').checked;
+
+        // Get all entries for this component
+        const componentEntries = crdtEntries.filter(e => e._comp === selectedTimelineComponent);
+
+        // Group by tick
+        const s2rByTick = {};
+        const r2sByTick = {};
+        let minTick = Infinity, maxTickLocal = 0;
+
+        componentEntries.forEach(e => {
+            const tick = e._tk;
+            const dir = e.d || 's2r';
+            if (tick < minTick) minTick = tick;
+            if (tick > maxTickLocal) maxTickLocal = tick;
+
+            if (dir === 's2r') {
+                s2rByTick[tick] = (s2rByTick[tick] || 0) + 1;
+            } else {
+                r2sByTick[tick] = (r2sByTick[tick] || 0) + 1;
+            }
+        });
+
+        if (minTick === Infinity) minTick = 0;
+
+        // Update labels
+        document.getElementById('timeline-start-tick').textContent = `Tick ${minTick}`;
+        document.getElementById('timeline-end-tick').textContent = `Tick ${maxTickLocal}`;
+
+        const totalS2R = Object.values(s2rByTick).reduce((a, b) => a + b, 0);
+        const totalR2S = Object.values(r2sByTick).reduce((a, b) => a + b, 0);
+        document.getElementById('timeline-stats').textContent = `S→R: ${totalS2R} | R→S: ${totalR2S}`;
+
+        // Draw the chart
+        const canvas = document.getElementById('timeline-canvas');
+        const container = document.getElementById('component-timeline-chart');
+        canvas.width = container.clientWidth * window.devicePixelRatio;
+        canvas.height = container.clientHeight * window.devicePixelRatio;
+        canvas.style.width = container.clientWidth + 'px';
+        canvas.style.height = container.clientHeight + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        // Clear canvas
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, width, height);
+
+        // Find max value for scale
+        let maxValue = 0;
+        if (showS2R) maxValue = Math.max(maxValue, ...Object.values(s2rByTick));
+        if (showR2S) maxValue = Math.max(maxValue, ...Object.values(r2sByTick));
+        if (maxValue === 0) maxValue = 1;
+
+        const tickRange = maxTickLocal - minTick || 1;
+
+        // Draw grid
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 4; i++) {
+            const y = padding.top + (chartHeight * i / 4);
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+        }
+        ctx.stroke();
+
+        // Draw Y axis labels
+        ctx.fillStyle = '#666';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= 4; i++) {
+            const y = padding.top + (chartHeight * i / 4);
+            const value = Math.round(maxValue * (1 - i / 4));
+            ctx.fillText(value.toString(), padding.left - 5, y + 3);
+        }
+
+        // Function to draw a line chart
+        function drawLine(dataByTick, color) {
+            const ticks = Object.keys(dataByTick).map(Number).sort((a, b) => a - b);
+            if (ticks.length === 0) return;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            ticks.forEach((tick, i) => {
+                const x = padding.left + ((tick - minTick) / tickRange) * chartWidth;
+                const y = padding.top + chartHeight - (dataByTick[tick] / maxValue) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+
+            // Draw dots
+            ctx.fillStyle = color;
+            ticks.forEach(tick => {
+                const x = padding.left + ((tick - minTick) / tickRange) * chartWidth;
+                const y = padding.top + chartHeight - (dataByTick[tick] / maxValue) * chartHeight;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Draw lines
+        if (showS2R) drawLine(s2rByTick, '#2ecc71');
+        if (showR2S) drawLine(r2sByTick, '#9b59b6');
+
+        // Draw X axis
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, height - padding.bottom);
+        ctx.lineTo(width - padding.right, height - padding.bottom);
+        ctx.stroke();
+    }
+
+    // ============== PLAYGROUND ==============
+
+    let playgroundInitialized = false;
+    let playgroundDebounceTimer = null;
+
+    function initPlayground() {
+        if (playgroundInitialized) return;
+        playgroundInitialized = true;
+
+        const codeArea = document.getElementById('playground-code');
+        codeArea.addEventListener('input', () => {
+            clearTimeout(playgroundDebounceTimer);
+            playgroundDebounceTimer = setTimeout(executePlayground, 300);
+        });
+
+        // Handle Tab key for indentation
+        codeArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = codeArea.selectionStart;
+                const end = codeArea.selectionEnd;
+                codeArea.value = codeArea.value.substring(0, start) + '  ' + codeArea.value.substring(end);
+                codeArea.selectionStart = codeArea.selectionEnd = start + 2;
+            }
+        });
+
+        document.getElementById('playground-help-btn').addEventListener('click', () => {
+            document.getElementById('playground-help-modal').classList.remove('hidden');
+        });
+
+        // Run initial code
+        executePlayground();
+    }
+
+    // Playground API functions
+    function getState(tick) {
+        const state = reconstructStateAtTick(tick);
+
+        return {
+            entities: state,
+            tick: tick,
+
+            getEntitiesWithComponent(componentName) {
+                return Object.entries(state)
+                    .filter(([_, data]) => componentName in data.components)
+                    .map(([eid, _]) => parseInt(eid));
+            },
+
+            getComponent(entityId, componentName) {
+                const entity = state[entityId];
+                if (!entity) return null;
+                return entity.components[componentName] || null;
+            },
+
+            getAllComponents(entityId) {
+                const entity = state[entityId];
+                if (!entity) return {};
+                return { ...entity.components };
+            },
+
+            getEntityCount() {
+                return Object.keys(state).length;
+            },
+
+            getComponentCount() {
+                let count = 0;
+                Object.values(state).forEach(e => {
+                    count += Object.keys(e.components).length;
+                });
+                return count;
+            }
+        };
+    }
+
+    function getChangesForEntity(entityId) {
+        return crdtEntries
+            .filter(e => e._eid === entityId)
+            .map(e => ({
+                tick: e._tk,
+                component: e._comp,
+                operation: e._op,
+                direction: e.d || 's2r',
+                payload: e.payload,
+                timestamp: e.ct
+            }));
+    }
+
+    function getChangesForComponent(componentName) {
+        return crdtEntries
+            .filter(e => e._comp === componentName)
+            .map(e => ({
+                tick: e._tk,
+                entityId: e._eid,
+                operation: e._op,
+                direction: e.d || 's2r',
+                payload: e.payload,
+                timestamp: e.ct
+            }));
+    }
+
+    function getChangesBetweenTicks(fromTick, toTick) {
+        return crdtEntries
+            .filter(e => e._tk >= fromTick && e._tk <= toTick)
+            .map(e => ({
+                tick: e._tk,
+                entityId: e._eid,
+                component: e._comp,
+                operation: e._op,
+                direction: e.d || 's2r',
+                payload: e.payload
+            }));
+    }
+
+    function executePlayground() {
+        const code = document.getElementById('playground-code').value;
+        const resultEl = document.getElementById('playground-result');
+        const statusEl = document.getElementById('playground-status');
+        const execTimeEl = document.getElementById('playground-exec-time');
+
+        if (!code.trim()) {
+            resultEl.textContent = '';
+            statusEl.textContent = '';
+            execTimeEl.textContent = '';
+            return;
+        }
+
+        const startTime = performance.now();
+
+        try {
+            // Create a function with access to our API
+            const fn = new Function(
+                'getState', 'getChangesForEntity', 'getChangesForComponent', 'getChangesBetweenTicks',
+                'maxTick', 'crdtEntries', 'allEntries',
+                code.includes('return') ? code : `return (${code})`
+            );
+
+            const result = fn(
+                getState, getChangesForEntity, getChangesForComponent, getChangesBetweenTicks,
+                maxTick, crdtEntries, allEntries
+            );
+
+            const endTime = performance.now();
+
+            resultEl.style.color = '#eee';
+            resultEl.textContent = JSON.stringify(result, null, 2);
+            statusEl.textContent = '✓';
+            statusEl.style.color = '#2ecc71';
+            execTimeEl.textContent = `${(endTime - startTime).toFixed(1)}ms`;
+
+        } catch (err) {
+            const endTime = performance.now();
+
+            resultEl.style.color = '#e74c3c';
+            resultEl.textContent = `Error: ${err.message}`;
+            statusEl.textContent = '✗';
+            statusEl.style.color = '#e74c3c';
+            execTimeEl.textContent = `${(endTime - startTime).toFixed(1)}ms`;
+        }
+    }
+
+    // ============== TREE SELECTION HELPERS ==============
+
+    function highlightTreeEntity(eid) {
+        // Remove previous selection
+        document.querySelectorAll('#tree-content .tree-item.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+
+        // Find and highlight the entity
+        const items = document.querySelectorAll('#tree-content .tree-item');
+        items.forEach(item => {
+            if (item.querySelector('.entity-id')?.textContent === `E${eid}`) {
+                item.classList.add('selected');
+                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+
+    function showTreeEntityDetails(eid) {
+        selectTreeEntity(eid);
     }
     </script>
 </body>

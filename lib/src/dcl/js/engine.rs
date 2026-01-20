@@ -135,6 +135,13 @@ async fn op_crdt_recv_from_renderer(
             let mut data_buf = Vec::new();
             let mut data_writter = DclWriter::new(&mut data_buf);
 
+            // Get current tick for logging
+            #[cfg(feature = "scene_logging")]
+            let current_tick = op_state
+                .try_borrow::<SceneTickCounter>()
+                .map(|tc| tc.0.load(std::sync::atomic::Ordering::Relaxed))
+                .unwrap_or(0);
+
             for (component_id, entities) in dirty_crdt_state.lww.iter() {
                 for entity_id in entities {
                     // Log renderer->scene CRDT operation
@@ -167,7 +174,7 @@ async fn op_crdt_recv_from_renderer(
                                 };
 
                                 log_crdt_renderer_to_scene(
-                                    0, // tick not available here
+                                    current_tick,
                                     entity_id.as_i32() as u32,
                                     component_id.0,
                                     operation,
@@ -197,7 +204,7 @@ async fn op_crdt_recv_from_renderer(
                         use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
 
                         log_crdt_renderer_to_scene(
-                            0, // tick not available here
+                            current_tick,
                             entity_id.as_i32() as u32,
                             component_id.0,
                             CrdtOperation::Append,
@@ -225,7 +232,7 @@ async fn op_crdt_recv_from_renderer(
                     use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
 
                     log_crdt_renderer_to_scene(
-                        0, // tick not available here
+                        current_tick,
                         entity_id.as_i32() as u32,
                         0, // no component for entity delete
                         CrdtOperation::DeleteEntity,
