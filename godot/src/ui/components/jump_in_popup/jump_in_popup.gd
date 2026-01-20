@@ -3,7 +3,7 @@ extends ColorRect
 var texture_placeholder = load("res://assets/ui/placeholder2.png")
 
 var location: Vector2i = Vector2i(0, 0)
-var realm: String = Realm.MAIN_REALM
+var realm: String = DclUrls.main_realm()
 
 @onready var texture_rect: TextureRect = %TextureRect
 @onready var label_title: Label = %Label_Title

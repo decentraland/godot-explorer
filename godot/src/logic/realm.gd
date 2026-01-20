@@ -21,16 +21,6 @@ const DAO_SERVERS: Array[String] = [
 
 var _has_realm = false
 
-# gdlint: ignore=class-variable-name
-static var MAIN_REALM: String:
-	get:
-		return DclUrls.genesis()
-
-# gdlint: ignore=class-variable-name
-static var WORLDS_URL: String:
-	get:
-		return DclUrls.worlds_content_server()
-
 
 static func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
@@ -48,7 +38,7 @@ static func is_genesis_city(_realm_name: String):
 
 
 static func dcl_world_url(dcl_name: String) -> String:
-	return WORLDS_URL + dcl_name.to_lower().uri_encode()
+	return DclUrls.worlds_content_server() + dcl_name.to_lower().uri_encode()
 
 
 static func ensure_reduce_url(url):
@@ -56,7 +46,7 @@ static func ensure_reduce_url(url):
 
 
 static func ensure_dcl_ens(url: String) -> String:
-	return url.replace(WORLDS_URL, "")
+	return url.replace(DclUrls.worlds_content_server(), "")
 
 
 static func ensure_remove_slash(str_param: String) -> String:

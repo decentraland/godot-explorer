@@ -705,7 +705,7 @@ func check_deep_link_teleport_to():
 			if realm.is_empty():
 				realm = Global.deep_link_obj.realm
 			if realm.is_empty():
-				realm = Realm.MAIN_REALM
+				realm = DclUrls.main_realm()
 
 			Global.teleport_to(Global.deep_link_obj.location, realm)
 		elif not Global.deep_link_obj.preview.is_empty():

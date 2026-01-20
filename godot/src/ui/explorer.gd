@@ -97,7 +97,7 @@ func get_params_from_cmd():
 	if Global.deep_link_obj.is_location_defined() and location_vector == null:
 		location_vector = Global.deep_link_obj.location
 		if realm_string == null:
-			realm_string = Realm.MAIN_REALM
+			realm_string = DclUrls.main_realm()
 
 	return [realm_string, location_vector]
 

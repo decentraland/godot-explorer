@@ -18,7 +18,7 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 @export var likes_percent: float = 0.0
 @export var metadata: Dictionary = {}
 @export var location: Vector2i = Vector2i(0, 0)
-@export var realm: String = Realm.MAIN_REALM
+@export var realm: String = DclUrls.main_realm()
 @export var realm_title: String = "Genesis City"
 
 var event_id: String
@@ -328,7 +328,7 @@ func set_data(item_data):
 		if world_name:
 			set_realm(world_name, world_name)
 	else:
-		set_realm(Realm.MAIN_REALM, "Genesis City")
+		set_realm(DclUrls.main_realm(), "Genesis City")
 
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))

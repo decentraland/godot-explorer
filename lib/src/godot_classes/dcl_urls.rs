@@ -38,8 +38,8 @@ impl DclUrls {
 
     // Content
     #[func]
-    pub fn genesis() -> GString {
-        urls::genesis().to_godot()
+    pub fn main_realm() -> GString {
+        urls::main_realm().to_godot()
     }
     #[func]
     pub fn worlds_content_server() -> GString {
