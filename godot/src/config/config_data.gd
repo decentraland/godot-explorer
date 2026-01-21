@@ -6,9 +6,10 @@ signal param_changed(param: ConfigParams)
 enum FpsLimitMode {
 	VSYNC = 0,
 	NO_LIMIT = 1,
-	FPS_30 = 2,
-	FPS_60 = 3,
-	FPS_18 = 4,
+	FPS_18 = 2,  # Very Low profile
+	FPS_30 = 3,
+	FPS_60 = 4,
+	FPS_120 = 5,
 }
 
 enum ConfigParams {
@@ -30,6 +31,9 @@ enum ConfigParams {
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
 }
+
+# Graphics profile index for Custom (manual settings)
+const PROFILE_CUSTOM: int = 4
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
 	set(value):
@@ -78,7 +82,7 @@ var skybox_time: int = 43200:
 		skybox_time = value
 		param_changed.emit(ConfigParams.SKYBOX_TIME)
 
-# See FpsLimitMode enum for available options
+# See FpsLimitMode enum for available options (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
 var limit_fps: int = FpsLimitMode.FPS_30:
 	set(value):
 		limit_fps = value
@@ -102,7 +106,7 @@ var bloom_quality: int = 0:
 		bloom_quality = value
 		param_changed.emit(ConfigParams.BLOOM_QUALITY)
 
-# 0: Performance, 1: Balanced, 2: Quality, 3: Custom
+# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
 var graphic_profile: int = 0:
 	set(value):
 		graphic_profile = value
@@ -113,6 +117,13 @@ var anti_aliasing: int = 0:
 	set(value):
 		anti_aliasing = value
 		param_changed.emit(ConfigParams.ANTI_ALIASING)
+
+# First launch benchmark completed (for autodetection)
+var first_launch_completed: bool = false
+
+# Benchmark results (for debugging/analytics)
+var benchmark_gpu_score: float = -1.0  # Render time in ms (-1 = not run)
+var benchmark_ram_gb: float = -1.0  # System RAM in GB (-1 = not detected)
 
 var last_realm_joined: String = "":
 	set(value):
@@ -212,7 +223,10 @@ func load_from_default():
 	self.shadow_quality = 0  # disabled
 	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
-	self.graphic_profile = 0
+	self.graphic_profile = 0  # Very Low (will be set by benchmark on first launch)
+	self.first_launch_completed = false
+	self.benchmark_gpu_score = -1.0
+	self.benchmark_ram_gb = -1.0
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 	self.max_cache_size = 1
@@ -241,7 +255,7 @@ func load_from_settings_file():
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
 
-	self.limit_fps = settings_file.get_value("config", "fps_limit", data_default.limit_fps)
+	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(
 		"config", "shadow_quality", data_default.shadow_quality
@@ -254,6 +268,15 @@ func load_from_settings_file():
 	)
 	self.graphic_profile = settings_file.get_value(
 		"config", "graphic_profile", data_default.graphic_profile
+	)
+	self.first_launch_completed = settings_file.get_value(
+		"config", "first_launch_completed", data_default.first_launch_completed
+	)
+	self.benchmark_gpu_score = settings_file.get_value(
+		"config", "benchmark_gpu_score", data_default.benchmark_gpu_score
+	)
+	self.benchmark_ram_gb = settings_file.get_value(
+		"config", "benchmark_ram_gb", data_default.benchmark_ram_gb
 	)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
@@ -340,12 +363,15 @@ func save_to_settings_file():
 
 	var new_settings_file: ConfigFile = ConfigFile.new()
 	new_settings_file.set_value("config", "process_tick_quota_ms", self.process_tick_quota_ms)
-	new_settings_file.set_value("config", "fps_limit", self.limit_fps)
+	new_settings_file.set_value("config", "limit_fps", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)
 	new_settings_file.set_value("config", "shadow_quality", self.shadow_quality)
 	new_settings_file.set_value("config", "bloom_quality", self.bloom_quality)
 	new_settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
 	new_settings_file.set_value("config", "graphic_profile", self.graphic_profile)
+	new_settings_file.set_value("config", "first_launch_completed", self.first_launch_completed)
+	new_settings_file.set_value("config", "benchmark_gpu_score", self.benchmark_gpu_score)
+	new_settings_file.set_value("config", "benchmark_ram_gb", self.benchmark_ram_gb)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)

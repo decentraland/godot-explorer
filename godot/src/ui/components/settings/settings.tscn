@@ -381,7 +381,7 @@ text = "Graphic Profile"
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
-items = Array[String](["LOW", "MEDIUM", "HIGH", "CUSTOM"])
+items = Array[String](["VERY LOW", "LOW", "MEDIUM", "HIGH", "CUSTOM"])
 
 [node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 unique_name_in_owner = true
@@ -415,6 +415,7 @@ theme = SubResource("Theme_7krp8")
 items = Array[String](["Max"])
 
 [node name="LimitFps" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
@@ -428,9 +429,10 @@ text = "Limit FPS"
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
-items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS"])
+items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS", "120 FPS"])
 
 [node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
@@ -731,11 +733,11 @@ popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
 popup/item_1/id = 1
-popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
+popup/item_2/text = "https://sdk-test-scenes.decentraland.org"
 popup/item_2/id = 2
 popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
 popup/item_3/id = 3
-popup/item_4/text = "https://peer-testing.decentraland.org"
+popup/item_4/text = "https://peer.decentraland.org"
 popup/item_4/id = 4
 popup/item_5/text = "https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main"
 popup/item_5/id = 5

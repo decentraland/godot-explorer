@@ -99,6 +99,8 @@ var _is_portrait: bool = true
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
+var _hardware_benchmark: HardwareBenchmark = null
+
 
 func set_url_popup_instance(popup_instance) -> void:
 	url_popup_instance = popup_instance
@@ -349,6 +351,14 @@ func _async_clear_cache_if_needed() -> void:
 	var should_clear_startup = cli.clear_cache_startup
 	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
 
+	# Run hardware benchmark on first launch (mobile only)
+	# In dev builds, always run to help with testing
+	var should_run_benchmark: bool = (
+		is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
+	)
+	if should_run_benchmark:
+		_run_first_launch_benchmark.call_deferred()
+
 	if should_clear_startup or version_changed:
 		if should_clear_startup:
 			prints("Clear cache startup!")
@@ -362,6 +372,39 @@ func _async_clear_cache_if_needed() -> void:
 		if version_changed:
 			config.local_assets_cache_version = Global.LOCAL_ASSETS_CACHE_VERSION
 			config.save_to_settings_file()
+
+
+func _run_first_launch_benchmark() -> void:
+	print("[HardwareBenchmark] Running first launch benchmark...")
+	_hardware_benchmark = HardwareBenchmark.new()
+	_hardware_benchmark.benchmark_completed.connect(_on_first_launch_benchmark_completed)
+	get_tree().root.add_child(_hardware_benchmark)
+	_hardware_benchmark.run_benchmark()
+
+
+func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb: float) -> void:
+	print(
+		(
+			"[HardwareBenchmark] First launch complete: profile=%d, gpu=%.1fms, ram=%.1fGB"
+			% [profile, gpu_score, ram_gb]
+		)
+	)
+
+	# Store benchmark results for debugging/analytics
+	get_config().benchmark_gpu_score = gpu_score
+	get_config().benchmark_ram_gb = ram_gb
+	get_config().first_launch_completed = true
+
+	# Apply the detected profile
+	GraphicSettings.apply_graphic_profile(profile)
+
+	# Save configuration
+	get_config().save_to_settings_file()
+
+	# Cleanup benchmark
+	if is_instance_valid(_hardware_benchmark):
+		_hardware_benchmark.queue_free()
+		_hardware_benchmark = null
 
 
 func set_raycast_debugger_enable(enable: bool):
@@ -451,10 +494,10 @@ func open_url(url: String, use_webkit: bool = false):
 		if DclIosPlugin.is_available():
 			DclIosPlugin.open_auth_url(url)
 		elif DclAndroidPlugin.is_available():
-			if player_identity.target_config_id == "androidSocial":
-				DclAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
-			else:
+			if "provider=wallet-connect" in url:
 				DclAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
+			else:
+				DclAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 		else:
 			OS.shell_open(url)
 	else:

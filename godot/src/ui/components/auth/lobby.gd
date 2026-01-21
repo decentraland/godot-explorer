@@ -3,7 +3,11 @@ extends Control
 
 signal change_scene(new_scene_path: String)
 
+const AUTH_TIMEOUT_SECONDS: float = 60.0
+
 var is_creating_account: bool = false
+var auth_timeout_timer: Timer = null
+var auth_waiting_for_browser: bool = false
 
 var current_profile: DclUserProfile
 var guest_account_created: bool = false
@@ -30,6 +34,10 @@ var _playing: String
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
+@onready var auth_spinner = %AuthSpinner
+@onready var auth_error_label = %AuthErrorLabel
+@onready var button_cancel = %Button_Cancel
+@onready var button_cancel_icon = %ButtonCancelIcon
 
 @onready var label_avatar_name = %Label_Name
 
@@ -123,6 +131,22 @@ func show_auth_browser_open_screen():
 	container_sign_in_step2.show()
 	show_panel(control_signin)
 
+	# Reset error state and show spinner
+	_reset_auth_screen_state()
+
+	# Mark that we're waiting for browser auth
+	auth_waiting_for_browser = true
+
+	# Start timeout timer
+	auth_timeout_timer.start(AUTH_TIMEOUT_SECONDS)
+
+
+func _reset_auth_screen_state():
+	auth_error_label.hide()
+	auth_spinner.show()
+	button_cancel.text = "CANCEL"
+	button_cancel_icon.show()
+
 
 func show_avatar_create_screen():
 	track_lobby_screen("AVATAR_CREATE")
@@ -174,6 +198,13 @@ func _ready():
 	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
 	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
+	Global.player_identity.auth_error.connect(self._on_auth_error)
+
+	# Create auth timeout timer
+	auth_timeout_timer = Timer.new()
+	auth_timeout_timer.one_shot = true
+	auth_timeout_timer.timeout.connect(self._on_auth_timeout)
+	add_child(auth_timeout_timer)
 
 	Global.scene_runner.set_pause(true)
 
@@ -203,6 +234,25 @@ func _ready():
 		go_to_explorer.call_deferred()
 	else:
 		show_account_home_screen()
+
+
+func _notification(what: int) -> void:
+	# On mobile, pause/resume auth timeout when app loses/gains focus
+	# This prevents timeout while user is in external browser for auth
+	if not Global.is_mobile():
+		return
+
+	if not auth_waiting_for_browser:
+		return
+
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		# App lost focus (browser opened) - pause the timer
+		if auth_timeout_timer != null:
+			auth_timeout_timer.paused = true
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# App regained focus (returned from browser) - resume the timer
+		if auth_timeout_timer != null:
+			auth_timeout_timer.paused = false
 
 
 func go_to_explorer():
@@ -251,7 +301,12 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
-		await async_close_sign_in()
+		if profile_has_name():
+			await async_close_sign_in()
+		else:
+			# New user signed in but has no profile name - go to naming screen
+			_show_avatar_preview()
+			show_avatar_naming_screen()
 	else:
 		ready_for_redirect_by_deep_link = true
 		if _should_go_to_explorer_from_deeplink():
@@ -264,6 +319,7 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
+	_stop_auth_timeout()
 	Global.get_config().session_account = {}
 
 	var new_stored_account := {}
@@ -321,7 +377,10 @@ func _on_button_next_pressed():
 
 	await ProfileService.async_deploy_profile(current_profile)
 
-	show_auth_home_screen()
+	if is_creating_account:
+		show_auth_home_screen()
+	else:
+		await async_close_sign_in()
 
 
 func _on_button_random_name_pressed():
@@ -337,8 +396,33 @@ func _on_button_go_to_sign_in_pressed():
 
 func _on_button_cancel_pressed():
 	Global.metrics.track_click_button("cancel", current_screen_name, "")
+	_stop_auth_timeout()
 	Global.player_identity.abort_try_connect_account()
 	show_auth_home_screen()
+
+
+func _on_auth_error(error_message: String):
+	_stop_auth_timeout()
+	_show_auth_error(error_message)
+
+
+func _on_auth_timeout():
+	Global.player_identity.abort_try_connect_account()
+	_show_auth_error("Authentication timed out. Please try again.")
+
+
+func _show_auth_error(error_message: String):
+	auth_spinner.hide()
+	auth_error_label.text = error_message
+	auth_error_label.show()
+	button_cancel.text = "TRY AGAIN"
+	button_cancel_icon.hide()
+
+
+func _stop_auth_timeout():
+	auth_waiting_for_browser = false
+	if auth_timeout_timer != null:
+		auth_timeout_timer.stop()
 
 
 func create_guest_account_if_needed():
