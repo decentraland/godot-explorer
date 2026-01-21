@@ -633,6 +633,12 @@ func _on_ui_root_gui_input(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			set_cursor_position(event.position)
+		# On mobile in PointerUnlocked mode (VirtualCamera active), trigger ia_pointer on touch
+		if Global.is_mobile() and Global.scene_runner.raycast_use_cursor_position:
+			if event.pressed:
+				Input.action_press("ia_pointer")
+			else:
+				Input.action_release("ia_pointer")
 
 
 func _on_panel_profile_open_profile():
