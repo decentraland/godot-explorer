@@ -160,7 +160,12 @@ impl ProfileService {
 
     #[func]
     pub fn async_fetch_profile(address: GString, lambda_server_url: GString) -> Gd<Promise> {
-        let url = format!("{}/profiles/{}", lambda_server_url, address);
+        let base_url = lambda_server_url
+            .to_string()
+            .trim_end_matches('/')
+            .to_string();
+        let url = format!("{}/profiles/{}", base_url, address);
+        tracing::debug!("profile > fetching from: {}", url);
         let http_requester = DclGlobal::singleton().bind().get_http_requester();
         let promise = http_requester.bind().request_json(
             GString::from(url.as_str()),
@@ -254,6 +259,7 @@ impl ProfileService {
 
         // Deploy to server
         let url = format!("{}entities/", profile_content_url);
+        tracing::debug!("profile > deploying to: {}", url);
 
         // Deploy via HTTP request using the Arc<HttpQueueRequester>
         let headers_map = {
@@ -264,7 +270,7 @@ impl ProfileService {
 
         let request_option = crate::http_request::request_response::RequestOption::new(
             0,
-            url,
+            url.clone(),
             http::Method::POST,
             crate::http_request::request_response::ResponseType::AsString,
             Some(prepared_data),
@@ -277,6 +283,22 @@ impl ProfileService {
             .await
             .map_err(|e| anyhow!("Failed to deploy profile: {:?}", e))?;
 
+        // Check HTTP status code
+        let status_code = response.status_code();
+        if !(200..=299).contains(&status_code) {
+            let error_body = response.get_response_as_string().to_string();
+            tracing::error!(
+                "profile > deploy failed - HTTP {}: {}",
+                status_code,
+                error_body
+            );
+            return Err(anyhow!(
+                "Deploy failed with HTTP {}: {}",
+                status_code,
+                error_body
+            ));
+        }
+
         // Parse response
         let response_variant = response.get_response_as_string();
         let response_str = if response_variant.is_nil() {
@@ -288,11 +310,16 @@ impl ProfileService {
             .map_err(|e| anyhow!("Failed to parse deployment response: {}", e))?;
 
         if response_json.get("creationTimestamp").is_none() {
+            tracing::error!(
+                "profile > deploy failed - invalid response: {}",
+                response_str
+            );
             return Err(anyhow!(
                 "Invalid deployment response: missing creationTimestamp"
             ));
         }
 
+        tracing::info!("profile > deploy succeeded for: {}", eth_address);
         Ok(response_json)
     }
 }

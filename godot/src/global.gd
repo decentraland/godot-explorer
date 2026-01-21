@@ -445,10 +445,10 @@ func open_url(url: String, use_webkit: bool = false):
 		if DclIosPlugin.is_available():
 			DclIosPlugin.open_auth_url(url)
 		elif DclAndroidPlugin.is_available():
-			if player_identity.target_config_id == "androidSocial":
-				DclAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
-			else:
+			if "provider=wallet-connect" in url:
 				DclAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
+			else:
+				DclAndroidPlugin.open_custom_tab_url(url)  # FOR SOCIAL
 		else:
 			OS.shell_open(url)
 	else:
