@@ -32,11 +32,7 @@ enum ConfigParams {
 	SKYBOX_TIME,
 }
 
-# Graphics profile indices
-const PROFILE_VERY_LOW: int = 0
-const PROFILE_LOW: int = 1
-const PROFILE_MEDIUM: int = 2
-const PROFILE_HIGH: int = 3
+# Graphics profile index for Custom (manual settings)
 const PROFILE_CUSTOM: int = 4
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":

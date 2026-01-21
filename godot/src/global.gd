@@ -346,9 +346,9 @@ func _async_clear_cache_if_needed() -> void:
 	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
 
 	# Run hardware benchmark on first launch (mobile only)
-	# In debug builds, always run to help with testing
+	# In dev builds, always run to help with testing
 	var should_run_benchmark: bool = (
-		is_mobile() and (not get_config().first_launch_completed or OS.is_debug_build())
+		is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 	)
 	if should_run_benchmark:
 		_run_first_launch_benchmark.call_deferred()
