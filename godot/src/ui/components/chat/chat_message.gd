@@ -18,6 +18,10 @@ var is_own_message: bool = false
 var has_claimed_name: bool = false
 var max_panel_width: int = 370
 
+# Static vars to defer profile picture loading until scene finishes loading
+static var _scene_loading_finished: bool = false
+static var _signal_connected: bool = false
+
 @onready var rich_text_label_compact_chat: RichTextLabel = %RichTextLabel_CompactChat
 @onready var h_box_container_extended_chat: HBoxContainer = %HBoxContainer_ExtendedChat
 @onready var h_box_container_compact_chat: HBoxContainer = %HBoxContainer_CompactChat
@@ -36,12 +40,21 @@ var max_panel_width: int = 370
 
 
 func _ready() -> void:
+	# Connect loading_finished signal once (static connection)
+	if not _signal_connected:
+		_signal_connected = true
+		Global.loading_finished.connect(_on_scene_loading_finished)
+
 	# Connect signals for clickable URLs
 	rich_text_label_message.meta_clicked.connect(_on_url_clicked)
 	rich_text_label_compact_chat.meta_clicked.connect(_on_url_clicked)
 
 	configure_link_styles()
 	async_adjust_panel_size()
+
+
+static func _on_scene_loading_finished() -> void:
+	_scene_loading_finished = true
 
 
 func configure_link_styles() -> void:
@@ -162,8 +175,11 @@ func set_avatar(avatar: DclAvatar) -> void:
 		has_claimed_name = true
 
 	# Update both profile pictures (extended and compact)
-	#profile_picture.async_update_profile_picture(avatar)
-	#profile_picture_compact.async_update_profile_picture(avatar)
+	# Skip during scene loading to avoid performance issues from concurrent fetches
+	if _scene_loading_finished:
+		var social_data = SocialHelper.social_data_from_avatar(avatar)
+		profile_picture.async_update_profile_picture(social_data)
+		profile_picture_compact.async_update_profile_picture(social_data)
 
 
 func set_system_avatar() -> void:
