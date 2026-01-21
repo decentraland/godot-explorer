@@ -11,6 +11,7 @@ pub mod gltf_container;
 pub mod gltf_node_modifiers;
 pub mod input_modifier;
 pub mod material;
+pub mod skybox_time;
 pub mod mesh_collider;
 pub mod mesh_renderer;
 pub mod nft_shape;

@@ -21,6 +21,7 @@ use super::{
         },
         input_modifier::update_input_modifier,
         material::{update_material, update_video_material_textures},
+        skybox_time::update_skybox_time,
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
@@ -288,6 +289,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::InputModifier => {
                 update_input_modifier(scene, crdt_state, current_parcel_scene_id);
+                false
+            }
+            SceneUpdateState::SkyboxTime => {
+                update_skybox_time(scene, crdt_state, current_parcel_scene_id);
                 false
             }
             SceneUpdateState::TriggerArea => {
