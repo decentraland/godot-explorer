@@ -3,7 +3,7 @@ pub mod content_mapping;
 pub mod content_notificator;
 pub mod content_provider;
 pub mod file_string;
-mod gltf;
+pub mod gltf;
 pub mod packed_array;
 pub mod profile;
 #[cfg(feature = "use_resource_tracking")]

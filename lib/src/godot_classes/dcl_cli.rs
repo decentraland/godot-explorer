@@ -88,8 +88,12 @@ pub struct DclCli {
     pub emulate_ios: bool,
     #[var(get)]
     pub emulate_android: bool,
+    #[var(get)]
+    pub asset_server: bool,
 
     // Arguments with values
+    #[var(get)]
+    pub asset_server_port: i32,
     #[var(get)]
     pub realm: GString,
     #[var(get)]
@@ -328,6 +332,20 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
+            // Asset Server
+            ArgDefinition {
+                name: "--asset-server".to_string(),
+                description: "Start the asset optimization server instead of the normal client"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Server".to_string(),
+            },
+            ArgDefinition {
+                name: "--asset-server-port".to_string(),
+                description: "Port for asset optimization server (default: 8080)".to_string(),
+                arg_type: ArgType::Value("<port>".to_string()),
+                category: "Server".to_string(),
+            },
         ]
     }
 
@@ -461,8 +479,14 @@ impl INode for DclCli {
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
+        let asset_server = args_map.contains_key("--asset-server");
 
         // Extract arguments with values
+        let asset_server_port = args_map
+            .get("--asset-server-port")
+            .and_then(|v| v.as_ref())
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(8080);
         let realm = args_map
             .get("--realm")
             .and_then(|v| v.as_ref())
@@ -541,6 +565,8 @@ impl INode for DclCli {
             stress_test,
             emulate_ios,
             emulate_android,
+            asset_server,
+            asset_server_port,
             realm,
             location,
             scene_input_file,

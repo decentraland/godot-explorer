@@ -21,6 +21,7 @@ once_cell = "1.16.0"
 futures-lite = "1.12.0"
 
 hyper = { version = "1.0.0-rc.3", features = ["full"] }
+hyper-util = { version = "0.1.0-rc.1", features = ["tokio"], optional = true }
 http-body-util = "0.1.0-rc.2"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking", "stream"] }
 regex = "*"
@@ -92,6 +93,7 @@ use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 use_voice_chat = []
 use_memory_debugger = []
+asset_server = ["dep:hyper-util"]
 
 # TODO: Fix enable_inspector failure when cross-compiling to Android from Windows.
 #       The FastWebSockets build incorrectly includes `unmask`.
