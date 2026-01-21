@@ -94,8 +94,8 @@ func close():
 	if not is_open:
 		return
 	is_open = false
-	if Global.has_changes():
-		Global.async_save_profile()
+	if Global.player_identity.has_changes():
+		Global.player_identity.async_save_profile()
 	var tween_m = create_tween()
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
@@ -244,13 +244,13 @@ func _on_visibility_changed():
 
 
 func _async_request_hide_menu():
-	await Global.async_save_profile()
+	await Global.player_identity.async_save_profile()
 	hide_menu.emit()
 
 
 func _on_button_backpack_toggled(toggled_on):
 	if !toggled_on:
-		Global.async_save_profile()
+		Global.player_identity.async_save_profile()
 
 
 func _on_size_changed() -> void:

@@ -165,7 +165,7 @@ func _update_visible_categories():
 
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
-	Global.mutable_avatar.set_emotes(emotes_urns)
+	Global.player_identity.get_mutable_avatar().set_emotes(emotes_urns)
 	# Don't trigger request_update_avatar - emotes are loaded separately by the emote controller
 	# and don't require reloading the avatar mesh/wearables
 
@@ -195,15 +195,19 @@ func _unset_avatar_loading(current: int):
 
 
 func _async_update_avatar():
-	Global.mutable_profile.set_avatar(Global.mutable_avatar)
+	Global.player_identity.get_mutable_profile().set_avatar(
+		Global.player_identity.get_mutable_avatar()
+	)
 
 	var loading_id := _set_avatar_loading()
-	await avatar_preview.avatar.async_update_avatar_from_profile(Global.mutable_profile)
+	await avatar_preview.avatar.async_update_avatar_from_profile(
+		Global.player_identity.get_mutable_profile()
+	)
 	_unset_avatar_loading(loading_id)
 
 
 func _load_filtered_data(filter: String):
-	if Global.mutable_avatar == null:
+	if Global.player_identity.get_mutable_avatar() == null:
 		return
 
 	filtered_data = []
@@ -215,7 +219,7 @@ func _load_filtered_data(filter: String):
 			if wearable.get_category() == filter or is_filter_all:
 				var is_body_shape = wearable.get_category() == "body_shape"
 				var is_equipable = Wearables.can_equip(
-					wearable, Global.mutable_avatar.get_body_shape()
+					wearable, Global.player_identity.get_mutable_avatar().get_body_shape()
 				)
 				var is_base_wearable = Wearables.is_base_wearable(wearable_id)
 				var can_use = (
@@ -256,8 +260,8 @@ func _show_wearables():
 
 		# Check if the item is equipped
 		var is_wearable_pressed = (
-			Global.mutable_avatar.get_wearables().has(wearable_id)
-			or Global.mutable_avatar.get_body_shape() == wearable_id
+			Global.player_identity.get_mutable_avatar().get_wearables().has(wearable_id)
+			or Global.player_identity.get_mutable_avatar().get_body_shape() == wearable_id
 		)
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
 		wearable_item.set_equiped(is_wearable_pressed)
@@ -275,13 +279,13 @@ func _on_wearable_filter_button_filter_type(type):
 	var should_hide = false
 	if type == Wearables.Categories.BODY_SHAPE:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
-		skin_color_picker.set_color(Global.mutable_avatar.get_skin_color())
+		skin_color_picker.set_color(Global.player_identity.get_mutable_avatar().get_skin_color())
 	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
-		skin_color_picker.set_color(Global.mutable_avatar.get_hair_color())
+		skin_color_picker.set_color(Global.player_identity.get_mutable_avatar().get_hair_color())
 	elif type == Wearables.Categories.EYES:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
-		skin_color_picker.set_color(Global.mutable_avatar.get_eyes_color())
+		skin_color_picker.set_color(Global.player_identity.get_mutable_avatar().get_eyes_color())
 	else:
 		should_hide = true
 
@@ -296,14 +300,16 @@ func _on_wearable_equip(wearable_id: String):
 	var category = desired_wearable.get_category()
 
 	if category == Wearables.Categories.BODY_SHAPE:
-		var current_body_shape_id := Global.mutable_avatar.get_body_shape()
+		var current_body_shape_id: String = (
+			Global.player_identity.get_mutable_avatar().get_body_shape()
+		)
 		var new_body_shape_id := wearable_id
 		if current_body_shape_id != new_body_shape_id:
 			avatar_wearables_body_shape_cache[current_body_shape_id] = (
-				Global.mutable_avatar.get_wearables().duplicate()
+				Global.player_identity.get_mutable_avatar().get_wearables().duplicate()
 			)
 
-			Global.mutable_avatar.set_body_shape(new_body_shape_id)
+			Global.player_identity.get_mutable_avatar().set_body_shape(new_body_shape_id)
 			var default_wearables: Dictionary = Wearables.DefaultWearables.BY_BODY_SHAPES.get(
 				new_body_shape_id
 			)
@@ -311,9 +317,13 @@ func _on_wearable_equip(wearable_id: String):
 			if new_avatar_wearables.is_empty():
 				new_avatar_wearables = default_wearables.values()
 
-			Global.mutable_avatar.set_wearables(PackedStringArray(new_avatar_wearables))
+			Global.player_identity.get_mutable_avatar().set_wearables(
+				PackedStringArray(new_avatar_wearables)
+			)
 	else:
-		var new_avatar_wearables := Global.mutable_avatar.get_wearables()
+		var new_avatar_wearables: PackedStringArray = (
+			Global.player_identity.get_mutable_avatar().get_wearables()
+		)
 		var to_remove = []
 		# Unequip current wearable with category
 		for current_wearable_id in new_avatar_wearables:
@@ -327,7 +337,7 @@ func _on_wearable_equip(wearable_id: String):
 			new_avatar_wearables.remove_at(index)
 
 		new_avatar_wearables.append(wearable_id)
-		Global.mutable_avatar.set_wearables(new_avatar_wearables)
+		Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 
 	request_update_avatar = true
 
@@ -340,12 +350,14 @@ func _on_wearable_unequip(wearable_id: String):
 		# can not unequip a body shape
 		return
 
-	var new_avatar_wearables := Global.mutable_avatar.get_wearables()
+	var new_avatar_wearables: PackedStringArray = (
+		Global.player_identity.get_mutable_avatar().get_wearables()
+	)
 	var index = new_avatar_wearables.find(wearable_id)
 	if index != -1:
 		new_avatar_wearables.remove_at(index)
 
-	Global.mutable_avatar.set_wearables(new_avatar_wearables)
+	Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 	request_update_avatar = true
 
 
@@ -356,17 +368,17 @@ func _on_button_logout_pressed():
 func _on_color_picker_panel_pick_color(color: Color):
 	match skin_color_picker.color_target:
 		skin_color_picker.ColorTarget.EYE:
-			Global.mutable_avatar.set_eyes_color(color)
+			Global.player_identity.get_mutable_avatar().set_eyes_color(color)
 		skin_color_picker.ColorTarget.SKIN:
-			Global.mutable_avatar.set_skin_color(color)
+			Global.player_identity.get_mutable_avatar().set_skin_color(color)
 		skin_color_picker.ColorTarget.HAIR:
-			Global.mutable_avatar.set_hair_color(color)
+			Global.player_identity.get_mutable_avatar().set_hair_color(color)
 
 	skin_color_picker.set_color(color)
 	avatar_preview.avatar.update_colors(
-		Global.mutable_avatar.get_eyes_color(),
-		Global.mutable_avatar.get_skin_color(),
-		Global.mutable_avatar.get_hair_color()
+		Global.player_identity.get_mutable_avatar().get_eyes_color(),
+		Global.player_identity.get_mutable_avatar().get_skin_color(),
+		Global.player_identity.get_mutable_avatar().get_hair_color()
 	)
 
 
@@ -383,13 +395,13 @@ func _on_color_picker_button_toggle_color_panel(toggled, color_target):
 		match skin_color_picker.color_target:
 			skin_color_picker.ColorTarget.EYE:
 				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = Global.mutable_avatar.get_eyes_color()
+				current_color = Global.player_identity.get_mutable_avatar().get_eyes_color()
 			skin_color_picker.ColorTarget.SKIN:
 				color_picker_panel.color_type = color_picker_panel.ColorTargetType.SKIN
-				current_color = Global.mutable_avatar.get_skin_color()
+				current_color = Global.player_identity.get_mutable_avatar().get_skin_color()
 			skin_color_picker.ColorTarget.HAIR:
 				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = Global.mutable_avatar.get_hair_color()
+				current_color = Global.player_identity.get_mutable_avatar().get_hair_color()
 
 		color_picker_panel.custom_popup(rect, current_color)
 
@@ -450,7 +462,11 @@ func _on_blacklist_changed():
 
 func _on_blacklist_deploy_timer_timeout():
 	# Update the mutable profile with current blacklist before deploying
-	Global.mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
-	Global.mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
+	Global.player_identity.get_mutable_profile().set_blocked(
+		Global.social_blacklist.get_blocked_list()
+	)
+	Global.player_identity.get_mutable_profile().set_muted(Global.social_blacklist.get_muted_list())
 	# Deploy without incrementing version for blacklist changes (ADR-290: no snapshots)
-	ProfileService.async_deploy_profile_with_version_control(Global.mutable_profile, false)
+	ProfileService.async_deploy_profile_with_version_control(
+		Global.player_identity.get_mutable_profile(), false
+	)

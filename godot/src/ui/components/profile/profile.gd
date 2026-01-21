@@ -211,26 +211,25 @@ func _async_save_profile_changes() -> void:
 	var current_country_index = profile_field_option_country.option_button.selected
 	if current_country_index != original_country_index:
 		var country_text = _get_option_text(profile_field_option_country, current_country_index)
-		Global.get_mutable_profile().set_country(country_text)
+		Global.player_identity.get_mutable_profile().set_country(country_text)
 		original_country_index = current_country_index
 
 	var current_language_index = profile_field_option_language.option_button.selected
 	if current_language_index != original_language_index:
 		var language_text = _get_option_text(profile_field_option_language, current_language_index)
-		Global.get_mutable_profile().set_language(language_text)
-		Global.get_mutable_profile()
+		Global.player_identity.get_mutable_profile().set_language(language_text)
 		original_language_index = current_language_index
 
 	var current_pronouns_index = profile_field_option_pronouns.option_button.selected
 	if current_pronouns_index != original_pronouns_index:
 		var pronouns_text = _get_option_text(profile_field_option_pronouns, current_pronouns_index)
-		Global.get_mutable_profile().set_pronouns(pronouns_text)
+		Global.player_identity.get_mutable_profile().set_pronouns(pronouns_text)
 		original_pronouns_index = current_pronouns_index
 
 	var current_gender_index = profile_field_option_gender.option_button.selected
 	if current_gender_index != original_gender_index:
 		var gender_text = _get_option_text(profile_field_option_gender, current_gender_index)
-		Global.get_mutable_profile().set_gender(gender_text)
+		Global.player_identity.get_mutable_profile().set_gender(gender_text)
 		original_gender_index = current_gender_index
 
 	var current_relationship_index = profile_field_option_relationship_status.option_button.selected
@@ -238,7 +237,7 @@ func _async_save_profile_changes() -> void:
 		var relationship_text = _get_option_text(
 			profile_field_option_relationship_status, current_relationship_index
 		)
-		Global.get_mutable_profile().set_relationship_status(relationship_text)
+		Global.player_identity.get_mutable_profile().set_relationship_status(relationship_text)
 		original_relationship_index = current_relationship_index
 
 	var current_sexual_orientation_index = (
@@ -248,7 +247,7 @@ func _async_save_profile_changes() -> void:
 		var sexual_orientation_text = _get_option_text(
 			profile_field_option_sexual_orientation, current_sexual_orientation_index
 		)
-		Global.get_mutable_profile().set_sexual_orientation(sexual_orientation_text)
+		Global.player_identity.get_mutable_profile().set_sexual_orientation(sexual_orientation_text)
 		original_sexual_orientation_index = current_sexual_orientation_index
 
 	var current_employment_index = profile_field_option_employment_status.option_button.selected
@@ -256,30 +255,30 @@ func _async_save_profile_changes() -> void:
 		var employment_text = _get_option_text(
 			profile_field_option_employment_status, current_employment_index
 		)
-		Global.get_mutable_profile().set_employment_status(employment_text)
+		Global.player_identity.get_mutable_profile().set_employment_status(employment_text)
 		original_employment_index = current_employment_index
 
 	var current_profession = profile_field_text_profession.text_edit_value.text
 	if current_profession != original_profession:
-		Global.get_mutable_profile().set_profession(current_profession)
+		Global.player_identity.get_mutable_profile().set_profession(current_profession)
 		original_profession = current_profession
 
 	var current_real_name = profile_field_text_real_name.text_edit_value.text
 	if current_real_name != original_real_name:
-		Global.get_mutable_profile().set_real_name(current_real_name)
+		Global.player_identity.get_mutable_profile().set_real_name(current_real_name)
 		original_real_name = current_real_name
 
 	var current_hobbies = profile_field_text_hobbies.text_edit_value.text
 	if current_hobbies != original_hobbies:
-		Global.get_mutable_profile().set_hobbies(current_hobbies)
+		Global.player_identity.get_mutable_profile().set_hobbies(current_hobbies)
 		original_hobbies = current_hobbies
 
 	var current_about_me = profile_field_text_about_me.text_edit_value.text
 	if current_about_me != original_about_me:
-		Global.get_mutable_profile().set_description(current_about_me)
+		Global.player_identity.get_mutable_profile().set_description(current_about_me)
 		original_about_me = current_about_me
 
-	await Global.async_save_profile()
+	await Global.player_identity.async_save_profile_metadata()
 
 
 func _update_elements_visibility() -> void:
@@ -419,7 +418,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 		mutual_friends.async_set_mutual_friends(profile.get_ethereum_address())
 
 	if is_own_passport:
-		var mutable := Global.get_mutable_profile()
+		var mutable: DclUserProfile = Global.player_identity.get_mutable_profile()
 		if mutable != null and profile.get_profile_version() < mutable.get_profile_version():
 			if _deploy_loading_id == -1:
 				_deploy_loading_id = _set_avatar_loading()
@@ -755,8 +754,8 @@ func _async_on_button_links_save_pressed():
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
 			links_to_save.append({"title": child.text, "url": child.url})
-	Global.get_mutable_profile().set_links(links_to_save)
-	await Global.async_save_profile()
+	Global.player_identity.get_mutable_profile().set_links(links_to_save)
+	await Global.player_identity.async_save_profile()
 	_turn_links_editing(false)
 
 
