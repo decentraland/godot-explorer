@@ -74,13 +74,14 @@ def get_batch_status(batch_id: str) -> dict:
 
 
 def main():
+    global ASSET_SERVER_URL
+
     parser = argparse.ArgumentParser(description="Test the Asset Optimization Server")
     parser.add_argument("pointer", nargs="?", default="0,0", help="Scene pointer (default: 0,0)")
     parser.add_argument("count", nargs="?", default="1", help="Number of GLBs to process (default: 1, use 'all' for all)")
     parser.add_argument("--server", default=ASSET_SERVER_URL, help="Asset server URL")
     args = parser.parse_args()
 
-    global ASSET_SERVER_URL
     ASSET_SERVER_URL = args.server
 
     print("=== Asset Server Test Script ===")
