@@ -634,14 +634,12 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 
 ## Save profile (ADR-290: snapshots are no longer uploaded)
 func async_save_profile_metadata(profile: DclUserProfile) -> void:
-	print("SAVE PROFILE METADATA")
 	await ProfileService.async_deploy_profile(profile)
 
 
 ## ADR-290: Snapshots are no longer uploaded to the server.
 ## Profile images are served on-demand by the profile-images service.
 func async_save_profile() -> void:
-	print("SAVE PROFILE FULL")
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 
 	# Generate local snapshots for immediate UI display (not uploaded)
@@ -675,7 +673,6 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	Global.social_blacklist.init_from_profile(new_profile)
 
 
-#TODO move to ProfileHelper?
 func get_mutable_avatar() -> DclAvatarWireFormat:
 	return mutable_avatar
 

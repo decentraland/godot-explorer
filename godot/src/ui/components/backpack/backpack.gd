@@ -111,7 +111,6 @@ func _ready():
 		wearable_data[wearable_id] = wearable
 		if wearable == null:
 			printerr("Error loading wearable_id ", wearable_id)
-
 	_update_visible_categories()
 
 	request_update_avatar = true

@@ -85,10 +85,6 @@ func _ready():
 		open.call_deferred()
 
 
-#func _on_button_close_pressed():
-#	_async_request_hide_menu()
-
-
 func open():
 	_open()
 
@@ -96,10 +92,8 @@ func open():
 # gdlint:ignore = async-function-name
 func close():
 	if not is_open:
-		print("MENU ALREADY CLOSED")
 		return
 	is_open = false
-	print("MENU CLOSED")
 	if Global.has_changes():
 		Global.async_save_profile()
 	var tween_m = create_tween()
@@ -250,17 +244,11 @@ func _on_visibility_changed():
 
 
 func _async_request_hide_menu():
-	#if control_deploying_profile.visible:  # loading...
-	#	return
-
-	print("SAVE PROFILE _async_request_hide_menu")
 	await Global.async_save_profile()
-
 	hide_menu.emit()
 
 
 func _on_button_backpack_toggled(toggled_on):
-	print("SAVE PROFILE _on_button_backpack_toggled")
 	if !toggled_on:
 		Global.async_save_profile()
 
