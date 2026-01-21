@@ -2,9 +2,7 @@ use crate::{
     dcl::{scene_apis::RpcResultSender, SceneId},
     godot_classes::dcl_global::DclGlobal,
     scene_runner::{
-        global_get_node_helper::{
-            get_avatar_node, get_dialog_stack_node, get_explorer_node,
-        },
+        global_get_node_helper::{get_avatar_node, get_dialog_stack_node, get_explorer_node},
         scene::{Scene, SceneType},
     },
 };
@@ -44,36 +42,36 @@ pub fn change_realm(
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
         tracing::error!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let Some(global) = root.get_node_or_null("/root/Global") else {
         tracing::error!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let modal_manager_variant = global.get("modal_manager");
-    let Some(modal_manager) = modal_manager_variant.try_to::<godot::prelude::Gd<godot::classes::Node>>().ok() else {
+    let Some(modal_manager) = modal_manager_variant
+        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
+        .ok()
+    else {
         tracing::error!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let mut modal_manager = modal_manager;
     let realm_name = to.to_godot();
     let scene_message = message.clone().unwrap_or_default().to_godot();
 
     modal_manager.call(
         "show_change_realm_modal",
-        &[
-            realm_name.to_variant(),
-            scene_message.to_variant(),
-        ],
+        &[realm_name.to_variant(), scene_message.to_variant()],
     );
 
     // Send Ok immediately - the modal will handle the actual realm change
@@ -99,34 +97,34 @@ pub fn open_external_url(
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
         tracing::error!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let Some(global) = root.get_node_or_null("/root/Global") else {
         tracing::error!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let modal_manager_variant = global.get("modal_manager");
-    let Some(modal_manager) = modal_manager_variant.try_to::<godot::prelude::Gd<godot::classes::Node>>().ok() else {
+    let Some(modal_manager) = modal_manager_variant
+        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
+        .ok()
+    else {
         tracing::error!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let mut modal_manager = modal_manager;
     let godot_url = url.to_string().to_godot();
-    
-    modal_manager.call(
-        "show_external_link_modal",
-        &[godot_url.to_variant()],
-    );
-    
+
+    modal_manager.call("show_external_link_modal", &[godot_url.to_variant()]);
+
     // Send Ok immediately - the modal will handle the actual URL opening
     // This matches the behavior where the RPC call succeeds once the modal is shown
     response.send(Ok(()));
@@ -267,33 +265,33 @@ pub fn teleport_to(
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
         tracing::error!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let Some(global) = root.get_node_or_null("/root/Global") else {
         tracing::error!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let modal_manager_variant = global.get("modal_manager");
-    let Some(modal_manager) = modal_manager_variant.try_to::<godot::prelude::Gd<godot::classes::Node>>().ok() else {
+    let Some(modal_manager) = modal_manager_variant
+        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
+        .ok()
+    else {
         tracing::error!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
-    
+
     let mut modal_manager = modal_manager;
     let target_parcel = Vector2i::new(world_coordinates[0], world_coordinates[1]);
 
-    modal_manager.call(
-        "async_show_teleport_modal",
-        &[target_parcel.to_variant()],
-    );
+    modal_manager.call("async_show_teleport_modal", &[target_parcel.to_variant()]);
 
     // Send Ok immediately - the modal will handle the actual teleportation
     // This matches the behavior where the RPC call succeeds once the modal is shown
