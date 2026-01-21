@@ -18,7 +18,7 @@ use prost::Message;
 
 use crate::{
     auth::wallet::AsH160, comms::profile::UserProfile,
-    dcl::components::proto_components::kernel::comms::rfc4,
+    dcl::components::proto_components::kernel::comms::rfc4, godot_classes::dcl_global::DclGlobal,
 };
 
 use super::{
@@ -273,6 +273,22 @@ fn spawn_livekit_task(
             }
         };
 
+        // Set participant metadata (version, agent, platform)
+        {
+            let version = DclGlobal::get_version().to_string();
+            let metadata = serde_json::json!({
+                "dcl_version": version,
+                "agent": "godot",
+                "platform": "mobile"
+            }).to_string();
+
+            if let Err(e) = room.local_participant().set_metadata(metadata).await {
+                tracing::warn!("Failed to set participant metadata: {:?}", e);
+            } else {
+                tracing::debug!("Set participant metadata: version={}, agent=godot, platform=mobile", version);
+            }
+        }
+
         // Only initialize microphone if voice chat feature is enabled
         #[cfg(feature = "use_voice_chat")]
         {
@@ -324,6 +340,7 @@ fn spawn_livekit_task(
                             tracing::debug!("Connected to LiveKit room with {} participants", participants_with_tracks.len());
 
                             // Subscribe to video tracks from streamers already in the room
+                            // and check metadata from existing participants
                             for (participant, publications) in participants_with_tracks {
                                 let identity = participant.identity();
                                 let identity_str = identity.0.as_str();
@@ -335,6 +352,25 @@ fn spawn_livekit_task(
                                         tracing::debug!("Subscribing to streamer publication: {:?} (kind: {:?})",
                                             publication.sid(), publication.kind());
                                         publication.set_subscribed(true);
+                                    }
+                                }
+
+                                // Check metadata from existing participants (for version reporting)
+                                if let Some(address) = identity_str.as_h160() {
+                                    let metadata = participant.metadata();
+                                    if !metadata.is_empty() {
+                                        tracing::debug!(
+                                            "Existing participant {:#x} has metadata: {}",
+                                            address,
+                                            metadata
+                                        );
+                                        if let Err(e) = sender.send(IncomingMessage {
+                                            message: MessageType::PeerMetadata(metadata),
+                                            address,
+                                            room_id: room_id.clone(),
+                                        }).await {
+                                            tracing::warn!("Failed to send PeerMetadata for existing participant: {}", e);
+                                        }
                                     }
                                 }
                             }
@@ -675,6 +711,23 @@ fn spawn_livekit_task(
                                 tracing::warn!("Failed to send Disconnected: {}", e);
                             }
                             break 'stream;
+                        }
+                        livekit::RoomEvent::ParticipantMetadataChanged { participant, metadata, .. } => {
+                            // Handle metadata changes from remote participants (version reporting for staging/dev)
+                            if let Some(address) = participant.identity().0.as_str().as_h160() {
+                                tracing::debug!(
+                                    "Received metadata from {:#x}: {}",
+                                    address,
+                                    metadata
+                                );
+                                if let Err(e) = sender.send(IncomingMessage {
+                                    message: MessageType::PeerMetadata(metadata),
+                                    address,
+                                    room_id: room_id.clone(),
+                                }).await {
+                                    tracing::warn!("Failed to send PeerMetadata message: {}", e);
+                                }
+                            }
                         }
                         _ => { tracing::debug!("Event: {:?}", incoming); }
                     };
