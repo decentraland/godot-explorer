@@ -844,7 +844,7 @@ mod tests {
         // TODO: the mock server is not working in the github actions
         // The test now is using the real server
         let entities_active_url =
-            "https://sdk-test-scenes.decentraland.zone/content/entities/active".to_string();
+            "https://sdk-test-scenes.decentraland.org/content/entities/active".to_string();
         let content_url =
             "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest/contents"
                 .to_string();

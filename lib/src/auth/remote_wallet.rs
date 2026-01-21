@@ -29,10 +29,9 @@ impl fmt::Debug for RemoteWallet {
 impl RemoteWallet {
     pub async fn with_auth_identity(
         report_url_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
-        target_config_id: Option<String>,
     ) -> Result<(Self, EphemeralAuthChain), anyhow::Error> {
         let (ephemeral_wallet, chain_id) =
-            try_create_remote_ephemeral(report_url_sender.clone(), target_config_id).await?;
+            try_create_remote_ephemeral(report_url_sender.clone()).await?;
 
         Ok((
             Self {
@@ -89,7 +88,7 @@ mod test {
     #[tokio::test]
     async fn test_get_remote_wallet() {
         let (sx, _rx) = tokio::sync::mpsc::channel(100);
-        let Ok(remote_wallet) = RemoteWallet::with_auth_identity(sx, None).await else {
+        let Ok(remote_wallet) = RemoteWallet::with_auth_identity(sx).await else {
             return;
         };
         tracing::info!("remote_wallet {:?} ", remote_wallet.0);
