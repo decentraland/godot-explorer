@@ -1,6 +1,5 @@
 class_name PlayerIdentity extends DclPlayerIdentity
 
-
 var _mutable_avatar: DclAvatarWireFormat
 var _mutable_profile: DclUserProfile
 var _current_profile: DclUserProfile
