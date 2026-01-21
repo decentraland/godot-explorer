@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=26 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" uid="uid://do4lb6hapbydx" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -13,7 +13,6 @@
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
 [ext_resource type="PackedScene" uid="uid://fc5fxcmfp4pq" path="res://src/ui/components/dcl_line_edit.tscn" id="13_vcjym"]
-[ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
 [ext_resource type="Texture2D" uid="uid://dpto8joivusog" path="res://assets/themes/dark_dcl_theme/icons/cancel-icon.svg" id="15_ypsmd"]
 [ext_resource type="PackedScene" uid="uid://bi3eesytuc1tr" path="res://src/ui/components/auth/login.tscn" id="17_vcjym"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="18_2q7xc"]
@@ -232,7 +231,6 @@ text = "SIGN IN"
 
 [node name="BackpackContainer" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/BackpackContainer"]
@@ -275,6 +273,7 @@ icon_alignment = 2
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -324,7 +323,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 advice = "*Avoid using your real name for safety"
 hint = "Username"
-show_tag = false
 
 [node name="VBoxContainer" type="MarginContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
 layout_mode = 2
@@ -379,38 +377,19 @@ text = "Welcome Back!"
 label_settings = ExtResource("18_ypsmd")
 horizontal_alignment = 1
 
-[node name="TextureRect" type="Control" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="AvatarPreview" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect" instance=ExtResource("15_n5dun")]
+[node name="AvatarPreviewContainer" type="Control" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
-layout_mode = 1
-offset_top = -50.0
-offset_bottom = -50.0
-size_flags_horizontal = 3
+layout_mode = 2
 size_flags_vertical = 3
-focus_mode = 0
-mouse_filter = 2
-stretch = true
-hide_name = true
-can_move = false
 
-[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect"]
+[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -270.0
-offset_top = -65.0
-offset_right = 270.0
-offset_bottom = 9.0
-grow_horizontal = 2
-grow_vertical = 0
+layout_mode = 2
 size_flags_vertical = 8
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("5_g62s5")
@@ -609,7 +588,6 @@ expand_mode = 1
 [connection signal="pressed" from="Main/BackpackContainer/MarginContainer/VBoxContainer/Button_Continue" to="." method="_on_button_continue_pressed"]
 [connection signal="dcl_line_edit_changed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/DclLineEdit" to="." method="_on_dcl_line_edit_dcl_line_edit_changed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/VBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
-[connection signal="gui_input" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/Button_Next" to="." method="_on_button_next_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]

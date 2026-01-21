@@ -33,7 +33,8 @@ var _playing: String
 
 @onready var label_avatar_name = %Label_Name
 
-@onready var avatar_preview: AvatarPreview = %AvatarPreview
+var avatar_preview: AvatarPreview = null
+@onready var avatar_preview_container: Control = %AvatarPreviewContainer
 @onready var button_next = %Button_Next
 
 @onready var backpack = %Backpack
@@ -170,7 +171,7 @@ func _ready():
 	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
 
 	Global.scene_runner.set_pause(true)
-
+	
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
 
@@ -215,7 +216,10 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
-	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+	# El avatar_preview se obtendrá y actualizará cuando se muestre en _show_avatar_preview()
+	# Solo actualizamos si ya existe (por ejemplo, si ya estaba visible)
+	if is_instance_valid(avatar_preview):
+		await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -304,7 +308,8 @@ func _on_button_next_pressed():
 	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
-	avatar_preview.hide()
+	if is_instance_valid(avatar_preview):
+		avatar_preview.hide()
 	show_loading_screen()
 	current_profile.set_name(dcl_line_edit.line_edit.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
@@ -360,6 +365,28 @@ func _on_button_enter_as_guest_pressed():
 
 
 func _show_avatar_preview():
+	# Obtener el avatar_preview solo cuando se va a mostrar
+	if not is_instance_valid(avatar_preview):
+		avatar_preview = Global.get_avatar_preview(avatar_preview_container)
+	
+	# Configurar propiedades cada vez que se muestra (porque puede ser reutilizado)
+	avatar_preview.hide_name = false
+	avatar_preview.can_move = false
+	avatar_preview.stretch = true
+	avatar_preview.show_platform = false
+	avatar_preview.focus_mode = Control.FOCUS_NONE
+	
+	# Aplicar las propiedades (el avatar_preview se encarga de aplicarlas internamente)
+	avatar_preview._apply_properties()
+	
+	# Conectar nuestra señal para los gestos táctiles (solo si no está ya conectada)
+	if not avatar_preview.gui_input.is_connected(self._on_avatar_preview_gui_input):
+		avatar_preview.gui_input.connect(self._on_avatar_preview_gui_input)
+	
+	# Actualizar el avatar con el perfil actual si existe
+	if is_instance_valid(current_profile):
+		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
+	
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
@@ -387,6 +414,10 @@ func _on_deep_link_received():
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 	button_next.disabled = dcl_line_edit.error
+	# Solo actualizar emotes si el avatar_preview está disponible
+	if not is_instance_valid(avatar_preview):
+		return
+		
 	if dcl_line_edit.error:
 		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
 			avatar_preview.avatar.emote_controller.async_play_emote("shrug")

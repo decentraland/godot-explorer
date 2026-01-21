@@ -99,6 +99,8 @@ var _is_portrait: bool = true
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
+var _avatar_preview_instance: AvatarPreview = null
+
 
 func set_url_popup_instance(popup_instance) -> void:
 	url_popup_instance = popup_instance
@@ -750,3 +752,37 @@ func _notification(what: int) -> void:
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
 	NotificationsManager.async_sync_attended_events()
+
+
+func get_avatar_preview(container: Node) -> AvatarPreview:
+	# Buscar el avatar_preview en todo el árbol
+	var found_preview: AvatarPreview = _find_avatar_preview_in_tree(get_tree().root)
+	
+	# Si no existe, instanciarlo
+	if not is_instance_valid(found_preview):
+		const AVATAR_PREVIEW_SCENE = preload("res://src/ui/components/backpack/avatar_preview.tscn")
+		_avatar_preview_instance = AVATAR_PREVIEW_SCENE.instantiate()
+		found_preview = _avatar_preview_instance
+		# Agregarlo al viewport inicialmente
+		var viewport = get_viewport()
+		if is_instance_valid(viewport):
+			viewport.add_child(found_preview)
+	
+	# Reemparentar al nuevo contenedor si es diferente del padre actual
+	if is_instance_valid(container) and found_preview.get_parent() != container:
+		found_preview.reparent(container)
+	
+	return found_preview
+
+
+func _find_avatar_preview_in_tree(node: Node) -> AvatarPreview:
+	# Buscar recursivamente en el árbol
+	if node is AvatarPreview:
+		return node as AvatarPreview
+	
+	for child in node.get_children():
+		var result = _find_avatar_preview_in_tree(child)
+		if is_instance_valid(result):
+			return result
+	
+	return null

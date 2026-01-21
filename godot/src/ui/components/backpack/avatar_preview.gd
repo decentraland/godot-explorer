@@ -36,23 +36,60 @@ func get_body_camera_position() -> Vector3:
 	return BODY_CAMERA_POSITION_WITH_PLATFORM if show_platform else BODY_CAMERA_POSITION
 
 
+func _apply_layout() -> void:
+	# Configurar layout para que ocupe todo el contenedor padre (full rect)
+	# Esto se aplica automáticamente cuando el nodo entra al árbol o se reemparenta
+	if not is_inside_tree():
+		return
+	
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	offset_left = 0
+	offset_top = 0
+	offset_right = 0
+	offset_bottom = 0
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+
+func _apply_properties() -> void:
+	# Aplicar las propiedades al avatar y plataforma internos
+	# Esto se puede llamar después de cambiar las propiedades para aplicarlas inmediatamente
+	if is_instance_valid(avatar):
+		avatar.hide_name = hide_name
+	if is_instance_valid(platform):
+		platform.set_visible(show_platform)
+	
+	# Actualizar la posición de la cámara según show_platform
+	if is_instance_valid(camera_3d):
+		camera_3d.set_position(get_body_camera_position())
+	
+	# Manejar can_move: conectar/desconectar la señal de movimiento
+	if can_move:
+		# Conectar solo si no está ya conectada
+		if not gui_input.is_connected(self._on_gui_input):
+			gui_input.connect(self._on_gui_input)
+	else:
+		# Desconectar si está conectada
+		if gui_input.is_connected(self._on_gui_input):
+			gui_input.disconnect(self._on_gui_input)
+	_apply_layout()
+
 func _ready():
 	if custom_environment != null:
 		world_environment.environment = custom_environment
 
 	directional_light_3d.visible = with_light
 
-	avatar.hide_name = hide_name
-	platform.set_visible(show_platform)
+	# Aplicar layout para ocupar todo el contenedor
+	_apply_layout()
+	
+	# Aplicar todas las propiedades usando el método centralizado
+	_apply_properties()
 
-	camera_3d.set_position(get_body_camera_position())
 	camera_3d.set_rotation_degrees(DEFAULT_ROTATION)
 
 	if outline_system:
 		outline_system.setup(camera_3d)
-
-	if can_move:
-		gui_input.connect(self._on_gui_input)
 
 	if Global.standalone:
 		Global.player_identity.set_default_profile()
@@ -161,3 +198,30 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) 
 	set_size(original_size)
 
 	return img
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_ENTER_TREE:
+			# Cuando el nodo entra al árbol, aplicar el layout
+			_apply_layout()
+		NOTIFICATION_UNPARENTED:
+			# Cuando el nodo es desemparentado (por ejemplo, cuando el padre es eliminado),
+			# reemparentar al viewport para no perder el nodo
+			_on_tree_exiting()
+		NOTIFICATION_PREDELETE:
+			# También verificar cuando el nodo está a punto de ser eliminado
+			_on_tree_exiting()
+
+
+func _on_tree_exiting() -> void:
+	# Si el padre está siendo eliminado o el nodo fue desemparentado,
+	# reemparentar al viewport para no perder el nodo
+	var parent = get_parent()
+	var viewport = get_viewport()
+	
+	# Si no hay padre válido o el padre está siendo eliminado, reemparentar al viewport
+	if (not is_instance_valid(parent) or (is_instance_valid(parent) and parent.is_queued_for_deletion())) and is_instance_valid(viewport):
+		if get_parent() != viewport:
+			# Reemparentar inmediatamente para evitar que el nodo sea eliminado
+			reparent(viewport)

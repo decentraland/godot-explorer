@@ -27,7 +27,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 3
+size_flags_vertical = 3
 script = ExtResource("1_sayag")
 
 [node name="SubViewport" type="SubViewport" parent="."]
@@ -69,3 +70,5 @@ light_energy = 0.05
 shadow_reverse_cull_face = true
 shadow_transmittance_bias = 2.455
 shadow_blur = 6.834
+
+[connection signal="tree_exiting" from="." to="." method="_on_tree_exiting"]

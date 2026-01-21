@@ -31,7 +31,6 @@ Global="*res://src/global.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 ModalManager="*res://src/ui/components/modal/modal_manager.gd"
-AvatarPreviewManager="*res://src/ui/components/backpack/avatar_preview_manager.gd"
 
 [debug]
 
