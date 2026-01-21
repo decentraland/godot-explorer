@@ -116,9 +116,6 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 
-	# Register popup instances in Global
-	#control_modal.add_child(Global.modal_instance)
-
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)
 	Global.open_chat.connect(_on_global_open_chat)

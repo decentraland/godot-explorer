@@ -1,16 +1,15 @@
 use crate::{
     dcl::{scene_apis::RpcResultSender, SceneId},
-    godot_classes::{dcl_confirm_dialog::DclConfirmDialog, dcl_global::DclGlobal},
+    godot_classes::dcl_global::DclGlobal,
     scene_runner::{
         global_get_node_helper::{
-            get_avatar_node, get_dialog_stack_node, get_explorer_node, get_realm_node,
+            get_avatar_node, get_dialog_stack_node, get_explorer_node,
         },
         scene::{Scene, SceneType},
     },
 };
 
 use godot::{
-    classes::Os,
     meta::ToGodot,
     obj::Singleton,
     prelude::{PackedScene, Variant, Vector2i, Vector3},
@@ -39,36 +38,37 @@ pub fn change_realm(
         return;
     }
 
-    // Get ModalManager singleton - try both methods for robustness
-    let mut modal_manager = if let Some(manager) = godot::classes::Engine::singleton()
-        .get_singleton(&godot::builtin::StringName::from("ModalManager"))
-    {
-        manager.cast::<godot::classes::Node>()
-    } else if let Some(tree) = godot::classes::Engine::singleton().get_main_loop() {
-        // Fallback: access via scene tree
-        let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-            tracing::error!("Cannot get root node");
-            response.send(Err("ModalManager not available".to_string()));
-            return;
-        };
-        let Some(manager) = root.get_node_or_null("ModalManager") else {
-            tracing::error!("ModalManager not found in scene tree");
-            response.send(Err("ModalManager not available".to_string()));
-            return;
-        };
-        manager
-    } else {
-        tracing::error!("Cannot access scene tree");
-        response.send(Err("ModalManager not available".to_string()));
+    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
+    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
+        tracing::error!("Cannot get main loop");
+        response.send(Err("modal_manager not available".to_string()));
         return;
     };
-
+    
+    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
+        tracing::error!("Cannot get root node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let Some(global) = root.get_node_or_null("/root/Global") else {
+        tracing::error!("Cannot get Global node from scene tree");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let modal_manager_variant = global.get("modal_manager");
+    let Some(modal_manager) = modal_manager_variant.try_to::<godot::prelude::Gd<godot::classes::Node>>().ok() else {
+        tracing::error!("Cannot convert modal_manager variant to Node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let mut modal_manager = modal_manager;
     let realm_name = to.to_godot();
     let scene_message = message.clone().unwrap_or_default().to_godot();
 
-    // Show modal using ModalManager
-    // The modal will handle realm change when user confirms via realm node
-    modal_manager.call_deferred(
+    modal_manager.call(
         "show_change_realm_modal",
         &[
             realm_name.to_variant(),
@@ -93,36 +93,36 @@ pub fn open_external_url(
         return;
     }
 
-    // Get ModalManager singleton - try both methods for robustness
-    let mut modal_manager = if let Some(manager) = godot::classes::Engine::singleton()
-        .get_singleton(&godot::builtin::StringName::from("ModalManager"))
-    {
-        manager.cast::<godot::classes::Node>()
-    } else if let Some(tree) = godot::classes::Engine::singleton().get_main_loop() {
-        // Fallback: access via scene tree
-        let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-            tracing::error!("Cannot get root node");
-            response.send(Err("ModalManager not available".to_string()));
-            return;
-        };
-        let Some(manager) = root.get_node_or_null("ModalManager") else {
-            tracing::error!("ModalManager not found in scene tree");
-            response.send(Err("ModalManager not available".to_string()));
-            return;
-        };
-        manager
-    } else {
-        tracing::error!("Cannot access scene tree");
-        response.send(Err("ModalManager not available".to_string()));
+    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
+    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
+        tracing::error!("Cannot get main loop");
+        response.send(Err("modal_manager not available".to_string()));
         return;
     };
-
+    
+    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
+        tracing::error!("Cannot get root node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let Some(global) = root.get_node_or_null("/root/Global") else {
+        tracing::error!("Cannot get Global node from scene tree");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let modal_manager_variant = global.get("modal_manager");
+    let Some(modal_manager) = modal_manager_variant.try_to::<godot::prelude::Gd<godot::classes::Node>>().ok() else {
+        tracing::error!("Cannot convert modal_manager variant to Node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let mut modal_manager = modal_manager;
     let godot_url = url.to_string().to_godot();
     
-    // Show the modal using ModalManager
-    // The modal will handle opening the URL when user confirms via Global.open_url
-    // If user cancels, the modal just closes (no error sent)
-    modal_manager.call_deferred(
+    modal_manager.call(
         "show_external_link_modal",
         &[godot_url.to_variant()],
     );
@@ -261,35 +261,36 @@ pub fn teleport_to(
         return;
     }
 
-    // Get ModalManager singleton - try both methods for robustness
-    let mut modal_manager = if let Some(manager) = godot::classes::Engine::singleton()
-        .get_singleton(&godot::builtin::StringName::from("ModalManager"))
-    {
-        manager.cast::<godot::classes::Node>()
-    } else if let Some(tree) = godot::classes::Engine::singleton().get_main_loop() {
-        // Fallback: access via scene tree
-        let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-            tracing::error!("Cannot get root node");
-            response.send(Err("ModalManager not available".to_string()));
-            return;
-        };
-        let Some(manager) = root.get_node_or_null("ModalManager") else {
-            tracing::error!("ModalManager not found in scene tree");
-            response.send(Err("ModalManager not available".to_string()));
-            return;
-        };
-        manager
-    } else {
-        tracing::error!("Cannot access scene tree");
-        response.send(Err("ModalManager not available".to_string()));
+    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
+    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
+        tracing::error!("Cannot get main loop");
+        response.send(Err("modal_manager not available".to_string()));
         return;
     };
-
+    
+    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
+        tracing::error!("Cannot get root node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let Some(global) = root.get_node_or_null("/root/Global") else {
+        tracing::error!("Cannot get Global node from scene tree");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let modal_manager_variant = global.get("modal_manager");
+    let Some(modal_manager) = modal_manager_variant.try_to::<godot::prelude::Gd<godot::classes::Node>>().ok() else {
+        tracing::error!("Cannot convert modal_manager variant to Node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
+    
+    let mut modal_manager = modal_manager;
     let target_parcel = Vector2i::new(world_coordinates[0], world_coordinates[1]);
 
-    // Show modal using ModalManager
-    // The modal will handle teleportation when user confirms via Global.teleport_to
-    modal_manager.call_deferred(
+    modal_manager.call(
         "async_show_teleport_modal",
         &[target_parcel.to_variant()],
     );

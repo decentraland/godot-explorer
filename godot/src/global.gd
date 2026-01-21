@@ -77,12 +77,13 @@ var preload_assets: PreloadAssets
 
 var locations: Node
 
+var modal_manager: Node
+
 var standalone = false
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
 
-var modal_instance: Modal = load("res://src/ui/components/modal/modal.tscn").instantiate()
 var last_emitted_height: int = 0
 var current_height: int = -1
 var previous_height: int = -1
@@ -254,11 +255,15 @@ func _ready():
 	self.locations = load("res://src/helpers_components/locations.gd").new()
 	self.locations.set_name("locations")
 
+	self.modal_manager = load("res://src/ui/components/modal/modal_manager.gd").new()
+	self.modal_manager.set_name("modal_manager")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.locations)
+	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

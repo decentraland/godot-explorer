@@ -98,7 +98,6 @@ func show_connection_lost_modal() -> void:
 ## @param location: The position to teleport to
 ## @param realm: The destination realm (optional)
 func async_show_teleport_modal(location: Vector2i, realm: String = "") -> void:
-	print("MODAL TELEPORT")
 	var modal = _create_modal()
 	if not modal:
 		return
