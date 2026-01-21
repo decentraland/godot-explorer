@@ -7,19 +7,22 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 use super::wallet::SimpleAuthChain;
 
 // Production
-const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
+// const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
+// const AUTH_MOBILE_FRONT_URL: &str = "https://decentraland.org/auth/mobile";
+// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
+// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
 
 // Localhost with .zone auth-api
 // const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
+// const AUTH_MOBILE_FRONT_URL: &str = "http://localhost:5173/auth/mobile";
 // const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 // const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
 
-// Staging with .zone frontend + .zone auth-api
-// const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
+// Production
+const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
+const AUTH_MOBILE_FRONT_URL: &str = "https://decentraland.org/auth/mobile";
+const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
+const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
@@ -387,77 +390,47 @@ async fn create_new_request(
     }
 }
 
-/// Result from creating a mobile auth request.
-/// Contains the request_id that will be received via deep link.
-pub struct MobileAuthRequest {
-    pub request_id: String,
-}
-
 /// Creates an auth request and opens the browser for mobile.
 /// Instead of polling, the app should wait for a deep link with the identity ID.
 /// Returns the request_id that will be received via deep link `decentraland://open?signin=${request_id}`
 pub async fn do_request_mobile(
-    message: CreateRequest,
+    _message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
-    target_config_id: Option<String>,
-) -> Result<MobileAuthRequest, anyhow::Error> {
+    provider: Option<String>,
+) -> Result<(), anyhow::Error> {
     tracing::debug!(
-        "do_request_mobile: starting mobile auth request, method={}, target_config_id={:?}",
-        message.method,
-        target_config_id
+        "do_request_mobile: starting mobile auth request, provider={:?}",
+        provider
     );
 
-    let request = create_new_request(message).await?;
-    let req_id = request.request_id.clone();
-    let code = request.code;
-    tracing::debug!(
-        "do_request_mobile: request created with req_id={}, code={}",
-        req_id,
-        code
-    );
-
-    // Determine target_config_id based on OS or use the provided one
-    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
-        "ios" => "ios".to_string(),
-        "android" => "android".to_string(),
-        _ => "alternative".to_string(),
-    });
-    tracing::debug!(
-        "do_request_mobile: resolved target_config_id={}, os={}",
-        target_config_id,
-        std::env::consts::OS
-    );
-
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}&flow=deeplink");
+    // Build URL with optional provider parameter
+    let url = if let Some(provider) = provider {
+        format!("{}?provider={}", AUTH_MOBILE_FRONT_URL, provider)
+    } else {
+        AUTH_MOBILE_FRONT_URL.to_string()
+    };
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter
         .send(GodotTokioCall::OpenUrl {
-            url: url.clone(),
+            url,
             description: "".into(),
             use_webview: true,
         })
         .await?;
 
-    tracing::debug!(
-        "do_request_mobile: auth URL sent to Godot, waiting for deep link callback with req_id={}",
-        req_id
-    );
+    tracing::debug!("do_request_mobile: auth URL sent to Godot, waiting for deep link callback");
 
-    Ok(MobileAuthRequest {
-        request_id: request.request_id,
-    })
+    Ok(())
 }
 
 pub async fn do_request(
     message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
-    target_config_id: Option<String>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     tracing::debug!(
-        "do_request: starting auth request, method={}, target_config_id={:?}",
-        message.method,
-        target_config_id
+        "do_request: starting auth request, method={}",
+        message.method
     );
 
     let request = create_new_request(message).await?;
@@ -469,19 +442,7 @@ pub async fn do_request(
         code
     );
 
-    // Determine target_config_id based on OS or use the provided one
-    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
-        "ios" => "ios".to_string(),
-        "android" => "android".to_string(),
-        _ => "alternative".to_string(),
-    });
-    tracing::debug!(
-        "do_request: resolved target_config_id={}, os={}",
-        target_config_id,
-        std::env::consts::OS
-    );
-
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
+    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
     tracing::debug!("do_request: opening auth URL={}", url);
 
     url_reporter
@@ -595,7 +556,6 @@ mod test {
                 auth_chain: None,
             },
             sx,
-            None,
         )
         .await;
 
