@@ -607,6 +607,9 @@ func _on_timer_fps_label_timeout():
 	# Add dynamic graphics info if enabled
 	if Global.get_config().dynamic_graphics_enabled:
 		var dm = Global.dynamic_graphics_manager
+		if dm == null:
+			label_fps.set_text(fps_text)
+			return
 		var profile_name = GraphicSettings.PROFILE_NAMES[dm.get_current_profile()]
 
 		if DclGlobal.is_production():

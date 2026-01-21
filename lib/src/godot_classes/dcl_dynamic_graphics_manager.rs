@@ -21,7 +21,7 @@ enum ManagerState {
 }
 
 /// Timing constants (in seconds)
-const WARMUP_DURATION: f64 = 60.0; // 1 minute before monitoring
+const WARMUP_DURATION: f64 = 180.0; // 3 minutes before monitoring (spec: 3-5 min)
 const DOWNGRADE_WINDOW: f64 = 60.0; // Window for downgrade evaluation
 const UPGRADE_WINDOW: f64 = 120.0; // Window for upgrade evaluation
 const COOLDOWN_AFTER_DOWNGRADE: f64 = 120.0; // 2 minutes after downgrade (want to stabilize quickly)
@@ -576,7 +576,6 @@ impl DclDynamicGraphicsManager {
         let mut sorted: Vec<f64> = self.frame_time_samples[start_index..].to_vec();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Get the 95th percentile index
         let p95_index = ((sorted.len() as f64) * 0.95) as usize;
         let p95_index = p95_index.min(sorted.len().saturating_sub(1));
 

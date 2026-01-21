@@ -653,8 +653,8 @@ func _update_dynamic_graphics_status() -> void:
 	if not Global.is_mobile():
 		return
 
-	var manager := Global.dynamic_graphics_manager
-	if not manager.is_enabled():
+	var manager = Global.dynamic_graphics_manager
+	if manager == null or not manager.is_enabled():
 		label_dynamic_graphics_status.text = ""
 		return
 
