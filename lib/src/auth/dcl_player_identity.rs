@@ -655,9 +655,7 @@ impl DclPlayerIdentity {
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             handle.spawn(async move {
-                let result = do_request(body, url_sender)
-                    .await
-                    .map(|(_, result)| result);
+                let result = do_request(body, url_sender).await.map(|(_, result)| result);
                 response.send(result.map_err(|err| err.to_string()));
             });
         }
