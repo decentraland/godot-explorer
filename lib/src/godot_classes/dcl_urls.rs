@@ -22,6 +22,10 @@ impl DclUrls {
         urls::auth_frontend().to_godot()
     }
     #[func]
+    pub fn auth_mobile_frontend() -> GString {
+        urls::auth_mobile_frontend().to_godot()
+    }
+    #[func]
     pub fn auth_api_base() -> GString {
         urls::auth_api_base().to_godot()
     }

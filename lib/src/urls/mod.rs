@@ -12,6 +12,9 @@ fn env() -> &'static str {
 pub fn auth_frontend() -> String {
     format!("https://decentraland.{}/auth/requests", env())
 }
+pub fn auth_mobile_frontend() -> String {
+    format!("https://decentraland.{}/auth/mobile", env())
+}
 pub fn auth_api_base() -> String {
     format!("https://auth-api.decentraland.{}", env())
 }
@@ -150,6 +153,7 @@ mod tests {
     fn test_all_urls_valid() {
         let urls = [
             auth_frontend(),
+            auth_mobile_frontend(),
             auth_api_base(),
             auth_api_requests(),
             main_realm(),
