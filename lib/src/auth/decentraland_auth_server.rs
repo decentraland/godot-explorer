@@ -542,7 +542,6 @@ mod test {
                 auth_chain: None,
             },
             sx,
-            None,
         )
         .await;
 
