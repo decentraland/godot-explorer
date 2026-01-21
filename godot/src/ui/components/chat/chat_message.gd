@@ -162,7 +162,7 @@ func set_avatar(avatar: DclAvatar) -> void:
 		has_claimed_name = true
 
 	# Update both profile pictures (extended and compact)
-	var social_data :SocialItemData = SocialHelper.social_data_from_avatar(avatar)
+	var social_data: SocialItemData = SocialHelper.social_data_from_avatar(avatar)
 	profile_picture.async_update_profile_picture(social_data)
 	profile_picture_compact.async_update_profile_picture(social_data)
 
