@@ -569,7 +569,7 @@ fn run_tests(
     args: &[&str],
     scene_tests: bool,
     client_tests: bool,
-    _use_tuned_glibc: bool,
+    use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
     // Prepare arguments for client tests
     let mut final_args = args.to_vec();
@@ -585,7 +585,7 @@ fn run_tests(
 
     // Apply tuned glibc malloc settings on Linux
     #[cfg(target_os = "linux")]
-    if _use_tuned_glibc {
+    if use_tuned_glibc {
         cmd.env("MALLOC_MMAP_THRESHOLD_", "131072");
         cmd.env("MALLOC_TRIM_THRESHOLD_", "131072");
         cmd.env("MALLOC_ARENA_MAX", "2");

@@ -30,6 +30,7 @@ enum ConfigParams {
 	GRAPHIC_PROFILE,
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
+	DYNAMIC_GRAPHICS_ENABLED,
 }
 
 # Graphics profile index for Custom (manual settings)
@@ -124,6 +125,12 @@ var first_launch_completed: bool = false
 # Benchmark results (for debugging/analytics)
 var benchmark_gpu_score: float = -1.0  # Render time in ms (-1 = not run)
 var benchmark_ram_gb: float = -1.0  # System RAM in GB (-1 = not detected)
+
+# Dynamic graphics profile adjustment enabled
+var dynamic_graphics_enabled: bool = true:
+	set(value):
+		dynamic_graphics_enabled = value
+		param_changed.emit(ConfigParams.DYNAMIC_GRAPHICS_ENABLED)
 
 var last_realm_joined: String = "":
 	set(value):
@@ -227,6 +234,7 @@ func load_from_default():
 	self.first_launch_completed = false
 	self.benchmark_gpu_score = -1.0
 	self.benchmark_ram_gb = -1.0
+	self.dynamic_graphics_enabled = true
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 	self.max_cache_size = 1
@@ -277,6 +285,9 @@ func load_from_settings_file():
 	)
 	self.benchmark_ram_gb = settings_file.get_value(
 		"config", "benchmark_ram_gb", data_default.benchmark_ram_gb
+	)
+	self.dynamic_graphics_enabled = settings_file.get_value(
+		"config", "dynamic_graphics_enabled", data_default.dynamic_graphics_enabled
 	)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
@@ -372,6 +383,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "first_launch_completed", self.first_launch_completed)
 	new_settings_file.set_value("config", "benchmark_gpu_score", self.benchmark_gpu_score)
 	new_settings_file.set_value("config", "benchmark_ram_gb", self.benchmark_ram_gb)
+	new_settings_file.set_value("config", "dynamic_graphics_enabled", self.dynamic_graphics_enabled)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
