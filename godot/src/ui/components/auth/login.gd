@@ -31,7 +31,7 @@ func async_login(provider: String = ""):
 	if is_real_mobile:
 		Global.player_identity.start_mobile_connect_account(provider)
 	else:
-		Global.player_identity.try_connect_account()
+		Global.player_identity.try_connect_account("")
 
 	lobby.waiting_for_new_wallet = true
 	lobby.show_auth_browser_open_screen()

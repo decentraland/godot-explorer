@@ -93,7 +93,7 @@ func fetch_nft(urn: DclUrn) -> Promise:
 
 func _async_request_nft(completed_promise: Promise, urn: DclUrn):
 	var url = (
-		DclUrls.opensea_proxy()
+		DclUrls.open_sea_proxy()
 		+ "/api/v2/chain/%s/contract/%s/nfts/%s" % [urn.chain, urn.contract_address, urn.token_id]
 	)
 	var headers = {
