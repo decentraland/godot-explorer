@@ -92,7 +92,6 @@ func _update_border_style() -> void:
 
 func async_update_profile_picture(data: SocialItemData):
 	var nickname_color = DclAvatar.get_nickname_color(data.name)
-	print("UPDATE PROFILE PICTURE")
 	var background_color = nickname_color
 	apply_style(background_color)
 
