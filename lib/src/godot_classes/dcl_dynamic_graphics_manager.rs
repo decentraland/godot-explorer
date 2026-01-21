@@ -5,7 +5,7 @@ use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin:
 
 /// Thermal state levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ThermalState {
+pub enum ThermalState {
     Normal,
     High,
     Critical,
@@ -13,108 +13,77 @@ enum ThermalState {
 
 /// Manager state machine states
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ManagerState {
+pub enum ManagerState {
     Disabled,
     WarmingUp,
     Monitoring,
     Cooldown,
 }
 
+/// Action returned by state machine when profile should change
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProfileAction {
+    Downgrade(i32),
+    Upgrade(i32),
+}
+
 /// Timing constants (in seconds)
 const WARMUP_DURATION: f64 = 180.0; // 3 minutes before monitoring (spec: 3-5 min)
 const DOWNGRADE_WINDOW: f64 = 60.0; // Window for downgrade evaluation
 const UPGRADE_WINDOW: f64 = 120.0; // Window for upgrade evaluation
-const COOLDOWN_AFTER_DOWNGRADE: f64 = 120.0; // 2 minutes after downgrade (want to stabilize quickly)
-const COOLDOWN_AFTER_UPGRADE: f64 = 300.0; // 5 minutes after upgrade (more conservative)
+const COOLDOWN_AFTER_DOWNGRADE: f64 = 120.0; // 2 minutes after downgrade
+const COOLDOWN_AFTER_UPGRADE: f64 = 300.0; // 5 minutes after upgrade
 const THERMAL_HIGH_DOWNGRADE_TIME: f64 = 30.0; // Seconds of HIGH thermal before downgrade
 const SAMPLE_INTERVAL: f64 = 1.0; // Sample frame time every second
 
-/// Threshold constants based on frame time ratio to target
-/// If target is 33.3ms (30 FPS), these ratios determine thresholds
-const FRAME_TIME_DOWNGRADE_RATIO: f64 = 1.2; // Downgrade if frame time > target * 1.2
-const FRAME_TIME_UPGRADE_RATIO: f64 = 0.5; // Upgrade if frame time < target * 0.5 (plenty of headroom)
-const FRAME_SPIKE_THRESHOLD_MS: f64 = 50.0; // Frames > 50ms are considered spikes/hiccups
-const FRAME_SPIKE_RATIO_THRESHOLD: f64 = 0.1; // 10% of frames with spikes triggers downgrade
+/// Threshold constants
+const FRAME_TIME_DOWNGRADE_RATIO: f64 = 1.2;
+const FRAME_TIME_UPGRADE_RATIO: f64 = 0.5;
+const FRAME_SPIKE_THRESHOLD_MS: f64 = 50.0;
+const FRAME_SPIKE_RATIO_THRESHOLD: f64 = 0.1;
 
 /// Profile indices
 const PROFILE_VERY_LOW: i32 = 0;
-#[allow(dead_code)]
-const PROFILE_LOW: i32 = 1;
-#[allow(dead_code)]
-const PROFILE_MEDIUM: i32 = 2;
 const PROFILE_HIGH: i32 = 3;
 const PROFILE_CUSTOM: i32 = 4;
 
-/// Profile bounds for dynamic adjustment (Custom is excluded)
 const MIN_PROFILE: i32 = PROFILE_VERY_LOW;
 const MAX_PROFILE: i32 = PROFILE_HIGH;
 
-#[derive(GodotClass)]
-#[class(base=Node)]
-pub struct DclDynamicGraphicsManager {
-    base: Base<Node>,
+// ============================================================================
+// DynamicGraphicsState - Pure state machine, no Godot dependencies
+// ============================================================================
 
-    /// Current state machine state
-    state: ManagerState,
-
-    /// Timer for current state
-    state_timer: f64,
-
-    /// Frame time samples (actual process time in ms) collected every second
-    frame_time_samples: Vec<f64>,
-
-    /// Timer for sampling
-    sample_timer: f64,
-
-    /// Accumulated frame times for averaging within sample interval
-    accumulated_frame_time: f64,
-    accumulated_frame_count: u32,
-
-    /// Frame spike tracking (frames > 50ms)
-    spike_count: u32,
-    frame_count: u32,
-
-    /// Current thermal state
-    thermal_state: ThermalState,
-
-    /// Timer for high thermal state
-    thermal_high_timer: f64,
-
-    /// Current active profile
-    current_profile: i32,
-
-    /// Target frame time based on FPS limit (e.g., 33.3ms for 30 FPS)
-    target_frame_time_ms: f64,
-
-    /// Is gameplay active (not loading)
-    is_gameplay_active: bool,
-
-    /// Is dynamic adjustment enabled
-    enabled: bool,
-
-    /// Cached mobile platform availability (checked once at init)
-    has_ios_plugin: bool,
-    has_android_plugin: bool,
-
-    /// Viewport RID for render time measurement
-    viewport_rid: Option<Rid>,
-
-    /// Whether render time measurement is enabled
-    render_time_enabled: bool,
-
-    /// Current cooldown duration (varies based on whether last change was upgrade or downgrade)
-    current_cooldown_duration: f64,
+/// Pure state machine for dynamic graphics adjustment.
+/// Can be tested without Godot runtime.
+#[derive(Debug)]
+pub struct DynamicGraphicsState {
+    pub state: ManagerState,
+    pub state_timer: f64,
+    pub frame_time_samples: Vec<f64>,
+    pub sample_timer: f64,
+    pub accumulated_frame_time: f64,
+    pub accumulated_frame_count: u32,
+    pub spike_count: u32,
+    pub frame_count: u32,
+    pub thermal_state: ThermalState,
+    pub thermal_high_timer: f64,
+    pub current_profile: i32,
+    pub target_frame_time_ms: f64,
+    pub is_gameplay_active: bool,
+    pub enabled: bool,
+    pub current_cooldown_duration: f64,
 }
 
-#[godot_api]
-impl INode for DclDynamicGraphicsManager {
-    fn init(base: Base<Node>) -> Self {
-        // Check plugin availability once at init
-        let has_ios_plugin = DclIosPlugin::is_available();
-        let has_android_plugin = DclAndroidPlugin::is_available();
+impl Default for DynamicGraphicsState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
+impl DynamicGraphicsState {
+    pub fn new() -> Self {
         Self {
-            base,
             state: ManagerState::Disabled,
             state_timer: 0.0,
             frame_time_samples: Vec::with_capacity(150),
@@ -126,27 +95,387 @@ impl INode for DclDynamicGraphicsManager {
             thermal_state: ThermalState::Normal,
             thermal_high_timer: 0.0,
             current_profile: 0,
-            target_frame_time_ms: 33.3, // Default for 30 FPS
+            target_frame_time_ms: 33.3,
             is_gameplay_active: false,
             enabled: true,
-            has_ios_plugin,
-            has_android_plugin,
-            viewport_rid: None,
-            render_time_enabled: false,
             current_cooldown_duration: COOLDOWN_AFTER_DOWNGRADE,
         }
     }
 
-    fn ready(&mut self) {
-        // Note: DclGlobal is not available yet during init, so we start disabled.
-        // GDScript should call initialize() after Global is ready.
+    /// Initialize with config values
+    pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {
+        self.enabled = enabled;
+        self.current_profile = current_profile;
+        self.target_frame_time_ms = Self::fps_limit_to_target_ms(fps_limit);
 
-        // Get viewport RID and enable render time measurement
+        if self.should_enable() {
+            self.start_warmup();
+        }
+    }
+
+    /// Process one frame. Returns Some(ProfileAction) if profile should change.
+    pub fn process_frame(
+        &mut self,
+        delta: f64,
+        render_time_ms: f64,
+        thermal_str: &str,
+    ) -> Option<ProfileAction> {
+        if self.state == ManagerState::Disabled {
+            return None;
+        }
+
+        // Track frame spikes
+        self.frame_count += 1;
+        if render_time_ms > FRAME_SPIKE_THRESHOLD_MS {
+            self.spike_count += 1;
+        }
+
+        // Accumulate frame times
+        self.accumulated_frame_time += render_time_ms;
+        self.accumulated_frame_count += 1;
+
+        // Sample periodically
+        self.sample_timer += delta;
+        if self.sample_timer >= SAMPLE_INTERVAL {
+            self.sample_timer = 0.0;
+            self.collect_frame_time_sample();
+        }
+
+        // Update thermal state
+        self.update_thermal_state(delta, thermal_str);
+
+        // Process state machine
+        match self.state {
+            ManagerState::Disabled => None,
+            ManagerState::WarmingUp => {
+                self.process_warmup(delta);
+                None
+            }
+            ManagerState::Monitoring => self.process_monitoring(),
+            ManagerState::Cooldown => {
+                self.process_cooldown(delta);
+                None
+            }
+        }
+    }
+
+    pub fn on_loading_started(&mut self) {
+        self.is_gameplay_active = false;
+        self.reset_samples();
+    }
+
+    pub fn on_loading_finished(&mut self) {
+        self.is_gameplay_active = true;
+        if self.state == ManagerState::Monitoring {
+            self.start_warmup();
+        }
+    }
+
+    pub fn on_manual_profile_change(&mut self, new_profile: i32) {
+        self.current_profile = new_profile;
+
+        if new_profile == PROFILE_CUSTOM {
+            self.state = ManagerState::Disabled;
+        } else if self.should_enable() && self.state == ManagerState::Disabled {
+            self.start_warmup();
+        }
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+
+        if enabled && self.should_enable() {
+            self.start_warmup();
+        } else {
+            self.state = ManagerState::Disabled;
+        }
+    }
+
+    pub fn on_fps_limit_changed(&mut self, fps_limit: i32) {
+        self.target_frame_time_ms = Self::fps_limit_to_target_ms(fps_limit);
+    }
+
+    // Getters
+    pub fn is_active(&self) -> bool {
+        self.state != ManagerState::Disabled
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn get_warmup_remaining(&self) -> f64 {
+        if self.state == ManagerState::WarmingUp {
+            (WARMUP_DURATION - self.state_timer).max(0.0)
+        } else {
+            0.0
+        }
+    }
+
+    pub fn get_cooldown_remaining(&self) -> f64 {
+        if self.state == ManagerState::Cooldown {
+            (self.current_cooldown_duration - self.state_timer).max(0.0)
+        } else {
+            0.0
+        }
+    }
+
+    pub fn get_average_frame_time(&self) -> f64 {
+        if self.frame_time_samples.is_empty() {
+            return self.target_frame_time_ms;
+        }
+        let sum: f64 = self.frame_time_samples.iter().sum();
+        sum / self.frame_time_samples.len() as f64
+    }
+
+    pub fn get_frame_time_ratio(&self) -> f64 {
+        self.get_average_frame_time() / self.target_frame_time_ms
+    }
+
+    // Internal methods
+    fn should_enable(&self) -> bool {
+        self.enabled && self.current_profile != PROFILE_CUSTOM
+    }
+
+    fn start_warmup(&mut self) {
+        self.state = ManagerState::WarmingUp;
+        self.state_timer = 0.0;
+        self.reset_samples();
+    }
+
+    fn process_warmup(&mut self, delta: f64) {
+        if !self.is_gameplay_active {
+            return;
+        }
+
+        self.state_timer += delta;
+
+        if self.state_timer >= WARMUP_DURATION {
+            self.state = ManagerState::Monitoring;
+            self.state_timer = 0.0;
+            self.reset_samples();
+        }
+    }
+
+    fn process_monitoring(&mut self) -> Option<ProfileAction> {
+        if !self.is_gameplay_active {
+            return None;
+        }
+
+        // Critical thermal - immediate downgrade
+        if self.thermal_state == ThermalState::Critical {
+            return self.try_downgrade();
+        }
+
+        // Check downgrade conditions
+        if self.frame_time_samples.len() >= DOWNGRADE_WINDOW as usize {
+            let p95_frame_time = self.calculate_p95_frame_time(DOWNGRADE_WINDOW as usize);
+            let frame_time_ratio = p95_frame_time / self.target_frame_time_ms;
+            let spike_ratio = self.calculate_spike_ratio();
+
+            if frame_time_ratio > FRAME_TIME_DOWNGRADE_RATIO {
+                return self.try_downgrade();
+            }
+
+            if spike_ratio > FRAME_SPIKE_RATIO_THRESHOLD {
+                return self.try_downgrade();
+            }
+        }
+
+        // Thermal high downgrade
+        if self.thermal_high_timer >= THERMAL_HIGH_DOWNGRADE_TIME {
+            return self.try_downgrade();
+        }
+
+        // Check upgrade conditions
+        if self.frame_time_samples.len() >= UPGRADE_WINDOW as usize {
+            let avg_frame_time = self.calculate_average_frame_time(UPGRADE_WINDOW as usize);
+            let frame_time_ratio = avg_frame_time / self.target_frame_time_ms;
+            let spike_ratio = self.calculate_spike_ratio();
+
+            let frame_time_ok = frame_time_ratio < FRAME_TIME_UPGRADE_RATIO;
+            let spikes_ok = spike_ratio < FRAME_SPIKE_RATIO_THRESHOLD * 0.5;
+            let thermal_ok = self.thermal_state == ThermalState::Normal;
+
+            if frame_time_ok && spikes_ok && thermal_ok {
+                return self.try_upgrade();
+            }
+        }
+
+        None
+    }
+
+    fn process_cooldown(&mut self, delta: f64) {
+        self.state_timer += delta;
+        if self.state_timer >= self.current_cooldown_duration {
+            self.state = ManagerState::Monitoring;
+            self.state_timer = 0.0;
+            self.reset_samples();
+        }
+    }
+
+    fn try_downgrade(&mut self) -> Option<ProfileAction> {
+        if self.current_profile <= MIN_PROFILE {
+            return None;
+        }
+
+        let new_profile = self.current_profile - 1;
+        self.current_cooldown_duration = COOLDOWN_AFTER_DOWNGRADE;
+        self.apply_profile_change(new_profile);
+        Some(ProfileAction::Downgrade(new_profile))
+    }
+
+    fn try_upgrade(&mut self) -> Option<ProfileAction> {
+        if self.current_profile >= MAX_PROFILE {
+            return None;
+        }
+
+        let new_profile = self.current_profile + 1;
+        self.current_cooldown_duration = COOLDOWN_AFTER_UPGRADE;
+        self.apply_profile_change(new_profile);
+        Some(ProfileAction::Upgrade(new_profile))
+    }
+
+    fn apply_profile_change(&mut self, new_profile: i32) {
+        self.current_profile = new_profile;
+        self.state = ManagerState::Cooldown;
+        self.state_timer = 0.0;
+        self.reset_samples();
+    }
+
+    fn collect_frame_time_sample(&mut self) {
+        if self.accumulated_frame_count > 0 {
+            let avg = self.accumulated_frame_time / self.accumulated_frame_count as f64;
+            self.frame_time_samples.push(avg);
+            self.accumulated_frame_time = 0.0;
+            self.accumulated_frame_count = 0;
+        }
+
+        let max_samples = UPGRADE_WINDOW as usize + 10;
+        while self.frame_time_samples.len() > max_samples {
+            self.frame_time_samples.remove(0);
+        }
+    }
+
+    fn calculate_average_frame_time(&self, sample_count: usize) -> f64 {
+        if self.frame_time_samples.is_empty() {
+            return self.target_frame_time_ms;
+        }
+
+        let count = sample_count.min(self.frame_time_samples.len());
+        let start = self.frame_time_samples.len() - count;
+        let sum: f64 = self.frame_time_samples[start..].iter().sum();
+        sum / count as f64
+    }
+
+    fn calculate_spike_ratio(&self) -> f64 {
+        if self.frame_count == 0 {
+            return 0.0;
+        }
+        self.spike_count as f64 / self.frame_count as f64
+    }
+
+    fn calculate_p95_frame_time(&self, sample_count: usize) -> f64 {
+        if self.frame_time_samples.is_empty() {
+            return self.target_frame_time_ms;
+        }
+
+        let count = sample_count.min(self.frame_time_samples.len());
+        let start = self.frame_time_samples.len() - count;
+        let mut sorted: Vec<f64> = self.frame_time_samples[start..].to_vec();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let idx = ((sorted.len() as f64) * 0.95) as usize;
+        let idx = idx.min(sorted.len().saturating_sub(1));
+
+        sorted
+            .get(idx)
+            .copied()
+            .unwrap_or(self.target_frame_time_ms)
+    }
+
+    fn update_thermal_state(&mut self, delta: f64, thermal_str: &str) {
+        match thermal_str {
+            "nominal" | "fair" => {
+                self.thermal_state = ThermalState::Normal;
+                self.thermal_high_timer = 0.0;
+            }
+            "serious" => {
+                self.thermal_state = ThermalState::High;
+                self.thermal_high_timer += delta;
+            }
+            "critical" => {
+                self.thermal_state = ThermalState::Critical;
+                self.thermal_high_timer = 0.0;
+            }
+            _ => {
+                self.thermal_state = ThermalState::Normal;
+                self.thermal_high_timer = 0.0;
+            }
+        }
+    }
+
+    fn reset_samples(&mut self) {
+        self.frame_time_samples.clear();
+        self.accumulated_frame_time = 0.0;
+        self.accumulated_frame_count = 0;
+        self.spike_count = 0;
+        self.frame_count = 0;
+        self.thermal_high_timer = 0.0;
+        self.sample_timer = 0.0;
+    }
+
+    pub fn fps_limit_to_target_ms(fps_limit: i32) -> f64 {
+        match fps_limit {
+            0 | 1 => 16.6,
+            2 => 55.6,
+            3 => 33.3,
+            4 => 16.6,
+            5 => 8.3,
+            _ => 33.3,
+        }
+    }
+}
+
+// ============================================================================
+// DclDynamicGraphicsManager - Godot wrapper
+// ============================================================================
+
+#[derive(GodotClass)]
+#[class(base=Node)]
+pub struct DclDynamicGraphicsManager {
+    base: Base<Node>,
+
+    /// Pure state machine
+    state: DynamicGraphicsState,
+
+    /// Godot-specific fields
+    has_ios_plugin: bool,
+    has_android_plugin: bool,
+    viewport_rid: Option<Rid>,
+    render_time_enabled: bool,
+}
+
+#[godot_api]
+impl INode for DclDynamicGraphicsManager {
+    fn init(base: Base<Node>) -> Self {
+        let has_ios_plugin = DclIosPlugin::is_available();
+        let has_android_plugin = DclAndroidPlugin::is_available();
+
+        Self {
+            base,
+            state: DynamicGraphicsState::new(),
+            has_ios_plugin,
+            has_android_plugin,
+            viewport_rid: None,
+            render_time_enabled: false,
+        }
+    }
+
+    fn ready(&mut self) {
         if let Some(viewport) = self.base().get_viewport() {
             let rid = viewport.get_viewport_rid();
             self.viewport_rid = Some(rid);
-
-            // Enable render time measurement on the viewport
             RenderingServer::singleton().viewport_set_measure_render_time(rid, true);
             self.render_time_enabled = true;
 
@@ -165,170 +494,95 @@ impl INode for DclDynamicGraphicsManager {
     }
 
     fn process(&mut self, delta: f64) {
-        if self.state == ManagerState::Disabled {
-            return;
-        }
-
-        // Get actual render time (CPU + GPU) from RenderingServer
-        // This gives us the real work time, independent of FPS cap
         let render_time_ms = self.get_total_render_time_ms();
+        let thermal_str = self.get_thermal_state_from_platform();
 
-        // Track frame spikes (using actual render time, not delta which includes wait time)
-        self.frame_count += 1;
-        if render_time_ms > FRAME_SPIKE_THRESHOLD_MS {
-            self.spike_count += 1;
-        }
-
-        // Accumulate frame times for averaging
-        self.accumulated_frame_time += render_time_ms;
-        self.accumulated_frame_count += 1;
-
-        // Sample frame time periodically (average over the interval)
-        self.sample_timer += delta;
-        if self.sample_timer >= SAMPLE_INTERVAL {
-            self.sample_timer = 0.0;
-            self.collect_frame_time_sample();
-        }
-
-        // Update thermal state
-        self.update_thermal_state(delta);
-
-        // Process state machine
-        match self.state {
-            ManagerState::Disabled => {}
-            ManagerState::WarmingUp => self.process_warmup(delta),
-            ManagerState::Monitoring => self.process_monitoring(),
-            ManagerState::Cooldown => self.process_cooldown(delta),
+        if let Some(action) = self
+            .state
+            .process_frame(delta, render_time_ms, &thermal_str)
+        {
+            let new_profile = match action {
+                ProfileAction::Downgrade(p) => {
+                    godot_print!("[DynamicGraphics] Profile downgrade to {}", p);
+                    p
+                }
+                ProfileAction::Upgrade(p) => {
+                    godot_print!("[DynamicGraphics] Profile upgrade to {}", p);
+                    p
+                }
+            };
+            self.base_mut()
+                .emit_signal("profile_change_requested", &[new_profile.to_variant()]);
         }
     }
 }
 
 #[godot_api]
 impl DclDynamicGraphicsManager {
-    /// Signal emitted when profile should change. GDScript handles the actual change.
     #[signal]
     fn profile_change_requested(new_profile: i32);
 
-    /// Initialize the manager with config values. Call this from GDScript after Global is ready.
-    /// fps_limit: The FPS limit mode (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
     #[func]
     pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {
-        self.enabled = enabled;
-        self.current_profile = current_profile;
-        self.target_frame_time_ms = Self::fps_limit_to_target_ms(fps_limit);
-
-        // Start warmup if enabled and not custom profile
-        if self.should_enable() {
-            self.start_warmup();
-        }
-
+        self.state.initialize(enabled, current_profile, fps_limit);
         godot_print!(
-            "[DynamicGraphics] initialized: enabled={}, profile={}, fps_limit={}, target_frame_time={}ms",
-            self.enabled,
-            self.current_profile,
-            fps_limit,
-            self.target_frame_time_ms
+            "[DynamicGraphics] initialized: enabled={}, profile={}, target={}ms",
+            enabled,
+            current_profile,
+            self.state.target_frame_time_ms
         );
     }
 
-    /// Update target frame time when FPS limit changes
     #[func]
     pub fn on_fps_limit_changed(&mut self, fps_limit: i32) {
-        self.target_frame_time_ms = Self::fps_limit_to_target_ms(fps_limit);
+        self.state.on_fps_limit_changed(fps_limit);
         godot_print!(
-            "[DynamicGraphics] FPS limit changed, new target_frame_time={}ms",
-            self.target_frame_time_ms
+            "[DynamicGraphics] FPS limit changed, target={}ms",
+            self.state.target_frame_time_ms
         );
     }
 
-    /// Called when loading starts (from GDScript signal)
     #[func]
     pub fn on_loading_started(&mut self) {
-        self.is_gameplay_active = false;
-        self.reset_samples();
-        godot_print!("[DynamicGraphics] loading started, pausing monitoring");
+        self.state.on_loading_started();
+        godot_print!("[DynamicGraphics] loading started");
     }
 
-    /// Called when loading finishes (from GDScript signal)
     #[func]
     pub fn on_loading_finished(&mut self) {
-        self.is_gameplay_active = true;
-        // Restart warmup after loading
-        if self.state == ManagerState::Monitoring {
-            self.start_warmup();
-        }
-        godot_print!(
-            "[DynamicGraphics] loading finished, resuming (state={:?})",
-            self.state
-        );
+        self.state.on_loading_finished();
+        godot_print!("[DynamicGraphics] loading finished");
     }
 
-    /// Check if gameplay is currently active (not loading)
-    #[func]
-    pub fn is_gameplay_active(&self) -> bool {
-        self.is_gameplay_active
-    }
-
-    /// Get debug info string for troubleshooting
-    #[func]
-    pub fn get_debug_info(&self) -> GString {
-        GString::from(
-            format!(
-                "state={:?}, timer={:.1}s, gameplay_active={}, samples={}",
-                self.state,
-                self.state_timer,
-                self.is_gameplay_active,
-                self.frame_time_samples.len()
-            )
-            .as_str(),
-        )
-    }
-
-    /// Called when user manually changes profile in settings
     #[func]
     pub fn on_manual_profile_change(&mut self, new_profile: i32) {
-        self.current_profile = new_profile;
-
-        // If user selects Custom, disable dynamic adjustment
-        if new_profile == PROFILE_CUSTOM {
-            self.state = ManagerState::Disabled;
-            godot_print!("[DynamicGraphics] disabled (custom profile selected)");
-        } else if self.should_enable() && self.state == ManagerState::Disabled {
-            self.start_warmup();
-            godot_print!("[DynamicGraphics] re-enabled after manual change");
-        }
+        self.state.on_manual_profile_change(new_profile);
     }
 
-    /// Enable or disable dynamic graphics adjustment
     #[func]
     pub fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
-
-        if enabled && self.should_enable() {
-            self.start_warmup();
-        } else {
-            self.state = ManagerState::Disabled;
-        }
-
+        self.state.set_enabled(enabled);
         godot_print!("[DynamicGraphics] set_enabled({})", enabled);
     }
 
-    /// Check if dynamic adjustment is currently active
+    #[func]
+    pub fn is_gameplay_active(&self) -> bool {
+        self.state.is_gameplay_active
+    }
+
     #[func]
     pub fn is_active(&self) -> bool {
-        self.state != ManagerState::Disabled
+        self.state.is_active()
     }
 
-    /// Check if dynamic adjustment is enabled (regardless of state)
     #[func]
     pub fn is_enabled(&self) -> bool {
-        self.enabled
+        self.state.is_enabled()
     }
 
-    /// Get current state name (without timer info)
     #[func]
     pub fn get_state_name(&self) -> GString {
-        match self.state {
+        match self.state.state {
             ManagerState::Disabled => "Disabled".into(),
             ManagerState::WarmingUp => "WarmingUp".into(),
             ManagerState::Monitoring => "Monitoring".into(),
@@ -336,293 +590,76 @@ impl DclDynamicGraphicsManager {
         }
     }
 
-    /// Get current state for debugging (with timer info)
     #[func]
     pub fn get_state_string(&self) -> GString {
-        match self.state {
+        match self.state.state {
             ManagerState::Disabled => "disabled".into(),
             ManagerState::WarmingUp => {
-                GString::from(format!("warming_up ({:.0}s)", self.state_timer).as_str())
+                GString::from(format!("warming_up ({:.0}s)", self.state.state_timer).as_str())
             }
             ManagerState::Monitoring => "monitoring".into(),
             ManagerState::Cooldown => {
-                GString::from(format!("cooldown ({:.0}s)", self.state_timer).as_str())
+                GString::from(format!("cooldown ({:.0}s)", self.state.state_timer).as_str())
             }
         }
     }
 
-    /// Get remaining warmup time in seconds
     #[func]
     pub fn get_warmup_remaining(&self) -> f64 {
-        if self.state == ManagerState::WarmingUp {
-            (WARMUP_DURATION - self.state_timer).max(0.0)
-        } else {
-            0.0
-        }
+        self.state.get_warmup_remaining()
     }
 
-    /// Get remaining cooldown time in seconds
     #[func]
     pub fn get_cooldown_remaining(&self) -> f64 {
-        if self.state == ManagerState::Cooldown {
-            (self.current_cooldown_duration - self.state_timer).max(0.0)
-        } else {
-            0.0
-        }
+        self.state.get_cooldown_remaining()
     }
 
-    /// Get current profile
     #[func]
     pub fn get_current_profile(&self) -> i32 {
-        self.current_profile
+        self.state.current_profile
     }
 
-    /// Get average frame time from recent samples (in ms)
     #[func]
     pub fn get_average_frame_time(&self) -> f64 {
-        if self.frame_time_samples.is_empty() {
-            return self.target_frame_time_ms;
-        }
-        let sum: f64 = self.frame_time_samples.iter().sum();
-        sum / self.frame_time_samples.len() as f64
+        self.state.get_average_frame_time()
     }
 
-    /// Get target frame time (in ms)
     #[func]
     pub fn get_target_frame_time(&self) -> f64 {
-        self.target_frame_time_ms
+        self.state.target_frame_time_ms
     }
 
-    /// Get frame time ratio (actual / target). < 1.0 means headroom, > 1.0 means struggling
     #[func]
     pub fn get_frame_time_ratio(&self) -> f64 {
-        self.get_average_frame_time() / self.target_frame_time_ms
+        self.state.get_frame_time_ratio()
     }
 
-    /// Get current thermal state as string
     #[func]
     pub fn get_thermal_state_string(&self) -> GString {
-        match self.thermal_state {
+        match self.state.thermal_state {
             ThermalState::Normal => "normal".into(),
             ThermalState::High => "high".into(),
             ThermalState::Critical => "critical".into(),
         }
     }
+
+    #[func]
+    pub fn get_debug_info(&self) -> GString {
+        GString::from(
+            format!(
+                "state={:?}, timer={:.1}s, gameplay={}, samples={}",
+                self.state.state,
+                self.state.state_timer,
+                self.state.is_gameplay_active,
+                self.state.frame_time_samples.len()
+            )
+            .as_str(),
+        )
+    }
 }
 
 impl DclDynamicGraphicsManager {
-    fn should_enable(&self) -> bool {
-        // Disabled if dynamic graphics is off or profile is Custom
-        if !self.enabled {
-            return false;
-        }
-        if self.current_profile == PROFILE_CUSTOM {
-            return false;
-        }
-        true
-    }
-
-    fn start_warmup(&mut self) {
-        self.state = ManagerState::WarmingUp;
-        self.state_timer = 0.0;
-        self.reset_samples();
-        godot_print!("[DynamicGraphics] starting warmup ({}s)", WARMUP_DURATION);
-    }
-
-    fn process_warmup(&mut self, delta: f64) {
-        if !self.is_gameplay_active {
-            return;
-        }
-
-        let old_timer = self.state_timer;
-        self.state_timer += delta;
-
-        // Log progress every 30 seconds
-        let old_30s = (old_timer / 30.0) as i32;
-        let new_30s = (self.state_timer / 30.0) as i32;
-        if new_30s > old_30s {
-            godot_print!(
-                "[DynamicGraphics] warmup progress {:.0}s / {:.0}s",
-                self.state_timer,
-                WARMUP_DURATION
-            );
-        }
-
-        if self.state_timer >= WARMUP_DURATION {
-            self.state = ManagerState::Monitoring;
-            self.state_timer = 0.0;
-            self.reset_samples();
-            godot_print!("[DynamicGraphics] warmup complete, starting monitoring");
-        }
-    }
-
-    fn process_monitoring(&mut self) {
-        if !self.is_gameplay_active {
-            return;
-        }
-
-        // Check for immediate critical thermal downgrade
-        if self.thermal_state == ThermalState::Critical {
-            self.try_downgrade("critical thermal state");
-            return;
-        }
-
-        // Check downgrade conditions (need DOWNGRADE_WINDOW seconds of samples)
-        if self.frame_time_samples.len() >= DOWNGRADE_WINDOW as usize {
-            // Use P95 for downgrade evaluation (better at catching stutters than average)
-            let p95_frame_time = self.calculate_p95_frame_time(DOWNGRADE_WINDOW as usize);
-            let frame_time_ratio = p95_frame_time / self.target_frame_time_ms;
-            let spike_ratio = self.calculate_spike_ratio();
-
-            // Downgrade if P95 frame time too high (ratio > 1.2 means 20% over budget)
-            if frame_time_ratio > FRAME_TIME_DOWNGRADE_RATIO {
-                self.try_downgrade(&format!(
-                    "high P95 frame time ({:.1}ms, {:.0}% of budget)",
-                    p95_frame_time,
-                    frame_time_ratio * 100.0
-                ));
-                return;
-            }
-
-            // Downgrade if too many frame spikes
-            if spike_ratio > FRAME_SPIKE_RATIO_THRESHOLD {
-                self.try_downgrade(&format!("frame spikes ({:.1}%)", spike_ratio * 100.0));
-                return;
-            }
-        }
-
-        // Check thermal high downgrade
-        if self.thermal_high_timer >= THERMAL_HIGH_DOWNGRADE_TIME {
-            self.try_downgrade("high thermal state");
-            return;
-        }
-
-        // Check upgrade conditions (need UPGRADE_WINDOW seconds of samples)
-        if self.frame_time_samples.len() >= UPGRADE_WINDOW as usize {
-            let avg_frame_time = self.calculate_average_frame_time(UPGRADE_WINDOW as usize);
-            let frame_time_ratio = avg_frame_time / self.target_frame_time_ms;
-            let spike_ratio = self.calculate_spike_ratio();
-
-            // All conditions must be met for upgrade
-            // Ratio < 0.5 means using less than 50% of frame budget (plenty of headroom)
-            let frame_time_ok = frame_time_ratio < FRAME_TIME_UPGRADE_RATIO;
-            let spikes_ok = spike_ratio < FRAME_SPIKE_RATIO_THRESHOLD * 0.5; // More strict for upgrade
-            let thermal_ok = self.thermal_state == ThermalState::Normal;
-
-            if frame_time_ok && spikes_ok && thermal_ok {
-                self.try_upgrade(&format!(
-                    "good performance ({:.1}ms, {:.0}% of budget)",
-                    avg_frame_time,
-                    frame_time_ratio * 100.0
-                ));
-            }
-        }
-    }
-
-    fn process_cooldown(&mut self, delta: f64) {
-        self.state_timer += delta;
-        if self.state_timer >= self.current_cooldown_duration {
-            self.state = ManagerState::Monitoring;
-            self.state_timer = 0.0;
-            self.reset_samples();
-            godot_print!("[DynamicGraphics] cooldown complete, resuming monitoring");
-        }
-    }
-
-    fn collect_frame_time_sample(&mut self) {
-        // Calculate average frame time from accumulated values
-        if self.accumulated_frame_count > 0 {
-            let avg_frame_time = self.accumulated_frame_time / self.accumulated_frame_count as f64;
-            self.frame_time_samples.push(avg_frame_time);
-
-            // Reset accumulators
-            self.accumulated_frame_time = 0.0;
-            self.accumulated_frame_count = 0;
-        }
-
-        // Keep only samples needed for upgrade window (larger window)
-        let max_samples = UPGRADE_WINDOW as usize + 10;
-        while self.frame_time_samples.len() > max_samples {
-            self.frame_time_samples.remove(0);
-        }
-    }
-
-    fn calculate_average_frame_time(&self, sample_count: usize) -> f64 {
-        if self.frame_time_samples.is_empty() {
-            return self.target_frame_time_ms;
-        }
-
-        let count = sample_count.min(self.frame_time_samples.len());
-        let start_index = self.frame_time_samples.len() - count;
-        let sum: f64 = self.frame_time_samples[start_index..].iter().sum();
-        sum / count as f64
-    }
-
-    fn calculate_spike_ratio(&self) -> f64 {
-        if self.frame_count == 0 {
-            return 0.0;
-        }
-        self.spike_count as f64 / self.frame_count as f64
-    }
-
-    /// Calculate the 95th percentile frame time (better at catching spikes than average)
-    fn calculate_p95_frame_time(&self, sample_count: usize) -> f64 {
-        if self.frame_time_samples.is_empty() {
-            return self.target_frame_time_ms;
-        }
-
-        let count = sample_count.min(self.frame_time_samples.len());
-        let start_index = self.frame_time_samples.len() - count;
-        let mut sorted: Vec<f64> = self.frame_time_samples[start_index..].to_vec();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-        let p95_index = ((sorted.len() as f64) * 0.95) as usize;
-        let p95_index = p95_index.min(sorted.len().saturating_sub(1));
-
-        sorted
-            .get(p95_index)
-            .copied()
-            .unwrap_or(self.target_frame_time_ms)
-    }
-
-    /// Convert FPS limit mode to target frame time in milliseconds
-    fn fps_limit_to_target_ms(fps_limit: i32) -> f64 {
-        match fps_limit {
-            0 | 1 => 16.6, // VSYNC or NO_LIMIT - assume 60 FPS target
-            2 => 55.6,     // 18 FPS (Very Low profile)
-            3 => 33.3,     // 30 FPS
-            4 => 16.6,     // 60 FPS
-            5 => 8.3,      // 120 FPS
-            _ => 33.3,     // Default to 30 FPS
-        }
-    }
-
-    fn update_thermal_state(&mut self, delta: f64) {
-        let thermal_string = self.get_thermal_state_from_platform();
-
-        match thermal_string.as_str() {
-            "nominal" | "fair" => {
-                self.thermal_state = ThermalState::Normal;
-                self.thermal_high_timer = 0.0;
-            }
-            "serious" => {
-                self.thermal_state = ThermalState::High;
-                self.thermal_high_timer += delta;
-            }
-            "critical" => {
-                self.thermal_state = ThermalState::Critical;
-                self.thermal_high_timer = 0.0;
-            }
-            _ => {
-                // Unknown or unavailable - assume normal
-                self.thermal_state = ThermalState::Normal;
-                self.thermal_high_timer = 0.0;
-            }
-        }
-    }
-
     fn get_thermal_state_from_platform(&self) -> String {
-        // Use cached availability flags to avoid per-frame singleton lookups
         if self.has_ios_plugin {
             return DclIosPlugin::get_thermal_state().to_string();
         }
@@ -632,85 +669,204 @@ impl DclDynamicGraphicsManager {
         "nominal".to_string()
     }
 
-    /// Get total render time (CPU + GPU) in milliseconds
-    /// This is the actual work time, independent of FPS cap
     fn get_total_render_time_ms(&self) -> f64 {
         if !self.render_time_enabled {
-            // Fallback to delta-based estimation if measurement not available
-            return self.target_frame_time_ms;
+            return self.state.target_frame_time_ms;
         }
 
         if let Some(rid) = self.viewport_rid {
             let rs = RenderingServer::singleton();
-
-            // Get CPU and GPU render times (in milliseconds)
             let cpu_time = rs.viewport_get_measured_render_time_cpu(rid);
             let gpu_time = rs.viewport_get_measured_render_time_gpu(rid);
-
-            // Return the larger of the two (bottleneck determines frame time)
-            // In practice, we want to know if either CPU or GPU is struggling
             cpu_time.max(gpu_time)
         } else {
-            self.target_frame_time_ms
+            self.state.target_frame_time_ms
         }
     }
+}
 
-    fn try_downgrade(&mut self, reason: &str) {
-        if self.current_profile <= MIN_PROFILE {
-            // Already at lowest, can't downgrade further
-            return;
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_state() -> DynamicGraphicsState {
+        let mut state = DynamicGraphicsState::new();
+        state.is_gameplay_active = true;
+        state
+    }
+
+    #[test]
+    fn test_warmup_to_monitoring() {
+        let mut state = create_state();
+        state.initialize(true, 2, 3); // enabled, Medium profile, 30fps
+
+        assert_eq!(state.state, ManagerState::WarmingUp);
+
+        // Simulate warmup duration
+        for _ in 0..180 {
+            state.process_frame(1.0, 20.0, "nominal");
         }
 
-        let new_profile = self.current_profile - 1;
-        self.current_cooldown_duration = COOLDOWN_AFTER_DOWNGRADE;
-        self.apply_profile_change(new_profile, "downgrade", reason);
+        assert_eq!(state.state, ManagerState::Monitoring);
     }
 
-    fn try_upgrade(&mut self, reason: &str) {
-        if self.current_profile >= MAX_PROFILE {
-            // Already at highest, can't upgrade further
-            return;
+    #[test]
+    fn test_downgrade_on_critical_thermal() {
+        let mut state = create_state();
+        state.initialize(true, 2, 3);
+
+        // Skip warmup
+        state.state = ManagerState::Monitoring;
+        state.is_gameplay_active = true;
+
+        let action = state.process_frame(0.016, 20.0, "critical");
+
+        assert!(matches!(action, Some(ProfileAction::Downgrade(1))));
+        assert_eq!(state.current_profile, 1);
+        assert_eq!(state.state, ManagerState::Cooldown);
+    }
+
+    #[test]
+    fn test_downgrade_on_sustained_high_thermal() {
+        let mut state = create_state();
+        state.initialize(true, 2, 3);
+        state.state = ManagerState::Monitoring;
+
+        // Simulate 30+ seconds of high thermal
+        for _ in 0..31 {
+            let action = state.process_frame(1.0, 20.0, "serious");
+            if action.is_some() {
+                assert!(matches!(action, Some(ProfileAction::Downgrade(_))));
+                return;
+            }
         }
 
-        let new_profile = self.current_profile + 1;
-        self.current_cooldown_duration = COOLDOWN_AFTER_UPGRADE;
-        self.apply_profile_change(new_profile, "upgrade", reason);
+        // Should have downgraded by now
+        assert_eq!(state.current_profile, 1);
     }
 
-    fn apply_profile_change(&mut self, new_profile: i32, action: &str, reason: &str) {
-        let old_profile = self.current_profile;
-        self.current_profile = new_profile;
+    #[test]
+    fn test_downgrade_on_high_frame_time() {
+        let mut state = create_state();
+        state.initialize(true, 2, 3); // 30fps = 33.3ms target
+        state.state = ManagerState::Monitoring;
 
-        // Apply the profile via GDScript GraphicSettings
-        self.call_apply_graphic_profile(new_profile);
+        // Simulate 60+ seconds of high frame times (>40ms, ratio > 1.2)
+        for _ in 0..65 {
+            let action = state.process_frame(1.0, 45.0, "nominal");
+            if action.is_some() {
+                assert!(matches!(action, Some(ProfileAction::Downgrade(_))));
+                return;
+            }
+        }
 
-        // Enter cooldown
-        self.state = ManagerState::Cooldown;
-        self.state_timer = 0.0;
-        self.reset_samples();
-
-        godot_print!(
-            "[DynamicGraphics] Profile {}: {} -> {} (reason: {})",
-            action,
-            old_profile,
-            new_profile,
-            reason
-        );
+        assert_eq!(state.current_profile, 1);
     }
 
-    fn call_apply_graphic_profile(&mut self, profile_index: i32) {
-        // Emit signal for GDScript to handle the actual profile change
-        self.base_mut()
-            .emit_signal("profile_change_requested", &[profile_index.to_variant()]);
+    #[test]
+    fn test_upgrade_conditions() {
+        let mut state = create_state();
+        state.initialize(true, 1, 3); // Low profile, 30fps
+        state.state = ManagerState::Monitoring;
+
+        // Simulate 120+ seconds of good performance (<16.6ms, ratio < 0.5)
+        for _ in 0..125 {
+            let action = state.process_frame(1.0, 10.0, "nominal");
+            if action.is_some() {
+                assert!(matches!(action, Some(ProfileAction::Upgrade(2))));
+                return;
+            }
+        }
+
+        assert_eq!(state.current_profile, 2);
     }
 
-    fn reset_samples(&mut self) {
-        self.frame_time_samples.clear();
-        self.accumulated_frame_time = 0.0;
-        self.accumulated_frame_count = 0;
-        self.spike_count = 0;
-        self.frame_count = 0;
-        self.thermal_high_timer = 0.0;
-        self.sample_timer = 0.0;
+    #[test]
+    fn test_cooldown_blocks_changes() {
+        let mut state = create_state();
+        state.initialize(true, 2, 3);
+        state.state = ManagerState::Cooldown;
+        state.current_cooldown_duration = 120.0;
+
+        // During cooldown, no actions should be returned
+        for _ in 0..60 {
+            let action = state.process_frame(1.0, 50.0, "critical");
+            assert!(action.is_none());
+        }
+
+        // Still in cooldown
+        assert_eq!(state.state, ManagerState::Cooldown);
+    }
+
+    #[test]
+    fn test_cooldown_completes() {
+        let mut state = create_state();
+        state.state = ManagerState::Cooldown;
+        state.current_cooldown_duration = 120.0;
+        state.is_gameplay_active = true;
+
+        // Simulate full cooldown
+        for _ in 0..121 {
+            state.process_frame(1.0, 20.0, "nominal");
+        }
+
+        assert_eq!(state.state, ManagerState::Monitoring);
+    }
+
+    #[test]
+    fn test_profile_bounds_min() {
+        let mut state = create_state();
+        state.initialize(true, 0, 3); // Already at Very Low
+        state.state = ManagerState::Monitoring;
+
+        // Try to downgrade - should not go below 0
+        let action = state.process_frame(0.016, 20.0, "critical");
+        assert!(action.is_none());
+        assert_eq!(state.current_profile, 0);
+    }
+
+    #[test]
+    fn test_profile_bounds_max() {
+        let mut state = create_state();
+        state.initialize(true, 3, 3); // Already at High
+        state.state = ManagerState::Monitoring;
+
+        // Fill samples for upgrade check
+        for _ in 0..125 {
+            state.process_frame(1.0, 10.0, "nominal");
+        }
+
+        // Should not go above High (3)
+        assert_eq!(state.current_profile, 3);
+    }
+
+    #[test]
+    fn test_custom_profile_disables() {
+        let mut state = create_state();
+        state.initialize(true, 2, 3);
+
+        state.on_manual_profile_change(PROFILE_CUSTOM);
+
+        assert_eq!(state.state, ManagerState::Disabled);
+    }
+
+    #[test]
+    fn test_loading_pauses_monitoring() {
+        let mut state = create_state();
+        state.initialize(true, 2, 3);
+        state.state = ManagerState::Monitoring;
+        state.is_gameplay_active = true;
+
+        state.on_loading_started();
+
+        assert!(!state.is_gameplay_active);
+
+        // Critical thermal should not trigger downgrade during loading
+        let action = state.process_frame(0.016, 20.0, "critical");
+        assert!(action.is_none());
     }
 }
