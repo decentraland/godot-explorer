@@ -381,7 +381,7 @@ text = "Graphic Profile"
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
-items = Array[String](["LOW", "MEDIUM", "HIGH", "CUSTOM"])
+items = Array[String](["VERY LOW", "LOW", "MEDIUM", "HIGH", "CUSTOM"])
 
 [node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 unique_name_in_owner = true
@@ -415,6 +415,7 @@ theme = SubResource("Theme_7krp8")
 items = Array[String](["Max"])
 
 [node name="LimitFps" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
@@ -428,9 +429,10 @@ text = "Limit FPS"
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
-items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS"])
+items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS", "120 FPS"])
 
 [node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
@@ -731,11 +733,11 @@ popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
 popup/item_1/id = 1
-popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
+popup/item_2/text = "https://sdk-test-scenes.decentraland.org"
 popup/item_2/id = 2
 popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
 popup/item_3/id = 3
-popup/item_4/text = "https://peer-testing.decentraland.org"
+popup/item_4/text = "https://peer.decentraland.org"
 popup/item_4/id = 4
 popup/item_5/text = "https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main"
 popup/item_5/id = 5
@@ -857,6 +859,29 @@ theme = ExtResource("12_sa1v7")
 theme_override_font_sizes/font_size = 20
 text = "Test Notification with Emojis"
 
+[node name="VBoxContainer_OpenUserData" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label_OpenUserData" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
+layout_mode = 2
+theme = SubResource("Theme_nuccv")
+text = "User Data"
+
+[node name="Button_OpenUserData" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 20
+text = "Open User Data Folder"
+
 [node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
@@ -976,5 +1001,6 @@ hide_on_portrait = true
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]

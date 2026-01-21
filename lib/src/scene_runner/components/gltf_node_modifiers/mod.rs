@@ -112,13 +112,17 @@ pub fn update_gltf_node_modifiers(
 
             // Get the GltfContainer to access the loaded GLTF
             let Some(gltf_container) = get_gltf_container(&node_3d) else {
-                // No GltfContainer on this entity - will be processed when GLTF finishes loading
+                // No GltfContainer on this entity - create empty state so it gets re-processed when GLTF loads
+                // (the gltf_container sync will check has_state and re-add to pending)
+                scene.gltf_node_modifier_states.entry(*entity).or_default();
                 updated_count += 1;
                 continue;
             };
 
             let Some(gltf_root) = gltf_container.bind().get_gltf_resource() else {
-                // GLTF not loaded yet - will be processed when loading completes
+                // GLTF not loaded yet - create empty state so it gets re-processed when GLTF finishes loading
+                // (the gltf_container sync will check has_state and re-add to pending)
+                scene.gltf_node_modifier_states.entry(*entity).or_default();
                 updated_count += 1;
                 continue;
             };

@@ -70,6 +70,13 @@ impl DclUserProfile {
     }
 
     #[func]
+    fn set_ethereum_address(&mut self, address: GString) {
+        let address_str = address.to_string();
+        self.inner.content.eth_address = address_str.clone();
+        self.inner.content.user_id = Some(address_str);
+    }
+
+    #[func]
     fn set_description(&mut self, description: GString) {
         self.inner.content.description = description.to_string();
     }

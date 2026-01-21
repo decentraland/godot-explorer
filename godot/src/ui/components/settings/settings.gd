@@ -58,6 +58,8 @@ var _dirty_connected: bool = false
 @onready var radio_selector_aa = %RadioSelector_AA
 
 @onready var radio_selector_limit_fps = %RadioSelector_LimitFps
+@onready var container_limit_fps = %LimitFps
+@onready var container_resolution_3d_scale = %Resolution3DScale
 
 #Advanced items:
 @onready var option_button_realm = %OptionButton_Realm
@@ -108,10 +110,17 @@ func _ready():
 
 
 func refresh_graphic_settings():
-	# We only show the custom settings if the graphic profile is custom
-	box_container_custom.visible = Global.get_config().graphic_profile == 3
 	var graphic_profile = Global.get_config().graphic_profile
+	var is_custom_profile: bool = graphic_profile == ConfigData.PROFILE_CUSTOM
+
+	# We only show the custom settings if the graphic profile is custom
+	box_container_custom.visible = is_custom_profile
 	radio_selector_graphic_profile.selected = graphic_profile
+
+	# Hide FPS limit and 3D resolution scale when using preset profiles
+	# These are controlled by the profile, not user-configurable
+	container_limit_fps.visible = is_custom_profile
+	container_resolution_3d_scale.visible = is_custom_profile
 
 	if Global.is_mobile():
 		v_box_container_windowed.hide()
@@ -370,29 +379,12 @@ func _on_radio_selector_aa_select_item(index, _item):
 
 
 func _on_radio_selector_graphic_profile_select_item(index, _item):
-	Global.get_config().graphic_profile = index
-
-	match index:
-		0:  # Performance
-			Global.get_config().anti_aliasing = 0  # off
-			Global.get_config().shadow_quality = 0  # disabled
-			Global.get_config().bloom_quality = 0  # off
-			Global.get_config().skybox = 0  # low
-			Global.get_config().texture_quality = 0  # low
-		1:  # Balanced
-			Global.get_config().anti_aliasing = 1  # x2
-			Global.get_config().shadow_quality = 1  # normal
-			Global.get_config().bloom_quality = 1  # low
-			Global.get_config().skybox = 1  # medium
-			Global.get_config().texture_quality = 1  # medium
-		2:  # Quality
-			Global.get_config().anti_aliasing = 3  # x8
-			Global.get_config().shadow_quality = 2  # high quality
-			Global.get_config().bloom_quality = 2  # high
-			Global.get_config().skybox = 2  # high
-			Global.get_config().texture_quality = 2  # high
-		3:  # Custom
-			pass
+	# Use centralized profile application (handles all parameters)
+	# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
+	if index < ConfigData.PROFILE_CUSTOM:
+		GraphicSettings.apply_graphic_profile(index)
+	else:
+		Global.get_config().graphic_profile = index  # Custom - keep current settings
 
 	refresh_graphic_settings()
 	Global.get_config().save_to_settings_file()
@@ -558,3 +550,16 @@ func _on_button_report_bug_pressed() -> void:
 		url += "?" + "&".join(params)
 
 	Global.open_url(url)
+
+
+func _on_button_open_user_data_pressed() -> void:
+	var user_data_path = OS.get_user_data_dir()
+	print("Opening user data folder: ", user_data_path)
+
+	# On mobile, we can't open the file explorer directly, so we copy the path to clipboard
+	if Global.is_mobile():
+		DisplayServer.clipboard_set(user_data_path)
+		print("User data path copied to clipboard: ", user_data_path)
+	else:
+		# On desktop (Windows, macOS, Linux), open the file explorer
+		OS.shell_open(user_data_path)

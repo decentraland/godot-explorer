@@ -65,3 +65,9 @@ func _refresh_list():
 func _on_select_item(index: int, item: String):
 	selected = index
 	select_item.emit(index, item)
+
+
+func set_disabled(disabled: bool) -> void:
+	for child in get_children():
+		if child is CheckBox:
+			child.disabled = disabled

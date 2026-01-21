@@ -576,6 +576,36 @@ func _on_debug_timer_timeout() -> void:
 
 
 # =============================================================================
+# SYSTEM TOASTS (in-app only, not OS notifications)
+# =============================================================================
+
+
+## Show a system toast notification (in-app only, for things like profile changes)
+## @param title: The notification title
+## @param description: The notification description
+## @param notification_type: Type identifier (default: "system")
+func show_system_toast(
+	title: String, description: String, notification_type: String = "system"
+) -> void:
+	var timestamp = Time.get_unix_time_from_system() * 1000  # milliseconds
+	var notif: Dictionary = {
+		"id": "system_" + str(timestamp) + "_" + str(randi()),
+		"type": notification_type,
+		"address": "",
+		"timestamp": int(timestamp),
+		"read": true,  # Mark as read so it doesn't persist
+		"metadata": {"title": title, "description": description, "link": ""}
+	}
+
+	# Add to queue for toast display
+	_notification_queue.append(notif)
+
+	# Emit signal to show toast if this is the only one in queue
+	if _notification_queue.size() == 1 and not _queue_paused:
+		notification_queued.emit(notif)
+
+
+# =============================================================================
 # LOCAL NOTIFICATIONS
 # =============================================================================
 
