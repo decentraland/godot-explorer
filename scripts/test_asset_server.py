@@ -30,7 +30,10 @@ CONTENT_SERVER = "https://peer.decentraland.org/content"
 
 def fetch_json(url: str, data: dict = None) -> dict:
     """Fetch JSON from URL, optionally POSTing data."""
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "DecentralandAssetServerTest/1.0",
+    }
 
     if data:
         req = Request(url, data=json.dumps(data).encode(), headers=headers, method="POST")
