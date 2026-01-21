@@ -4,8 +4,10 @@
 
 use std::sync::Arc;
 
-use godot::classes::Os;
-use godot::obj::Singleton;
+use godot::classes::portable_compressed_texture_2d::CompressionMode;
+use godot::classes::resource_saver::SaverFlags;
+use godot::classes::{Image, Os, PortableCompressedTexture2D, Resource, ResourceSaver};
+use godot::prelude::*;
 use tokio::sync::Semaphore;
 
 use crate::content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef};
@@ -13,9 +15,11 @@ use crate::content::content_provider::SceneGltfContext;
 use crate::content::gltf::{
     load_and_save_emote_gltf, load_and_save_scene_gltf, load_and_save_wearable_gltf,
 };
+use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::content::resource_provider::ResourceProvider;
-use crate::content::texture::load_image_texture;
+use crate::content::thread_safety::GodotSingleThreadSafety;
 use crate::godot_classes::dcl_config::TextureQuality;
+use crate::utils::infer_mime;
 
 use super::job_manager::JobManager;
 use super::types::{AssetRequest, AssetType, JobStatus};
@@ -186,21 +190,130 @@ async fn process_emote_gltf(
     load_and_save_emote_gltf(file_path, request.hash.clone(), content_mapping, scene_ctx).await
 }
 
-/// Process a texture.
+/// Process a texture and save as compressed .ctex format.
+///
+/// Downloads the texture, compresses it using ETC2 (mobile-optimized),
+/// and saves as a PortableCompressedTexture2D (.ctex) file.
 async fn process_texture(
     request: &AssetRequest,
     ctx: &ProcessorContext,
 ) -> Result<String, anyhow::Error> {
     tracing::info!("Processing texture: {}", request.hash);
 
-    let content_ctx = ctx.to_content_context();
+    let raw_file_path = format!("{}{}", ctx.content_folder, request.hash);
+    let ctex_file_path = format!("{}{}.ctex", ctx.content_folder, request.hash);
 
-    // The result is a Variant containing TextureEntry, but we just want to confirm it succeeded
-    // and return the cached path
-    let _ = load_image_texture(request.url.clone(), request.hash.clone(), content_ctx).await?;
+    // Download the raw image file
+    let bytes_vec = ctx
+        .resource_provider
+        .fetch_resource_with_data(&request.url, &request.hash, &raw_file_path)
+        .await
+        .map_err(anyhow::Error::msg)?;
 
-    // Return the path where the texture is cached
-    Ok(format!("{}{}", ctx.content_folder, request.hash))
+    if bytes_vec.is_empty() {
+        return Err(anyhow::anyhow!("Empty texture data"));
+    }
+
+    // Check for unsupported formats
+    if infer_mime::is_avif(&bytes_vec) {
+        return Err(anyhow::anyhow!("Unsupported image format: AVIF"));
+    }
+    if infer_mime::is_heic(&bytes_vec) {
+        return Err(anyhow::anyhow!("Unsupported image format: HEIC"));
+    }
+
+    // Animated formats (GIF, animated WebP) are not supported for .ctex compression
+    if infer_mime::is_gif(&bytes_vec) {
+        return Err(anyhow::anyhow!(
+            "Animated GIF not supported for .ctex compression"
+        ));
+    }
+    if infer_mime::is_animated_webp(&bytes_vec) {
+        return Err(anyhow::anyhow!(
+            "Animated WebP not supported for .ctex compression"
+        ));
+    }
+
+    // Acquire Godot thread for texture processing
+    let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx.to_content_context())
+        .await
+        .ok_or_else(|| anyhow::anyhow!("Failed to acquire Godot thread"))?;
+
+    // Load image from bytes
+    let bytes = PackedByteArray::from_vec(&bytes_vec);
+    let mut image = Image::new_gd();
+
+    let err = if infer_mime::is_png(&bytes_vec) {
+        image.load_png_from_buffer(&bytes)
+    } else if infer_mime::is_jpeg(&bytes_vec) {
+        image.load_jpg_from_buffer(&bytes)
+    } else if infer_mime::is_webp(&bytes_vec) {
+        image.load_webp_from_buffer(&bytes)
+    } else if infer_mime::is_bmp(&bytes_vec) {
+        image.load_bmp_from_buffer(&bytes)
+    } else if infer_mime::is_tga(&bytes_vec) {
+        image.load_tga_from_buffer(&bytes)
+    } else {
+        // Try PNG as fallback
+        image.load_png_from_buffer(&bytes)
+    };
+
+    if err != godot::global::Error::OK {
+        return Err(anyhow::anyhow!("Failed to load image: {:?}", err));
+    }
+
+    // Resize if needed based on texture quality
+    let max_size = ctx.texture_quality.to_max_size();
+    resize_image_if_needed(&mut image, max_size);
+
+    // Create PortableCompressedTexture2D with ETC2 compression (mobile-optimized)
+    let mut compressed_texture = PortableCompressedTexture2D::new_gd();
+    compressed_texture.create_from_image(Some(&image), CompressionMode::ETC2);
+
+    // Keep the compressed buffer so it can be saved
+    compressed_texture.set_keep_compressed_buffer(true);
+
+    // Save as .ctex file
+    let err = ResourceSaver::singleton()
+        .save_ex(&compressed_texture.upcast::<Resource>())
+        .path(&ctex_file_path)
+        .flags(SaverFlags::COMPRESS)
+        .done();
+
+    if err != godot::global::Error::OK {
+        return Err(anyhow::anyhow!(
+            "Failed to save compressed texture: {:?}",
+            err
+        ));
+    }
+
+    tracing::info!(
+        "Texture compressed and saved: {} -> {}",
+        request.hash,
+        ctex_file_path
+    );
+
+    Ok(ctex_file_path)
+}
+
+/// Resize image if it exceeds max size while maintaining aspect ratio.
+fn resize_image_if_needed(image: &mut Gd<Image>, max_size: i32) {
+    let width = image.get_width();
+    let height = image.get_height();
+
+    if width <= max_size && height <= max_size {
+        return;
+    }
+
+    let (new_width, new_height) = if width > height {
+        let ratio = max_size as f32 / width as f32;
+        (max_size, (height as f32 * ratio) as i32)
+    } else {
+        let ratio = max_size as f32 / height as f32;
+        ((width as f32 * ratio) as i32, max_size)
+    };
+
+    image.resize(new_width, new_height);
 }
 
 /// Find the file path that maps to a given hash.

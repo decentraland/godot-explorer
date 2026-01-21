@@ -64,7 +64,7 @@ pub fn pack_assets_to_zip(
         // Determine the path inside the ZIP
         // No res:// prefix - Godot adds it when loading the resource pack
         let zip_internal_path = match asset_type {
-            AssetType::Texture => format!("optimized-content/{}", hash),
+            AssetType::Texture => format!("optimized-content/{}.ctex", hash),
             _ => format!("optimized-content/{}.scn", hash), // Scene, Wearable, Emote
         };
 
