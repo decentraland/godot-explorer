@@ -93,6 +93,10 @@ var deep_link_url: String = ""
 var player_camera_node: DclCamera3D
 var session_id: String
 
+var mutable_avatar: DclAvatarWireFormat
+var mutable_profile: DclUserProfile
+var current_profile: DclUserProfile
+
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
@@ -240,6 +244,12 @@ func _ready():
 
 	# Clear cache if needed (startup flag or version changed) - await completion
 	await _async_clear_cache_if_needed()
+
+	mutable_profile = DclUserProfile.new()
+	current_profile = DclUserProfile.new()
+	mutable_avatar = mutable_profile.get_avatar()
+
+	Global.player_identity.profile_changed.connect(_on_profile_changed)
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -622,9 +632,56 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	return await PromiseUtils.async_awaiter(response_promise)
 
 
-# Save profile (ADR-290: snapshots are no longer uploaded)
-func async_save_profile_metadata(profile: DclUserProfile):
+## Save profile (ADR-290: snapshots are no longer uploaded)
+func async_save_profile_metadata(profile: DclUserProfile) -> void:
+	print("SAVE PROFILE METADATA")
 	await ProfileService.async_deploy_profile(profile)
+
+
+## ADR-290: Snapshots are no longer uploaded to the server.
+## Profile images are served on-demand by the profile-images service.
+func async_save_profile() -> void:
+	print("SAVE PROFILE FULL")
+	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
+
+	# Generate local snapshots for immediate UI display (not uploaded)
+	await Global.snapshot.async_generate_for_avatar(mutable_avatar, mutable_profile)
+
+	mutable_profile.set_avatar(mutable_avatar)
+
+	# Update blocked and muted lists from social_blacklist
+	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
+	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
+
+	# Deploy profile to server (ADR-290: no snapshots in deployment)
+	await ProfileService.async_deploy_profile(mutable_profile)
+
+
+## Check both profile changes AND avatar changes
+## Avatar is a clone, so changes to mutable_avatar don't affect mutable_profile directly
+func has_changes():
+	var original_avatar = current_profile.get_avatar()
+	if not original_avatar.equal(mutable_avatar):
+		return true
+	return not current_profile.equal(mutable_profile)
+
+
+func _on_profile_changed(new_profile: DclUserProfile):
+	mutable_profile = new_profile.duplicated()
+	current_profile = new_profile.duplicated()
+	mutable_avatar = mutable_profile.get_avatar()
+
+	# Update social blacklist from the profile
+	Global.social_blacklist.init_from_profile(new_profile)
+
+
+#TODO move to ProfileHelper?
+func get_mutable_avatar() -> DclAvatarWireFormat:
+	return mutable_avatar
+
+
+func get_mutable_profile() -> DclUserProfile:
+	return mutable_profile
 
 
 func shorten_address(address: String) -> String:

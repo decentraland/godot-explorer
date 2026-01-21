@@ -12,6 +12,7 @@ signal preview_hot_reload(scene_type: String, scene_id: String)
 #signals from advanced settings
 
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
+var is_open: bool = false
 var buttons_quantity: int = 0
 var pressed_index: int = 0
 
@@ -84,8 +85,8 @@ func _ready():
 		open.call_deferred()
 
 
-func _on_button_close_pressed():
-	_async_request_hide_menu()
+#func _on_button_close_pressed():
+#	_async_request_hide_menu()
 
 
 func open():
@@ -94,9 +95,13 @@ func open():
 
 # gdlint:ignore = async-function-name
 func close():
-	# Wait for profile deploy if backpack has changes before closing
-	if selected_node == control_backpack:
-		await _async_deploy_if_has_changes()
+	if not is_open:
+		print("MENU ALREADY CLOSED")
+		return
+	is_open = false
+	print("MENU CLOSED")
+	if Global.has_changes():
+		Global.async_save_profile()
 	var tween_m = create_tween()
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
 	var tween_h = create_tween()
@@ -158,6 +163,7 @@ func _open():
 		show()
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_callback(func(): is_open = true)
 
 
 func _on_control_settings_toggle_fps_visibility(visibility):
@@ -243,27 +249,20 @@ func _on_visibility_changed():
 		Global.on_menu_close.emit()
 
 
-func _async_deploy_if_has_changes():
-	if control_backpack.instance == null:
-		return
-	if control_backpack.instance.has_changes():
-		control_deploying_profile.show()
-		await control_backpack.instance.async_save_profile()
-		control_deploying_profile.hide()
-
-
 func _async_request_hide_menu():
-	if control_deploying_profile.visible:  # loading...
-		return
+	#if control_deploying_profile.visible:  # loading...
+	#	return
 
-	await _async_deploy_if_has_changes()
+	print("SAVE PROFILE _async_request_hide_menu")
+	await Global.async_save_profile()
 
 	hide_menu.emit()
 
 
 func _on_button_backpack_toggled(toggled_on):
+	print("SAVE PROFILE _on_button_backpack_toggled")
 	if !toggled_on:
-		_async_deploy_if_has_changes()
+		Global.async_save_profile()
 
 
 func _on_size_changed() -> void:

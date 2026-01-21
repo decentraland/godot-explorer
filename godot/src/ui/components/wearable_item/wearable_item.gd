@@ -67,6 +67,7 @@ func async_set_wearable(wearable: DclItemEntityDefinition):
 		if res is PromiseError:
 			printerr("Fetch texture error on ", wearable_thumbnail, ": ", res.get_error())
 		else:
+			print("Wearable texture fetched", dcl_content_mapping)
 			var current_size = texture_rect_preview.size
 			texture_rect_preview.texture = res.texture
 			texture_rect_preview.size = current_size
