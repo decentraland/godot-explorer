@@ -726,7 +726,7 @@ func _on_control_menu_open_profile() -> void:
 
 
 func _open_own_profile() -> void:
-	control_menu.show_own_profile()
+	control_menu.async_show_own_profile()
 	release_mouse()
 
 
