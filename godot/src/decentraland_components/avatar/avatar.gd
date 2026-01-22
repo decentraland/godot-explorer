@@ -26,6 +26,7 @@ var has_connected_web3: bool = false  # Whether the user has connected a web3 wa
 # AvatarShape-specific state (NPCs from scene SDK)
 var is_avatar_shape: bool = false
 var last_expression_trigger_timestamp: int = -1
+var last_expression_trigger_id: String = ""
 
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
@@ -210,12 +211,21 @@ func async_update_avatar(
 			"expression_trigger_timestamp", -1
 		)
 
-		# Trigger emote if timestamp changed (Lamport timestamp pattern)
-		if (
-			expression_trigger_timestamp > last_expression_trigger_timestamp
-			and not expression_trigger_id.is_empty()
-		):
+		# Determine if we should trigger the emote:
+		# 1. If timestamp is valid (>= 0) and greater than last timestamp, OR
+		# 2. If no timestamp (-1) but the expression_trigger_id changed
+		var should_trigger = false
+		if not expression_trigger_id.is_empty():
+			if expression_trigger_timestamp >= 0:
+				# Timestamp-based triggering (Lamport timestamp pattern)
+				should_trigger = expression_trigger_timestamp > last_expression_trigger_timestamp
+			else:
+				# No timestamp - trigger when id changes
+				should_trigger = expression_trigger_id != last_expression_trigger_id
+
+		if should_trigger:
 			last_expression_trigger_timestamp = expression_trigger_timestamp
+			last_expression_trigger_id = expression_trigger_id
 			# Defer emote play to after avatar is loaded if needed
 			if avatar_ready:
 				_async_play_expression_trigger(expression_trigger_id)
@@ -777,7 +787,7 @@ func _async_play_expression_trigger(emote_id: String) -> void:
 	if emote_id.is_empty():
 		return
 
-	# URN emotes (wearable emotes)
+	# URN emotes (wearable emotes and scene emotes)
 	if emote_id.begins_with("urn:"):
 		await async_play_emote(emote_id)
 	# Default emotes (wave, clap, dance, etc.) - play via emote controller

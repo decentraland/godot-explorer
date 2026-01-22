@@ -546,9 +546,20 @@ layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="TextureProgressBar" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" instance=ExtResource("11_7iulh")]
+[node name="AuthSpinner" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" instance=ExtResource("11_7iulh")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
+
+[node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 24
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="HSeparator4" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
 layout_mode = 2
@@ -556,6 +567,7 @@ theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_Cancel" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 focus_mode = 0
@@ -567,7 +579,8 @@ theme_override_font_sizes/font_size = 30
 text = "CANCEL"
 expand_icon = true
 
-[node name="TextureRect" type="TextureRect" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel"]
+[node name="ButtonCancelIcon" type="TextureRect" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

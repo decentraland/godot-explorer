@@ -92,7 +92,6 @@ func _update_border_style() -> void:
 
 func async_update_profile_picture(data: SocialItemData):
 	var nickname_color = DclAvatar.get_nickname_color(data.name)
-
 	var background_color = nickname_color
 	apply_style(background_color)
 
@@ -152,7 +151,7 @@ func _on_gui_input(event: InputEvent) -> void:
 			if avatar != null and is_instance_valid(avatar):
 				var explorer = Global.get_explorer()
 				if avatar.avatar_id == Global.player_identity.get_address_str():
-					explorer.control_menu.show_own_profile()
+					explorer.control_menu.async_show_own_profile()
 				else:
 					Global.open_profile_by_avatar.emit(avatar)
 
