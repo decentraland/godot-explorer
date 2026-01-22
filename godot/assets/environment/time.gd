@@ -36,13 +36,11 @@ func _process(delta: float) -> void:
 			last_value = normalized_time
 		return
 
-	var scene_runner = Global.scene_runner
-
 	# Check if SDK is controlling the skybox time
-	if scene_runner.sdk_skybox_time_active:
+	if Global.sdk_skybox_time_active:
 		# SDK is controlling: use the fixed time from the scene
-		target_time = float(scene_runner.sdk_skybox_fixed_time) / 86400.0
-		transition_forward = scene_runner.sdk_skybox_transition_forward
+		target_time = float(Global.sdk_skybox_fixed_time) / 86400.0
+		transition_forward = Global.sdk_skybox_transition_forward
 
 		# Smooth transition to target time
 		if not is_equal_approx(normalized_time, target_time):

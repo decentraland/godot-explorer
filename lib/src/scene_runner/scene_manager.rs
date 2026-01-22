@@ -117,16 +117,6 @@ pub struct SceneManager {
     // Loading session tracking
     current_loading_session: Option<LoadingSession>,
     next_session_id: u64,
-
-    // SDK-controlled skybox time
-    // When a scene sets the SkyboxTime component on the root entity,
-    // the explorer should use that time instead of the global time
-    #[var(get, set = set_sdk_skybox_time_active)]
-    sdk_skybox_time_active: bool,
-    #[var(get, set = set_sdk_skybox_fixed_time)]
-    sdk_skybox_fixed_time: u32, // seconds since 00:00 (0-86400)
-    #[var(get, set = set_sdk_skybox_transition_forward)]
-    sdk_skybox_transition_forward: bool, // true = forward, false = backward
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -1331,29 +1321,13 @@ impl SceneManager {
         self.current_parcel_scene_id.0
     }
 
-    /// Setter for SDK skybox time active state (called from skybox_time component)
-    #[func]
-    pub fn set_sdk_skybox_time_active(&mut self, active: bool) {
-        self.sdk_skybox_time_active = active;
-    }
-
-    /// Setter for SDK skybox fixed time (called from skybox_time component)
-    #[func]
-    pub fn set_sdk_skybox_fixed_time(&mut self, time: u32) {
-        self.sdk_skybox_fixed_time = time;
-    }
-
-    /// Setter for SDK skybox transition direction (called from skybox_time component)
-    #[func]
-    pub fn set_sdk_skybox_transition_forward(&mut self, forward: bool) {
-        self.sdk_skybox_transition_forward = forward;
-    }
-
     fn on_current_parcel_scene_changed(&mut self) {
-        // Reset input modifiers when changing scenes
-        // The new scene's InputModifier (if any) will be applied on the next update tick
+        // Reset input modifiers and skybox time when changing scenes
+        // The new scene's components (if any) will be applied on the next update tick
         if let Some(mut global) = DclGlobal::try_singleton() {
-            global.bind_mut().reset_input_modifiers();
+            let mut global_bind = global.bind_mut();
+            global_bind.reset_input_modifiers();
+            global_bind.reset_skybox_time();
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
@@ -1405,11 +1379,6 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
-
-        // Reset skybox time - the new scene's SkyboxTime (if any) will be applied on the next update tick
-        self.sdk_skybox_time_active = false;
-        self.sdk_skybox_fixed_time = 0;
-        self.sdk_skybox_transition_forward = true;
 
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
@@ -1650,9 +1619,6 @@ impl INode for SceneManager {
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
-            sdk_skybox_time_active: false,
-            sdk_skybox_fixed_time: 0,
-            sdk_skybox_transition_forward: true,
         }
     }
 

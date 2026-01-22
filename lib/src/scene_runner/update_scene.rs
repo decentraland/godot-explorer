@@ -20,6 +20,7 @@ use super::{
             update_gltf_node_modifiers, update_modifier_textures, update_modifier_video_textures,
         },
         input_modifier::update_input_modifier,
+        skybox_time::update_skybox_time,
         material::{update_material, update_video_material_textures},
         skybox_time::update_skybox_time,
         mesh_collider::update_mesh_collider,
