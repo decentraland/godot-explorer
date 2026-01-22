@@ -1,0 +1,11 @@
+.DS_Store
+/.build
+/build
+/bin
+/Packages
+xcuserdata/
+DerivedData/
+.swiftpm/
+.netrc
+Package.resolved
+*~

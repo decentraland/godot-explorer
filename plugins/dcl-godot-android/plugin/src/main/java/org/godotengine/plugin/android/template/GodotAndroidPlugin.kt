@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.AlarmManager
+import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -37,6 +38,13 @@ import org.godotengine.godot.plugin.UsedByGodot
 import java.io.File
 import java.io.FileOutputStream
 
+// Reown/WalletConnect Sign SDK imports (without Compose UI)
+import com.reown.android.Core
+import com.reown.android.CoreClient
+import com.reown.android.relay.ConnectionType
+import com.reown.sign.client.Sign
+import com.reown.sign.client.SignClient
+
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     private var webView: WebView? = null
@@ -53,6 +61,15 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private var pendingResumeRunnable: Runnable? = null
     // Notification database instance
     private var notificationDatabase: NotificationDatabase? = null
+
+    // WalletConnect/Reown state tracking
+    private var wcProjectId: String = ""
+    private var wcConnectionState: String = "disconnected" // disconnected, connecting, connected, error
+    private var wcConnectedAddress: String = ""
+    private var wcSignState: String = "idle" // idle, pending, success, error
+    private var wcSignResult: String = ""
+    private var wcErrorMessage: String = ""
+    private var wcInitialized: Boolean = false
 
     private val customPackageNames = arrayOf(
         "com.android.chrome",        // Google Chrome
@@ -1190,6 +1207,454 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         // Query notifications marked as scheduled
         val scheduled = db.queryNotifications("is_scheduled = 1", "", -1)
         return scheduled.map { it["id"].toString() }.toTypedArray()
+    }
+
+    // ==================== WalletConnect/Reown Methods ====================
+    // Using Sign SDK directly (without AppKit Compose UI) for Godot compatibility
+
+    // Additional state for Sign SDK
+    private var wcSessionTopic: String = ""
+    private var wcPairingUri: String = ""
+
+    /**
+     * Initialize WalletConnect/Reown Sign SDK with a project ID.
+     * Get your project ID from https://dashboard.reown.com/
+     *
+     * @param projectId The WalletConnect project ID
+     * @return true if initialization started successfully
+     */
+    @UsedByGodot
+    fun walletConnectInit(projectId: String): Boolean {
+        if (wcInitialized) {
+            Log.d(pluginName, "WalletConnect already initialized")
+            return true
+        }
+
+        wcProjectId = projectId
+        wcConnectionState = "disconnected"
+        wcErrorMessage = ""
+
+        val act = activity ?: run {
+            wcConnectionState = "error"
+            wcErrorMessage = "Activity is null"
+            Log.e(pluginName, "WalletConnect init failed: Activity is null")
+            return false
+        }
+
+        try {
+            val appMetaData = Core.Model.AppMetaData(
+                name = "Decentraland",
+                description = "Decentraland Explorer",
+                url = "https://decentraland.org",
+                icons = listOf("https://decentraland.org/images/decentraland.png"),
+                redirect = "decentraland://walletconnect"
+            )
+
+            CoreClient.initialize(
+                projectId = projectId,
+                connectionType = ConnectionType.AUTOMATIC,
+                application = act.application,
+                metaData = appMetaData
+            ) { error ->
+                wcConnectionState = "error"
+                wcErrorMessage = error.throwable.message ?: "Core init failed"
+                Log.e(pluginName, "WalletConnect CoreClient init error: ${wcErrorMessage}")
+            }
+
+            // Initialize SignClient for dApp functionality
+            val initParams = Sign.Params.Init(core = CoreClient)
+            SignClient.initialize(initParams) { error ->
+                wcConnectionState = "error"
+                wcErrorMessage = error.throwable.message ?: "SignClient init failed"
+                Log.e(pluginName, "WalletConnect SignClient init error: ${wcErrorMessage}")
+            }
+
+            // Set up dApp delegate for session events
+            val dappDelegate = object : SignClient.DappDelegate {
+                override fun onSessionApproved(approvedSession: Sign.Model.ApprovedSession) {
+                    wcConnectionState = "connected"
+                    wcSessionTopic = approvedSession.topic
+                    // Extract address from CAIP-10 account string (e.g., "eip155:1:0x123...")
+                    wcConnectedAddress = approvedSession.accounts.firstOrNull()?.split(":")?.lastOrNull() ?: ""
+                    Log.d(pluginName, "WalletConnect session approved: $wcConnectedAddress")
+                }
+
+                override fun onSessionRejected(rejectedSession: Sign.Model.RejectedSession) {
+                    wcConnectionState = "disconnected"
+                    wcErrorMessage = rejectedSession.reason
+                    Log.d(pluginName, "WalletConnect session rejected: ${rejectedSession.reason}")
+                }
+
+                override fun onSessionUpdate(updatedSession: Sign.Model.UpdatedSession) {
+                    Log.d(pluginName, "WalletConnect session updated")
+                }
+
+                override fun onSessionExtend(session: Sign.Model.Session) {
+                    Log.d(pluginName, "WalletConnect session extended")
+                }
+
+                override fun onSessionEvent(sessionEvent: Sign.Model.SessionEvent) {
+                    Log.d(pluginName, "WalletConnect session event: ${sessionEvent.name}")
+                }
+
+                override fun onSessionDelete(deletedSession: Sign.Model.DeletedSession) {
+                    wcConnectionState = "disconnected"
+                    wcConnectedAddress = ""
+                    wcSessionTopic = ""
+                    Log.d(pluginName, "WalletConnect session deleted")
+                }
+
+                override fun onSessionRequestResponse(response: Sign.Model.SessionRequestResponse) {
+                    when (val result = response.result) {
+                        is Sign.Model.JsonRpcResponse.JsonRpcResult -> {
+                            wcSignState = "success"
+                            wcSignResult = result.result.toString()
+                            Log.d(pluginName, "WalletConnect sign success: ${wcSignResult.take(20)}...")
+                        }
+                        is Sign.Model.JsonRpcResponse.JsonRpcError -> {
+                            wcSignState = "error"
+                            wcErrorMessage = result.message
+                            Log.e(pluginName, "WalletConnect sign error: ${wcErrorMessage}")
+                        }
+                    }
+                }
+
+                override fun onProposalExpired(proposal: Sign.Model.ExpiredProposal) {
+                    wcConnectionState = "disconnected"
+                    wcErrorMessage = "Connection proposal expired"
+                    wcPairingUri = ""
+                    Log.d(pluginName, "WalletConnect proposal expired")
+                }
+
+                override fun onRequestExpired(request: Sign.Model.ExpiredRequest) {
+                    wcSignState = "error"
+                    wcErrorMessage = "Sign request expired"
+                    Log.d(pluginName, "WalletConnect request expired")
+                }
+
+                override fun onConnectionStateChange(state: Sign.Model.ConnectionState) {
+                    Log.d(pluginName, "WalletConnect connection state changed: ${state.isAvailable}")
+                }
+
+                override fun onError(error: Sign.Model.Error) {
+                    wcErrorMessage = error.throwable.message ?: "Unknown error"
+                    Log.e(pluginName, "WalletConnect error: ${wcErrorMessage}")
+                }
+            }
+
+            SignClient.setDappDelegate(dappDelegate)
+            wcInitialized = true
+            Log.d(pluginName, "WalletConnect Sign SDK initialized with projectId: ${projectId.take(8)}...")
+            return true
+        } catch (e: Exception) {
+            wcConnectionState = "error"
+            wcErrorMessage = e.message ?: "Unknown error during initialization"
+            Log.e(pluginName, "WalletConnect init exception: ${e.message}", e)
+            return false
+        }
+    }
+
+    /**
+     * Create a new pairing and get the WalletConnect URI.
+     * This URI can be used to connect via QR code or deep link.
+     *
+     * @return The WalletConnect URI (wc:...) or empty string on error
+     */
+    @UsedByGodot
+    fun walletConnectCreatePairing(): String {
+        if (!wcInitialized) {
+            wcErrorMessage = "WalletConnect not initialized"
+            Log.e(pluginName, wcErrorMessage)
+            return ""
+        }
+
+        try {
+            wcConnectionState = "connecting"
+            wcPairingUri = ""
+
+            // Define the namespaces we need (Ethereum mainnet with personal_sign)
+            val namespaces = mapOf(
+                "eip155" to Sign.Model.Namespace.Proposal(
+                    chains = listOf("eip155:1"),  // Ethereum mainnet
+                    methods = listOf("personal_sign", "eth_signTypedData", "eth_signTypedData_v4"),
+                    events = listOf("chainChanged", "accountsChanged")
+                )
+            )
+
+            // Create pairing first
+            val pairing = CoreClient.Pairing.create { error ->
+                wcErrorMessage = error.throwable.message ?: "Pairing creation failed"
+                Log.e(pluginName, "WalletConnect pairing error: ${wcErrorMessage}")
+            }
+
+            if (pairing == null) {
+                wcConnectionState = "error"
+                wcErrorMessage = "Failed to create pairing"
+                Log.e(pluginName, wcErrorMessage)
+                return ""
+            }
+
+            val connectParams = Sign.Params.Connect(
+                namespaces = namespaces,
+                optionalNamespaces = null,
+                properties = null,
+                pairing = pairing
+            )
+
+            SignClient.connect(
+                connect = connectParams,
+                onSuccess = { uri ->
+                    wcPairingUri = uri
+                    Log.d(pluginName, "WalletConnect pairing created: ${uri.take(50)}...")
+                },
+                onError = { error ->
+                    wcConnectionState = "error"
+                    wcErrorMessage = error.throwable.message ?: "Connect failed"
+                    Log.e(pluginName, "WalletConnect connect error: ${wcErrorMessage}")
+                }
+            )
+
+            // Return the URI (may be empty if async hasn't completed yet)
+            // Client should poll walletConnectGetPairingUri()
+            return wcPairingUri
+        } catch (e: Exception) {
+            wcConnectionState = "error"
+            wcErrorMessage = e.message ?: "Failed to create pairing"
+            Log.e(pluginName, "WalletConnect createPairing error: ${wcErrorMessage}", e)
+            return ""
+        }
+    }
+
+    /**
+     * Get the current pairing URI.
+     *
+     * @return The WalletConnect URI (wc:...) or empty string if not available
+     */
+    @UsedByGodot
+    fun walletConnectGetPairingUri(): String {
+        return wcPairingUri
+    }
+
+    /**
+     * Open a wallet app with the WalletConnect URI via deep link.
+     * If walletPackage is empty, opens a chooser with all available wallet apps.
+     *
+     * @param walletPackage Optional package name (e.g., "io.metamask" or "com.trustwallet.app")
+     * @return true if deep link was opened
+     */
+    @UsedByGodot
+    fun walletConnectOpenWallet(walletPackage: String): Boolean {
+        if (wcPairingUri.isEmpty()) {
+            wcErrorMessage = "No pairing URI available. Call walletConnectCreatePairing first."
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        }
+
+        val act = activity ?: run {
+            wcErrorMessage = "Activity is null"
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        }
+
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(wcPairingUri))
+
+            if (walletPackage.isNotEmpty()) {
+                intent.setPackage(walletPackage)
+            }
+
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            act.startActivity(intent)
+            Log.d(pluginName, "WalletConnect opened wallet: $walletPackage")
+            return true
+        } catch (e: ActivityNotFoundException) {
+            wcErrorMessage = "Wallet app not found: $walletPackage"
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        } catch (e: Exception) {
+            wcErrorMessage = e.message ?: "Failed to open wallet"
+            Log.e(pluginName, "WalletConnect openWallet error: ${wcErrorMessage}", e)
+            return false
+        }
+    }
+
+    /**
+     * Disconnect the current WalletConnect session.
+     *
+     * @return true if disconnect was initiated
+     */
+    @UsedByGodot
+    fun walletConnectDisconnect(): Boolean {
+        if (!wcInitialized || wcSessionTopic.isEmpty()) {
+            wcConnectionState = "disconnected"
+            wcConnectedAddress = ""
+            wcSessionTopic = ""
+            return true
+        }
+
+        try {
+            val disconnectParams = Sign.Params.Disconnect(sessionTopic = wcSessionTopic)
+            SignClient.disconnect(disconnectParams) { error ->
+                wcErrorMessage = error.throwable.message ?: "Disconnect failed"
+                Log.e(pluginName, "WalletConnect disconnect error: ${wcErrorMessage}")
+            }
+
+            wcConnectionState = "disconnected"
+            wcConnectedAddress = ""
+            wcSessionTopic = ""
+            wcSignState = "idle"
+            wcSignResult = ""
+            wcPairingUri = ""
+            Log.d(pluginName, "WalletConnect disconnected")
+            return true
+        } catch (e: Exception) {
+            wcErrorMessage = e.message ?: "Disconnect exception"
+            Log.e(pluginName, "WalletConnect disconnect exception: ${wcErrorMessage}", e)
+            return false
+        }
+    }
+
+    /**
+     * Request a personal_sign signature from the connected wallet.
+     *
+     * @param message The message to sign (for Decentraland login, this is the ephemeral message)
+     * @return true if sign request was initiated
+     */
+    @UsedByGodot
+    fun walletConnectRequestSign(message: String): Boolean {
+        if (wcConnectionState != "connected") {
+            wcErrorMessage = "Not connected to wallet"
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        }
+
+        if (wcSessionTopic.isEmpty()) {
+            wcErrorMessage = "No active session"
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        }
+
+        if (wcConnectedAddress.isEmpty()) {
+            wcErrorMessage = "No connected address"
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        }
+
+        wcSignState = "pending"
+        wcSignResult = ""
+        wcErrorMessage = ""
+
+        try {
+            // For personal_sign, params are [message, address]
+            val params = listOf(message, wcConnectedAddress)
+            val paramsJson = org.json.JSONArray(params).toString()
+
+            val requestParams = Sign.Params.Request(
+                sessionTopic = wcSessionTopic,
+                method = "personal_sign",
+                params = paramsJson,
+                chainId = "eip155:1" // Ethereum mainnet
+            )
+
+            SignClient.request(requestParams) { error ->
+                wcSignState = "error"
+                wcErrorMessage = error.throwable.message ?: "Sign request failed"
+                Log.e(pluginName, "WalletConnect sign request error: ${wcErrorMessage}")
+            }
+
+            Log.d(pluginName, "WalletConnect sign request initiated for message: ${message.take(50)}...")
+
+            // Also try to open the wallet app to prompt user
+            val act = activity
+            if (act != null && wcPairingUri.isNotEmpty()) {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(wcPairingUri))
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    act.startActivity(intent)
+                } catch (e: Exception) {
+                    // Wallet might already be open, that's fine
+                    Log.d(pluginName, "Could not re-open wallet: ${e.message}")
+                }
+            }
+
+            return true
+        } catch (e: Exception) {
+            wcSignState = "error"
+            wcErrorMessage = e.message ?: "Sign request exception"
+            Log.e(pluginName, "WalletConnect sign request exception: ${wcErrorMessage}", e)
+            return false
+        }
+    }
+
+    /**
+     * Get the current WalletConnect connection state.
+     *
+     * @return "disconnected", "connecting", "connected", or "error"
+     */
+    @UsedByGodot
+    fun walletConnectGetConnectionState(): String {
+        return wcConnectionState
+    }
+
+    /**
+     * Get the connected wallet address.
+     *
+     * @return The wallet address (0x...) or empty string if not connected
+     */
+    @UsedByGodot
+    fun walletConnectGetAddress(): String {
+        return wcConnectedAddress
+    }
+
+    /**
+     * Get the current sign request state.
+     *
+     * @return "idle", "pending", "success", or "error"
+     */
+    @UsedByGodot
+    fun walletConnectGetSignState(): String {
+        return wcSignState
+    }
+
+    /**
+     * Get the signature result from the last successful sign request.
+     *
+     * @return The signature hex string or empty string
+     */
+    @UsedByGodot
+    fun walletConnectGetSignResult(): String {
+        return wcSignResult
+    }
+
+    /**
+     * Get the last error message from WalletConnect operations.
+     *
+     * @return The error message or empty string
+     */
+    @UsedByGodot
+    fun walletConnectGetError(): String {
+        return wcErrorMessage
+    }
+
+    /**
+     * Reset the sign state to idle. Call this after processing a sign result.
+     */
+    @UsedByGodot
+    fun walletConnectResetSignState() {
+        wcSignState = "idle"
+        wcSignResult = ""
+        wcErrorMessage = ""
+        Log.d(pluginName, "WalletConnect sign state reset")
+    }
+
+    /**
+     * Check if WalletConnect is initialized.
+     *
+     * @return true if initialized
+     */
+    @UsedByGodot
+    fun walletConnectIsInitialized(): Boolean {
+        return wcInitialized
     }
 
     companion object {
