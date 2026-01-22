@@ -267,7 +267,11 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 	if is_instance_valid(avatar_preview):
+		# Hide avatar_preview while updating to avoid showing the previous avatar
+		avatar_preview.hide()
 		await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+		# Show avatar_preview after it has been fully updated
+		avatar_preview.show()
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -452,6 +456,9 @@ func _show_avatar_preview():
 	if not is_instance_valid(avatar_preview):
 		return
 	
+	# Hide avatar_preview initially to avoid showing the default avatar
+	avatar_preview.hide()
+	
 	avatar_preview.hide_name = false
 	avatar_preview.can_move = false
 	avatar_preview.stretch = true
@@ -463,9 +470,11 @@ func _show_avatar_preview():
 	if not avatar_preview.gui_input.is_connected(self._on_avatar_preview_gui_input):
 		avatar_preview.gui_input.connect(self._on_avatar_preview_gui_input)
 	
+	# Update avatar with user profile before showing it
 	if is_instance_valid(current_profile):
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 	
+	# Only show avatar_preview after the avatar has been fully updated
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
