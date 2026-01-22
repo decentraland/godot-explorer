@@ -18,6 +18,7 @@ var wearable_data: Dictionary = {}
 var mutable_avatar: DclAvatarWireFormat
 var mutable_profile: DclUserProfile
 var current_profile: DclUserProfile
+var avatar_preview: AvatarPreview = null
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String = "body"
@@ -36,8 +37,8 @@ var is_loading_profile: bool = false
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
-@onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
+@onready var avatar_preview_container: Control = %AvatarPreview_Container
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
 @onready var container_sub_categories = %HBoxContainer_SubCategories
@@ -511,3 +512,9 @@ func _on_blacklist_deploy_timer_timeout():
 	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
 	# Deploy without incrementing version for blacklist changes (ADR-290: no snapshots)
 	ProfileService.async_deploy_profile_with_version_control(mutable_profile, false)
+
+
+func _on_visibility_changed() -> void:
+	if visible:
+		avatar_preview = Global.get_avatar_preview(avatar_preview_container)
+		

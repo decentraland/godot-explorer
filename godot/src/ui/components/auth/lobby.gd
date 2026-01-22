@@ -13,6 +13,7 @@ var ready_for_redirect_by_deep_link: bool = false
 
 var loading_first_profile: bool = false
 var current_screen_name: String = ""
+var avatar_preview: AvatarPreview = null
 
 var _skip_lobby: bool = false
 var _last_panel: Control = null
@@ -33,7 +34,6 @@ var _playing: String
 
 @onready var label_avatar_name = %Label_Name
 
-var avatar_preview: AvatarPreview = null
 @onready var avatar_preview_container: Control = %AvatarPreviewContainer
 @onready var button_next = %Button_Next
 
@@ -216,8 +216,6 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
-	# El avatar_preview se obtendrá y actualizará cuando se muestre en _show_avatar_preview()
-	# Solo actualizamos si ya existe (por ejemplo, si ya estaba visible)
 	if is_instance_valid(avatar_preview):
 		await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 
@@ -365,7 +363,6 @@ func _on_button_enter_as_guest_pressed():
 
 
 func _show_avatar_preview():
-	# Obtener el avatar_preview solo cuando se va a mostrar
 	if not is_instance_valid(avatar_preview):
 		avatar_preview = Global.get_avatar_preview(avatar_preview_container)
 	
