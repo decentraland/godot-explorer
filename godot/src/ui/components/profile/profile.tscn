@@ -1,4 +1,4 @@
-[gd_scene load_steps=50 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=49 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
@@ -8,7 +8,6 @@
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="3_oe5oo"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_4hw2j"]
 [ext_resource type="PackedScene" uid="uid://cib31p07gwaj5" path="res://src/ui/components/profile/profile_field_text.tscn" id="4_8pwo8"]
-[ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="5_yx7pe"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="7_m8kjd"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="7_yx7pe"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="8_wxsqs"]
@@ -146,7 +145,7 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 
-[node name="Control_landscape_avatar" type="Control" parent="MarginContainer/HBoxContainer"]
+[node name="Control_LandscapeAvatar" type="Control" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
@@ -156,13 +155,16 @@ mouse_filter = 2
 script = ExtResource("3_oe5oo")
 hide_on_portrait = true
 
-[node name="AvatarPreview" parent="MarginContainer/HBoxContainer/Control_landscape_avatar" instance=ExtResource("5_yx7pe")]
+[node name="AvatarPreviewContainer_Landscape" type="Control" parent="MarginContainer/HBoxContainer/Control_LandscapeAvatar"]
 unique_name_in_owner = true
 layout_mode = 1
-size_flags_horizontal = 1
-mouse_filter = 0
-stretch = true
-hide_name = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
 [node name="VSeparator" type="VSeparator" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -446,7 +448,7 @@ size_flags_vertical = 3
 mouse_filter = 2
 script = ExtResource("3_oe5oo")
 
-[node name="MarginContainer_PortraitAvatar" type="MarginContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar"]
+[node name="Control_PortraitAvatar" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -454,8 +456,16 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 100
-theme_override_constants/margin_right = 100
+mouse_filter = 2
+
+[node name="AvatarPreviewContainer_Portrait" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar/Control_PortraitAvatar"]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_right = 583.0
+offset_bottom = 500.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true

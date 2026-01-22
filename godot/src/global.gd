@@ -794,7 +794,7 @@ func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 
 func get_avatar_preview(container: Node) -> AvatarPreview:
 	var found_preview: AvatarPreview = _find_avatar_preview_in_tree(get_tree().root)
-	
+
 	if not is_instance_valid(found_preview):
 		const AVATAR_PREVIEW_SCENE = preload("res://src/ui/components/backpack/avatar_preview.tscn")
 		_avatar_preview_instance = AVATAR_PREVIEW_SCENE.instantiate()
@@ -802,21 +802,21 @@ func get_avatar_preview(container: Node) -> AvatarPreview:
 		var viewport = get_viewport()
 		if is_instance_valid(viewport):
 			viewport.add_child(found_preview)
-	
+
 	if is_instance_valid(container) and found_preview.get_parent() != container:
 		found_preview.reparent(container)
 		found_preview._apply_layout()
-	
+
 	return found_preview
 
 
 func _find_avatar_preview_in_tree(node: Node) -> AvatarPreview:
 	if node is AvatarPreview:
 		return node as AvatarPreview
-	
+
 	for child in node.get_children():
 		var result = _find_avatar_preview_in_tree(child)
 		if is_instance_valid(result):
 			return result
-	
+
 	return null

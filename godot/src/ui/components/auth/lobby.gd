@@ -202,7 +202,7 @@ func _ready():
 	add_child(auth_timeout_timer)
 
 	Global.scene_runner.set_pause(true)
-	
+
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
 
@@ -287,7 +287,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		if profile_has_name():
 			label_avatar_name.set_text(new_profile.get_name())
 			show_restore_screen()
-			_show_avatar_preview()
+			_async_show_avatar_preview()
 			Global.metrics.update_identity(
 				Global.player_identity.get_address_str(), Global.player_identity.is_guest
 			)
@@ -305,7 +305,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			await async_close_sign_in()
 		else:
 			# New user signed in but has no profile name - go to naming screen
-			_show_avatar_preview()
+			_async_show_avatar_preview()
 			show_avatar_naming_screen()
 	else:
 		ready_for_redirect_by_deep_link = true
@@ -450,30 +450,30 @@ func _on_button_enter_as_guest_pressed():
 	await async_close_sign_in()
 
 
-func _show_avatar_preview():
+func _async_show_avatar_preview():
 	avatar_preview = Global.get_avatar_preview(avatar_preview_container)
-	
+
 	if not is_instance_valid(avatar_preview):
 		return
-	
+
 	# Hide avatar_preview initially to avoid showing the default avatar
 	avatar_preview.hide()
-	
+
 	avatar_preview.hide_name = false
 	avatar_preview.can_move = false
 	avatar_preview.stretch = true
 	avatar_preview.show_platform = false
 	avatar_preview.focus_mode = Control.FOCUS_NONE
-	
+
 	avatar_preview._apply_properties()
-	
+
 	if not avatar_preview.gui_input.is_connected(self._on_avatar_preview_gui_input):
 		avatar_preview.gui_input.connect(self._on_avatar_preview_gui_input)
-	
+
 	# Update avatar with user profile before showing it
 	if is_instance_valid(current_profile):
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
-	
+
 	# Only show avatar_preview after the avatar has been fully updated
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.async_play_emote("wave")
@@ -502,10 +502,10 @@ func _on_deep_link_received():
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 	button_next.disabled = dcl_line_edit.error
-	
+
 	if not is_instance_valid(avatar_preview):
 		return
-		
+
 	if dcl_line_edit.error:
 		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
 			avatar_preview.avatar.emote_controller.async_play_emote("shrug")

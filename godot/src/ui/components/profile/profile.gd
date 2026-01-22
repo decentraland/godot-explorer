@@ -33,17 +33,19 @@ var original_real_name: String = ""
 var original_hobbies: String = ""
 var original_about_me: String = ""
 var player_profile = Global.player_identity.get_profile_or_null()
+var avatar_preview: AvatarPreview = null
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
 
-@onready var control_landscape_avatar: Control = %Control_landscape_avatar
-@onready var margin_container_portrait_avatar: MarginContainer = %MarginContainer_PortraitAvatar
+@onready var control_landscape_avatar: Control = %Control_LandscapeAvatar
+@onready var control_portrait_avatar: Control = %Control_PortraitAvatar
+@onready var avatar_preview_container_landscape: Control = %AvatarPreviewContainer_Landscape
+@onready var avatar_preview_container_portrait: Control = %AvatarPreviewContainer_Portrait
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
 @onready var label_editing_links: Label = %Label_EditingLinks
 @onready var scroll_container: ScrollContainer = %ScrollContainer
-@onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var button_edit_about: Button = %Button_EditAbout
 @onready var button_edit_links: Button = %Button_EditLinks
 @onready var h_flow_container_equipped_wearables: HFlowContainer = %HFlowContainer_EquippedWearables
@@ -98,7 +100,7 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 
 func _ready() -> void:
 	get_window().size_changed.connect(self._relocate_avatar_preview)
-	_relocate_avatar_preview()
+	_setup_avatar_preview()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
@@ -342,7 +344,8 @@ func _set_avatar_loading() -> int:
 	button_edit_about.hide()
 	button_edit_links.hide()
 
-	avatar_preview.hide()
+	if is_instance_valid(avatar_preview):
+		avatar_preview.hide()
 	avatar_loading_counter += 1
 	return avatar_loading_counter
 
@@ -350,12 +353,16 @@ func _set_avatar_loading() -> int:
 func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
-	avatar_preview.show()
+	if is_instance_valid(avatar_preview):
+		avatar_preview.show()
 	panel_container_getting_data.hide()
 	profile_header.show()
 	v_box_container_content.show()
 	_on_stop_emote()
-	if not avatar_preview.avatar.emote_controller.is_playing():
+	if (
+		is_instance_valid(avatar_preview)
+		and not avatar_preview.avatar.emote_controller.is_playing()
+	):
 		avatar_preview.avatar.emote_controller.async_play_emote("wave")
 	_update_elements_visibility()
 	# Only update buttons for block/mute, not friendship buttons yet
@@ -364,25 +371,26 @@ func _unset_avatar_loading(current: int):
 		_update_buttons()
 	else:
 		# Update only block/mute buttons, not friendship buttons
-		var current_avatar = avatar_preview.avatar
-		is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-		if is_blocked_user:
-			button_block_user.icon = null
-			button_block_user.text = "UNBLOCK"
-			button_block_user.custom_minimum_size.x = 86
-			button_mute_user.hide()
-		else:
-			button_block_user.icon = BLOCK
-			button_block_user.custom_minimum_size.x = 38
-			button_block_user.text = "BLOCK"
-			button_mute_user.show()
+		if is_instance_valid(avatar_preview):
+			var current_avatar = avatar_preview.avatar
+			is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+			if is_blocked_user:
+				button_block_user.icon = null
+				button_block_user.text = "UNBLOCK"
+				button_block_user.custom_minimum_size.x = 86
+				button_mute_user.hide()
+			else:
+				button_block_user.icon = BLOCK
+				button_block_user.custom_minimum_size.x = 38
+				button_block_user.text = "BLOCK"
+				button_mute_user.show()
 
-		is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
-		button_mute_user.set_pressed_no_signal(is_muted_user)
-		if is_muted_user:
-			button_mute_user.icon = MUTE
-		else:
-			button_mute_user.icon = UNMUTE
+			is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
+			button_mute_user.set_pressed_no_signal(is_muted_user)
+			if is_muted_user:
+				button_mute_user.icon = MUTE
+			else:
+				button_mute_user.icon = UNMUTE
 	_update_friendship_buttons()
 
 
@@ -391,7 +399,17 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
 	# Reset friendship status to ensure buttons don't show with old state
 	current_friendship_status = Global.FriendshipStatus.UNKNOWN
-	await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
+
+	# Ensure avatar_preview is set up
+	if not is_instance_valid(avatar_preview):
+		_setup_avatar_preview()
+
+	# Hide avatar_preview while updating to avoid showing previous avatar
+	if is_instance_valid(avatar_preview):
+		avatar_preview.hide()
+		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
+		# Show avatar_preview after it has been fully updated
+		avatar_preview.show()
 
 	if player_profile != null:
 		is_own_passport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
@@ -429,6 +447,8 @@ func async_show_profile(profile: DclUserProfile) -> void:
 
 
 func _on_emote_pressed(urn: String) -> void:
+	if not is_instance_valid(avatar_preview):
+		return
 	avatar_preview.reset_avatar_rotation()
 	avatar_preview.avatar.emote_controller.stop_emote()
 	if not avatar_preview.avatar.emote_controller.is_playing():
@@ -436,11 +456,13 @@ func _on_emote_pressed(urn: String) -> void:
 
 
 func _on_stop_emote() -> void:
-	avatar_preview.avatar.emote_controller.stop_emote()
+	if is_instance_valid(avatar_preview):
+		avatar_preview.avatar.emote_controller.stop_emote()
 
 
 func _on_reset_avatars_rotation() -> void:
-	avatar_preview.reset_avatar_rotation()
+	if is_instance_valid(avatar_preview):
+		avatar_preview.reset_avatar_rotation()
 
 
 func _on_button_edit_about_pressed() -> void:
@@ -805,6 +827,8 @@ func _async_on_deploy_timeout() -> void:
 
 
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
+	if not is_instance_valid(avatar_preview):
+		return
 	if toggled_on:
 		Global.social_blacklist.add_muted(avatar_preview.avatar.avatar_id)
 	else:
@@ -815,6 +839,8 @@ func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 
 
 func _check_block_and_mute_status() -> void:
+	if not is_instance_valid(avatar_preview):
+		return
 	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
@@ -829,6 +855,8 @@ func _check_block_and_mute_status() -> void:
 
 func _update_buttons() -> void:
 	if is_own_passport:
+		return
+	if not is_instance_valid(avatar_preview):
 		return
 	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
@@ -857,6 +885,8 @@ func _update_buttons() -> void:
 
 
 func _on_button_block_user_pressed() -> void:
+	if not is_instance_valid(avatar_preview):
+		return
 	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	if is_blocked_user:
@@ -875,7 +905,7 @@ func _on_button_block_user_pressed() -> void:
 
 
 func _notify_other_components_of_change() -> void:
-	if avatar_preview.avatar != null:
+	if is_instance_valid(avatar_preview) and avatar_preview.avatar != null:
 		Global.get_tree().call_group(
 			"blacklist_ui_sync", "_sync_blacklist_ui", avatar_preview.avatar.avatar_id
 		)
@@ -885,6 +915,7 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 	if (
 		not is_own_passport
 		and current_profile != null
+		and is_instance_valid(avatar_preview)
 		and avatar_preview.avatar != null
 		and avatar_preview.avatar.avatar_id == changed_avatar_id
 	):
@@ -1206,6 +1237,8 @@ func _update_friendship_buttons() -> void:
 		return
 
 	# Check if user is blocked - if blocked, don't show any friendship buttons
+	if not is_instance_valid(avatar_preview):
+		return
 	var current_avatar = avatar_preview.avatar
 	var is_user_blocked = false
 	if current_avatar != null and not current_avatar.avatar_id.is_empty():
@@ -1256,13 +1289,41 @@ func _hide_friendship_buttons() -> void:
 	button_unfriend.hide()
 
 
-func _relocate_avatar_preview():
+func _setup_avatar_preview() -> void:
+	# Get the appropriate container based on current orientation
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var is_landscape: bool = window_size.x > window_size.y
-	if is_landscape:
-		avatar_preview.reparent(control_landscape_avatar)
-	else:
-		avatar_preview.reparent(margin_container_portrait_avatar)
+	var container: Control = control_landscape_avatar if is_landscape else control_portrait_avatar
+
+	# Get or create avatar_preview using Global
+	avatar_preview = Global.get_avatar_preview(container)
+
+	if not is_instance_valid(avatar_preview):
+		return
+
+	# Configure avatar_preview properties for profile
+	avatar_preview.hide_name = true
+	avatar_preview.can_move = true
+	avatar_preview.stretch = true
+	avatar_preview.show_platform = false
+	avatar_preview._apply_properties()
+
+	# Hide avatar_preview initially to avoid showing default avatar
+	avatar_preview.hide()
+
+
+func _relocate_avatar_preview():
+	if not is_instance_valid(avatar_preview):
+		return
+
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var is_landscape: bool = window_size.x > window_size.y
+	var container: Control = (
+		avatar_preview_container_landscape if is_landscape else avatar_preview_container_portrait
+	)
+
+	# Reparent avatar_preview to the correct container
+	avatar_preview = Global.get_avatar_preview(container)
 
 
 func _on_copy_nick_pressed() -> void:

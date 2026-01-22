@@ -39,7 +39,7 @@ func get_body_camera_position() -> Vector3:
 func _apply_layout() -> void:
 	if not is_inside_tree():
 		return
-	
+
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	offset_left = 0
 	offset_top = 0
@@ -55,10 +55,10 @@ func _apply_properties() -> void:
 		avatar.hide_name = hide_name
 	if is_instance_valid(platform):
 		platform.set_visible(show_platform)
-	
+
 	if is_instance_valid(camera_3d):
 		camera_3d.set_position(get_body_camera_position())
-	
+
 	if can_move:
 		if not gui_input.is_connected(self._on_gui_input):
 			gui_input.connect(self._on_gui_input)
@@ -67,6 +67,7 @@ func _apply_properties() -> void:
 			gui_input.disconnect(self._on_gui_input)
 	_apply_layout()
 
+
 func _ready():
 	if custom_environment != null:
 		world_environment.environment = custom_environment
@@ -74,7 +75,7 @@ func _ready():
 	directional_light_3d.visible = with_light
 
 	_apply_layout()
-	
+
 	_apply_properties()
 
 	camera_3d.set_rotation_degrees(DEFAULT_ROTATION)
@@ -202,7 +203,13 @@ func _notification(what: int) -> void:
 func _on_tree_exiting() -> void:
 	var parent = get_parent()
 	var viewport = get_viewport()
-	
-	if (not is_instance_valid(parent) or (is_instance_valid(parent) and parent.is_queued_for_deletion())) and is_instance_valid(viewport):
+
+	if (
+		(
+			not is_instance_valid(parent)
+			or (is_instance_valid(parent) and parent.is_queued_for_deletion())
+		)
+		and is_instance_valid(viewport)
+	):
 		if get_parent() != viewport:
 			reparent(viewport)

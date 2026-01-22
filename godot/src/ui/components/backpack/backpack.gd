@@ -62,7 +62,6 @@ func _ready():
 	if hide_navbar:
 		container_navbar.hide()
 
-	
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
 	wearable_editor.show()
 	emote_editor.hide()
@@ -177,10 +176,10 @@ func _physics_process(_delta):
 			if avatar_preview:
 				_setup_avatar_preview()
 			return
-		elif request_update_avatar:
-				_async_update_avatar()
-				request_update_avatar = false
-			
+		if request_update_avatar:
+			_async_update_avatar()
+			request_update_avatar = false
+
 		if request_show_wearables:
 			request_show_wearables = false
 			_show_wearables()
@@ -204,7 +203,7 @@ func _async_update_avatar():
 	Global.player_identity.get_mutable_profile().set_avatar(
 		Global.player_identity.get_mutable_avatar()
 	)
-	
+
 	if avatar_preview:
 		var loading_id := _set_avatar_loading()
 		await avatar_preview.avatar.async_update_avatar_from_profile(
@@ -481,28 +480,27 @@ func _on_blacklist_deploy_timer_timeout():
 	ProfileService.async_deploy_profile_with_version_control(
 		Global.player_identity.get_mutable_profile(), false
 	)
-	
+
 
 # gdlint:ignore = async-function-name
 func _setup_avatar_preview() -> void:
 	if not avatar_preview:
 		return
-		
+
 	avatar_preview.hide_name = true
 	avatar_preview.can_move = true
 	avatar_preview.show_platform = true
 	avatar_preview.focus_mode = Control.FOCUS_NONE
 	avatar_preview.stretch = true
-	
+
 	avatar_preview.show()
 	avatar_loading.hide()
 	avatar_preview_container.show()
-	
+
 	avatar_preview._apply_properties()
-	
+
 	emote_editor.avatar = avatar_preview.avatar
-	
-	
+
 	if Global.player_identity.get_mutable_profile():
 		await avatar_preview.avatar.async_update_avatar_from_profile(
 			Global.player_identity.get_mutable_profile()
