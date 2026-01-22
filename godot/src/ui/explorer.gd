@@ -224,7 +224,8 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		control_menu.control_settings.set_preview_url(cmd_realm)
+		if control_menu.control_settings.instance != null:
+			control_menu.control_settings.instance.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -631,6 +632,12 @@ func _on_ui_root_gui_input(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			set_cursor_position(event.position)
+		# On mobile in PointerUnlocked mode (VirtualCamera active), trigger ia_pointer on touch
+		if Global.is_mobile() and Global.scene_runner.raycast_use_cursor_position:
+			if event.pressed:
+				Input.action_press("ia_pointer")
+			else:
+				Input.action_release("ia_pointer")
 
 
 func _on_panel_profile_open_profile():
@@ -718,7 +725,7 @@ func _on_control_menu_open_profile() -> void:
 
 
 func _open_own_profile() -> void:
-	control_menu.show_own_profile()
+	control_menu.async_show_own_profile()
 	release_mouse()
 
 
