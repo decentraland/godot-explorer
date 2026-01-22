@@ -145,7 +145,7 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 
-[node name="Control_LandscapeAvatar" type="Control" parent="MarginContainer/HBoxContainer"]
+[node name="AvatarPreviewContainer_Landscape" type="Control" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
@@ -154,17 +154,6 @@ size_flags_vertical = 3
 mouse_filter = 2
 script = ExtResource("3_oe5oo")
 hide_on_portrait = true
-
-[node name="AvatarPreviewContainer_Landscape" type="Control" parent="MarginContainer/HBoxContainer/Control_LandscapeAvatar"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
 
 [node name="VSeparator" type="VSeparator" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -440,32 +429,14 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 30
 
-[node name="Control_Avatar" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
+[node name="AvatarPreviewContainer_Portrait" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 500)
 layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-script = ExtResource("3_oe5oo")
-
-[node name="Control_PortraitAvatar" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="AvatarPreviewContainer_Portrait" type="Control" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar/Control_PortraitAvatar"]
-unique_name_in_owner = true
-anchors_preset = 0
-offset_right = 583.0
-offset_bottom = 500.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
+script = ExtResource("3_oe5oo")
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true

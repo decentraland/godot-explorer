@@ -37,8 +37,6 @@ var avatar_preview: AvatarPreview = null
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
 
-@onready var control_landscape_avatar: Control = %Control_LandscapeAvatar
-@onready var control_portrait_avatar: Control = %Control_PortraitAvatar
 @onready var avatar_preview_container_landscape: Control = %AvatarPreviewContainer_Landscape
 @onready var avatar_preview_container_portrait: Control = %AvatarPreviewContainer_Portrait
 
@@ -86,7 +84,6 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 @onready var button_mute_user: Button = %Button_MuteUser
-@onready var control_avatar: Control = %Control_Avatar
 @onready var button_close_profile: Button = %Button_CloseProfile
 @onready var button_menu: Button = %Button_Menu
 @onready var button_cancel_request: Button = %Button_CancelRequest
@@ -103,7 +100,7 @@ func _ready() -> void:
 	_setup_avatar_preview()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
-	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
+	avatar_preview_container_portrait.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
 	button_menu.button_pressed = false
 	menu.hide()
 
@@ -1290,10 +1287,7 @@ func _hide_friendship_buttons() -> void:
 
 
 func _setup_avatar_preview() -> void:
-	# Get the appropriate container based on current orientation
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	var is_landscape: bool = window_size.x > window_size.y
-	var container: Control = control_landscape_avatar if is_landscape else control_portrait_avatar
+	var container: Control = avatar_preview_container_portrait if Global.is_orientation_portrait() else avatar_preview_container_landscape
 
 	# Get or create avatar_preview using Global
 	avatar_preview = Global.get_avatar_preview(container)
