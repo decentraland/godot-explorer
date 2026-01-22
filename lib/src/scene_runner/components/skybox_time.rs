@@ -64,8 +64,7 @@ pub fn update_skybox_time(
     match root_skybox_time.and_then(|entry| entry.value.as_ref()) {
         Some(skybox_time) => {
             let fixed_time = skybox_time.fixed_time;
-            let transition_forward =
-                skybox_time.transition_mode() != TransitionMode::TmBackward;
+            let transition_forward = skybox_time.transition_mode() != TransitionMode::TmBackward;
 
             if !global_bind.sdk_skybox_time_active {
                 tracing::debug!(
