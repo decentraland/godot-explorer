@@ -143,16 +143,14 @@ static func apply_low_processor_mode() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	Engine.max_fps = 0  # Let VSync control frame rate
 	Engine.physics_ticks_per_second = 60
-	var viewport := Global.get_window().get_viewport()
-	viewport.disable_3d = true
+	Global.get_window().get_viewport().disable_3d = true
 
 
 static func apply_full_processor_mode() -> void:
 	# For world exploration - full performance
 	OS.low_processor_usage_mode = false
 	apply_fps_limit()  # Apply user's configured FPS limit
-	var viewport := Global.get_window().get_viewport()
-	viewport.disable_3d = false
+	Global.get_window().get_viewport().disable_3d = false
 
 
 ## Apply a graphic profile by index
