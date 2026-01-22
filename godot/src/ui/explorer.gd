@@ -226,7 +226,8 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		control_menu.control_settings.set_preview_url(cmd_realm)
+		if control_menu.control_settings.instance != null:
+			control_menu.control_settings.instance.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
