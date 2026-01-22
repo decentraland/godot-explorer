@@ -21,7 +21,7 @@ var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
 
 var avatar_wearables_body_shape_cache: Dictionary = {}
-
+var avatar_preview: AvatarPreview = null
 var avatar_loading_counter: int = 0
 
 # Timer for debounced blacklist changes
@@ -32,7 +32,7 @@ var is_loading_profile: bool = false
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
-@onready var avatar_preview: AvatarPreview = %AvatarPreview
+@onready var avatar_preview_container: Control = %AvatarPreviewContainer
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
@@ -62,7 +62,7 @@ func _ready():
 	if hide_navbar:
 		container_navbar.hide()
 
-	emote_editor.avatar = avatar_preview.avatar
+	
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
 	wearable_editor.show()
 	emote_editor.hide()
@@ -171,17 +171,23 @@ func _on_set_new_emotes(emotes_urns: PackedStringArray):
 
 
 func _physics_process(_delta):
-	if request_update_avatar:
-		request_update_avatar = false
-		_async_update_avatar()
-
-	if request_show_wearables:
-		request_show_wearables = false
-		_show_wearables()
+	if visible:
+		if avatar_preview == null:
+			avatar_preview = Global.get_avatar_preview(avatar_preview_container)
+			if avatar_preview:
+				_setup_avatar_preview()
+			return
+		elif request_update_avatar:
+				_async_update_avatar()
+				request_update_avatar = false
+			
+		if request_show_wearables:
+			request_show_wearables = false
+			_show_wearables()
 
 
 func _set_avatar_loading() -> int:
-	avatar_preview.hide()
+	avatar_preview_container.hide()
 	avatar_loading.show()
 	avatar_loading_counter += 1
 	return avatar_loading_counter
@@ -191,19 +197,20 @@ func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
 	avatar_loading.hide()
-	avatar_preview.show()
+	avatar_preview_container.show()
 
 
 func _async_update_avatar():
 	Global.player_identity.get_mutable_profile().set_avatar(
 		Global.player_identity.get_mutable_avatar()
 	)
-
-	var loading_id := _set_avatar_loading()
-	await avatar_preview.avatar.async_update_avatar_from_profile(
-		Global.player_identity.get_mutable_profile()
-	)
-	_unset_avatar_loading(loading_id)
+	
+	if avatar_preview:
+		var loading_id := _set_avatar_loading()
+		await avatar_preview.avatar.async_update_avatar_from_profile(
+			Global.player_identity.get_mutable_profile()
+		)
+		_unset_avatar_loading(loading_id)
 
 
 func _load_filtered_data(filter: String):
@@ -274,7 +281,8 @@ func _on_main_category_filter_type(type: String):
 
 func _on_wearable_filter_button_filter_type(type):
 	_load_filtered_data(type)
-	avatar_preview.focus_camera_on(type)
+	if avatar_preview:
+		avatar_preview.focus_camera_on(type)
 
 	var should_hide = false
 	if type == Wearables.Categories.BODY_SHAPE:
@@ -375,11 +383,12 @@ func _on_color_picker_panel_pick_color(color: Color):
 			Global.player_identity.get_mutable_avatar().set_hair_color(color)
 
 	skin_color_picker.set_color(color)
-	avatar_preview.avatar.update_colors(
-		Global.player_identity.get_mutable_avatar().get_eyes_color(),
-		Global.player_identity.get_mutable_avatar().get_skin_color(),
-		Global.player_identity.get_mutable_avatar().get_hair_color()
-	)
+	if avatar_preview:
+		avatar_preview.avatar.update_colors(
+			Global.player_identity.get_mutable_avatar().get_eyes_color(),
+			Global.player_identity.get_mutable_avatar().get_skin_color(),
+			Global.player_identity.get_mutable_avatar().get_hair_color()
+		)
 
 
 func _on_color_picker_button_toggle_color_panel(toggled, color_target):
@@ -415,7 +424,8 @@ func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 
 
 func _on_button_wearables_pressed():
-	avatar_preview.avatar.emote_controller.stop_emote()
+	if avatar_preview:
+		avatar_preview.avatar.emote_controller.stop_emote()
 	wearable_editor.show()
 	emote_editor.hide()
 
@@ -425,7 +435,8 @@ func _on_button_emotes_pressed():
 
 
 func show_emotes() -> void:
-	avatar_preview.focus_camera_on(Wearables.Categories.BODY_SHAPE)
+	if avatar_preview:
+		avatar_preview.focus_camera_on(Wearables.Categories.BODY_SHAPE)
 	wearable_editor.hide()
 	emote_editor.show()
 
@@ -470,3 +481,29 @@ func _on_blacklist_deploy_timer_timeout():
 	ProfileService.async_deploy_profile_with_version_control(
 		Global.player_identity.get_mutable_profile(), false
 	)
+	
+
+# gdlint:ignore = async-function-name
+func _setup_avatar_preview() -> void:
+	if not avatar_preview:
+		return
+		
+	avatar_preview.hide_name = true
+	avatar_preview.can_move = true
+	avatar_preview.show_platform = true
+	avatar_preview.focus_mode = Control.FOCUS_NONE
+	avatar_preview.stretch = true
+	
+	avatar_preview.show()
+	avatar_loading.hide()
+	avatar_preview_container.show()
+	
+	avatar_preview._apply_properties()
+	
+	emote_editor.avatar = avatar_preview.avatar
+	
+	
+	if Global.player_identity.get_mutable_profile():
+		await avatar_preview.avatar.async_update_avatar_from_profile(
+			Global.player_identity.get_mutable_profile()
+		)

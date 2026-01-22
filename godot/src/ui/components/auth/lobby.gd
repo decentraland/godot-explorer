@@ -447,24 +447,22 @@ func _on_button_enter_as_guest_pressed():
 
 
 func _show_avatar_preview():
-	if not is_instance_valid(avatar_preview):
-		avatar_preview = Global.get_avatar_preview(avatar_preview_container)
+	avatar_preview = Global.get_avatar_preview(avatar_preview_container)
 	
-	# Configurar propiedades cada vez que se muestra (porque puede ser reutilizado)
+	if not is_instance_valid(avatar_preview):
+		return
+	
 	avatar_preview.hide_name = false
 	avatar_preview.can_move = false
 	avatar_preview.stretch = true
 	avatar_preview.show_platform = false
 	avatar_preview.focus_mode = Control.FOCUS_NONE
 	
-	# Aplicar las propiedades (el avatar_preview se encarga de aplicarlas internamente)
 	avatar_preview._apply_properties()
 	
-	# Conectar nuestra señal para los gestos táctiles (solo si no está ya conectada)
 	if not avatar_preview.gui_input.is_connected(self._on_avatar_preview_gui_input):
 		avatar_preview.gui_input.connect(self._on_avatar_preview_gui_input)
 	
-	# Actualizar el avatar con el perfil actual si existe
 	if is_instance_valid(current_profile):
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 	
@@ -495,7 +493,7 @@ func _on_deep_link_received():
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 	button_next.disabled = dcl_line_edit.error
-	# Solo actualizar emotes si el avatar_preview está disponible
+	
 	if not is_instance_valid(avatar_preview):
 		return
 		
