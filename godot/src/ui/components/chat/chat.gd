@@ -13,7 +13,6 @@ var is_open: bool = false
 var scrolled: bool = false
 var new_messages_count: int = 0
 
-
 @onready var panel_line_edit: PanelContainer = %PanelLineEdit
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
@@ -47,7 +46,7 @@ func _ready():
 		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b]",
 		Time.get_unix_time_from_system()
 	)
-	
+
 
 func _on_submit_message(message: String):
 	if !message.is_empty():
@@ -75,12 +74,18 @@ func _on_button_send_pressed():
 	submit_message.emit(line_edit_command.text)
 	line_edit_command.text = ""
 	_scroll_to_bottom()
+	# Cerrar el chat si la configuración lo requiere
+	if Global.get_config().submit_message_closes_chat:
+		exit_chat()
 
 
 func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
 	_scroll_to_bottom()
+	# Cerrar el chat si la configuración lo requiere
+	if Global.get_config().submit_message_closes_chat:
+		exit_chat()
 
 
 func toggle_chat_visibility(visibility: bool):
