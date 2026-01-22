@@ -427,7 +427,7 @@ func print_node_tree(node: Node, prefix = ""):
 			print_node_tree(child, prefix + node.name + "/")
 
 
-func get_explorer():
+func get_explorer() -> Explorer:
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		return explorer
