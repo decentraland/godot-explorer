@@ -43,5 +43,11 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			"com.reown:sign:1.5.2"
 		])
 
+	func _get_android_dependencies_maven_repos(platform, debug):
+		# JitPack is required for Reown/WalletConnect transitive dependencies
+		return PackedStringArray([
+			"https://jitpack.io"
+		])
+
 	func _get_name():
 		return _plugin_name
