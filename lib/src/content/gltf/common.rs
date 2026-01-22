@@ -85,7 +85,8 @@ pub(super) fn set_owner_recursive(node: &mut Gd<Node>, owner: &Gd<Node>) {
 }
 
 /// Parse GLTF/GLB file to extract dependencies (images and buffers).
-pub(super) async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
+/// Returns file paths as referenced in the GLTF (relative paths like "textures/image.png").
+pub async fn get_dependencies(file_path: &str) -> Result<Vec<String>, anyhow::Error> {
     let mut dependencies = Vec::new();
     let mut file = tokio::fs::File::open(file_path).await?;
 

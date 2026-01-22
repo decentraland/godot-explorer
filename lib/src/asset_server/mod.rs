@@ -10,9 +10,13 @@ mod handlers;
 mod job_manager;
 mod packer;
 mod processor;
+mod scene_fetcher;
 mod server;
 mod types;
 
 pub use godot_wrapper::DclAssetServer;
 pub use server::AssetServer;
-pub use types::{AssetType, BatchStatus, JobStatus, ProcessRequest};
+pub use types::{
+    AssetType, BatchStatus, JobStatus, ProcessRequest, ProcessSceneRequest,
+    SceneOptimizationMetadata,
+};

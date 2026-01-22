@@ -1,7 +1,7 @@
 //! Shared types for the asset optimization server.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tokio::time::Instant;
 
 /// Type of asset to process.
@@ -76,6 +76,10 @@ pub struct Batch {
     pub error: Option<String>,
     /// When the batch was created
     pub created_at: Instant,
+    /// Scene hash (for process-scene batches)
+    pub scene_hash: Option<String>,
+    /// Filter for which assets to pack (None = pack all)
+    pub pack_filter: Option<HashSet<String>>,
 }
 
 impl Batch {
@@ -88,6 +92,28 @@ impl Batch {
             zip_path: None,
             error: None,
             created_at: Instant::now(),
+            scene_hash: None,
+            pack_filter: None,
+        }
+    }
+
+    pub fn new_scene_batch(
+        id: String,
+        output_hash: String,
+        job_ids: Vec<String>,
+        scene_hash: String,
+        pack_filter: Option<HashSet<String>>,
+    ) -> Self {
+        Self {
+            id,
+            output_hash,
+            job_ids,
+            status: BatchStatus::Processing,
+            zip_path: None,
+            error: None,
+            created_at: Instant::now(),
+            scene_hash: Some(scene_hash),
+            pack_filter,
         }
     }
 }
@@ -120,6 +146,13 @@ pub struct ProcessRequest {
     pub assets: Vec<AssetRequest>,
 }
 
+/// Original texture dimensions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextureSize {
+    pub x: u32,
+    pub y: u32,
+}
+
 /// A processing job.
 #[derive(Debug, Clone)]
 pub struct Job {
@@ -141,6 +174,12 @@ pub struct Job {
     pub created_at: Instant,
     /// When the job was last updated
     pub updated_at: Instant,
+    /// Original texture size (for texture jobs)
+    pub original_size: Option<TextureSize>,
+    /// Optimized file size in bytes
+    pub optimized_file_size: Option<u64>,
+    /// GLTF texture dependencies (for GLTF jobs)
+    pub gltf_dependencies: Option<Vec<String>>,
 }
 
 impl Job {
@@ -156,6 +195,9 @@ impl Job {
             error: None,
             created_at: now,
             updated_at: now,
+            original_size: None,
+            optimized_file_size: None,
+            gltf_dependencies: None,
         }
     }
 }
@@ -185,6 +227,7 @@ pub struct ProcessResponse {
 #[derive(Debug, Serialize)]
 pub struct StatusResponse {
     pub job_id: String,
+    pub hash: String,
     pub asset_type: AssetType,
     pub status: JobStatus,
     pub progress: f32,
@@ -200,6 +243,7 @@ impl From<&Job> for StatusResponse {
     fn from(job: &Job) -> Self {
         Self {
             job_id: job.id.clone(),
+            hash: job.hash.clone(),
             asset_type: job.asset_type,
             status: job.status,
             progress: job.progress,
@@ -247,4 +291,52 @@ pub struct BatchSummary {
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
     pub status: String,
+}
+
+/// Request body for POST /process-scene endpoint.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ProcessSceneRequest {
+    /// Scene entity hash to process
+    pub scene_hash: String,
+    /// Base URL for content fetching (e.g., "https://peer.decentraland.org/content/")
+    pub content_base_url: String,
+    /// Output hash for the ZIP filename (defaults to scene_hash)
+    #[serde(default)]
+    pub output_hash: Option<String>,
+    /// Optional filter for which hashes to include in the ZIP.
+    /// If not provided, all processed assets are included.
+    #[serde(default)]
+    pub pack_hashes: Option<Vec<String>>,
+}
+
+/// Response for POST /process-scene endpoint.
+#[derive(Debug, Serialize)]
+pub struct ProcessSceneResponse {
+    /// Batch ID for tracking all assets
+    pub batch_id: String,
+    /// Output hash for the ZIP filename
+    pub output_hash: String,
+    /// Scene hash being processed
+    pub scene_hash: String,
+    /// Total number of assets discovered
+    pub total_assets: usize,
+    /// Number of assets that will be packed (if pack_hashes provided)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pack_assets: Option<usize>,
+    /// List of job responses (one per asset)
+    pub jobs: Vec<JobResponse>,
+}
+
+/// Metadata stored in the ZIP file describing the optimization results.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneOptimizationMetadata {
+    /// List of all optimized content hashes
+    pub optimized_content: Vec<String>,
+    /// Map of GLTF hash -> list of texture hashes it depends on
+    pub external_scene_dependencies: HashMap<String, Vec<String>>,
+    /// Map of texture hash -> original dimensions
+    pub original_sizes: HashMap<String, TextureSize>,
+    /// Map of hash -> optimized file size in bytes
+    pub hash_size_map: HashMap<String, u64>,
 }

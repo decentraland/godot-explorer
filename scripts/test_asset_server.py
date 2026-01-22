@@ -5,15 +5,19 @@ Test script for the Asset Optimization Server.
 Fetches a Decentraland scene and submits it for processing.
 
 Usage:
-    ./test_asset_server.py [pointer] [count]
+    ./test_asset_server.py [pointer]
+    ./test_asset_server.py --scene-hash <hash>
 
 Examples:
-    ./test_asset_server.py 0,0        # Process first GLB from Genesis Plaza
-    ./test_asset_server.py 0,0 all    # Process ALL GLBs from Genesis Plaza
-    ./test_asset_server.py 0,0 5      # Process first 5 GLBs
+    ./test_asset_server.py 0,0              # Process all assets from Genesis Plaza
+    ./test_asset_server.py -52,-52          # Process all assets from a specific scene
+    ./test_asset_server.py --scene-hash bafkreifdm7l...  # Process by scene hash directly
 
 Output:
-    Creates a ZIP file at {content_folder}/{entity_id}-mobile.zip
+    Creates a ZIP file at {content_folder}/{entity_id}-mobile.zip with:
+    - metadata.json (optimization metadata)
+    - glbs/{hash}.scn (processed GLTFs)
+    - content/{hash}.ctex (processed textures)
 """
 
 import argparse
@@ -64,10 +68,18 @@ def fetch_scene_entity(pointer: str) -> dict:
     return result[0]
 
 
-def submit_assets(output_hash: str, assets: list) -> dict:
-    """Submit assets to asset server for processing."""
-    url = f"{ASSET_SERVER_URL}/process"
-    return fetch_json(url, {"output_hash": output_hash, "assets": assets})
+def submit_scene(scene_hash: str, content_base_url: str, output_hash: str = None, pack_hashes: list = None) -> dict:
+    """Submit scene to asset server for processing."""
+    url = f"{ASSET_SERVER_URL}/process-scene"
+    data = {
+        "scene_hash": scene_hash,
+        "content_base_url": content_base_url,
+    }
+    if output_hash:
+        data["output_hash"] = output_hash
+    if pack_hashes:
+        data["pack_hashes"] = pack_hashes
+    return fetch_json(url, data)
 
 
 def get_batch_status(batch_id: str) -> dict:
@@ -81,17 +93,17 @@ def main():
 
     parser = argparse.ArgumentParser(description="Test the Asset Optimization Server")
     parser.add_argument("pointer", nargs="?", default="0,0", help="Scene pointer (default: 0,0)")
-    parser.add_argument("count", nargs="?", default="1", help="Number of GLBs to process (default: 1, use 'all' for all)")
+    parser.add_argument("--scene-hash", help="Process a scene by hash directly (skips pointer lookup)")
     parser.add_argument("--server", default=ASSET_SERVER_URL, help="Asset server URL")
+    parser.add_argument("--content-server", default=CONTENT_SERVER, help="Content server URL")
     args = parser.parse_args()
 
     ASSET_SERVER_URL = args.server
+    content_server = args.content_server
 
     print("=== Asset Server Test Script ===")
     print(f"Asset Server: {ASSET_SERVER_URL}")
-    print(f"Content Server: {CONTENT_SERVER}")
-    print(f"Pointer: {args.pointer}")
-    print(f"Count: {args.count}")
+    print(f"Content Server: {content_server}")
     print()
 
     # Check health
@@ -103,95 +115,78 @@ def main():
     print("✓ Asset server is healthy")
     print()
 
-    # Fetch scene entity
-    print(f"Fetching scene entity for pointer '{args.pointer}'...")
-    try:
-        entity = fetch_scene_entity(args.pointer)
-    except ValueError as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-    except (URLError, HTTPError) as e:
-        print(f"Error fetching entity: {e}")
-        sys.exit(1)
-
-    entity_id = entity["id"]
-    entity_type = entity["type"]
-    print(f"✓ Found entity")
-    print()
-    print(f"Entity ID: {entity_id}")
-    print(f"Entity Type: {entity_type}")
-    print()
-
-    # Build content mapping
-    content_mapping = {item["file"]: item["hash"] for item in entity.get("content", [])}
-
-    # Find GLB/GLTF files
-    print("Looking for GLTF/GLB files...")
-    gltf_files = [
-        item for item in entity.get("content", [])
-        if item["file"].lower().endswith((".glb", ".gltf"))
-    ]
-
-    if not gltf_files:
-        print("No GLTF/GLB files found in this scene")
-        sys.exit(1)
-
-    print(f"Found {len(gltf_files)} GLTF/GLB files")
-    print()
-
-    # Determine how many to process
-    if args.count.lower() == "all":
-        limit = len(gltf_files)
+    # Get scene hash
+    if args.scene_hash:
+        scene_hash = args.scene_hash
+        entity_id = scene_hash
+        print(f"Using provided scene hash: {scene_hash}")
     else:
-        limit = min(int(args.count), len(gltf_files))
+        # Fetch scene entity
+        print(f"Fetching scene entity for pointer '{args.pointer}'...")
+        try:
+            entity = fetch_scene_entity(args.pointer)
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+        except (URLError, HTTPError) as e:
+            print(f"Error fetching entity: {e}")
+            sys.exit(1)
 
-    print(f"=== Processing {limit} GLTF file(s) ===")
+        entity_id = entity["id"]
+        scene_hash = entity_id
+        entity_type = entity["type"]
+
+        # Count assets
+        content = entity.get("content", [])
+        gltf_count = sum(1 for item in content if item["file"].lower().endswith((".glb", ".gltf")))
+        image_count = sum(1 for item in content if item["file"].lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tga")))
+
+        print(f"✓ Found entity")
+        print()
+        print(f"Entity ID: {entity_id}")
+        print(f"Entity Type: {entity_type}")
+        print(f"Total content files: {len(content)}")
+        print(f"  - GLTFs: {gltf_count}")
+        print(f"  - Images: {image_count}")
+
     print()
 
-    # Build assets list
-    base_url = f"{CONTENT_SERVER}/contents/"
-    assets = []
-    for item in gltf_files[:limit]:
-        assets.append({
-            "url": base_url + item["hash"],
-            "type": "scene",
-            "hash": item["hash"],
-            "base_url": base_url,
-            "content_mapping": content_mapping,
-        })
-
-    # Show first few assets
-    print(f"Submitting {len(assets)} asset(s) to asset server...")
-    print()
-    if len(assets) > 3:
-        print("First 3 assets:")
-        for asset in assets[:3]:
-            print(f"  {asset['hash']}")
-        print(f"  ... and {len(assets) - 3} more")
-    else:
-        print("Assets:")
-        for asset in assets:
-            print(f"  {asset['hash']}")
+    # Submit scene for processing
+    content_base_url = f"{content_server}/contents/"
+    print(f"=== Submitting scene for processing ===")
+    print(f"Scene Hash: {scene_hash}")
+    print(f"Content Base URL: {content_base_url}")
     print()
 
-    # Submit to asset server
     try:
-        response = submit_assets(entity_id, assets)
+        response = submit_scene(scene_hash, content_base_url)
     except (URLError, HTTPError) as e:
-        print(f"Error submitting assets: {e}")
+        print(f"Error submitting scene: {e}")
+        if hasattr(e, 'read'):
+            error_body = e.read().decode()
+            print(f"Response: {error_body}")
         sys.exit(1)
 
     batch_id = response["batch_id"]
     output_hash = response["output_hash"]
-    total = response["total"]
+    total_assets = response["total_assets"]
+    pack_assets = response.get("pack_assets")
 
     print(f"Batch ID: {batch_id}")
     print(f"Output Hash: {output_hash}")
-    print(f"Submitted {total} jobs")
+    print(f"Total assets discovered: {total_assets}")
+    if pack_assets is not None:
+        print(f"Assets to pack: {pack_assets}")
+    print()
+
+    # Count jobs by type
+    jobs = response.get("jobs", [])
+    print(f"Created {len(jobs)} jobs")
     print()
 
     # Poll batch status
     print("=== Polling batch status ===")
+    start_time = time.time()
     while True:
         try:
             status = get_batch_status(batch_id)
@@ -210,9 +205,12 @@ def main():
         completed = sum(1 for j in jobs if j["status"] == "completed")
         failed = sum(1 for j in jobs if j["status"] == "failed")
 
+        elapsed = time.time() - start_time
+        elapsed_str = f"{int(elapsed // 60):02d}:{int(elapsed % 60):02d}"
+
         sys.stdout.write(
-            f"\rBatch: {batch_status:<10} Progress: {progress_pct:3d}%  "
-            f"Q: {queued}  D: {downloading}  P: {processing}  ✓: {completed}  ✗: {failed}"
+            f"\r[{elapsed_str}] Batch: {batch_status:<10} Progress: {progress_pct:3d}%  "
+            f"Q: {queued}  D: {downloading}  P: {processing}  ✓: {completed}  ✗: {failed}  "
         )
         sys.stdout.flush()
 
@@ -223,9 +221,21 @@ def main():
 
         time.sleep(1)
 
+    total_elapsed = time.time() - start_time
+
     # Show final status
     print("=== Batch Complete ===")
     final_status = get_batch_status(batch_id)
+
+    # Format total elapsed time
+    minutes = int(total_elapsed // 60)
+    seconds = int(total_elapsed % 60)
+    if minutes > 0:
+        time_str = f"{minutes}m {seconds}s"
+    else:
+        time_str = f"{seconds}s"
+    print(f"Total time: {time_str}")
+    print()
 
     if final_status["status"] == "completed":
         zip_path = final_status.get("zip_path", "N/A")
@@ -240,8 +250,14 @@ def main():
     completed = sum(1 for j in jobs if j["status"] == "completed")
     failed = sum(1 for j in jobs if j["status"] == "failed")
 
+    # Count by type
+    gltf_completed = sum(1 for j in jobs if j["status"] == "completed" and j["asset_type"] != "texture")
+    texture_completed = sum(1 for j in jobs if j["status"] == "completed" and j["asset_type"] == "texture")
+
     print()
     print(f"Jobs completed: {completed}")
+    print(f"  - GLTFs: {gltf_completed}")
+    print(f"  - Textures: {texture_completed}")
     print(f"Jobs failed: {failed}")
 
     if failed > 0:

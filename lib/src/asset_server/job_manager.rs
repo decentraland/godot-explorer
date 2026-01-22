@@ -1,12 +1,14 @@
 //! Job queue management for the asset server.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::time::Instant;
 use uuid::Uuid;
 
-use super::types::{AssetType, Batch, BatchStatus, Job, JobStatus};
+use super::types::{
+    AssetType, Batch, BatchStatus, Job, JobStatus, SceneOptimizationMetadata, TextureSize,
+};
 
 /// Maximum number of concurrent processing jobs.
 const MAX_CONCURRENT_JOBS: usize = 4;
@@ -100,6 +102,36 @@ impl JobManager {
         }
     }
 
+    /// Set the original texture size for a texture job.
+    pub async fn set_texture_original_size(&self, job_id: &str, width: u32, height: u32) {
+        let mut jobs = self.jobs.write().await;
+        if let Some(job) = jobs.get_mut(job_id) {
+            job.original_size = Some(TextureSize {
+                x: width,
+                y: height,
+            });
+            job.updated_at = Instant::now();
+        }
+    }
+
+    /// Set the optimized file size for a job.
+    pub async fn set_optimized_file_size(&self, job_id: &str, size: u64) {
+        let mut jobs = self.jobs.write().await;
+        if let Some(job) = jobs.get_mut(job_id) {
+            job.optimized_file_size = Some(size);
+            job.updated_at = Instant::now();
+        }
+    }
+
+    /// Set the GLTF dependencies (texture hashes) for a GLTF job.
+    pub async fn set_gltf_dependencies(&self, job_id: &str, dependencies: Vec<String>) {
+        let mut jobs = self.jobs.write().await;
+        if let Some(job) = jobs.get_mut(job_id) {
+            job.gltf_dependencies = Some(dependencies);
+            job.updated_at = Instant::now();
+        }
+    }
+
     /// Acquire a permit to process a job.
     /// This limits the number of concurrent jobs.
     pub async fn acquire_permit(&self) -> tokio::sync::OwnedSemaphorePermit {
@@ -112,6 +144,29 @@ impl JobManager {
     pub async fn create_batch(&self, output_hash: String, job_ids: Vec<String>) -> String {
         let batch_id = Uuid::new_v4().to_string();
         let batch = Batch::new(batch_id.clone(), output_hash, job_ids);
+
+        let mut batches = self.batches.write().await;
+        batches.insert(batch_id.clone(), batch);
+
+        batch_id
+    }
+
+    /// Create a new scene batch with optional pack filter.
+    pub async fn create_scene_batch(
+        &self,
+        output_hash: String,
+        job_ids: Vec<String>,
+        scene_hash: String,
+        pack_filter: Option<HashSet<String>>,
+    ) -> String {
+        let batch_id = Uuid::new_v4().to_string();
+        let batch = Batch::new_scene_batch(
+            batch_id.clone(),
+            output_hash,
+            job_ids,
+            scene_hash,
+            pack_filter,
+        );
 
         let mut batches = self.batches.write().await;
         batches.insert(batch_id.clone(), batch);
@@ -187,6 +242,68 @@ impl JobManager {
     pub async fn get_batch_output_hash(&self, batch_id: &str) -> Option<String> {
         let batches = self.batches.read().await;
         batches.get(batch_id).map(|b| b.output_hash.clone())
+    }
+
+    /// Get the pack filter for a batch.
+    pub async fn get_batch_pack_filter(&self, batch_id: &str) -> Option<HashSet<String>> {
+        let batches = self.batches.read().await;
+        batches.get(batch_id).and_then(|b| b.pack_filter.clone())
+    }
+
+    /// Build scene optimization metadata from completed jobs in a batch.
+    pub async fn build_scene_metadata(&self, batch_id: &str) -> SceneOptimizationMetadata {
+        let batches = self.batches.read().await;
+        let batch = match batches.get(batch_id) {
+            Some(b) => b,
+            None => {
+                return SceneOptimizationMetadata {
+                    optimized_content: Vec::new(),
+                    external_scene_dependencies: HashMap::new(),
+                    original_sizes: HashMap::new(),
+                    hash_size_map: HashMap::new(),
+                }
+            }
+        };
+
+        let jobs = self.jobs.read().await;
+        let mut optimized_content = Vec::new();
+        let mut external_scene_dependencies = HashMap::new();
+        let mut original_sizes = HashMap::new();
+        let mut hash_size_map = HashMap::new();
+
+        for job_id in &batch.job_ids {
+            if let Some(job) = jobs.get(job_id) {
+                if job.status != JobStatus::Completed {
+                    continue;
+                }
+
+                optimized_content.push(job.hash.clone());
+
+                // Add original size for textures
+                if let Some(ref size) = job.original_size {
+                    original_sizes.insert(job.hash.clone(), size.clone());
+                }
+
+                // Add optimized file size
+                if let Some(size) = job.optimized_file_size {
+                    hash_size_map.insert(job.hash.clone(), size);
+                }
+
+                // Add GLTF dependencies
+                if let Some(ref deps) = job.gltf_dependencies {
+                    if !deps.is_empty() {
+                        external_scene_dependencies.insert(job.hash.clone(), deps.clone());
+                    }
+                }
+            }
+        }
+
+        SceneOptimizationMetadata {
+            optimized_content,
+            external_scene_dependencies,
+            original_sizes,
+            hash_size_map,
+        }
     }
 
     /// Update the status of a batch.

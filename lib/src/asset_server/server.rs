@@ -15,10 +15,11 @@ use tokio::net::TcpListener;
 
 use super::handlers::{
     handle_batch_status, handle_health, handle_job_status, handle_jobs, handle_process,
+    handle_process_scene,
 };
 use super::job_manager::JobManager;
 use super::processor::{create_default_context, ProcessorContext};
-use super::types::ProcessRequest;
+use super::types::{ProcessRequest, ProcessSceneRequest};
 
 /// Asset optimization server.
 pub struct AssetServer {
@@ -48,6 +49,7 @@ impl AssetServer {
         println!("Asset Optimization Server listening on http://{}", addr);
         println!("Endpoints:");
         println!("  POST /process              - Submit assets for processing");
+        println!("  POST /process-scene        - Process all assets from a scene entity");
         println!(
             "  GET  /status/{{batch_id}}    - Get batch status (includes all jobs and ZIP path)"
         );
@@ -159,6 +161,35 @@ async fn handle_request(
             };
 
             match handle_process(request, job_manager, ctx).await {
+                Ok(response) => json_response(StatusCode::ACCEPTED, &response),
+                Err(e) => error_response(StatusCode::BAD_REQUEST, &e),
+            }
+        }
+
+        (Method::POST, "/process-scene") => {
+            // Read request body
+            let body_bytes = match req.collect().await {
+                Ok(collected) => collected.to_bytes(),
+                Err(e) => {
+                    return Ok(error_response(
+                        StatusCode::BAD_REQUEST,
+                        &format!("Failed to read body: {}", e),
+                    ));
+                }
+            };
+
+            // Parse JSON
+            let request: ProcessSceneRequest = match serde_json::from_slice(&body_bytes) {
+                Ok(req) => req,
+                Err(e) => {
+                    return Ok(error_response(
+                        StatusCode::BAD_REQUEST,
+                        &format!("Invalid JSON: {}", e),
+                    ));
+                }
+            };
+
+            match handle_process_scene(request, job_manager, ctx).await {
                 Ok(response) => json_response(StatusCode::ACCEPTED, &response),
                 Err(e) => error_response(StatusCode::BAD_REQUEST, &e),
             }
