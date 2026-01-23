@@ -108,14 +108,7 @@ func _ready():
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
 	Global.change_parcel.connect(_on_change_parcel)
 
-	# Set version label with environment suffix
-	var version_text = "v" + DclGlobal.get_version()
-	var env = DclGlobal.get_dcl_environment()
-	if env == "zone":
-		version_text += " - ZONE"
-	elif env == "today":
-		version_text += " - TODAY"
-	label_version.set_text(version_text)
+	label_version.set_text(DclGlobal.get_version_with_env())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)

@@ -460,6 +460,18 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").into()
     }
 
+    /// Get version string with environment suffix (e.g., "v1.0.0 - ZONE")
+    #[func]
+    pub fn get_version_with_env() -> GString {
+        let version = format!("v{}", env!("GODOT_EXPLORER_VERSION"));
+        let env = crate::env::get_environment();
+        match env.suffix() {
+            "zone" => GString::from(&format!("{} - ZONE", version)),
+            "today" => GString::from(&format!("{} - TODAY", version)),
+            _ => GString::from(&version),
+        }
+    }
+
     #[func]
     pub fn is_production() -> bool {
         env!("GODOT_EXPLORER_VERSION").contains("-prod")
