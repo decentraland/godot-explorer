@@ -4,7 +4,7 @@ use std::{
 };
 
 use ethers_core::types::H160;
-use godot::prelude::{GString, Gd};
+use godot::prelude::{GString, Gd, ToGodot};
 use std::cmp::Ordering;
 use tokio::sync::mpsc;
 
@@ -21,7 +21,7 @@ use crate::{
     },
     content::profile::{prepare_request_requirements, request_lambda_profile},
     dcl::components::proto_components::kernel::comms::rfc4,
-    godot_classes::dcl_social_blacklist::DclSocialBlacklist,
+    godot_classes::{dcl_global::DclGlobal, dcl_social_blacklist::DclSocialBlacklist},
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
@@ -61,6 +61,7 @@ pub enum MessageType {
     PeerJoined,                     // Peer joined a room
     PeerLeft,                       // Peer left a room
     Disconnected(DisconnectReason), // Disconnected from the server
+    PeerMetadata(String),           // Peer metadata (e.g., version info for staging/dev builds)
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +126,7 @@ struct Peer {
     profile_fetch_attempted: bool,           // Track if we already tried to fetch this profile
     profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
+    peer_version: Option<String>,            // Client version for staging/dev builds
 }
 
 struct ProfileUpdate {
@@ -595,6 +597,7 @@ impl MessageProcessor {
                     profile_fetch_attempted: false,
                     profile_fetch_failures: 0,
                     profile_fetch_banned_until: None,
+                    peer_version: None,
                 },
             );
 
@@ -782,6 +785,33 @@ impl MessageProcessor {
                 // Any room disconnect (scene or archipelago) should be reported
                 if self.disconnect_reason.is_none() {
                     self.disconnect_reason = Some((*reason, room_id));
+                }
+            }
+            MessageType::PeerMetadata(ref metadata) => {
+                // Parse metadata JSON to extract version info
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(metadata) {
+                    if let Some(version) = json.get("dcl_version").and_then(|v| v.as_str()) {
+                        tracing::debug!(
+                            "Received version metadata from {:#x}: {}",
+                            message.address,
+                            version
+                        );
+                        if let Some(peer) = self.peer_identities.get_mut(&message.address) {
+                            peer.peer_version = Some(version.to_string());
+                            // Only show version label for non-production builds
+                            if !DclGlobal::is_production() {
+                                let mut avatar_scene_ref = self.avatars.clone();
+                                let address_str = format!("{:#x}", message.address);
+                                avatar_scene_ref.call(
+                                    "set_avatar_version_by_address",
+                                    &[
+                                        GString::from(&address_str).to_variant(),
+                                        GString::from(version).to_variant(),
+                                    ],
+                                );
+                            }
+                        }
+                    }
                 }
             }
         }
