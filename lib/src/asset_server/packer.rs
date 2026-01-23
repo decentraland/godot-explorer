@@ -175,14 +175,16 @@ pub fn pack_scene_assets_to_zip(
         ));
     }
 
-    // Add metadata.json first
+    // Add {scene_id}-optimized.json metadata file
+    let metadata_filename = format!("{}-optimized.json", output_hash);
     let metadata_json = serde_json::to_string_pretty(&metadata)
         .map_err(|e| anyhow::anyhow!("Failed to serialize metadata: {}", e))?;
 
-    let err = packer.start_file(&GString::from("metadata.json"));
+    let err = packer.start_file(&GString::from(&metadata_filename));
     if err != godot::global::Error::OK {
         return Err(anyhow::anyhow!(
-            "Failed to start metadata.json entry: {:?}",
+            "Failed to start {} entry: {:?}",
+            metadata_filename,
             err
         ));
     }
@@ -190,12 +192,16 @@ pub fn pack_scene_assets_to_zip(
     let metadata_bytes = PackedByteArray::from(metadata_json.as_bytes());
     let err = packer.write_file(&metadata_bytes);
     if err != godot::global::Error::OK {
-        return Err(anyhow::anyhow!("Failed to write metadata.json: {:?}", err));
+        return Err(anyhow::anyhow!(
+            "Failed to write {}: {:?}",
+            metadata_filename,
+            err
+        ));
     }
 
     let err = packer.close_file();
     if err != godot::global::Error::OK {
-        tracing::warn!("Failed to close metadata.json entry: {:?}", err);
+        tracing::warn!("Failed to close {} entry: {:?}", metadata_filename, err);
     }
 
     // Add asset files
