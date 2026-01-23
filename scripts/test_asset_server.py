@@ -2,34 +2,37 @@
 """
 Test script for the Asset Optimization Server.
 
-Fetches a Decentraland scene and processes assets individually.
+Fetches a Decentraland scene and processes assets.
 
 Usage:
     ./test_asset_server.py [pointer]
     ./test_asset_server.py --scene-hash <hash>
-    ./test_asset_server.py --individual    # Process each asset into separate ZIP
+    ./test_asset_server.py --individual    # Create separate ZIP per GLTF+dependencies
 
 Examples:
     ./test_asset_server.py 0,0              # Process Genesis Plaza (metadata only)
-    ./test_asset_server.py 0,0 --individual # Process each asset separately
+    ./test_asset_server.py 0,0 --individual # One ZIP per GLTF with its textures
     ./test_asset_server.py --scene-hash bafkreifdm7l...  # Process by scene hash
 
 Output:
     Creates ZIP files in ./output/:
-    - {scene_hash}-mobile.zip (with metadata.json only when using --individual)
-    - {asset_hash}-mobile.zip (individual asset ZIPs when using --individual)
+    - {scene_hash}-mobile.zip (metadata + all assets, or metadata only with --individual)
+    - {gltf_hash}-mobile.zip (GLTF + texture dependencies when using --individual)
 """
 
 import argparse
 import json
+import os
 import sys
 import time
+import zipfile
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
 
 ASSET_SERVER_URL = "http://localhost:8080"
 CONTENT_SERVER = "https://peer.decentraland.org/content"
+OUTPUT_DIR = "./output"
 
 
 def fetch_json(url: str, data: dict = None, timeout: int = 30) -> dict:
@@ -79,22 +82,6 @@ def submit_scene(scene_hash: str, content_base_url: str, output_hash: str = None
         data["output_hash"] = output_hash
     if pack_hashes is not None:  # Allow empty list
         data["pack_hashes"] = pack_hashes
-    return fetch_json(url, data)
-
-
-def submit_asset(asset_hash: str, asset_url: str, asset_type: str, base_url: str, content_mapping: dict) -> dict:
-    """Submit a single asset to asset server for processing."""
-    url = f"{ASSET_SERVER_URL}/process"
-    data = {
-        "assets": [{
-            "hash": asset_hash,
-            "url": asset_url,
-            "asset_type": asset_type,
-            "base_url": base_url,
-            "content_mapping": content_mapping,
-        }],
-        "output_hash": asset_hash,
-    }
     return fetch_json(url, data)
 
 
@@ -152,7 +139,20 @@ def format_time(seconds: float) -> str:
     return f"{secs}s"
 
 
-def process_scene_metadata_only(scene_hash: str, content_base_url: str, entity: dict = None):
+def extract_metadata_from_zip(zip_path: str, scene_hash: str) -> dict:
+    """Extract metadata JSON from the scene ZIP file."""
+    metadata_filename = f"{scene_hash}-optimized.json"
+
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            with zf.open(metadata_filename) as f:
+                return json.loads(f.read().decode())
+    except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as e:
+        print(f"Error extracting metadata from {zip_path}: {e}")
+        return None
+
+
+def process_scene_metadata_only(scene_hash: str, content_base_url: str):
     """Process scene to get metadata only (no assets packed)."""
     print(f"=== Processing Scene (Metadata Only) ===")
     print(f"Scene Hash: {scene_hash}")
@@ -185,8 +185,9 @@ def process_scene_metadata_only(scene_hash: str, content_base_url: str, entity: 
     print(f"Total time: {format_time(total_elapsed)}")
     print(f"Status: {final_status['status']}")
 
+    zip_path = final_status.get('zip_path')
     if final_status["status"] == "completed":
-        print(f"Metadata ZIP: {final_status.get('zip_path', 'N/A')}")
+        print(f"Metadata ZIP: {zip_path or 'N/A'}")
 
     jobs = final_status.get("jobs", [])
     completed = sum(1 for j in jobs if j["status"] == "completed")
@@ -195,38 +196,49 @@ def process_scene_metadata_only(scene_hash: str, content_base_url: str, entity: 
     print(f"Completed: {completed}, Failed: {failed}")
     print()
 
-    return final_status, jobs
+    return final_status, zip_path
 
 
-def process_assets_individually(jobs: list, content_base_url: str, content_mapping: dict):
-    """Process each asset individually to create separate ZIP files."""
-    print(f"=== Processing Assets Individually ===")
-    print(f"Processing {len(jobs)} completed assets...")
+def process_gltf_bundles(scene_hash: str, content_base_url: str, zip_path: str):
+    """Create individual ZIP files for each GLTF with its texture dependencies."""
+    print(f"=== Creating Individual GLTF Bundles ===")
+    print()
+
+    # Extract metadata from the scene ZIP
+    if not zip_path or not os.path.exists(zip_path):
+        print(f"Error: ZIP file not found at {zip_path}")
+        return
+
+    metadata = extract_metadata_from_zip(zip_path, scene_hash)
+    if not metadata:
+        print("Error: Could not extract metadata from ZIP")
+        return
+
+    dependencies = metadata.get("external_scene_dependencies", {})
+    if not dependencies:
+        print("No GLTF dependencies found in metadata")
+        return
+
+    print(f"Found {len(dependencies)} GLTFs with external dependencies")
     print()
 
     start_time = time.time()
     successful = 0
     failed = 0
 
-    for i, job in enumerate(jobs):
-        if job["status"] != "completed":
-            continue
+    for i, (gltf_hash, texture_deps) in enumerate(dependencies.items()):
+        # Pack the GLTF + all its texture dependencies
+        pack_hashes = [gltf_hash] + texture_deps
 
-        asset_hash = job["hash"]
-        asset_type = job["asset_type"]
-        asset_url = f"{content_base_url}{asset_hash}"
-
-        # Progress indicator
-        sys.stdout.write(f"\r[{i+1}/{len(jobs)}] Processing {asset_hash[:16]}... ")
-        sys.stdout.flush()
+        print(f"[{i+1}/{len(dependencies)}] {gltf_hash[:16]}... ({len(texture_deps)} textures)")
 
         try:
-            response = submit_asset(
-                asset_hash=asset_hash,
-                asset_url=asset_url,
-                asset_type=asset_type,
-                base_url=content_base_url,
-                content_mapping=content_mapping,
+            # Submit with the GLTF hash as output_hash so ZIP is named after the GLTF
+            response = submit_scene(
+                scene_hash=scene_hash,
+                content_base_url=content_base_url,
+                output_hash=gltf_hash,
+                pack_hashes=pack_hashes,
             )
 
             batch_id = response["batch_id"]
@@ -234,42 +246,46 @@ def process_assets_individually(jobs: list, content_base_url: str, content_mappi
 
             if final_status["status"] == "completed":
                 successful += 1
+                bundle_zip = final_status.get('zip_path', 'N/A')
+                print(f"    ✓ Created: {os.path.basename(bundle_zip)}")
             else:
                 failed += 1
-                print(f"\n  Failed: {final_status.get('error', 'Unknown error')}")
+                print(f"    ✗ Failed: {final_status.get('error', 'Unknown error')}")
 
         except (URLError, HTTPError) as e:
             failed += 1
-            print(f"\n  Error: {e}")
+            print(f"    ✗ Error: {e}")
 
     total_elapsed = time.time() - start_time
     print()
-    print()
-    print(f"=== Individual Processing Complete ===")
+    print(f"=== Bundle Creation Complete ===")
     print(f"Total time: {format_time(total_elapsed)}")
     print(f"Successful: {successful}")
     print(f"Failed: {failed}")
 
 
 def main():
-    global ASSET_SERVER_URL, CONTENT_SERVER
+    global ASSET_SERVER_URL, CONTENT_SERVER, OUTPUT_DIR
 
     parser = argparse.ArgumentParser(description="Test the Asset Optimization Server")
     parser.add_argument("pointer", nargs="?", default="0,0", help="Scene pointer (default: 0,0)")
     parser.add_argument("--scene-hash", help="Process a scene by hash directly")
-    parser.add_argument("--individual", action="store_true", help="Process each asset into separate ZIP files")
+    parser.add_argument("--individual", action="store_true", help="Create separate ZIP per GLTF with dependencies")
     parser.add_argument("--server", default=ASSET_SERVER_URL, help="Asset server URL")
     parser.add_argument("--content-server", default=CONTENT_SERVER, help="Content server URL")
+    parser.add_argument("--output-dir", default=OUTPUT_DIR, help="Output directory for ZIPs")
     args = parser.parse_args()
 
     ASSET_SERVER_URL = args.server
     CONTENT_SERVER = args.content_server
+    OUTPUT_DIR = args.output_dir
     content_base_url = f"{CONTENT_SERVER}/contents/"
 
     print("=== Asset Server Test Script ===")
     print(f"Asset Server: {ASSET_SERVER_URL}")
     print(f"Content Server: {CONTENT_SERVER}")
-    print(f"Mode: {'Individual ZIPs' if args.individual else 'Scene metadata only'}")
+    print(f"Output Directory: {OUTPUT_DIR}")
+    print(f"Mode: {'Individual GLTF bundles' if args.individual else 'Scene metadata only'}")
     print()
 
     # Check health
@@ -282,9 +298,6 @@ def main():
     print()
 
     # Get scene info
-    entity = None
-    content_mapping = {}
-
     if args.scene_hash:
         scene_hash = args.scene_hash
         print(f"Using provided scene hash: {scene_hash}")
@@ -302,9 +315,6 @@ def main():
         scene_hash = entity["id"]
         content = entity.get("content", [])
 
-        # Build content mapping
-        content_mapping = {item["file"]: item["hash"] for item in content}
-
         gltf_count = sum(1 for item in content if item["file"].lower().endswith((".glb", ".gltf")))
         image_count = sum(1 for item in content if item["file"].lower().endswith((".png", ".jpg", ".jpeg", ".webp")))
 
@@ -313,16 +323,15 @@ def main():
 
     print()
 
-    # Process scene (metadata only)
-    final_status, jobs = process_scene_metadata_only(scene_hash, content_base_url, entity)
+    # Process scene (metadata only first)
+    final_status, zip_path = process_scene_metadata_only(scene_hash, content_base_url)
 
-    # Process individually if requested
+    # Create individual GLTF bundles if requested
     if args.individual:
-        completed_jobs = [j for j in jobs if j["status"] == "completed"]
-        if completed_jobs:
-            process_assets_individually(completed_jobs, content_base_url, content_mapping)
+        if final_status["status"] == "completed" and zip_path:
+            process_gltf_bundles(scene_hash, content_base_url, zip_path)
         else:
-            print("No completed jobs to process individually.")
+            print("Cannot create individual bundles: scene processing failed or no ZIP created")
 
 
 if __name__ == "__main__":
