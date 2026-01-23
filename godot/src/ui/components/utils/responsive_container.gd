@@ -65,8 +65,7 @@ func _ready():
 
 func _notification(what):
 	match what:
-		NOTIFICATION_SORT_CHILDREN, \
-		NOTIFICATION_RESIZED:
+		NOTIFICATION_SORT_CHILDREN, NOTIFICATION_RESIZED:
 			_update_layout()
 
 
@@ -79,8 +78,7 @@ func _request_update():
 func _is_portrait() -> bool:
 	if Engine.is_editor_hint():
 		return simulate_portrait
-	else:
-		return Global.is_orientation_portrait()
+	return Global.is_orientation_portrait()
 
 
 func _get_reference_size() -> Vector2:
@@ -88,27 +86,26 @@ func _get_reference_size() -> Vector2:
 		var root = get_tree().edited_scene_root
 		if root and root != self:
 			return root.size
-		else:
-			return Vector2(
-				ProjectSettings.get_setting("display/window/size/viewport_width"),
-				ProjectSettings.get_setting("display/window/size/viewport_height")
-			)
-	else:
-		return get_viewport_rect().size
+
+		return Vector2(
+			ProjectSettings.get_setting("display/window/size/viewport_width"),
+			ProjectSettings.get_setting("display/window/size/viewport_height")
+		)
+	return get_viewport_rect().size
 
 
 func _update_layout():
 	if not is_inside_tree():
 		return
-	
+
 	var ref_size = _get_reference_size()
 	var is_portrait = _is_portrait()
-	
+
 	# Select values based on orientation
 	var width_percent: float
 	var max_height_percent: float
 	var min_height_percent: float
-	
+
 	if is_portrait:
 		width_percent = portrait_width
 		max_height_percent = portrait_max_height
@@ -117,26 +114,26 @@ func _update_layout():
 		width_percent = landscape_width
 		max_height_percent = landscape_max_height
 		min_height_percent = landscape_min_height
-	
+
 	# Calculate dimensions
 	var target_width = ref_size.x * width_percent
 	var max_height = ref_size.y * max_height_percent
 	var min_height = ref_size.y * min_height_percent
-	
+
 	var content_height = get_combined_minimum_size().y
 	var final_height = clamp(content_height, min_height, max_height)
-	
+
 	size = Vector2(target_width, final_height)
-	
+
 	# Position
 	var pos = Vector2.ZERO
-	
+
 	if center_horizontal:
 		pos.x = (ref_size.x - size.x) / 2
-	
+
 	if center_vertical:
 		pos.y = (ref_size.y - size.y) / 2 + vertical_offset
 	else:
 		pos.y = vertical_offset
-	
+
 	position = pos

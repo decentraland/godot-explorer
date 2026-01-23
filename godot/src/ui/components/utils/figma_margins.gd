@@ -61,8 +61,7 @@ func _ready():
 
 func _notification(what):
 	match what:
-		NOTIFICATION_SORT_CHILDREN, \
-		NOTIFICATION_RESIZED:
+		NOTIFICATION_SORT_CHILDREN, NOTIFICATION_RESIZED:
 			_update_layout()
 
 
@@ -74,8 +73,7 @@ func _request_update():
 func _is_portrait() -> bool:
 	if Engine.is_editor_hint():
 		return simulate_portrait
-	else:
-		return Global.is_orientation_portrait()
+	return Global.is_orientation_portrait()
 
 
 func _get_reference_size() -> Vector2:
@@ -83,22 +81,20 @@ func _get_reference_size() -> Vector2:
 		var root = get_tree().edited_scene_root
 		if root and root != self:
 			return root.size
-		else:
-			return Vector2(
-				ProjectSettings.get_setting("display/window/size/viewport_width"),
-				ProjectSettings.get_setting("display/window/size/viewport_height")
-			)
-	else:
-		return get_viewport_rect().size
+		return Vector2(
+			ProjectSettings.get_setting("display/window/size/viewport_width"),
+			ProjectSettings.get_setting("display/window/size/viewport_height")
+		)
+	return get_viewport_rect().size
 
 
 func _update_layout():
 	if not is_inside_tree():
 		return
-	
+
 	var ref_size = _get_reference_size()
 	var is_portrait = _is_portrait()
-	
+
 	# Select values based on orientation
 	var margin_left: float
 	var margin_right: float
@@ -118,9 +114,8 @@ func _update_layout():
 		margin_right = right_landscape * landscape_scale
 		margin_top = top_landscape * landscape_scale
 		margin_bottom = bottom_landscape * landscape_scale
-		
+
 	add_theme_constant_override("margin_left", margin_left)
 	add_theme_constant_override("margin_right", margin_right)
 	add_theme_constant_override("margin_top", margin_top)
 	add_theme_constant_override("margin_bottom", margin_bottom)
-	

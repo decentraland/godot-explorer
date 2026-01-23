@@ -186,7 +186,7 @@ func _create_modal() -> Modal:
 func _async_load_place_name(modal: Modal, location: Vector2i) -> void:
 	if !is_instance_valid(modal):
 		modal = _create_modal()
-		
+
 	var place_url: String = "https://places.decentraland.org/api/places?limit=1"
 	place_url += "&positions=%d,%d" % [location.x, location.y]
 
