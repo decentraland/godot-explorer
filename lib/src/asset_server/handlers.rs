@@ -130,7 +130,7 @@ async fn watch_and_pack_batch(
     // Acquire Godot thread for ZIPPacker
     let _permit = ctx.godot_single_thread.acquire().await;
 
-    match pack_assets_to_zip(&output_hash, results, &ctx.content_folder) {
+    match pack_assets_to_zip(&output_hash, results, &ctx.output_folder) {
         Ok(zip_path) => {
             tracing::info!("Batch {} packed to {}", batch_id, zip_path);
             job_manager.complete_batch(&batch_id, zip_path).await;
@@ -552,7 +552,7 @@ async fn watch_and_pack_scene_batch(
         results,
         pack_filter.as_ref(),
         metadata,
-        &ctx.content_folder,
+        &ctx.output_folder,
     ) {
         Ok(zip_path) => {
             tracing::info!("Scene batch {} packed to {}", batch_id, zip_path);

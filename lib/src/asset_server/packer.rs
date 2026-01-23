@@ -14,17 +14,17 @@ use super::types::{AssetType, SceneOptimizationMetadata};
 
 /// Pack processed assets into a ZIP file.
 ///
-/// Creates a ZIP file at `{content_folder}{output_hash}-mobile.zip` containing
+/// Creates a ZIP file at `{output_folder}{output_hash}-mobile.zip` containing
 /// all processed assets. The paths inside the ZIP are structured as:
 /// - `glbs/{hash}.scn` for GLTF assets (scene/wearable/emote)
-/// - `content/{hash}.ctex` for texture files
+/// - `content/{hash}.res` for texture files
 ///
 /// After `load_resource_pack()`, files become accessible at `res://glbs/...` and `res://content/...`
 ///
 /// # Arguments
 /// * `output_hash` - The hash to use for the ZIP filename
 /// * `asset_paths` - List of (hash, optimized_path, asset_type) for each completed job
-/// * `content_folder` - The content folder path (e.g., `~/.local/share/godot/.../content/`)
+/// * `output_folder` - The output folder path for ZIP files (e.g., `./output/`)
 ///
 /// # Returns
 /// * `Ok(String)` - The path to the created ZIP file
@@ -32,9 +32,9 @@ use super::types::{AssetType, SceneOptimizationMetadata};
 pub fn pack_assets_to_zip(
     output_hash: &str,
     asset_paths: Vec<(String, String, AssetType)>,
-    content_folder: &str,
+    output_folder: &str,
 ) -> Result<String, anyhow::Error> {
-    let zip_path = format!("{}{}-mobile.zip", content_folder, output_hash);
+    let zip_path = format!("{}{}-mobile.zip", output_folder, output_hash);
 
     tracing::info!("Packing {} assets to ZIP: {}", asset_paths.len(), zip_path);
 
@@ -121,17 +121,17 @@ pub fn pack_assets_to_zip(
 
 /// Pack scene assets into a ZIP file with metadata and optional selective packing.
 ///
-/// Creates a ZIP file at `{content_folder}{output_hash}-mobile.zip` containing:
+/// Creates a ZIP file at `{output_folder}{output_hash}-mobile.zip` containing:
 /// - `metadata.json` with optimization results
 /// - `glbs/{hash}.scn` for GLTF assets
-/// - `content/{hash}.ctex` for texture assets
+/// - `content/{hash}.res` for texture assets
 ///
 /// # Arguments
 /// * `output_hash` - The hash to use for the ZIP filename
 /// * `asset_paths` - List of (hash, optimized_path, asset_type) for each completed job
 /// * `pack_filter` - Optional set of hashes to include (None = include all)
 /// * `metadata` - Scene optimization metadata to include in the ZIP
-/// * `content_folder` - The content folder path
+/// * `output_folder` - The output folder path for ZIP files (e.g., `./output/`)
 ///
 /// # Returns
 /// * `Ok(String)` - The path to the created ZIP file
@@ -141,9 +141,9 @@ pub fn pack_scene_assets_to_zip(
     asset_paths: Vec<(String, String, AssetType)>,
     pack_filter: Option<&HashSet<String>>,
     metadata: SceneOptimizationMetadata,
-    content_folder: &str,
+    output_folder: &str,
 ) -> Result<String, anyhow::Error> {
-    let zip_path = format!("{}{}-mobile.zip", content_folder, output_hash);
+    let zip_path = format!("{}{}-mobile.zip", output_folder, output_hash);
 
     // Filter assets if pack_filter is provided
     let assets_to_pack: Vec<_> = if let Some(filter) = pack_filter {

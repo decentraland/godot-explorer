@@ -29,15 +29,21 @@ use super::types::{AssetRequest, AssetType, JobStatus};
 #[derive(Clone)]
 pub struct ProcessorContext {
     pub content_folder: Arc<String>,
+    pub output_folder: Arc<String>,
     pub resource_provider: Arc<ResourceProvider>,
     pub godot_single_thread: Arc<Semaphore>,
     pub texture_quality: TextureQuality,
 }
 
 impl ProcessorContext {
-    pub fn new(content_folder: String, resource_provider: Arc<ResourceProvider>) -> Self {
+    pub fn new(
+        content_folder: String,
+        output_folder: String,
+        resource_provider: Arc<ResourceProvider>,
+    ) -> Self {
         Self {
             content_folder: Arc::new(content_folder),
+            output_folder: Arc::new(output_folder),
             resource_provider,
             godot_single_thread: Arc::new(Semaphore::new(1)),
             texture_quality: TextureQuality::Medium,
@@ -587,6 +593,26 @@ async fn extract_gltf_texture_dependencies(
 pub fn create_default_context() -> ProcessorContext {
     let content_folder = format!("{}/content/", Os::singleton().get_user_data_dir());
 
+    // Output folder for ZIP files - use env var or default to ./output/
+    let output_folder =
+        std::env::var("ASSET_SERVER_OUTPUT_DIR").unwrap_or_else(|_| "./output/".to_string());
+
+    // Ensure output folder ends with /
+    let output_folder = if output_folder.ends_with('/') {
+        output_folder
+    } else {
+        format!("{}/", output_folder)
+    };
+
+    // Create output directory if it doesn't exist
+    if let Err(e) = std::fs::create_dir_all(&output_folder) {
+        tracing::warn!(
+            "Failed to create output directory '{}': {}",
+            output_folder,
+            e
+        );
+    }
+
     let resource_provider = Arc::new(ResourceProvider::new(
         &content_folder,
         5 * 1024 * 1000 * 1000, // 5GB cache for asset server mode
@@ -595,5 +621,5 @@ pub fn create_default_context() -> ProcessorContext {
         Arc::new(crate::content::resource_download_tracking::ResourceDownloadTracking::new()),
     ));
 
-    ProcessorContext::new(content_folder, resource_provider)
+    ProcessorContext::new(content_folder, output_folder, resource_provider)
 }
