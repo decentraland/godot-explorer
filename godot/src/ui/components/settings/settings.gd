@@ -29,6 +29,7 @@ var _dirty_connected: bool = false
 @onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
+@onready var check_box_submit_message_closes_chat: CheckBox = %CheckBox_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 
@@ -89,6 +90,9 @@ func _ready():
 
 	preview_viewport_container.hide()
 	check_box_dynamic_skybox.button_pressed = Global.get_config().dynamic_skybox
+	check_box_submit_message_closes_chat.button_pressed = (
+		Global.get_config().submit_message_closes_chat
+	)
 
 	var step_value = 86400 / h_slider_skybox_time.max_value
 	h_slider_skybox_time.value = Global.get_config().skybox_time / step_value
@@ -426,6 +430,12 @@ func _on_check_box_dynamic_skybox_toggled(toggled_on: bool) -> void:
 		Global.get_config().save_to_settings_file()
 
 
+func _on_check_box_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
+	if Global.get_config().submit_message_closes_chat != toggled_on:
+		Global.get_config().submit_message_closes_chat = toggled_on
+		Global.get_config().save_to_settings_file()
+
+
 func _on_h_slider_skybox_time_value_changed(value: float) -> void:
 	var step_value = 86400 / h_slider_skybox_time.max_value
 	var time: int = value * step_value
@@ -506,7 +516,7 @@ func _on_button_report_bug_pressed() -> void:
 	var device_brand = ""
 	var device_model = ""
 	var os_version = OS.get_name()
-	var app_version = Global.get_version()
+	var app_version = DclGlobal.get_version()
 	var environment = ""
 	if DclAndroidPlugin.is_available():
 		var android_singleton = Engine.get_singleton("dcl-godot-android")
@@ -563,3 +573,30 @@ func _on_button_open_user_data_pressed() -> void:
 	else:
 		# On desktop (Windows, macOS, Linux), open the file explorer
 		OS.shell_open(user_data_path)
+
+
+func _on_button_report_content_pressed() -> void:
+	var form_id = "1FAIpQLSdD31D0GKROyxmrvM-KVStqdhyqF430crjaTtpemEiAqCHQbg"
+	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+
+	var params = []
+
+	var scene_name = ""
+	if Global.scene_runner != null:
+		var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
+		if current_scene_id >= 0:
+			scene_name = Global.scene_runner.get_scene_title(current_scene_id)
+
+	var current_position = Global.get_config().last_parcel_position
+	var scene_info = "%s (%d, %d)" % [scene_name, current_position.x, current_position.y]
+
+	var wallet_id = Global.player_identity.get_address_str()
+
+	params.append("entry.60289947=" + scene_info.uri_encode())
+	params.append("entry.927432836=" + wallet_id.uri_encode())
+
+	var url = base_url
+	if params.size() > 0:
+		url += "?" + "&".join(params)
+
+	Global.open_url(url)

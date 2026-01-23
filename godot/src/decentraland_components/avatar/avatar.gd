@@ -769,6 +769,10 @@ func _on_timer_hide_mic_timeout():
 	nickname_ui.mic_enabled = false
 
 
+func set_client_version(version: String):
+	nickname_ui.client_version = version
+
+
 func _play_emote_audio(file_hash: String):
 	emote_controller.play_emote_audio(file_hash)
 

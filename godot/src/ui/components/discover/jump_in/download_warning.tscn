@@ -1,0 +1,45 @@
+[gd_scene load_steps=5 format=3 uid="uid://cjli636t2wu4o"]
+
+[ext_resource type="Texture2D" uid="uid://bogcegqbgujx4" path="res://assets/ui/warning-color.svg" id="1_22eu1"]
+[ext_resource type="Script" uid="uid://8r70gxe3s1vx" path="res://src/ui/components/discover/jump_in/download_warning.gd" id="1_wk0wp"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="2_wk0wp"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g0uym"]
+bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+border_color = Color(0.988235, 0.988235, 0.988235, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="DownloadWarning" type="PanelContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_g0uym")
+script = ExtResource("1_wk0wp")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+texture = ExtResource("1_22eu1")
+expand_mode = 1
+
+[node name="Label_DownloadWarning" type="Label" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8784314, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_wk0wp")
+theme_override_font_sizes/font_size = 20
+text = "Downloads up to 1GB of data"
