@@ -45,8 +45,6 @@ func _on_button_cancel_pressed() -> void:
 
 
 func _on_button_save_pressed() -> void:
-	ProfileHelper.get_mutable_profile().set_name(new_nickname)
-	ProfileHelper.async_save_profile()
 	emit_signal("update_name_on_profile", new_nickname)
 	close()
 

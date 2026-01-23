@@ -671,11 +671,6 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	return await PromiseUtils.async_awaiter(response_promise)
 
 
-# Save profile (ADR-290: snapshots are no longer uploaded)
-func async_save_profile_metadata(profile: DclUserProfile):
-	await ProfileService.async_deploy_profile(profile)
-
-
 func shorten_address(address: String) -> String:
 	if address.length() <= 8:
 		return address
@@ -687,9 +682,9 @@ func shorten_address(address: String) -> String:
 func get_backpack() -> Backpack:
 	var explorer = Global.get_explorer()
 	if explorer != null and is_instance_valid(explorer.control_menu):
-		return explorer.control_menu.control_backpack
+		return explorer.control_menu.control_backpack.instance
 	var control_menu = get_node_or_null("/root/Menu")
-	return control_menu.control_backpack
+	return control_menu.control_backpack.instance
 
 
 func _process(_delta: float) -> void:

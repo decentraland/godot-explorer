@@ -1322,10 +1322,12 @@ impl SceneManager {
     }
 
     fn on_current_parcel_scene_changed(&mut self) {
-        // Reset input modifiers when changing scenes
-        // The new scene's InputModifier (if any) will be applied on the next update tick
+        // Reset input modifiers and skybox time when changing scenes
+        // The new scene's components (if any) will be applied on the next update tick
         if let Some(mut global) = DclGlobal::try_singleton() {
-            global.bind_mut().reset_input_modifiers();
+            let mut global_bind = global.bind_mut();
+            global_bind.reset_input_modifiers();
+            global_bind.reset_skybox_time();
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
@@ -1377,6 +1379,7 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
             .emit_signal("on_change_scene_id", &[scene_id]);

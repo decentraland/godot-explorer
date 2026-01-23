@@ -5,9 +5,7 @@ static func social_data_from_avatar(avatar_param: DclAvatar) -> SocialItemData:
 	var social_data := SocialItemData.new()
 	social_data.name = avatar_param.get_avatar_name()
 	social_data.address = avatar_param.avatar_id
-	social_data.profile_picture_url = (
-		avatar_param.get_avatar_data().to_godot_dictionary()["snapshots"]["face256"]
-	)
+	social_data.profile_picture_url = avatar_param.get_avatar_data().get_snapshots_face_url()
 	social_data.has_claimed_name = false
 	return social_data
 

@@ -231,6 +231,14 @@ pub struct DclGlobal {
     pub input_modifier_disable_jump: bool,
     #[var]
     pub input_modifier_disable_emote: bool,
+
+    // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
+    #[var]
+    pub sdk_skybox_time_active: bool,
+    #[var]
+    pub sdk_skybox_fixed_time: u32,
+    #[var]
+    pub sdk_skybox_transition_forward: bool,
 }
 
 #[godot_api]
@@ -377,6 +385,11 @@ impl INode for DclGlobal {
             input_modifier_disable_run: false,
             input_modifier_disable_jump: false,
             input_modifier_disable_emote: false,
+
+            // SDK skybox time starts as inactive
+            sdk_skybox_time_active: false,
+            sdk_skybox_fixed_time: 0,
+            sdk_skybox_transition_forward: true,
         }
     }
 }
@@ -519,6 +532,13 @@ impl DclGlobal {
         self.input_modifier_disable_run = false;
         self.input_modifier_disable_jump = false;
         self.input_modifier_disable_emote = false;
+    }
+
+    /// Reset SDK skybox time to inactive state
+    pub fn reset_skybox_time(&mut self) {
+        self.sdk_skybox_time_active = false;
+        self.sdk_skybox_fixed_time = 0;
+        self.sdk_skybox_transition_forward = true;
     }
 
     /// Check if walk input is disabled (either by disable_all or disable_walk)

@@ -48,7 +48,8 @@ func _on_size_changed():
 		if (
 			explorer.control_menu != null
 			and explorer.control_menu.visible
-			and explorer.control_menu.control_discover.visible
+			and explorer.control_menu.control_discover.instance != null
+			and explorer.control_menu.control_discover.instance.visible
 		):
 			# If discover is open, keep hidden
 			hide()
@@ -119,7 +120,10 @@ func set_manually_hidden(is_hidden: bool) -> void:
 		var explorer = Global.get_explorer()
 		if explorer != null:
 			# Check if discover or chat are open before restoring visibility
-			if explorer.control_menu.visible and explorer.control_menu.control_discover.visible:
+			if (
+				explorer.control_menu.visible
+				and explorer.control_menu.control_discover.instance.visible
+			):
 				# If discover is open, keep hidden
 				return
 			if explorer.chat_container.visible:
