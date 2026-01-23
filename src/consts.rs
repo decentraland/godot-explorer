@@ -10,12 +10,12 @@ pub const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
 
 pub const GODOT4_BIN_BASE_URL: &str =
-    "https://godot-engine-releases.dclexplorer.com/4.5.1.stable/editors/";
+    "https://godot-engine-releases.dclexplorer.com/branches/4.5.1-feat-add-export-option-android/editors/";
 
 pub const GODOT_CURRENT_VERSION: &str = "4.5.1";
 
 pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
-    "https://godot-engine-releases.dclexplorer.com/4.5.1.stable/compressed-templates/";
+    "https://godot-engine-releases.dclexplorer.com/branches/4.5.1-feat-add-export-option-android/compressed-templates/";
 
 pub const GODOT_PLATFORM_FILES: &[(&str, &[&str])] = &[
     ("ios", &["ios.zip"]),
