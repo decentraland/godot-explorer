@@ -143,7 +143,9 @@ func refresh_graphic_settings():
 		ConfigData.FpsLimitMode.FPS_18: 2,
 	}
 
-	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING[Global.get_config().limit_fps]
+	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING.get(
+		Global.get_config().limit_fps, 0
+	)
 	radio_selector_texture_quality.selected = Global.get_config().texture_quality
 	radio_selector_skybox.selected = Global.get_config().skybox
 	radio_selector_shadow.selected = Global.get_config().shadow_quality

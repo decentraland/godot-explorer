@@ -457,7 +457,7 @@ text = "Limit FPS"
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
-items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS", "120 FPS"])
+items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS"])
 
 [node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 unique_name_in_owner = true
