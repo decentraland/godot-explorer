@@ -1,21 +1,6 @@
 class_name Modal
 extends ColorRect
 
-## Generic UI component for displaying modals.
-## All business logic should be handled by ModalManager.
-
-const V_MARGIN_RATIO_LANDSCAPE = 0.1  # Modal max height = 80%
-const V_MARGIN_RATIO_PORTRAIT = 0.2  # Modal max height = 60%
-const H_MARGIN_RATIO_LANDSCAPE = 0.275  # Modal max width = 45%
-const H_MARGIN_RATIO_PORTRAIT = 0.14  # Modal max width = 72%
-
-const H_MARGIN_CONTENT_LANDSCAPE = 80 * 2 / 3
-const TOP_MARGIN_CONTENT_LANDSCAPE = 80 * 2 / 3
-const BOTTOM_MARGIN_CONTENT_LANDSCAPE = 70 * 2 / 3
-const H_MARGIN_CONTENT_PORTRAIT = 80 * 2 / 3
-const TOP_MARGIN_CONTENT_PORTRAIT = 100 * 2 / 3
-const BOTTOM_MARGIN_CONTENT_PORTRAIT = 90 * 2 / 3
-
 const MODAL_ALERT_ICON = preload("res://assets/ui/modal-alert-icon.svg")
 const MODAL_BLOCK_ICON = preload("res://assets/ui/modal-block-icon.svg")
 const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg")
@@ -82,47 +67,3 @@ func show_url(url_text: String) -> void:
 func hide_url() -> void:
 	h_separator_url.hide()
 	label_url.hide()
-
-
-## Resizes the modal based on window size and orientation
-func resize_modal() -> void:
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	var is_landscape: bool = window_size.x > window_size.y
-	if is_landscape:
-		var v_margin = window_size.y * V_MARGIN_RATIO_LANDSCAPE
-		var h_margin = window_size.x * H_MARGIN_RATIO_LANDSCAPE
-		margin_container_modal.add_theme_constant_override("margin_top", v_margin)
-		margin_container_modal.add_theme_constant_override("margin_bottom", v_margin)
-		margin_container_modal.add_theme_constant_override("margin_left", h_margin)
-		margin_container_modal.add_theme_constant_override("margin_right", h_margin)
-		margin_container_content.add_theme_constant_override(
-			"margin_top", TOP_MARGIN_CONTENT_LANDSCAPE
-		)
-		margin_container_content.add_theme_constant_override(
-			"margin_bottom", BOTTOM_MARGIN_CONTENT_LANDSCAPE
-		)
-		margin_container_content.add_theme_constant_override(
-			"margin_left", H_MARGIN_CONTENT_LANDSCAPE
-		)
-		margin_container_content.add_theme_constant_override(
-			"margin_right", H_MARGIN_CONTENT_LANDSCAPE
-		)
-	else:
-		var v_margin = window_size.y * V_MARGIN_RATIO_PORTRAIT
-		var h_margin = window_size.x * H_MARGIN_RATIO_PORTRAIT
-		margin_container_modal.add_theme_constant_override("margin_top", v_margin)
-		margin_container_modal.add_theme_constant_override("margin_bottom", v_margin)
-		margin_container_modal.add_theme_constant_override("margin_left", h_margin)
-		margin_container_modal.add_theme_constant_override("margin_right", h_margin)
-		margin_container_content.add_theme_constant_override(
-			"margin_top", TOP_MARGIN_CONTENT_PORTRAIT
-		)
-		margin_container_content.add_theme_constant_override(
-			"margin_bottom", BOTTOM_MARGIN_CONTENT_PORTRAIT
-		)
-		margin_container_content.add_theme_constant_override(
-			"margin_left", H_MARGIN_CONTENT_PORTRAIT
-		)
-		margin_container_content.add_theme_constant_override(
-			"margin_right", H_MARGIN_CONTENT_PORTRAIT
-		)

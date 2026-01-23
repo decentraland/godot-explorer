@@ -177,13 +177,16 @@ func _create_modal() -> Modal:
 
 		modal.hide_url()
 		modal.hide_icon()
-		modal.resize_modal()
+		# resize_modal will be called in modal._ready() after @onready nodes are initialized
 		return modal
 	push_error("ModalManager: Could not get scene tree root")
 	return null
 
 
 func _async_load_place_name(modal: Modal, location: Vector2i) -> void:
+	if !is_instance_valid(modal):
+		modal = _create_modal()
+		
 	var place_url: String = "https://places.decentraland.org/api/places?limit=1"
 	place_url += "&positions=%d,%d" % [location.x, location.y]
 
