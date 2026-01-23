@@ -13,8 +13,8 @@ use tokio::sync::Semaphore;
 use crate::content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef};
 use crate::content::content_provider::SceneGltfContext;
 use crate::content::gltf::{
-    get_dependencies, get_embedded_texture_size, load_and_save_emote_gltf,
-    load_and_save_scene_gltf, load_and_save_wearable_gltf,
+    get_dependencies, load_and_save_emote_gltf, load_and_save_scene_gltf,
+    load_and_save_wearable_gltf,
 };
 use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::content::resource_provider::ResourceProvider;
@@ -204,14 +204,6 @@ async fn process_scene_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
-    // For GLTFs with no external dependencies, try to get embedded texture size
-    let original_size = if gltf_dependencies.is_empty() {
-        get_embedded_texture_size(&gltf_file_path)
-            .await
-    } else {
-        None
-    };
-
     let scene_ctx = ctx.to_scene_context();
 
     let optimized_path = load_and_save_scene_gltf(
@@ -227,7 +219,7 @@ async fn process_scene_gltf(
 
     Ok(ProcessResult {
         optimized_path,
-        original_size,
+        original_size: None,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
     })
@@ -264,14 +256,6 @@ async fn process_wearable_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
-    // For GLTFs with no external dependencies, try to get embedded texture size
-    let original_size = if gltf_dependencies.is_empty() {
-        get_embedded_texture_size(&gltf_file_path)
-            .await
-    } else {
-        None
-    };
-
     let scene_ctx = ctx.to_scene_context();
 
     let optimized_path = load_and_save_wearable_gltf(
@@ -287,7 +271,7 @@ async fn process_wearable_gltf(
 
     Ok(ProcessResult {
         optimized_path,
-        original_size,
+        original_size: None,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
     })
@@ -324,14 +308,6 @@ async fn process_emote_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
-    // For GLTFs with no external dependencies, try to get embedded texture size
-    let original_size = if gltf_dependencies.is_empty() {
-        get_embedded_texture_size(&gltf_file_path)
-            .await
-    } else {
-        None
-    };
-
     let scene_ctx = ctx.to_scene_context();
 
     let optimized_path = load_and_save_emote_gltf(
@@ -347,7 +323,7 @@ async fn process_emote_gltf(
 
     Ok(ProcessResult {
         optimized_path,
-        original_size,
+        original_size: None,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
     })
