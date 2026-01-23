@@ -463,12 +463,17 @@ func set_time(_start_at: int, live: bool) -> void:
 	var border = _get_border()
 	var jump_to_event = _get_button_jump_to_event()
 	var reminder_button = _get_reminder_button()
+	var download_warning = _get_download_warning()
+
+	if download_warning:
+		download_warning.hide()
 
 	if time_pill and live_pill:
 		if live:
 			live_pill.text = "LIVE"
-			if jump_to_event and reminder_button:
+			if jump_to_event and reminder_button and download_warning:
 				jump_to_event.show()
+				download_warning.show()
 				reminder_button.hide()
 			if border:
 				border.self_modulate = "#FFFFFF"
