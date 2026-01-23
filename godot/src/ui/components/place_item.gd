@@ -74,6 +74,10 @@ func _get_button_jump_to_event() -> Button:
 	return _get_node_safe("Button_JumpToEvent")
 
 
+func _get_download_warning() -> Button:
+	return _get_node_safe("DownloadWarning")
+
+
 func _get_label_location() -> Label:
 	return _get_node_safe("Label_Location")
 
@@ -275,6 +279,26 @@ func set_creator(_creator: String):
 		label.text = _creator
 
 
+func set_download_warning(item_data: Dictionary) -> void:
+	var download_warning = _get_download_warning()
+	if not download_warning:
+		return
+
+	var is_world = item_data.get("world", false)
+	var max_size_mb: int
+
+	if is_world:
+		max_size_mb = 100  # Worlds have ~100MB dynamic capacity
+	else:
+		var positions = item_data.get("positions", [])
+		var parcel_count = positions.size() if positions is Array else 1
+		if parcel_count == 0:
+			parcel_count = 20  # Fallback to worst-case scenario (300mb)
+		max_size_mb = mini(parcel_count * 15, 300)  # 15MB per parcel, max 300MB
+
+	download_warning.set_warning_text("Downloads up to %dMB of data" % max_size_mb)
+
+
 func set_data(item_data):
 	_data = item_data
 
@@ -332,6 +356,8 @@ func set_data(item_data):
 
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))
+
+	set_download_warning(item_data)
 
 
 func _async_download_image(url: String):
@@ -437,12 +463,17 @@ func set_time(_start_at: int, live: bool) -> void:
 	var border = _get_border()
 	var jump_to_event = _get_button_jump_to_event()
 	var reminder_button = _get_reminder_button()
+	var download_warning = _get_download_warning()
+
+	if download_warning:
+		download_warning.hide()
 
 	if time_pill and live_pill:
 		if live:
 			live_pill.text = "LIVE"
-			if jump_to_event and reminder_button:
+			if jump_to_event and reminder_button and download_warning:
 				jump_to_event.show()
+				download_warning.show()
 				reminder_button.hide()
 			if border:
 				border.self_modulate = "#FFFFFF"
