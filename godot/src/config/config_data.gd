@@ -82,6 +82,10 @@ var skybox_time: int = 43200:
 		skybox_time = value
 		param_changed.emit(ConfigParams.SKYBOX_TIME)
 
+var submit_message_closes_chat: bool = false:
+	set(value):
+		submit_message_closes_chat = value
+
 # See FpsLimitMode enum for available options (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
 var limit_fps: int = FpsLimitMode.FPS_30:
 	set(value):
@@ -235,6 +239,7 @@ func load_from_default():
 
 	self.dynamic_skybox = true
 	self.skybox_time = 43200
+	self.submit_message_closes_chat = false
 
 	self.window_mode = 0
 
@@ -291,6 +296,9 @@ func load_from_settings_file():
 		"config", "dynamic_skybox", data_default.dynamic_skybox
 	)
 	self.skybox_time = settings_file.get_value("config", "skybox_time", data_default.skybox_time)
+	self.submit_message_closes_chat = settings_file.get_value(
+		"config", "submit_message_closes_chat", data_default.submit_message_closes_chat
+	)
 
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
@@ -377,6 +385,9 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
 	new_settings_file.set_value("config", "dynamic_skybox", self.dynamic_skybox)
 	new_settings_file.set_value("config", "skybox_time", self.skybox_time)
+	new_settings_file.set_value(
+		"config", "submit_message_closes_chat", self.submit_message_closes_chat
+	)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
