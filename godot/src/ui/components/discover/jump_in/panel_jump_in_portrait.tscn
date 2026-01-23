@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=30 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="14_nmmsr"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="15_nmmsr"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="16_j63ba"]
+[ext_resource type="PackedScene" uid="uid://cjli636t2wu4o" path="res://src/ui/components/discover/jump_in/download_warning.tscn" id="18_nmmsr"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsiqj"]
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
@@ -364,6 +365,10 @@ layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("12_whm4w")
 expand_mode = 3
+
+[node name="DownloadWarning" parent="VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("18_nmmsr")]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
