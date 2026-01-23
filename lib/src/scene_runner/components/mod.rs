@@ -17,6 +17,7 @@ pub mod nft_shape;
 pub mod pointer_events;
 pub mod raycast;
 pub mod realm_info;
+pub mod skybox_time;
 pub mod text_shape;
 pub mod transform_and_parent;
 pub mod trigger_area;
