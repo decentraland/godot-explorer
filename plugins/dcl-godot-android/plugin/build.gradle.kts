@@ -83,11 +83,13 @@ dependencies {
     api("androidx.media3:media3-ui:1.4.1")
 
     // Reown Sign SDK (WalletConnect successor) for native wallet connection
-    // Using Sign SDK directly instead of AppKit to avoid Jetpack Compose dependency
-    // Using 'api' instead of 'implementation' to make dependencies transitive for Godot
     api(platform("com.reown:android-bom:1.5.2"))
-    api("com.reown:android-core")
-    api("com.reown:sign")
+    api("com.reown:android-core") {
+        exclude(group = "org.jspecify", module = "jspecify")
+    }
+    api("com.reown:sign") {
+        exclude(group = "org.jspecify", module = "jspecify")
+    }
 }
 
 // BUILD TASKS DEFINITION

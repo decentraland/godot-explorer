@@ -30,6 +30,14 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		else:
 			return PackedStringArray([_plugin_name + "/bin/release/" + _plugin_name + "-release.aar"])
 
+	func _get_android_packaging_options(platform, debug):
+		# Resolve OSGI manifest conflicts between jspecify and bcprov-jdk18on
+		# (transitive dependencies of Reown/WalletConnect SDK)
+		# See: https://github.com/bcgit/bc-java/issues/1685
+		return PackedStringArray([
+			"pickFirst:META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+		])
+
 	func _get_android_dependencies(platform, debug):
 		return PackedStringArray([
 			"androidx.browser:browser:1.5.0",
