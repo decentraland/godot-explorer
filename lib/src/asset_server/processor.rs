@@ -23,7 +23,7 @@ use crate::godot_classes::dcl_config::TextureQuality;
 use crate::utils::infer_mime;
 
 use super::job_manager::JobManager;
-use super::types::{AssetRequest, AssetType, JobStatus, TextureSize};
+use super::types::{AssetRequest, AssetType, JobStatus};
 
 /// Context for asset processing, similar to ContentProviderContext but standalone.
 #[derive(Clone)]
@@ -208,10 +208,6 @@ async fn process_scene_gltf(
     let original_size = if gltf_dependencies.is_empty() {
         get_embedded_texture_size(&gltf_file_path)
             .await
-            .map(|(w, h)| TextureSize {
-                width: w,
-                height: h,
-            })
     } else {
         None
     };
@@ -272,10 +268,6 @@ async fn process_wearable_gltf(
     let original_size = if gltf_dependencies.is_empty() {
         get_embedded_texture_size(&gltf_file_path)
             .await
-            .map(|(w, h)| TextureSize {
-                width: w,
-                height: h,
-            })
     } else {
         None
     };
@@ -336,10 +328,6 @@ async fn process_emote_gltf(
     let original_size = if gltf_dependencies.is_empty() {
         get_embedded_texture_size(&gltf_file_path)
             .await
-            .map(|(w, h)| TextureSize {
-                width: w,
-                height: h,
-            })
     } else {
         None
     };
