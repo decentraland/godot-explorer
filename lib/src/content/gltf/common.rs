@@ -150,51 +150,73 @@ pub async fn get_embedded_texture_size(file_path: &str) -> Option<(u32, u32)> {
     let mut file = tokio::fs::File::open(file_path).await.ok()?;
 
     let magic = file.read_i32_le().await.ok()?;
-    let json: serde_json::Value = if magic == 0x46546C67 {
-        // GLB format
-        let _version = file.read_i32_le().await.ok()?;
-        let _length = file.read_i32_le().await.ok()?;
-        let chunk_length = file.read_i32_le().await.ok()?;
-        let _chunk_type = file.read_i32_le().await.ok()?;
 
-        let mut json_data = vec![0u8; chunk_length as usize];
-        file.read_exact(&mut json_data).await.ok()?;
-        serde_json::de::from_slice(json_data.as_slice()).ok()?
-    } else {
-        // GLTF format
-        let mut json_data = Vec::new();
-        file.seek(std::io::SeekFrom::Start(0)).await.ok()?;
-        file.read_to_end(&mut json_data).await.ok()?;
-        serde_json::de::from_slice(json_data.as_slice()).ok()?
-    };
+    // Only GLB format can have embedded binary images
+    if magic != 0x46546C67 {
+        return None;
+    }
+
+    // Parse GLB header
+    let _version = file.read_i32_le().await.ok()?;
+    let _total_length = file.read_i32_le().await.ok()?;
+
+    // Read JSON chunk
+    let json_chunk_length = file.read_i32_le().await.ok()?;
+    let _json_chunk_type = file.read_i32_le().await.ok()?;
+
+    let mut json_data = vec![0u8; json_chunk_length as usize];
+    file.read_exact(&mut json_data).await.ok()?;
+    let json: serde_json::Value = serde_json::de::from_slice(&json_data).ok()?;
+
+    // Check if there's a binary chunk
+    let bin_chunk_length = file.read_i32_le().await.ok()?;
+    let bin_chunk_type = file.read_i32_le().await.ok()?;
+
+    // BIN chunk type is 0x004E4942 ("BIN\0")
+    if bin_chunk_type != 0x004E4942 {
+        return None;
+    }
+
+    // Read binary chunk
+    let mut bin_data = vec![0u8; bin_chunk_length as usize];
+    file.read_exact(&mut bin_data).await.ok()?;
 
     let images = json.get("images")?.as_array()?;
+    let buffer_views = json.get("bufferViews")?.as_array()?;
 
     for image in images {
+        // Check for bufferView (binary embedded in GLB)
+        if let Some(buffer_view_idx) = image.get("bufferView").and_then(|v| v.as_u64()) {
+            let buffer_view = buffer_views.get(buffer_view_idx as usize)?;
+            let byte_offset = buffer_view
+                .get("byteOffset")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as usize;
+            let byte_length = buffer_view.get("byteLength")?.as_u64()? as usize;
+
+            // Extract image data from binary chunk
+            if byte_offset + byte_length <= bin_data.len() {
+                let image_data = &bin_data[byte_offset..byte_offset + byte_length];
+                if let Some(dims) = get_image_dimensions_from_bytes(image_data) {
+                    return Some(dims);
+                }
+            }
+        }
         // Check for data URI (base64 embedded)
-        if let Some(uri) = image.get("uri").and_then(|u| u.as_str()) {
+        else if let Some(uri) = image.get("uri").and_then(|u| u.as_str()) {
             if uri.starts_with("data:image/") {
-                // Extract base64 data and decode to get dimensions
                 if let Some(base64_start) = uri.find("base64,") {
                     let base64_data = &uri[base64_start + 7..];
                     if let Ok(decoded) = base64::Engine::decode(
                         &base64::engine::general_purpose::STANDARD,
                         base64_data,
                     ) {
-                        // Try to get image dimensions from decoded data
                         if let Some(dims) = get_image_dimensions_from_bytes(&decoded) {
                             return Some(dims);
                         }
                     }
                 }
             }
-        }
-        // Check for bufferView (binary embedded in GLB)
-        else if image.get("bufferView").is_some() {
-            // For GLB with binary embedded images, we'd need to parse the binary chunk
-            // For now, we'll try to get dimensions from the GLTF document after loading
-            // This is a simplification - the actual dimensions will be captured during processing
-            continue;
         }
     }
 
