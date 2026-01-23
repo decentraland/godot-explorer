@@ -27,6 +27,7 @@ use super::{
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         realm_info::sync_realm_info,
+        skybox_time::update_skybox_time,
         text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent,
         trigger_area::update_trigger_area,
@@ -288,6 +289,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::InputModifier => {
                 update_input_modifier(scene, crdt_state, current_parcel_scene_id);
+                false
+            }
+            SceneUpdateState::SkyboxTime => {
+                update_skybox_time(scene, crdt_state, current_parcel_scene_id);
                 false
             }
             SceneUpdateState::TriggerArea => {
