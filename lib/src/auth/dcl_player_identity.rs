@@ -257,9 +257,9 @@ impl DclPlayerIdentity {
             };
 
             match result {
-                Ok(()) => {
+                Ok(pending) => {
                     tracing::info!("Mobile auth started, waiting for deep link");
-                    this.bind_mut().pending_mobile_auth = Some(());
+                    this.bind_mut().pending_mobile_auth = Some(pending);
                 }
                 Err(err) => {
                     tracing::error!("Error starting mobile auth: {:?}", err);
