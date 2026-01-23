@@ -597,13 +597,6 @@ pub fn create_default_context() -> ProcessorContext {
     let output_folder =
         std::env::var("ASSET_SERVER_OUTPUT_DIR").unwrap_or_else(|_| "./output/".to_string());
 
-    // Ensure output folder ends with /
-    let output_folder = if output_folder.ends_with('/') {
-        output_folder
-    } else {
-        format!("{}/", output_folder)
-    };
-
     // Create output directory if it doesn't exist
     if let Err(e) = std::fs::create_dir_all(&output_folder) {
         tracing::warn!(
@@ -612,6 +605,18 @@ pub fn create_default_context() -> ProcessorContext {
             e
         );
     }
+
+    // Convert to absolute path for consistent paths in responses
+    let output_folder = std::fs::canonicalize(&output_folder)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or(output_folder);
+
+    // Ensure output folder ends with /
+    let output_folder = if output_folder.ends_with('/') {
+        output_folder
+    } else {
+        format!("{}/", output_folder)
+    };
 
     let resource_provider = Arc::new(ResourceProvider::new(
         &content_folder,
