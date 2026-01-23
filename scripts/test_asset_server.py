@@ -214,8 +214,8 @@ def create_individual_bundles(scene_hash: str, content_base_url: str, zip_path: 
         print("Error: Could not extract metadata from ZIP")
         return
 
-    dependencies = metadata.get("external_scene_dependencies", {})
-    optimized_content = set(metadata.get("optimized_content", []))
+    dependencies = metadata.get("externalSceneDependencies", {})
+    optimized_content = set(metadata.get("optimizedContent", []))
 
     # Get all GLTF hashes (keys in dependencies)
     gltf_hashes = set(dependencies.keys())
