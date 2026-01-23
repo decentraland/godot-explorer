@@ -247,7 +247,6 @@ size_flags_horizontal = 3
 
 [node name="Container_General" type="MarginContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
@@ -309,6 +308,15 @@ layout_mode = 2
 theme = SubResource("Theme_kjn2w")
 items = Array[String](["512mb", "1gb", "2gb"])
 
+[node name="HBoxContainer3" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+layout_mode = 2
+
+[node name="CheckBox_SubmitMessageClosesChat" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer3"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Submit message closes the chat"
+
 [node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 layout_mode = 2
 
@@ -348,7 +356,7 @@ stretch = true
 handle_input_locally = false
 size = Vector2i(500, 150)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
 [node name="PreviewCamera3D" type="Camera3D" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
@@ -982,6 +990,7 @@ hide_on_portrait = true
 [connection signal="visibility_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize/RadioSelector_MaxCacheSize" to="." method="_on_radio_selector_max_cache_size_select_item"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer3/CheckBox_SubmitMessageClosesChat" to="." method="_on_check_box_submit_message_closes_chat_toggled"]
 [connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/CheckBox_DynamicSkybox" to="." method="_on_check_box_dynamic_skybox_toggled"]
 [connection signal="drag_ended" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_ended"]
 [connection signal="drag_started" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_started"]

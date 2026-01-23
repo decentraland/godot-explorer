@@ -182,7 +182,9 @@ theme_override_fonts/font = ExtResource("6_mb7k1")
 theme_override_font_sizes/font_size = 18
 placeholder_text = "Write a message..."
 max_length = 155
-virtual_keyboard_enabled = false
+keep_editing_on_text_submit = true
+clear_button_enabled = true
+deselect_on_focus_loss_enabled = false
 
 [node name="Button_Send" type="Button" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit"]
 custom_minimum_size = Vector2(100, 0)
@@ -193,11 +195,9 @@ text = "SEND"
 icon = ExtResource("3_umu3q")
 icon_alignment = 2
 
-[connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
 [connection signal="scroll_ended" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_scroll_ended"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]
 [connection signal="focus_exited" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
-[connection signal="gui_input" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_gui_input"]
 [connection signal="text_submitted" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
 [connection signal="pressed" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]

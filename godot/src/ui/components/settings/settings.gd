@@ -29,6 +29,7 @@ var _dirty_connected: bool = false
 @onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
+@onready var check_box_submit_message_closes_chat: CheckBox = %CheckBox_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 
@@ -89,6 +90,9 @@ func _ready():
 
 	preview_viewport_container.hide()
 	check_box_dynamic_skybox.button_pressed = Global.get_config().dynamic_skybox
+	check_box_submit_message_closes_chat.button_pressed = (
+		Global.get_config().submit_message_closes_chat
+	)
 
 	var step_value = 86400 / h_slider_skybox_time.max_value
 	h_slider_skybox_time.value = Global.get_config().skybox_time / step_value
@@ -423,6 +427,12 @@ func _on_check_box_dynamic_skybox_toggled(toggled_on: bool) -> void:
 	label_skybox_time.visible = !toggled_on
 	if Global.get_config().dynamic_skybox != toggled_on:
 		Global.get_config().dynamic_skybox = toggled_on
+		Global.get_config().save_to_settings_file()
+
+
+func _on_check_box_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
+	if Global.get_config().submit_message_closes_chat != toggled_on:
+		Global.get_config().submit_message_closes_chat = toggled_on
 		Global.get_config().save_to_settings_file()
 
 
