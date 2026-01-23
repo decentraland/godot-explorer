@@ -125,6 +125,8 @@ pub struct SceneGltfContext {
     pub resource_provider: Arc<ResourceProvider>,
     pub godot_single_thread: Arc<Semaphore>,
     pub texture_quality: TextureQuality,
+    /// Force ETC2 compression even on non-mobile platforms (for asset server)
+    pub force_compress: bool,
 }
 
 unsafe impl Send for SceneGltfContext {}
@@ -300,6 +302,7 @@ impl ContentProvider {
             resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
+            force_compress: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -417,6 +420,7 @@ impl ContentProvider {
             resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
+            force_compress: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -531,6 +535,7 @@ impl ContentProvider {
             resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
+            force_compress: false,
         };
 
         let file_hash_clone = file_hash.clone();

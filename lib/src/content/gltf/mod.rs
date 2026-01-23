@@ -9,7 +9,7 @@ mod scene;
 mod wearable;
 
 // Re-export public API (maintains compatibility with content_provider.rs)
-pub use common::get_dependencies;
+pub use common::{get_dependencies, get_embedded_texture_size};
 pub use emote::{
     build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf, DclEmoteGltf,
 };

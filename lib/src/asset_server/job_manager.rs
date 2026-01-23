@@ -289,11 +289,9 @@ impl JobManager {
                     hash_size_map.insert(job.hash.clone(), size);
                 }
 
-                // Add GLTF dependencies
+                // Add GLTF dependencies (include GLTFs with empty deps too)
                 if let Some(ref deps) = job.gltf_dependencies {
-                    if !deps.is_empty() {
-                        external_scene_dependencies.insert(job.hash.clone(), deps.clone());
-                    }
+                    external_scene_dependencies.insert(job.hash.clone(), deps.clone());
                 }
             }
         }

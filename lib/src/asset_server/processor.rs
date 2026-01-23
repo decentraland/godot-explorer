@@ -13,8 +13,8 @@ use tokio::sync::Semaphore;
 use crate::content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef};
 use crate::content::content_provider::SceneGltfContext;
 use crate::content::gltf::{
-    get_dependencies, load_and_save_emote_gltf, load_and_save_scene_gltf,
-    load_and_save_wearable_gltf,
+    get_dependencies, get_embedded_texture_size, load_and_save_emote_gltf,
+    load_and_save_scene_gltf, load_and_save_wearable_gltf,
 };
 use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::content::resource_provider::ResourceProvider;
@@ -23,7 +23,7 @@ use crate::godot_classes::dcl_config::TextureQuality;
 use crate::utils::infer_mime;
 
 use super::job_manager::JobManager;
-use super::types::{AssetRequest, AssetType, JobStatus};
+use super::types::{AssetRequest, AssetType, JobStatus, TextureSize};
 
 /// Context for asset processing, similar to ContentProviderContext but standalone.
 #[derive(Clone)]
@@ -51,12 +51,14 @@ impl ProcessorContext {
     }
 
     /// Convert to SceneGltfContext for GLTF loading functions.
+    /// Sets force_compress=true since asset server always produces mobile-optimized output.
     pub fn to_scene_context(&self) -> SceneGltfContext {
         SceneGltfContext {
             content_folder: self.content_folder.clone(),
             resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
+            force_compress: true, // Asset server always compresses for mobile
         }
     }
 
@@ -202,6 +204,18 @@ async fn process_scene_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
+    // For GLTFs with no external dependencies, try to get embedded texture size
+    let original_size = if gltf_dependencies.is_empty() {
+        get_embedded_texture_size(&gltf_file_path)
+            .await
+            .map(|(w, h)| TextureSize {
+                width: w,
+                height: h,
+            })
+    } else {
+        None
+    };
+
     let scene_ctx = ctx.to_scene_context();
 
     let optimized_path = load_and_save_scene_gltf(
@@ -217,7 +231,7 @@ async fn process_scene_gltf(
 
     Ok(ProcessResult {
         optimized_path,
-        original_size: None,
+        original_size,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
     })
@@ -254,6 +268,18 @@ async fn process_wearable_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
+    // For GLTFs with no external dependencies, try to get embedded texture size
+    let original_size = if gltf_dependencies.is_empty() {
+        get_embedded_texture_size(&gltf_file_path)
+            .await
+            .map(|(w, h)| TextureSize {
+                width: w,
+                height: h,
+            })
+    } else {
+        None
+    };
+
     let scene_ctx = ctx.to_scene_context();
 
     let optimized_path = load_and_save_wearable_gltf(
@@ -269,7 +295,7 @@ async fn process_wearable_gltf(
 
     Ok(ProcessResult {
         optimized_path,
-        original_size: None,
+        original_size,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
     })
@@ -306,6 +332,18 @@ async fn process_emote_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
+    // For GLTFs with no external dependencies, try to get embedded texture size
+    let original_size = if gltf_dependencies.is_empty() {
+        get_embedded_texture_size(&gltf_file_path)
+            .await
+            .map(|(w, h)| TextureSize {
+                width: w,
+                height: h,
+            })
+    } else {
+        None
+    };
+
     let scene_ctx = ctx.to_scene_context();
 
     let optimized_path = load_and_save_emote_gltf(
@@ -321,7 +359,7 @@ async fn process_emote_gltf(
 
     Ok(ProcessResult {
         optimized_path,
-        original_size: None,
+        original_size,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
     })

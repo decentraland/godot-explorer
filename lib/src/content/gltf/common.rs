@@ -29,15 +29,23 @@ use crate::godot_classes::dcl_resource_tracker::{
 };
 
 /// Post-import texture processing for all GLTF types.
-/// Resizes images according to max_size limits.
-pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
+/// Resizes and optionally compresses images according to max_size limits.
+///
+/// # Arguments
+/// * `node_to_inspect` - The root node to process
+/// * `max_size` - Maximum texture dimension
+/// * `force_compress` - If true, always compress with ETC2 (for asset server)
+pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compress: bool) {
+    let should_compress =
+        force_compress || std::env::consts::OS == "ios" || std::env::consts::OS == "android";
+
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             if let Some(mesh) = mesh_instance_3d.get_mesh() {
                 for surface_index in 0..mesh.get_surface_count() {
                     if let Some(material) = mesh.surface_get_material(surface_index) {
                         if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
-                            // Resize images
+                            // Resize/compress images
                             for ord in 0..TextureParam::MAX.ord() {
                                 let texture_param = TextureParam::from_ord(ord);
                                 if let Some(texture) = base_material.get_texture(texture_param) {
@@ -45,9 +53,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                                         texture.try_cast::<ImageTexture>()
                                     {
                                         if let Some(mut image) = texture_image.get_image() {
-                                            if std::env::consts::OS == "ios"
-                                                || std::env::consts::OS == "android"
-                                            {
+                                            if should_compress {
                                                 let texture =
                                                     create_compressed_texture(&mut image, max_size);
                                                 base_material.set_texture(texture_param, &texture);
@@ -64,7 +70,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
             }
         }
 
-        post_import_process(child, max_size);
+        post_import_process(child, max_size, force_compress);
     }
 }
 
@@ -136,6 +142,102 @@ pub async fn get_dependencies(file_path: &str) -> Result<Vec<String>, anyhow::Er
     }
 
     Ok(dependencies)
+}
+
+/// Check if a GLTF has embedded textures (no external dependencies).
+/// Returns the dimensions of the first embedded texture if found.
+pub async fn get_embedded_texture_size(file_path: &str) -> Option<(u32, u32)> {
+    let mut file = tokio::fs::File::open(file_path).await.ok()?;
+
+    let magic = file.read_i32_le().await.ok()?;
+    let json: serde_json::Value = if magic == 0x46546C67 {
+        // GLB format
+        let _version = file.read_i32_le().await.ok()?;
+        let _length = file.read_i32_le().await.ok()?;
+        let chunk_length = file.read_i32_le().await.ok()?;
+        let _chunk_type = file.read_i32_le().await.ok()?;
+
+        let mut json_data = vec![0u8; chunk_length as usize];
+        file.read_exact(&mut json_data).await.ok()?;
+        serde_json::de::from_slice(json_data.as_slice()).ok()?
+    } else {
+        // GLTF format
+        let mut json_data = Vec::new();
+        file.seek(std::io::SeekFrom::Start(0)).await.ok()?;
+        file.read_to_end(&mut json_data).await.ok()?;
+        serde_json::de::from_slice(json_data.as_slice()).ok()?
+    };
+
+    let images = json.get("images")?.as_array()?;
+
+    for image in images {
+        // Check for data URI (base64 embedded)
+        if let Some(uri) = image.get("uri").and_then(|u| u.as_str()) {
+            if uri.starts_with("data:image/") {
+                // Extract base64 data and decode to get dimensions
+                if let Some(base64_start) = uri.find("base64,") {
+                    let base64_data = &uri[base64_start + 7..];
+                    if let Ok(decoded) = base64::Engine::decode(
+                        &base64::engine::general_purpose::STANDARD,
+                        base64_data,
+                    ) {
+                        // Try to get image dimensions from decoded data
+                        if let Some(dims) = get_image_dimensions_from_bytes(&decoded) {
+                            return Some(dims);
+                        }
+                    }
+                }
+            }
+        }
+        // Check for bufferView (binary embedded in GLB)
+        else if image.get("bufferView").is_some() {
+            // For GLB with binary embedded images, we'd need to parse the binary chunk
+            // For now, we'll try to get dimensions from the GLTF document after loading
+            // This is a simplification - the actual dimensions will be captured during processing
+            continue;
+        }
+    }
+
+    None
+}
+
+/// Get image dimensions from raw bytes (supports PNG, JPEG)
+fn get_image_dimensions_from_bytes(data: &[u8]) -> Option<(u32, u32)> {
+    // PNG header check
+    if data.len() >= 24 && &data[0..8] == b"\x89PNG\r\n\x1a\n" {
+        // PNG dimensions are at bytes 16-23 (width at 16-19, height at 20-23)
+        let width = u32::from_be_bytes([data[16], data[17], data[18], data[19]]);
+        let height = u32::from_be_bytes([data[20], data[21], data[22], data[23]]);
+        return Some((width, height));
+    }
+
+    // JPEG header check
+    if data.len() >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
+        // JPEG dimensions require parsing SOF markers
+        let mut i = 2;
+        while i < data.len() - 9 {
+            if data[i] != 0xFF {
+                i += 1;
+                continue;
+            }
+            let marker = data[i + 1];
+            // SOF0, SOF1, SOF2 markers contain dimensions
+            if marker == 0xC0 || marker == 0xC1 || marker == 0xC2 {
+                let height = u16::from_be_bytes([data[i + 5], data[i + 6]]) as u32;
+                let width = u16::from_be_bytes([data[i + 7], data[i + 8]]) as u32;
+                return Some((width, height));
+            }
+            // Skip to next marker
+            if i + 3 < data.len() {
+                let length = u16::from_be_bytes([data[i + 2], data[i + 3]]) as usize;
+                i += 2 + length;
+            } else {
+                break;
+            }
+        }
+    }
+
+    None
 }
 
 /// Thread safety guard for Godot API access
@@ -315,9 +417,9 @@ where
             .generate_scene(&new_gltf_state)
             .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
 
-        // Post-process textures
+        // Post-process textures (compress if on mobile or force_compress is set)
         let max_size = ctx.texture_quality.to_max_size();
-        post_import_process(node.clone(), max_size);
+        post_import_process(node.clone(), max_size, ctx.force_compress);
 
         // Cast to Node3D and rotate
         let mut node = node
