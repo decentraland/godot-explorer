@@ -387,6 +387,7 @@ func _init_dynamic_graphics_manager() -> void:
 	loading_started.connect(dynamic_graphics_manager.on_loading_started)
 	loading_finished.connect(dynamic_graphics_manager.on_loading_finished)
 	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
+	dynamic_graphics_manager.thermal_fps_cap_changed.connect(_on_thermal_fps_cap_changed)
 	# Listen for FPS limit changes
 	get_config().param_changed.connect(_on_config_param_changed)
 
@@ -438,6 +439,19 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 func _on_config_param_changed(param: int) -> void:
 	if param == ConfigData.ConfigParams.LIMIT_FPS:
 		dynamic_graphics_manager.on_fps_limit_changed(get_config().limit_fps)
+		# Re-apply FPS limit considering thermal cap
+		GraphicSettings.apply_fps_limit_with_thermal_cap(
+			get_config().limit_fps, dynamic_graphics_manager.get_thermal_fps_cap()
+		)
+
+
+func _on_thermal_fps_cap_changed(fps_cap: int) -> void:
+	# Apply the effective FPS limit (considering both user setting and thermal cap)
+	GraphicSettings.apply_fps_limit_with_thermal_cap(get_config().limit_fps, fps_cap)
+	if fps_cap == 0:
+		print("[ThermalFPS] Cap removed, using user setting")
+	else:
+		print("[ThermalFPS] Cap applied: %d FPS" % fps_cap)
 
 
 func _on_dynamic_profile_change(new_profile: int) -> void:
