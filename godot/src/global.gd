@@ -227,6 +227,12 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
+	# Initialize environment from deep link or default to "org"
+	var env = deep_link_obj.dclenv if not deep_link_obj.dclenv.is_empty() else "org"
+	DclGlobal.set_dcl_environment(env)
+	if env != "org":
+		print("[GLOBAL] Environment set to: ", env)
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 
@@ -737,7 +743,7 @@ func check_deep_link_teleport_to():
 			if realm.is_empty():
 				realm = Global.deep_link_obj.realm
 			if realm.is_empty():
-				realm = Realm.MAIN_REALM
+				realm = DclUrls.main_realm()
 
 			Global.teleport_to(Global.deep_link_obj.location, realm)
 		elif not Global.deep_link_obj.preview.is_empty():

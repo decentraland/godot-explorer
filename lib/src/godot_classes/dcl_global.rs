@@ -460,6 +460,18 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").into()
     }
 
+    /// Get version string with environment suffix (e.g., "v1.0.0 - ZONE")
+    #[func]
+    pub fn get_version_with_env() -> GString {
+        let version = format!("v{}", env!("GODOT_EXPLORER_VERSION"));
+        let env = crate::env::get_environment();
+        match env.suffix() {
+            "zone" => GString::from(&format!("{} - ZONE", version)),
+            "today" => GString::from(&format!("{} - TODAY", version)),
+            _ => GString::from(&version),
+        }
+    }
+
     #[func]
     pub fn is_production() -> bool {
         env!("GODOT_EXPLORER_VERSION").contains("-prod")
@@ -582,5 +594,23 @@ impl DclGlobal {
     pub fn emit_sentry_rust_test_messages() {
         use crate::tools::sentry_logger::emit_sentry_test_messages;
         emit_sentry_test_messages();
+    }
+
+    /// Set the Decentraland environment for URL transformation.
+    /// Valid values: "org", "zone", "today"
+    #[func]
+    pub fn set_dcl_environment(env: GString) {
+        if let Some(dcl_env) = crate::env::DclEnvironment::parse(&env.to_string()) {
+            crate::env::set_environment(dcl_env);
+        } else {
+            tracing::warn!("Invalid environment value: {}", env);
+        }
+    }
+
+    /// Get the current Decentraland environment suffix.
+    /// Returns: "org", "zone", or "today"
+    #[func]
+    pub fn get_dcl_environment() -> GString {
+        GString::from(crate::env::get_environment().suffix())
     }
 }

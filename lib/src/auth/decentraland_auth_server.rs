@@ -3,26 +3,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
+use crate::urls;
 
 use super::wallet::SimpleAuthChain;
-
-// Production
-// const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
-// const AUTH_MOBILE_FRONT_URL: &str = "https://decentraland.org/auth/mobile";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
-
-// Localhost with .zone auth-api
-// const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
-// const AUTH_MOBILE_FRONT_URL: &str = "http://localhost:5173/auth/mobile";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
-
-// Production
-const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
-const AUTH_MOBILE_FRONT_URL: &str = "https://decentraland.org/auth/mobile";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
@@ -104,7 +87,7 @@ pub struct AuthLink {
 /// instead of polling for the result.
 /// Returns the full AuthIdentity including ephemeral private key and auth chain.
 pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityResponse, anyhow::Error> {
-    let url = format!("{AUTH_SERVER_ENDPOINT_BASE_URL}/identities/{identity_id}");
+    let url = format!("{}/identities/{identity_id}", urls::auth_api_base());
     tracing::debug!(
         "fetch_identity_by_id: requesting identity_id={}, url={}",
         identity_id,
@@ -175,7 +158,7 @@ pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityRespons
 async fn fetch_polling_server(
     req_id: String,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
-    let url = format!("{AUTH_SERVER_ENDPOINT_URL}/{req_id}");
+    let url = format!("{}/{req_id}", urls::auth_api_requests());
     tracing::debug!(
         "fetch_polling_server: starting polling for req_id={}, url={}, max_retries={}, timeout={}s",
         req_id,
@@ -349,9 +332,10 @@ async fn create_new_request(
     );
 
     let body = serde_json::to_string(&message).expect("valid json");
+    let endpoint_url = urls::auth_api_requests();
     tracing::trace!(
         "create_new_request: POST to {} with body length={}",
-        AUTH_SERVER_ENDPOINT_URL,
+        endpoint_url,
         body.len()
     );
 
@@ -359,7 +343,7 @@ async fn create_new_request(
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
         .expect("reqwest build error")
-        .post(AUTH_SERVER_ENDPOINT_URL)
+        .post(&endpoint_url)
         .header("Content-Type", "application/json")
         .body(body)
         .send()
@@ -392,7 +376,6 @@ async fn create_new_request(
 
 /// Creates an auth request and opens the browser for mobile.
 /// Instead of polling, the app should wait for a deep link with the identity ID.
-/// Returns the request_id that will be received via deep link `decentraland://open?signin=${request_id}`
 pub async fn do_request_mobile(
     _message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
@@ -405,9 +388,9 @@ pub async fn do_request_mobile(
 
     // Build URL with optional provider parameter
     let url = if let Some(provider) = provider {
-        format!("{}?provider={}", AUTH_MOBILE_FRONT_URL, provider)
+        format!("{}?provider={}", urls::auth_mobile_frontend(), provider)
     } else {
-        AUTH_MOBILE_FRONT_URL.to_string()
+        urls::auth_mobile_frontend()
     };
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
@@ -442,7 +425,10 @@ pub async fn do_request(
         code
     );
 
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
+    let url = format!(
+        "{}/{req_id}?targetConfigId=alternative",
+        urls::auth_frontend()
+    );
     tracing::debug!("do_request: opening auth URL={}", url);
 
     url_reporter

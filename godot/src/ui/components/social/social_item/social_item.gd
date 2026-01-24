@@ -386,7 +386,7 @@ func _on_button_jump_in_pressed() -> void:
 	if parcel.size() >= 2:
 		var parcel_position = Vector2i(parcel[0], parcel[1])
 		# Fixed realm to main because we only know our friends positions in Genesis City
-		Global.teleport_to(parcel_position, Realm.MAIN_REALM)
+		Global.teleport_to(parcel_position, DclUrls.main_realm())
 	else:
 		push_error("Invalid parcel coordinates")
 
@@ -395,7 +395,7 @@ func _async_fetch_place_data() -> void:
 	if parcel.size() < 2:
 		return
 
-	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	var url: String = DclUrls.places_api() + "/places?limit=1"
 	url += "&positions=%d,%d" % [parcel[0], parcel[1]]
 
 	var headers = {"Content-Type": "application/json"}
