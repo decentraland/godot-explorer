@@ -3,143 +3,193 @@ extends RefCounted
 
 var _avatar_preview_instance: AvatarPreview = null
 var _avatar_preview_scene = load("res://src/ui/components/backpack/avatar_preview.tscn")
-var _current_container: Node = null  # Guardar referencia al contenedor actual
+var _current_container: Node = null
 
 
 func reparent_avatar_preview(container: Node) -> AvatarPreview:
-	# Primero verificar si tenemos una referencia válida guardada
-	var found_preview: AvatarPreview = null
+	var found_preview: AvatarPreview = _get_or_create_avatar_preview()
 	
-	if is_instance_valid(_avatar_preview_instance):
-		# Verificar que todavía esté en el árbol
-		if _avatar_preview_instance.is_inside_tree():
-			found_preview = _avatar_preview_instance
-			print("Usando avatar_preview existente de referencia: ", found_preview.get_path())
-		else:
-			# La referencia ya no es válida, limpiarla
-			_avatar_preview_instance = null
-	
-	# Si no encontramos uno válido, buscar en el árbol
 	if not is_instance_valid(found_preview):
-		found_preview = _find_avatar_preview_in_tree(Global.get_tree().root)
-		if is_instance_valid(found_preview):
-			print("Encontrado avatar_preview en árbol: ", found_preview.get_path())
-			_avatar_preview_instance = found_preview
+		return null
 	
-	# Si todavía no encontramos uno, crear uno nuevo
-	if not is_instance_valid(found_preview):
-		print("no existía, creando nuevo")
-		_avatar_preview_instance = _avatar_preview_scene.instantiate()
-		found_preview = _avatar_preview_instance
-		var viewport = Global.get_viewport()
-		if is_instance_valid(viewport):
-			viewport.add_child(found_preview)
-	
-	# Conectar la señal tree_exiting para reemparentar al root antes de eliminarse
-	if is_instance_valid(found_preview):
-		# Desconectar si ya estaba conectada para evitar duplicados
-		if found_preview.tree_exiting.is_connected(_on_avatar_preview_tree_exiting):
-			found_preview.tree_exiting.disconnect(_on_avatar_preview_tree_exiting)
-		# Conectar la señal
-		found_preview.tree_exiting.connect(_on_avatar_preview_tree_exiting)
-		
+	_ensure_tree_exiting_connected(found_preview)
 
-	if is_instance_valid(container) and found_preview.get_parent() != container:
-		# Desconectar del contenedor anterior si existe
-		if is_instance_valid(_current_container) and _current_container != container:
-			if _current_container.tree_exiting.is_connected(_on_container_tree_exiting.bind(found_preview)):
-				_current_container.tree_exiting.disconnect(_on_container_tree_exiting.bind(found_preview))
+	if is_instance_valid(container):
+		if not _can_reparent_to_container(container):
+			print("Container '", container.name, "' not ready, using call_deferred")
+			call_deferred("_deferred_reparent_to_container", found_preview, container)
+			return found_preview
 		
-		found_preview.reparent(container)
-		found_preview._apply_layout()
-		
-		# Mostrar el avatar_preview si estaba oculto
-		if found_preview is CanvasItem and not found_preview.visible:
-			found_preview.show()
-		
-		# Actualizar referencia al contenedor actual
-		_current_container = container
-		
-		# Monitorear el nuevo contenedor
-		_monitor_container_for_deletion(container, found_preview)
+		_reparent_to_container(found_preview, container)
 
 	return found_preview
 
 
+func _get_or_create_avatar_preview() -> AvatarPreview:
+	# Check if we have a valid saved reference
+	if is_instance_valid(_avatar_preview_instance) and _avatar_preview_instance.is_inside_tree():
+		var parent_name = _avatar_preview_instance.get_parent().name if is_instance_valid(_avatar_preview_instance.get_parent()) else "null"
+		print("Using existing avatar_preview from reference, parent: '", parent_name, "'")
+		return _avatar_preview_instance
+	
+	# Clear invalid reference
+	if not is_instance_valid(_avatar_preview_instance) or not _avatar_preview_instance.is_inside_tree():
+		_avatar_preview_instance = null
+	
+	# Search in tree
+	var found_preview = _find_avatar_preview_in_tree(Global.get_tree().root)
+	if is_instance_valid(found_preview):
+		var parent_name = found_preview.get_parent().name if is_instance_valid(found_preview.get_parent()) else "null"
+		print("Found avatar_preview in tree, parent: '", parent_name, "'")
+		_avatar_preview_instance = found_preview
+		return found_preview
+	
+	# Create new instance
+	print("AvatarPreview does not exist, creating new instance")
+	_avatar_preview_instance = _avatar_preview_scene.instantiate()
+	var viewport = Global.get_viewport()
+	if is_instance_valid(viewport):
+		viewport.add_child(_avatar_preview_instance)
+	
+	return _avatar_preview_instance
+
+
+func _ensure_tree_exiting_connected(preview: AvatarPreview) -> void:
+	if not is_instance_valid(preview):
+		return
+	
+	if preview.tree_exiting.is_connected(_on_avatar_preview_tree_exiting):
+		preview.tree_exiting.disconnect(_on_avatar_preview_tree_exiting)
+	
+	preview.tree_exiting.connect(_on_avatar_preview_tree_exiting)
+
+
+func _can_reparent_to_container(container: Node) -> bool:
+	return container.is_inside_tree() and not _is_node_or_ancestor_queued_for_deletion(container)
+
+
+func _reparent_to_container(preview: AvatarPreview, container: Node) -> void:
+	var current_parent = preview.get_parent()
+	
+	if current_parent == container:
+		print("AvatarPreview already in correct container: '", container.name, "'")
+		_ensure_visible(preview)
+		return
+	
+	var current_parent_name = current_parent.name if is_instance_valid(current_parent) else "null"
+	print("Reparenting avatar_preview from '", current_parent_name, "' to '", container.name, "'")
+	
+	_disconnect_previous_container(preview)
+	
+	# Reparent immediately if current parent is valid, otherwise defer
+	if is_instance_valid(current_parent) and not current_parent.is_queued_for_deletion():
+		preview.reparent(container)
+		preview._apply_layout()
+		print("AvatarPreview reparented immediately")
+	else:
+		print("Current parent invalid or being deleted, using call_deferred")
+		call_deferred("_deferred_reparent_to_container", preview, container)
+		return
+	
+	_ensure_visible(preview)
+	_current_container = container
+	print("Current container updated to: '", container.name, "'")
+	_monitor_container_for_deletion(container, preview)
+
+
+func _disconnect_previous_container(preview: AvatarPreview) -> void:
+	if is_instance_valid(_current_container) and _current_container.tree_exiting.is_connected(_on_container_tree_exiting.bind(preview)):
+		_current_container.tree_exiting.disconnect(_on_container_tree_exiting.bind(preview))
+
+
+func _ensure_visible(preview: AvatarPreview) -> void:
+	if preview is CanvasItem and not preview.visible:
+		preview.show()
+
+
 func _monitor_container_for_deletion(container: Node, preview: AvatarPreview) -> void:
-	# Conectar a la señal tree_exiting del contenedor para detectar cuando se elimina
 	if is_instance_valid(container) and not container.tree_exiting.is_connected(_on_container_tree_exiting.bind(preview)):
 		container.tree_exiting.connect(_on_container_tree_exiting.bind(preview))
 
 
 func _on_container_tree_exiting(preview: AvatarPreview) -> void:
-	# Cuando el contenedor se elimina, verificar que sea realmente el contenedor actual
 	if not is_instance_valid(preview):
 		return
 	
 	var current_parent = preview.get_parent()
-	
-	# Solo reemparentar si:
-	# 1. El preview todavía tiene un padre válido
-	# 2. El padre es realmente el contenedor que se está eliminando (no otro contenedor)
 	if is_instance_valid(current_parent) and current_parent == _current_container:
-		print("Contenedor actual eliminándose, reemparentando avatar_preview al root")
+		print("Current container being deleted, reparenting avatar_preview to root")
 		var root = Global.get_tree().root
 		if is_instance_valid(root):
-			# Usar call_deferred para asegurar que el reemparentado ocurra después
-			# de que el árbol se actualice, especialmente cuando cambia la escena completa
 			call_deferred("_deferred_reparent_to_root_from_container", preview)
 			preview.hide()
 	else:
-		print("Contenedor eliminándose pero no es el contenedor actual (padre actual: ", current_parent.get_path() if is_instance_valid(current_parent) else "null", ", contenedor guardado: ", _current_container.get_path() if is_instance_valid(_current_container) else "null", ")")
+		var current_parent_name = current_parent.name if is_instance_valid(current_parent) else "null"
+		var saved_container_name = _current_container.name if is_instance_valid(_current_container) else "null"
+		print("Container being deleted but not current container (current parent: '", current_parent_name, "', saved container: '", saved_container_name, "')")
 
 
 func _on_avatar_preview_tree_exiting() -> void:
-	if is_instance_valid(_avatar_preview_instance):
-		# Verificar que el nodo realmente esté a punto de salir del árbol
-		var parent = _avatar_preview_instance.get_parent()
-		if not is_instance_valid(parent) or parent.is_queued_for_deletion():
-			print("AvatarPreview tree_exiting detectado, reemparentando al root")
-			detach_node(_avatar_preview_instance)
+	if not is_instance_valid(_avatar_preview_instance):
+		return
+	
+	var parent = _avatar_preview_instance.get_parent()
+	if not is_instance_valid(parent) or parent.is_queued_for_deletion():
+		print("AvatarPreview tree_exiting detected, reparenting to root")
+		detach_node(_avatar_preview_instance)
 
 
 func detach_node(node: Node) -> void:
 	if not is_instance_valid(node):
-		print("detach_node: nodo no válido")
 		return
 	
-	print("detach_node llamado para: ", node.name if is_instance_valid(node) else "null")
-	
-	# Reemparentar inmediatamente al root (no usar call_deferred porque puede ser demasiado tarde)
 	var root = Global.get_tree().root
 	if not is_instance_valid(root):
-		print("detach_node: root no válido")
-		return
-	
-	if not is_instance_valid(node):
-		print("detach_node: nodo no válido después de verificar root")
 		return
 	
 	var current_parent = node.get_parent()
-	print("detach_node: padre actual = ", current_parent.get_path() if is_instance_valid(current_parent) else "null")
-	print("detach_node: root = ", root.get_path())
-	
-	# Solo reemparentar si no está ya en el root
 	if current_parent != root:
-		# Reemparentar inmediatamente - esto debe ocurrir ANTES de que el nodo se elimine
+		var current_parent_name = current_parent.name if is_instance_valid(current_parent) else "null"
 		node.reparent(root)
-		print("✓ AvatarPreview reemparentado al root desde: ", current_parent.get_path() if is_instance_valid(current_parent) else "null")
-		# Actualizar la referencia y limpiar contenedor
+		print("AvatarPreview reparented to root from: '", current_parent_name, "'")
 		if node is AvatarPreview:
 			_avatar_preview_instance = node as AvatarPreview
 		_current_container = null
 	else:
-		print("detach_node: ya está en el root, no necesita reemparentar")
+		print("AvatarPreview already in root, no reparenting needed")
 	
-	# Ocultar el nodo
 	if node is CanvasItem:
 		node.hide()
-		print("AvatarPreview ocultado")
+		print("AvatarPreview hidden")
+
+
+func _deferred_reparent_to_container(preview: AvatarPreview, container: Node) -> void:
+	if not is_instance_valid(preview) or not is_instance_valid(container):
+		print("_deferred_reparent_to_container: preview or container invalid")
+		return
+	
+	if not container.is_inside_tree():
+		print("Container '", container.name, "' still not in tree, retrying next frame")
+		call_deferred("_deferred_reparent_to_container", preview, container)
+		return
+	
+	if _is_node_or_ancestor_queued_for_deletion(container):
+		print("Container '", container.name, "' still being deleted, retrying next frame")
+		call_deferred("_deferred_reparent_to_container", preview, container)
+		return
+	
+	if preview.get_parent() != container:
+		preview.reparent(container)
+		preview._apply_layout()
+		print("AvatarPreview reparented to container (deferred): '", container.name, "'")
+		_ensure_visible(preview)
+		_current_container = container
+		if preview is AvatarPreview:
+			_avatar_preview_instance = preview as AvatarPreview
+		_monitor_container_for_deletion(container, preview)
+	else:
+		print("AvatarPreview already in correct container (deferred check)")
+		_ensure_visible(preview)
 
 
 func _deferred_reparent_to_root_from_container(preview: AvatarPreview) -> void:
@@ -147,16 +197,25 @@ func _deferred_reparent_to_root_from_container(preview: AvatarPreview) -> void:
 		return
 	
 	var root = Global.get_tree().root
-	if is_instance_valid(root) and is_instance_valid(preview):
-		var current_parent = preview.get_parent()
-		if current_parent != root:
-			preview.reparent(root)
-			print("✓ AvatarPreview reemparentado al root desde contenedor (deferred)")
-			# Limpiar referencia al contenedor
-			_current_container = null
-			# Actualizar referencia
-			if preview is AvatarPreview:
-				_avatar_preview_instance = preview as AvatarPreview
+	if not is_instance_valid(root):
+		return
+	
+	var current_parent = preview.get_parent()
+	if current_parent != root:
+		preview.reparent(root)
+		print("AvatarPreview reparented to root from container (deferred)")
+		_current_container = null
+		if preview is AvatarPreview:
+			_avatar_preview_instance = preview as AvatarPreview
+
+
+func _is_node_or_ancestor_queued_for_deletion(node: Node) -> bool:
+	var current = node
+	while is_instance_valid(current):
+		if current.is_queued_for_deletion():
+			return true
+		current = current.get_parent()
+	return false
 
 
 func _find_avatar_preview_in_tree(node: Node) -> AvatarPreview:

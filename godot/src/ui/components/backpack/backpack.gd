@@ -32,7 +32,7 @@ var is_loading_profile: bool = false
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
-@onready var avatar_preview_container: Control = %AvatarPreviewContainer
+@onready var backpack_avatar_preview_container: Control = %Backpack_AvatarPreviewContainer
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
@@ -172,7 +172,7 @@ func _on_set_new_emotes(emotes_urns: PackedStringArray):
 func _physics_process(_delta):
 	if visible:
 		if avatar_preview == null:
-			avatar_preview = Global.manager.reparent_avatar_preview(avatar_preview_container)
+			avatar_preview = Global.single_instance_manager.reparent_avatar_preview(backpack_avatar_preview_container)
 			if avatar_preview:
 				_setup_avatar_preview()
 			return
@@ -186,7 +186,7 @@ func _physics_process(_delta):
 
 
 func _set_avatar_loading() -> int:
-	avatar_preview_container.hide()
+	backpack_avatar_preview_container.hide()
 	avatar_loading.show()
 	avatar_loading_counter += 1
 	return avatar_loading_counter
@@ -196,7 +196,7 @@ func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
 	avatar_loading.hide()
-	avatar_preview_container.show()
+	backpack_avatar_preview_container.show()
 
 
 func _async_update_avatar():
@@ -495,7 +495,7 @@ func _setup_avatar_preview() -> void:
 
 	avatar_preview.show()
 	avatar_loading.hide()
-	avatar_preview_container.show()
+	backpack_avatar_preview_container.show()
 
 	avatar_preview._apply_properties()
 

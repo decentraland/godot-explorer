@@ -37,8 +37,8 @@ var avatar_preview: AvatarPreview = null
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
 
-@onready var avatar_preview_container_landscape: Control = %AvatarPreviewContainer_Landscape
-@onready var avatar_preview_container_portrait: Control = %AvatarPreviewContainer_Portrait
+@onready var profile_avatar_preview_container_landscape: Control = %Profile_AvatarPreviewContainer_Landscape
+@onready var profile_avatar_preview_container_portrait: Control = %Profile_AvatarPreviewContainer_Portrait
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
@@ -100,7 +100,7 @@ func _ready() -> void:
 	_setup_avatar_preview()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
-	avatar_preview_container_portrait.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
+	profile_avatar_preview_container_portrait.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
 	button_menu.button_pressed = false
 	menu.hide()
 
@@ -1287,10 +1287,10 @@ func _hide_friendship_buttons() -> void:
 
 
 func _setup_avatar_preview() -> void:
-	var container: Control = avatar_preview_container_portrait if Global.is_orientation_portrait() else avatar_preview_container_landscape
+	var container: Control = profile_avatar_preview_container_portrait if Global.is_orientation_portrait() else profile_avatar_preview_container_landscape
 
 	# Get or create avatar_preview using Global
-	avatar_preview = Global.manager.reparent_avatar_preview(container)
+	avatar_preview = Global.single_instance_manager.reparent_avatar_preview(container)
 
 	if not is_instance_valid(avatar_preview):
 		return
@@ -1313,11 +1313,11 @@ func _relocate_avatar_preview():
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var is_landscape: bool = window_size.x > window_size.y
 	var container: Control = (
-		avatar_preview_container_landscape if is_landscape else avatar_preview_container_portrait
+		profile_avatar_preview_container_landscape if is_landscape else profile_avatar_preview_container_portrait
 	)
 
 	# Reparent avatar_preview to the correct container
-	avatar_preview = Global.manager.reparent_avatar_preview(container)
+	avatar_preview = Global.single_instance_manager.reparent_avatar_preview(container)
 
 
 func _on_copy_nick_pressed() -> void:

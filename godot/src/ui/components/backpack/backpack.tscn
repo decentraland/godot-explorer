@@ -235,7 +235,7 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="AvatarPreviewContainer" type="Control" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar"]
+[node name="Backpack_AvatarPreviewContainer" type="Control" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -762,7 +762,7 @@ stretch_mode = 6
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/Button_Wearables" to="." method="_on_button_wearables_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer/CheckBox_OnlyCollectibles" to="." method="_on_check_box_only_collectibles_toggled"]
-[connection signal="visibility_changed" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/AvatarPreviewContainer" to="." method="_on_avatar_preview_container_visibility_changed"]
+[connection signal="visibility_changed" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/Backpack_AvatarPreviewContainer" to="." method="_on_avatar_preview_container_visibility_changed"]
 [connection signal="toggle_color_panel" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer2/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]
 [connection signal="meta_clicked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer/MarginContainer/Control_NoItems/RichTextBox_OpenMarketplace" to="." method="_on_rich_text_box_open_marketplace_meta_clicked"]
 [connection signal="hided" from="Color_Picker_Panel" to="." method="_on_color_picker_panel_hided"]
