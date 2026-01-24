@@ -63,8 +63,8 @@ impl ProcessorContext {
     }
 
     /// Convert to ContentProviderContext for texture loading.
+    /// Note: Network inspector is disabled for asset server (runs on background threads)
     pub fn to_content_context(&self) -> crate::content::content_provider::ContentProviderContext {
-        use crate::godot_classes::dcl_global::DclGlobal;
         use crate::http_request::http_queue_requester::HttpQueueRequester;
 
         crate::content::content_provider::ContentProviderContext {
@@ -72,10 +72,9 @@ impl ProcessorContext {
             resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
-            http_queue_requester: Arc::new(HttpQueueRequester::new(
-                6,
-                DclGlobal::get_network_inspector_sender(),
-            )),
+            // Pass None for network inspector since asset server runs on background threads
+            // and cannot safely call DclGlobal::get_network_inspector_sender()
+            http_queue_requester: Arc::new(HttpQueueRequester::new(6, None)),
         }
     }
 }

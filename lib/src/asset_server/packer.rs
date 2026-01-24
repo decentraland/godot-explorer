@@ -122,9 +122,14 @@ pub fn pack_assets_to_zip(
 /// Pack scene assets into a ZIP file with metadata and optional selective packing.
 ///
 /// Creates a ZIP file at `{output_folder}{output_hash}-mobile.zip` containing:
-/// - `metadata.json` with optimization results
+/// - `{output_hash}-optimized.json` with optimization metadata (only for scene-level packs)
 /// - `glbs/{hash}.scn` for GLTF assets
 /// - `content/{hash}.res` for texture assets
+///
+/// Packing modes:
+/// - `pack_filter = None` → Full scene pack: all assets + metadata
+/// - `pack_filter = Some(empty)` → Metadata only: just the JSON file, no assets
+/// - `pack_filter = Some(non-empty)` → Individual bundle: filtered assets only, NO metadata
 ///
 /// # Arguments
 /// * `output_hash` - The hash to use for the ZIP filename
@@ -145,19 +150,33 @@ pub fn pack_scene_assets_to_zip(
 ) -> Result<String, anyhow::Error> {
     let zip_path = format!("{}{}-mobile.zip", output_folder, output_hash);
 
-    // Filter assets if pack_filter is provided
-    let assets_to_pack: Vec<_> = if let Some(filter) = pack_filter {
-        asset_paths
-            .into_iter()
-            .filter(|(hash, _, _)| filter.contains(hash))
-            .collect()
-    } else {
-        asset_paths
+    // Determine packing mode based on pack_filter:
+    // - None: full scene pack (all assets + metadata)
+    // - Some(empty): metadata-only pack (just JSON)
+    // - Some(non-empty): individual bundle (filtered assets, NO metadata)
+    let (assets_to_pack, include_metadata): (Vec<_>, bool) = match pack_filter {
+        None => {
+            // Full scene pack: all assets + metadata
+            (asset_paths, true)
+        }
+        Some(filter) if filter.is_empty() => {
+            // Metadata-only pack: no assets, just metadata
+            (Vec::new(), true)
+        }
+        Some(filter) => {
+            // Individual bundle: filtered assets only, NO metadata
+            let filtered = asset_paths
+                .into_iter()
+                .filter(|(hash, _, _)| filter.contains(hash))
+                .collect();
+            (filtered, false)
+        }
     };
 
     tracing::info!(
-        "Packing {} assets to ZIP with metadata: {}",
+        "Packing {} assets to ZIP (metadata: {}): {}",
         assets_to_pack.len(),
+        include_metadata,
         zip_path
     );
 
@@ -175,33 +194,35 @@ pub fn pack_scene_assets_to_zip(
         ));
     }
 
-    // Add {scene_id}-optimized.json metadata file
-    let metadata_filename = format!("{}-optimized.json", output_hash);
-    let metadata_json = serde_json::to_string_pretty(&metadata)
-        .map_err(|e| anyhow::anyhow!("Failed to serialize metadata: {}", e))?;
+    // Add {output_hash}-optimized.json metadata file (only for scene-level packs)
+    if include_metadata {
+        let metadata_filename = format!("{}-optimized.json", output_hash);
+        let metadata_json = serde_json::to_string_pretty(&metadata)
+            .map_err(|e| anyhow::anyhow!("Failed to serialize metadata: {}", e))?;
 
-    let err = packer.start_file(&GString::from(&metadata_filename));
-    if err != godot::global::Error::OK {
-        return Err(anyhow::anyhow!(
-            "Failed to start {} entry: {:?}",
-            metadata_filename,
-            err
-        ));
-    }
+        let err = packer.start_file(&GString::from(&metadata_filename));
+        if err != godot::global::Error::OK {
+            return Err(anyhow::anyhow!(
+                "Failed to start {} entry: {:?}",
+                metadata_filename,
+                err
+            ));
+        }
 
-    let metadata_bytes = PackedByteArray::from(metadata_json.as_bytes());
-    let err = packer.write_file(&metadata_bytes);
-    if err != godot::global::Error::OK {
-        return Err(anyhow::anyhow!(
-            "Failed to write {}: {:?}",
-            metadata_filename,
-            err
-        ));
-    }
+        let metadata_bytes = PackedByteArray::from(metadata_json.as_bytes());
+        let err = packer.write_file(&metadata_bytes);
+        if err != godot::global::Error::OK {
+            return Err(anyhow::anyhow!(
+                "Failed to write {}: {:?}",
+                metadata_filename,
+                err
+            ));
+        }
 
-    let err = packer.close_file();
-    if err != godot::global::Error::OK {
-        tracing::warn!("Failed to close {} entry: {:?}", metadata_filename, err);
+        let err = packer.close_file();
+        if err != godot::global::Error::OK {
+            tracing::warn!("Failed to close {} entry: {:?}", metadata_filename, err);
+        }
     }
 
     // Add asset files

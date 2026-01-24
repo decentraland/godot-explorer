@@ -27,6 +27,7 @@ import os
 import sys
 import time
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
@@ -200,7 +201,7 @@ def process_scene_metadata_only(scene_hash: str, content_base_url: str):
 
 
 def create_individual_bundles(scene_hash: str, content_base_url: str, zip_path: str):
-    """Create individual ZIP files for each GLTF (with deps) and each texture."""
+    """Create individual ZIP files for each GLTF and each texture (one asset per ZIP)."""
     print(f"=== Creating Individual Asset Bundles ===")
     print()
 
@@ -220,97 +221,93 @@ def create_individual_bundles(scene_hash: str, content_base_url: str, zip_path: 
     # Get all GLTF hashes (keys in dependencies)
     gltf_hashes = set(dependencies.keys())
 
-    # Get all texture hashes that are dependencies
-    all_texture_deps = set()
-    for deps in dependencies.values():
-        all_texture_deps.update(deps)
-
-    # Standalone textures = optimized content - GLTFs - texture deps that are bundled with GLTFs
-    # Actually, we want ALL textures to have their own ZIP
+    # All textures = optimized content - GLTFs
     texture_hashes = optimized_content - gltf_hashes
 
-    print(f"GLTFs to bundle: {len(gltf_hashes)}")
-    print(f"Textures to bundle: {len(texture_hashes)}")
+    all_hashes = list(gltf_hashes) + list(texture_hashes)
+    print(f"Total assets to bundle: {len(all_hashes)} ({len(gltf_hashes)} GLTFs, {len(texture_hashes)} textures)")
     print()
 
     start_time = time.time()
-    successful = 0
-    failed = 0
 
-    # Create GLTF bundles (GLTF + dependencies)
-    print(f"--- Creating GLTF Bundles ({len(gltf_hashes)}) ---")
-    for i, gltf_hash in enumerate(sorted(gltf_hashes)):
-        texture_deps = dependencies.get(gltf_hash, [])
-        pack_hashes = [gltf_hash] + texture_deps
+    # Submit ALL requests concurrently using thread pool
+    print(f"--- Submitting {len(all_hashes)} bundle requests (concurrent) ---")
+    pending_batches = []  # List of (hash, batch_id)
+    submit_failed = 0
+    submitted = 0
 
-        sys.stdout.write(f"\r[{i+1}/{len(gltf_hashes)}] GLTF {gltf_hash[:16]}... ({len(texture_deps)} deps) ")
-        sys.stdout.flush()
+    def submit_one(asset_hash):
+        """Submit a single bundle request."""
+        response = submit_scene(
+            scene_hash=scene_hash,
+            content_base_url=content_base_url,
+            output_hash=asset_hash,
+            pack_hashes=[asset_hash],
+        )
+        return (asset_hash, response["batch_id"])
 
-        try:
-            response = submit_scene(
-                scene_hash=scene_hash,
-                content_base_url=content_base_url,
-                output_hash=gltf_hash,
-                pack_hashes=pack_hashes,
-            )
+    with ThreadPoolExecutor(max_workers=32) as executor:
+        futures = {executor.submit(submit_one, h): h for h in all_hashes}
 
-            batch_id = response["batch_id"]
-            final_status = wait_for_batch(batch_id, show_progress=False)
+        for future in as_completed(futures):
+            asset_hash = futures[future]
+            try:
+                result = future.result()
+                pending_batches.append(result)
+                submitted += 1
+            except Exception as e:
+                submit_failed += 1
 
-            if final_status["status"] == "completed":
-                successful += 1
-            else:
-                failed += 1
-                print(f"\n    ✗ Failed: {final_status.get('error', 'Unknown error')}")
+            sys.stdout.write(f"\r[{submitted + submit_failed}/{len(all_hashes)}] Submitted: {submitted} ✓, {submit_failed} ✗ ")
+            sys.stdout.flush()
 
-        except (URLError, HTTPError) as e:
-            failed += 1
-            print(f"\n    ✗ Error: {e}")
-
-    print(f"\r[{len(gltf_hashes)}/{len(gltf_hashes)}] GLTF bundles: {successful} ✓, {failed} ✗" + " " * 20)
+    print(f"\r[{len(all_hashes)}/{len(all_hashes)}] Submitted: {len(pending_batches)} ✓, {submit_failed} ✗" + " " * 20)
     print()
 
-    # Create individual texture ZIPs
-    gltf_successful = successful
-    gltf_failed = failed
+    # Wait for ALL batches to complete
+    print(f"--- Waiting for {len(pending_batches)} batches to complete ---")
     successful = 0
     failed = 0
 
-    print(f"--- Creating Texture Bundles ({len(texture_hashes)}) ---")
-    for i, texture_hash in enumerate(sorted(texture_hashes)):
-        sys.stdout.write(f"\r[{i+1}/{len(texture_hashes)}] Texture {texture_hash[:16]}... ")
+    while pending_batches:
+        still_pending = []
+        for asset_hash, batch_id in pending_batches:
+            try:
+                status = get_batch_status(batch_id)
+                batch_status = status["status"]
+
+                if batch_status == "completed":
+                    successful += 1
+                elif batch_status == "failed":
+                    failed += 1
+                else:
+                    still_pending.append((asset_hash, batch_id))
+            except (URLError, HTTPError):
+                still_pending.append((asset_hash, batch_id))
+
+        pending_batches = still_pending
+
+        completed = successful + failed
+        total = completed + len(pending_batches)
+        elapsed = time.time() - start_time
+        elapsed_str = f"{int(elapsed // 60):02d}:{int(elapsed % 60):02d}"
+
+        sys.stdout.write(
+            f"\r[{elapsed_str}] Completed: {completed}/{total}  ✓: {successful}  ✗: {failed}  Pending: {len(pending_batches)}  "
+        )
         sys.stdout.flush()
 
-        try:
-            response = submit_scene(
-                scene_hash=scene_hash,
-                content_base_url=content_base_url,
-                output_hash=texture_hash,
-                pack_hashes=[texture_hash],
-            )
+        if pending_batches:
+            time.sleep(0.5)
 
-            batch_id = response["batch_id"]
-            final_status = wait_for_batch(batch_id, show_progress=False)
-
-            if final_status["status"] == "completed":
-                successful += 1
-            else:
-                failed += 1
-                print(f"\n    ✗ Failed: {final_status.get('error', 'Unknown error')}")
-
-        except (URLError, HTTPError) as e:
-            failed += 1
-            print(f"\n    ✗ Error: {e}")
-
-    print(f"\r[{len(texture_hashes)}/{len(texture_hashes)}] Texture bundles: {successful} ✓, {failed} ✗" + " " * 20)
-
+    print()
     total_elapsed = time.time() - start_time
     print()
     print(f"=== Bundle Creation Complete ===")
     print(f"Total time: {format_time(total_elapsed)}")
-    print(f"GLTF bundles: {gltf_successful} successful, {gltf_failed} failed")
-    print(f"Texture bundles: {successful} successful, {failed} failed")
-    print(f"Total ZIPs created: {gltf_successful + successful}")
+    print(f"Successful: {successful}")
+    print(f"Failed: {failed + submit_failed}")
+    print(f"Total ZIPs created: {successful}")
 
 
 def main():
