@@ -1290,7 +1290,7 @@ func _setup_avatar_preview() -> void:
 	var container: Control = avatar_preview_container_portrait if Global.is_orientation_portrait() else avatar_preview_container_landscape
 
 	# Get or create avatar_preview using Global
-	avatar_preview = Global.get_avatar_preview(container)
+	avatar_preview = Global.manager.reparent_avatar_preview(container)
 
 	if not is_instance_valid(avatar_preview):
 		return
@@ -1317,7 +1317,7 @@ func _relocate_avatar_preview():
 	)
 
 	# Reparent avatar_preview to the correct container
-	avatar_preview = Global.get_avatar_preview(container)
+	avatar_preview = Global.manager.reparent_avatar_preview(container)
 
 
 func _on_copy_nick_pressed() -> void:

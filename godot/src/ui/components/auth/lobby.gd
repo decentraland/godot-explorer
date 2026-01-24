@@ -451,7 +451,7 @@ func _on_button_enter_as_guest_pressed():
 
 
 func _async_show_avatar_preview():
-	avatar_preview = Global.get_avatar_preview(avatar_preview_container)
+	avatar_preview = Global.manager.reparent_avatar_preview(avatar_preview_container)
 
 	if not is_instance_valid(avatar_preview):
 		return

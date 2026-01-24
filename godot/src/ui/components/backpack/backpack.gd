@@ -172,7 +172,7 @@ func _on_set_new_emotes(emotes_urns: PackedStringArray):
 func _physics_process(_delta):
 	if visible:
 		if avatar_preview == null:
-			avatar_preview = Global.get_avatar_preview(avatar_preview_container)
+			avatar_preview = Global.manager.reparent_avatar_preview(avatar_preview_container)
 			if avatar_preview:
 				_setup_avatar_preview()
 			return

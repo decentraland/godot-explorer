@@ -202,14 +202,16 @@ func _notification(what: int) -> void:
 
 func _on_tree_exiting() -> void:
 	var parent = get_parent()
+	
+	# Si el padre está siendo eliminado o no es válido, usar el manager para reemparentar al root
+	if not is_instance_valid(parent) or (is_instance_valid(parent) and parent.is_queued_for_deletion()):
+		# Usar el manager para reemparentar al root
+		# Esto asegura que el avatar_preview sobreviva a los cambios de escena
+		if is_instance_valid(Global) and is_instance_valid(Global.manager):
+			Global.manager.detach_node(self)
+			return
+	
+	# Fallback: si el manager no está disponible, usar la lógica original
 	var viewport = get_viewport()
-
-	if (
-		(
-			not is_instance_valid(parent)
-			or (is_instance_valid(parent) and parent.is_queued_for_deletion())
-		)
-		and is_instance_valid(viewport)
-	):
-		if get_parent() != viewport:
-			reparent(viewport)
+	if is_instance_valid(viewport) and get_parent() != viewport:
+		reparent(viewport)
