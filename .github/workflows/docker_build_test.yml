@@ -39,18 +39,16 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           image: godot-explorer
-          # TODO: Remove 'asset-server' tag after testing asset server in Docker
           tags: |
             ${{ github.sha }}
-            ${{ github.ref == 'refs/heads/release' && 'latest' || (github.ref == 'refs/heads/main' && 'staging' || (github.ref == 'refs/heads/feat/asset-server-zip-packing' && 'asset-server' || 'next')) }}
+            ${{ github.ref == 'refs/heads/release' && 'latest' || (github.ref == 'refs/heads/main' && 'staging' || 'next') }}
           dockerfiles: |
             ./Dockerfile
           build-args: |
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
-        # TODO: Remove 'feat/asset-server-zip-packing' condition after testing asset server in Docker
-        if: github.ref == 'refs/heads/release' || github.ref == 'refs/heads/feat/asset-server-zip-packing'
+        if: github.ref == 'refs/heads/release' || contains(github.event.pull_request.labels.*.name, 'publish-docker')
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
