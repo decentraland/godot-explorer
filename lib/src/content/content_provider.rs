@@ -180,7 +180,7 @@ impl INode for ContentProvider {
     fn ready(&mut self) {}
     fn exit_tree(&mut self) {
         self.promises.clear();
-        tracing::info!("ContentProvider::exit_tree");
+        tracing::debug!("ContentProvider::exit_tree");
     }
 
     fn process(&mut self, dt: f64) {
@@ -288,7 +288,7 @@ impl ContentProvider {
             // File was evicted from cache - remove stale promise and re-download
             // NOTE: Any caller still holding the old promise may try to load a non-existent file.
             // This is handled gracefully in GDScript by checking file existence before loading.
-            tracing::info!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
+            tracing::debug!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
             self.promises.remove(&file_hash);
         }
 
@@ -403,7 +403,7 @@ impl ContentProvider {
             // File was evicted from cache - remove stale promise and re-download
             // NOTE: Any caller still holding the old promise may try to load a non-existent file.
             // This is handled gracefully in GDScript by checking file existence before loading.
-            tracing::info!(
+            tracing::debug!(
                 "Wearable GLTF cache EVICTED: {} - re-downloading",
                 file_hash
             );
@@ -521,7 +521,7 @@ impl ContentProvider {
             // File was evicted from cache - remove stale promise and re-download
             // NOTE: Any caller still holding the old promise may try to load a non-existent file.
             // This is handled gracefully in GDScript by checking file existence before loading.
-            tracing::info!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
+            tracing::debug!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
             self.promises.remove(&file_hash);
         }
 
@@ -768,7 +768,8 @@ impl ContentProvider {
 
     #[func]
     pub fn optimized_asset_exists(&self, file_hash: GString) -> bool {
-        self.optimized_assets.contains(&file_hash.to_string())
+        let hash_str = file_hash.to_string();
+        self.optimized_assets.contains(&hash_str)
     }
 
     #[func]
@@ -779,6 +780,11 @@ impl ContentProvider {
         let (promise, get_promise) = Promise::make_to_async();
 
         if let Ok(content_data) = content_data {
+            tracing::info!(
+                "load_optimized_assets_metadata: loaded {} optimized content hashes",
+                content_data.optimized_content.len()
+            );
+
             self.optimized_original_size
                 .extend(content_data.original_sizes);
 
@@ -1020,14 +1026,37 @@ impl ContentProvider {
                 )
                 .await;
 
-                let godot_path = format!("res://content/{}", hash_id);
+                let godot_path = format!("res://content/{}.res", hash_id);
 
-                let resource = ResourceLoader::singleton()
+                let resource = match ResourceLoader::singleton()
                     .load(&GString::from(godot_path.as_str()))
-                    .unwrap();
+                {
+                    Some(res) => res,
+                    None => {
+                        tracing::error!(
+                            "Failed to load optimized texture resource: {}",
+                            godot_path
+                        );
+                        then_promise(
+                            get_promise,
+                            Err(anyhow::anyhow!("Failed to load texture: {}", godot_path)),
+                        );
+                        return;
+                    }
+                };
 
                 let texture = resource.cast::<godot::classes::Texture2D>();
-                let image = texture.get_image().unwrap();
+                let image = match texture.get_image() {
+                    Some(img) => img,
+                    None => {
+                        tracing::error!("Failed to get image from texture: {}", godot_path);
+                        then_promise(
+                            get_promise,
+                            Err(anyhow::anyhow!("Failed to get image from: {}", godot_path)),
+                        );
+                        return;
+                    }
+                };
 
                 let original_size = if let Some(original_size) = original_size {
                     Vector2i::new(original_size.width, original_size.height)
@@ -1851,6 +1880,12 @@ impl ContentProvider {
         optimized_data: Arc<OptimizedData>,
         with_dependencies: bool,
     ) -> Result<(), String> {
+        tracing::debug!(
+            "async_fetch_optimized_asset: {} (with_dependencies: {})",
+            file_hash,
+            with_dependencies
+        );
+
         // 1. We search which dependencies we need to download
         let mut futures_to_wait: Vec<_> = Vec::default();
         let mut hashes_to_load: Vec<String> = Vec::default();
@@ -1880,6 +1915,12 @@ impl ContentProvider {
             let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
 
+            tracing::debug!(
+                "Optimized asset dependency: {} -> url: {}",
+                hash_dependency,
+                asset_url
+            );
+
             if !loaded_dependencies.contains(hash_dependency) {
                 if hash_dependency != &file_hash {
                     // we don't add the own file
@@ -1890,10 +1931,12 @@ impl ContentProvider {
                 .file_exists(&hash_dependency_zip)
                 .await
             {
+                tracing::debug!("Skipping {} - already cached", hash_dependency_zip);
                 continue; // Skip fetching if the dependency exists in cache
             }
 
             // Fetch the resource if it's either a new dependency or missing in cache
+            tracing::debug!("Fetching optimized asset: {}", asset_url);
 
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_dependency_zip, "optimized_asset_dep");
@@ -1902,11 +1945,17 @@ impl ContentProvider {
             let hash_for_tracking = hash_dependency_zip.clone();
 
             let ctx_clone = ctx.clone();
+            let url_for_log = asset_url.clone();
             let future = async move {
                 let result = ctx_clone
                     .resource_provider
-                    .fetch_resource(asset_url, hash_dependency_zip, absolute_file_path)
+                    .fetch_resource(asset_url, hash_dependency_zip.clone(), absolute_file_path)
                     .await;
+
+                match &result {
+                    Ok(_) => tracing::debug!("Downloaded optimized asset: {}", url_for_log),
+                    Err(e) => tracing::error!("Failed to download {}: {}", url_for_log, e),
+                }
 
                 #[cfg(feature = "use_resource_tracking")]
                 if let Err(ref e) = result {
@@ -1932,19 +1981,44 @@ impl ContentProvider {
         drop(loaded_dependencies); // drop write
 
         // 3. Wait all downloads
-        let _ = try_join_all(futures_to_wait).await;
+        tracing::debug!(
+            "Waiting for {} optimized asset downloads...",
+            futures_to_wait.len()
+        );
+        let download_results = try_join_all(futures_to_wait).await;
+        match &download_results {
+            Ok(_) => tracing::debug!("All optimized asset downloads completed successfully"),
+            Err(e) => tracing::error!("Some optimized asset downloads failed: {}", e),
+        }
 
         // 4. Load what was listed
+        tracing::debug!(
+            "Loading {} resource packs into Godot...",
+            hashes_to_load.len()
+        );
         for hash_to_load in &hashes_to_load {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
             let zip_path = &format!("user://content/{}", hash_zip);
+
+            // Check if file exists before loading
+            let absolute_path = format!("{}{}", ctx.content_folder, hash_zip);
+            let exists = std::path::Path::new(&absolute_path).exists();
+            tracing::debug!(
+                "Loading resource pack: {} (exists: {})",
+                zip_path,
+                exists
+            );
+
             let result = godot::classes::ProjectSettings::singleton()
                 .load_resource_pack_ex(zip_path)
                 .replace_files(false)
                 .done();
 
             if !result {
+                tracing::error!("load_resource_pack FAILED on {}", zip_path);
                 godot_error!("load_resource_pack failed on {zip_path}");
+            } else {
+                tracing::debug!("load_resource_pack SUCCESS: {}", zip_path);
             }
         }
 

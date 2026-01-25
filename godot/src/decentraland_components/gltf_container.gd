@@ -105,7 +105,7 @@ func async_load_gltf():
 
 
 ## Optimized Asset Loading Path
-## Pre-baked scenes from res://glbs/<hash>.tscn
+## Pre-baked scenes from res://glbs/<hash>.scn
 # gdlint:ignore = async-function-name
 func _async_load_optimized_asset(gltf_hash: String):
 	self.optimized = true
@@ -120,14 +120,20 @@ func _async_load_optimized_asset(gltf_hash: String):
 		currently_loading_assets.append(gltf_hash)
 
 	# Download dependencies (textures, etc.)
+	print("[GltfContainer] Fetching optimized asset: ", gltf_hash)
 	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
+		printerr("[GltfContainer] Failed to download optimized asset dependencies: ", gltf_hash)
 		_finish_with_error("failed to download optimized asset dependencies")
 		return
-
 	# Load from res://glbs/
-	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
+	var scene_file = "res://glbs/" + gltf_hash + ".scn"
+	if not ResourceLoader.exists(scene_file):
+		printerr("[GltfContainer] Scene file not found after resource pack load: ", scene_file)
+		_finish_with_error("optimized scene not found: " + scene_file)
+		return
+
 	var gltf_node := await _async_load_and_instantiate(scene_file)
 	if gltf_node == null:
 		var reason = (
@@ -135,6 +141,7 @@ func _async_load_optimized_asset(gltf_hash: String):
 			if not _last_load_error.is_empty()
 			else "failed to instantiate optimized scene"
 		)
+		printerr("[GltfContainer] Failed to instantiate: ", scene_file, " reason: ", reason)
 		_finish_with_error(reason)
 		return
 
@@ -207,9 +214,12 @@ func _async_load_runtime_gltf():
 func _async_load_and_instantiate(scene_path: String) -> Node3D:
 	_last_load_error = ""
 
-	# Check file exists (for user:// paths, .remap for res:// paths)
+	# Check file exists
+	# For res:// paths: use ResourceLoader.exists() which handles both .remap files
+	# (exported builds) and dynamically loaded resource packs
+	# For user:// paths: use FileAccess.file_exists()
 	if scene_path.begins_with("res://"):
-		if not FileAccess.file_exists(scene_path + ".remap"):
+		if not ResourceLoader.exists(scene_path):
 			_last_load_error = "file not found: " + scene_path
 			printerr("GltfContainer: ", _last_load_error)
 			return null

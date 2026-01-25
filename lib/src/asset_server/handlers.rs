@@ -513,6 +513,23 @@ async fn watch_and_pack_scene_batch(
         .await;
 
     let results = job_manager.get_batch_results(&batch_id).await;
+    tracing::info!(
+        "Scene batch {} has {} results with optimized_path",
+        batch_id,
+        results.len()
+    );
+
+    // Log first few results for debugging
+    for (i, (hash, path, asset_type)) in results.iter().take(3).enumerate() {
+        tracing::debug!(
+            "  Result {}: hash={}, path={}, type={:?}",
+            i,
+            hash,
+            path,
+            asset_type
+        );
+    }
+
     let output_hash = match job_manager.get_batch_output_hash(&batch_id).await {
         Some(hash) => hash,
         None => {
@@ -524,14 +541,20 @@ async fn watch_and_pack_scene_batch(
     };
 
     if results.is_empty() {
-        job_manager
-            .fail_batch(&batch_id, "No assets completed successfully".to_string())
-            .await;
-        return;
+        tracing::error!(
+            "Scene batch {} has NO results! Metadata will be generated but no assets will be packed",
+            batch_id
+        );
+        // Don't fail - still pack the metadata so the client can know what's available
     }
 
     // Get pack filter
     let pack_filter = job_manager.get_batch_pack_filter(&batch_id).await;
+    tracing::info!(
+        "Scene batch {} pack_filter: {:?}",
+        batch_id,
+        pack_filter.as_ref().map(|f| f.len())
+    );
 
     // Build metadata from completed jobs
     let metadata = job_manager.build_scene_metadata(&batch_id).await;

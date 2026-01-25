@@ -155,6 +155,56 @@ def extract_metadata_from_zip(zip_path: str, scene_hash: str) -> dict:
         return None
 
 
+def process_scene_full(scene_hash: str, content_base_url: str):
+    """Process scene with ALL assets + metadata in one ZIP."""
+    print(f"=== Processing Scene (Full Pack) ===")
+    print(f"Scene Hash: {scene_hash}")
+    print()
+
+    # Submit WITHOUT pack_hashes to get full scene pack
+    try:
+        response = submit_scene(scene_hash, content_base_url)
+    except (URLError, HTTPError) as e:
+        print(f"Error submitting scene: {e}")
+        if hasattr(e, 'read'):
+            print(f"Response: {e.read().decode()}")
+        sys.exit(1)
+
+    batch_id = response["batch_id"]
+    total_assets = response["total_assets"]
+
+    print(f"Batch ID: {batch_id}")
+    print(f"Total assets to process: {total_assets}")
+    print()
+
+    # Wait for batch completion
+    final_status = wait_for_batch(batch_id)
+
+    print()
+    print(f"=== Result ===")
+    print(f"Status: {final_status['status']}")
+
+    zip_path = final_status.get("zip_path")
+    if zip_path:
+        print(f"ZIP: {zip_path}")
+        # Check ZIP contents
+        if os.path.exists(zip_path):
+            with zipfile.ZipFile(zip_path, 'r') as zf:
+                files = zf.namelist()
+                print(f"ZIP contains {len(files)} files")
+                # Count by type
+                scn_files = [f for f in files if f.endswith('.scn')]
+                res_files = [f for f in files if f.endswith('.res')]
+                json_files = [f for f in files if f.endswith('.json')]
+                print(f"  - Scenes (.scn): {len(scn_files)}")
+                print(f"  - Resources (.res): {len(res_files)}")
+                print(f"  - Metadata (.json): {len(json_files)}")
+    else:
+        print("No ZIP file created")
+
+    return final_status, zip_path
+
+
 def process_scene_metadata_only(scene_hash: str, content_base_url: str):
     """Process scene to get metadata only (no assets packed)."""
     print(f"=== Processing Scene (Metadata Only) ===")
@@ -318,7 +368,8 @@ def main():
     parser = argparse.ArgumentParser(description="Test the Asset Optimization Server")
     parser.add_argument("pointer", nargs="?", default="0,0", help="Scene pointer (default: 0,0)")
     parser.add_argument("--scene-hash", help="Process a scene by hash directly")
-    parser.add_argument("--individual", action="store_true", help="Create separate ZIP per asset")
+    parser.add_argument("--full", action="store_true", help="Create FULL scene pack (all assets + metadata in one ZIP)")
+    parser.add_argument("--individual", action="store_true", help="Create separate ZIP per asset (after metadata-only pack)")
     parser.add_argument("--server", default=ASSET_SERVER_URL, help="Asset server URL")
     parser.add_argument("--port", type=int, help="Asset server port (shorthand for --server http://localhost:PORT)")
     parser.add_argument("--content-server", default=CONTENT_SERVER, help="Content server URL")
@@ -328,10 +379,17 @@ def main():
     CONTENT_SERVER = args.content_server
     content_base_url = f"{CONTENT_SERVER}/contents/"
 
+    if args.full:
+        mode_str = "Full scene pack (all assets + metadata)"
+    elif args.individual:
+        mode_str = "Individual asset bundles"
+    else:
+        mode_str = "Scene metadata only"
+
     print("=== Asset Server Test Script ===")
     print(f"Asset Server: {ASSET_SERVER_URL}")
     print(f"Content Server: {CONTENT_SERVER}")
-    print(f"Mode: {'Individual asset bundles' if args.individual else 'Scene metadata only'}")
+    print(f"Mode: {mode_str}")
     print()
 
     # Check health
@@ -369,15 +427,19 @@ def main():
 
     print()
 
-    # Process scene (metadata only first)
-    final_status, zip_path = process_scene_metadata_only(scene_hash, content_base_url)
+    if args.full:
+        # Full scene pack: all assets + metadata in one ZIP
+        final_status, zip_path = process_scene_full(scene_hash, content_base_url)
+    else:
+        # Process scene (metadata only first)
+        final_status, zip_path = process_scene_metadata_only(scene_hash, content_base_url)
 
-    # Create individual bundles if requested
-    if args.individual:
-        if final_status["status"] == "completed" and zip_path:
-            create_individual_bundles(scene_hash, content_base_url, zip_path)
-        else:
-            print("Cannot create individual bundles: scene processing failed or no ZIP created")
+        # Create individual bundles if requested
+        if args.individual:
+            if final_status["status"] == "completed" and zip_path:
+                create_individual_bundles(scene_hash, content_base_url, zip_path)
+            else:
+                print("Cannot create individual bundles: scene processing failed or no ZIP created")
 
 
 if __name__ == "__main__":

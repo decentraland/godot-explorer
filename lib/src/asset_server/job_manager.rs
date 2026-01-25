@@ -107,8 +107,8 @@ impl JobManager {
         let mut jobs = self.jobs.write().await;
         if let Some(job) = jobs.get_mut(job_id) {
             job.original_size = Some(TextureSize {
-                x: width,
-                y: height,
+                width,
+                height,
             });
             job.updated_at = Instant::now();
         }
@@ -219,20 +219,50 @@ impl JobManager {
         let batches = self.batches.read().await;
         let batch = match batches.get(batch_id) {
             Some(b) => b,
-            None => return Vec::new(),
+            None => {
+                tracing::warn!("get_batch_results: batch {} not found", batch_id);
+                return Vec::new();
+            }
         };
 
         let jobs = self.jobs.read().await;
         let mut results = Vec::new();
+        let mut completed_no_path = 0;
+        let mut not_completed = 0;
+        let mut not_found = 0;
 
         for job_id in &batch.job_ids {
             if let Some(job) = jobs.get(job_id) {
                 if job.status == JobStatus::Completed {
                     if let Some(ref path) = job.optimized_path {
                         results.push((job.hash.clone(), path.clone(), job.asset_type));
+                    } else {
+                        completed_no_path += 1;
+                        if completed_no_path <= 3 {
+                            tracing::warn!(
+                                "Job {} (hash={}) is Completed but has no optimized_path!",
+                                job_id,
+                                job.hash
+                            );
+                        }
                     }
+                } else {
+                    not_completed += 1;
                 }
+            } else {
+                not_found += 1;
             }
+        }
+
+        if completed_no_path > 0 || not_found > 0 {
+            tracing::warn!(
+                "get_batch_results: {} jobs, {} with path, {} completed without path, {} not completed, {} not found",
+                batch.job_ids.len(),
+                results.len(),
+                completed_no_path,
+                not_completed,
+                not_found
+            );
         }
 
         results

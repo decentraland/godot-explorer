@@ -149,8 +149,8 @@ pub struct ProcessRequest {
 /// Original texture dimensions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextureSize {
-    pub x: u32,
-    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 /// A processing job.
