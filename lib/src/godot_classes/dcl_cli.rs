@@ -473,8 +473,8 @@ impl INode for DclCli {
         let benchmark_report = args_map.contains_key("--benchmark-report");
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
-        let only_optimized = args_map.contains_key("--only-optimized");
-        let only_no_optimized = true; // args_map.contains_key("--only-no-optimized");
+        let only_optimized = true; // args_map.contains_key("--only-optimized");
+        let only_no_optimized = args_map.contains_key("--only-no-optimized");
         let emote_test_mode = args_map.contains_key("--emote-test");
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");

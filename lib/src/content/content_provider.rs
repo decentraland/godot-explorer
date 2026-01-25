@@ -131,7 +131,7 @@ pub struct SceneGltfContext {
 
 unsafe impl Send for SceneGltfContext {}
 
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v2";
+const ASSET_OPTIMIZED_BASE_URL: &str = "http://127.0.0.1:9090";
 
 #[godot_api]
 impl INode for ContentProvider {
