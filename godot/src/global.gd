@@ -575,6 +575,8 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
+	# Set orientation BEFORE changing window size so listeners get correct value
+	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	elif cli.emulate_ios:
@@ -588,7 +590,6 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
-	_is_portrait = false
 
 
 func is_orientation_portrait() -> bool:
@@ -596,6 +597,8 @@ func is_orientation_portrait() -> bool:
 
 
 func set_orientation_portrait():
+	# Set orientation BEFORE changing window size so listeners get correct value
+	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 	elif cli.emulate_ios:
@@ -609,7 +612,6 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
-	_is_portrait = true
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
