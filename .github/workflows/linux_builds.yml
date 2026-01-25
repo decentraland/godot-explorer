@@ -35,7 +35,7 @@ jobs:
         uses: ./.github/actions/set-prod-flag
 
       - name: Build
-        run: cargo run -- build --release ${{ env.PROD_FLAG }}
+        run: cargo run -- build --release --features asset_server ${{ env.PROD_FLAG }}
 
       - name: Test
         working-directory: lib
