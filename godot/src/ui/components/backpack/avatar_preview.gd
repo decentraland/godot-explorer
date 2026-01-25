@@ -36,23 +36,52 @@ func get_body_camera_position() -> Vector3:
 	return BODY_CAMERA_POSITION_WITH_PLATFORM if show_platform else BODY_CAMERA_POSITION
 
 
+func _apply_layout() -> void:
+	if not is_inside_tree():
+		return
+
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	offset_left = 0
+	offset_top = 0
+	offset_right = 0
+	offset_bottom = 0
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stretch = true
+
+
+func _apply_properties() -> void:
+	if is_instance_valid(avatar):
+		avatar.hide_name = hide_name
+	if is_instance_valid(platform):
+		platform.set_visible(show_platform)
+
+	if is_instance_valid(camera_3d):
+		camera_3d.set_position(get_body_camera_position())
+
+	if can_move:
+		if not gui_input.is_connected(self._on_gui_input):
+			gui_input.connect(self._on_gui_input)
+	else:
+		if gui_input.is_connected(self._on_gui_input):
+			gui_input.disconnect(self._on_gui_input)
+	_apply_layout()
+
+
 func _ready():
 	if custom_environment != null:
 		world_environment.environment = custom_environment
 
 	directional_light_3d.visible = with_light
 
-	avatar.hide_name = hide_name
-	platform.set_visible(show_platform)
+	_apply_layout()
 
-	camera_3d.set_position(get_body_camera_position())
+	_apply_properties()
+
 	camera_3d.set_rotation_degrees(DEFAULT_ROTATION)
 
 	if outline_system:
 		outline_system.setup(camera_3d)
-
-	if can_move:
-		gui_input.connect(self._on_gui_input)
 
 	if Global.standalone:
 		Global.player_identity.set_default_profile()
@@ -161,3 +190,24 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) 
 	set_size(original_size)
 
 	return img
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_UNPARENTED:
+			_on_tree_exiting()
+		NOTIFICATION_PREDELETE:
+			_on_tree_exiting()
+
+
+func _on_tree_exiting() -> void:
+	var parent = get_parent()
+	
+	if not is_instance_valid(parent) or (is_instance_valid(parent) and parent.is_queued_for_deletion()):
+		if is_instance_valid(Global) and is_instance_valid(Global.single_instance_manager):
+			Global.single_instance_manager.detach_node(self)
+			return
+	
+	var viewport = get_viewport()
+	if is_instance_valid(viewport) and get_parent() != viewport:
+		reparent(viewport)

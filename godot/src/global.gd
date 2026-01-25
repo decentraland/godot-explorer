@@ -101,6 +101,8 @@ var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
 
+var single_instance_manager: SingleInstanceManager = SingleInstanceManager.new()
+
 
 func set_url_popup_instance(popup_instance) -> void:
 	url_popup_instance = popup_instance

@@ -17,6 +17,7 @@ var ready_for_redirect_by_deep_link: bool = false
 
 var loading_first_profile: bool = false
 var current_screen_name: String = ""
+var avatar_preview: AvatarPreview = null
 
 var _skip_lobby: bool = false
 var _last_panel: Control = null
@@ -41,7 +42,7 @@ var _playing: String
 
 @onready var label_avatar_name = %Label_Name
 
-@onready var avatar_preview: AvatarPreview = %AvatarPreview
+@onready var avatar_preview_container: Control = %AvatarPreviewContainer
 @onready var button_next = %Button_Next
 
 @onready var backpack = %Backpack
@@ -264,7 +265,12 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
-	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+	if is_instance_valid(avatar_preview):
+		# Hide avatar_preview while updating to avoid showing the previous avatar
+		avatar_preview.hide()
+		await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+		# Show avatar_preview after it has been fully updated
+		avatar_preview.show()
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -280,7 +286,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		if profile_has_name():
 			label_avatar_name.set_text(new_profile.get_name())
 			show_restore_screen()
-			_show_avatar_preview()
+			_async_show_avatar_preview()
 			Global.metrics.update_identity(
 				Global.player_identity.get_address_str(), Global.player_identity.is_guest
 			)
@@ -298,7 +304,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			await async_close_sign_in()
 		else:
 			# New user signed in but has no profile name - go to naming screen
-			_show_avatar_preview()
+			_async_show_avatar_preview()
 			show_avatar_naming_screen()
 	else:
 		ready_for_redirect_by_deep_link = true
@@ -359,7 +365,8 @@ func _on_button_next_pressed():
 	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
-	avatar_preview.hide()
+	if is_instance_valid(avatar_preview):
+		avatar_preview.hide()
 	show_loading_screen()
 	current_profile.set_name(dcl_line_edit.line_edit.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
@@ -442,7 +449,31 @@ func _on_button_enter_as_guest_pressed():
 	await async_close_sign_in()
 
 
-func _show_avatar_preview():
+func _async_show_avatar_preview():
+	avatar_preview = Global.single_instance_manager.reparent_avatar_preview(avatar_preview_container)
+
+	if not is_instance_valid(avatar_preview):
+		return
+
+	# Hide avatar_preview initially to avoid showing the default avatar
+	avatar_preview.hide()
+
+	avatar_preview.hide_name = false
+	avatar_preview.can_move = false
+	avatar_preview.stretch = true
+	avatar_preview.show_platform = false
+	avatar_preview.focus_mode = Control.FOCUS_NONE
+
+	avatar_preview._apply_properties()
+
+	if not avatar_preview.gui_input.is_connected(self._on_avatar_preview_gui_input):
+		avatar_preview.gui_input.connect(self._on_avatar_preview_gui_input)
+
+	# Update avatar with user profile before showing it
+	if is_instance_valid(current_profile):
+		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
+
+	# Only show avatar_preview after the avatar has been fully updated
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.async_play_emote("wave")
 
@@ -470,6 +501,10 @@ func _on_deep_link_received():
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 	button_next.disabled = dcl_line_edit.error
+
+	if not is_instance_valid(avatar_preview):
+		return
+
 	if dcl_line_edit.error:
 		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
 			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
