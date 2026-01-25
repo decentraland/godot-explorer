@@ -8,11 +8,13 @@ Usage:
     ./test_asset_server.py [pointer]
     ./test_asset_server.py --scene-hash <hash>
     ./test_asset_server.py --individual    # Create separate ZIP per asset
+    ./test_asset_server.py --port 9000     # Use custom port
 
 Examples:
     ./test_asset_server.py 0,0              # Process Genesis Plaza (metadata only)
     ./test_asset_server.py 0,0 --individual # One ZIP per GLTF (with deps) + one ZIP per texture
     ./test_asset_server.py --scene-hash bafkreifdm7l...  # Process by scene hash
+    ./test_asset_server.py --port 9000 0,0  # Use server on port 9000
 
 Output:
     Creates ZIP files in output folder:
@@ -318,10 +320,11 @@ def main():
     parser.add_argument("--scene-hash", help="Process a scene by hash directly")
     parser.add_argument("--individual", action="store_true", help="Create separate ZIP per asset")
     parser.add_argument("--server", default=ASSET_SERVER_URL, help="Asset server URL")
+    parser.add_argument("--port", type=int, help="Asset server port (shorthand for --server http://localhost:PORT)")
     parser.add_argument("--content-server", default=CONTENT_SERVER, help="Content server URL")
     args = parser.parse_args()
 
-    ASSET_SERVER_URL = args.server
+    ASSET_SERVER_URL = f"http://localhost:{args.port}" if args.port else args.server
     CONTENT_SERVER = args.content_server
     content_base_url = f"{CONTENT_SERVER}/contents/"
 
