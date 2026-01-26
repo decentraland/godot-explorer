@@ -110,7 +110,7 @@ func async_show_teleport_modal(location: Vector2i, realm: String = "") -> void:
 			print("NOT CREATED MODAL")
 			return
 
-	var destination_realm = realm if not realm.is_empty() else Realm.MAIN_REALM
+	var destination_realm = realm if not realm.is_empty() else DclUrls.main_realm()
 
 	current_modal.set_title(TELEPORT_TITLE)
 	current_modal.set_body(TELEPORT_BODY + str(location))
