@@ -172,6 +172,9 @@ func async_close_sign_in():
 
 # gdlint:ignore = async-function-name
 func _ready():
+	# Connect visibility_changed to handle avatar_preview reparenting
+	visibility_changed.connect(_on_visibility_changed)
+	
 	# Set version label
 	label_version.set_text("v" + DclGlobal.get_version())
 	button_enter_as_guest.visible = not DclGlobal.is_production()
@@ -450,12 +453,36 @@ func _on_button_enter_as_guest_pressed():
 	await async_close_sign_in()
 
 
+func _on_visibility_changed() -> void:
+	if not visible:
+		return
+	
+	if not is_instance_valid(avatar_preview):
+		avatar_preview = Global.single_instance_manager.get_avatar_preview()
+		if avatar_preview:
+			_configure_avatar_preview()
+	
+	if avatar_preview:
+		Global.single_instance_manager.handle_visibility_change(avatar_preview_container, true)
+
+
 func _async_show_avatar_preview():
-	avatar_preview = Global.single_instance_manager.reparent_avatar_preview(avatar_preview_container)
+	avatar_preview = Global.single_instance_manager.get_avatar_preview()
 
 	if not is_instance_valid(avatar_preview):
 		return
 
+	_configure_avatar_preview()
+	
+	# Handle initial visibility
+	if visible:
+		Global.single_instance_manager.handle_visibility_change(avatar_preview_container, true)
+
+
+func _configure_avatar_preview() -> void:
+	if not is_instance_valid(avatar_preview):
+		return
+	
 	# Hide avatar_preview initially to avoid showing the default avatar
 	avatar_preview.hide()
 

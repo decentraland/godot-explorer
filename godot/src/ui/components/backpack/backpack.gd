@@ -54,6 +54,9 @@ var is_loading_profile: bool = false
 
 # gdlint:ignore = async-function-name
 func _ready():
+	# Connect visibility_changed to handle avatar_preview reparenting
+	visibility_changed.connect(_on_visibility_changed)
+	
 	for category in Wearables.Categories.ALL_CATEGORIES:
 		var button_group = ButtonGroup.new()
 		button_group.allow_unpress = _can_unequip(category)
@@ -169,12 +172,22 @@ func _on_set_new_emotes(emotes_urns: PackedStringArray):
 	# and don't require reloading the avatar mesh/wearables
 
 
+func _on_visibility_changed() -> void:
+	if not visible:
+		return
+	
+	if avatar_preview == null:
+		avatar_preview = Global.single_instance_manager.get_avatar_preview()
+		if avatar_preview:
+			_setup_avatar_preview()
+	
+	if avatar_preview:
+		Global.single_instance_manager.handle_visibility_change(backpack_avatar_preview_container, true)
+
+
 func _physics_process(_delta):
 	if visible:
 		if avatar_preview == null:
-			avatar_preview = Global.single_instance_manager.reparent_avatar_preview(backpack_avatar_preview_container)
-			if avatar_preview:
-				_setup_avatar_preview()
 			return
 		if request_update_avatar:
 			_async_update_avatar()

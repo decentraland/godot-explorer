@@ -96,6 +96,9 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 
 
 func _ready() -> void:
+	# Connect visibility_changed to handle avatar_preview reparenting
+	visibility_changed.connect(_on_avatar_preview_visibility_changed)
+	
 	get_window().size_changed.connect(self._relocate_avatar_preview)
 	_setup_avatar_preview()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1286,11 +1289,22 @@ func _hide_friendship_buttons() -> void:
 	button_unfriend.hide()
 
 
+func _on_avatar_preview_visibility_changed() -> void:
+	if not visible:
+		return
+	
+	if not is_instance_valid(avatar_preview):
+		return
+	
+	var container: Control = profile_avatar_preview_container_portrait if Global.is_orientation_portrait() else profile_avatar_preview_container_landscape
+	Global.single_instance_manager.handle_visibility_change(container, true)
+
+
 func _setup_avatar_preview() -> void:
 	var container: Control = profile_avatar_preview_container_portrait if Global.is_orientation_portrait() else profile_avatar_preview_container_landscape
 
-	# Get or create avatar_preview using Global
-	avatar_preview = Global.single_instance_manager.reparent_avatar_preview(container)
+	# Get or create avatar_preview
+	avatar_preview = Global.single_instance_manager.get_avatar_preview()
 
 	if not is_instance_valid(avatar_preview):
 		return
@@ -1302,6 +1316,10 @@ func _setup_avatar_preview() -> void:
 	avatar_preview.show_platform = false
 	avatar_preview._apply_properties()
 
+	# Handle initial visibility
+	if visible:
+		Global.single_instance_manager.handle_visibility_change(container, true)
+	
 	# Hide avatar_preview initially to avoid showing default avatar
 	avatar_preview.hide()
 
@@ -1316,8 +1334,9 @@ func _relocate_avatar_preview():
 		profile_avatar_preview_container_landscape if is_landscape else profile_avatar_preview_container_portrait
 	)
 
-	# Reparent avatar_preview to the correct container
-	avatar_preview = Global.single_instance_manager.reparent_avatar_preview(container)
+	# Reparent avatar_preview to the correct container if visible
+	if visible:
+		Global.single_instance_manager.handle_visibility_change(container, true)
 
 
 func _on_copy_nick_pressed() -> void:
