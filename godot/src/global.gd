@@ -284,6 +284,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
+	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
+
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
@@ -307,6 +309,9 @@ func _ready():
 		var stress_test_controller = load("res://src/tools/stress_test_controller.gd").new()
 		stress_test_controller.set_name("StressTestController")
 		get_tree().root.add_child.call_deferred(stress_test_controller)
+
+	# Initialize dynamic graphics manager after config is loaded
+	_init_dynamic_graphics_manager.call_deferred()
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -351,6 +356,26 @@ func _async_clear_cache_if_needed() -> void:
 			config.save_to_settings_file()
 
 
+func _init_dynamic_graphics_manager() -> void:
+	# Initialize with config values and connect signals
+	dynamic_graphics_manager.initialize(
+		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
+	)
+	loading_started.connect(dynamic_graphics_manager.on_loading_started)
+	loading_finished.connect(dynamic_graphics_manager.on_loading_finished)
+	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
+	# Listen for FPS limit changes
+	get_config().param_changed.connect(_on_config_param_changed)
+
+	# Run hardware benchmark on first launch (mobile only)
+	# In debug builds, always run to help with testing
+	var should_run_benchmark: bool = (
+		is_mobile() and (not get_config().first_launch_completed or OS.is_debug_build())
+	)
+	if should_run_benchmark:
+		_run_first_launch_benchmark.call_deferred()
+
+
 func _run_first_launch_benchmark() -> void:
 	print("[HardwareBenchmark] Running first launch benchmark...")
 	_hardware_benchmark = HardwareBenchmark.new()
@@ -375,6 +400,9 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 	# Apply the detected profile
 	GraphicSettings.apply_graphic_profile(profile)
 
+	# Sync the dynamic graphics manager with the new profile
+	dynamic_graphics_manager.on_manual_profile_change(profile)
+
 	# Save configuration
 	get_config().save_to_settings_file()
 
@@ -382,6 +410,36 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 	if is_instance_valid(_hardware_benchmark):
 		_hardware_benchmark.queue_free()
 		_hardware_benchmark = null
+
+
+func _on_config_param_changed(param: int) -> void:
+	if param == ConfigData.ConfigParams.LIMIT_FPS:
+		dynamic_graphics_manager.on_fps_limit_changed(get_config().limit_fps)
+
+
+func _on_dynamic_profile_change(new_profile: int) -> void:
+	var old_profile: int = get_config().graphic_profile
+	if old_profile == new_profile:
+		# No actual change, skip
+		return
+
+	var old_name: String = GraphicSettings.PROFILE_NAMES[old_profile]
+	var new_name: String = GraphicSettings.PROFILE_NAMES[new_profile]
+	var is_downgrade: bool = new_profile < old_profile
+
+	print("[DynamicGraphics] Profile changed: %s -> %s" % [old_name, new_name])
+
+	# Apply the profile change requested by the dynamic graphics manager
+	GraphicSettings.apply_graphic_profile(new_profile)
+	get_config().save_to_settings_file()
+
+	# Show toast notification to user
+	var title: String = "Graphics %s" % ("Reduced" if is_downgrade else "Improved")
+	var description: String = (
+		"Profile changed to %s for better %s"
+		% [new_name, "performance" if is_downgrade else "quality"]
+	)
+	NotificationsManager.show_system_toast(title, description, "graphics_profile")
 
 
 func set_raycast_debugger_enable(enable: bool):
@@ -410,7 +468,7 @@ func print_node_tree(node: Node, prefix = ""):
 			print_node_tree(child, prefix + node.name + "/")
 
 
-func get_explorer():
+func get_explorer() -> Explorer:
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		return explorer
