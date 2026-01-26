@@ -109,6 +109,7 @@ func async_start_chat():
 
 	Global.get_explorer().release_mouse()
 	DisplayServer.virtual_keyboard_show("")
+	line_edit_command.text = ""
 	h_box_container_line_edit.show()
 	line_edit_command.grab_focus()
 	on_open_chat.emit()
