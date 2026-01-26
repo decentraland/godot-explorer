@@ -70,7 +70,6 @@ func _notification(what):
 
 
 func _request_update():
-	print(is_inside_tree())
 	if is_inside_tree():
 		_update_layout()
 
@@ -123,7 +122,7 @@ func _update_layout():
 	var content_height = get_combined_minimum_size().y
 	var final_height = clamp(content_height, min_height, max_height)
 
-	size = Vector2(target_width, final_height)
+	set_deferred("size", Vector2(target_width, final_height))
 
 	# Position
 	var pos = Vector2.ZERO

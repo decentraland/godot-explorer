@@ -77,7 +77,7 @@ var preload_assets: PreloadAssets
 
 var locations: Node
 
-var modal_manager: Node
+var modal_manager: ModalManager
 
 var standalone = false
 

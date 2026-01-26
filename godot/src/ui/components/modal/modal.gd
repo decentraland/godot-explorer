@@ -5,7 +5,6 @@ const MODAL_ALERT_ICON = preload("res://assets/ui/modal-alert-icon.svg")
 const MODAL_BLOCK_ICON = preload("res://assets/ui/modal-block-icon.svg")
 const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg")
 
-@onready var margin_container_modal: MarginContainer = %MarginContainer_Modal
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
 @onready var label_title: Label = %Label_Title
 @onready var label_body: Label = %Label_Body
@@ -14,10 +13,18 @@ const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg
 @onready var icon: TextureRect = %Icon
 @onready var button_secondary: Button = %Button_Secondary
 @onready var button_primary: Button = %Button_Primary
+@onready var panel_container: PanelContainer = $PanelContainer
 
 
 func _ready() -> void:
 	hide()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED:
+		if visible:
+			# Update size when modal becomes visible
+			_async_update_modal_size()
 
 
 ## Sets the modal title
@@ -28,6 +35,7 @@ func set_title(title: String) -> void:
 ## Sets the modal body text
 func set_body(body: String) -> void:
 	label_body.text = body
+	_async_update_modal_size()
 
 
 ## Sets the primary button text
@@ -67,3 +75,20 @@ func show_url(url_text: String) -> void:
 func hide_url() -> void:
 	h_separator_url.hide()
 	label_url.hide()
+	_async_update_modal_size()
+
+
+## Updates the modal size to fit its content
+func _async_update_modal_size() -> void:
+	if not is_inside_tree():
+		return
+
+	# Force ResponsiveContainer to recalculate size after content changes
+	if panel_container and panel_container.has_method("_request_update"):
+		# Wait for multiple frames to ensure:
+		# 1. Content has been laid out
+		# 2. Viewport size is correct (especially when called from SDK)
+		# 3. All @onready nodes are initialized
+		await get_tree().process_frame
+		await get_tree().process_frame
+		panel_container._request_update()

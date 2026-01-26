@@ -70,7 +70,7 @@ pub fn change_realm(
     let scene_message = message.clone().unwrap_or_default().to_godot();
 
     modal_manager.call(
-        "show_change_realm_modal",
+        "async_show_change_realm_modal",
         &[realm_name.to_variant(), scene_message.to_variant()],
     );
 
@@ -123,7 +123,7 @@ pub fn open_external_url(
     let mut modal_manager = modal_manager;
     let godot_url = url.to_string().to_godot();
 
-    modal_manager.call("show_external_link_modal", &[godot_url.to_variant()]);
+    modal_manager.call("async_show_external_link_modal", &[godot_url.to_variant()]);
 
     // Send Ok immediately - the modal will handle the actual URL opening
     // This matches the behavior where the RPC call succeeds once the modal is shown

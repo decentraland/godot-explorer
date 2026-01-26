@@ -438,7 +438,7 @@ func _on_url_clicked(meta):
 		var mention_str = meta_str.substr(8)  # Remove "mention:" prefix
 		_handle_mention_click(mention_str)
 	else:
-		Global.modal_manager.show_external_link_modal(meta_str)
+		Global.modal_manager.async_show_external_link_modal(meta_str)
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
 

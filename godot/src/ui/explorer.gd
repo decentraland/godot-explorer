@@ -66,8 +66,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
-@onready var modal: ColorRect = %Modal
-@onready var control_modal: Control = %Control_Modal
 
 
 func _process(_dt):

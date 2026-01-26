@@ -1,12 +1,12 @@
 [gd_scene load_steps=13 format=3 uid="uid://cwa2ufu3umupb"]
 
 [ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://src/ui/components/modal/modal.gd" id="1_146x8"]
-[ext_resource type="Script" uid="uid://cfv8ay3djq4jk" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
-[ext_resource type="LabelSettings" path="res://assets/themes/modal_tittle.tres" id="2_ijrai"]
-[ext_resource type="Script" uid="uid://cxeq0buwsxwg1" path="res://src/ui/components/utils/figma_margins.gd" id="3_146x8"]
+[ext_resource type="Script" uid="uid://n7ca5tqvbyf3" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
+[ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="2_ijrai"]
+[ext_resource type="Script" uid="uid://pwlonouve8et" path="res://src/ui/components/utils/figma_margins.gd" id="3_146x8"]
 [ext_resource type="Texture2D" uid="uid://bth12b5lxd4ul" path="res://assets/ui/modal-background.png" id="3_ijrai"]
-[ext_resource type="LabelSettings" path="res://assets/themes/modal_body.tres" id="3_tquji"]
-[ext_resource type="LabelSettings" path="res://assets/themes/modal_url.tres" id="4_4n1cu"]
+[ext_resource type="LabelSettings" uid="uid://cp7awd4s8rtcn" path="res://assets/themes/modal_body.tres" id="3_tquji"]
+[ext_resource type="LabelSettings" uid="uid://cmc7vbpljmiry" path="res://assets/themes/modal_url.tres" id="4_4n1cu"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_bdjpj"]
 [ext_resource type="Texture2D" uid="uid://bpsb828rp2tlt" path="res://assets/ui/modal-alert-icon.svg" id="6_rvkw6"]
 
@@ -34,21 +34,20 @@ color = Color(0, 0, 0, 0.5019608)
 script = ExtResource("1_146x8")
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
-layout_mode = 0
-offset_left = 111.600006
-offset_top = 59.0
-offset_right = 608.4
-offset_bottom = 661.0
-size_flags_vertical = 4
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 129.5
+offset_top = 59.5
+offset_right = -129.5
+offset_bottom = -59.5
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_figov")
 script = ExtResource("2_5cdoh")
-portrait_width = 0.69
-portrait_max_height = 0.71
-portrait_min_height = 0.25
-landscape_width = 0.56
-landscape_max_height = 0.74
-landscape_min_height = 0.2
-simulate_portrait = true
+portrait_min_height = 0.1
+landscape_min_height = 0.1
 
 [node name="PanelContainer_Background" type="PanelContainer" parent="PanelContainer"]
 clip_children = 1
@@ -107,12 +106,14 @@ autowrap_mode = 2
 
 [node name="HSeparator_Url" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 14
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
 [node name="Label_Url" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(50, 10)
 layout_mode = 2
 text = "url"
