@@ -66,7 +66,10 @@ func hide_icon() -> void:
 ## Shows the URL separator and URL text
 ## @param url_text: The URL text to display
 func show_url(url_text: String) -> void:
-	label_url.text = url_text
+	if url_text.length() > 106:
+		label_url.text = url_text.left(103) + "..."
+	else:
+		label_url.text = url_text
 	h_separator_url.show()
 	label_url.show()
 
@@ -92,3 +95,9 @@ func _async_update_modal_size() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		panel_container._request_update()
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			Global.modal_manager.close_current_modal()

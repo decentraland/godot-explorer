@@ -1,7 +1,7 @@
 [gd_scene load_steps=13 format=3 uid="uid://cwa2ufu3umupb"]
 
 [ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://src/ui/components/modal/modal.gd" id="1_146x8"]
-[ext_resource type="Script" uid="uid://n7ca5tqvbyf3" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
+[ext_resource type="Script" uid="uid://btifit7el05or" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
 [ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="2_ijrai"]
 [ext_resource type="Script" uid="uid://pwlonouve8et" path="res://src/ui/components/utils/figma_margins.gd" id="3_146x8"]
 [ext_resource type="Texture2D" uid="uid://bth12b5lxd4ul" path="res://assets/ui/modal-background.png" id="3_ijrai"]
@@ -30,6 +30,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_force_pass_scroll_events = false
 color = Color(0, 0, 0, 0.5019608)
 script = ExtResource("1_146x8")
 
@@ -39,9 +40,9 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 129.5
-offset_top = 59.5
+offset_top = 28.0
 offset_right = -129.5
-offset_bottom = -59.5
+offset_bottom = -28.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_figov")
@@ -106,20 +107,24 @@ autowrap_mode = 2
 
 [node name="HSeparator_Url" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 14
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
 [node name="Label_Url" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
+clip_contents = true
 custom_minimum_size = Vector2(50, 10)
 layout_mode = 2
-text = "url"
+text = "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"
 label_settings = ExtResource("4_4n1cu")
 horizontal_alignment = 1
-autowrap_mode = 2
+autowrap_mode = 1
+autowrap_trim_flags = 0
+justification_flags = 0
+max_lines_visible = 2
+visible_characters = 106
+visible_ratio = 1.0707071
 
 [node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
 layout_mode = 2
@@ -166,5 +171,6 @@ texture = ExtResource("6_rvkw6")
 expand_mode = 1
 stretch_mode = 4
 
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Secondary" to="." method="_on_button_secondary_pressed"]
 [connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Primary" to="." method="_on_button_primary_pressed"]
