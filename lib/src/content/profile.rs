@@ -9,6 +9,7 @@ use crate::{
         http_queue_requester::HttpQueueRequester,
         request_response::{RequestOption, ResponseType},
     },
+    urls,
 };
 
 pub(crate) fn prepare_request_requirements() -> (String, String, Arc<HttpQueueRequester>) {
@@ -23,7 +24,7 @@ pub(crate) fn prepare_request_requirements() -> (String, String, Arc<HttpQueueRe
         .get_http_queue_requester();
 
     let lamda_server_base_url = if lamda_server_base_url.is_empty() {
-        "https://peer.decentraland.org/lambdas/".to_string()
+        urls::peer_lambdas()
     } else {
         lamda_server_base_url
     };

@@ -1532,7 +1532,7 @@ async fn get_scene_adapter(
     // Create the request body
 
     use crate::{
-        comms::consts::GATEKEEPER_URL,
+        comms::consts::gatekeeper_url,
         http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
     };
     let request_body = serde_json::json!({
@@ -1541,11 +1541,14 @@ async fn get_scene_adapter(
     });
     let metadata_json_string = request_body.to_string();
 
-    tracing::debug!("🔄 Making scene adapter request to: {}", GATEKEEPER_URL);
+    let gatekeeper = gatekeeper_url();
+    tracing::debug!("🔄 Making scene adapter request to: {}", gatekeeper);
     tracing::debug!("📋 Request body: {}", metadata_json_string);
 
     // Create URI
-    let uri = http::Uri::from_static(GATEKEEPER_URL);
+    let uri = gatekeeper
+        .parse::<http::Uri>()
+        .map_err(|e| format!("Invalid gatekeeper URL: {}", e))?;
     let method = http::Method::POST;
 
     // Sign the request

@@ -40,7 +40,7 @@ func on_request(_offset: int, limit: int) -> void:
 
 	# TODO: Implement more filters (categories, sorting, etc.)
 	# For now we only query the events API URL
-	var url = "https://events.decentraland.org/api/events/"
+	var url = DclUrls.events_api() + "/events/"
 	if search_param.length() > 0:
 		url += "?search=" + search_param.replace(" ", "%20")
 	_async_fetch_events(url, limit)

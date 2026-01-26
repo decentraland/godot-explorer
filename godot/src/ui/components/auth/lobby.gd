@@ -171,8 +171,7 @@ func async_close_sign_in():
 
 # gdlint:ignore = async-function-name
 func _ready():
-	# Set version label
-	label_version.set_text("v" + DclGlobal.get_version())
+	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_guest.visible = not DclGlobal.is_production()
 
 	Global.music_player.play.call_deferred("music_builder")

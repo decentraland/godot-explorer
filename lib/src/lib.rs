@@ -19,6 +19,7 @@ pub mod avatars;
 pub mod comms;
 pub mod content;
 pub mod dcl;
+pub mod env;
 pub mod godot_classes;
 pub mod http_request;
 pub mod notifications;
@@ -28,6 +29,7 @@ pub mod scene_runner;
 pub mod social;
 pub mod test_runner;
 pub mod tools;
+pub mod urls;
 pub mod utils;
 
 struct DecentralandGodotLibrary;

@@ -99,7 +99,7 @@ func get_params_from_cmd():
 	if Global.deep_link_obj.is_location_defined() and location_vector == null:
 		location_vector = Global.deep_link_obj.location
 		if realm_string == null:
-			realm_string = Realm.MAIN_REALM
+			realm_string = DclUrls.main_realm()
 
 	return [realm_string, location_vector]
 
@@ -110,7 +110,7 @@ func _ready():
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
 	Global.change_parcel.connect(_on_change_parcel)
 
-	label_version.set_text("v" + DclGlobal.get_version())
+	label_version.set_text(DclGlobal.get_version_with_env())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)

@@ -16,7 +16,6 @@ signal local_notification_permission_changed(granted: bool)
 signal local_notification_scheduled(notification_id: String)
 signal local_notification_cancelled(notification_id: String)
 
-const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 
 ## TESTING: Set to true to inject fake notifications for testing
@@ -49,7 +48,6 @@ const MAX_OS_SCHEDULED_NOTIFICATIONS = 24  # Maximum notifications scheduled wit
 const TOAST_MAX_AGE_MS = 5 * 60 * 1000  # 5 minutes in milliseconds
 
 # Event notification sync constants
-const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
 # Local notifications version - increment this to clear and re-sync all notifications
@@ -346,7 +344,7 @@ func fetch_notifications(
 	if query_params.size() > 0:
 		query_string = "?" + "&".join(query_params)
 
-	var url = BASE_URL + "/notifications" + query_string
+	var url = DclUrls.notifications_api() + "/notifications" + query_string
 
 	# Execute async fetch in a coroutine
 	_async_fetch_notifications(promise, url)
@@ -439,7 +437,7 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 		promise.reject("User not authenticated")
 		return promise
 
-	var url = BASE_URL + "/notifications/read"
+	var url = DclUrls.notifications_api() + "/notifications/read"
 	var body = {"notificationIds": Array(notification_ids)}
 	var body_json = JSON.stringify(body)
 
@@ -870,7 +868,7 @@ func async_sync_attended_events() -> void:
 				"Notification permission not granted yet, scheduling anyway (OS will handle)"
 			)
 
-	var url = EVENTS_API_BASE_URL + "/events/?only_attendee=true"
+	var url = DclUrls.events_api() + "/events/?only_attendee=true"
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:

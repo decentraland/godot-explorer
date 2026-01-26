@@ -4,7 +4,6 @@ const DISLIKE = preload("res://assets/ui/dislike.svg")
 const DISLIKE_SOLID = preload("res://assets/ui/dislike_solid.svg")
 const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
-const PLACES_API_BASE_URL = "https://places.decentraland.org/api"
 
 @export var show_share_button: bool = false:
 	set(value):
@@ -49,7 +48,7 @@ func _async_on_button_like_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/likes"
+	var url = DclUrls.places_api() + "/places/" + place_id + "/likes"
 	var body: String
 
 	if toggled_on:
@@ -76,7 +75,7 @@ func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/likes"
+	var url = DclUrls.places_api() + "/places/" + place_id + "/likes"
 	var body
 
 	if toggled_on:
@@ -104,7 +103,7 @@ func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/favorites"
+	var url = DclUrls.places_api() + "/places/" + place_id + "/favorites"
 	var body = JSON.stringify({"favorites": toggled_on})
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
@@ -123,7 +122,7 @@ func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 func _async_update_buttons_icons() -> void:
 	disable_buttons()
 
-	var url = PLACES_API_BASE_URL + "/places/" + place_id
+	var url = DclUrls.places_api() + "/places/" + place_id
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
 
 	if response == null:

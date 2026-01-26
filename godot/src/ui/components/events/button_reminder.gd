@@ -1,6 +1,5 @@
 extends Button
 
-const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
 # DEBUG: Set to true to trigger notifications in 10 seconds instead of actual event time
@@ -32,7 +31,7 @@ func _async_on_toggled(toggled_on: bool) -> void:
 
 	_set_loading(true)
 
-	var url = EVENTS_API_BASE_URL + "/events/" + event_id_value + "/attendees"
+	var url = DclUrls.events_api() + "/events/" + event_id_value + "/attendees"
 	var method: HTTPClient.Method
 
 	if toggled_on:
