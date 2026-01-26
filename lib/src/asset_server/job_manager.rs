@@ -106,10 +106,7 @@ impl JobManager {
     pub async fn set_texture_original_size(&self, job_id: &str, width: u32, height: u32) {
         let mut jobs = self.jobs.write().await;
         if let Some(job) = jobs.get_mut(job_id) {
-            job.original_size = Some(TextureSize {
-                width,
-                height,
-            });
+            job.original_size = Some(TextureSize { width, height });
             job.updated_at = Instant::now();
         }
     }
