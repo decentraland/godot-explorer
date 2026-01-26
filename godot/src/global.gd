@@ -260,6 +260,22 @@ func _ready():
 		test_runner.start.call_deferred()
 		return
 
+	# Floating Islands Benchmark mode
+	if cli.fi_benchmark_size >= 0:
+		print("Running Floating Islands Benchmark...")
+
+		# Create minimal required components for benchmark
+		self.scene_fetcher = SceneFetcher.new()
+		self.scene_fetcher.set_name("scene_fetcher")
+		get_tree().root.add_child.call_deferred(self.scene_fetcher)
+		get_tree().root.add_child.call_deferred(self.scene_runner)
+		get_tree().root.add_child.call_deferred(self.content_provider)
+
+		var fi_runner = load("res://src/tools/fi_benchmark_runner.gd").new()
+		fi_runner.set_name("FIBenchmarkRunner")
+		get_tree().root.add_child.call_deferred(fi_runner)
+		return
+
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
