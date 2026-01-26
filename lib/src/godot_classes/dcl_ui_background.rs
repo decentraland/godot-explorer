@@ -219,25 +219,16 @@ impl DclUiBackground {
 
         // DCL format: [bl_x, bl_y, br_x, br_y, tr_x, tr_y, tl_x, tl_y]
         // Remap with 90° CW rotation to fix orientation
-        // Also flip X to preserve animation direction (CW vs CCW)
         // DCL bl → shader top_left, DCL br → shader bottom_left,
         // DCL tr → shader bottom_right, DCL tl → shader top_right
-        shader_mat.set_shader_parameter(
-            "uv_top_left",
-            &Vector2::new(1.0 - uvs[0], uvs[1]).to_variant(),
-        );
-        shader_mat.set_shader_parameter(
-            "uv_bottom_left",
-            &Vector2::new(1.0 - uvs[2], uvs[3]).to_variant(),
-        );
+        shader_mat.set_shader_parameter("uv_top_left", &Vector2::new(uvs[0], uvs[1]).to_variant());
+        shader_mat
+            .set_shader_parameter("uv_bottom_left", &Vector2::new(uvs[2], uvs[3]).to_variant());
         shader_mat.set_shader_parameter(
             "uv_bottom_right",
-            &Vector2::new(1.0 - uvs[4], uvs[5]).to_variant(),
+            &Vector2::new(uvs[4], uvs[5]).to_variant(),
         );
-        shader_mat.set_shader_parameter(
-            "uv_top_right",
-            &Vector2::new(1.0 - uvs[6], uvs[7]).to_variant(),
-        );
+        shader_mat.set_shader_parameter("uv_top_right", &Vector2::new(uvs[6], uvs[7]).to_variant());
 
         // Set texture on the UV child and also as shader parameter
         if let Some(child) = &mut self.uv_child {
