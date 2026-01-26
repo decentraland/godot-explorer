@@ -340,7 +340,7 @@ func _on_button_different_account_pressed():
 
 func _on_button_continue_pressed():
 	Global.metrics.track_click_button("next", current_screen_name, "")
-	_async_on_profile_changed(backpack.mutable_profile)
+	_async_on_profile_changed(Global.player_identity.get_mutable_profile())
 	show_avatar_naming_screen()
 
 
