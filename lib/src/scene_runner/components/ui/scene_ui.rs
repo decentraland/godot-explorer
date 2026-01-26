@@ -5,6 +5,7 @@ use std::{
 };
 
 use godot::{
+    builtin::math::FloatExt,
     classes::{
         text_server::{JustificationFlag, LineBreakFlag},
         Node,
@@ -302,13 +303,18 @@ fn update_layout(
         )
         .expect("failed to compute layout");
 
+    // Track which entities are hidden due to having zero size (cascades to children)
+    let mut hidden_by_zero_size: HashMap<SceneEntityId, bool> = HashMap::new();
+
     for (entity, key_node) in processed_nodes_sorted.iter() {
         let ui_node = godot_dcl_scene.get_node_or_null_ui(entity).unwrap();
+        let parent_entity = ui_node.ui_transform.parent;
+
         let parent_node = processed_nodes
-            .get_mut(&ui_node.ui_transform.parent)
+            .get_mut(&parent_entity)
             .expect("parent not found, it was processed before");
 
-        if let Some(parent) = godot_dcl_scene.get_node_or_null_ui(&ui_node.ui_transform.parent) {
+        if let Some(parent) = godot_dcl_scene.get_node_or_null_ui(&parent_entity) {
             parent.base_control.clone().move_child(
                 &ui_node.base_control.clone().upcast::<Node>(),
                 parent_node.1 + parent.control_offset(),
@@ -329,7 +335,26 @@ fn update_layout(
             x: layout.size.width,
             y: layout.size.height,
         });
-        let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None;
+
+        // Check if parent is hidden by zero size (cascade hidden state down the tree)
+        let parent_hidden = hidden_by_zero_size
+            .get(&parent_entity)
+            .copied()
+            .unwrap_or(false);
+
+        // Check if this element has zero computed size.
+        // In SDK7/React-ECS, scene developers often use a separate "data holder" entity
+        // with Transform.scale to control UI visibility. The UI reads that scale and
+        // multiplies dimensions by it (e.g., width: 512 * windowScale.x).
+        // When scale is 0, the computed size becomes 0.
+        let has_zero_size =
+            layout.size.width.is_zero_approx() || layout.size.height.is_zero_approx();
+
+        let is_hidden_by_zero_size = parent_hidden || has_zero_size;
+        hidden_by_zero_size.insert(*entity, is_hidden_by_zero_size);
+
+        let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None
+            || is_hidden_by_zero_size;
         control.set_visible(!is_hidden);
     }
 }
