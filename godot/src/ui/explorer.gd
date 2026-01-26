@@ -602,7 +602,30 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
+	var fps_text = "- " + str(Engine.get_frames_per_second()) + " FPS"
+
+	# Add dynamic graphics info if enabled
+	if Global.get_config().dynamic_graphics_enabled:
+		var dm = Global.dynamic_graphics_manager
+		if dm == null:
+			label_fps.set_text(fps_text)
+			return
+		var profile_name = GraphicSettings.PROFILE_NAMES[dm.get_current_profile()]
+
+		if DclGlobal.is_production():
+			fps_text += " | DynGfx: %s | %s" % [dm.get_state_name(), profile_name]
+		else:
+			fps_text += (
+				" | DynGfx: %s | R:%.2f | T:%s | %s"
+				% [
+					dm.get_state_name(),
+					dm.get_frame_time_ratio(),
+					dm.get_thermal_state_string(),
+					profile_name
+				]
+			)
+
+	label_fps.set_text(fps_text)
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.get_config().save_to_settings_file()

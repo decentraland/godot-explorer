@@ -433,6 +433,28 @@ impl Metrics {
                         metrics.average_jsheap_mb = Some(jsheap_avg_mb as f32);
                     }
                 }
+
+                // Dynamic graphics metrics
+                let dynamic_manager = global_bind.dynamic_graphics_manager.clone();
+                let dm_bind = dynamic_manager.bind();
+                metrics.dynamic_graphics_enabled = Some(dm_bind.is_enabled());
+                if dm_bind.is_enabled() {
+                    metrics.dynamic_graphics_state = Some(dm_bind.get_state_name().to_string());
+                    metrics.dynamic_graphics_profile = Some(dm_bind.get_current_profile());
+                    metrics.frame_time_ratio = Some(dm_bind.get_frame_time_ratio() as f32);
+                    // Use the internal thermal state from the dynamic manager
+                    metrics.dynamic_graphics_thermal_state =
+                        Some(dm_bind.get_thermal_state_string().to_string());
+                }
+
+                // Hardware benchmark result from config (GDScript property)
+                let config = global_bind.config.clone();
+                let gpu_score = config.get("benchmark_gpu_score");
+                if let Ok(score) = gpu_score.try_to::<f64>() {
+                    if score > 0.0 {
+                        metrics.benchmark_gpu_score = Some(score as f32);
+                    }
+                }
             }
         }
     }
