@@ -217,18 +217,18 @@ impl DclUiBackground {
             return;
         }
 
-        // DCL format: [bl_x, bl_y, br_x, br_y, tr_x, tr_y, tl_x, tl_y]
-        // Remap with 90° CW rotation to fix orientation
-        // DCL bl → shader top_left, DCL br → shader bottom_left,
-        // DCL tr → shader bottom_right, DCL tl → shader top_right
-        shader_mat.set_shader_parameter("uv_top_left", &Vector2::new(uvs[0], uvs[1]).to_variant());
-        shader_mat
-            .set_shader_parameter("uv_bottom_left", &Vector2::new(uvs[2], uvs[3]).to_variant());
+        // UV format (matching bevy-explorer): [tl.x, tl.y, bl.x, bl.y, br.x, br.y, tr.x, tr.y]
+        // Pack into two Vec4s for shader:
+        // uvs_0 = vec4(tl.x, tl.y, bl.x, bl.y)
+        // uvs_1 = vec4(br.x, br.y, tr.x, tr.y)
         shader_mat.set_shader_parameter(
-            "uv_bottom_right",
-            &Vector2::new(uvs[4], uvs[5]).to_variant(),
+            "uvs_0",
+            &Vector4::new(uvs[0], uvs[1], uvs[2], uvs[3]).to_variant(),
         );
-        shader_mat.set_shader_parameter("uv_top_right", &Vector2::new(uvs[6], uvs[7]).to_variant());
+        shader_mat.set_shader_parameter(
+            "uvs_1",
+            &Vector4::new(uvs[4], uvs[5], uvs[6], uvs[7]).to_variant(),
+        );
 
         // Set texture on the UV child and also as shader parameter
         if let Some(child) = &mut self.uv_child {
