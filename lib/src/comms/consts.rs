@@ -1,5 +1,8 @@
+/// Get the gatekeeper URL (transformed based on environment)
 #[cfg(feature = "use_livekit")]
-pub const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
+pub fn gatekeeper_url() -> String {
+    crate::urls::comms_gatekeeper()
+}
 
 // Temporary flags for testing different connection scenarios
 #[cfg(feature = "use_livekit")]

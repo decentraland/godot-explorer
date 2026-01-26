@@ -18,7 +18,7 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 @export var likes_percent: float = 0.0
 @export var metadata: Dictionary = {}
 @export var location: Vector2i = Vector2i(0, 0)
-@export var realm: String = Realm.MAIN_REALM
+@export var realm: String = DclUrls.main_realm()
 @export var realm_title: String = "Genesis City"
 
 var event_id: String
@@ -352,7 +352,7 @@ func set_data(item_data):
 		if world_name:
 			set_realm(world_name, world_name)
 	else:
-		set_realm(Realm.MAIN_REALM, "Genesis City")
+		set_realm(DclUrls.main_realm(), "Genesis City")
 
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))
@@ -669,8 +669,7 @@ func schedule_event() -> void:
 
 	# Create jump in URL with location coordinates
 	var jump_in_url = (
-		"https://decentraland.org/jump/events?position=%d%%2C%d&realm=main"
-		% [location.x, location.y]
+		DclUrls.jump_events() + "?position=%d%%2C%d&realm=main" % [location.x, location.y]
 	)
 
 	# Combine description with jump in URL
@@ -710,7 +709,7 @@ func _on_button_share_pressed() -> void:
 		printerr("Event ID not available")
 		return
 
-	var event_url = "https://decentraland.org/events/event/?id=" + event_id
+	var event_url = DclUrls.host() + "/events/event/?id=" + event_id
 
 	var event_title = _data.get("name", "Decentraland Event")
 

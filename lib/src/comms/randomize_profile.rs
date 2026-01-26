@@ -9,7 +9,7 @@ use crate::comms::profile::{
 impl UserProfile {
     pub fn randomize() -> Self {
         Self {
-            base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
+            base_url: format!("{}contents/", crate::urls::peer_content()),
             version: 1,
             content: SerializedProfile::randomize(),
         }

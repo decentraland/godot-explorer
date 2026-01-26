@@ -3,7 +3,7 @@ extends ColorRect
 var texture_placeholder = load("res://assets/ui/placeholder2.png")
 
 var location: Vector2i = Vector2i(0, 0)
-var realm: String = Realm.MAIN_REALM
+var realm: String = DclUrls.main_realm()
 
 @onready var texture_rect: TextureRect = %TextureRect
 @onready var label_title: Label = %Label_Title
@@ -35,7 +35,7 @@ func _on_button_jump_in_pressed() -> void:
 
 
 func async_load_place_position():
-	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	var url: String = DclUrls.places_api() + "/places?limit=1"
 	url += "&positions=%d,%d" % [location.x, location.y]
 
 	var headers = {"Content-Type": "application/json"}

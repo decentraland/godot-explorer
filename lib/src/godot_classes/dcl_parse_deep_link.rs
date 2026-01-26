@@ -27,6 +27,11 @@ pub struct DclParseDeepLink {
     /// The signin identity ID from deep link `decentraland://open?signin=${identityId}`
     #[var]
     signin_identity_id: GString,
+
+    /// The environment parameter from deep link `decentraland://open?dclenv=zone`
+    /// Valid values: "org", "zone", "today"
+    #[var]
+    dclenv: GString,
 }
 
 #[godot_api]
@@ -41,6 +46,7 @@ impl IRefCounted for DclParseDeepLink {
             dynamic_scene_loading: false,
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
+            dclenv: GString::new(),
         }
     }
 }
@@ -56,6 +62,7 @@ impl DclParseDeepLink {
             dynamic_scene_loading: false,
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
+            dclenv: GString::new(),
         };
 
         if url_str.is_empty() {
@@ -108,6 +115,13 @@ impl DclParseDeepLink {
                     // Dynamic scene loading mode - "true" or "1" enables it
                     return_object.dynamic_scene_loading =
                         value.eq_ignore_ascii_case("true") || value == "1";
+                }
+                "dclenv" => {
+                    // Environment parameter - valid values: org, zone, today
+                    let env_lower = value.to_lowercase();
+                    if ["org", "zone", "today"].contains(&env_lower.as_str()) {
+                        return_object.dclenv = GString::from(env_lower.as_str());
+                    }
                 }
                 _ => {}
             }

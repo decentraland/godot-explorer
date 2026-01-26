@@ -227,6 +227,12 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
+	# Initialize environment from deep link or default to "org"
+	var env = deep_link_obj.dclenv if not deep_link_obj.dclenv.is_empty() else "org"
+	DclGlobal.set_dcl_environment(env)
+	if env != "org":
+		print("[GLOBAL] Environment set to: ", env)
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 
@@ -569,6 +575,8 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
+	# Set orientation BEFORE changing window size so listeners get correct value
+	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	elif cli.emulate_ios:
@@ -582,7 +590,6 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
-	_is_portrait = false
 
 
 func is_orientation_portrait() -> bool:
@@ -590,6 +597,8 @@ func is_orientation_portrait() -> bool:
 
 
 func set_orientation_portrait():
+	# Set orientation BEFORE changing window size so listeners get correct value
+	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 	elif cli.emulate_ios:
@@ -603,7 +612,6 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
-	_is_portrait = true
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
@@ -737,7 +745,7 @@ func check_deep_link_teleport_to():
 			if realm.is_empty():
 				realm = Global.deep_link_obj.realm
 			if realm.is_empty():
-				realm = Realm.MAIN_REALM
+				realm = DclUrls.main_realm()
 
 			Global.teleport_to(Global.deep_link_obj.location, realm)
 		elif not Global.deep_link_obj.preview.is_empty():

@@ -411,7 +411,7 @@ func _on_color_picker_panel_hided():
 
 
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
-	Global.open_url("https://decentraland.org/marketplace/browse?section=wearables")
+	Global.open_url(DclUrls.marketplace() + "/browse?section=wearables")
 
 
 func _on_button_wearables_pressed():
