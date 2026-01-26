@@ -350,7 +350,6 @@ func _on_radio_selector_select_item(index, _item):
 	}
 
 	Global.get_config().limit_fps = LIMIT_FPS_MAPPING[index]
-	GraphicSettings.apply_fps_limit()
 	Global.get_config().save_to_settings_file()
 
 
