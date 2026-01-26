@@ -327,6 +327,21 @@ fn update_layout(
 
         let mut control = ui_node.base_control.clone();
         let layout = taffy.layout(*key_node).unwrap();
+        let style = taffy.style(*key_node).unwrap();
+
+        tracing::debug!(
+            "[UI_LAYOUT] Entity {:?} - computed layout: pos=({:.1}, {:.1}), size=({:.1}, {:.1}), parent={:?}, has_bkg={}, style_size=({:?}, {:?})",
+            entity,
+            layout.location.x,
+            layout.location.y,
+            layout.size.width,
+            layout.size.height,
+            parent_entity,
+            ui_node.has_background,
+            style.size.width,
+            style.size.height
+        );
+
         control.set_position(godot::prelude::Vector2 {
             x: layout.location.x,
             y: layout.location.y,

@@ -42,6 +42,11 @@ impl INinePatchRect for DclUiBackground {
             .base()
             .get_parent()
             .expect("ui_background suppose to have a parent");
+        let parent_size = parent.clone().cast::<Control>().get_size();
+        tracing::debug!(
+            "[UI_BKG] ready: connecting to parent resize signal, parent_size={:?}",
+            parent_size
+        );
         parent.connect("resized", &self.base().callable("_on_parent_size"));
 
         self._set_white_pixel();
@@ -51,8 +56,6 @@ impl INinePatchRect for DclUiBackground {
 #[godot_api]
 impl DclUiBackground {
     fn update_layout_for_center(&mut self) -> Option<()> {
-        tracing::debug!("update_layout_for_center");
-
         let parent_size = self
             .base()
             .get_parent()
@@ -83,12 +86,37 @@ impl DclUiBackground {
 
     #[func]
     fn _on_parent_size(&mut self) {
+        let parent_size = self
+            .base()
+            .get_parent()
+            .map(|p| p.cast::<Control>().get_size())
+            .unwrap_or_default();
+        let my_size = self.base().get_size();
+        let my_pos = self.base().get_position();
+        tracing::debug!(
+            "[UI_BKG] _on_parent_size: texture_loaded={}, texture_mode={:?}, parent_size={:?}, my_size={:?}, my_pos={:?}",
+            self.texture_loaded,
+            self.current_value.texture_mode(),
+            parent_size,
+            my_size,
+            my_pos
+        );
+
         if !self.texture_loaded {
+            tracing::debug!("[UI_BKG] _on_parent_size: texture_loaded=false, skipping");
             return;
         }
 
         if let BackgroundTextureMode::Center = self.current_value.texture_mode() {
+            tracing::debug!(
+                "[UI_BKG] _on_parent_size: CENTER mode, calling update_layout_for_center"
+            );
             self.update_layout_for_center();
+        } else {
+            tracing::debug!(
+                "[UI_BKG] _on_parent_size: mode={:?}, NOT Center, doing nothing",
+                self.current_value.texture_mode()
+            );
         }
     }
 
@@ -141,6 +169,16 @@ impl DclUiBackground {
 
     #[func]
     fn _on_texture_loaded(&mut self) {
+        let parent_size = self
+            .base()
+            .get_parent()
+            .map(|p| p.cast::<Control>().get_size())
+            .unwrap_or_default();
+        tracing::debug!(
+            "[UI_BKG] _on_texture_loaded START: waiting_hash={}, parent_size={:?}",
+            self.waiting_hash,
+            parent_size
+        );
         let global = DclGlobal::singleton();
         let mut content_provider = global.bind().get_content_provider();
         let Some(godot_texture) = content_provider
@@ -148,24 +186,64 @@ impl DclUiBackground {
             .get_texture_from_hash(self.waiting_hash.clone())
         else {
             if self.first_texture_load_shot {
+                tracing::debug!("[UI_BKG] _on_texture_loaded: first shot, will retry");
                 self.first_texture_load_shot = false;
             } else {
                 tracing::error!("trying to set texture not found: {}", self.waiting_hash);
             }
             return;
         };
+        tracing::debug!(
+            "[UI_BKG] _on_texture_loaded: texture found, size={:?}",
+            godot_texture.get_size()
+        );
         self.texture_loaded = true;
         self.base_mut()
             .set_texture(&godot_texture.clone().upcast::<Texture2D>());
 
         self._set_texture_params();
+
+        let final_size = self.base().get_size();
+        let final_pos = self.base().get_position();
+        tracing::debug!(
+            "[UI_BKG] _on_texture_loaded END: final_size={:?}, final_pos={:?}",
+            final_size,
+            final_pos
+        );
     }
 
     fn _set_texture_params(&mut self) {
         let Some(godot_texture) = self.base().get_texture() else {
+            tracing::debug!("[UI_BKG] _set_texture_params: NO TEXTURE, returning early");
             return;
         };
-        match self.current_value.texture_mode() {
+        let parent_size = self
+            .base()
+            .get_parent()
+            .map(|p| p.cast::<Control>().get_size())
+            .unwrap_or_default();
+        let my_size_before = self.base().get_size();
+
+        // When there's no actual texture (just using white_pixel placeholder),
+        // force STRETCH mode to fill the parent area. CENTER mode only makes sense
+        // when there's a real image to center.
+        let effective_texture_mode = if self.current_value.texture.is_none() {
+            BackgroundTextureMode::Stretch
+        } else {
+            self.current_value.texture_mode()
+        };
+
+        tracing::debug!(
+            "[UI_BKG] _set_texture_params: requested_mode={:?}, effective_mode={:?}, has_texture={}, parent_size={:?}, my_size_before={:?}, texture_size={:?}",
+            self.current_value.texture_mode(),
+            effective_texture_mode,
+            self.current_value.texture.is_some(),
+            parent_size,
+            my_size_before,
+            godot_texture.get_size()
+        );
+
+        match effective_texture_mode {
             BackgroundTextureMode::NineSlices => {
                 self.base_mut()
                     .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
@@ -203,6 +281,17 @@ impl DclUiBackground {
                 );
                 self.base_mut().set_v_axis_stretch_mode(
                     godot::classes::nine_patch_rect::AxisStretchMode::TILE_FIT,
+                );
+
+                let slices_info = if self.current_value.texture_slices.is_some() {
+                    format!("{:?}", self.current_value.texture_slices)
+                } else {
+                    "default (1/3)".to_string()
+                };
+                tracing::debug!(
+                    "[UI_BKG] _set_texture_params NINE_SLICES: margins L={}, T={}, R={}, B={}, slices={}",
+                    patch_margin_left, patch_margin_top, patch_margin_right, patch_margin_bottom,
+                    slices_info
                 );
             }
             BackgroundTextureMode::Center => {
@@ -266,7 +355,24 @@ impl DclUiBackground {
         new_value: PbUiBackground,
         content_mapping: ContentMappingAndUrlRef,
     ) {
+        let parent_size = self
+            .base()
+            .get_parent()
+            .map(|p| p.cast::<Control>().get_size())
+            .unwrap_or_default();
+        let my_size = self.base().get_size();
+        let my_pos = self.base().get_position();
         let texture_changed = new_value.texture != self.current_value.texture;
+        tracing::debug!(
+            "[UI_BKG] change_value START: texture_changed={}, texture_mode={:?}, parent_size={:?}, my_size={:?}, my_pos={:?}, texture_loaded={}, has_texture={:?}",
+            texture_changed,
+            new_value.texture_mode(),
+            parent_size,
+            my_size,
+            my_pos,
+            self.texture_loaded,
+            new_value.texture.is_some()
+        );
         self.current_value = new_value;
 
         // texture change if
@@ -345,8 +451,19 @@ impl DclUiBackground {
                 );
             }
         } else {
+            tracing::debug!(
+                "[UI_BKG] change_value: texture NOT changed, calling _set_texture_params"
+            );
             self._set_texture_params();
         }
+
+        let final_size = self.base().get_size();
+        let final_pos = self.base().get_position();
+        tracing::debug!(
+            "[UI_BKG] change_value END: final_size={:?}, final_pos={:?}",
+            final_size,
+            final_pos
+        );
 
         let modulate_color = self
             .current_value
