@@ -199,6 +199,9 @@ async fn process_scene_gltf(
         .await
         .map_err(anyhow::Error::msg)?;
 
+    // Decompress if Draco-compressed (overwrites original file)
+    decompress_gltf_if_needed(&gltf_file_path).await?;
+
     // Extract actual texture dependencies from the downloaded GLTF file
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
@@ -251,6 +254,9 @@ async fn process_wearable_gltf(
         .await
         .map_err(anyhow::Error::msg)?;
 
+    // Decompress if Draco-compressed (overwrites original file)
+    decompress_gltf_if_needed(&gltf_file_path).await?;
+
     // Extract actual texture dependencies from the downloaded GLTF file
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
@@ -302,6 +308,9 @@ async fn process_emote_gltf(
         )
         .await
         .map_err(anyhow::Error::msg)?;
+
+    // Decompress if Draco-compressed (overwrites original file)
+    decompress_gltf_if_needed(&gltf_file_path).await?;
 
     // Extract actual texture dependencies from the downloaded GLTF file
     let gltf_dependencies =
@@ -536,6 +545,117 @@ fn find_file_path_for_hash(
 const IMAGE_EXTENSIONS: &[&str] = &[
     ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tga", ".ktx", ".ktx2",
 ];
+
+/// Check if a GLTF/GLB file uses Draco compression and decompress if needed.
+/// Overwrites the original file with the decompressed version.
+async fn decompress_gltf_if_needed(file_path: &str) -> Result<(), anyhow::Error> {
+    let uses_draco = check_for_draco_extension(file_path).await?;
+
+    if !uses_draco {
+        return Ok(());
+    }
+
+    tracing::info!("Decompressing Draco-compressed GLTF: {}", file_path);
+
+    // Create temporary output path
+    let temp_path = format!("{}.tmp.glb", file_path);
+
+    // Run gltf-transform copy (removes Draco compression)
+    let output = tokio::process::Command::new("gltf-transform")
+        .args(["copy", file_path, &temp_path])
+        .output()
+        .await
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                anyhow::anyhow!(
+                    "gltf-transform not found. Install with: npm install -g @gltf-transform/cli"
+                )
+            } else {
+                anyhow::anyhow!("Failed to run gltf-transform: {}", e)
+            }
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Clean up temp file on error
+        let _ = tokio::fs::remove_file(&temp_path).await;
+        return Err(anyhow::anyhow!(
+            "gltf-transform failed (exit code {:?}):\nstderr: {}\nstdout: {}",
+            output.status.code(),
+            stderr,
+            stdout
+        ));
+    }
+
+    // Replace original with decompressed version
+    tokio::fs::rename(&temp_path, file_path).await?;
+
+    tracing::info!("Draco decompression complete: {}", file_path);
+
+    Ok(())
+}
+
+/// Check if a GLTF/GLB file uses Draco mesh compression.
+async fn check_for_draco_extension(file_path: &str) -> Result<bool, anyhow::Error> {
+    let data = tokio::fs::read(file_path).await?;
+
+    // GLB files start with magic "glTF"
+    if data.len() > 12 && &data[0..4] == b"glTF" {
+        // Parse GLB header to find JSON chunk
+        let json_chunk = extract_glb_json(&data)?;
+        let json: serde_json::Value = serde_json::from_slice(json_chunk)?;
+
+        if let Some(extensions) = json.get("extensionsUsed").and_then(|e| e.as_array()) {
+            return Ok(extensions
+                .iter()
+                .any(|ext| ext.as_str() == Some("KHR_draco_mesh_compression")));
+        }
+    } else {
+        // Regular GLTF JSON file
+        let json: serde_json::Value = serde_json::from_slice(&data)?;
+
+        if let Some(extensions) = json.get("extensionsUsed").and_then(|e| e.as_array()) {
+            return Ok(extensions
+                .iter()
+                .any(|ext| ext.as_str() == Some("KHR_draco_mesh_compression")));
+        }
+    }
+
+    Ok(false)
+}
+
+/// Extract the JSON chunk from a GLB file.
+fn extract_glb_json(data: &[u8]) -> Result<&[u8], anyhow::Error> {
+    if data.len() < 12 {
+        return Err(anyhow::anyhow!("GLB file too small"));
+    }
+
+    // GLB header: magic (4) + version (4) + length (4)
+    // Chunk header: chunk_length (4) + chunk_type (4)
+    if data.len() < 20 {
+        return Err(anyhow::anyhow!("GLB file missing chunk header"));
+    }
+
+    // Read first chunk length (little endian)
+    let chunk_length = u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as usize;
+
+    // Read chunk type (should be JSON = 0x4E4F534A)
+    let chunk_type = u32::from_le_bytes([data[16], data[17], data[18], data[19]]);
+    if chunk_type != 0x4E4F534A {
+        return Err(anyhow::anyhow!("First GLB chunk is not JSON"));
+    }
+
+    // Chunk data starts at byte 20
+    let chunk_start = 20;
+    let chunk_end = chunk_start + chunk_length;
+
+    if data.len() < chunk_end {
+        return Err(anyhow::anyhow!("GLB JSON chunk extends beyond file"));
+    }
+
+    Ok(&data[chunk_start..chunk_end])
+}
 
 /// Get the base directory from a file path.
 fn get_base_dir(file_path: &str) -> String {
