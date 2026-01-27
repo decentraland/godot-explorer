@@ -143,9 +143,7 @@ func generate_floating_islands():
 	elif arm_length == 99:
 		log_msg("FI Benchmark: Genesis Plaza layout (%d parcels)" % parcels.size())
 	else:
-		log_msg(
-			"FI Benchmark: 4 parcels in CROSS with arm_length=%d (worst case)" % arm_length
-		)
+		log_msg("FI Benchmark: 4 parcels in CROSS with arm_length=%d (worst case)" % arm_length)
 
 	# Create fake scene items to populate loaded_scenes
 	if arm_length == 99:
@@ -210,33 +208,85 @@ func generate_cross_with_separation(arm_length: int) -> Array[Vector2i]:
 func get_genesis_plaza_parcels() -> Array[Vector2i]:
 	return [
 		# Row y=-3
-		Vector2i(-5, -3), Vector2i(-4, -3), Vector2i(-3, -3), Vector2i(-1, -3),
+		Vector2i(-5, -3),
+		Vector2i(-4, -3),
+		Vector2i(-3, -3),
+		Vector2i(-1, -3),
 		# Row y=-2
-		Vector2i(-7, -2), Vector2i(-6, -2), Vector2i(-5, -2), Vector2i(-4, -2),
-		Vector2i(-3, -2), Vector2i(-2, -2), Vector2i(-1, -2),
+		Vector2i(-7, -2),
+		Vector2i(-6, -2),
+		Vector2i(-5, -2),
+		Vector2i(-4, -2),
+		Vector2i(-3, -2),
+		Vector2i(-2, -2),
+		Vector2i(-1, -2),
 		# Row y=-1
-		Vector2i(-7, -1), Vector2i(-6, -1), Vector2i(-5, -1), Vector2i(-4, -1),
-		Vector2i(-3, -1), Vector2i(-2, -1), Vector2i(-1, -1),
+		Vector2i(-7, -1),
+		Vector2i(-6, -1),
+		Vector2i(-5, -1),
+		Vector2i(-4, -1),
+		Vector2i(-3, -1),
+		Vector2i(-2, -1),
+		Vector2i(-1, -1),
 		# Row y=0 (main road)
-		Vector2i(-7, 0), Vector2i(-6, 0), Vector2i(-5, 0), Vector2i(-4, 0),
-		Vector2i(-3, 0), Vector2i(-2, 0), Vector2i(-1, 0), Vector2i(0, 0),
-		Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0),
-		Vector2i(5, 0), Vector2i(6, 0), Vector2i(7, 0), Vector2i(8, 0),
-		Vector2i(9, 0), Vector2i(10, 0),
+		Vector2i(-7, 0),
+		Vector2i(-6, 0),
+		Vector2i(-5, 0),
+		Vector2i(-4, 0),
+		Vector2i(-3, 0),
+		Vector2i(-2, 0),
+		Vector2i(-1, 0),
+		Vector2i(0, 0),
+		Vector2i(1, 0),
+		Vector2i(2, 0),
+		Vector2i(3, 0),
+		Vector2i(4, 0),
+		Vector2i(5, 0),
+		Vector2i(6, 0),
+		Vector2i(7, 0),
+		Vector2i(8, 0),
+		Vector2i(9, 0),
+		Vector2i(10, 0),
 		# Row y=1
-		Vector2i(-7, 1), Vector2i(-6, 1), Vector2i(-5, 1), Vector2i(-4, 1),
-		Vector2i(-3, 1), Vector2i(-2, 1), Vector2i(-1, 1),
+		Vector2i(-7, 1),
+		Vector2i(-6, 1),
+		Vector2i(-5, 1),
+		Vector2i(-4, 1),
+		Vector2i(-3, 1),
+		Vector2i(-2, 1),
+		Vector2i(-1, 1),
 		# Row y=2
-		Vector2i(-7, 2), Vector2i(-6, 2), Vector2i(-5, 2), Vector2i(-4, 2),
-		Vector2i(-3, 2), Vector2i(-2, 2), Vector2i(-1, 2),
+		Vector2i(-7, 2),
+		Vector2i(-6, 2),
+		Vector2i(-5, 2),
+		Vector2i(-4, 2),
+		Vector2i(-3, 2),
+		Vector2i(-2, 2),
+		Vector2i(-1, 2),
 		# Row y=3
-		Vector2i(-6, 3), Vector2i(-5, 3), Vector2i(-4, 3), Vector2i(-3, 3), Vector2i(-2, 3),
+		Vector2i(-6, 3),
+		Vector2i(-5, 3),
+		Vector2i(-4, 3),
+		Vector2i(-3, 3),
+		Vector2i(-2, 3),
 		# Row y=4
-		Vector2i(-6, 4), Vector2i(-5, 4), Vector2i(-4, 4), Vector2i(-3, 4), Vector2i(-2, 4),
+		Vector2i(-6, 4),
+		Vector2i(-5, 4),
+		Vector2i(-4, 4),
+		Vector2i(-3, 4),
+		Vector2i(-2, 4),
 		# Row y=5
-		Vector2i(-6, 5), Vector2i(-5, 5), Vector2i(-4, 5), Vector2i(-3, 5), Vector2i(-2, 5),
+		Vector2i(-6, 5),
+		Vector2i(-5, 5),
+		Vector2i(-4, 5),
+		Vector2i(-3, 5),
+		Vector2i(-2, 5),
 		# Row y=6
-		Vector2i(-6, 6), Vector2i(-5, 6), Vector2i(-4, 6), Vector2i(-3, 6), Vector2i(-2, 6),
+		Vector2i(-6, 6),
+		Vector2i(-5, 6),
+		Vector2i(-4, 6),
+		Vector2i(-3, 6),
+		Vector2i(-2, 6),
 	]
 
 
