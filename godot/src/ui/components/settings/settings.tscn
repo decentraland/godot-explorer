@@ -376,6 +376,34 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 30
 
+[node name="DynamicGraphics" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="Label_DynamicGraphics" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Auto Graphics Adjustment"
+
+[node name="Label_DynamicGraphicsDesc" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+modulate = Color(1, 1, 1, 0.7)
+text = "Automatically adjusts graphics based on device performance"
+
+[node name="CheckBox_DynamicGraphics" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Enable Dynamic Graphics"
+
+[node name="Label_DynamicGraphicsStatus" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.5, 1, 0.5, 1)
+text = ""
+
 [node name="GraphicProfile" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
 alignment = 1
@@ -437,7 +465,7 @@ text = "Limit FPS"
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
-items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS", "120 FPS"])
+items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS"])
 
 [node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 unique_name_in_owner = true
@@ -995,6 +1023,7 @@ hide_on_portrait = true
 [connection signal="drag_ended" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_ended"]
 [connection signal="drag_started" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_started"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_value_changed"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics/CheckBox_DynamicGraphics" to="." method="_on_check_box_dynamic_graphics_toggled"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/GraphicProfile/RadioSelector_GraphicProfile" to="." method="_on_radio_selector_graphic_profile_select_item"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed/RadioSelector_Windowed" to="." method="_on_radio_selector_windowed_select_item"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/UiZoom/RadioSelector_UiZoom" to="." method="_on_radio_selector_ui_zoom_select_item"]

@@ -736,6 +736,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="ColorRect_Background" type="ColorRect" parent="."]
+unique_name_in_owner = true
 show_behind_parent = true
 layout_mode = 1
 anchors_preset = 15
@@ -747,6 +748,7 @@ mouse_filter = 2
 color = Color(0.898039, 0.882353, 0.87451, 1)
 
 [node name="TextureRect_Background" type="TextureRect" parent="."]
+unique_name_in_owner = true
 show_behind_parent = true
 layout_mode = 1
 anchors_preset = 15

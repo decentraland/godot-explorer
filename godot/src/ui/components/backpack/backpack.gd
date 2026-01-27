@@ -5,6 +5,7 @@ const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
 
+@export var hide_background: bool = false
 @export var hide_navbar: bool = false
 
 var wearable_button_group_per_category: Dictionary = {}
@@ -50,10 +51,14 @@ var is_loading_profile: bool = false
 @onready var container_navbar = %PanelContainer_Navbar
 @onready var button_emotes = %Button_Emotes
 @onready var button_wearables = %Button_Wearables
+@onready var color_rect_background: ColorRect = %ColorRect_Background
+@onready var texture_rect_background: TextureRect = %TextureRect_Background
 
 
 # gdlint:ignore = async-function-name
 func _ready():
+	color_rect_background.visible = !hide_background
+	texture_rect_background.visible = !hide_background
 	for category in Wearables.Categories.ALL_CATEGORIES:
 		var button_group = ButtonGroup.new()
 		button_group.allow_unpress = _can_unequip(category)

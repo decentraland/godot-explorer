@@ -39,6 +39,7 @@ var fade_in_tween: Tween = null
 @onready var hud_button_backpack: Button = %HudButton_Backpack
 @onready var hud_button_discover: Button = %HudButton_Discover
 @onready var hud_button_settings: Button = %HudButton_Settings
+@onready var control_modal: Control = %Control_Modal
 
 
 func _ready():
@@ -94,6 +95,7 @@ func close():
 	if not is_open:
 		return
 	is_open = false
+	GraphicSettings.apply_full_processor_mode()
 	if Global.player_identity.has_changes():
 		Global.player_identity.async_save_profile()
 	var tween_m = create_tween()
@@ -107,12 +109,13 @@ func close():
 	)
 
 
-func async_show_discover():
+func async_show_discover(open_menu := true):
 	await control_discover._async_instantiate()
 	select_discover_screen()
 	if is_instance_valid(hud_button_discover):
 		hud_button_discover.toggled.emit(true)
-	_open()
+	if open_menu:
+		_open()
 
 
 func async_show_backpack(on_emotes := false):
@@ -149,15 +152,21 @@ func async_show_own_profile():
 
 
 func _open():
+	if is_open:
+		return
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if not selected_node:
-		async_show_discover()
+		async_show_discover(false)
 	if not visible:
 		show()
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_callback(func(): is_open = true)
+	tween.tween_callback(
+		func():
+			is_open = true
+			GraphicSettings.apply_low_processor_mode()
+	)
 
 
 func _on_control_settings_toggle_fps_visibility(visibility):

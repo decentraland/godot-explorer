@@ -1,0 +1,176 @@
+[gd_scene load_steps=13 format=3 uid="uid://cwa2ufu3umupb"]
+
+[ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://src/ui/components/modal/modal.gd" id="1_146x8"]
+[ext_resource type="Script" uid="uid://btifit7el05or" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
+[ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="2_ijrai"]
+[ext_resource type="Script" uid="uid://pwlonouve8et" path="res://src/ui/components/utils/figma_margins.gd" id="3_146x8"]
+[ext_resource type="Texture2D" uid="uid://bth12b5lxd4ul" path="res://assets/ui/modal-background.png" id="3_ijrai"]
+[ext_resource type="LabelSettings" uid="uid://cp7awd4s8rtcn" path="res://assets/themes/modal_body.tres" id="3_tquji"]
+[ext_resource type="LabelSettings" uid="uid://cmc7vbpljmiry" path="res://assets/themes/modal_url.tres" id="4_4n1cu"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_bdjpj"]
+[ext_resource type="Texture2D" uid="uid://bpsb828rp2tlt" path="res://assets/ui/modal-alert-icon.svg" id="6_rvkw6"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_figov"]
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ijrai"]
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_figov"]
+
+[node name="Modal" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_force_pass_scroll_events = false
+color = Color(0, 0, 0, 0.5019608)
+script = ExtResource("1_146x8")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 129.5
+offset_top = 28.0
+offset_right = -129.5
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_figov")
+script = ExtResource("2_5cdoh")
+portrait_min_height = 0.1
+landscape_min_height = 0.1
+
+[node name="PanelContainer_Background" type="PanelContainer" parent="PanelContainer"]
+clip_children = 1
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ijrai")
+
+[node name="TextureRect" type="TextureRect" parent="PanelContainer/PanelContainer_Background"]
+layout_mode = 2
+texture = ExtResource("3_ijrai")
+expand_mode = 1
+
+[node name="MarginContainer_Content" type="MarginContainer" parent="PanelContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 80
+theme_override_constants/margin_top = 80
+theme_override_constants/margin_right = 80
+theme_override_constants/margin_bottom = 70
+script = ExtResource("3_146x8")
+height_portrait = 1080.0
+top_portrait = 100.0
+right_portrait = 80.0
+bottom_portrait = 90.0
+portrait_left_margin = 80.0
+top_landscape = 80.0
+right_landscape = 80.0
+bottom_landscape = 70.0
+left_landscape = 80.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer_Content"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Label_Title" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 10)
+layout_mode = 2
+text = "Loading is taking longer than expected"
+label_settings = ExtResource("2_ijrai")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator2" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 14
+theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
+
+[node name="Label_Body" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 10)
+layout_mode = 2
+text = "You can reload the experience, or jump in now, it should keep loading in the background."
+label_settings = ExtResource("3_tquji")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator_Url" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 14
+theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
+
+[node name="Label_Url" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(50, 10)
+layout_mode = 2
+text = "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"
+label_settings = ExtResource("4_4n1cu")
+horizontal_alignment = 1
+autowrap_mode = 1
+autowrap_trim_flags = 0
+justification_flags = 0
+max_lines_visible = 2
+visible_characters = 106
+visible_ratio = 1.0707071
+
+[node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 53
+theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 40
+
+[node name="Button_Secondary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("5_bdjpj")
+theme_type_variation = &"SecondaryButton"
+text = "SECONDARY"
+
+[node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("5_bdjpj")
+text = "PRIMARY"
+
+[node name="Control" type="Control" parent="PanelContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+
+[node name="Icon" type="TextureRect" parent="PanelContainer/Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(82.667, 66.667)
+layout_mode = 0
+offset_left = -41.333
+offset_top = -33.333
+offset_right = 41.334
+offset_bottom = 33.334
+size_flags_horizontal = 4
+size_flags_vertical = 0
+texture = ExtResource("6_rvkw6")
+expand_mode = 1
+stretch_mode = 4
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Secondary" to="." method="_on_button_secondary_pressed"]
+[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Primary" to="." method="_on_button_primary_pressed"]

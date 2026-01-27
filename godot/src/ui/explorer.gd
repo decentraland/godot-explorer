@@ -32,8 +32,8 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
-@onready var url_popup = %UrlPopup
-@onready var jump_in_popup = %JumpInPopup
+#@onready var url_popup = %UrlPopup
+#@onready var jump_in_popup = %JumpInPopup
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
@@ -114,10 +114,6 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 
-	# Register popup instances in Global
-	Global.set_url_popup_instance(url_popup)
-	Global.set_jump_in_popup_instance(jump_in_popup)
-
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)
 	Global.open_chat.connect(_on_global_open_chat)
@@ -127,7 +123,7 @@ func _ready():
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
 
-	navbar.close_all.connect(_close_all_panels)
+	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
 
@@ -602,7 +598,30 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
+	var fps_text = "- " + str(Engine.get_frames_per_second()) + " FPS"
+
+	# Add dynamic graphics info if enabled
+	if Global.get_config().dynamic_graphics_enabled:
+		var dm = Global.dynamic_graphics_manager
+		if dm == null:
+			label_fps.set_text(fps_text)
+			return
+		var profile_name = GraphicSettings.PROFILE_NAMES[dm.get_current_profile()]
+
+		if DclGlobal.is_production():
+			fps_text += " | DynGfx: %s | %s" % [dm.get_state_name(), profile_name]
+		else:
+			fps_text += (
+				" | DynGfx: %s | R:%.2f | T:%s | %s"
+				% [
+					dm.get_state_name(),
+					dm.get_frame_time_ratio(),
+					dm.get_thermal_state_string(),
+					profile_name
+				]
+			)
+
+	label_fps.set_text(fps_text)
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.get_config().save_to_settings_file()

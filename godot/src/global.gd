@@ -25,6 +25,9 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal camera_mode_set(camera_mode: Global.CameraMode)
+signal run_anyway
+signal reload_scene
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -75,13 +78,12 @@ var preload_assets: PreloadAssets
 
 var locations: Node
 
+var modal_manager: ModalManager
+
 var standalone = false
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
-
-var url_popup_instance = null
-var jump_in_popup_instance = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
@@ -100,34 +102,6 @@ var _is_portrait: bool = true
 var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
-
-
-func set_url_popup_instance(popup_instance) -> void:
-	url_popup_instance = popup_instance
-
-
-func show_url_popup(url: String) -> void:
-	if url_popup_instance != null:
-		url_popup_instance.open(url)
-
-
-func hide_url_popup() -> void:
-	if url_popup_instance != null:
-		url_popup_instance.close()
-
-
-func set_jump_in_popup_instance(popup_instance) -> void:
-	jump_in_popup_instance = popup_instance
-
-
-func show_jump_in_popup(coordinates: Vector2i) -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.open(coordinates)
-
-
-func hide_jump_in_popup() -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.close()
 
 
 func is_xr() -> bool:
@@ -306,11 +280,15 @@ func _ready():
 	self.locations = load("res://src/helpers_components/locations.gd").new()
 	self.locations.set_name("locations")
 
+	self.modal_manager = load("res://src/ui/components/modal/modal_manager.gd").new()
+	self.modal_manager.set_name("modal_manager")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.locations)
+	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
@@ -323,6 +301,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
+	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
+
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
@@ -346,6 +326,9 @@ func _ready():
 		var stress_test_controller = load("res://src/tools/stress_test_controller.gd").new()
 		stress_test_controller.set_name("StressTestController")
 		get_tree().root.add_child.call_deferred(stress_test_controller)
+
+	# Initialize dynamic graphics manager after config is loaded
+	_init_dynamic_graphics_manager.call_deferred()
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -390,6 +373,26 @@ func _async_clear_cache_if_needed() -> void:
 			config.save_to_settings_file()
 
 
+func _init_dynamic_graphics_manager() -> void:
+	# Initialize with config values and connect signals
+	dynamic_graphics_manager.initialize(
+		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
+	)
+	loading_started.connect(dynamic_graphics_manager.on_loading_started)
+	loading_finished.connect(dynamic_graphics_manager.on_loading_finished)
+	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
+	# Listen for FPS limit changes
+	get_config().param_changed.connect(_on_config_param_changed)
+
+	# Run hardware benchmark on first launch (mobile only)
+	# In debug builds, always run to help with testing
+	var should_run_benchmark: bool = (
+		is_mobile() and (not get_config().first_launch_completed or OS.is_debug_build())
+	)
+	if should_run_benchmark:
+		_run_first_launch_benchmark.call_deferred()
+
+
 func _run_first_launch_benchmark() -> void:
 	print("[HardwareBenchmark] Running first launch benchmark...")
 	_hardware_benchmark = HardwareBenchmark.new()
@@ -414,6 +417,9 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 	# Apply the detected profile
 	GraphicSettings.apply_graphic_profile(profile)
 
+	# Sync the dynamic graphics manager with the new profile
+	dynamic_graphics_manager.on_manual_profile_change(profile)
+
 	# Save configuration
 	get_config().save_to_settings_file()
 
@@ -421,6 +427,36 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 	if is_instance_valid(_hardware_benchmark):
 		_hardware_benchmark.queue_free()
 		_hardware_benchmark = null
+
+
+func _on_config_param_changed(param: int) -> void:
+	if param == ConfigData.ConfigParams.LIMIT_FPS:
+		dynamic_graphics_manager.on_fps_limit_changed(get_config().limit_fps)
+
+
+func _on_dynamic_profile_change(new_profile: int) -> void:
+	var old_profile: int = get_config().graphic_profile
+	if old_profile == new_profile:
+		# No actual change, skip
+		return
+
+	var old_name: String = GraphicSettings.PROFILE_NAMES[old_profile]
+	var new_name: String = GraphicSettings.PROFILE_NAMES[new_profile]
+	var is_downgrade: bool = new_profile < old_profile
+
+	print("[DynamicGraphics] Profile changed: %s -> %s" % [old_name, new_name])
+
+	# Apply the profile change requested by the dynamic graphics manager
+	GraphicSettings.apply_graphic_profile(new_profile)
+	get_config().save_to_settings_file()
+
+	# Show toast notification to user
+	var title: String = "Graphics %s" % ("Reduced" if is_downgrade else "Improved")
+	var description: String = (
+		"Profile changed to %s for better %s"
+		% [new_name, "performance" if is_downgrade else "quality"]
+	)
+	NotificationsManager.show_system_toast(title, description, "graphics_profile")
 
 
 func set_raycast_debugger_enable(enable: bool):
@@ -449,7 +485,7 @@ func print_node_tree(node: Node, prefix = ""):
 			print_node_tree(child, prefix + node.name + "/")
 
 
-func get_explorer():
+func get_explorer() -> Explorer:
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		return explorer
@@ -594,7 +630,7 @@ func set_orientation_landscape():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(false)
@@ -616,7 +652,7 @@ func set_orientation_portrait():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(true)
@@ -812,3 +848,7 @@ func _notification(what: int) -> void:
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
 	NotificationsManager.async_sync_attended_events()
+
+
+func set_camera_mode(camera_mode: Global.CameraMode) -> void:
+	camera_mode_set.emit(camera_mode)

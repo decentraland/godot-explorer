@@ -1,8 +1,8 @@
 extends Control
 
-signal close_all
 signal close_only_panels
 signal navbar_opened
+signal navbar_closed
 
 enum BUTTON { FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
 
@@ -65,7 +65,7 @@ func _on_size_changed():
 
 func _on_navbar_close() -> void:
 	close_from_discover_button()
-	close_all.emit()
+	navbar_closed.emit()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
@@ -76,7 +76,7 @@ func _on_button_toggled(toggled_on: bool) -> void:
 		navbar_opened.emit()
 	else:
 		animation_player.play("close")
-		close_all.emit()
+		navbar_closed.emit()
 
 
 ## Set a button as pressed
