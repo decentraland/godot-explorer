@@ -14,6 +14,7 @@ var _two_fingers = false
 
 func _init(player: Player):
 	_player = player
+	Global.camera_mode_set.connect(_on_camera_mode_set)
 
 
 func _input(event):
@@ -33,23 +34,6 @@ func _input(event):
 					_two_fingers = event.pressed
 					if event.pressed:
 						_start_length = (_positions[0] - _positions[1]).length()
-
-			if event is InputEventScreenDrag and _two_fingers:
-				_positions[event.index] = event.position
-				var zoom_length = (_positions[0] - _positions[1]).length()
-				var zoom_amount = zoom_length - _start_length
-				if (
-					zoom_amount >= 50
-					and _player.camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON
-				):
-					_player.set_camera_mode(Global.CameraMode.FIRST_PERSON)
-					_start_length = zoom_length
-				elif (
-					zoom_amount <= -50
-					and _player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON
-				):
-					_player.set_camera_mode(Global.CameraMode.THIRD_PERSON)
-					_start_length = zoom_length
 		else:
 			_two_fingers = false
 
@@ -60,3 +44,7 @@ func _input(event):
 			_player.avatar.rotate_y(deg_to_rad(_touch_position.x) * HORIZONTAL_SENS)
 			_player.mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * VERTICAL_SENS)
 			_player.clamp_camera_rotation()
+
+
+func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
+	_player.set_camera_mode(camera_mode)
