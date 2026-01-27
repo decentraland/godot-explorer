@@ -1537,13 +1537,13 @@ async fn get_scene_adapter(
     // Create the request body
 
     use crate::{
-        comms::consts::{gatekeeper_url, PREVIEW_GATEKEEPER_URL},
+        comms::consts::{gatekeeper_url, gatekeeper_url_local},
         http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
     };
 
     // Use preview gatekeeper for local scenes (b64- prefix indicates local preview)
     let gatekeeper = if scene_id.starts_with("b64-") {
-        PREVIEW_GATEKEEPER_URL.to_string()
+        gatekeeper_url_local()
     } else {
         gatekeeper_url()
     };

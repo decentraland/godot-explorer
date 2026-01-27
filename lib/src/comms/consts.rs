@@ -4,9 +4,11 @@ pub fn gatekeeper_url() -> String {
     crate::urls::comms_gatekeeper()
 }
 
+/// Get the local/preview gatekeeper URL (transformed based on environment)
 #[cfg(feature = "use_livekit")]
-pub const PREVIEW_GATEKEEPER_URL: &str =
-    "https://comms-gatekeeper-local.decentraland.org/get-scene-adapter";
+pub fn gatekeeper_url_local() -> String {
+    crate::urls::comms_gatekeeper_local()
+}
 
 // Temporary flags for testing different connection scenarios
 #[cfg(feature = "use_livekit")]
