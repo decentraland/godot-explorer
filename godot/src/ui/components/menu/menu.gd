@@ -39,6 +39,7 @@ var fade_in_tween: Tween = null
 @onready var hud_button_backpack: Button = %HudButton_Backpack
 @onready var hud_button_discover: Button = %HudButton_Discover
 @onready var hud_button_settings: Button = %HudButton_Settings
+@onready var control_modal: Control = %Control_Modal
 
 
 func _ready():

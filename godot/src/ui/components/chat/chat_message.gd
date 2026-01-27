@@ -438,7 +438,7 @@ func _on_url_clicked(meta):
 		var mention_str = meta_str.substr(8)  # Remove "mention:" prefix
 		_handle_mention_click(mention_str)
 	else:
-		Global.show_url_popup(meta_str)
+		Global.modal_manager.async_show_external_link_modal(meta_str)
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
 
@@ -448,7 +448,7 @@ func _handle_coordinate_click(coord_str: String):
 	if coords.size() == 2:
 		var x = int(coords[0])
 		var y = int(coords[1])
-		Global.show_jump_in_popup(Vector2i(x, y))
+		Global.modal_manager.async_show_teleport_modal(Vector2i(x, y))
 
 
 func _handle_mention_click(mention_str: String):
