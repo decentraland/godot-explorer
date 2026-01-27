@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://bmjwqm6jgri7c"]
+[gd_scene load_steps=18 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" uid="uid://cm08lp37agj2o" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
@@ -11,9 +11,7 @@
 [ext_resource type="Shader" uid="uid://ctbwfwlyggrm0" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="8_32igy"]
 [ext_resource type="PackedScene" uid="uid://blang7av7p2rm" path="res://src/ui/components/loading_screen/carousel_viewport.tscn" id="8_s5q41"]
 [ext_resource type="Script" uid="uid://cu4rtpvdc5b65" path="res://src/ui/components/loading_screen/loading_screen_progress_logic.gd" id="10_xsh10"]
-[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="11_70l7e"]
 [ext_resource type="Texture2D" uid="uid://msi357rn4mni" path="res://assets/ui/loading/RightArrow.svg" id="11_hsax5"]
-[ext_resource type="Texture2D" uid="uid://c2b5kvxnhtgok" path="res://assets/themes/dark_dcl_theme/icons/Delay.svg" id="12_s60ex"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bl8r0"]
 
@@ -50,15 +48,6 @@ shader_parameter/offsetFrequency = 0.5
 shader_parameter/minOffsetSpread = 0.6
 shader_parameter/maxOffsetSpread = 2.0
 shader_parameter/linesPerGroup = 16
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vtq8r"]
-bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_82asl"]
 
 [node name="Loading" type="Control"]
 layout_mode = 3
@@ -295,89 +284,9 @@ wait_time = 0.5
 script = ExtResource("10_xsh10")
 loading_screen = NodePath("..")
 
-[node name="PopupWarning" type="Panel" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -280.0
-offset_top = 90.0
-offset_right = 280.0
-offset_bottom = 166.0
-grow_horizontal = 2
-theme = ExtResource("11_70l7e")
-theme_override_styles/panel = SubResource("StyleBoxFlat_vtq8r")
-
-[node name="MarginContainer" type="MarginContainer" parent="PopupWarning"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 13
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 13
-theme_override_constants/margin_bottom = 20
-
-[node name="HBoxContainer" type="HBoxContainer" parent="PopupWarning/MarginContainer"]
-layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="PopupWarning/MarginContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-
-[node name="HBoxContainer_Title" type="HBoxContainer" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
-layout_mode = 2
-texture = ExtResource("12_s60ex")
-expand_mode = 2
-stretch_mode = 5
-
-[node name="Label" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "A Little Longer Than Expected..."
-
-[node name="Label2" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 12
-text = "You can try to reload the experience or run it as it is."
-
-[node name="HBoxContainer" type="HBoxContainer" parent="PopupWarning/MarginContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 10
-size_flags_vertical = 4
-alignment = 2
-
-[node name="Button_Reload" type="Button" parent="PopupWarning/MarginContainer/HBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme = ExtResource("11_70l7e")
-theme_type_variation = &"RedButton"
-text = "RELOAD
-"
-
-[node name="VSeparator" type="VSeparator" parent="PopupWarning/MarginContainer/HBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 10
-theme_override_styles/separator = SubResource("StyleBoxEmpty_82asl")
-
-[node name="Button_Continue" type="Button" parent="PopupWarning/MarginContainer/HBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_type_variation = &"GrayButton"
-text = "RUN ANYWAY"
-
 [connection signal="gui_input" from="VBox_Loading/VBox_Header/ColorRect_Header" to="." method="_on_color_rect_header_gui_input"]
 [connection signal="gui_input" from="VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left/TextureRect_LeftArrow" to="." method="_on_texture_rect_left_arrow_gui_input"]
 [connection signal="gui_input" from="VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Right/TextureRect_RightArrow" to="." method="_on_texture_rect_right_arrow_gui_input"]
 [connection signal="timeout" from="Timer_AutoMoveCarousel" to="." method="_on_timer_auto_move_carousel_timeout"]
 [connection signal="timeout" from="Timer_CheckProgressTimeout" to="." method="_on_timer_check_progress_timeout_timeout"]
 [connection signal="loading_show_requested" from="LoadingScreenProgressLogic" to="." method="_on_loading_screen_progress_logic_loading_show_requested"]
-[connection signal="pressed" from="PopupWarning/MarginContainer/HBoxContainer/HBoxContainer/Button_Reload" to="." method="_on_button_reload_pressed"]
-[connection signal="pressed" from="PopupWarning/MarginContainer/HBoxContainer/HBoxContainer/Button_Continue" to="." method="_on_button_continue_pressed"]

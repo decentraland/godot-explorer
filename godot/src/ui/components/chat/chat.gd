@@ -71,11 +71,13 @@ func _scroll_to_bottom() -> void:
 
 
 func _on_button_send_pressed():
-	submit_message.emit(line_edit_command.text)
+	var message = line_edit_command.text
+	submit_message.emit(message)
 	line_edit_command.text = ""
 	_scroll_to_bottom()
-	# Cerrar el chat si la configuración lo requiere
-	if Global.get_config().submit_message_closes_chat:
+	# Always close chat if it's a command (starts with "/")
+	# or if the configuration requires it
+	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
 		exit_chat()
 
 
@@ -83,8 +85,9 @@ func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
 	_scroll_to_bottom()
-	# Cerrar el chat si la configuración lo requiere
-	if Global.get_config().submit_message_closes_chat:
+	# Always close chat if it's a command (starts with "/")
+	# or if the configuration requires it
+	if new_text.begins_with("/") or Global.get_config().submit_message_closes_chat:
 		exit_chat()
 
 
