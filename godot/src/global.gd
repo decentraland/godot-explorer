@@ -25,6 +25,7 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal camera_mode_set(camera_mode: Global.CameraMode)
 signal run_anyway
 signal reload_scene
 
@@ -831,3 +832,7 @@ func _notification(what: int) -> void:
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
 	NotificationsManager.async_sync_attended_events()
+
+
+func set_camera_mode(camera_mode: Global.CameraMode) -> void:
+	camera_mode_set.emit(camera_mode)
