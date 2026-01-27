@@ -89,6 +89,14 @@ impl Frame {
                     network_used_last_minute_mb: None,
                     js_scene_count: None,
                     average_jsheap_mb: None,
+                    // Dynamic graphics metrics (populated by metrics.rs)
+                    dynamic_graphics_enabled: None,
+                    dynamic_graphics_state: None,
+                    dynamic_graphics_profile: None,
+                    frame_time_ratio: None,
+                    dynamic_graphics_thermal_state: None,
+                    // Hardware benchmark result (populated by metrics.rs)
+                    benchmark_gpu_score: None,
                 }));
 
             self.dt_ms_vec.resize(0, 0.0);
