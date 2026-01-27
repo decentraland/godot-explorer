@@ -4,9 +4,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::{
-    dcl_android_plugin::DclGodotAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
-};
+use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -82,14 +80,26 @@ impl INode for MemoryDebugger {
     }
 
     fn ready(&mut self) {
-        // Check if this is a Godot debug build
-        let is_debug_build = Os::singleton().is_debug_build();
-        self.is_enabled = is_debug_build;
-
-        if self.is_enabled {
-            tracing::info!("MemoryDebugger enabled (Godot debug export)");
+        // Check if logging disabled via environment variable (tracking still works)
+        if std::env::var("DISABLE_MEMORY_DEBUGGER_LOGS")
+            .map(|v| v == "1")
+            .unwrap_or(false)
+        {
+            self.is_enabled = false;
+            tracing::info!(
+                "MemoryDebugger logging disabled via DISABLE_MEMORY_DEBUGGER_LOGS env var"
+            );
+            // Continue to set up scene_manager_path for benchmark queries
         } else {
-            tracing::info!("MemoryDebugger disabled (Godot release export)");
+            // Check if this is a Godot debug build
+            let is_debug_build = Os::singleton().is_debug_build();
+            self.is_enabled = is_debug_build;
+
+            if self.is_enabled {
+                tracing::info!("MemoryDebugger enabled (Godot debug export)");
+            } else {
+                tracing::info!("MemoryDebugger disabled (Godot release export)");
+            }
         }
 
         // Automatically find and set the scene_manager_path if not already set
@@ -227,8 +237,8 @@ impl MemoryDebugger {
         // Get metrics from the appropriate mobile plugin
         let metrics_data = if DclIosPlugin::is_available() {
             DclIosPlugin::get_mobile_metrics_internal()
-        } else if DclGodotAndroidPlugin::is_available() {
-            DclGodotAndroidPlugin::get_mobile_metrics_internal()
+        } else if DclAndroidPlugin::is_available() {
+            DclAndroidPlugin::get_mobile_metrics_internal()
         } else {
             None
         };
@@ -503,8 +513,8 @@ impl MemoryDebugger {
         // Get total memory from mobile metrics
         let total_memory_mb = if DclIosPlugin::is_available() {
             DclIosPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
-        } else if DclGodotAndroidPlugin::is_available() {
-            DclGodotAndroidPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
+        } else if DclAndroidPlugin::is_available() {
+            DclAndroidPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
         } else {
             None
         };

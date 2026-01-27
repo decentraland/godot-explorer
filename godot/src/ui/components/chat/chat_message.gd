@@ -162,8 +162,9 @@ func set_avatar(avatar: DclAvatar) -> void:
 		has_claimed_name = true
 
 	# Update both profile pictures (extended and compact)
-	#profile_picture.async_update_profile_picture(avatar)
-	#profile_picture_compact.async_update_profile_picture(avatar)
+	var social_data: SocialItemData = SocialHelper.social_data_from_avatar(avatar)
+	profile_picture.async_update_profile_picture(social_data)
+	profile_picture_compact.async_update_profile_picture(social_data)
 
 
 func set_system_avatar() -> void:
@@ -437,7 +438,9 @@ func _on_url_clicked(meta):
 		var mention_str = meta_str.substr(8)  # Remove "mention:" prefix
 		_handle_mention_click(mention_str)
 	else:
-		Global.show_url_popup(meta_str)
+		Global.modal_manager.async_show_external_link_modal(meta_str)
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_hide()
 
 
 func _handle_coordinate_click(coord_str: String):
@@ -445,7 +448,7 @@ func _handle_coordinate_click(coord_str: String):
 	if coords.size() == 2:
 		var x = int(coords[0])
 		var y = int(coords[1])
-		Global.show_jump_in_popup(Vector2i(x, y))
+		Global.modal_manager.async_show_teleport_modal(Vector2i(x, y))
 
 
 func _handle_mention_click(mention_str: String):
@@ -463,7 +466,7 @@ func _handle_mention_click(mention_str: String):
 				var avatar_name = avatar.get_avatar_name()
 				if avatar_name == mention_without_at:
 					# Show some kind of user profile or interaction
-					Global.get_explorer()._async_open_profile(avatar.avatar_id)
+					Global.get_explorer()._async_open_profile_by_address(avatar.avatar_id)
 					break
 
 

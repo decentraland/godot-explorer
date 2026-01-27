@@ -1,5 +1,8 @@
+/// Get the gatekeeper URL (transformed based on environment)
 #[cfg(feature = "use_livekit")]
-pub const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
+pub fn gatekeeper_url() -> String {
+    crate::urls::comms_gatekeeper()
+}
 
 #[cfg(feature = "use_livekit")]
 pub const PREVIEW_GATEKEEPER_URL: &str =
@@ -28,3 +31,17 @@ pub const PROFILE_REQUEST_INTERVAL_SECS: f32 = 10.0;
 
 // Protocol version
 pub const DEFAULT_PROTOCOL_VERSION: u32 = 100;
+
+/// Truncates a string to at most `max_bytes` while respecting UTF-8 character boundaries.
+/// Returns the original string if it's already within the limit.
+pub fn truncate_utf8_safe(s: &str, max_bytes: usize) -> &str {
+    if s.len() <= max_bytes {
+        return s;
+    }
+
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}

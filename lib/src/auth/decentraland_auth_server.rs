@@ -3,23 +3,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
+use crate::urls;
 
 use super::wallet::SimpleAuthChain;
-
-// Production
-const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.org";
-
-// Localhost with .zone auth-api
-// const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
-
-// Staging with .zone frontend + .zone auth-api
-// const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_SERVER_ENDPOINT_BASE_URL: &str = "https://auth-api.decentraland.zone";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
@@ -101,7 +87,7 @@ pub struct AuthLink {
 /// instead of polling for the result.
 /// Returns the full AuthIdentity including ephemeral private key and auth chain.
 pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityResponse, anyhow::Error> {
-    let url = format!("{AUTH_SERVER_ENDPOINT_BASE_URL}/identities/{identity_id}");
+    let url = format!("{}/identities/{identity_id}", urls::auth_api_base());
     tracing::debug!(
         "fetch_identity_by_id: requesting identity_id={}, url={}",
         identity_id,
@@ -133,7 +119,7 @@ pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityRespons
 
     if !status.is_success() {
         let status_code = status.as_u16();
-        tracing::warn!(
+        tracing::error!(
             "fetch_identity_by_id: error status={} for identity_id={}",
             status_code,
             identity_id
@@ -172,7 +158,7 @@ pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityRespons
 async fn fetch_polling_server(
     req_id: String,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
-    let url = format!("{AUTH_SERVER_ENDPOINT_URL}/{req_id}");
+    let url = format!("{}/{req_id}", urls::auth_api_requests());
     tracing::debug!(
         "fetch_polling_server: starting polling for req_id={}, url={}, max_retries={}, timeout={}s",
         req_id,
@@ -252,14 +238,14 @@ async fn fetch_polling_server(
                                 );
                                 Ok((response.sender, response_data))
                             } else if let Some(error) = response.error {
-                                tracing::warn!(
+                                tracing::error!(
                                     "fetch_polling_server: server returned error for req_id={}: {}",
                                     req_id,
                                     error.message
                                 );
                                 Err(anyhow::Error::msg(error.message))
                             } else {
-                                tracing::warn!(
+                                tracing::error!(
                                     "fetch_polling_server: invalid response (no result or error) for req_id={}",
                                     req_id
                                 );
@@ -267,7 +253,7 @@ async fn fetch_polling_server(
                             }
                         }
                         Err(error) => {
-                            tracing::warn!(
+                            tracing::error!(
                                 "fetch_polling_server: failed to parse response JSON for req_id={}: {:?}",
                                 req_id,
                                 error
@@ -279,7 +265,7 @@ async fn fetch_polling_server(
                         }
                     }
                 } else {
-                    tracing::warn!(
+                    tracing::error!(
                         "fetch_polling_server: unexpected status={} for req_id={}",
                         status,
                         req_id
@@ -292,7 +278,7 @@ async fn fetch_polling_server(
             }
             Err(error) => {
                 if let Some(status_code) = error.status() {
-                    tracing::warn!(
+                    tracing::error!(
                         "fetch_polling_server: request error with status={} for req_id={}: {:?}",
                         status_code,
                         req_id,
@@ -303,7 +289,7 @@ async fn fetch_polling_server(
                         status_code, error
                     )))
                 } else {
-                    tracing::warn!(
+                    tracing::error!(
                         "fetch_polling_server: request error (no status) for req_id={}: {:?}",
                         req_id,
                         error
@@ -326,7 +312,7 @@ async fn fetch_polling_server(
             continue;
         }
 
-        tracing::debug!(
+        tracing::info!(
             "fetch_polling_server: completed successfully after {} attempts for req_id={}",
             attempt,
             req_id
@@ -346,9 +332,10 @@ async fn create_new_request(
     );
 
     let body = serde_json::to_string(&message).expect("valid json");
+    let endpoint_url = urls::auth_api_requests();
     tracing::trace!(
         "create_new_request: POST to {} with body length={}",
-        AUTH_SERVER_ENDPOINT_URL,
+        endpoint_url,
         body.len()
     );
 
@@ -356,7 +343,7 @@ async fn create_new_request(
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
         .expect("reqwest build error")
-        .post(AUTH_SERVER_ENDPOINT_URL)
+        .post(&endpoint_url)
         .header("Content-Type", "application/json")
         .body(body)
         .send()
@@ -376,7 +363,7 @@ async fn create_new_request(
     } else {
         let status_code = status.as_u16();
         let response_text = response.text().await?;
-        tracing::warn!(
+        tracing::error!(
             "create_new_request: failed with status={}, response={}",
             status_code,
             response_text
@@ -387,77 +374,46 @@ async fn create_new_request(
     }
 }
 
-/// Result from creating a mobile auth request.
-/// Contains the request_id that will be received via deep link.
-pub struct MobileAuthRequest {
-    pub request_id: String,
-}
-
 /// Creates an auth request and opens the browser for mobile.
 /// Instead of polling, the app should wait for a deep link with the identity ID.
-/// Returns the request_id that will be received via deep link `decentraland://open?signin=${request_id}`
 pub async fn do_request_mobile(
-    message: CreateRequest,
+    _message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
-    target_config_id: Option<String>,
-) -> Result<MobileAuthRequest, anyhow::Error> {
+    provider: Option<String>,
+) -> Result<(), anyhow::Error> {
     tracing::debug!(
-        "do_request_mobile: starting mobile auth request, method={}, target_config_id={:?}",
-        message.method,
-        target_config_id
+        "do_request_mobile: starting mobile auth request, provider={:?}",
+        provider
     );
 
-    let request = create_new_request(message).await?;
-    let req_id = request.request_id.clone();
-    let code = request.code;
-    tracing::debug!(
-        "do_request_mobile: request created with req_id={}, code={}",
-        req_id,
-        code
-    );
-
-    // Determine target_config_id based on OS or use the provided one
-    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
-        "ios" => "ios".to_string(),
-        "android" => "android".to_string(),
-        _ => "alternative".to_string(),
-    });
-    tracing::debug!(
-        "do_request_mobile: resolved target_config_id={}, os={}",
-        target_config_id,
-        std::env::consts::OS
-    );
-
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}&flow=deeplink");
+    // Build URL with optional provider parameter
+    let url = if let Some(provider) = provider {
+        format!("{}?provider={}", urls::auth_mobile_frontend(), provider)
+    } else {
+        urls::auth_mobile_frontend()
+    };
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter
         .send(GodotTokioCall::OpenUrl {
-            url: url.clone(),
+            url,
             description: "".into(),
             use_webview: true,
         })
         .await?;
 
-    tracing::debug!(
-        "do_request_mobile: auth URL sent to Godot, waiting for deep link callback with req_id={}",
-        req_id
-    );
+    tracing::debug!("do_request_mobile: auth URL sent to Godot, waiting for deep link callback");
 
-    Ok(MobileAuthRequest {
-        request_id: request.request_id,
-    })
+    Ok(())
 }
 
 pub async fn do_request(
     message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
-    target_config_id: Option<String>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     tracing::debug!(
-        "do_request: starting auth request, method={}, target_config_id={:?}",
-        message.method,
-        target_config_id
+        "do_request: starting auth request, method={}",
+        message.method
     );
 
     let request = create_new_request(message).await?;
@@ -469,19 +425,10 @@ pub async fn do_request(
         code
     );
 
-    // Determine target_config_id based on OS or use the provided one
-    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
-        "ios" => "ios".to_string(),
-        "android" => "android".to_string(),
-        _ => "alternative".to_string(),
-    });
-    tracing::debug!(
-        "do_request: resolved target_config_id={}, os={}",
-        target_config_id,
-        std::env::consts::OS
+    let url = format!(
+        "{}/{req_id}?targetConfigId=alternative",
+        urls::auth_frontend()
     );
-
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
     tracing::debug!("do_request: opening auth URL={}", url);
 
     url_reporter
@@ -507,7 +454,7 @@ pub async fn do_request(
             );
         }
         Err(e) => {
-            tracing::warn!("do_request: failed for req_id={}: {:?}", req_id, e);
+            tracing::error!("do_request: failed for req_id={}: {:?}", req_id, e);
         }
     }
     result
@@ -595,7 +542,6 @@ mod test {
                 auth_chain: None,
             },
             sx,
-            None,
         )
         .await;
 

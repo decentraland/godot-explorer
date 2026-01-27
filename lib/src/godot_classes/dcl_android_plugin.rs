@@ -3,7 +3,9 @@ use godot::prelude::*;
 use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
 use godot::classes::Image;
 
-/// Static wrapper for the DclAndroidPlugin (old plugin) that provides typed access to Android-specific functionality
+const SINGLETON_NAME: &str = "dcl-godot-android";
+
+/// Static wrapper for the dcl-godot-android plugin that provides typed access to Android-specific functionality
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct DclAndroidPlugin {
@@ -12,11 +14,17 @@ pub struct DclAndroidPlugin {
 
 #[godot_api]
 impl DclAndroidPlugin {
-    /// Try to get the DclAndroidPlugin singleton
+    /// Try to get the dcl-godot-android singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
-        let singleton = godot::classes::Engine::singleton()
-            .get_singleton(&StringName::from("DclAndroidPlugin"))?;
+        let singleton =
+            godot::classes::Engine::singleton().get_singleton(&StringName::from(SINGLETON_NAME))?;
         Some(singleton.cast::<Object>())
+    }
+
+    /// Check if the dcl-godot-android plugin is available (runtime check)
+    #[func]
+    pub fn is_available() -> bool {
+        godot::classes::Engine::singleton().has_singleton(&StringName::from(SINGLETON_NAME))
     }
 
     /// Show a Decentraland mobile toast notification
@@ -29,7 +37,7 @@ impl DclAndroidPlugin {
         true
     }
 
-    /// Open a URL
+    /// Open a URL in the default browser
     #[func]
     pub fn open_url(url: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
@@ -37,36 +45,6 @@ impl DclAndroidPlugin {
         };
         singleton.call("openUrl", &[url.to_variant()]);
         true
-    }
-
-    /// Check if the old DclAndroidPlugin is available
-    #[func]
-    pub fn is_available() -> bool {
-        #[cfg(target_os = "android")]
-        {
-            true
-        }
-        #[cfg(not(target_os = "android"))]
-        {
-            false
-        }
-    }
-}
-
-/// Static wrapper for the dcl-godot-android plugin (new plugin) that provides typed access to Android-specific functionality
-#[derive(GodotClass)]
-#[class(init, base=RefCounted)]
-pub struct DclGodotAndroidPlugin {
-    _base: Base<RefCounted>,
-}
-
-#[godot_api]
-impl DclGodotAndroidPlugin {
-    /// Try to get the dcl-godot-android singleton
-    fn try_get_singleton() -> Option<Gd<Object>> {
-        let singleton = godot::classes::Engine::singleton()
-            .get_singleton(&StringName::from("dcl-godot-android"))?;
-        Some(singleton.cast::<Object>())
     }
 
     #[func]
@@ -118,17 +96,22 @@ impl DclGodotAndroidPlugin {
         Some(DclMobileMetrics::from_dictionary(dict))
     }
 
-    /// Check if the dcl-godot-android plugin is available
+    /// Get current thermal state for dynamic graphics adjustment
+    /// Returns: "nominal", "fair", "serious", "critical", or empty string if unavailable
     #[func]
-    pub fn is_available() -> bool {
-        #[cfg(target_os = "android")]
-        {
-            true
-        }
-        #[cfg(not(target_os = "android"))]
-        {
-            false
-        }
+    pub fn get_thermal_state() -> GString {
+        Self::get_mobile_metrics_internal()
+            .map(|m| GString::from(&m.device_thermal_state))
+            .unwrap_or_default()
+    }
+
+    /// Get total device RAM in megabytes
+    /// Returns -1 if unavailable
+    #[func]
+    pub fn get_total_ram_mb() -> i32 {
+        Self::get_mobile_device_info_internal()
+            .map(|info| info.total_ram_mb)
+            .unwrap_or(-1)
     }
 
     /// Add a calendar event with title, description, start time, end time, and location

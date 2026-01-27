@@ -1,20 +1,36 @@
 name: 🍏 iOS
 on:
-  push:
-    branches:
-      - main
-      - release
-  workflow_dispatch:
+  workflow_call:
     inputs:
       ref:
-        description: 'Branch or commit to build'
+        description: 'Branch to build'
         required: false
+        type: string
         default: 'main'
       pr_number:
         description: 'PR number to update with build status (optional)'
         required: false
+        type: string
         default: ''
-
+    secrets:
+      DEPLOY_SSH_KEY:
+        required: true
+      SENTRY_AUTH_TOKEN:
+        required: false
+      SENTRY_ORG:
+        required: false
+      SENTRY_PROJECT:
+        required: false
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch to build'
+        required: true
+        type: choice
+        default: 'main'
+        options:
+          - main
+          - release
 permissions:
   pull-requests: write
   contents: read
@@ -31,9 +47,43 @@ jobs:
     runs-on: warp-macos-14-arm64-6x
     timeout-minutes: 45
     steps:
+      - name: Validate required secrets
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "Validating required secrets..."
+          MISSING=""
+
+          # Required secrets (build will fail without these)
+          if [ -z "$DEPLOY_SSH_KEY" ]; then
+            MISSING="$MISSING DEPLOY_SSH_KEY"
+          fi
+
+          if [ -n "$MISSING" ]; then
+            echo "❌ Missing required secrets:$MISSING"
+            echo "Please configure these secrets in the repository settings."
+            exit 1
+          fi
+
+          # Optional secrets (build will continue but some features disabled)
+          if [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "⚠️  Sentry secrets not configured (SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT)"
+            echo "   libdclgodot upload will be skipped."
+          fi
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured"
+            echo "   Slack notifications will be skipped."
+          fi
+
+          echo "✅ Required secrets validated"
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.sha }}
+          ref: ${{ inputs.ref || github.event.inputs.ref }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -53,7 +103,7 @@ jobs:
       # Build section
       - name: Cargo install
         timeout-minutes: 8
-        run: cargo run -- install --targets ios
+        run: cargo run -- install --targets ios --no-strip
 
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
@@ -92,17 +142,25 @@ jobs:
         timeout-minutes: 10
         run: |
           # Use PR-{number}-{branch} format for PR builds, otherwise use the ref name
-          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
-            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+            BRANCH_NAME="${REF}"
           fi
           echo "Deploying to branch: $BRANCH_NAME"
 
-          # Clone the target repository using SSH
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git clone git@github.com:decentraland/godot-mobile-deploy-pipeline.git deploy-repo
+          # Add ci_scripts for Xcode Cloud to upload dSYMs to Sentry
+          mkdir -p exports/ci_scripts
+          cp .github/scripts/ci_post_xcodebuild.sh exports/ci_scripts/
+          chmod +x exports/ci_scripts/ci_post_xcodebuild.sh
 
-          cd deploy-repo
+          # Initialize fresh repo (no need to clone since we create orphan branch anyway)
+          # This avoids downloading potentially GBs of LFS data
+          mkdir deploy-repo && cd deploy-repo
+          git init
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:decentraland/godot-mobile-deploy-pipeline.git
 
           # Configure git
           git config user.name "github-actions[bot]"
@@ -121,8 +179,8 @@ jobs:
           git lfs track "*.dylib"
           git lfs track "*.ipa"
           git lfs track "*.app"
-          git lfs track "*.framework"
-          git lfs track "*.xcframework"
+          git lfs track "*.framework/**"
+          git lfs track "*.xcframework/**"
           git lfs track "*.a"
           git lfs track "*.pck"
           git lfs track "*.so"
@@ -160,15 +218,56 @@ jobs:
         run: |
           rm -f ~/.ssh/deploy_key
 
+      # Upload libdclgodot debug symbols to Sentry
+      # Note: Only libdclgodot is uploaded here since it's built by CI and UUID matches
+      # The main app dSYM is uploaded by Xcode Cloud via ci_post_xcodebuild.sh
+      - name: Upload libdclgodot to Sentry
+        if: success()
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
+            echo "⚠️  Sentry secrets not configured, skipping upload"
+            exit 0
+          fi
+
+          # Install sentry-cli
+          curl -sL https://sentry.io/get-cli/ | bash
+
+          # Find libdclgodot.dylib
+          LIBDCLGODOT_PATH="lib/target/libdclgodot_ios/libdclgodot.dylib"
+
+          if [ -f "$LIBDCLGODOT_PATH" ]; then
+            echo "Found libdclgodot at: $LIBDCLGODOT_PATH"
+
+            # Upload to Sentry
+            sentry-cli upload-dif \
+              --org "$SENTRY_ORG" \
+              --project "$SENTRY_PROJECT" \
+              --auth-token "$SENTRY_AUTH_TOKEN" \
+              --include-sources \
+              --wait \
+              "$LIBDCLGODOT_PATH"
+
+            echo "✅ libdclgodot uploaded to Sentry"
+          else
+            echo "⚠️  libdclgodot not found at $LIBDCLGODOT_PATH"
+            find lib/target -name "libdclgodot*" -type f 2>/dev/null || true
+          fi
+
       - name: Notify Slack on Failure
         if: failure() && !cancelled()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
-            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+            BRANCH_NAME="${REF}"
           fi
           COMMIT_SHA="${{ github.sha }}"
           COMMIT_SHORT="${COMMIT_SHA:0:7}"
@@ -226,10 +325,12 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
-            BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
-            BRANCH_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+            BRANCH_NAME="${REF}"
           fi
           COMMIT_SHA="${{ github.sha }}"
           COMMIT_SHORT="${COMMIT_SHA:0:7}"
@@ -282,11 +383,13 @@ jobs:
           }" "$SLACK_WEBHOOK_URL"
 
       - name: Update PR Comment - Success
-        if: success() && github.event.inputs.pr_number != ''
+        if: success() && (inputs.pr_number || github.event.inputs.pr_number)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
 
@@ -305,20 +408,22 @@ jobs:
           🔄 **Completed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
           # Find and update the existing iOS comment
-          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
 
           if [ -n "$COMMENT_ID" ]; then
             gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
           else
-            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
+            gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments -f body="${COMMENT_BODY}"
           fi
 
       - name: Update PR Comment - Failure
-        if: failure() && !cancelled() && github.event.inputs.pr_number != ''
+        if: failure() && !cancelled() && (inputs.pr_number || github.event.inputs.pr_number)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           COMMENT_BODY="---
@@ -334,20 +439,22 @@ jobs:
           🔄 **Failed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
           # Find and update the existing iOS comment
-          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
 
           if [ -n "$COMMENT_ID" ]; then
             gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
           else
-            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
+            gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments -f body="${COMMENT_BODY}"
           fi
 
       - name: Update PR Comment - Cancelled
-        if: cancelled() && github.event.inputs.pr_number != ''
+        if: cancelled() && (inputs.pr_number || github.event.inputs.pr_number)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="PR-${{ github.event.inputs.pr_number }}-${{ github.event.inputs.ref }}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           COMMENT_BODY="---
@@ -363,10 +470,10 @@ jobs:
           🔄 **Cancelled**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
           # Find and update the existing iOS comment
-          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
+          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments --jq '.[] | select(.body | contains("build-report-ios") or contains("iOS Build Triggered") or contains("iOS Build Complete") or contains("iOS Build Failed") or contains("iOS Build Cancelled")) | .id' | head -1)
 
           if [ -n "$COMMENT_ID" ]; then
             gh api repos/${{ github.repository }}/issues/comments/${COMMENT_ID} -X PATCH -f body="${COMMENT_BODY}"
           else
-            gh api repos/${{ github.repository }}/issues/${{ github.event.inputs.pr_number }}/comments -f body="${COMMENT_BODY}"
+            gh api repos/${{ github.repository }}/issues/${PR_NUMBER}/comments -f body="${COMMENT_BODY}"
           fi

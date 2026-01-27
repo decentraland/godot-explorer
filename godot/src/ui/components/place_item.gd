@@ -18,7 +18,7 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 @export var likes_percent: float = 0.0
 @export var metadata: Dictionary = {}
 @export var location: Vector2i = Vector2i(0, 0)
-@export var realm: String = Realm.MAIN_REALM
+@export var realm: String = DclUrls.main_realm()
 @export var realm_title: String = "Genesis City"
 
 var event_id: String
@@ -72,6 +72,10 @@ func _get_button_jump_in() -> Button:
 
 func _get_button_jump_to_event() -> Button:
 	return _get_node_safe("Button_JumpToEvent")
+
+
+func _get_download_warning() -> Button:
+	return _get_node_safe("DownloadWarning")
 
 
 func _get_label_location() -> Label:
@@ -275,6 +279,26 @@ func set_creator(_creator: String):
 		label.text = _creator
 
 
+func set_download_warning(item_data: Dictionary) -> void:
+	var download_warning = _get_download_warning()
+	if not download_warning:
+		return
+
+	var is_world = item_data.get("world", false)
+	var max_size_mb: int
+
+	if is_world:
+		max_size_mb = 100  # Worlds have ~100MB dynamic capacity
+	else:
+		var positions = item_data.get("positions", [])
+		var parcel_count = positions.size() if positions is Array else 1
+		if parcel_count == 0:
+			parcel_count = 20  # Fallback to worst-case scenario (300mb)
+		max_size_mb = mini(parcel_count * 15, 300)  # 15MB per parcel, max 300MB
+
+	download_warning.set_warning_text("Downloads up to %dMB of data" % max_size_mb)
+
+
 func set_data(item_data):
 	_data = item_data
 
@@ -328,10 +352,12 @@ func set_data(item_data):
 		if world_name:
 			set_realm(world_name, world_name)
 	else:
-		set_realm(Realm.MAIN_REALM, "Genesis City")
+		set_realm(DclUrls.main_realm(), "Genesis City")
 
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))
+
+	set_download_warning(item_data)
 
 
 func _async_download_image(url: String):
@@ -437,12 +463,17 @@ func set_time(_start_at: int, live: bool) -> void:
 	var border = _get_border()
 	var jump_to_event = _get_button_jump_to_event()
 	var reminder_button = _get_reminder_button()
+	var download_warning = _get_download_warning()
+
+	if download_warning:
+		download_warning.hide()
 
 	if time_pill and live_pill:
 		if live:
 			live_pill.text = "LIVE"
-			if jump_to_event and reminder_button:
+			if jump_to_event and reminder_button and download_warning:
 				jump_to_event.show()
+				download_warning.show()
 				reminder_button.hide()
 			if border:
 				border.self_modulate = "#FFFFFF"
@@ -638,8 +669,7 @@ func schedule_event() -> void:
 
 	# Create jump in URL with location coordinates
 	var jump_in_url = (
-		"https://decentraland.org/jump/events?position=%d%%2C%d&realm=main"
-		% [location.x, location.y]
+		DclUrls.jump_events() + "?position=%d%%2C%d&realm=main" % [location.x, location.y]
 	)
 
 	# Combine description with jump in URL
@@ -656,8 +686,8 @@ func schedule_event() -> void:
 		var start_time_millis = start_timestamp * 1000
 		var end_time_millis = finish_timestamp * 1000
 		var event_location: String = "Decentraland at " + str(location.x) + "," + str(location.y)
-		if DclGodotAndroidPlugin.is_available():
-			DclGodotAndroidPlugin.add_calendar_event(
+		if DclAndroidPlugin.is_available():
+			DclAndroidPlugin.add_calendar_event(
 				event_name, details, start_time_millis, end_time_millis, event_location
 			)
 		elif DclIosPlugin.is_available():
@@ -679,14 +709,14 @@ func _on_button_share_pressed() -> void:
 		printerr("Event ID not available")
 		return
 
-	var event_url = "https://decentraland.org/events/event/?id=" + event_id
+	var event_url = DclUrls.host() + "/events/event/?id=" + event_id
 
 	var event_title = _data.get("name", "Decentraland Event")
 
 	var text = "Visit the event '" + event_title + "' following this link " + event_url
 
 	if Global.is_android():
-		DclGodotAndroidPlugin.share_text(text)
+		DclAndroidPlugin.share_text(text)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(text)
 

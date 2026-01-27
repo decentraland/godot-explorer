@@ -24,6 +24,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
+@onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -31,8 +32,8 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
-@onready var url_popup = %UrlPopup
-@onready var jump_in_popup = %JumpInPopup
+#@onready var url_popup = %UrlPopup
+#@onready var jump_in_popup = %JumpInPopup
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
@@ -96,24 +97,22 @@ func get_params_from_cmd():
 	if Global.deep_link_obj.is_location_defined() and location_vector == null:
 		location_vector = Global.deep_link_obj.location
 		if realm_string == null:
-			realm_string = Realm.MAIN_REALM
+			realm_string = DclUrls.main_realm()
 
 	return [realm_string, location_vector]
 
 
 func _ready():
+	GraphicSettings.apply_full_processor_mode()
+
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
 	Global.change_parcel.connect(_on_change_parcel)
 
-	label_version.set_text("v" + DclGlobal.get_version())
+	label_version.set_text(DclGlobal.get_version_with_env())
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
-
-	# Register popup instances in Global
-	Global.set_url_popup_instance(url_popup)
-	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)
@@ -124,7 +123,7 @@ func _ready():
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
 
-	navbar.close_all.connect(_close_all_panels)
+	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
 
@@ -133,6 +132,9 @@ func _ready():
 
 	# Connect to notification clicks to handle friend request notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
+
+	# Connect on open emotes backpack
+	Global.open_backpack.connect(_on_backpack_emote_opened)
 
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
@@ -153,6 +155,8 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
+	if Global.FORCE_TEST and cmd_location == null:
+		cmd_location = Global.FORCE_TEST_LOCATION
 	# LOADING_START metric
 	var loading_data = {
 		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
@@ -218,7 +222,8 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		control_menu.control_settings.set_preview_url(cmd_realm)
+		if control_menu.control_settings.instance != null:
+			control_menu.control_settings.instance.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -454,6 +459,23 @@ func _on_panel_chat_submit_message(message: String):
 			}
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
+		elif command_str == "/world" and params.size() > 1:
+			var world_realm = params[1] + ".dcl.eth"
+			Global.on_chat_message.emit(
+				"system",
+				"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+				Time.get_unix_time_from_system()
+			)
+			Global.realm.async_set_realm(world_realm, true)
+			loading_ui.enable_loading_screen()
+			# LOADING_START metric
+			var loading_data = {
+				"position": str(Global.scene_fetcher.current_position),
+				"realm": world_realm,
+				"when": "on_world"
+			}
+			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
@@ -488,6 +510,10 @@ func _on_control_menu_request_pause_scenes(enabled):
 func move_to(position: Vector3, skip_loading: bool):
 	if disable_move_to:
 		return
+
+	# Set grace period on avatar's emote controller to prevent emote cancellation during teleport
+	if player.avatar and player.avatar.emote_controller:
+		player.avatar.emote_controller.set_teleport_grace()
 
 	player.move_to(position)
 	var cur_parcel_position = Vector2i(
@@ -561,11 +587,10 @@ func _on_control_menu_request_debug_panel(enabled):
 	if enabled:
 		if not is_instance_valid(debug_panel):
 			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
-			ui_root.add_child(debug_panel)
-			ui_root.move_child(debug_panel, control_menu.get_index() - 1)
+			safe_margin_container_debug.add_child(debug_panel)
 	else:
 		if is_instance_valid(debug_panel):
-			ui_root.remove_child(debug_panel)
+			safe_margin_container_debug.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 
@@ -573,7 +598,30 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
+	var fps_text = "- " + str(Engine.get_frames_per_second()) + " FPS"
+
+	# Add dynamic graphics info if enabled
+	if Global.get_config().dynamic_graphics_enabled:
+		var dm = Global.dynamic_graphics_manager
+		if dm == null:
+			label_fps.set_text(fps_text)
+			return
+		var profile_name = GraphicSettings.PROFILE_NAMES[dm.get_current_profile()]
+
+		if DclGlobal.is_production():
+			fps_text += " | DynGfx: %s | %s" % [dm.get_state_name(), profile_name]
+		else:
+			fps_text += (
+				" | DynGfx: %s | R:%.2f | T:%s | %s"
+				% [
+					dm.get_state_name(),
+					dm.get_frame_time_ratio(),
+					dm.get_thermal_state_string(),
+					profile_name
+				]
+			)
+
+	label_fps.set_text(fps_text)
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.get_config().save_to_settings_file()
@@ -605,6 +653,12 @@ func _on_ui_root_gui_input(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			set_cursor_position(event.position)
+		# On mobile in PointerUnlocked mode (VirtualCamera active), trigger ia_pointer on touch
+		if Global.is_mobile() and Global.scene_runner.raycast_use_cursor_position:
+			if event.pressed:
+				Input.action_press("ia_pointer")
+			else:
+				Input.action_release("ia_pointer")
 
 
 func _on_panel_profile_open_profile():
@@ -692,7 +746,7 @@ func _on_control_menu_open_profile() -> void:
 
 
 func _open_own_profile() -> void:
-	control_menu.show_own_profile()
+	control_menu.async_show_own_profile()
 	release_mouse()
 
 
@@ -881,6 +935,13 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
 
 
+func _on_backpack_emote_opened(on_emotes := false) -> void:
+	if not on_emotes:
+		return
+	navbar.open_navbar_silently()
+	navbar.set_button_pressed(navbar.BUTTON.BACKPACK)
+
+
 func _close_all_panels():
 	control_menu.close()
 	_on_friends_panel_closed()
@@ -933,7 +994,7 @@ func _share_place():
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
-		DclGodotAndroidPlugin.share_text(msg)
+		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(msg)
 

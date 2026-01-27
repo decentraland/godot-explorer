@@ -45,32 +45,23 @@ pub fn run_version_check() -> anyhow::Result<()> {
     let export_presets_content =
         fs::read_to_string(export_presets_path).expect("Failed to read export_presets.cfg");
 
-    // Find all version/code entries (Android and Quest)
+    // Find all version/code entries (Android and iOS)
     let mut android_version_code = None;
-    let mut quest_version_code = None;
     let mut ios_version = None;
 
     let mut in_android_preset = false;
-    let mut in_quest_preset = false;
     let mut in_ios_preset = false;
 
     for line in export_presets_content.lines() {
         if line.contains("name=\"android\"") {
             in_android_preset = true;
-            in_quest_preset = false;
-            in_ios_preset = false;
-        } else if line.contains("name=\"quest\"") {
-            in_quest_preset = true;
-            in_android_preset = false;
             in_ios_preset = false;
         } else if line.contains("name=\"ios\"") {
             in_ios_preset = true;
             in_android_preset = false;
-            in_quest_preset = false;
         } else if line.starts_with("[preset.") && !line.contains(".options]") {
             // Reset flags on new preset (but not on [preset.X.options])
             in_android_preset = false;
-            in_quest_preset = false;
             in_ios_preset = false;
         }
 
@@ -83,18 +74,6 @@ pub fn run_version_check() -> anyhow::Result<()> {
                     .trim()
                     .parse::<u32>()
                     .expect("Failed to parse Android version/code as u32"),
-            );
-        } else if in_quest_preset
-            && line.starts_with("version/code=")
-            && quest_version_code.is_none()
-        {
-            quest_version_code = Some(
-                line.split('=')
-                    .nth(1)
-                    .expect("Failed to parse Quest version/code")
-                    .trim()
-                    .parse::<u32>()
-                    .expect("Failed to parse Quest version/code as u32"),
             );
         } else if in_ios_preset && line.starts_with("application/version=") && ios_version.is_none()
         {
@@ -111,16 +90,11 @@ pub fn run_version_check() -> anyhow::Result<()> {
     }
 
     let android_version_code = android_version_code.expect("Failed to find Android version/code");
-    let quest_version_code = quest_version_code.expect("Failed to find Quest version/code");
     let ios_version = ios_version.expect("Failed to find iOS application/version");
 
     print_message(
         MessageType::Info,
         &format!("Android version/code: {}", android_version_code),
-    );
-    print_message(
-        MessageType::Info,
-        &format!("Quest version/code: {}", quest_version_code),
     );
     print_message(
         MessageType::Info,
@@ -152,23 +126,12 @@ pub fn run_version_check() -> anyhow::Result<()> {
         all_match = false;
     }
 
-    if quest_version_code != expected_version_code {
-        print_message(
-            MessageType::Error,
-            &format!(
-                "Quest version/code ({}) does not match Cargo.toml version code ({})",
-                quest_version_code, expected_version_code
-            ),
-        );
-        all_match = false;
-    }
-
     if all_match {
         print_message(
             MessageType::Success,
             &format!(
-                "✓ All versions match: Cargo.toml={}, Android={}, iOS={}, Quest={}",
-                expected_version_code, android_version_code, ios_version, quest_version_code
+                "✓ All versions match: Cargo.toml={}, Android={}, iOS={}",
+                expected_version_code, android_version_code, ios_version
             ),
         );
         Ok(())

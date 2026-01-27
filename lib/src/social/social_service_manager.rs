@@ -14,8 +14,7 @@ use futures_util::StreamExt;
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::dcl::components::proto_components::social_service::v2::*;
 use crate::social::friends::build_auth_chain;
-
-const SOCIAL_SERVICE_URL: &str = "wss://rpc-social-service-ea.decentraland.org";
+use crate::urls;
 const CONNECTION_TIMEOUT_SECS: u64 = 10;
 const RPC_TIMEOUT_SECS: u64 = 15;
 
@@ -77,9 +76,10 @@ pub struct SocialServiceManager {
 /// Returns both the RpcClient (which must stay alive) and the service module
 async fn create_connection(wallet: &Arc<EphemeralAuthChain>) -> Result<ServiceConnection> {
     // Establish WebSocket connection with timeout
+    let social_service_url = urls::social_service();
     let ws_connection = tokio::time::timeout(
         Duration::from_secs(CONNECTION_TIMEOUT_SECS),
-        WebSocketClient::connect(SOCIAL_SERVICE_URL),
+        WebSocketClient::connect(&social_service_url),
     )
     .await
     .map_err(|_| {

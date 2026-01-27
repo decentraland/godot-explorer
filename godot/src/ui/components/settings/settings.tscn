@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=30 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -14,6 +14,7 @@
 [ext_resource type="Texture2D" uid="uid://bcm628h2i3wnd" path="res://assets/ui/account-icon.svg" id="8_hdct4"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="8_wyn32"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
+[ext_resource type="LabelSettings" uid="uid://c8st3oitu2gpy" path="res://src/ui/components/events/event_title.tres" id="15_7krp8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_drkw7"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -51,6 +52,8 @@ CheckBox/font_sizes/font_size = 19
 Button/font_sizes/font_size = 20
 
 [sub_resource type="Theme" id="Theme_nuccv"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_h5vs5"]
 
 [node name="Control_SettingsPanel" type="VBoxContainer"]
 anchors_preset = 15
@@ -244,7 +247,6 @@ size_flags_horizontal = 3
 
 [node name="Container_General" type="MarginContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
@@ -306,6 +308,15 @@ layout_mode = 2
 theme = SubResource("Theme_kjn2w")
 items = Array[String](["512mb", "1gb", "2gb"])
 
+[node name="HBoxContainer3" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+layout_mode = 2
+
+[node name="CheckBox_SubmitMessageClosesChat" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer3"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "Submit message closes the chat"
+
 [node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 layout_mode = 2
 
@@ -345,7 +356,7 @@ stretch = true
 handle_input_locally = false
 size = Vector2i(500, 150)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
 [node name="PreviewCamera3D" type="Camera3D" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
@@ -365,6 +376,34 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 30
 
+[node name="DynamicGraphics" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="Label_DynamicGraphics" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Auto Graphics Adjustment"
+
+[node name="Label_DynamicGraphicsDesc" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+modulate = Color(1, 1, 1, 0.7)
+text = "Automatically adjusts graphics based on device performance"
+
+[node name="CheckBox_DynamicGraphics" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Enable Dynamic Graphics"
+
+[node name="Label_DynamicGraphicsStatus" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+modulate = Color(0.5, 1, 0.5, 1)
+text = ""
+
 [node name="GraphicProfile" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
 alignment = 1
@@ -378,7 +417,7 @@ text = "Graphic Profile"
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
-items = Array[String](["LOW", "MEDIUM", "HIGH", "CUSTOM"])
+items = Array[String](["VERY LOW", "LOW", "MEDIUM", "HIGH", "CUSTOM"])
 
 [node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 unique_name_in_owner = true
@@ -412,6 +451,7 @@ theme = SubResource("Theme_7krp8")
 items = Array[String](["Max"])
 
 [node name="LimitFps" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
@@ -428,6 +468,7 @@ theme = SubResource("Theme_7krp8")
 items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS"])
 
 [node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
@@ -729,11 +770,11 @@ popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
 popup/item_1/id = 1
-popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
+popup/item_2/text = "https://sdk-test-scenes.decentraland.org"
 popup/item_2/id = 2
 popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
 popup/item_3/id = 3
-popup/item_4/text = "https://peer-testing.decentraland.org"
+popup/item_4/text = "https://peer.decentraland.org"
 popup/item_4/id = 4
 popup/item_5/text = "https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main"
 popup/item_5/id = 5
@@ -832,6 +873,52 @@ layout_mode = 2
 text = "1"
 horizontal_alignment = 1
 
+[node name="VBoxContainer_TestNotification" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label_TestNotification" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification"]
+layout_mode = 2
+theme = SubResource("Theme_nuccv")
+text = "Test Notification"
+
+[node name="Button_TestNotification" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 20
+text = "Test Notification with Emojis"
+
+[node name="VBoxContainer_OpenUserData" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label_OpenUserData" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
+layout_mode = 2
+theme = SubResource("Theme_nuccv")
+text = "User Data"
+
+[node name="Button_OpenUserData" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 20
+text = "Open User Data Folder"
+
 [node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
@@ -843,6 +930,11 @@ mouse_filter = 2
 theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
+
+[node name="Label_Account" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+layout_mode = 2
+text = "ACCOUNT"
+label_settings = ExtResource("15_7krp8")
 
 [node name="Button_DeleteAccount" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
 custom_minimum_size = Vector2(300, 80)
@@ -857,9 +949,59 @@ visible = false
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme = ExtResource("12_sa1v7")
 disabled = true
 text = "LOG OUT"
+
+[node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+custom_minimum_size = Vector2(0, 23)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_h5vs5")
+
+[node name="Label_Notifications" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+layout_mode = 2
+text = "NOTIFICATIONS"
+label_settings = ExtResource("15_7krp8")
+
+[node name="Button_AllNotifications" type="CheckButton" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 22
+disabled = true
+button_pressed = true
+text = "ALL NOTIFICATIONS"
+
+[node name="HSeparator2" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(0, 23)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_h5vs5")
+
+[node name="Label_Help" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+layout_mode = 2
+text = "HELP"
+label_settings = ExtResource("15_7krp8")
+
+[node name="Button_ReportContent" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(300, 80)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 22
+text = "REPORT CONTENT"
+
+[node name="Button_ReportBug" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(300, 80)
+layout_mode = 2
+size_flags_horizontal = 0
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 22
+text = "REPORT BUG"
 
 [node name="Control" type="Control" parent="ColorRect_Content/SafeMarginContainer/MarginContainer"]
 custom_minimum_size = Vector2(120, 0)
@@ -876,10 +1018,12 @@ hide_on_portrait = true
 [connection signal="visibility_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize/RadioSelector_MaxCacheSize" to="." method="_on_radio_selector_max_cache_size_select_item"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer3/CheckBox_SubmitMessageClosesChat" to="." method="_on_check_box_submit_message_closes_chat_toggled"]
 [connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/CheckBox_DynamicSkybox" to="." method="_on_check_box_dynamic_skybox_toggled"]
 [connection signal="drag_ended" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_ended"]
 [connection signal="drag_started" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_started"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_value_changed"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics/CheckBox_DynamicGraphics" to="." method="_on_check_box_dynamic_graphics_toggled"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/GraphicProfile/RadioSelector_GraphicProfile" to="." method="_on_radio_selector_graphic_profile_select_item"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed/RadioSelector_Windowed" to="." method="_on_radio_selector_windowed_select_item"]
 [connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/UiZoom/RadioSelector_UiZoom" to="." method="_on_radio_selector_ui_zoom_select_item"]
@@ -902,4 +1046,8 @@ hide_on_portrait = true
 [connection signal="item_selected" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]

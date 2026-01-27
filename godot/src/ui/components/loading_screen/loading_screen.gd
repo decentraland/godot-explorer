@@ -13,7 +13,7 @@ var bg_colors: Array[Color] = [
 var item_index = 0
 var item_count = 0
 var progress: float = 0.0
-var last_progress_change := Time.get_ticks_msec()
+var last_activity_time := Time.get_ticks_msec()
 var popup_warning_pos_y: int = 0
 
 var last_hide_click := 0.0
@@ -29,7 +29,6 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 @onready var background: ColorRect = $VBox_Loading/ColorRect_Background
 
 @onready var timer_auto_move_carousel = $Timer_AutoMoveCarousel
-@onready var popup_warning = $PopupWarning
 
 @onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
@@ -37,9 +36,7 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 
 
 func _ready():
-	last_progress_change = Time.get_ticks_msec()
-	popup_warning.hide()
-	popup_warning_pos_y = popup_warning.position.y
+	last_activity_time = Time.get_ticks_msec()
 	item_count = carousel.item_count()
 	set_item(randi_range(0, item_count - 1))
 
@@ -56,6 +53,7 @@ func enable_loading_screen():
 
 
 func async_hide_loading_screen_effect():
+	Global.close_navbar.emit()
 	debug_chronometer.lap("Finished loading scene")
 	Global.loading_finished.emit()
 	timer_check_progress_timeout.stop()
@@ -131,7 +129,7 @@ func set_shader_background_color(color: Color):
 func set_progress(new_progress: float):
 	new_progress = clampf(new_progress, 0.0, 100.0)
 	if progress != new_progress:
-		last_progress_change = Time.get_ticks_msec()
+		last_activity_time = Time.get_ticks_msec()
 	progress = new_progress
 
 	loading_progress_label.text = "LOADING %d%%" % floor(progress)
@@ -146,7 +144,7 @@ func _on_timer_auto_move_carousel_timeout():
 
 func _on_timer_check_progress_timeout_timeout():
 	if Global.scene_runner.is_paused():
-		last_progress_change = Time.get_ticks_msec()
+		last_activity_time = Time.get_ticks_msec()
 		return
 
 	var loading_resources = (
@@ -156,19 +154,20 @@ func _on_timer_check_progress_timeout_timeout():
 		Global.content_provider.count_loaded_resources() - loaded_resources_offset
 	)
 	var download_speed_mbs: float = Global.content_provider.get_download_speed_mbs()
+
+	# Update activity time if downloads are happening (resources being loaded)
+	# This prevents timeout from triggering while actual work is in progress
+	var is_actively_downloading = download_speed_mbs > 0.01 or loading_resources > loaded_resources
+	if is_actively_downloading:
+		last_activity_time = Time.get_ticks_msec()
+
 	label_loading_state.text = (
 		"(%d/%d resources at %.2fmb/s)" % [loaded_resources, loading_resources, download_speed_mbs]
 	)
 
-	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_progress_change) / 1000.0))
+	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_activity_time) / 1000.0))
 	if inactive_seconds > 20:
-		var tween = get_tree().create_tween()
-		popup_warning.position.y = -popup_warning.size.y
-		tween.tween_property(popup_warning, "position:y", popup_warning_pos_y, 1.0).set_trans(
-			Tween.TRANS_ELASTIC
-		)
-		popup_warning.show()
-
+		Global.modal_manager.async_show_scene_timeout_modal()
 		# LOADING_TIMEOUT metric
 		var timeout_data = {
 			"loaded_resources": loaded_resources,
@@ -182,35 +181,8 @@ func _on_timer_check_progress_timeout_timeout():
 		timer_check_progress_timeout.stop()
 
 
-func async_hide_popup_warning():
-	var tween = get_tree().create_tween()
-	popup_warning.position.y = popup_warning_pos_y
-	tween.tween_property(popup_warning, "position:y", -popup_warning.size.y, 1.0).set_trans(
-		Tween.TRANS_ELASTIC
-	)
-	await tween.finished
-	popup_warning.hide()
-
-
-func _on_button_continue_pressed():
-	# LOADING_RUNANYWAY metric
-	Global.metrics.track_click_button("run_anyway", "LOADING", "")
-
-	loading_screen_progress_logic.hide_loading_screen()
-	async_hide_popup_warning()
-
-
-func _on_button_reload_pressed():
-	# LOADING_RELOAD metric
-	Global.metrics.track_click_button("reload", "LOADING", "")
-
-	Global.realm.async_set_realm(Global.realm.get_realm_string())
-	async_hide_popup_warning()
-
-
 func _on_loading_screen_progress_logic_loading_show_requested():
-	last_progress_change = Time.get_ticks_msec()
-	popup_warning.hide()
+	last_activity_time = Time.get_ticks_msec()
 	timer_check_progress_timeout.start()
 	loaded_resources_offset = Global.content_provider.count_loaded_resources()
 

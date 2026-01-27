@@ -358,6 +358,20 @@ impl AvatarScene {
     pub fn update_dcl_avatar_by_alias(&mut self, alias: u32, profile: Gd<DclUserProfile>) {
         self.update_avatar_by_alias(alias, &profile.bind().inner);
     }
+
+    #[func]
+    pub fn set_avatar_version_by_address(&mut self, address: GString, version: GString) {
+        let address_str = address.to_string();
+        if let Some(h160) = address_str.as_h160() {
+            if let Some(alias) = self.avatar_address.get(&h160) {
+                if let Some(entity_id) = self.avatar_entity.get(alias) {
+                    if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                        avatar.call("set_client_version", &[version.to_variant()]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl AvatarScene {
@@ -407,8 +421,10 @@ impl AvatarScene {
             self.last_movement_timestamp.remove(&alias);
             self.last_position_index.remove(&alias);
 
+            // Remove from tree first, then queue_free (correct order)
+            self.base_mut()
+                .remove_child(&avatar.clone().upcast::<Node>());
             avatar.queue_free();
-            self.base_mut().remove_child(&avatar.upcast::<Node>());
 
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();

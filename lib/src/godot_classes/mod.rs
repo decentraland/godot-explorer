@@ -12,6 +12,7 @@ pub mod dcl_cli;
 pub mod dcl_config;
 pub mod dcl_confirm_dialog;
 pub mod dcl_crash_generator;
+pub mod dcl_dynamic_graphics_manager;
 pub mod dcl_ether;
 pub mod dcl_global;
 pub mod dcl_global_time;
@@ -33,12 +34,12 @@ pub mod dcl_ui_control;
 pub mod dcl_ui_dropdown;
 pub mod dcl_ui_input;
 pub mod dcl_ui_text;
+pub mod dcl_urls;
 pub mod dcl_video_player;
 pub mod dcl_virtual_camera;
 pub mod font;
 pub mod portables;
 pub mod promise;
-pub mod resource_locker;
 pub mod rpc_sender;
 
 pub trait JsonGodotClass

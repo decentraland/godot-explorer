@@ -49,7 +49,10 @@ pub fn update_gltf_container(
                 if let Some(mut gltf_node) = existing {
                     gltf_node.queue_free();
                     node_3d.remove_child(&gltf_node);
-                    scene.gltf_loading.remove(entity);
+                    // If GLTF was still loading when removed, count it as finished
+                    if scene.gltf_loading.remove(entity) {
+                        scene.gltf_loading_finished_count += 1;
+                    }
                 }
             } else if let Some(new_value) = new_value {
                 let visible_meshes_collision_mask =
@@ -66,7 +69,9 @@ pub fn update_gltf_container(
                             invisible_meshes_collision_mask.to_variant(),
                         ],
                     );
-                    scene.gltf_loading.insert(*entity);
+                    if scene.gltf_loading.insert(*entity) {
+                        scene.gltf_loading_started_count += 1;
+                    }
                 } else {
                     // TODO: preload this resource
                     let mut new_gltf = godot::tools::load::<PackedScene>(
@@ -87,7 +92,9 @@ pub fn update_gltf_container(
                     new_gltf.set_name("GltfContainer");
                     node_3d.add_child(&new_gltf.clone().upcast::<Node>());
 
-                    scene.gltf_loading.insert(*entity);
+                    if scene.gltf_loading.insert(*entity) {
+                        scene.gltf_loading_started_count += 1;
+                    }
                 }
             }
 
@@ -162,11 +169,35 @@ pub fn sync_gltf_loading_state(
                 .put(*entity, Some(pb_gltf_container_loading_state));
         }
 
-        if current_state_godot == GltfContainerLoadingState::Finished
+        if (current_state_godot == GltfContainerLoadingState::Finished
             || current_state_godot == GltfContainerLoadingState::FinishedWithError
-            || current_state_godot == GltfContainerLoadingState::NotFound
+            || current_state_godot == GltfContainerLoadingState::NotFound)
+            && scene.gltf_loading.remove(entity)
         {
-            scene.gltf_loading.remove(entity);
+            scene.gltf_loading_finished_count += 1;
+
+            // When GLTF finishes loading, mark entity for GltfNodeModifiers re-application
+            // (modifiers need to be applied to newly loaded nodes)
+            // Only add if entity actually has the GltfNodeModifiers component
+            if current_state_godot == GltfContainerLoadingState::Finished {
+                let has_state = scene.gltf_node_modifier_states.contains_key(entity);
+                let has_dirty = scene
+                    .current_dirty
+                    .lww_components
+                    .get(&SceneComponentId::GLTF_NODE_MODIFIERS)
+                    .is_some_and(|dirty| dirty.contains(entity));
+                tracing::debug!(
+                    "sync_gltf_loading_state: entity {:?} state=Finished, has_modifier_state={}, has_modifier_dirty={}, gltf_loading.len()={}",
+                    entity,
+                    has_state,
+                    has_dirty,
+                    scene.gltf_loading.len()
+                );
+                if has_state || has_dirty {
+                    tracing::debug!("sync_gltf_loading_state: Adding entity {:?} to gltf_node_modifiers_pending (will be removed from gltf_loading)", entity);
+                    scene.gltf_node_modifiers_pending.insert(*entity);
+                }
+            }
         }
 
         current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;

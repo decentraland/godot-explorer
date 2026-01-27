@@ -54,7 +54,7 @@ func async_load_place_position(pos: Vector2i):
 	_close()
 	show()
 	texture_progress_bar.show()
-	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	var url: String = DclUrls.places_api() + "/places?limit=1"
 	url += "&positions=%d,%d" % [pos.x, pos.y]
 
 	var headers = {"Content-Type": "application/json"}

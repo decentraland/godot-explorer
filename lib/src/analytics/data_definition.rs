@@ -146,6 +146,28 @@ pub struct SegmentEventPerformanceMetrics {
     // Average JS heap memory per scene in megabytes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub average_jsheap_mb: Option<f32>,
+
+    // Dynamic graphics system metrics
+    // Whether dynamic graphics adjustment is enabled
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_enabled: Option<bool>,
+    // Current state of the dynamic graphics system (Stabilizing/Monitoring/Adjusting)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_state: Option<String>,
+    // Current graphic profile index (0=Very Low, 1=Low, 2=Medium, 3=High)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_profile: Option<i32>,
+    // Frame time ratio (actual/target, <1 means headroom, >1 means struggling)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frame_time_ratio: Option<f32>,
+    // Thermal state as interpreted by dynamic graphics (normal/high/critical)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_thermal_state: Option<String>,
+
+    // Hardware benchmark result (from initial auto-detection)
+    // GPU render time in milliseconds (lower is better)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub benchmark_gpu_score: Option<f32>,
 }
 
 #[derive(Serialize, Clone)]

@@ -29,6 +29,7 @@ var _dirty_connected: bool = false
 @onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
+@onready var check_box_submit_message_closes_chat: CheckBox = %CheckBox_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 
@@ -50,6 +51,12 @@ var _dirty_connected: bool = false
 @onready var box_container_custom = %VBoxContainer_Custom
 
 @onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
+@onready var graphic_profile_container = %RadioSelector_GraphicProfile.get_parent()
+
+# Dynamic graphics toggle
+@onready var check_box_dynamic_graphics: CheckBox = %CheckBox_DynamicGraphics
+@onready var label_dynamic_graphics_status: Label = %Label_DynamicGraphicsStatus
+@onready var dynamic_graphics_container: VBoxContainer = %DynamicGraphics
 
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
 @onready var radio_selector_skybox = %RadioSelector_Skybox
@@ -58,6 +65,8 @@ var _dirty_connected: bool = false
 @onready var radio_selector_aa = %RadioSelector_AA
 
 @onready var radio_selector_limit_fps = %RadioSelector_LimitFps
+@onready var container_limit_fps = %LimitFps
+@onready var container_resolution_3d_scale = %Resolution3DScale
 
 #Advanced items:
 @onready var option_button_realm = %OptionButton_Realm
@@ -68,6 +77,7 @@ var _dirty_connected: bool = false
 @onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
 
 @onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
+@onready var button_test_notification = %Button_TestNotification
 
 @onready var button_general: Button = %Button_General
 @onready var button_graphics: Button = %Button_Graphics
@@ -86,6 +96,9 @@ func _ready():
 
 	preview_viewport_container.hide()
 	check_box_dynamic_skybox.button_pressed = Global.get_config().dynamic_skybox
+	check_box_submit_message_closes_chat.button_pressed = (
+		Global.get_config().submit_message_closes_chat
+	)
 
 	var step_value = 86400 / h_slider_skybox_time.max_value
 	h_slider_skybox_time.value = Global.get_config().skybox_time / step_value
@@ -93,6 +106,7 @@ func _ready():
 	label_skybox_time.visible = !Global.get_config().dynamic_skybox
 
 	# graphic
+	_setup_dynamic_graphics()
 	refresh_graphic_settings()
 
 	# volume
@@ -107,10 +121,17 @@ func _ready():
 
 
 func refresh_graphic_settings():
-	# We only show the custom settings if the graphic profile is custom
-	box_container_custom.visible = Global.get_config().graphic_profile == 3
 	var graphic_profile = Global.get_config().graphic_profile
+	var is_custom_profile: bool = graphic_profile == ConfigData.PROFILE_CUSTOM
+
+	# We only show the custom settings if the graphic profile is custom
+	box_container_custom.visible = is_custom_profile
 	radio_selector_graphic_profile.selected = graphic_profile
+
+	# Hide FPS limit and 3D resolution scale when using preset profiles
+	# These are controlled by the profile, not user-configurable
+	container_limit_fps.visible = is_custom_profile
+	container_resolution_3d_scale.visible = is_custom_profile
 
 	if Global.is_mobile():
 		v_box_container_windowed.hide()
@@ -126,7 +147,9 @@ func refresh_graphic_settings():
 		ConfigData.FpsLimitMode.FPS_18: 2,
 	}
 
-	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING[Global.get_config().limit_fps]
+	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING.get(
+		Global.get_config().limit_fps, 0
+	)
 	radio_selector_texture_quality.selected = Global.get_config().texture_quality
 	radio_selector_skybox.selected = Global.get_config().skybox
 	radio_selector_shadow.selected = Global.get_config().shadow_quality
@@ -336,7 +359,6 @@ func _on_radio_selector_select_item(index, _item):
 	}
 
 	Global.get_config().limit_fps = LIMIT_FPS_MAPPING[index]
-	GraphicSettings.apply_fps_limit()
 	Global.get_config().save_to_settings_file()
 
 
@@ -369,32 +391,18 @@ func _on_radio_selector_aa_select_item(index, _item):
 
 
 func _on_radio_selector_graphic_profile_select_item(index, _item):
-	Global.get_config().graphic_profile = index
-
-	match index:
-		0:  # Performance
-			Global.get_config().anti_aliasing = 0  # off
-			Global.get_config().shadow_quality = 0  # disabled
-			Global.get_config().bloom_quality = 0  # off
-			Global.get_config().skybox = 0  # low
-			Global.get_config().texture_quality = 0  # low
-		1:  # Balanced
-			Global.get_config().anti_aliasing = 1  # x2
-			Global.get_config().shadow_quality = 1  # normal
-			Global.get_config().bloom_quality = 1  # low
-			Global.get_config().skybox = 1  # medium
-			Global.get_config().texture_quality = 1  # medium
-		2:  # Quality
-			Global.get_config().anti_aliasing = 3  # x8
-			Global.get_config().shadow_quality = 2  # high quality
-			Global.get_config().bloom_quality = 2  # high
-			Global.get_config().skybox = 2  # high
-			Global.get_config().texture_quality = 2  # high
-		3:  # Custom
-			pass
+	# Use centralized profile application (handles all parameters)
+	# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
+	if index < ConfigData.PROFILE_CUSTOM:
+		GraphicSettings.apply_graphic_profile(index)
+	else:
+		Global.get_config().graphic_profile = index  # Custom - keep current settings
 
 	refresh_graphic_settings()
 	Global.get_config().save_to_settings_file()
+
+	# Notify dynamic graphics manager of manual profile change
+	Global.dynamic_graphics_manager.on_manual_profile_change(index)
 
 
 func _on_h_slider_music_volume_value_changed(value):
@@ -430,6 +438,12 @@ func _on_check_box_dynamic_skybox_toggled(toggled_on: bool) -> void:
 	label_skybox_time.visible = !toggled_on
 	if Global.get_config().dynamic_skybox != toggled_on:
 		Global.get_config().dynamic_skybox = toggled_on
+		Global.get_config().save_to_settings_file()
+
+
+func _on_check_box_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
+	if Global.get_config().submit_message_closes_chat != toggled_on:
+		Global.get_config().submit_message_closes_chat = toggled_on
 		Global.get_config().save_to_settings_file()
 
 
@@ -478,3 +492,197 @@ func _on_button_account_pressed() -> void:
 
 func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
+
+
+func _on_button_test_notification_pressed() -> void:
+	# Test notification with emojis and accents in both title and body
+	# This will test if iOS can display both correctly
+	var test_title = "🎉 Notificación de Prueba 🎉"
+	var test_body = "Esta es una notificación de prueba con emojis 🚀 y acentos: áéíóú ÁÉÍÓÚ ñ Ñ"
+	var notification_id = "test_notification_" + str(Time.get_unix_time_from_system())
+	var delay_seconds = 5  # Show notification in 5 seconds
+
+	if NotificationsManager.schedule_local_notification(
+		notification_id, test_title, test_body, delay_seconds
+	):
+		print(
+			(
+				"Test notification scheduled: id=%s, title=%s, body=%s"
+				% [notification_id, test_title, test_body]
+			)
+		)
+		print(
+			"Expected: Emojis and accents should be preserved. If they show as symbols, enable sanitization."
+		)
+	else:
+		printerr("Failed to schedule test notification")
+
+
+func _on_button_report_bug_pressed() -> void:
+	var form_id = "1FAIpQLScWjnb3Ya7yV8xFn0R-yf_SMejzBGDiDTZbHaddOFEmJwAM6g"
+	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+
+	var params = []
+	var platform = "desktop"
+	var device_brand = ""
+	var device_model = ""
+	var os_version = OS.get_name()
+	var app_version = DclGlobal.get_version()
+	var environment = ""
+	if DclAndroidPlugin.is_available():
+		var android_singleton = Engine.get_singleton("dcl-godot-android")
+		if android_singleton:
+			var device_info = android_singleton.getMobileDeviceInfo()
+			device_brand = device_info.get("device_brand", "")
+			device_model = device_info.get("device_model", "")
+			os_version = device_info.get("os_version", OS.get_name())
+		platform = "mobile"
+	elif DclIosPlugin.is_available():
+		var ios_singleton = Engine.get_singleton("DclGodotiOS")
+		if ios_singleton:
+			var device_info = ios_singleton.get_mobile_device_info()
+			device_brand = device_info.get("device_brand", "")
+			device_model = device_info.get("device_model", "")
+			os_version = device_info.get("os_version", OS.get_name())
+		platform = "mobile"
+
+	params.append("entry.908487542=" + os_version.uri_encode())
+	params.append("entry.1825988508=" + app_version.uri_encode())
+	params.append("entry.902053507=" + platform.uri_encode())
+	params.append("entry.983493489=" + Global.player_identity.get_address_str().uri_encode())
+	params.append("entry.519686692=" + RenderingServer.get_video_adapter_name().uri_encode())
+	params.append("entry.69678037=" + Global.session_id.uri_encode())
+
+	if "dev" in app_version:
+		environment = "develop"
+	else:
+		environment = "production"
+
+	params.append("entry.1045647501=" + environment.uri_encode())
+
+	if device_brand != "":
+		params.append("entry.942533991=" + device_brand.uri_encode())
+
+	if device_model != "":
+		params.append("entry.264855991=" + device_model.uri_encode())
+
+	var url = base_url
+	if params.size() > 0:
+		url += "?" + "&".join(params)
+
+	Global.open_url(url)
+
+
+func _on_button_open_user_data_pressed() -> void:
+	var user_data_path = OS.get_user_data_dir()
+	print("Opening user data folder: ", user_data_path)
+
+	# On mobile, we can't open the file explorer directly, so we copy the path to clipboard
+	if Global.is_mobile():
+		DisplayServer.clipboard_set(user_data_path)
+		print("User data path copied to clipboard: ", user_data_path)
+	else:
+		# On desktop (Windows, macOS, Linux), open the file explorer
+		OS.shell_open(user_data_path)
+
+
+func _on_button_report_content_pressed() -> void:
+	var form_id = "1FAIpQLSdD31D0GKROyxmrvM-KVStqdhyqF430crjaTtpemEiAqCHQbg"
+	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+
+	var params = []
+
+	var scene_name = ""
+	if Global.scene_runner != null:
+		var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
+		if current_scene_id >= 0:
+			scene_name = Global.scene_runner.get_scene_title(current_scene_id)
+
+	var current_position = Global.get_config().last_parcel_position
+	var scene_info = "%s (%d, %d)" % [scene_name, current_position.x, current_position.y]
+
+	var wallet_id = Global.player_identity.get_address_str()
+
+	params.append("entry.60289947=" + scene_info.uri_encode())
+	params.append("entry.927432836=" + wallet_id.uri_encode())
+
+	var url = base_url
+	if params.size() > 0:
+		url += "?" + "&".join(params)
+
+	Global.open_url(url)
+
+
+func _setup_dynamic_graphics() -> void:
+	# Only show on mobile platforms
+	dynamic_graphics_container.visible = Global.is_mobile()
+
+	if not Global.is_mobile():
+		return
+
+	# Initialize checkbox state
+	var is_enabled: bool = Global.get_config().dynamic_graphics_enabled
+	check_box_dynamic_graphics.set_pressed_no_signal(is_enabled)
+
+	# Update UI state
+	_update_graphic_settings_enabled(is_enabled)
+	_update_dynamic_graphics_status()
+
+	# Connect to manager signal to update UI when profile changes dynamically
+	Global.dynamic_graphics_manager.profile_change_requested.connect(
+		func(_profile: int):
+			refresh_graphic_settings()
+			_update_dynamic_graphics_status()
+	)
+
+
+func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
+	Global.get_config().dynamic_graphics_enabled = toggled_on
+	Global.get_config().save_to_settings_file()
+
+	# Enable/disable the dynamic graphics manager
+	Global.dynamic_graphics_manager.set_enabled(toggled_on)
+
+	# Update UI state
+	_update_graphic_settings_enabled(toggled_on)
+	_update_dynamic_graphics_status()
+
+
+func _update_graphic_settings_enabled(dynamic_enabled: bool) -> void:
+	# When dynamic graphics is enabled, hide manual graphic settings
+	# Custom profile is always excluded from dynamic adjustment
+	var current_profile: int = Global.get_config().graphic_profile
+	var should_hide: bool = dynamic_enabled and current_profile != ConfigData.PROFILE_CUSTOM
+
+	# Hide/show the graphic settings that are controlled by dynamic graphics
+	graphic_profile_container.visible = not should_hide
+	container_limit_fps.visible = not should_hide
+	container_resolution_3d_scale.visible = not should_hide
+
+
+func _update_dynamic_graphics_status() -> void:
+	if not Global.is_mobile():
+		return
+
+	var manager = Global.dynamic_graphics_manager
+	if manager == null or not manager.is_enabled():
+		label_dynamic_graphics_status.text = ""
+		return
+
+	var state_name: String = manager.get_state_name()
+	var current_profile: int = manager.get_current_profile()
+	var profile_name: String = GraphicSettings.PROFILE_NAMES[current_profile]
+
+	match state_name:
+		"Disabled":
+			label_dynamic_graphics_status.text = ""
+		"WarmingUp":
+			var remaining := int(manager.get_warmup_remaining())
+			label_dynamic_graphics_status.text = "Warming up... (%ds)" % remaining
+		"Monitoring":
+			label_dynamic_graphics_status.text = "Active - Current: %s" % profile_name
+		"Cooldown":
+			var remaining := int(manager.get_cooldown_remaining())
+			label_dynamic_graphics_status.text = (
+				"Cooldown (%ds) - Current: %s" % [remaining, profile_name]
+			)

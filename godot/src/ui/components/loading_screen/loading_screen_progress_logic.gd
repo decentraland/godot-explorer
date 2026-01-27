@@ -1,117 +1,93 @@
 extends Node
+## Loading screen controller that listens to SceneManager loading signals.
+## Uses the new Rust-based LoadingSession for accurate, monotonically-increasing progress.
 
 signal loading_show_requested
 
 @export var loading_screen: Control
 
-var scenes_metadata_loaded: bool = false
-var waiting_new_scene_load_report = true
-var waiting_for_scenes = false
-var wait_for: float = 0.0
-var empty_timeout: float = 0.0
-var pending_to_load: int = 0
-var loaded_resources_offset := 0
-
 
 func _ready():
-	Global.scene_fetcher.report_scene_load.connect(_report_scene_load)
+	# Connect to SceneManager loading signals
+	Global.scene_runner.loading_started.connect(_on_loading_started)
+	Global.scene_runner.loading_phase_changed.connect(_on_phase_changed)
+	Global.scene_runner.loading_progress.connect(_on_loading_progress)
+	Global.scene_runner.loading_complete.connect(_on_loading_complete)
+	Global.scene_runner.loading_timeout.connect(_on_loading_timeout)
+	Global.scene_runner.loading_cancelled.connect(_on_loading_cancelled)
 
 
-func _report_scene_load(done: bool, is_new_loading: bool, pending: int):
-	scenes_metadata_loaded = done
-	waiting_for_scenes = done
-	if done == false and is_new_loading:  # start
-		enable_loading_screen()
-
-	waiting_new_scene_load_report = false
-	empty_timeout = 2.0
-	pending_to_load = pending
-
-
+## Called by loading_screen.gd when it wants to enable loading
 func enable_loading_screen():
+	# Show loading screen immediately - the LoadingSession will update progress later
 	Global.content_provider.set_max_concurrent_downloads(6)
 
-	# Mute voice chat and scene volume
+	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
 	AudioSettings.apply_voice_chat_volume_settings(0.0)
 
 	loading_screen.show()
-	set_physics_process(true)
-	scenes_metadata_loaded = false
-	loading_screen.set_progress(0.0)
-	waiting_new_scene_load_report = true
+	loading_screen.set_progress(0)
 	loading_show_requested.emit()
-	wait_for = 1.0
-
-	loaded_resources_offset = Global.content_provider.count_loaded_resources()
 
 
+## Called by loading_screen.gd or popup button to force hide loading
 func hide_loading_screen():
+	_hide_loading_screen()
+
+
+func _on_loading_started(_session_id: int, _expected_count: int):
+	Global.content_provider.set_max_concurrent_downloads(6)
+
+	# Mute voice chat and scene volume during loading
+	AudioSettings.apply_scene_volume_settings(0.0)
+	AudioSettings.apply_voice_chat_volume_settings(0.0)
+
+	loading_screen.show()
+	loading_screen.set_progress(0)
+	loading_show_requested.emit()
+
+
+func _on_phase_changed(_phase: String):
+	# Could update status text here if loading screen supports it
+	# e.g., loading_screen.set_status({"metadata": "Fetching scenes...", ...}.get(phase, "Loading..."))
+	pass
+
+
+func _on_loading_progress(percent: float, _ready_count: int, _total_count: int):
+	loading_screen.set_progress(percent)
+
+
+func _on_loading_complete(_session_id: int):
+	loading_screen.set_progress(100)
+	_hide_loading_screen()
+
+
+func _on_loading_timeout(_session_id: int):
+	push_warning("Loading session timed out")
+	_hide_loading_screen()
+
+
+func _on_loading_cancelled(_session_id: int):
+	# A new loading session is about to start - keep the loading screen visible
+	# The new session's loading_started signal will reset progress
+	pass
+
+
+func _hide_loading_screen():
 	Global.content_provider.set_max_concurrent_downloads(6)
 
 	# Restore voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings()
 	AudioSettings.apply_voice_chat_volume_settings()
 
-	set_physics_process(false)
 	loading_screen.async_hide_loading_screen_effect()
 
 	# LOADING_END (Success) metric
+	var pos = Global.scene_fetcher.current_position
 	var end_data = {
 		"scene_id": Global.scene_fetcher.current_scene_entity_id,
-		"position": "%d,%d" % Global.scene_fetcher.current_position,
+		"position": "%d,%d" % [pos.x, pos.y],
 		"status": "Success"
 	}
 	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))
-
-
-func _physics_process(delta):
-	if wait_for > 0.0:
-		wait_for -= delta
-		return
-	if waiting_new_scene_load_report:
-		return
-
-	if scenes_metadata_loaded == false:
-		# We fake 20% for the metadata loading in 2 seconds
-		var new_progress = minf(loading_screen.progress + delta / 4.0 * 20.0, 20.0)
-		loading_screen.set_progress(new_progress)
-	elif waiting_for_scenes:
-		var scenes_loaded_count: int = Global.scene_runner.get_child_count()
-		if scenes_loaded_count == 0 and pending_to_load == 0:
-			empty_timeout -= delta
-			if empty_timeout < 0.0:
-				loading_screen.set_progress(100)
-				hide_loading_screen()
-			return
-
-		# 20% to 100% is waiting for all scene runners hit frame 4 (all gltf are loaded)
-		var scene_progress: float = 0
-		for child in Global.scene_runner.get_children():
-			var this_scene_progress: float = 0.0
-			if child is DclSceneNode:
-				var tick_number = mini(child.get_last_tick_number(), 4)
-				if tick_number < 4:
-					this_scene_progress = 0.2 * (float(tick_number) / 3.0)
-					this_scene_progress += (
-						0.8 * child.get_gltf_loading_progress() * (float(tick_number) / 3.0)
-					)
-				else:
-					this_scene_progress = 1.0
-			scene_progress += this_scene_progress
-
-		var loading_resources = (
-			Global.content_provider.count_loading_resources() - loaded_resources_offset
-		)
-		var loaded_resources = (
-			Global.content_provider.count_loaded_resources() - loaded_resources_offset
-		)
-		var scene_loading_progress = scene_progress / float(scenes_loaded_count)
-		var loading_progress = float(loaded_resources) / float(loading_resources)
-		var current_progress: int = (
-			int(scene_loading_progress * 40.0) + int(loading_progress * 40.0) + 20
-		)
-		loading_screen.set_progress(current_progress)
-
-		if current_progress == 100:
-			hide_loading_screen()

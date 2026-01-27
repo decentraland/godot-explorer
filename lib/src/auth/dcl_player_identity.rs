@@ -12,9 +12,7 @@ use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
-use super::auth_identity::{
-    complete_mobile_auth, create_local_ephemeral, start_mobile_auth, PendingMobileAuth,
-};
+use super::auth_identity::{complete_mobile_auth, create_local_ephemeral, start_mobile_auth};
 use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
@@ -31,16 +29,13 @@ pub struct DclPlayerIdentity {
     wallet: Option<CurrentWallet>,
     ephemeral_auth_chain: Option<EphemeralAuthChain>,
 
-    #[var]
-    target_config_id: GString,
-
     profile: Option<Gd<DclUserProfile>>,
 
     try_connect_account_handle: Option<JoinHandle<()>>,
 
     /// Pending mobile auth state, stored between start_mobile_connect_account
     /// and complete_mobile_connect_account (when deep link arrives)
-    pending_mobile_auth: Option<PendingMobileAuth>,
+    pending_mobile_auth: Option<()>,
 
     #[var]
     is_guest: bool,
@@ -59,7 +54,6 @@ impl INode for DclPlayerIdentity {
             is_guest: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
-            target_config_id: GString::default(),
         }
     }
 }
@@ -74,6 +68,9 @@ impl DclPlayerIdentity {
 
     #[signal]
     fn profile_changed(new_profile: Gd<DclUserProfile>);
+
+    #[signal]
+    fn auth_error(error_message: GString);
 
     #[func]
     fn try_set_remote_wallet(
@@ -166,6 +163,8 @@ impl DclPlayerIdentity {
     #[func]
     fn _error_getting_wallet(&mut self, error_str: GString) {
         tracing::error!("error getting wallet {:?}", error_str);
+        self.base_mut()
+            .emit_signal("auth_error", &[error_str.to_variant()]);
     }
 
     #[func]
@@ -177,7 +176,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn try_connect_account(&mut self, target_config_id: GString) {
+    fn try_connect_account(&mut self) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -189,15 +188,8 @@ impl DclPlayerIdentity {
             .bind()
             .get_sender();
 
-        self.target_config_id = target_config_id.clone();
-        let target_config_id = if target_config_id.is_empty() {
-            None
-        } else {
-            Some(target_config_id.to_string())
-        };
-
         let try_connect_account_handle = handle.spawn(async move {
-            let wallet = RemoteWallet::with_auth_identity(sender, target_config_id).await;
+            let wallet = RemoteWallet::with_auth_identity(sender).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -240,7 +232,7 @@ impl DclPlayerIdentity {
     /// The app should wait for a deep link with signin identity ID,
     /// then call complete_mobile_connect_account with that ID.
     #[func]
-    fn start_mobile_connect_account(&mut self, target_config_id: GString) {
+    fn start_mobile_connect_account(&mut self, provider: GString) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -252,25 +244,21 @@ impl DclPlayerIdentity {
             .bind()
             .get_sender();
 
-        self.target_config_id = target_config_id.clone();
-        let target_config_id = if target_config_id.is_empty() {
+        let provider = if provider.is_empty() {
             None
         } else {
-            Some(target_config_id.to_string())
+            Some(provider.to_string())
         };
 
         handle.spawn(async move {
-            let result = start_mobile_auth(sender, target_config_id).await;
+            let result = start_mobile_auth(sender, provider).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
 
             match result {
                 Ok(pending) => {
-                    tracing::info!(
-                        "Mobile auth started, waiting for deep link with request_id: {}",
-                        pending.request_id
-                    );
+                    tracing::info!("Mobile auth started, waiting for deep link");
                     this.bind_mut().pending_mobile_auth = Some(pending);
                 }
                 Err(err) => {
@@ -428,7 +416,7 @@ impl DclPlayerIdentity {
         profile.content.eth_address = self.get_address_str().to_string();
         let profile = DclUserProfile::from_gd(profile);
         self.profile = Some(profile.clone());
-        tracing::warn!("profile > set default profile",);
+        tracing::info!("profile > set default profile",);
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -443,7 +431,7 @@ impl DclPlayerIdentity {
         profile.content.eth_address = self.get_address_str().to_string();
         let profile = DclUserProfile::from_gd(profile);
         self.profile = Some(profile.clone());
-        tracing::warn!("profile > set random profile",);
+        tracing::info!("profile > set random profile",);
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -454,7 +442,7 @@ impl DclPlayerIdentity {
     #[func]
     pub fn set_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.profile = Some(profile.clone());
-        tracing::warn!("profile > set profile func",);
+        tracing::info!("profile > set profile func",);
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -600,7 +588,7 @@ impl DclPlayerIdentity {
             Ok(profile) => {
                 let new_profile = DclUserProfile::from_gd(profile);
                 self.profile = Some(new_profile.clone());
-                tracing::warn!("profile > set profile from lambda",);
+                tracing::info!("profile > set profile from lambda",);
 
                 self.base_mut().call_deferred(
                     "emit_signal",
@@ -666,11 +654,8 @@ impl DclPlayerIdentity {
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let target_config_id = self.target_config_id.to_string();
             handle.spawn(async move {
-                let result = do_request(body, url_sender, Some(target_config_id))
-                    .await
-                    .map(|(_, result)| result);
+                let result = do_request(body, url_sender).await.map(|(_, result)| result);
                 response.send(result.map_err(|err| err.to_string()));
             });
         }

@@ -55,7 +55,6 @@ func _on_submit_message(message: String):
 		Global.metrics.track_chat_message_sent(
 			message.length(), "nearby", false, is_mention, is_command, "", "CHAT"
 		)
-
 		UiSounds.play_sound("widget_chat_message_private_send")
 
 
@@ -72,24 +71,24 @@ func _scroll_to_bottom() -> void:
 
 
 func _on_button_send_pressed():
-	submit_message.emit(line_edit_command.text)
+	var message = line_edit_command.text
+	submit_message.emit(message)
 	line_edit_command.text = ""
-	exit_chat()
-	DisplayServer.virtual_keyboard_hide()
+	_scroll_to_bottom()
+	# Always close chat if it's a command (starts with "/")
+	# or if the configuration requires it
+	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
+		exit_chat()
 
 
 func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
-	line_edit_command.focus_exited.emit()
-	grab_focus.call_deferred()
-	exit_chat()
-
-
-func finish():
-	if line_edit_command.text.size() > 0:
-		submit_message.emit(line_edit_command.text)
-		line_edit_command.text = ""
+	_scroll_to_bottom()
+	# Always close chat if it's a command (starts with "/")
+	# or if the configuration requires it
+	if new_text.begins_with("/") or Global.get_config().submit_message_closes_chat:
+		exit_chat()
 
 
 func toggle_chat_visibility(visibility: bool):
@@ -98,16 +97,6 @@ func toggle_chat_visibility(visibility: bool):
 	else:
 		Global.explorer_grab_focus()
 		UiSounds.play_sound("widget_chat_close")
-
-
-func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			exit_chat()
-		if event.pressed and event.keycode == KEY_ENTER:
-			toggle_chat_visibility(true)
-			async_start_chat()
-			line_edit_command.grab_focus.call_deferred()
 
 
 func exit_chat() -> void:
@@ -123,6 +112,7 @@ func async_start_chat():
 
 	Global.get_explorer().release_mouse()
 	DisplayServer.virtual_keyboard_show("")
+	line_edit_command.text = ""
 	h_box_container_line_edit.show()
 	line_edit_command.grab_focus()
 	on_open_chat.emit()
@@ -148,12 +138,6 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 		else:
 			panel_container_new_messages.show()
 			label_new_messages.text = str(new_messages_count)
-
-
-func _on_line_edit_command_gui_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			exit_chat()
 
 
 func is_at_bottom() -> bool:

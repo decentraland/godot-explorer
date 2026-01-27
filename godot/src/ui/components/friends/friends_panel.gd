@@ -78,6 +78,7 @@ func _ready() -> void:
 	request_list.size_changed.connect(_update_badge_visibility_on_navbar)
 	online_list.size_changed.connect(_update_dropdown_visibility)
 	offline_list.size_changed.connect(_update_dropdown_visibility)
+	nearby_list.size_changed.connect(_on_nearby_list_size_changed)
 
 	# Connect to error signals
 	request_list.load_error.connect(_on_load_error)
@@ -132,6 +133,7 @@ func _input(event: InputEvent) -> void:
 			Global.explorer_release_focus()
 
 
+## Opens the friends panel
 func show_panel_on_friends_tab() -> void:
 	show()
 	_load_unloaded_items()
@@ -570,6 +572,19 @@ func _check_blocked_list_size() -> void:
 
 func _on_blocked_list_size_changed() -> void:
 	_check_blocked_list_size()
+
+
+## Updates NEARBY users count.
+## If the amount is 0 don't show counter.
+## If amount is > 99 show "99+".
+## Else show the amount from list_size.
+func _on_nearby_list_size_changed() -> void:
+	var nearby_text := tr("NEARBY")
+	if nearby_list.list_size > 99:
+		nearby_text = "%s (99+)" % nearby_text
+	elif nearby_list.list_size > 0:
+		nearby_text = "%s (%d)" % [nearby_text, nearby_list.list_size]
+	button_nearby.text = nearby_text
 
 
 func _on_timer_timeout() -> void:

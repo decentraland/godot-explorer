@@ -13,6 +13,7 @@ mod runtime;
 mod testing;
 mod websocket;
 
+use crate::comms::truncate_utf8_safe;
 use crate::dcl::common::{
     is_scene_log_enabled, CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogLevel,
     SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
@@ -151,7 +152,7 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
 
     #[cfg(feature = "enable_inspector")]
     if inspect {
-        tracing::info!(
+        tracing::debug!(
             "[{}] inspector attached",
             std::thread::current().name().unwrap()
         );
@@ -246,7 +247,7 @@ pub(crate) fn scene_thread(
         if let Err(send_err) =
             thread_sender_to_main.send(SceneResponse::Error(scene_id, format!("{err_string:?}")))
         {
-            tracing::info!("error sending error: {send_err:?}. original error {err_string:?}")
+            tracing::error!("error sending error: {send_err:?}. original error {err_string:?}")
         }
         return;
     }
@@ -313,7 +314,7 @@ pub(crate) fn scene_thread(
 
     if inspector.is_some() {
         // TODO: maybe send a message to announce the inspector is being waited
-        tracing::info!("Inspector is waiting...");
+        tracing::debug!("Inspector is waiting...");
 
         runtime
             .inspector()
@@ -430,7 +431,7 @@ pub(crate) fn scene_thread(
 
         let value = state.borrow().borrow::<SceneDying>().0;
         if value {
-            tracing::info!("{} shutting down", log_info.prefix());
+            tracing::debug!("{} shutting down", log_info.prefix());
             break;
         }
 
@@ -440,7 +441,7 @@ pub(crate) fn scene_thread(
     send_remove_godot_scene(&state, scene_id);
     runtime.v8_isolate().terminate_execution();
 
-    tracing::info!("{} thread exited", log_info.prefix());
+    tracing::debug!("{} thread exited", log_info.prefix());
 
     // std::thread::sleep(Duration::from_millis(5000));
 }
@@ -548,11 +549,11 @@ fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate:
 
     if message.len() > 8192 {
         tracing::warn!("log message too long, truncating");
-        message = message[..8192].to_string();
+        message = truncate_utf8_safe(&message, 8192).to_string();
     }
 
     if immediate {
-        tracing::info!("{}", message);
+        tracing::debug!("{}", message);
     } else {
         tracing::debug!("{}", message);
     }
@@ -577,7 +578,7 @@ fn op_error(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediat
 
     if message.len() > 8192 {
         tracing::warn!("log message too long, truncating");
-        message = message[..8192].to_string();
+        message = truncate_utf8_safe(&message, 8192).to_string();
     }
 
     if immediate {

@@ -37,7 +37,9 @@ use crate::{
 };
 
 use super::{
-    components::{trigger_area::TriggerAreaState, tween::Tween},
+    components::{
+        gltf_node_modifiers::GltfNodeModifierState, trigger_area::TriggerAreaState, tween::Tween,
+    },
     godot_dcl_scene::GodotDclScene,
 };
 
@@ -70,6 +72,7 @@ pub struct Dirty {
     pub rpc_calls: Vec<RpcCall>,
 }
 
+#[derive(PartialEq)]
 pub enum SceneState {
     Alive,
     ToKill,
@@ -106,6 +109,7 @@ pub enum SceneUpdateState {
     MeshCollider,
     GltfContainer,
     SyncGltfContainer,
+    GltfNodeModifiers,
     NftShape,
     Animator,
     AvatarShape,
@@ -117,6 +121,8 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
+    InputModifier,
+    SkyboxTime,
     TriggerArea,
     VirtualCameras,
     AudioSource,
@@ -142,7 +148,8 @@ impl SceneUpdateState {
             Self::Billboard => Self::MeshCollider,
             Self::MeshCollider => Self::GltfContainer,
             Self::GltfContainer => Self::SyncGltfContainer,
-            Self::SyncGltfContainer => Self::NftShape,
+            Self::SyncGltfContainer => Self::GltfNodeModifiers,
+            Self::GltfNodeModifiers => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -151,7 +158,9 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::CameraModeArea,
-            Self::CameraModeArea => Self::TriggerArea,
+            Self::CameraModeArea => Self::InputModifier,
+            Self::InputModifier => Self::SkyboxTime,
+            Self::SkyboxTime => Self::TriggerArea,
             Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
@@ -202,6 +211,12 @@ pub struct Scene {
     pub content_mapping: ContentMappingAndUrlRef,
 
     pub gltf_loading: HashSet<SceneEntityId>,
+    /// Count of GLTF entities that started loading (for loading session tracking)
+    pub gltf_loading_started_count: u32,
+    /// Count of GLTF entities that finished loading (for loading session tracking)
+    pub gltf_loading_finished_count: u32,
+    /// Whether this scene has been reported as ready to the loading session
+    pub loading_reported_ready: bool,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
     pub trigger_area_results: Vec<(
         SceneEntityId,
@@ -243,6 +258,11 @@ pub struct Scene {
 
     // Trigger Areas
     pub trigger_areas: TriggerAreaState,
+
+    // GltfNodeModifiers - state tracking for restoration
+    pub gltf_node_modifier_states: HashMap<SceneEntityId, GltfNodeModifierState>,
+    // Entities pending GltfNodeModifiers re-application after GLTF loads
+    pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -335,6 +355,9 @@ impl Scene {
             next_tick_us: 0,
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
+            gltf_loading_started_count: 0,
+            gltf_loading_finished_count: 0,
+            loading_reported_ready: false,
             pointer_events_result: Vec::new(),
             trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),
@@ -353,6 +376,8 @@ impl Scene {
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            gltf_node_modifier_states: HashMap::new(),
+            gltf_node_modifiers_pending: HashSet::new(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -403,6 +428,9 @@ impl Scene {
             next_tick_us: 0,
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
+            gltf_loading_started_count: 0,
+            gltf_loading_finished_count: 0,
+            loading_reported_ready: false,
             pointer_events_result: Vec::new(),
             trigger_area_results: Vec::new(),
             continuos_raycast: HashSet::new(),
@@ -421,6 +449,8 @@ impl Scene {
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
+            gltf_node_modifier_states: HashMap::new(),
+            gltf_node_modifiers_pending: HashSet::new(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -430,7 +460,7 @@ impl Scene {
 
     pub fn register_livekit_video_player(&mut self, entity_id: SceneEntityId) {
         self.livekit_video_player_entities.insert(entity_id);
-        tracing::info!(
+        tracing::debug!(
             "Registered livekit video player entity {}",
             entity_id.as_i32()
         );
@@ -467,7 +497,7 @@ impl Scene {
         num_channels: u32,
         samples_per_channel: u32,
     ) {
-        tracing::info!(
+        tracing::debug!(
             "Livekit audio initialized: sample_rate={}, channels={}, samples_per_channel={}",
             sample_rate,
             num_channels,
@@ -497,5 +527,38 @@ impl Scene {
                 video_player.call("stream_buffer", &[frame.to_variant()]);
             }
         }
+    }
+
+    /// Cleanup all scene resources before destruction.
+    /// This ensures all Godot nodes are properly freed and references are cleared.
+    pub fn cleanup(&mut self) {
+        // Free audio sources
+        for (_, mut audio_source) in self.audio_sources.drain() {
+            audio_source.queue_free();
+        }
+
+        // Free audio streams
+        for (_, mut audio_stream) in self.audio_streams.drain() {
+            audio_stream.queue_free();
+        }
+
+        // Free video players
+        for (_, mut video_player) in self.video_players.drain() {
+            video_player.queue_free();
+        }
+
+        // Virtual camera is RefCounted, no need to queue_free - it's freed when references drop
+        // Just clear it to drop the reference
+        self.virtual_camera.bind_mut().clear();
+
+        // Clear other collections
+        self.gltf_loading.clear();
+        self.materials.clear();
+        self.tweens.clear();
+        self.dup_animator.clear();
+        self.livekit_video_player_entities.clear();
+
+        // Cleanup godot_dcl_scene (frees all entity nodes and root nodes)
+        self.godot_dcl_scene.cleanup();
     }
 }

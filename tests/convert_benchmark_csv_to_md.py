@@ -30,6 +30,7 @@ class BenchmarkMetrics:
 
         # Process info
         self.process_memory_usage_mb = float(row['process_memory_usage_mb'])
+        self.unknown_memory_mb = float(row.get('unknown_memory_mb', 0))
 
         # Memory metrics
         self.godot_static_memory_mb = float(row['godot_static_memory_mb'])
@@ -129,10 +130,14 @@ def format_change_int(current: int, baseline: int, lower_is_better: bool = True)
         return f"{current} {indicator} ({sign}{pct_change:.1f}%)"
 
 
-def find_baseline_for_test(test_name: str, baseline_list: List[BenchmarkMetrics]) -> Optional[BenchmarkMetrics]:
-    """Find matching baseline metrics for a test."""
+def find_baseline_for_test(test_name: str, realm: str, baseline_list: List[BenchmarkMetrics]) -> Optional[BenchmarkMetrics]:
+    """Find matching baseline metrics for a test.
+
+    Only matches if both test_name AND realm are the same, since comparing
+    benchmarks from different scenes/realms would be meaningless.
+    """
     for baseline in baseline_list:
-        if baseline.test_name == test_name:
+        if baseline.test_name == test_name and baseline.realm == realm:
             return baseline
     return None
 
@@ -156,6 +161,7 @@ def format_individual_report(metrics: BenchmarkMetrics, baseline: Optional[Bench
 
     if baseline:
         report.append(f"| **Process Memory Usage (RSS)** | **{format_change(metrics.process_memory_usage_mb, baseline.process_memory_usage_mb)} MiB** |\n")
+        report.append(f"| **Unknown Memory (untracked)** | **{format_change(metrics.unknown_memory_mb, baseline.unknown_memory_mb)} MiB** |\n")
         report.append(f"| Godot Static Memory | {format_change(metrics.godot_static_memory_mb, baseline.godot_static_memory_mb)} MiB |\n")
         report.append(f"| Godot Peak Memory | {format_change(metrics.godot_static_memory_peak_mb, baseline.godot_static_memory_peak_mb)} MiB |\n")
         report.append(f"| GPU Video RAM | {format_change(metrics.gpu_video_ram_mb, baseline.gpu_video_ram_mb)} MiB |\n")
@@ -165,6 +171,7 @@ def format_individual_report(metrics: BenchmarkMetrics, baseline: Optional[Bench
         report.append(f"| Rust Total Allocated | {format_change(metrics.rust_total_allocated_mb, baseline.rust_total_allocated_mb)} MiB |\n")
     else:
         report.append(f"| **Process Memory Usage (RSS)** | **{metrics.process_memory_usage_mb:.2f} MiB ({metrics.process_memory_usage_mb / 1024.0:.2f} GiB)** |\n")
+        report.append(f"| **Unknown Memory (untracked)** | **{metrics.unknown_memory_mb:.2f} MiB** |\n")
         report.append(f"| Godot Static Memory | {metrics.godot_static_memory_mb:.2f} MiB |\n")
         report.append(f"| Godot Peak Memory | {metrics.godot_static_memory_peak_mb:.2f} MiB |\n")
         report.append(f"| GPU Video RAM | {metrics.gpu_video_ram_mb:.2f} MiB |\n")
@@ -271,26 +278,19 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
 
     report.append("\n---\n")
 
-    # Table of Contents
-    report.append("\n## Table of Contents\n")
-    for i, metrics in enumerate(metrics_list, 1):
-        anchor = metrics.test_name.lower().replace(' ', '-').replace('_', '-')
-        report.append(f"\n{i}. [{metrics.test_name}](#test-{i}-{anchor})")
-    report.append("\n\n---\n")
-
     # Summary Overview
     report.append("\n## Summary Overview\n")
 
     # Memory Metrics
     report.append("\n### Memory Metrics\n")
-    report.append("\n| Test | Process RSS (MiB) | Godot Static (MiB) | GPU VRAM (MiB) | Rust Heap (MiB) | Deno Total (MiB) |\n")
-    report.append("|------|-------------------|-------------------|----------------|-----------------|------------------|\n")
+    report.append("\n| Test | Process RSS (MiB) | Unknown (MiB) | Godot Static (MiB) | GPU VRAM (MiB) | Rust Heap (MiB) | Deno Total (MiB) |\n")
+    report.append("|------|-------------------|---------------|-------------------|----------------|-----------------|------------------|\n")
     for metrics in metrics_list:
-        baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
+        baseline = find_baseline_for_test(metrics.test_name, metrics.realm, baseline_list) if baseline_list else None
         if baseline:
-            report.append(f"| {metrics.test_name} | {format_change(metrics.process_memory_usage_mb, baseline.process_memory_usage_mb)} | {format_change(metrics.godot_static_memory_mb, baseline.godot_static_memory_mb)} | {format_change(metrics.gpu_video_ram_mb, baseline.gpu_video_ram_mb)} | {format_change(metrics.rust_heap_usage_mb, baseline.rust_heap_usage_mb)} | {format_change(metrics.deno_total_memory_mb, baseline.deno_total_memory_mb)} |\n")
+            report.append(f"| {metrics.test_name} | {format_change(metrics.process_memory_usage_mb, baseline.process_memory_usage_mb)} | {format_change(metrics.unknown_memory_mb, baseline.unknown_memory_mb)} | {format_change(metrics.godot_static_memory_mb, baseline.godot_static_memory_mb)} | {format_change(metrics.gpu_video_ram_mb, baseline.gpu_video_ram_mb)} | {format_change(metrics.rust_heap_usage_mb, baseline.rust_heap_usage_mb)} | {format_change(metrics.deno_total_memory_mb, baseline.deno_total_memory_mb)} |\n")
         else:
-            report.append(f"| {metrics.test_name} | {metrics.process_memory_usage_mb:.2f} | {metrics.godot_static_memory_mb:.2f} | {metrics.gpu_video_ram_mb:.2f} | {metrics.rust_heap_usage_mb:.2f} | {metrics.deno_total_memory_mb:.2f} |\n")
+            report.append(f"| {metrics.test_name} | {metrics.process_memory_usage_mb:.2f} | {metrics.unknown_memory_mb:.2f} | {metrics.godot_static_memory_mb:.2f} | {metrics.gpu_video_ram_mb:.2f} | {metrics.rust_heap_usage_mb:.2f} | {metrics.deno_total_memory_mb:.2f} |\n")
     report.append("\n")
 
     # Objects Summary
@@ -298,7 +298,7 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
     report.append("\n| Test | Total Objects | Nodes | Resources | Orphan Nodes |\n")
     report.append("|------|---------------|-------|-----------|---------------|\n")
     for metrics in metrics_list:
-        baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
+        baseline = find_baseline_for_test(metrics.test_name, metrics.realm, baseline_list) if baseline_list else None
         if baseline:
             report.append(f"| {metrics.test_name} | {format_change_int(metrics.total_objects, baseline.total_objects)} | {format_change_int(metrics.node_count, baseline.node_count)} | {format_change_int(metrics.resource_count, baseline.resource_count)} | {format_change_int(metrics.orphan_node_count, baseline.orphan_node_count)} |\n")
         else:
@@ -310,7 +310,7 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
     report.append("\n| Test | FPS | Draw Calls | Primitives | Objects in Frame |\n")
     report.append("|------|-----|------------|------------|------------------|\n")
     for metrics in metrics_list:
-        baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
+        baseline = find_baseline_for_test(metrics.test_name, metrics.realm, baseline_list) if baseline_list else None
         if baseline:
             report.append(f"| {metrics.test_name} | {format_change(metrics.fps, baseline.fps, lower_is_better=False)} | {format_change_int(metrics.draw_calls, baseline.draw_calls)} | {format_change_int(metrics.primitives_in_frame, baseline.primitives_in_frame)} | {format_change_int(metrics.objects_in_frame, baseline.objects_in_frame)} |\n")
         else:
@@ -322,20 +322,12 @@ def format_consolidated_report(metrics_list: List[BenchmarkMetrics], baseline_li
     report.append("\n| Test | Meshes | Materials | Mesh RIDs | Material RIDs | Dedup Potential |\n")
     report.append("|------|--------|-----------|-----------|---------------|------------------|\n")
     for metrics in metrics_list:
-        baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
+        baseline = find_baseline_for_test(metrics.test_name, metrics.realm, baseline_list) if baseline_list else None
         if baseline:
             report.append(f"| {metrics.test_name} | {format_change_int(metrics.total_meshes, baseline.total_meshes)} | {format_change_int(metrics.total_materials, baseline.total_materials)} | {format_change_int(metrics.mesh_rid_count, baseline.mesh_rid_count)} | {format_change_int(metrics.material_rid_count, baseline.material_rid_count)} | {format_change_int(metrics.potential_dedup_count, baseline.potential_dedup_count)} |\n")
         else:
             report.append(f"| {metrics.test_name} | {metrics.total_meshes} | {metrics.total_materials} | {metrics.mesh_rid_count} | {metrics.material_rid_count} | {metrics.potential_dedup_count} |\n")
-    report.append("\n---\n")
-
-    # Detailed Test Results
-    report.append("\n## Detailed Test Results\n")
-    for i, metrics in enumerate(metrics_list, 1):
-        baseline = find_baseline_for_test(metrics.test_name, baseline_list) if baseline_list else None
-        report.append(f"\n### Test {i}: {metrics.test_name}\n")
-        report.append(format_individual_report(metrics, baseline))
-        report.append("\n---\n")
+    report.append("\n")
 
     return ''.join(report)
 

@@ -16,7 +16,6 @@ signal local_notification_permission_changed(granted: bool)
 signal local_notification_scheduled(notification_id: String)
 signal local_notification_cancelled(notification_id: String)
 
-const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 
 ## TESTING: Set to true to inject fake notifications for testing
@@ -49,7 +48,6 @@ const MAX_OS_SCHEDULED_NOTIFICATIONS = 24  # Maximum notifications scheduled wit
 const TOAST_MAX_AGE_MS = 5 * 60 * 1000  # 5 minutes in milliseconds
 
 # Event notification sync constants
-const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
 # Local notifications version - increment this to clear and re-sync all notifications
@@ -346,7 +344,7 @@ func fetch_notifications(
 	if query_params.size() > 0:
 		query_string = "?" + "&".join(query_params)
 
-	var url = BASE_URL + "/notifications" + query_string
+	var url = DclUrls.notifications_api() + "/notifications" + query_string
 
 	# Execute async fetch in a coroutine
 	_async_fetch_notifications(promise, url)
@@ -439,7 +437,7 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 		promise.reject("User not authenticated")
 		return promise
 
-	var url = BASE_URL + "/notifications/read"
+	var url = DclUrls.notifications_api() + "/notifications/read"
 	var body = {"notificationIds": Array(notification_ids)}
 	var body_json = JSON.stringify(body)
 
@@ -573,6 +571,36 @@ func _on_debug_timer_timeout() -> void:
 
 	# Restart timer with new random interval
 	_start_debug_timer()
+
+
+# =============================================================================
+# SYSTEM TOASTS (in-app only, not OS notifications)
+# =============================================================================
+
+
+## Show a system toast notification (in-app only, for things like profile changes)
+## @param title: The notification title
+## @param description: The notification description
+## @param notification_type: Type identifier (default: "system")
+func show_system_toast(
+	title: String, description: String, notification_type: String = "system"
+) -> void:
+	var timestamp = Time.get_unix_time_from_system() * 1000  # milliseconds
+	var notif: Dictionary = {
+		"id": "system_" + str(timestamp) + "_" + str(randi()),
+		"type": notification_type,
+		"address": "",
+		"timestamp": int(timestamp),
+		"read": true,  # Mark as read so it doesn't persist
+		"metadata": {"title": title, "description": description, "link": ""}
+	}
+
+	# Add to queue for toast display
+	_notification_queue.append(notif)
+
+	# Emit signal to show toast if this is the only one in queue
+	if _notification_queue.size() == 1 and not _queue_paused:
+		notification_queued.emit(notif)
 
 
 # =============================================================================
@@ -821,6 +849,10 @@ func _check_and_handle_version_change() -> bool:
 func async_sync_attended_events() -> void:
 	_debug_log("Starting attended events sync...")
 
+	# Skip on desktop - no local notification plugin available
+	if OS.get_name() != "Android" and OS.get_name() != "iOS":
+		return
+
 	# Check version and clear all notifications if version changed
 	_check_and_handle_version_change()
 
@@ -836,7 +868,7 @@ func async_sync_attended_events() -> void:
 				"Notification permission not granted yet, scheduling anyway (OS will handle)"
 			)
 
-	var url = EVENTS_API_BASE_URL + "/events/?only_attendee=true"
+	var url = DclUrls.events_api() + "/events/?only_attendee=true"
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:
@@ -848,25 +880,18 @@ func async_sync_attended_events() -> void:
 		push_warning("Invalid attended events response format")
 		return
 
-	var events: Array = json.get("data", [])
-	_debug_log("Found %d attended events" % events.size())
+	var all_events: Array = json.get("data", [])
 
-	# Debug: Print all attended events
-	_debug_log("=".repeat(70))
-	_debug_log("ATTENDED EVENTS (only_attendee=true)")
-	_debug_log("=".repeat(70))
-	for i in range(events.size()):
-		var ev = events[i]
-		var ev_id = ev.get("id", "")
-		var ev_name = ev.get("name", "")
-		var ev_start = ev.get("next_start_at", ev.get("start_at", ""))
-		var ev_x = ev.get("x", 0)
-		var ev_y = ev.get("y", 0)
-		_debug_log("  [%d] id=%s" % [i + 1, ev_id])
-		_debug_log("      name: %s" % ev_name)
-		_debug_log("      start_at: %s" % ev_start)
-		_debug_log("      position: %d,%d" % [ev_x, ev_y])
-	_debug_log("=".repeat(70))
+	# Filter locally to only use events where attending=true
+	# This is a workaround until the API's only_attendee parameter is fixed
+	var events: Array = []
+	for event_data in all_events:
+		if event_data.get("attending", false) == true:
+			events.append(event_data)
+
+	_debug_log(
+		"Found %d attended events (filtered from %d total)" % [events.size(), all_events.size()]
+	)
 
 	# Build set of attended event notification IDs
 	var attended_notification_ids: Dictionary = {}
@@ -896,9 +921,6 @@ func async_sync_attended_events() -> void:
 			_debug_log("Removed notification for unsubscribed event: %s" % existing_id)
 
 	# ADD notifications for attended events not yet scheduled
-	_debug_log("-".repeat(70))
-	_debug_log("PROCESSING EVENTS FOR SCHEDULING")
-	_debug_log("-".repeat(70))
 
 	for notification_id in attended_notification_ids:
 		var event_data = attended_notification_ids[notification_id]
@@ -1190,6 +1212,9 @@ func _os_get_scheduled_ids() -> Array:
 
 ## Print notification queue state for debugging on app launch/refocus
 func _print_queue_state(current_time: int, scheduled_count: int, pending_count: int) -> void:
+	if not _debug_notifications_enabled:
+		return
+
 	var plugin = _get_plugin()
 	if not plugin:
 		return

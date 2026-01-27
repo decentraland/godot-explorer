@@ -1,21 +1,16 @@
-[gd_scene load_steps=28 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=23 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
-[ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
-[ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
-[ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
+[ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/components/utils/clean_orientation.gd" id="3_rdch8"]
 [ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/components/discover/discover_button.gd" id="13_2fqoa"]
 [ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="15_0o5gq"]
 [ext_resource type="SpriteFrames" uid="uid://dixfuphroeh3a" path="res://assets/animations/discover_animation.tres" id="15_rdch8"]
 [ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/components/backpack/backpack_button.gd" id="16_p7nyr"]
-[ext_resource type="Texture2D" uid="uid://k7ufueequ8k0" path="res://assets/ui/backpack/backpack-bg.png" id="17_8btb2"]
 [ext_resource type="SpriteFrames" uid="uid://pdugkxtvb5a2" path="res://assets/animations/backpack_animation.tres" id="17_iib41"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="17_tc0me"]
 [ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/components/settings/settings_button.gd" id="18_3id7u"]
-[ext_resource type="PackedScene" uid="uid://cuduuu2b4u4bn" path="res://src/ui/components/profile_settings/profile_settings.tscn" id="18_x0kg3"]
 [ext_resource type="SpriteFrames" uid="uid://bkr6jgehk1ji0" path="res://assets/animations/settings_animation.tres" id="19_j150v"]
-[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="22_1kuym"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
 [ext_resource type="PackedScene" uid="uid://b3e5xybvamaqr" path="res://src/ui/components/menu/account_deletion_popup.tscn" id="31_kkhkt"]
 
@@ -28,15 +23,15 @@ gradient = SubResource("Gradient_6v8vt")
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_080im"]
 bg_color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_rdch8"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_hpe6q"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_7v87b"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_hefdq"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_udswp"]
 resource_local_to_scene = false
 resource_name = "Tabs"
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_0o5gq"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_lhdku"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4hsmp"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -75,6 +70,8 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 color = Color(0.0862745, 0.0784314, 0.105882, 1)
+script = ExtResource("3_rdch8")
+clean_on_landscape = true
 
 [node name="ColorRect_Background" type="TextureRect" parent="VBoxContainer"]
 show_behind_parent = true
@@ -90,46 +87,23 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Control_Discover" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("4_5qyiw")]
+[node name="Control_Discover" parent="VBoxContainer/ColorRect_Background/Menus" instance_placeholder="res://src/ui/components/discover/discover.tscn"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("3_1stdy")]
+[node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance_placeholder="res://src/ui/components/settings/settings.tscn"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 offset_bottom = 19.0
 
-[node name="Control_Backpack" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("8_d38wp")]
+[node name="Control_Backpack" parent="VBoxContainer/ColorRect_Background/Menus" instance_placeholder="res://src/ui/components/backpack/backpack.tscn"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="ColorRect_Background" type="ColorRect" parent="VBoxContainer/ColorRect_Background/Menus/Control_Backpack"]
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0.898039, 0.882353, 0.87451, 1)
-
-[node name="TextureRect_Background" type="TextureRect" parent="VBoxContainer/ColorRect_Background/Menus/Control_Backpack"]
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("17_8btb2")
-expand_mode = 2
-stretch_mode = 6
-
-[node name="Control_ProfileSettings" parent="VBoxContainer/ColorRect_Background/Menus" node_paths=PackedStringArray("backpack") instance=ExtResource("18_x0kg3")]
+[node name="Control_ProfileSettings" parent="VBoxContainer/ColorRect_Background/Menus" node_paths=PackedStringArray("backpack") instance_placeholder="res://src/ui/components/profile_settings/profile_settings.tscn"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -139,7 +113,8 @@ backpack = NodePath("../Control_Backpack")
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_080im")
-script = ExtResource("22_1kuym")
+script = ExtResource("3_rdch8")
+clean_on_landscape = true
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/BottomBar_Portrait"]
 layout_mode = 2
@@ -161,7 +136,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_rdch8")
+button_group = SubResource("ButtonGroup_hpe6q")
 icon_alignment = 1
 vertical_icon_alignment = 0
 script = ExtResource("13_2fqoa")
@@ -173,7 +148,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_7v87b")
+button_group = SubResource("ButtonGroup_hefdq")
 icon_alignment = 1
 vertical_icon_alignment = 0
 script = ExtResource("16_p7nyr")
@@ -191,7 +166,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_0o5gq")
+button_group = SubResource("ButtonGroup_lhdku")
 icon_alignment = 1
 vertical_icon_alignment = 0
 script = ExtResource("18_3id7u")
@@ -258,5 +233,15 @@ size_flags_horizontal = 4
 [node name="AccountDeletionPopUp" parent="." instance=ExtResource("31_kkhkt")]
 visible = false
 layout_mode = 1
+
+[node name="Control_Modal" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

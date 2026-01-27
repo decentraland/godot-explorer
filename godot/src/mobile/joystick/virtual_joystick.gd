@@ -8,7 +8,8 @@ signal is_holded(bool)
 
 # EXPORTED VARIABLE
 
-## The joystick doesn't move.  ## Every time the joystick area is pressed,
+## The joystick doesn't move.
+## Every time the joystick area is pressed,
 ## the joystick position is set on the touched position.
 enum JoystickMode { FIXED, DYNAMIC }
 
@@ -16,14 +17,14 @@ enum JoystickMode { FIXED, DYNAMIC }
 ## Visible on touch screens only
 enum VisibilityMode { ALWAYS, TOUCHSCREEN_ONLY }
 
-## The color of the button when the joystick is pressed.
-@export var pressed_color := Color.GRAY
-
 ## If the input is inside this range, the output is zero.
 @export_range(0, 200, 1) var deadzone_size: float = 0
 
 ## The max distance the tip can reach.
 @export_range(0, 500, 1) var clampzone_size: float = 75
+
+## Joystick resting position
+@export var _joystick_default_position := Vector2.ZERO
 
 ## If the joystick stays in the same position or appears on the touched
 ## position when touch is started
@@ -42,6 +43,10 @@ enum VisibilityMode { ALWAYS, TOUCHSCREEN_ONLY }
 @export var action_walk := "ia_walk"
 @export var action_sprint := "ia_sprint"
 
+## Margin node, to offset allowing to
+## render on the entire screen
+@export var margin_control: Control
+
 # PUBLIC VARIABLES
 
 ## If the joystick is receiving inputs.
@@ -53,18 +58,18 @@ var output := Vector2.ZERO
 # PRIVATE VARIABLES
 
 var _touch_index: int = -1
+var _joystick_position := Vector2.ZERO
+var _tip_position := Vector2.ZERO
 
 @onready var _sprint_timer := %SprintTimer
 
-@onready var _base := $Base
-@onready var _tip := $Base/Tip
+@onready var _dynamic_material: ShaderMaterial = $Dynamic.material
+@onready var _active_area: Control = $ActiveArea
 
-@onready var _base_radius = _base.size * _base.get_global_transform_with_canvas().get_scale() / 2
+@onready var _tip_default_position := Vector2.ZERO
 
-@onready var _base_default_position: Vector2 = _base.position
-@onready var _tip_default_position: Vector2 = _tip.position
+@onready var _button_camera := %Button_Camera
 
-@onready var _default_color: Color = _tip.modulate
 # FUNCTIONS
 
 
@@ -77,8 +82,29 @@ func _ready() -> void:
 	):
 		hide()
 
+	_active_area.connect("input_received", _on_input)
 
-func _input(event: InputEvent) -> void:
+	Global.loading_started.connect(_on_loading_scene)
+	var connect_explorer_signals := func():
+		Global.get_explorer().navbar.navbar_opened.connect(_on_navbar_opened)
+		Global.get_explorer().navbar.navbar_closed.connect(_on_navbar_closed)
+	connect_explorer_signals.call_deferred()
+	_on_loading_scene()
+
+
+func _on_loading_scene() -> void:
+	_dynamic_material.set_shader_parameter("state", 0)
+
+
+func _on_navbar_opened() -> void:
+	_button_camera.hide()
+
+
+func _on_navbar_closed() -> void:
+	_button_camera.show()
+
+
+func _on_input(event: InputEvent) -> void:
 	if Global.is_mobile():
 		if event is InputEventScreenTouch:
 			if event.pressed:
@@ -92,12 +118,13 @@ func _input(event: InputEvent) -> void:
 					):
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
+							_dynamic_material.set_shader_parameter("state", 1)
 						_touch_index = event.index
-						_tip.modulate = pressed_color
 						_update_joystick(event.position)
 						get_viewport().set_input_as_handled()
 			elif event.index == _touch_index:
 				_reset()
+				_dynamic_material.set_shader_parameter("state", 2)
 				emit_signal("stick_position", Vector2.ZERO)
 				get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
@@ -107,50 +134,58 @@ func _input(event: InputEvent) -> void:
 
 
 func _move_base(new_position: Vector2) -> void:
-	_base.global_position = (
-		new_position - _base.pivot_offset * get_global_transform_with_canvas().get_scale()
-	)
+	_joystick_position = new_position
+	_dynamic_material.set_shader_parameter("joystick_position", _joystick_position)
 
 
-func _move_tip(new_position: Vector2) -> void:
-	_tip.global_position = (
-		new_position - _tip.pivot_offset * _base.get_global_transform_with_canvas().get_scale()
-	)
+func _move_tip(vector: Vector2) -> void:
+	_dynamic_material.set_shader_parameter("tip_position", vector)
 
 
 func _is_point_inside_joystick_area(point: Vector2) -> bool:
 	var x: bool = (
-		point.x >= global_position.x
+		point.x >= _active_area.global_position.x
 		and (
 			point.x
-			<= global_position.x + (size.x * get_global_transform_with_canvas().get_scale().x)
+			<= (
+				_active_area.global_position.x
+				+ (
+					_active_area.size.x
+					* _active_area.get_global_transform_with_canvas().get_scale().x
+				)
+			)
 		)
 	)
 	var y: bool = (
-		point.y >= global_position.y
+		point.y >= _active_area.global_position.y
 		and (
 			point.y
-			<= global_position.y + (size.y * get_global_transform_with_canvas().get_scale().y)
+			<= (
+				_active_area.global_position.y
+				+ (
+					_active_area.size.y
+					* _active_area.get_global_transform_with_canvas().get_scale().y
+				)
+			)
 		)
 	)
 	return x and y
 
 
 func _is_point_inside_base(point: Vector2) -> bool:
-	var center: Vector2 = _base.global_position + _base_radius
+	var center: Vector2 = _joystick_position
 	var vector: Vector2 = point - center
-	if vector.length_squared() <= _base_radius.x * _base_radius.x:
+	if vector.length_squared() <= 25.0 * 25.0:
 		return true
 
 	return false
 
 
 func _update_joystick(touch_position: Vector2) -> void:
-	var center: Vector2 = _base.global_position + _base_radius
+	var center: Vector2 = _joystick_position
 	var vector: Vector2 = touch_position - center
-	vector = vector.limit_length(clampzone_size)
 
-	_move_tip(center + vector)
+	_move_tip(vector)
 
 	if vector.length_squared() > deadzone_size * deadzone_size:
 		is_pressed = true
@@ -198,9 +233,29 @@ func _reset():
 	emit_signal("is_holded", false)
 	output = Vector2.ZERO
 	_touch_index = -1
-	_tip.modulate = _default_color
-	_base.position = _base_default_position
-	_tip.position = _tip_default_position
+
+	var base_position := _joystick_default_position
+	base_position.y = size.y - base_position.y
+
+	# Expand VirtualJoystick outside the Safe Margin
+	if margin_control:
+		var margin_top: float = margin_control.get_theme_constant("margin_top")
+		var margin_left: float = margin_control.get_theme_constant("margin_left")
+		var margin_bottom: float = margin_control.get_theme_constant("margin_bottom")
+		offset_left = -margin_left
+		offset_top = -margin_top
+		offset_right = 0
+		offset_bottom = -margin_bottom
+		base_position.y += margin_bottom
+		base_position.x += margin_left
+
+	_dynamic_material.set_shader_parameter("max_chain_length", size.length() * 0.25)
+
+	_move_base(base_position)
+
+	_tip_position = _tip_default_position
+	_move_tip(_tip_position)
+
 	if use_input_actions:
 		if Input.is_action_pressed(action_left) or Input.is_action_just_pressed(action_left):
 			Input.action_release(action_left)
@@ -210,3 +265,21 @@ func _reset():
 			Input.action_release(action_down)
 		if Input.is_action_pressed(action_up) or Input.is_action_just_pressed(action_up):
 			Input.action_release(action_up)
+
+
+func _on_resized() -> void:
+	if not is_node_ready():
+		return
+	_reset()
+
+
+func _on_button_camera_pressed() -> void:
+	const CAMERA_MODE_1P = preload("res://assets/ui/camera_mode_1p.svg")
+	const CAMERA_MODE_3P = preload("res://assets/ui/camera_mode_3p.svg")
+	match Global.player_camera_node.get_camera_mode():
+		Global.CameraMode.THIRD_PERSON:
+			_button_camera.icon = CAMERA_MODE_3P
+			Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)
+		Global.CameraMode.FIRST_PERSON:
+			_button_camera.icon = CAMERA_MODE_1P
+			Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)

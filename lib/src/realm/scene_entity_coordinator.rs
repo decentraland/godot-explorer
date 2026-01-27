@@ -257,7 +257,7 @@ impl SceneEntityCoordinator {
         ) {
             Ok(entity_definition) => entity_definition,
             Err(err) => {
-                tracing::warn!(
+                tracing::error!(
                     "Error parsing scene data from entity {:?}: {:?}",
                     entity_base,
                     err
@@ -592,7 +592,7 @@ impl SceneEntityCoordinator {
     /// - If no fixed entities: Requests scene at current coordinate (fallback for genesis city teleports)
     pub fn update_position(&mut self, x: i16, z: i16) {
         if self.entities_active_url.is_empty() {
-            tracing::warn!("entities_active_url is empty, cannot update position");
+            tracing::error!("entities_active_url is empty, cannot update position");
             return;
         }
 
@@ -636,14 +636,14 @@ impl SceneEntityCoordinator {
                         self.dirty_loadable_scenes = true;
                     } else {
                         self.cleanup_request_id(response.request_option.id);
-                        tracing::warn!(
+                        tracing::error!(
                             "Bad status code while doing a request: {:?}",
                             response.status_code
                         );
                     }
                 }
                 Err(err) => {
-                    tracing::warn!("Error while doing a request: {err:?}");
+                    tracing::error!("Error while doing a request: {err:?}");
                 }
             }
         }
@@ -844,7 +844,7 @@ mod tests {
         // TODO: the mock server is not working in the github actions
         // The test now is using the real server
         let entities_active_url =
-            "https://sdk-test-scenes.decentraland.zone/content/entities/active".to_string();
+            "https://sdk-test-scenes.decentraland.org/content/entities/active".to_string();
         let content_url =
             "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest/contents"
                 .to_string();

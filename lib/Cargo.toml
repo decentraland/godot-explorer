@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.43.0"
+version = "0.45.0"
 edition = "2021"
 publish = false
 
@@ -74,6 +74,9 @@ cid = "0.11.0"
 multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
 
 modular-bitfield = "0.11"
+
+# Image decoding for formats not natively supported by Godot (GIF, animated WebP)
+image = { version = "0.25", default-features = false, features = ["gif", "webp"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21.1", features = ["invocation"] }

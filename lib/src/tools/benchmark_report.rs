@@ -64,9 +64,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::{
-    dcl_android_plugin::DclGodotAndroidPlugin, dcl_ios_plugin::DclIosPlugin,
-};
+use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
 
 use std::fs::{self, File};
 use std::io::Write as IoWrite;
@@ -94,8 +92,11 @@ pub struct BenchmarkMetrics {
     pub rust_heap_usage_mb: f64,
     pub rust_total_allocated_mb: f64,
     pub deno_total_memory_mb: f64,
+    pub deno_external_memory_mb: f64,
     pub deno_scene_count: i32,
     pub deno_average_memory_mb: f64,
+    pub content_cache_size_mb: f64,
+    pub alive_scene_count: i32,
 
     // Object counts
     pub total_objects: i64,
@@ -125,6 +126,10 @@ pub struct BenchmarkMetrics {
 
     // Process info
     pub process_memory_usage_mb: f64,
+
+    // Unknown memory = Process RSS - (all known allocations)
+    // This helps identify memory leaks in untracked areas
+    pub unknown_memory_mb: f64,
 }
 
 #[derive(GodotClass)]
@@ -191,7 +196,7 @@ impl BenchmarkReport {
         test_name: GString,
         location: GString,
         realm: GString,
-    ) -> Dictionary {
+    ) -> VarDictionary {
         let performance = Performance::singleton();
 
         // Memory metrics (in MiB)
@@ -221,14 +226,30 @@ impl BenchmarkReport {
         let (rust_heap_usage_mb, rust_total_allocated_mb) = (0.0, 0.0);
 
         // Deno memory
-        let (deno_total_memory_mb, deno_scene_count, deno_average_memory_mb) =
-            self.get_deno_metrics();
+        let (
+            deno_total_memory_mb,
+            deno_external_memory_mb,
+            deno_scene_count,
+            deno_average_memory_mb,
+            alive_scene_count,
+        ) = self.get_deno_metrics();
 
         // Object counts
         let total_objects = performance.get_monitor(Monitor::OBJECT_COUNT) as i64;
         let resource_count = performance.get_monitor(Monitor::OBJECT_RESOURCE_COUNT) as i64;
         let node_count = performance.get_monitor(Monitor::OBJECT_NODE_COUNT) as i64;
         let orphan_node_count = performance.get_monitor(Monitor::OBJECT_ORPHAN_NODE_COUNT) as i64;
+
+        // Print orphan nodes for debugging when we have a lot of orphans
+        // Using godot_print! to ensure output goes to Godot's console
+        if orphan_node_count > 1000 {
+            godot::global::godot_print!(
+                "=== ORPHAN NODES DEBUG: {} orphans detected ===",
+                orphan_node_count
+            );
+            godot::classes::Node::print_orphan_nodes();
+            godot::global::godot_print!("=== END ORPHAN NODES DEBUG ===");
+        }
 
         // Rendering
         let fps = performance.get_monitor(Monitor::TIME_FPS) as f64;
@@ -266,11 +287,16 @@ impl BenchmarkReport {
             rust_total_allocated_mb.to_variant(),
         );
         dict.set("deno_total_memory_mb", deno_total_memory_mb.to_variant());
+        dict.set(
+            "deno_external_memory_mb",
+            deno_external_memory_mb.to_variant(),
+        );
         dict.set("deno_scene_count", deno_scene_count.to_variant());
         dict.set(
             "deno_average_memory_mb",
             deno_average_memory_mb.to_variant(),
         );
+        dict.set("alive_scene_count", alive_scene_count.to_variant());
 
         dict.set("total_objects", total_objects.to_variant());
         dict.set("resource_count", resource_count.to_variant());
@@ -313,7 +339,7 @@ impl BenchmarkReport {
     ) {
         let performance = Performance::singleton();
 
-        let metrics = BenchmarkMetrics {
+        let mut metrics = BenchmarkMetrics {
             test_name: test_name.to_string(),
             timestamp: self.get_timestamp(),
             location: location.to_string(),
@@ -346,8 +372,11 @@ impl BenchmarkReport {
             rust_total_allocated_mb: 0.0,
 
             deno_total_memory_mb: self.get_deno_metrics().0,
-            deno_scene_count: self.get_deno_metrics().1,
-            deno_average_memory_mb: self.get_deno_metrics().2,
+            deno_external_memory_mb: self.get_deno_metrics().1,
+            deno_scene_count: self.get_deno_metrics().2,
+            deno_average_memory_mb: self.get_deno_metrics().3,
+            content_cache_size_mb: 0.0, // Will be set from GDScript if needed
+            alive_scene_count: self.get_deno_metrics().4,
 
             // Object counts
             total_objects: performance.get_monitor(Monitor::OBJECT_COUNT) as i64,
@@ -400,7 +429,19 @@ impl BenchmarkReport {
 
             // Process info
             process_memory_usage_mb: self.get_process_memory_usage_mb(),
+
+            // Will be calculated below
+            unknown_memory_mb: 0.0,
         };
+
+        // Calculate unknown memory: Process RSS - all known allocations
+        // Known allocations: Godot Static + GPU VRAM + Rust Heap + Deno Total + Deno External
+        let known_memory = metrics.godot_static_memory_mb
+            + metrics.gpu_video_ram_mb
+            + metrics.rust_heap_usage_mb
+            + metrics.deno_total_memory_mb
+            + metrics.deno_external_memory_mb;
+        metrics.unknown_memory_mb = (metrics.process_memory_usage_mb - known_memory).max(0.0);
 
         self.metrics_history.push(metrics);
         tracing::info!("Stored metrics for test: {}", test_name);
@@ -480,8 +521,9 @@ impl BenchmarkReport {
         )
     }
 
+    /// Returns (total_memory_mb, external_memory_mb, scene_count, average_memory_mb, alive_scene_count)
     #[cfg(feature = "use_deno")]
-    fn get_deno_metrics(&self) -> (f64, i32, f64) {
+    fn get_deno_metrics(&self) -> (f64, f64, i32, f64, i32) {
         use crate::scene_runner::scene_manager::SceneManager;
 
         if let Some(scene_manager_node) = &self.scene_manager_path {
@@ -489,24 +531,26 @@ impl BenchmarkReport {
                 let scene_manager = scene_manager.bind();
                 return (
                     scene_manager.get_total_deno_memory_mb(),
+                    scene_manager.get_total_deno_external_memory_mb(),
                     scene_manager.get_deno_scene_count(),
                     scene_manager.get_average_deno_memory_mb(),
+                    scene_manager.get_alive_scene_count(),
                 );
             }
         }
-        (0.0, 0, 0.0)
+        (0.0, 0.0, 0, 0.0, 0)
     }
 
     #[cfg(not(feature = "use_deno"))]
-    fn get_deno_metrics(&self) -> (f64, i32, f64) {
-        (0.0, 0, 0.0)
+    fn get_deno_metrics(&self) -> (f64, f64, i32, f64, i32) {
+        (0.0, 0.0, 0, 0.0, 0)
     }
 
     fn get_mobile_metrics(&self) -> (Option<i32>, Option<f32>, Option<i32>) {
         let metrics_data = if DclIosPlugin::is_available() {
             DclIosPlugin::get_mobile_metrics_internal()
-        } else if DclGodotAndroidPlugin::is_available() {
-            DclGodotAndroidPlugin::get_mobile_metrics_internal()
+        } else if DclAndroidPlugin::is_available() {
+            DclAndroidPlugin::get_mobile_metrics_internal()
         } else {
             None
         };
@@ -540,6 +584,55 @@ impl BenchmarkReport {
             }
         }
 
+        // macOS: Use mach_task_basic_info to get resident memory
+        #[cfg(target_os = "macos")]
+        {
+            use std::mem::MaybeUninit;
+
+            #[repr(C)]
+            struct MachTaskBasicInfo {
+                virtual_size: u64,
+                resident_size: u64,
+                resident_size_max: u64,
+                user_time: u64,
+                system_time: u64,
+                policy: i32,
+                suspend_count: i32,
+            }
+
+            extern "C" {
+                fn mach_task_self() -> u32;
+                fn task_info(
+                    target_task: u32,
+                    flavor: i32,
+                    task_info_out: *mut MachTaskBasicInfo,
+                    task_info_outCnt: *mut u32,
+                ) -> i32;
+            }
+
+            const MACH_TASK_BASIC_INFO: i32 = 20;
+            const MACH_TASK_BASIC_INFO_COUNT: u32 =
+                (std::mem::size_of::<MachTaskBasicInfo>() / std::mem::size_of::<u32>()) as u32;
+
+            unsafe {
+                let mut info = MaybeUninit::<MachTaskBasicInfo>::uninit();
+                let mut count = MACH_TASK_BASIC_INFO_COUNT;
+
+                let result = task_info(
+                    mach_task_self(),
+                    MACH_TASK_BASIC_INFO,
+                    info.as_mut_ptr(),
+                    &mut count,
+                );
+
+                if result == 0 {
+                    let info = info.assume_init();
+                    // resident_size is in bytes, convert to MiB
+                    return info.resident_size as f64 / 1_048_576.0;
+                }
+            }
+        }
+
         // Return 0.0 if not available
         0.0
     }
@@ -564,6 +657,10 @@ impl BenchmarkReport {
             "| **Process Memory Usage (RSS)** | **{:.2} MiB ({:.2} GiB)** |\n",
             metrics.process_memory_usage_mb,
             metrics.process_memory_usage_mb / 1024.0
+        ));
+        report.push_str(&format!(
+            "| **Unknown Memory (untracked)** | **{:.2} MiB** |\n",
+            metrics.unknown_memory_mb
         ));
         report.push_str(&format!(
             "| Godot Static Memory | {:.2} MiB |\n",
@@ -820,11 +917,14 @@ impl BenchmarkReport {
 
         // CSV Header
         csv.push_str("test_name,timestamp,location,realm,");
-        csv.push_str("process_memory_usage_mb,");
+        csv.push_str("process_memory_usage_mb,unknown_memory_mb,");
         csv.push_str("godot_static_memory_mb,godot_static_memory_peak_mb,");
         csv.push_str("gpu_video_ram_mb,gpu_texture_memory_mb,gpu_buffer_memory_mb,");
         csv.push_str("rust_heap_usage_mb,rust_total_allocated_mb,");
-        csv.push_str("deno_total_memory_mb,deno_scene_count,deno_average_memory_mb,");
+        csv.push_str(
+            "deno_total_memory_mb,deno_external_memory_mb,deno_scene_count,deno_average_memory_mb,",
+        );
+        csv.push_str("content_cache_size_mb,alive_scene_count,");
         csv.push_str("total_objects,resource_count,node_count,orphan_node_count,");
         csv.push_str("fps,draw_calls,primitives_in_frame,objects_in_frame,");
         csv.push_str("total_meshes,total_materials,mesh_rid_count,material_rid_count,");
@@ -840,7 +940,10 @@ impl BenchmarkReport {
                 Self::csv_escape(&metrics.location),
                 Self::csv_escape(&metrics.realm)
             ));
-            csv.push_str(&format!("{:.2},", metrics.process_memory_usage_mb));
+            csv.push_str(&format!(
+                "{:.2},{:.2},",
+                metrics.process_memory_usage_mb, metrics.unknown_memory_mb
+            ));
             csv.push_str(&format!(
                 "{:.2},{:.2},",
                 metrics.godot_static_memory_mb, metrics.godot_static_memory_peak_mb
@@ -856,10 +959,15 @@ impl BenchmarkReport {
                 metrics.rust_heap_usage_mb, metrics.rust_total_allocated_mb
             ));
             csv.push_str(&format!(
-                "{:.2},{},{:.2},",
+                "{:.2},{:.2},{},{:.2},",
                 metrics.deno_total_memory_mb,
+                metrics.deno_external_memory_mb,
                 metrics.deno_scene_count,
                 metrics.deno_average_memory_mb
+            ));
+            csv.push_str(&format!(
+                "{:.2},{},",
+                metrics.content_cache_size_mb, metrics.alive_scene_count
             ));
             csv.push_str(&format!(
                 "{},{},{},{},",

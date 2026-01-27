@@ -6,9 +6,10 @@ signal param_changed(param: ConfigParams)
 enum FpsLimitMode {
 	VSYNC = 0,
 	NO_LIMIT = 1,
-	FPS_30 = 2,
-	FPS_60 = 3,
-	FPS_18 = 4,
+	FPS_18 = 2,  # Very Low profile
+	FPS_30 = 3,
+	FPS_60 = 4,
+	FPS_120 = 5,
 }
 
 enum ConfigParams {
@@ -29,7 +30,11 @@ enum ConfigParams {
 	GRAPHIC_PROFILE,
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
+	DYNAMIC_GRAPHICS_ENABLED,
 }
+
+# Graphics profile index for Custom (manual settings)
+const PROFILE_CUSTOM: int = 4
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
 	set(value):
@@ -78,7 +83,11 @@ var skybox_time: int = 43200:
 		skybox_time = value
 		param_changed.emit(ConfigParams.SKYBOX_TIME)
 
-# See FpsLimitMode enum for available options
+var submit_message_closes_chat: bool = false:
+	set(value):
+		submit_message_closes_chat = value
+
+# See FpsLimitMode enum for available options (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
 var limit_fps: int = FpsLimitMode.FPS_30:
 	set(value):
 		limit_fps = value
@@ -102,7 +111,7 @@ var bloom_quality: int = 0:
 		bloom_quality = value
 		param_changed.emit(ConfigParams.BLOOM_QUALITY)
 
-# 0: Performance, 1: Balanced, 2: Quality, 3: Custom
+# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
 var graphic_profile: int = 0:
 	set(value):
 		graphic_profile = value
@@ -114,6 +123,19 @@ var anti_aliasing: int = 0:
 		anti_aliasing = value
 		param_changed.emit(ConfigParams.ANTI_ALIASING)
 
+# First launch benchmark completed (for autodetection)
+var first_launch_completed: bool = false
+
+# Benchmark results (for debugging/analytics)
+var benchmark_gpu_score: float = -1.0  # Render time in ms (-1 = not run)
+var benchmark_ram_gb: float = -1.0  # System RAM in GB (-1 = not detected)
+
+# Dynamic graphics profile adjustment enabled
+var dynamic_graphics_enabled: bool = true:
+	set(value):
+		dynamic_graphics_enabled = value
+		param_changed.emit(ConfigParams.DYNAMIC_GRAPHICS_ENABLED)
+
 var last_realm_joined: String = "":
 	set(value):
 		last_realm_joined = value
@@ -124,7 +146,7 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 
 var terms_and_conditions_version: int = 0
 
-var optimized_assets_version: int = 0
+var local_assets_cache_version: int = 0
 
 var local_notifications_version: int = 0
 
@@ -212,7 +234,11 @@ func load_from_default():
 	self.shadow_quality = 0  # disabled
 	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
-	self.graphic_profile = 0
+	self.graphic_profile = 0  # Very Low (will be set by benchmark on first launch)
+	self.first_launch_completed = false
+	self.benchmark_gpu_score = -1.0
+	self.benchmark_ram_gb = -1.0
+	self.dynamic_graphics_enabled = true
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 	self.max_cache_size = 1
@@ -221,6 +247,7 @@ func load_from_default():
 
 	self.dynamic_skybox = true
 	self.skybox_time = 43200
+	self.submit_message_closes_chat = false
 
 	self.window_mode = 0
 
@@ -241,7 +268,7 @@ func load_from_settings_file():
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
 
-	self.limit_fps = settings_file.get_value("config", "fps_limit", data_default.limit_fps)
+	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(
 		"config", "shadow_quality", data_default.shadow_quality
@@ -254,6 +281,18 @@ func load_from_settings_file():
 	)
 	self.graphic_profile = settings_file.get_value(
 		"config", "graphic_profile", data_default.graphic_profile
+	)
+	self.first_launch_completed = settings_file.get_value(
+		"config", "first_launch_completed", data_default.first_launch_completed
+	)
+	self.benchmark_gpu_score = settings_file.get_value(
+		"config", "benchmark_gpu_score", data_default.benchmark_gpu_score
+	)
+	self.benchmark_ram_gb = settings_file.get_value(
+		"config", "benchmark_ram_gb", data_default.benchmark_ram_gb
+	)
+	self.dynamic_graphics_enabled = settings_file.get_value(
+		"config", "dynamic_graphics_enabled", data_default.dynamic_graphics_enabled
 	)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
@@ -268,6 +307,9 @@ func load_from_settings_file():
 		"config", "dynamic_skybox", data_default.dynamic_skybox
 	)
 	self.skybox_time = settings_file.get_value("config", "skybox_time", data_default.skybox_time)
+	self.submit_message_closes_chat = settings_file.get_value(
+		"config", "submit_message_closes_chat", data_default.submit_message_closes_chat
+	)
 
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
@@ -325,8 +367,8 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
-	self.optimized_assets_version = settings_file.get_value(
-		"user", "optimized_assets_version", data_default.optimized_assets_version
+	self.local_assets_cache_version = settings_file.get_value(
+		"user", "local_assets_cache_version", data_default.local_assets_cache_version
 	)
 
 	self.local_notifications_version = settings_file.get_value(
@@ -340,17 +382,24 @@ func save_to_settings_file():
 
 	var new_settings_file: ConfigFile = ConfigFile.new()
 	new_settings_file.set_value("config", "process_tick_quota_ms", self.process_tick_quota_ms)
-	new_settings_file.set_value("config", "fps_limit", self.limit_fps)
+	new_settings_file.set_value("config", "limit_fps", self.limit_fps)
 	new_settings_file.set_value("config", "skybox", self.skybox)
 	new_settings_file.set_value("config", "shadow_quality", self.shadow_quality)
 	new_settings_file.set_value("config", "bloom_quality", self.bloom_quality)
 	new_settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
 	new_settings_file.set_value("config", "graphic_profile", self.graphic_profile)
+	new_settings_file.set_value("config", "first_launch_completed", self.first_launch_completed)
+	new_settings_file.set_value("config", "benchmark_gpu_score", self.benchmark_gpu_score)
+	new_settings_file.set_value("config", "benchmark_ram_gb", self.benchmark_ram_gb)
+	new_settings_file.set_value("config", "dynamic_graphics_enabled", self.dynamic_graphics_enabled)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
 	new_settings_file.set_value("config", "dynamic_skybox", self.dynamic_skybox)
 	new_settings_file.set_value("config", "skybox_time", self.skybox_time)
+	new_settings_file.set_value(
+		"config", "submit_message_closes_chat", self.submit_message_closes_chat
+	)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
@@ -369,7 +418,9 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
-	new_settings_file.set_value("user", "optimized_assets_version", self.optimized_assets_version)
+	new_settings_file.set_value(
+		"user", "local_assets_cache_version", self.local_assets_cache_version
+	)
 	new_settings_file.set_value(
 		"user", "local_notifications_version", self.local_notifications_version
 	)

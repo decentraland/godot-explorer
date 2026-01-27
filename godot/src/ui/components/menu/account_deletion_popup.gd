@@ -1,7 +1,5 @@
 extends TextureRect
 
-const DELETION_API_URL = "https://mobile-bff.decentraland.org/deletion"
-
 @onready var confirmation_dialog: VBoxContainer = %ConfirmationDialog
 @onready var processing_screen: VBoxContainer = %ProcessingScreen
 @onready var done_dialog: VBoxContainer = %DoneDialog
@@ -37,7 +35,9 @@ func async_start_flow() -> void:
 	processing_screen.show()
 
 	# Check if deletion was already requested from server
-	var response = await Global.async_signed_fetch(DELETION_API_URL, HTTPClient.METHOD_GET, "")
+	var response = await Global.async_signed_fetch(
+		DclUrls.account_deletion(), HTTPClient.METHOD_GET, ""
+	)
 
 	_hide_all()
 
@@ -66,7 +66,9 @@ func _async_on_button_confirm_delete_account_pressed() -> void:
 	_hide_all()
 	processing_screen.show()
 
-	var response = await Global.async_signed_fetch(DELETION_API_URL, HTTPClient.METHOD_POST, "")
+	var response = await Global.async_signed_fetch(
+		DclUrls.account_deletion(), HTTPClient.METHOD_POST, ""
+	)
 
 	_hide_all()
 
@@ -90,7 +92,9 @@ func _async_on_button_cancel_deletion_pressed() -> void:
 	_hide_all()
 	processing_screen.show()
 
-	var response = await Global.async_signed_fetch(DELETION_API_URL, HTTPClient.METHOD_DELETE, "")
+	var response = await Global.async_signed_fetch(
+		DclUrls.account_deletion(), HTTPClient.METHOD_DELETE, ""
+	)
 
 	_hide_all()
 
@@ -106,3 +110,13 @@ func _async_on_button_cancel_deletion_pressed() -> void:
 	else:
 		printerr("Cancel deletion request failed: ", data.get("error", "Unknown error"))
 		fail_dialog.show()
+
+
+func _on_visibility_changed() -> void:
+	if Global.get_explorer():
+		var navbar = Global.get_explorer().navbar
+		if navbar:
+			if visible:
+				navbar.hide()
+			else:
+				navbar.show()

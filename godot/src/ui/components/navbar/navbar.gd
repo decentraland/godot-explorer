@@ -1,8 +1,8 @@
 extends Control
 
-signal close_all
 signal close_only_panels
 signal navbar_opened
+signal navbar_closed
 
 enum BUTTON { FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
 
@@ -48,7 +48,8 @@ func _on_size_changed():
 		if (
 			explorer.control_menu != null
 			and explorer.control_menu.visible
-			and explorer.control_menu.control_discover.visible
+			and explorer.control_menu.control_discover.instance != null
+			and explorer.control_menu.control_discover.instance.visible
 		):
 			# If discover is open, keep hidden
 			hide()
@@ -64,7 +65,7 @@ func _on_size_changed():
 
 func _on_navbar_close() -> void:
 	close_from_discover_button()
-	close_all.emit()
+	navbar_closed.emit()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
@@ -75,7 +76,7 @@ func _on_button_toggled(toggled_on: bool) -> void:
 		navbar_opened.emit()
 	else:
 		animation_player.play("close")
-		close_all.emit()
+		navbar_closed.emit()
 
 
 ## Set a button as pressed
@@ -119,7 +120,10 @@ func set_manually_hidden(is_hidden: bool) -> void:
 		var explorer = Global.get_explorer()
 		if explorer != null:
 			# Check if discover or chat are open before restoring visibility
-			if explorer.control_menu.visible and explorer.control_menu.control_discover.visible:
+			if (
+				explorer.control_menu.visible
+				and explorer.control_menu.control_discover.instance.visible
+			):
 				# If discover is open, keep hidden
 				return
 			if explorer.chat_container.visible:

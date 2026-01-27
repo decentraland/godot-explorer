@@ -3,7 +3,7 @@
 class_name OpenSeaFetcher
 
 # DCL OpenSea
-const RETRIEVE_ASSETS_ENDPOINT := "https://opensea.decentraland.org/api/v2/chain/%s/contract/%s/nfts/%s"
+# Note: endpoint URL built dynamically using DclUrls.opensea_proxy()
 
 # OpenSea
 #const RETRIEVE_ASSETS_ENDPOINT := "https://api.opensea.io/api/v2/chain/%s/contract/%s/nfts/%s"
@@ -20,7 +20,7 @@ class Asset:
 	var token_id: String = ""
 	var image_url: String = ""
 	var background_color: Color
-	var texture: ImageTexture = null
+	var texture: Texture2D = null
 	var username: String = ""  # TODO: Need to fetch to users
 	var address: String = ""
 
@@ -43,7 +43,7 @@ class Asset:
 		background_color = Color.TRANSPARENT
 
 		# image
-		image_url = nft.get("image_url", "")
+		image_url = _get_or_empty_string(nft, "image_url")
 
 		# top ownership
 		var owners = nft.get("owners", null)
@@ -72,7 +72,8 @@ class Asset:
 		self.texture = result.texture
 
 	func get_hash() -> String:
-		return contract_address + ":" + token_id
+		# Use underscore instead of colon - colons are invalid in file paths on macOS
+		return contract_address + "_" + token_id
 
 
 var cached_promises: Dictionary
@@ -91,7 +92,10 @@ func fetch_nft(urn: DclUrn) -> Promise:
 
 
 func _async_request_nft(completed_promise: Promise, urn: DclUrn):
-	var url = RETRIEVE_ASSETS_ENDPOINT % [urn.chain, urn.contract_address, urn.token_id]
+	var url = (
+		DclUrls.open_sea_proxy()
+		+ "/api/v2/chain/%s/contract/%s/nfts/%s" % [urn.chain, urn.contract_address, urn.token_id]
+	)
 	var headers = {
 		"Content-Type": "application/json",
 		"X-API-KEY": API_KEY,

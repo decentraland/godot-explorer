@@ -113,12 +113,12 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("explorer-version")
-                .about("Get Godot Explorer version")
+                .about("Get Godot Explorer version (reads from .build.version created during build)")
                 .arg(
                     Arg::new("verbose")
                         .short('v')
                         .long("verbose")
-                        .help("show detailed warning messages")
+                        .help("show detailed messages")
                         .takes_value(false),
                 )
         )
@@ -137,9 +137,16 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(true)
                         .multiple_values(true),
                 )
+                .arg(
+                    Arg::new("no-strip")
+                        .long("no-strip")
+                        .help("skip stripping debug symbols from iOS templates (needed for CI to generate Sentry dSYMs)")
+                        .takes_value(false),
+                )
         )
         .subcommand(Command::new("update-protocol"))
         .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
+        .subcommand(Command::new("strip-ios-templates").about("Strip debug symbols from installed iOS templates (macOS only)"))
         .subcommand(
             Command::new("compare-image-folders")
                 .arg(
@@ -256,6 +263,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("For Android: push .so file directly to device instead of full APK deployment")
                         .takes_value(false),
                 ).arg(
+                    Arg::new("skip-export")
+                        .long("skip-export")
+                        .help("Skip build and export steps, deploy existing APK/IPA directly to device")
+                        .takes_value(false),
+                ).arg(
                     Arg::new("no-default-features")
                         .long("no-default-features")
                         .help("Do not activate default features")
@@ -333,6 +345,7 @@ fn main() -> Result<(), anyhow::Error> {
                 )
                 .arg(
                     Arg::new("resource-tracking")
+                        .short('x')
                         .help("enables resource tracking feature")
                         .takes_value(false),
                 )
@@ -377,8 +390,9 @@ fn main() -> Result<(), anyhow::Error> {
                 .unwrap_or_default();
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
+            let no_strip = sm.is_present("no-strip");
             // Call your install function and pass the templates
-            let result = install_dependency::install(no_templates, &platforms);
+            let result = install_dependency::install(no_templates, &platforms, no_strip);
             if result.is_ok() {
                 dependencies::suggest_next_steps("install", None);
             }
@@ -386,6 +400,7 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("clean-cache", _) => clear_cache_dir().map_err(|e| anyhow::anyhow!(e)),
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
+        ("strip-ios-templates", _) => export::strip_ios_templates(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
             let result_folder = Path::new(sm.value_of("result").unwrap());
@@ -427,6 +442,7 @@ fn main() -> Result<(), anyhow::Error> {
             // Check if target is specified
             let target = sm.value_of("target");
             let is_only_lib = sm.is_present("only-lib");
+            let is_skip_export = sm.is_present("skip-export");
 
             // For android/ios targets, check if we should deploy to device
             let should_deploy = target.is_some()
@@ -462,7 +478,21 @@ fn main() -> Result<(), anyhow::Error> {
                         .unwrap_or_default();
 
                     // Push the .so file to device
-                    run::hotreload_android(sm.is_present("release"), extras)?;
+                    run::hotreload_android(extras)?;
+
+                    return Ok(());
+                } else if is_skip_export {
+                    // Skip export mode: deploy existing APK/IPA directly
+                    print_message(
+                        MessageType::Step,
+                        &format!(
+                            "Deploying existing build to {} (skipping build and export)",
+                            platform
+                        ),
+                    );
+
+                    // Just deploy to device
+                    run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
 
                     return Ok(());
                 } else {
@@ -598,8 +628,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Check dependencies first
             dependencies::check_command_dependencies("import-assets", None)?;
 
-            // Build for host OS first (import-assets needs the library)
-            run::build(false, false, vec![], None, None)?;
+            // Only build if library doesn't exist (to avoid overwriting .build.version from CI builds)
+            let lib_path = helpers::get_host_library_path();
+            if !lib_path.exists() {
+                run::build(false, false, vec![], None, None)?;
+            }
 
             let status = import_assets();
             if !status.success() {
@@ -636,10 +669,7 @@ fn main() -> Result<(), anyhow::Error> {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
         ("version-check", _) => version_check::run_version_check(),
-        ("explorer-version", sm) => {
-            let verbose = sm.is_present("verbose");
-            version::get_godot_explorer_version(verbose)
-        }
+        ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
         _ => unreachable!("unreachable branch"),
     };
 

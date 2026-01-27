@@ -36,12 +36,14 @@ var player_profile = Global.player_identity.get_profile_or_null()
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
 
+@onready var control_landscape_avatar: Control = %Control_landscape_avatar
+@onready var margin_container_portrait_avatar: MarginContainer = %MarginContainer_PortraitAvatar
+
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
 @onready var label_editing_links: Label = %Label_EditingLinks
 @onready var scroll_container: ScrollContainer = %ScrollContainer
-@onready var avatar_preview_portrait: AvatarPreview = %AvatarPreviewPortrait
-@onready var avatar_preview_landscape: AvatarPreview = %AvatarPreviewLandscape
+@onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var button_edit_about: Button = %Button_EditAbout
 @onready var button_edit_links: Button = %Button_EditLinks
 @onready var h_flow_container_equipped_wearables: HFlowContainer = %HFlowContainer_EquippedWearables
@@ -95,6 +97,8 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 
 
 func _ready() -> void:
+	get_window().size_changed.connect(self._relocate_avatar_preview)
+	_relocate_avatar_preview()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
@@ -207,26 +211,25 @@ func _async_save_profile_changes() -> void:
 	var current_country_index = profile_field_option_country.option_button.selected
 	if current_country_index != original_country_index:
 		var country_text = _get_option_text(profile_field_option_country, current_country_index)
-		ProfileHelper.get_mutable_profile().set_country(country_text)
+		Global.player_identity.get_mutable_profile().set_country(country_text)
 		original_country_index = current_country_index
 
 	var current_language_index = profile_field_option_language.option_button.selected
 	if current_language_index != original_language_index:
 		var language_text = _get_option_text(profile_field_option_language, current_language_index)
-		ProfileHelper.get_mutable_profile().set_language(language_text)
-		ProfileHelper.get_mutable_profile()
+		Global.player_identity.get_mutable_profile().set_language(language_text)
 		original_language_index = current_language_index
 
 	var current_pronouns_index = profile_field_option_pronouns.option_button.selected
 	if current_pronouns_index != original_pronouns_index:
 		var pronouns_text = _get_option_text(profile_field_option_pronouns, current_pronouns_index)
-		ProfileHelper.get_mutable_profile().set_pronouns(pronouns_text)
+		Global.player_identity.get_mutable_profile().set_pronouns(pronouns_text)
 		original_pronouns_index = current_pronouns_index
 
 	var current_gender_index = profile_field_option_gender.option_button.selected
 	if current_gender_index != original_gender_index:
 		var gender_text = _get_option_text(profile_field_option_gender, current_gender_index)
-		ProfileHelper.get_mutable_profile().set_gender(gender_text)
+		Global.player_identity.get_mutable_profile().set_gender(gender_text)
 		original_gender_index = current_gender_index
 
 	var current_relationship_index = profile_field_option_relationship_status.option_button.selected
@@ -234,7 +237,7 @@ func _async_save_profile_changes() -> void:
 		var relationship_text = _get_option_text(
 			profile_field_option_relationship_status, current_relationship_index
 		)
-		ProfileHelper.get_mutable_profile().set_relationship_status(relationship_text)
+		Global.player_identity.get_mutable_profile().set_relationship_status(relationship_text)
 		original_relationship_index = current_relationship_index
 
 	var current_sexual_orientation_index = (
@@ -244,7 +247,7 @@ func _async_save_profile_changes() -> void:
 		var sexual_orientation_text = _get_option_text(
 			profile_field_option_sexual_orientation, current_sexual_orientation_index
 		)
-		ProfileHelper.get_mutable_profile().set_sexual_orientation(sexual_orientation_text)
+		Global.player_identity.get_mutable_profile().set_sexual_orientation(sexual_orientation_text)
 		original_sexual_orientation_index = current_sexual_orientation_index
 
 	var current_employment_index = profile_field_option_employment_status.option_button.selected
@@ -252,30 +255,30 @@ func _async_save_profile_changes() -> void:
 		var employment_text = _get_option_text(
 			profile_field_option_employment_status, current_employment_index
 		)
-		ProfileHelper.get_mutable_profile().set_employment_status(employment_text)
+		Global.player_identity.get_mutable_profile().set_employment_status(employment_text)
 		original_employment_index = current_employment_index
 
 	var current_profession = profile_field_text_profession.text_edit_value.text
 	if current_profession != original_profession:
-		ProfileHelper.get_mutable_profile().set_profession(current_profession)
+		Global.player_identity.get_mutable_profile().set_profession(current_profession)
 		original_profession = current_profession
 
 	var current_real_name = profile_field_text_real_name.text_edit_value.text
 	if current_real_name != original_real_name:
-		ProfileHelper.get_mutable_profile().set_real_name(current_real_name)
+		Global.player_identity.get_mutable_profile().set_real_name(current_real_name)
 		original_real_name = current_real_name
 
 	var current_hobbies = profile_field_text_hobbies.text_edit_value.text
 	if current_hobbies != original_hobbies:
-		ProfileHelper.get_mutable_profile().set_hobbies(current_hobbies)
+		Global.player_identity.get_mutable_profile().set_hobbies(current_hobbies)
 		original_hobbies = current_hobbies
 
 	var current_about_me = profile_field_text_about_me.text_edit_value.text
 	if current_about_me != original_about_me:
-		ProfileHelper.get_mutable_profile().set_description(current_about_me)
+		Global.player_identity.get_mutable_profile().set_description(current_about_me)
 		original_about_me = current_about_me
 
-	await ProfileHelper.async_save_profile()
+	await Global.player_identity.async_save_profile_metadata()
 
 
 func _update_elements_visibility() -> void:
@@ -304,6 +307,8 @@ func _update_elements_visibility() -> void:
 				button_claim_name.hide()
 			else:
 				button_claim_name.show()
+		if Global.is_ios():
+			button_claim_name.hide()
 	else:
 		button_block_user.show()
 		button_mute_user.show()
@@ -323,7 +328,7 @@ func _update_elements_visibility() -> void:
 			texture_rect_claimed_checkmark.hide()
 			label_tag.show()
 			label_tag.text = "#" + address.substr(address.length() - 4, 4)
-			if is_own_passport:
+			if !Global.is_ios() and is_own_passport:
 				button_claim_name.show()
 
 	_turn_links_editing(false)
@@ -336,8 +341,8 @@ func _set_avatar_loading() -> int:
 	v_box_container_content.hide()
 	button_edit_about.hide()
 	button_edit_links.hide()
-	avatar_preview_portrait.hide()
-	avatar_preview_landscape.hide()
+
+	avatar_preview.hide()
 	avatar_loading_counter += 1
 	return avatar_loading_counter
 
@@ -345,16 +350,13 @@ func _set_avatar_loading() -> int:
 func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
-	avatar_preview_portrait.show()
-	avatar_preview_landscape.show()
+	avatar_preview.show()
 	panel_container_getting_data.hide()
 	profile_header.show()
 	v_box_container_content.show()
 	_on_stop_emote()
-	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
-		avatar_preview_landscape.avatar.emote_controller.async_play_emote("wave")
-	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
-		avatar_preview_portrait.avatar.emote_controller.async_play_emote("wave")
+	if not avatar_preview.avatar.emote_controller.is_playing():
+		avatar_preview.avatar.emote_controller.async_play_emote("wave")
 	_update_elements_visibility()
 	# Only update buttons for block/mute, not friendship buttons yet
 	# Friendship buttons will be updated after _async_check_friendship_status() completes
@@ -362,7 +364,7 @@ func _unset_avatar_loading(current: int):
 		_update_buttons()
 	else:
 		# Update only block/mute buttons, not friendship buttons
-		var current_avatar = avatar_preview_landscape.avatar
+		var current_avatar = avatar_preview.avatar
 		is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 		if is_blocked_user:
 			button_block_user.icon = null
@@ -389,8 +391,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
 	# Reset friendship status to ensure buttons don't show with old state
 	current_friendship_status = Global.FriendshipStatus.UNKNOWN
-	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(current_profile)
-	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(current_profile)
+	await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 
 	if player_profile != null:
 		is_own_passport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
@@ -417,7 +418,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 		mutual_friends.async_set_mutual_friends(profile.get_ethereum_address())
 
 	if is_own_passport:
-		var mutable := ProfileHelper.get_mutable_profile()
+		var mutable: DclUserProfile = Global.player_identity.get_mutable_profile()
 		if mutable != null and profile.get_profile_version() < mutable.get_profile_version():
 			if _deploy_loading_id == -1:
 				_deploy_loading_id = _set_avatar_loading()
@@ -428,24 +429,18 @@ func async_show_profile(profile: DclUserProfile) -> void:
 
 
 func _on_emote_pressed(urn: String) -> void:
-	avatar_preview_landscape.reset_avatar_rotation()
-	avatar_preview_portrait.reset_avatar_rotation()
-	avatar_preview_landscape.avatar.emote_controller.stop_emote()
-	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
-		avatar_preview_landscape.avatar.emote_controller.async_play_emote(urn)
-	avatar_preview_portrait.avatar.emote_controller.stop_emote()
-	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
-		avatar_preview_portrait.avatar.emote_controller.async_play_emote(urn)
+	avatar_preview.reset_avatar_rotation()
+	avatar_preview.avatar.emote_controller.stop_emote()
+	if not avatar_preview.avatar.emote_controller.is_playing():
+		avatar_preview.avatar.emote_controller.async_play_emote(urn)
 
 
 func _on_stop_emote() -> void:
-	avatar_preview_landscape.avatar.emote_controller.stop_emote()
-	avatar_preview_portrait.avatar.emote_controller.stop_emote()
+	avatar_preview.avatar.emote_controller.stop_emote()
 
 
 func _on_reset_avatars_rotation() -> void:
-	avatar_preview_landscape.reset_avatar_rotation()
-	avatar_preview_portrait.reset_avatar_rotation()
+	avatar_preview.reset_avatar_rotation()
 
 
 func _on_button_edit_about_pressed() -> void:
@@ -524,14 +519,6 @@ func _async_on_button_about_save_pressed() -> void:
 		printerr("No current profile to save")
 
 
-func _on_button_copy_nick_pressed() -> void:
-	_copy_name_and_tag()
-
-
-func _on_button_copy_address_pressed() -> void:
-	_copy_address()
-
-
 func close() -> void:
 	hide()
 	_hide_all_social_buttons()
@@ -545,7 +532,7 @@ func close() -> void:
 
 
 func _on_button_claim_name_pressed() -> void:
-	Global.open_url("https://decentraland.org/marketplace/names/claim")
+	Global.open_url(DclUrls.marketplace_claim_name())
 
 
 func _on_button_edit_nick_pressed() -> void:
@@ -767,8 +754,8 @@ func _async_on_button_links_save_pressed():
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
 			links_to_save.append({"title": child.text, "url": child.url})
-	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	await ProfileHelper.async_save_profile()
+	Global.player_identity.get_mutable_profile().set_links(links_to_save)
+	await Global.player_identity.async_save_profile()
 	_turn_links_editing(false)
 
 
@@ -819,16 +806,16 @@ func _async_on_deploy_timeout() -> void:
 
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	if toggled_on:
-		Global.social_blacklist.add_muted(avatar_preview_landscape.avatar.avatar_id)
+		Global.social_blacklist.add_muted(avatar_preview.avatar.avatar_id)
 	else:
-		Global.social_blacklist.remove_muted(avatar_preview_landscape.avatar.avatar_id)
+		Global.social_blacklist.remove_muted(avatar_preview.avatar.avatar_id)
 	_update_buttons()
 
 	_notify_other_components_of_change()
 
 
 func _check_block_and_mute_status() -> void:
-	var current_avatar = avatar_preview_landscape.avatar
+	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
 
@@ -843,7 +830,7 @@ func _check_block_and_mute_status() -> void:
 func _update_buttons() -> void:
 	if is_own_passport:
 		return
-	var current_avatar = avatar_preview_landscape.avatar
+	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	if is_blocked_user:
 		button_block_user.icon = null
@@ -870,7 +857,7 @@ func _update_buttons() -> void:
 
 
 func _on_button_block_user_pressed() -> void:
-	var current_avatar = avatar_preview_landscape.avatar
+	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
 	if is_blocked_user:
 		# user_unblock metric
@@ -888,9 +875,9 @@ func _on_button_block_user_pressed() -> void:
 
 
 func _notify_other_components_of_change() -> void:
-	if avatar_preview_landscape.avatar != null:
+	if avatar_preview.avatar != null:
 		Global.get_tree().call_group(
-			"blacklist_ui_sync", "_sync_blacklist_ui", avatar_preview_landscape.avatar.avatar_id
+			"blacklist_ui_sync", "_sync_blacklist_ui", avatar_preview.avatar.avatar_id
 		)
 
 
@@ -898,8 +885,8 @@ func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 	if (
 		not is_own_passport
 		and current_profile != null
-		and avatar_preview_landscape.avatar != null
-		and avatar_preview_landscape.avatar.avatar_id == changed_avatar_id
+		and avatar_preview.avatar != null
+		and avatar_preview.avatar.avatar_id == changed_avatar_id
 	):
 		call_deferred("_update_buttons")
 
@@ -1219,7 +1206,7 @@ func _update_friendship_buttons() -> void:
 		return
 
 	# Check if user is blocked - if blocked, don't show any friendship buttons
-	var current_avatar = avatar_preview_landscape.avatar
+	var current_avatar = avatar_preview.avatar
 	var is_user_blocked = false
 	if current_avatar != null and not current_avatar.avatar_id.is_empty():
 		is_user_blocked = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
@@ -1267,3 +1254,20 @@ func _hide_friendship_buttons() -> void:
 	button_cancel_request.hide()
 	button_friend.hide()
 	button_unfriend.hide()
+
+
+func _relocate_avatar_preview():
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var is_landscape: bool = window_size.x > window_size.y
+	if is_landscape:
+		avatar_preview.reparent(control_landscape_avatar)
+	else:
+		avatar_preview.reparent(margin_container_portrait_avatar)
+
+
+func _on_copy_nick_pressed() -> void:
+	_copy_name_and_tag()
+
+
+func _on_copy_address_pressed() -> void:
+	_copy_address()

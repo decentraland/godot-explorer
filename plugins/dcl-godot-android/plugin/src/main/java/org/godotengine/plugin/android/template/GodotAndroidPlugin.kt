@@ -127,6 +127,28 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     @UsedByGodot
+    fun showDecentralandMobileToast() {
+        runOnUiThread {
+            Toast.makeText(activity, "Decentraland Mobile", Toast.LENGTH_LONG).show()
+            Log.v(pluginName, "Decentraland Mobile")
+        }
+    }
+
+    @UsedByGodot
+    fun openUrl(url: String) {
+        runOnUiThread {
+            activity?.let {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                try {
+                    it.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e(pluginName, "Error opening URL: $e")
+                }
+            } ?: Log.e(pluginName, "Activity is null, cannot open URL")
+        }
+    }
+
+    @UsedByGodot
     fun openCustomTabUrl(url: String) {
         runOnUiThread {
             activity?.let {
@@ -141,7 +163,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 }
 
                 if (!done) {
-                    openUrl(it, url)
+                    openUrlFallback(it, url)
                     Log.d(pluginName, "No Custom Tabs available, using fallback to open URL")
                 }
             } ?: Log.e(pluginName, "Activity is null, cannot open URL.")
@@ -163,7 +185,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
-    private fun openUrl(activity: Activity, url: String) {
+    private fun openUrlFallback(activity: Activity, url: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         try {
             activity.startActivity(intent)
@@ -189,6 +211,46 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 if (!isWebViewOpen) {
                     // Create a FrameLayout to hold the WebView and TextView
                     overlayLayout = FrameLayout(it)
+
+                    // Create toolbar height (56dp converted to pixels)
+                    val toolbarHeightPx = (56 * it.resources.displayMetrics.density).toInt()
+
+                    // Create a toolbar container at the top with close button
+                    val toolbar = FrameLayout(it).apply {
+                        setBackgroundColor(0xFF1A1A2E.toInt()) // Dark purple background
+                        id = android.view.View.generateViewId()
+                    }
+
+                    // Create close button (X)
+                    val closeButton = android.widget.ImageButton(it).apply {
+                        // Use system close/cancel drawable
+                        setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+                        setColorFilter(0xFFFFFFFF.toInt()) // White tint
+                        setBackgroundColor(0x00000000) // Transparent background
+                        setPadding(32, 16, 32, 16)
+                        contentDescription = "Close"
+                        setOnClickListener {
+                            closeWebView()
+                        }
+                    }
+
+                    // Add close button to toolbar (left side)
+                    val closeButtonParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    ).apply {
+                        gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                    }
+                    toolbar.addView(closeButton, closeButtonParams)
+
+                    // Add toolbar to overlay layout (at top)
+                    val toolbarParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        toolbarHeightPx
+                    ).apply {
+                        gravity = android.view.Gravity.TOP
+                    }
+                    overlayLayout?.addView(toolbar, toolbarParams)
 
                     // Create a WebView and configure it to behave as much like Chrome as possible
                     webView = WebView(it).apply {
@@ -249,11 +311,14 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                         loadUrl(url)
                     }
 
-                    // Add the WebView to the FrameLayout
-                    overlayLayout?.addView(webView, FrameLayout.LayoutParams(
+                    // Add the WebView to the FrameLayout (below the toolbar)
+                    val webViewParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.MATCH_PARENT
-                    ))
+                    ).apply {
+                        topMargin = toolbarHeightPx
+                    }
+                    overlayLayout?.addView(webView, webViewParams)
 
                     // If overlayText is not null or empty, create a TextView and add it
                     if (!overlayText.isNullOrEmpty()) {

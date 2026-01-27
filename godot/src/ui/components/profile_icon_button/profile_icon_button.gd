@@ -10,6 +10,11 @@ func _ready():
 	var profile := Global.player_identity.get_profile_or_null()
 	_async_on_profile_changed(profile)
 	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
+	Global.snapshot.snapshot_generated.connect(self._on_snapshot_generated)
+
+
+func _on_snapshot_generated(face_image: Image) -> void:
+	texture_rect_profile.texture = ImageTexture.create_from_image(face_image)
 
 
 func _on_gui_input(event: InputEvent):

@@ -1,16 +1,13 @@
 use crate::{
     dcl::{scene_apis::RpcResultSender, SceneId},
-    godot_classes::{dcl_confirm_dialog::DclConfirmDialog, dcl_global::DclGlobal},
+    godot_classes::dcl_global::DclGlobal,
     scene_runner::{
-        global_get_node_helper::{
-            get_avatar_node, get_dialog_stack_node, get_explorer_node, get_realm_node,
-        },
+        global_get_node_helper::{get_avatar_node, get_dialog_stack_node, get_explorer_node},
         scene::{Scene, SceneType},
     },
 };
 
 use godot::{
-    classes::Os,
     meta::ToGodot,
     obj::Singleton,
     prelude::{PackedScene, Variant, Vector2i, Vector3},
@@ -39,47 +36,47 @@ pub fn change_realm(
         return;
     }
 
-    // Get nodes
-    let mut dialog_stack = get_dialog_stack_node(scene);
+    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
+    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
+        tracing::error!("Cannot get main loop");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    let mut realm_node = get_realm_node(scene);
+    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
+        tracing::error!("Cannot get root node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    let confirm_dialog =
-        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
-            .instantiate()
-            .expect("ConfirmDialog instantiate error");
+    let Some(global) = root.get_node_or_null("/root/Global") else {
+        tracing::error!("Cannot get Global node from scene tree");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    // Setup confirm dialog
-    dialog_stack.add_child(&confirm_dialog.clone());
+    let modal_manager_variant = global.get("modal_manager");
+    let Some(modal_manager) = modal_manager_variant
+        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
+        .ok()
+    else {
+        tracing::error!("Cannot convert modal_manager variant to Node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    // Setup confirm Dialog
-    let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
-    let mut confirm_dialog = confirm_dialog.bind_mut();
+    let mut modal_manager = modal_manager;
+    let realm_name = to.to_godot();
+    let scene_message = message.clone().unwrap_or_default().to_godot();
 
-    let description = format!(
-        "The scene wants to move you to a new realm\nTo: `{}`\nScene message: {}",
-        to,
-        message.clone().unwrap_or_default()
+    modal_manager.call(
+        "async_show_change_realm_modal",
+        &[realm_name.to_variant(), scene_message.to_variant()],
     );
 
-    // clone data that is going to the callback
-    let to = to.to_godot();
-    let response = response.clone();
-
-    confirm_dialog.setup(
-        "Change Realm",
-        description.as_str(),
-        "Let's go!",
-        "No thanks",
-        move |ok| {
-            if ok {
-                realm_node.call("async_set_realm", &[Variant::from(to)]);
-                response.send(Ok(()));
-            } else {
-                response.send(Err("User rejected to change realm".to_string()));
-            }
-        },
-    );
+    // Send Ok immediately - the modal will handle the actual realm change
+    // This matches the behavior where the RPC call succeeds once the modal is shown
+    response.send(Ok(()));
 }
 
 pub fn open_external_url(
@@ -94,45 +91,43 @@ pub fn open_external_url(
         return;
     }
 
-    // Get nodes
-    let mut dialog_stack = get_dialog_stack_node(scene);
+    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
+    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
+        tracing::error!("Cannot get main loop");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    let confirm_dialog =
-        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
-            .instantiate()
-            .expect("ConfirmDialog instantiate error");
+    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
+        tracing::error!("Cannot get root node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    // Setup confirm dialog
-    dialog_stack.add_child(&confirm_dialog.clone());
+    let Some(global) = root.get_node_or_null("/root/Global") else {
+        tracing::error!("Cannot get Global node from scene tree");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    // Setup confirm Dialog
-    let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
-    let mut confirm_dialog = confirm_dialog.bind_mut();
+    let modal_manager_variant = global.get("modal_manager");
+    let Some(modal_manager) = modal_manager_variant
+        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
+        .ok()
+    else {
+        tracing::error!("Cannot convert modal_manager variant to Node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    let description = format!(
-        "You are about to open a link from the community. External links can be unsafe and lead to unverified content. Proceed with caution.
-        Do you still want to open the URL?\n\nURL:\n {}",
-        url
-    );
-
-    // clone data that is going to the callback
-    let response = response.clone();
+    let mut modal_manager = modal_manager;
     let godot_url = url.to_string().to_godot();
 
-    confirm_dialog.setup(
-        "Open External URL",
-        description.as_str(),
-        "Open Url",
-        "No thanks",
-        move |ok| {
-            if ok {
-                Os::singleton().shell_open(&godot_url);
-                response.send(Ok(()));
-            } else {
-                response.send(Err("User rejected to open the url".to_string()));
-            }
-        },
-    );
+    modal_manager.call("async_show_external_link_modal", &[godot_url.to_variant()]);
+
+    // Send Ok immediately - the modal will handle the actual URL opening
+    // This matches the behavior where the RPC call succeeds once the modal is shown
+    response.send(Ok(()));
 }
 
 pub fn open_nft_dialog(
@@ -264,47 +259,43 @@ pub fn teleport_to(
         return;
     }
 
-    // Get Nodes
-    let explorer_node = get_explorer_node(scene);
+    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
+    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
+        tracing::error!("Cannot get main loop");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    let mut dialog_stack = get_dialog_stack_node(scene);
+    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
+        tracing::error!("Cannot get root node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    // TODO: We should implement a new Dialog, that shows the thumbnail of the destination
-    let confirm_dialog =
-        godot::tools::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
-            .instantiate()
-            .expect("ConfirmDialog instantiate error");
+    let Some(global) = root.get_node_or_null("/root/Global") else {
+        tracing::error!("Cannot get Global node from scene tree");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    dialog_stack.add_child(&confirm_dialog.clone());
+    let modal_manager_variant = global.get("modal_manager");
+    let Some(modal_manager) = modal_manager_variant
+        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
+        .ok()
+    else {
+        tracing::error!("Cannot convert modal_manager variant to Node");
+        response.send(Err("modal_manager not available".to_string()));
+        return;
+    };
 
-    // Setup confirm Dialog
-    let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
-    let mut confirm_dialog = confirm_dialog.bind_mut();
-
-    let description = format!(
-        "The scene wants to teleport you to {},{} position\n",
-        world_coordinates[0], world_coordinates[1],
-    );
-
+    let mut modal_manager = modal_manager;
     let target_parcel = Vector2i::new(world_coordinates[0], world_coordinates[1]);
 
-    let response = response.clone();
-    confirm_dialog.setup(
-        "Teleport To",
-        description.as_str(),
-        "Let's go!",
-        "No thanks",
-        move |ok| {
-            if ok {
-                let mut explorer_node = explorer_node.clone();
-                explorer_node.call("teleport_to", &[Variant::from(target_parcel)]);
+    modal_manager.call("async_show_teleport_modal", &[target_parcel.to_variant()]);
 
-                response.send(Ok(()));
-            } else {
-                response.send(Err("User rejected to teleport".to_string()));
-            }
-        },
-    );
+    // Send Ok immediately - the modal will handle the actual teleportation
+    // This matches the behavior where the RPC call succeeds once the modal is shown
+    response.send(Ok(()));
 }
 
 pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id: &str) {
@@ -337,15 +328,39 @@ pub fn trigger_scene_emote(
         return;
     }
 
-    let Some(file_hash) = scene.content_mapping.get_hash(emote_src) else {
-        tracing::warn!("triggerSceneEmote failed: Emote not found");
+    tracing::info!(
+        "triggerSceneEmote: emote_src={}, looping={}, scene_id={}",
+        emote_src,
+        looping,
+        scene.scene_entity_definition.id
+    );
+
+    let Some(emote_hash) = scene.content_mapping.get_scene_emote_hash(emote_src) else {
+        tracing::warn!(
+            "triggerSceneEmote failed: Emote '{}' not found in content mapping",
+            emote_src
+        );
         return;
     };
 
-    let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
-    let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("async_play_emote", &[urn.to_variant()]);
+    tracing::info!(
+        "triggerSceneEmote: resolved glb_hash={}, audio_hash={:?}",
+        emote_hash.glb_hash,
+        emote_hash.audio_hash
+    );
 
+    let emote_data = emote_hash.to_godot_data(*looping);
+
+    let mut avatar_node = get_avatar_node(scene);
+    avatar_node.call("async_play_scene_emote", &[emote_data.to_variant()]);
+
+    // Broadcast to other players - construct URN for network compatibility
+    // Format: urn:decentraland:off-chain:scene-emote:{sceneId}-{glbHash}-{loop}
+    let urn = format!(
+        "urn:decentraland:off-chain:scene-emote:{}-{}-{}",
+        scene.scene_entity_definition.id, emote_hash.glb_hash, looping
+    );
+    tracing::info!("triggerSceneEmote: broadcasting URN={}", urn);
     DclGlobal::singleton()
         .bind()
         .get_comms()
