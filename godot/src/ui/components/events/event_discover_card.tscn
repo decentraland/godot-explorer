@@ -1,45 +1,48 @@
-[gd_scene load_steps=15 format=3 uid="uid://dj4nqjjptw0th"]
+[gd_scene load_steps=24 format=3 uid="uid://dj4nqjjptw0th"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
-[ext_resource type="FontVariation" uid="uid://ct75rjpcbx4cb" path="res://src/ui/components/events/inter600_icons.tres" id="3_7lpam"]
-[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_6bu5y"]
-[ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="4_kyirg"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gwscp"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_gwscp"]
+[ext_resource type="LabelSettings" uid="uid://c8st3oitu2gpy" path="res://src/ui/components/events/event_title.tres" id="4_xxfdn"]
+[ext_resource type="Script" uid="uid://bvaim5gv74xer" path="res://src/ui/components/circle_rect/circle_rect.gd" id="5_0y7ny"]
 [ext_resource type="LabelSettings" uid="uid://u04j325p422e" path="res://src/ui/components/events/time_pill_black.tres" id="5_7lpam"]
-[ext_resource type="LabelSettings" uid="uid://k8jblhm4mnv4" path="res://src/ui/components/events/event_info.tres" id="5_aes4k"]
+[ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="5_hq8br"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_0y7ny"]
+[ext_resource type="LabelSettings" uid="uid://cxx8iqtxnfbqt" path="res://src/ui/components/events/event_creator.tres" id="9_qwmgv"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kyirg"]
-bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 52
-corner_radius_top_right = 52
-corner_radius_bottom_right = 52
-corner_radius_bottom_left = 52
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0xa1v"]
+bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0vt0d"]
-bg_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 48
-corner_radius_top_right = 48
-corner_radius_bottom_right = 48
-corner_radius_bottom_left = 48
-
-[sub_resource type="LabelSettings" id="LabelSettings_aes4k"]
-line_spacing = 0.0
-font = ExtResource("3_7lpam")
-font_size = 22
-font_color = Color(0, 0, 0, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hq8br"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fhlt6"]
-content_margin_left = 10.0
-content_margin_right = 10.0
+content_margin_left = 8.0
+content_margin_right = 8.0
 bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [sub_resource type="LabelSettings" id="LabelSettings_kyirg"]
-font = ExtResource("4_6bu5y")
-font_size = 15
+font = ExtResource("4_gwscp")
+font_size = 18
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aes4k"]
 content_margin_left = 10.0
@@ -50,22 +53,49 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0, 0, 0, 1)
-corner_radius_top_left = 11
-corner_radius_top_right = 11
-corner_radius_bottom_right = 11
-corner_radius_bottom_left = 11
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kdyy4"]
+content_margin_left = 8.0
+content_margin_right = 8.0
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.9019608)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gwscp"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lpam"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(0.188235, 0.803922, 0, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+content_margin_left = 0.0
+content_margin_right = 0.0
+bg_color = Color(0.20392157, 0.7529412, 0.4392157, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="Gradient" id="Gradient_xxfdn"]
+colors = PackedColorArray(0.20392157, 0.7529412, 0.4392157, 1, 0.13333334, 0.75686276, 0.75686276, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_0xa1v"]
+gradient = SubResource("Gradient_xxfdn")
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xxfdn"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0xa1v"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_mwxpt"]
+line_spacing = 0.0
+font = ExtResource("8_0y7ny")
+font_size = 24
+font_color = Color(0.9098039, 0.7254902, 1, 1)
 
 [node name="EventDiscoverCard" type="TextureButton"]
-custom_minimum_size = Vector2(290, 250)
+custom_minimum_size = Vector2(406, 359)
 offset_right = 290.0
 offset_bottom = 250.0
 size_flags_horizontal = 0
@@ -74,11 +104,7 @@ mouse_filter = 1
 mouse_force_pass_scroll_events = false
 script = ExtResource("1_kyirg")
 
-[node name="Border" type="PanelContainer" parent="."]
-unique_name_in_owner = true
-self_modulate = Color(1, 1, 1, 0)
-clip_contents = true
-custom_minimum_size = Vector2(290, 250)
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -86,76 +112,67 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_kyirg")
-
-[node name="Content" type="MarginContainer" parent="Border"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 4
-
-[node name="PanelContainer" type="PanelContainer" parent="Border/Content"]
-clip_children = 2
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_0vt0d")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Border/Content/PanelContainer"]
-layout_mode = 2
-mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="TextureRect_Image" type="TextureRect" parent="Border/Content/PanelContainer/VBoxContainer"]
+[node name="Control_Image" type="Control" parent="VBoxContainer"]
+custom_minimum_size = Vector2(406, 240)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Panel_Container" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+clip_children = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0xa1v")
+
+[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 210.0
-mouse_filter = 2
+theme = ExtResource("2_gwscp")
 texture = ExtResource("1_vtdag")
-expand_mode = 2
+expand_mode = 1
 stretch_mode = 6
 
-[node name="MarginContainer" type="MarginContainer" parent="Border/Content/PanelContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_stretch_ratio = 90.0
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = -1
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 10
+theme_override_styles/panel = SubResource("StyleBoxFlat_hq8br")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Control_Image/PanelContainer"]
 layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 3
-alignment = 1
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
 
-[node name="Label_EventName" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer"]
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
-text = "Wednesday studio LIVE"
-label_settings = SubResource("LabelSettings_aes4k")
-clip_text = true
-text_overrun_behavior = 3
-
-[node name="HBoxContainer" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
+size_flags_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="LivePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(75, 0)
+[node name="LivePill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fhlt6")
 
-[node name="Label_LivePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/LivePill"]
+[node name="Label_LivePill" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/LivePill"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 4
 size_flags_vertical = 1
 text = "live"
 label_settings = SubResource("LabelSettings_kyirg")
@@ -163,14 +180,14 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="TimePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TimePill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_aes4k")
 
-[node name="Label_TimePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TimePill"]
+[node name="Label_TimePill" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TimePill"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -180,50 +197,105 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="TrendingPill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(75, 24)
+[node name="AttendeesPill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_7lpam")
+theme_override_styles/panel = SubResource("StyleBoxFlat_kdyy4")
 
-[node name="Label" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TrendingPill"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill"]
 layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="ColorRect" type="Control" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill/HBoxContainer"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+script = ExtResource("5_0y7ny")
+color = Color(0.1882353, 0.8039216, 0, 1)
+radius = 5.0
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill/HBoxContainer"]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+texture = ExtResource("5_hq8br")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_AttendeesNumber" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
 size_flags_vertical = 1
-text = "trending"
+text = "000"
 label_settings = SubResource("LabelSettings_kyirg")
 horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="Attendees" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
 layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_gwscp")
 
-[node name="Control" type="Control" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees"]
-custom_minimum_size = Vector2(20, 0)
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees/Control"]
-modulate = Color(0, 0, 0, 1)
-custom_minimum_size = Vector2(22, 0)
-layout_mode = 0
-offset_left = -3.0
-offset_right = 19.0
-offset_bottom = 24.0
-mouse_filter = 2
-texture = ExtResource("4_kyirg")
-expand_mode = 5
-stretch_mode = 5
-
-[node name="Label_AttendeesNumber" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees"]
+[node name="TrendingPill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+clip_children = 2
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_7lpam")
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TrendingPill"]
+layout_mode = 2
+texture = SubResource("GradientTexture1D_0xa1v")
+expand_mode = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TrendingPill"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+
+[node name="Label" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TrendingPill/MarginContainer"]
 layout_mode = 2
 size_flags_vertical = 1
-text = "263"
-label_settings = ExtResource("5_aes4k")
+text = "Trending"
+label_settings = SubResource("LabelSettings_kyirg")
+horizontal_alignment = 1
 vertical_alignment = 1
-uppercase = true
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xxfdn")
+
+[node name="Label_EventName" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Wednesday studio LIVE"
+label_settings = ExtResource("4_xxfdn")
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_0xa1v")
+
+[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label_by" type="Label" parent="VBoxContainer/HBoxContainer_UserName"]
+layout_mode = 2
+text = "by"
+label_settings = SubResource("LabelSettings_mwxpt")
+
+[node name="Label_UserName" type="Label" parent="VBoxContainer/HBoxContainer_UserName"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Lazaro"
+label_settings = ExtResource("9_qwmgv")
+clip_text = true
+text_overrun_behavior = 3
 
 [connection signal="pressed" from="." to="." method="_on_event_pressed"]

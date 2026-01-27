@@ -138,10 +138,6 @@ func _get_label_live_pill() -> Label:
 	return _get_node_safe("Label_LivePill")
 
 
-func _get_border() -> Control:
-	return _get_node_safe("Border")
-
-
 func _get_label_attendees_number() -> Label:
 	return _get_node_safe("Label_AttendeesNumber")
 
@@ -460,7 +456,6 @@ func set_recurrent(_recurrent: bool) -> void:
 func set_time(_start_at: int, live: bool) -> void:
 	var time_pill = _get_label_time_pill()
 	var live_pill = _get_label_live_pill()
-	var border = _get_border()
 	var jump_to_event = _get_button_jump_to_event()
 	var reminder_button = _get_reminder_button()
 	var download_warning = _get_download_warning()
@@ -475,8 +470,6 @@ func set_time(_start_at: int, live: bool) -> void:
 				jump_to_event.show()
 				download_warning.show()
 				reminder_button.hide()
-			if border:
-				border.self_modulate = "#FFFFFF"
 			live_pill.get_parent().show()
 			time_pill.get_parent().hide()
 			return
@@ -560,7 +553,6 @@ func _format_timestamp(timestamp: int) -> String:
 	var live_pill_parent = _get_label_live_pill().get_parent()
 	var time_pill = _get_label_time_pill()
 	var time_pill_parent = time_pill.get_parent()
-	var border = _get_border()
 	var jump_in_button = _get_button_jump_to_event()
 	var reminder_button = _get_reminder_button()
 	# Create unique styles for this instance
@@ -592,8 +584,6 @@ func _format_timestamp(timestamp: int) -> String:
 		if jump_in_button and reminder_button:
 			jump_in_button.show()
 			reminder_button.hide()
-		if border:
-			border.self_modulate = "#FFFFFF"
 		return "IN " + str(int(minutes_diff)) + " MINS"
 
 	live_pill_parent.hide()
@@ -601,8 +591,6 @@ func _format_timestamp(timestamp: int) -> String:
 	if jump_in_button and reminder_button:
 		jump_in_button.hide()
 		reminder_button.show()
-	if border:
-		border.self_modulate = "#FFFFFF00"
 
 	# If less than 1 hour remaining: IN XX MINUTES
 	if hours_diff < 1:
