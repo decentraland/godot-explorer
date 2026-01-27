@@ -10,6 +10,7 @@ var output_path: String = ""
 var screenshot_viewport: SubViewport = null
 
 
+# gdlint: ignore=async-function-name
 func _ready():
 	parcel_count = Global.cli.fi_benchmark_size
 	output_path = Global.cli.fi_benchmark_output
