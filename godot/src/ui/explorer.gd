@@ -123,7 +123,7 @@ func _ready():
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
 
-	navbar.close_all.connect(_close_all_panels)
+	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
 
