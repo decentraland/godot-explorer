@@ -1,8 +1,43 @@
-[gd_scene load_steps=4 format=3 uid="uid://dmr0fcamx7t56"]
+[gd_scene load_steps=10 format=3 uid="uid://dmr0fcamx7t56"]
 
 [ext_resource type="Script" uid="uid://bu1t2cfib3j0n" path="res://src/mobile/joystick/virtual_joystick.gd" id="1_8x4dy"]
+[ext_resource type="Texture2D" uid="uid://cdore7hjvxc66" path="res://assets/ui/camera_mode_3p.svg" id="2_4x7b8"]
 [ext_resource type="Script" uid="uid://dbghjmvuruo85" path="res://src/mobile/joystick/active_area.gd" id="2_gh23i"]
+[ext_resource type="Texture2D" uid="uid://dgsl21d8d3crd" path="res://assets/ui/camera_mode_1p.svg" id="3_4x7b8"]
 [ext_resource type="Material" uid="uid://beinfjlq7dgke" path="res://src/mobile/joystick/joystick_material.tres" id="3_naunr"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_artnu"]
+bg_color = Color(0, 0, 0, 0.70000005)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_038ik"]
+bg_color = Color(1, 1, 1, 0.70000005)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4x7b8"]
+bg_color = Color(1, 1, 1, 0.70000005)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+
+[sub_resource type="Theme" id="Theme_gh23i"]
+Button/colors/icon_pressed_color = Color(0, 0, 0, 1)
+Button/styles/hover = SubResource("StyleBoxFlat_artnu")
+Button/styles/hover_pressed = SubResource("StyleBoxFlat_038ik")
+Button/styles/normal = SubResource("StyleBoxFlat_artnu")
+Button/styles/pressed = SubResource("StyleBoxFlat_038ik")
+CheckButton/icons/checked = ExtResource("2_4x7b8")
+CheckButton/icons/unchecked = ExtResource("3_4x7b8")
+CheckButton/styles/hover_pressed = SubResource("StyleBoxFlat_4x7b8")
+CheckButton/styles/normal = SubResource("StyleBoxFlat_4x7b8")
+CheckButton/styles/pressed = SubResource("StyleBoxFlat_4x7b8")
 
 [node name="VirtualJoystick" type="Control"]
 layout_mode = 3
@@ -53,7 +88,26 @@ pivot_offset = Vector2(150, 150)
 mouse_filter = 2
 color = Color(1, 1, 1, 0.47843137)
 
+[node name="Button_Camera" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(65, 65)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -199.0
+offset_top = 33.0
+offset_right = -134.0
+offset_bottom = 98.0
+grow_horizontal = 0
+pivot_offset = Vector2(32.5, 32.5)
+theme = SubResource("Theme_gh23i")
+theme_override_constants/icon_max_width = 40
+icon = ExtResource("3_4x7b8")
+icon_alignment = 1
+
 [node name="SprintTimer" type="Timer" parent="."]
 unique_name_in_owner = true
 
 [connection signal="resized" from="." to="." method="_on_resized"]
+[connection signal="pressed" from="Button_Camera" to="." method="_on_button_camera_pressed"]

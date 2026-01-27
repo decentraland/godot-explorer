@@ -16,6 +16,7 @@ var _is_macos: bool = false
 func _init(player: Player):
 	_player = player
 	_is_macos = OS.get_name() == "macOS"
+	Global.camera_mode_set.connect(_on_camera_mode_set)
 
 
 func _input(event):
@@ -44,26 +45,6 @@ func _input(event):
 		_player.mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * v_sens)
 		_player.clamp_camera_rotation()
 
-	# Toggle first or third person camera
-	if event is InputEventMouseButton:
-		if !_player.camera_mode_change_blocked and Global.explorer_has_focus():
-			if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				if _player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-					_player.set_camera_mode(Global.CameraMode.THIRD_PERSON)
 
-			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				if _player.camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-					_player.set_camera_mode(Global.CameraMode.FIRST_PERSON)
-
-	# Handle trackpad gestures on macOS (two-finger scroll/zoom)
-	if _is_macos and event is InputEventPanGesture:
-		if !_player.camera_mode_change_blocked and Global.explorer_has_focus():
-			# Zoom out (third person) when scrolling down/away
-			if event.delta.y > 0.1:
-				if _player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-					_player.set_camera_mode(Global.CameraMode.THIRD_PERSON)
-
-			# Zoom in (first person) when scrolling up/toward
-			elif event.delta.y < -0.1:
-				if _player.camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-					_player.set_camera_mode(Global.CameraMode.FIRST_PERSON)
+func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
+	_player.set_camera_mode(camera_mode)

@@ -68,6 +68,8 @@ var _tip_position := Vector2.ZERO
 
 @onready var _tip_default_position := Vector2.ZERO
 
+@onready var _button_camera := %Button_Camera
+
 # FUNCTIONS
 
 
@@ -83,11 +85,23 @@ func _ready() -> void:
 	_active_area.connect("input_received", _on_input)
 
 	Global.loading_started.connect(_on_loading_scene)
+	var connect_explorer_signals := func():
+		Global.get_explorer().navbar.navbar_opened.connect(_on_navbar_opened)
+		Global.get_explorer().navbar.navbar_closed.connect(_on_navbar_closed)
+	connect_explorer_signals.call_deferred()
 	_on_loading_scene()
 
 
 func _on_loading_scene() -> void:
 	_dynamic_material.set_shader_parameter("state", 0)
+
+
+func _on_navbar_opened() -> void:
+	_button_camera.hide()
+
+
+func _on_navbar_closed() -> void:
+	_button_camera.show()
 
 
 func _on_input(event: InputEvent) -> void:
@@ -223,14 +237,14 @@ func _reset():
 	var base_position := _joystick_default_position
 	base_position.y = size.y - base_position.y
 
+	# Expand VirtualJoystick outside the Safe Margin
 	if margin_control:
 		var margin_top: float = margin_control.get_theme_constant("margin_top")
 		var margin_left: float = margin_control.get_theme_constant("margin_left")
-		var margin_right: float = margin_control.get_theme_constant("margin_right")
 		var margin_bottom: float = margin_control.get_theme_constant("margin_bottom")
 		offset_left = -margin_left
 		offset_top = -margin_top
-		offset_right = -margin_right
+		offset_right = 0
 		offset_bottom = -margin_bottom
 		base_position.y += margin_bottom
 		base_position.x += margin_left
@@ -257,3 +271,15 @@ func _on_resized() -> void:
 	if not is_node_ready():
 		return
 	_reset()
+
+
+func _on_button_camera_pressed() -> void:
+	const CAMERA_MODE_1P = preload("res://assets/ui/camera_mode_1p.svg")
+	const CAMERA_MODE_3P = preload("res://assets/ui/camera_mode_3p.svg")
+	match Global.player_camera_node.get_camera_mode():
+		Global.CameraMode.THIRD_PERSON:
+			_button_camera.icon = CAMERA_MODE_3P
+			Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)
+		Global.CameraMode.FIRST_PERSON:
+			_button_camera.icon = CAMERA_MODE_1P
+			Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
