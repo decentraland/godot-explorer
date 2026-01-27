@@ -909,9 +909,12 @@ func async_load_scene(
 	if _purge_cache_on_first_load:
 		_purge_cache_on_first_load = false
 		var files: PackedStringArray = content_mapping.get_files()
+		var purge_promises: Array = []
 		for file_path in files:
 			var file_hash = content_mapping.get_hash(file_path)
-			Global.content_provider.purge_file(file_hash)
+			purge_promises.push_back(Global.content_provider.purge_file(file_hash))
+		# Await all purge operations to complete before fetching
+		await PromiseUtils.async_all(purge_promises)
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null
