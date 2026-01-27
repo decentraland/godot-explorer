@@ -73,4 +73,4 @@ jobs:
           NEW=${{ steps.new_version.outputs.new_version }}
           git add godot/export_presets.cfg lib/Cargo.toml lib/Cargo.lock
           git commit -m "bump version v${NEW}"
-          git push origin main
+          git push origin ${{ github.ref_name }}
