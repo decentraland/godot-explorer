@@ -167,6 +167,9 @@ func _on_timer_check_progress_timeout_timeout():
 
 	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_activity_time) / 1000.0))
 	if inactive_seconds > 20:
+		# Skip showing modal during tests to avoid affecting screenshots
+		if Global.testing_scene_mode or Global.cli.scene_test_mode:
+			return
 		Global.modal_manager.async_show_scene_timeout_modal()
 		# LOADING_TIMEOUT metric
 		var timeout_data = {
