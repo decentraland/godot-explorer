@@ -1,8 +1,9 @@
-[gd_scene load_steps=24 format=3 uid="uid://dj4nqjjptw0th"]
+[gd_scene load_steps=26 format=3 uid="uid://dj4nqjjptw0th"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gwscp"]
+[ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_0xa1v"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_gwscp"]
 [ext_resource type="LabelSettings" uid="uid://c8st3oitu2gpy" path="res://src/ui/components/events/event_title.tres" id="4_xxfdn"]
 [ext_resource type="Script" uid="uid://bvaim5gv74xer" path="res://src/ui/components/circle_rect/circle_rect.gd" id="5_0y7ny"]
@@ -11,13 +12,19 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_0y7ny"]
 [ext_resource type="LabelSettings" uid="uid://cxx8iqtxnfbqt" path="res://src/ui/components/events/event_creator.tres" id="9_qwmgv"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0xa1v"]
-bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0y7ny"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
 border_color = Color(0.9098039, 0.7254902, 1, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0xa1v"]
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hq8br"]
 draw_center = false
@@ -119,7 +126,30 @@ custom_minimum_size = Vector2(406, 240)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Panel_Container" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+unique_name_in_owner = true
+clip_children = 2
+layout_mode = 0
+offset_right = 406.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0y7ny")
+
+[node name="TextureRect_NoImage" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_NoImage"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("2_gwscp")
+texture = ExtResource("3_0xa1v")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Panel_Container_Image" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+unique_name_in_owner = true
 clip_children = 2
 layout_mode = 1
 anchors_preset = 15
@@ -130,7 +160,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0xa1v")
 
-[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container"]
+[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_Image"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

@@ -20,6 +20,7 @@ const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres
 @export var location: Vector2i = Vector2i(0, 0)
 @export var realm: String = DclUrls.main_realm()
 @export var realm_title: String = "Genesis City"
+@export var categories: Array = []
 
 var event_id: String
 var event_status: String
@@ -48,8 +49,17 @@ func _ready():
 		set_likes_percent(likes_percent)
 		set_location(location)
 		set_event_location(location)
+		set_categories(categories)
 	else:
 		set_data(metadata)
+		
+	var card = _get_card()
+	if card:
+		card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		
+	var description_container = _get_description()
+	if description_container:
+		description_container.hide()
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -60,6 +70,26 @@ func _get_node_safe(node_name: String) -> Node:
 
 func _get_engagement_bar() -> HBoxContainer:
 	return _get_node_safe("EngagementBar")
+
+
+func _get_categories_bar() -> CategoriesBar:
+	return _get_node_safe("CategoriesBar")
+
+
+func _get_description() -> VBoxContainer:
+	return _get_node_safe("VBoxContainer_Description")
+
+
+func _get_card() -> PanelContainer:
+	return _get_node_safe("PanelContainer_Card")
+	
+	
+func _get_image_container() -> PanelContainer:
+	return _get_node_safe("Panel_Container_Image")
+	
+	
+func _get_no_image_container() -> PanelContainer:
+	return _get_node_safe("Panel_Container_NoImage")
 
 
 func _get_button_close() -> Button:
@@ -210,6 +240,7 @@ func set_event_location(_location: Vector2i):
 
 
 func set_image(_texture: Texture2D):
+	show_image_container(true)
 	var texture_rect = _get_texture_image()
 	if texture_rect:
 		texture_rect.texture = _texture
@@ -292,7 +323,7 @@ func set_download_warning(item_data: Dictionary) -> void:
 			parcel_count = 20  # Fallback to worst-case scenario (300mb)
 		max_size_mb = mini(parcel_count * 15, 300)  # 15MB per parcel, max 300MB
 
-	download_warning.set_warning_text("Downloads up to %dMB of data" % max_size_mb)
+	download_warning.set_warning_text("May download up to %dMB of data" % max_size_mb)
 
 
 func set_data(item_data):
@@ -304,7 +335,7 @@ func set_data(item_data):
 	set_trending(item_data.get("trending", false))
 	event_id = item_data.get("id", "id")
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
-
+	set_categories(item_data.get("categories", []))
 	# Parse event timestamp BEFORE set_attending so it's available for notifications
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
@@ -339,7 +370,7 @@ func set_data(item_data):
 		if not image_url.is_empty():
 			_async_download_image(image_url)
 		else:
-			set_image(texture_placeholder)
+			show_image_container(false)
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
 	var world = item_data.get("world", false)
@@ -361,7 +392,7 @@ func _async_download_image(url: String):
 	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		set_image(texture_placeholder)
+		show_image_container(false)
 		printerr("places_generator::_async_download_image promise error: ", result.get_error())
 		return
 	set_image(result.texture)
@@ -495,6 +526,12 @@ func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:
 		reminder_button.event_cover_image_url = _data.get("image", "") if _data else ""
 		reminder_button.set_pressed_no_signal(_attending)
 		reminder_button.update_styles(_attending)
+
+
+func set_categories(_categories:Array) -> void:
+	var categories_bar = _get_categories_bar()
+	if categories_bar:
+		categories_bar.set_categories(_categories)
 
 
 func _parse_iso_timestamp(iso_string: String) -> int:
@@ -718,3 +755,28 @@ func _on_button_jump_to_event_pressed() -> void:
 		"jump_to", "EVENT_DETAILS", JSON.stringify({"event_id": event_id, "event_tag": event_tags})
 	)
 	jump_in.emit(location, realm)
+
+
+func _on_panel_toggled(toggled_on: bool) -> void:
+	var description_container = _get_description()
+	var card = _get_card()
+	
+	if description_container and card:
+		if toggled_on:
+			description_container.show()
+			card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		else:
+			description_container.hide()
+			card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+
+func show_image_container(toggle:bool) -> void:
+	var image_container = _get_image_container()
+	var no_image_container = _get_no_image_container()
+	if image_container and no_image_container:
+		if toggle:
+			image_container.show()
+			no_image_container.hide()
+		else:
+			image_container.hide()
+			no_image_container.show()
+	

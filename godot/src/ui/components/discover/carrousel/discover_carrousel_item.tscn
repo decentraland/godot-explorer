@@ -1,7 +1,8 @@
-[gd_scene load_steps=12 format=3 uid="uid://nexo8k0ub5ty"]
+[gd_scene load_steps=14 format=3 uid="uid://nexo8k0ub5ty"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_w66jn"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
+[ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_7kg7x"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="3_w66jn"]
 [ext_resource type="LabelSettings" uid="uid://iia6jgjebpg" path="res://assets/themes/discover_item_title.tres" id="5_2d6b2"]
 [ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="6_2d6b2"]
@@ -10,12 +11,19 @@
 [ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="10_0qlyj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
-bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
 border_color = Color(0.9098039, 0.7254902, 1, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_w66jn"]
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qlstj"]
 draw_center = false
@@ -37,6 +45,16 @@ offset_right = 225.0
 offset_bottom = 175.0
 mouse_filter = 1
 script = ExtResource("1_w66jn")
+title = null
+event_name = null
+description = null
+views = null
+onlines = null
+likes_percent = null
+metadata = null
+location = null
+realm_title = null
+categories = null
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="."]
 layout_mode = 0
@@ -50,7 +68,8 @@ custom_minimum_size = Vector2(0, 156)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Panel_Container" type="PanelContainer" parent="VBoxContainer_Content/Control_Image"]
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="VBoxContainer_Content/Control_Image"]
+unique_name_in_owner = true
 clip_children = 2
 layout_mode = 1
 anchors_preset = 15
@@ -61,7 +80,30 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_c0877")
 
-[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer_Content/Control_Image/Panel_Container"]
+[node name="TextureRect_NoImage" type="TextureRect" parent="VBoxContainer_Content/Control_Image/Panel_Container_NoImage"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("2_gao81")
+texture = ExtResource("3_7kg7x")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Panel_Container_Image" type="PanelContainer" parent="VBoxContainer_Content/Control_Image"]
+unique_name_in_owner = true
+clip_children = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_w66jn")
+
+[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer_Content/Control_Image/Panel_Container_Image"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

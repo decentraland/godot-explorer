@@ -1,34 +1,40 @@
-[gd_scene load_steps=10 format=3 uid="uid://cmarw81knjomw"]
+[gd_scene load_steps=7 format=3 uid="uid://cmarw81knjomw"]
 
-[ext_resource type="StyleBox" uid="uid://dhbw2a5306luc" path="res://src/ui/components/discover/jump_in/like_button_hover.tres" id="1_fuexo"]
 [ext_resource type="Script" uid="uid://2bpphti4ixii" path="res://src/ui/components/engagement_bar/engagement_bar.gd" id="1_trky3"]
-[ext_resource type="StyleBox" uid="uid://cmld8wgql6udq" path="res://src/ui/components/discover/jump_in/like_button.tres" id="2_trky3"]
-[ext_resource type="StyleBox" uid="uid://ccq3cjgwmye8h" path="res://assets/themes/like_button_disabled.tres" id="2_x7ig1"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_g1nd3"]
 [ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="4_7tfn7"]
 [ext_resource type="Texture2D" uid="uid://bbfacjlfqblgk" path="res://assets/ui/dislike.svg" id="5_t7j2q"]
-[ext_resource type="Texture2D" uid="uid://dq3skqqbudygj" path="res://assets/ui/heart.svg" id="6_ag7gb"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="7_hx3j2"]
 [ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="7_k1hts"]
 
 [node name="EngagementBar" type="HBoxContainer"]
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 96)
+size_flags_horizontal = 0
+theme_override_constants/separation = 14
 script = ExtResource("1_trky3")
 
-[node name="Button_Like" type="Button" parent="."]
+[node name="Button_Share" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(46, 46)
+custom_minimum_size = Vector2(94, 46)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_type_variation = &"WhiteButton"
-theme_override_colors/icon_disabled_color = Color(0, 0, 0, 0)
-theme_override_colors/icon_hover_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_styles/disabled = ExtResource("2_x7ig1")
-theme_override_styles/hover_pressed = ExtResource("1_fuexo")
-theme_override_styles/hover = ExtResource("1_fuexo")
-theme_override_styles/pressed = ExtResource("2_trky3")
-theme_override_styles/normal = ExtResource("2_trky3")
+theme = ExtResource("2_g1nd3")
+theme_type_variation = &"EngagementButton"
+disabled = true
+toggle_mode = true
+icon = ExtResource("7_k1hts")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Like" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(94, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("2_g1nd3")
+theme_type_variation = &"EngagementButton"
 toggle_mode = true
 icon = ExtResource("4_7tfn7")
 icon_alignment = 1
@@ -53,19 +59,12 @@ pivot_offset = Vector2(64, 64)
 
 [node name="Button_Dislike" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(46, 46)
+custom_minimum_size = Vector2(94, 46)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme_type_variation = &"WhiteButton"
-theme_override_colors/icon_disabled_color = Color(0, 0, 0, 0)
-theme_override_colors/icon_hover_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_styles/disabled = ExtResource("2_x7ig1")
-theme_override_styles/hover_pressed = ExtResource("1_fuexo")
-theme_override_styles/hover = ExtResource("1_fuexo")
-theme_override_styles/pressed = ExtResource("2_trky3")
-theme_override_styles/normal = ExtResource("2_trky3")
+theme = ExtResource("2_g1nd3")
+theme_type_variation = &"EngagementButton"
 toggle_mode = true
 icon = ExtResource("5_t7j2q")
 icon_alignment = 1
@@ -88,58 +87,6 @@ grow_vertical = 2
 scale = Vector2(0.2, 0.2)
 pivot_offset = Vector2(64, 64)
 
-[node name="Button_Fav" type="Button" parent="."]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(46, 46)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_type_variation = &"WhiteButton"
-theme_override_colors/icon_disabled_color = Color(0, 0, 0, 0)
-theme_override_colors/icon_hover_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_styles/disabled = ExtResource("2_x7ig1")
-theme_override_styles/hover_pressed = ExtResource("1_fuexo")
-theme_override_styles/hover = ExtResource("1_fuexo")
-theme_override_styles/pressed = ExtResource("2_trky3")
-theme_override_styles/normal = ExtResource("2_trky3")
-toggle_mode = true
-icon = ExtResource("6_ag7gb")
-icon_alignment = 1
-expand_icon = true
-
-[node name="TextureProgressBar" parent="Button_Fav" instance=ExtResource("7_hx3j2")]
-modulate = Color(1, 1, 1, 0.470588)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
-grow_horizontal = 2
-grow_vertical = 2
-scale = Vector2(0.2, 0.2)
-pivot_offset = Vector2(64, 64)
-
-[node name="Button_Share" type="Button" parent="."]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(46, 46)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_type_variation = &"WhiteButton"
-disabled = true
-toggle_mode = true
-icon = ExtResource("7_k1hts")
-icon_alignment = 1
-expand_icon = true
-
+[connection signal="pressed" from="Button_Share" to="." method="_on_button_share_pressed"]
 [connection signal="toggled" from="Button_Like" to="." method="_async_on_button_like_toggled"]
 [connection signal="toggled" from="Button_Dislike" to="." method="_async_on_button_dislike_toggled"]
-[connection signal="toggled" from="Button_Fav" to="." method="_async_on_button_fav_toggled"]
-[connection signal="pressed" from="Button_Share" to="." method="_on_button_share_pressed"]
