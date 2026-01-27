@@ -48,15 +48,8 @@ func _async_on_button_like_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var url = DclUrls.places_api() + "/places/" + place_id + "/likes"
-	var body: String
+	var response = await PlacesHelper.async_post_like(place_id, toggled_on)
 
-	if toggled_on:
-		body = JSON.stringify({like = true})
-	else:
-		body = JSON.stringify({like = null})
-
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 	if response is PromiseError:
 		printerr("Error patching likes: ", response.get_error())
 	if response != null:
@@ -75,15 +68,8 @@ func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var url = DclUrls.places_api() + "/places/" + place_id + "/likes"
-	var body
-
-	if toggled_on:
-		body = JSON.stringify({like = false})
-	else:
-		body = JSON.stringify({like = null})
-
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	var response = await PlacesHelper.async_post_like(place_id, toggled_on)
+	
 	if response is PromiseError:
 		printerr("Error patching likes: ", response.get_error())
 	if response != null:
@@ -103,10 +89,8 @@ func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var url = DclUrls.places_api() + "/places/" + place_id + "/favorites"
-	var body = JSON.stringify({"favorites": toggled_on})
+	var response = await PlacesHelper.async_post_favorite(place_id, toggled_on)
 
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 	if response is PromiseError:
 		printerr("Error patching favorites: ", response.get_error())
 	if response != null:
@@ -122,8 +106,7 @@ func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 func _async_update_buttons_icons() -> void:
 	disable_buttons()
 
-	var url = DclUrls.places_api() + "/places/" + place_id
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+	var response = await PlacesHelper.async_get_by_id(place_id)
 
 	if response == null:
 		printerr("Error getting place's data")

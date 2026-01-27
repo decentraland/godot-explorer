@@ -47,7 +47,8 @@ func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 
 func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		%LastVisitGenerator.request_last_places()
+		#TODO find a better way to set offset and limit
+		%LastVisitGenerator.request_last_places(0, 10)
 
 
 func _on_line_edit_search_bar_focus_exited() -> void:

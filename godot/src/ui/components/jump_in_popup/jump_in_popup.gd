@@ -35,14 +35,8 @@ func _on_button_jump_in_pressed() -> void:
 
 
 func async_load_place_position():
-	var url: String = DclUrls.places_api() + "/places?limit=1"
-	url += "&positions=%d,%d" % [location.x, location.y]
 
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_GET, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
+	var result = await PlacesHelper.async_get_by_position(location)
 
 	if result is PromiseError:
 		printerr("Error request places jump in", result.get_error())

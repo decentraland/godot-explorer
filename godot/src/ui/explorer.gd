@@ -542,6 +542,8 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
+	
+	
 
 
 func player_look_at(look_at_position: Vector3):
