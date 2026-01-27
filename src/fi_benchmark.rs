@@ -9,11 +9,13 @@ use crate::ui::{print_message, print_section, MessageType};
 /// Benchmark configurations: (arm_length, title, description)
 /// 0 = single parcel with its ring of empty parcels
 /// Larger values = 4 parcels in cross, more empty parcels to fill the gaps
+/// 99 = special case: Genesis Plaza layout (69 parcels, real-world scenario)
 const BENCHMARK_CONFIGS: &[(u32, &str, &str)] = &[
     (0, "Single Parcel", "1 scene parcel with surrounding empty parcels"),
     (2, "Big Scene", "4 parcels in cross (2x2 equivalent), typical large scene"),
     (4, "Worst Case Real", "4 parcels spread apart, realistic worst case"),
     (6, "Extreme", "4 parcels very spread apart, unrealistic stress test"),
+    (99, "Genesis Plaza", "Real Genesis Plaza layout (69 parcels)"),
 ];
 
 /// Run the floating islands benchmark with multiple client sessions

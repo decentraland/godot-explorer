@@ -133,30 +133,41 @@ func generate_floating_islands():
 	# Use the REAL Global.scene_fetcher to generate floating islands
 	var sf = Global.scene_fetcher
 
-	# WORST CASE: Always 4 parcels in a cross pattern, but with increasing separation
 	# parcel_count is used as the ARM LENGTH (distance from center to each parcel)
-	# This generates more empty parcels as the separation increases
+	# Special case: 99 = Genesis Plaza layout
 	var arm_length = parcel_count
 	var parcels = generate_cross_with_separation(arm_length)
 
 	if arm_length == 0:
 		log_msg("FI Benchmark: 1 parcel at origin (base case)")
+	elif arm_length == 99:
+		log_msg("FI Benchmark: Genesis Plaza layout (%d parcels)" % parcels.size())
 	else:
 		log_msg(
 			"FI Benchmark: 4 parcels in CROSS with arm_length=%d (worst case)" % arm_length
 		)
 
 	# Create fake scene items to populate loaded_scenes
-	var idx = 0
-	for parcel_pos in parcels:
+	if arm_length == 99:
+		# Genesis Plaza: single scene with all 69 parcels
 		var fake_scene = SceneFetcher.SceneItem.new()
-		fake_scene.id = "benchmark_%d" % idx
-		var parcel_array: Array[Vector2i] = [parcel_pos]
-		fake_scene.parcels = parcel_array
+		fake_scene.id = "genesis_plaza"
+		fake_scene.parcels = parcels
 		fake_scene.is_global = false
-		fake_scene.scene_number_id = 1000 + idx
+		fake_scene.scene_number_id = 1000
 		sf.loaded_scenes[fake_scene.id] = fake_scene
-		idx += 1
+	else:
+		# Cross pattern: one scene per parcel
+		var idx = 0
+		for parcel_pos in parcels:
+			var fake_scene = SceneFetcher.SceneItem.new()
+			fake_scene.id = "benchmark_%d" % idx
+			var parcel_array: Array[Vector2i] = [parcel_pos]
+			fake_scene.parcels = parcel_array
+			fake_scene.is_global = false
+			fake_scene.scene_number_id = 1000 + idx
+			sf.loaded_scenes[fake_scene.id] = fake_scene
+			idx += 1
 
 	# Clear hash to force regeneration
 	sf.last_scene_group_hash = ""
@@ -175,11 +186,16 @@ func generate_floating_islands():
 
 ## Generate parcels for benchmark:
 ## - arm_length=0: single parcel at origin (base case)
+## - arm_length=99: Genesis Plaza layout (69 parcels)
 ## - arm_length>0: 4 parcels in cross pattern (worst case)
 func generate_cross_with_separation(arm_length: int) -> Array[Vector2i]:
 	if arm_length == 0:
 		# Single parcel at origin
 		return [Vector2i(0, 0)]
+
+	if arm_length == 99:
+		# Genesis Plaza - real layout from Catalyst (69 parcels)
+		return get_genesis_plaza_parcels()
 
 	# 4 parcels in cross pattern
 	return [
@@ -187,6 +203,40 @@ func generate_cross_with_separation(arm_length: int) -> Array[Vector2i]:
 		Vector2i(arm_length, 0),  # Right
 		Vector2i(0, -arm_length),  # Up
 		Vector2i(0, arm_length),  # Down
+	]
+
+
+## Genesis Plaza parcels from https://peer.decentraland.org/content/entities/scene?pointer=0,0
+func get_genesis_plaza_parcels() -> Array[Vector2i]:
+	return [
+		# Row y=-3
+		Vector2i(-5, -3), Vector2i(-4, -3), Vector2i(-3, -3), Vector2i(-1, -3),
+		# Row y=-2
+		Vector2i(-7, -2), Vector2i(-6, -2), Vector2i(-5, -2), Vector2i(-4, -2),
+		Vector2i(-3, -2), Vector2i(-2, -2), Vector2i(-1, -2),
+		# Row y=-1
+		Vector2i(-7, -1), Vector2i(-6, -1), Vector2i(-5, -1), Vector2i(-4, -1),
+		Vector2i(-3, -1), Vector2i(-2, -1), Vector2i(-1, -1),
+		# Row y=0 (main road)
+		Vector2i(-7, 0), Vector2i(-6, 0), Vector2i(-5, 0), Vector2i(-4, 0),
+		Vector2i(-3, 0), Vector2i(-2, 0), Vector2i(-1, 0), Vector2i(0, 0),
+		Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0),
+		Vector2i(5, 0), Vector2i(6, 0), Vector2i(7, 0), Vector2i(8, 0),
+		Vector2i(9, 0), Vector2i(10, 0),
+		# Row y=1
+		Vector2i(-7, 1), Vector2i(-6, 1), Vector2i(-5, 1), Vector2i(-4, 1),
+		Vector2i(-3, 1), Vector2i(-2, 1), Vector2i(-1, 1),
+		# Row y=2
+		Vector2i(-7, 2), Vector2i(-6, 2), Vector2i(-5, 2), Vector2i(-4, 2),
+		Vector2i(-3, 2), Vector2i(-2, 2), Vector2i(-1, 2),
+		# Row y=3
+		Vector2i(-6, 3), Vector2i(-5, 3), Vector2i(-4, 3), Vector2i(-3, 3), Vector2i(-2, 3),
+		# Row y=4
+		Vector2i(-6, 4), Vector2i(-5, 4), Vector2i(-4, 4), Vector2i(-3, 4), Vector2i(-2, 4),
+		# Row y=5
+		Vector2i(-6, 5), Vector2i(-5, 5), Vector2i(-4, 5), Vector2i(-3, 5), Vector2i(-2, 5),
+		# Row y=6
+		Vector2i(-6, 6), Vector2i(-5, 6), Vector2i(-4, 6), Vector2i(-3, 6), Vector2i(-2, 6),
 	]
 
 
@@ -312,20 +362,31 @@ func take_screenshot():
 
 
 func setup_camera():
-	# For cross pattern: arm_length is parcel_count, extends from -arm to +arm
-	# Plus padding of 2 on each side
-	var arm_length = parcel_count
 	var padding = 2  # SceneFetcher uses padding of 2
+	var min_parcel_x: int
+	var max_parcel_x: int
+	var min_parcel_y: int
+	var max_parcel_y: int
 
-	# Calculate bounding box in parcel coordinates
-	var min_parcel = -arm_length - padding
-	var max_parcel = arm_length + padding
+	if parcel_count == 99:
+		# Genesis Plaza bounds: X=-7 to 10, Y=-3 to 6
+		min_parcel_x = -7 - padding
+		max_parcel_x = 10 + padding
+		min_parcel_y = -3 - padding
+		max_parcel_y = 6 + padding
+	else:
+		# Cross pattern: arm_length extends from -arm to +arm
+		var arm_length = parcel_count
+		min_parcel_x = -arm_length - padding
+		max_parcel_x = arm_length + padding
+		min_parcel_y = -arm_length - padding
+		max_parcel_y = arm_length + padding
 
 	# Convert to world coordinates (each parcel is 16m, Z is negated in DCL)
-	var world_min_x = min_parcel * 16.0
-	var world_max_x = (max_parcel + 1) * 16.0
-	var world_min_z = -(max_parcel + 1) * 16.0
-	var world_max_z = -min_parcel * 16.0
+	var world_min_x = min_parcel_x * 16.0
+	var world_max_x = (max_parcel_x + 1) * 16.0
+	var world_min_z = -(max_parcel_y + 1) * 16.0
+	var world_max_z = -min_parcel_y * 16.0
 
 	# Calculate center and size
 	var center_x = (world_min_x + world_max_x) / 2.0
