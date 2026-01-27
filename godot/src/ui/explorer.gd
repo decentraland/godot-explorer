@@ -32,8 +32,8 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
-@onready var url_popup = %UrlPopup
-@onready var jump_in_popup = %JumpInPopup
+#@onready var url_popup = %UrlPopup
+#@onready var jump_in_popup = %JumpInPopup
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
@@ -113,10 +113,6 @@ func _ready():
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
-
-	# Register popup instances in Global
-	Global.set_url_popup_instance(url_popup)
-	Global.set_jump_in_popup_instance(jump_in_popup)
 
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)

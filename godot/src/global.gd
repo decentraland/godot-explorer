@@ -25,6 +25,8 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal run_anyway
+signal reload_scene
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -75,13 +77,12 @@ var preload_assets: PreloadAssets
 
 var locations: Node
 
+var modal_manager: ModalManager
+
 var standalone = false
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
-
-var url_popup_instance = null
-var jump_in_popup_instance = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
@@ -100,34 +101,6 @@ var _is_portrait: bool = true
 var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
-
-
-func set_url_popup_instance(popup_instance) -> void:
-	url_popup_instance = popup_instance
-
-
-func show_url_popup(url: String) -> void:
-	if url_popup_instance != null:
-		url_popup_instance.open(url)
-
-
-func hide_url_popup() -> void:
-	if url_popup_instance != null:
-		url_popup_instance.close()
-
-
-func set_jump_in_popup_instance(popup_instance) -> void:
-	jump_in_popup_instance = popup_instance
-
-
-func show_jump_in_popup(coordinates: Vector2i) -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.open(coordinates)
-
-
-func hide_jump_in_popup() -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.close()
 
 
 func is_xr() -> bool:
@@ -290,11 +263,15 @@ func _ready():
 	self.locations = load("res://src/helpers_components/locations.gd").new()
 	self.locations.set_name("locations")
 
+	self.modal_manager = load("res://src/ui/components/modal/modal_manager.gd").new()
+	self.modal_manager.set_name("modal_manager")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.locations)
+	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
