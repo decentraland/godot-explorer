@@ -714,6 +714,547 @@ impl SocialServiceManager {
 
         Ok(rx)
     }
+
+    // ========================================
+    // Blocking Features
+    // ========================================
+
+    /// Block a user
+    pub async fn block_user(&self, user_address: String) -> Result<BlockUserResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .block_user(BlockUserPayload {
+                user: Some(User {
+                    address: user_address,
+                }),
+            })
+            .await
+            .map_err(|e| anyhow!("Failed to block user: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Unblock a user
+    pub async fn unblock_user(&self, user_address: String) -> Result<UnblockUserResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .unblock_user(UnblockUserPayload {
+                user: Some(User {
+                    address: user_address,
+                }),
+            })
+            .await
+            .map_err(|e| anyhow!("Failed to unblock user: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Get the list of blocked users
+    pub async fn get_blocked_users(
+        &self,
+        pagination: Option<Pagination>,
+    ) -> Result<GetBlockedUsersResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .get_blocked_users(GetBlockedUsersPayload { pagination })
+            .await
+            .map_err(|e| anyhow!("Failed to get blocked users: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Get blocking status (who you blocked and who blocked you)
+    pub async fn get_blocking_status(&self) -> Result<GetBlockingStatusResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .get_blocking_status()
+            .await
+            .map_err(|e| anyhow!("Failed to get blocking status: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Subscribe to block updates stream
+    pub async fn subscribe_to_block_updates(
+        &self,
+    ) -> Result<tokio::sync::mpsc::UnboundedReceiver<BlockUpdate>> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let mut stream = service.subscribe_to_block_updates().await.map_err(|e| {
+            tracing::error!("Failed to subscribe to block updates: {:?}", e);
+            anyhow!("Failed to subscribe to block updates: {:?}", e)
+        })?;
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            while let Some(update) = stream.next().await {
+                if tx.send(update).is_err() {
+                    tracing::warn!("Block updates receiver dropped");
+                    break;
+                }
+            }
+        });
+
+        Ok(rx)
+    }
+
+    // ========================================
+    // Social Settings
+    // ========================================
+
+    /// Get social settings for the authenticated user
+    pub async fn get_social_settings(&self) -> Result<GetSocialSettingsResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .get_social_settings()
+            .await
+            .map_err(|e| anyhow!("Failed to get social settings: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Update social settings for the authenticated user
+    pub async fn upsert_social_settings(
+        &self,
+        private_messages_privacy: Option<i32>,
+        blocked_users_messages_visibility: Option<i32>,
+    ) -> Result<UpsertSocialSettingsResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .upsert_social_settings(UpsertSocialSettingsPayload {
+                private_messages_privacy,
+                blocked_users_messages_visibility,
+            })
+            .await
+            .map_err(|e| anyhow!("Failed to upsert social settings: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Get private messages settings for specific users
+    pub async fn get_private_messages_settings(
+        &self,
+        user_addresses: Vec<String>,
+    ) -> Result<GetPrivateMessagesSettingsResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let users = user_addresses
+            .into_iter()
+            .map(|address| User { address })
+            .collect();
+
+        let response = service
+            .get_private_messages_settings(GetPrivateMessagesSettingsPayload { user: users })
+            .await
+            .map_err(|e| anyhow!("Failed to get private messages settings: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    // ========================================
+    // Community Connectivity
+    // ========================================
+
+    /// Subscribe to community member connectivity updates
+    pub async fn subscribe_to_community_member_connectivity_updates(
+        &self,
+    ) -> Result<tokio::sync::mpsc::UnboundedReceiver<CommunityMemberConnectivityUpdate>> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let mut stream = service
+            .subscribe_to_community_member_connectivity_updates()
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    "Failed to subscribe to community member connectivity updates: {:?}",
+                    e
+                );
+                anyhow!(
+                    "Failed to subscribe to community member connectivity updates: {:?}",
+                    e
+                )
+            })?;
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            while let Some(update) = stream.next().await {
+                if tx.send(update).is_err() {
+                    tracing::warn!("Community member connectivity updates receiver dropped");
+                    break;
+                }
+            }
+        });
+
+        Ok(rx)
+    }
+
+    // ========================================
+    // Private Voice Chat
+    // ========================================
+
+    /// Start a private voice chat with another user
+    pub async fn start_private_voice_chat(
+        &self,
+        callee_address: String,
+    ) -> Result<StartPrivateVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .start_private_voice_chat(StartPrivateVoiceChatPayload {
+                callee: Some(User {
+                    address: callee_address,
+                }),
+            })
+            .await
+            .map_err(|e| anyhow!("Failed to start private voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Accept a private voice chat
+    pub async fn accept_private_voice_chat(
+        &self,
+        call_id: String,
+    ) -> Result<AcceptPrivateVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .accept_private_voice_chat(AcceptPrivateVoiceChatPayload { call_id })
+            .await
+            .map_err(|e| anyhow!("Failed to accept private voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Reject a private voice chat
+    pub async fn reject_private_voice_chat(
+        &self,
+        call_id: String,
+    ) -> Result<RejectPrivateVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .reject_private_voice_chat(RejectPrivateVoiceChatPayload { call_id })
+            .await
+            .map_err(|e| anyhow!("Failed to reject private voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// End a private voice chat
+    pub async fn end_private_voice_chat(
+        &self,
+        call_id: String,
+    ) -> Result<EndPrivateVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .end_private_voice_chat(EndPrivateVoiceChatPayload { call_id })
+            .await
+            .map_err(|e| anyhow!("Failed to end private voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Get incoming private voice chat request
+    pub async fn get_incoming_private_voice_chat_request(
+        &self,
+    ) -> Result<GetIncomingPrivateVoiceChatRequestResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .get_incoming_private_voice_chat_request()
+            .await
+            .map_err(|e| anyhow!("Failed to get incoming private voice chat request: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Subscribe to private voice chat updates
+    pub async fn subscribe_to_private_voice_chat_updates(
+        &self,
+    ) -> Result<tokio::sync::mpsc::UnboundedReceiver<PrivateVoiceChatUpdate>> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let mut stream = service
+            .subscribe_to_private_voice_chat_updates()
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to subscribe to private voice chat updates: {:?}", e);
+                anyhow!("Failed to subscribe to private voice chat updates: {:?}", e)
+            })?;
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            while let Some(update) = stream.next().await {
+                if tx.send(update).is_err() {
+                    tracing::warn!("Private voice chat updates receiver dropped");
+                    break;
+                }
+            }
+        });
+
+        Ok(rx)
+    }
+
+    // ========================================
+    // Community Voice Chat
+    // ========================================
+
+    /// Start a community voice chat (moderator/owner only)
+    pub async fn start_community_voice_chat(
+        &self,
+        community_id: String,
+    ) -> Result<StartCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .start_community_voice_chat(StartCommunityVoiceChatPayload { community_id })
+            .await
+            .map_err(|e| anyhow!("Failed to start community voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Join a community voice chat
+    pub async fn join_community_voice_chat(
+        &self,
+        community_id: String,
+    ) -> Result<JoinCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .join_community_voice_chat(JoinCommunityVoiceChatPayload { community_id })
+            .await
+            .map_err(|e| anyhow!("Failed to join community voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Request to speak in community voice chat
+    pub async fn request_to_speak_in_community_voice_chat(
+        &self,
+        community_id: String,
+        is_raising_hand: bool,
+    ) -> Result<RequestToSpeakInCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .request_to_speak_in_community_voice_chat(
+                RequestToSpeakInCommunityVoiceChatPayload {
+                    community_id,
+                    is_raising_hand,
+                },
+            )
+            .await
+            .map_err(|e| anyhow!("Failed to request to speak in community voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Promote speaker in community voice chat (moderator only)
+    pub async fn promote_speaker_in_community_voice_chat(
+        &self,
+        community_id: String,
+        user_address: String,
+    ) -> Result<PromoteSpeakerInCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .promote_speaker_in_community_voice_chat(PromoteSpeakerInCommunityVoiceChatPayload {
+                community_id,
+                user_address,
+            })
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to promote speaker in community voice chat: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(response)
+    }
+
+    /// Demote speaker in community voice chat (moderator only)
+    pub async fn demote_speaker_in_community_voice_chat(
+        &self,
+        community_id: String,
+        user_address: String,
+    ) -> Result<DemoteSpeakerInCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .demote_speaker_in_community_voice_chat(DemoteSpeakerInCommunityVoiceChatPayload {
+                community_id,
+                user_address,
+            })
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to demote speaker in community voice chat: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(response)
+    }
+
+    /// Kick player from community voice chat (moderator only)
+    pub async fn kick_player_from_community_voice_chat(
+        &self,
+        community_id: String,
+        user_address: String,
+    ) -> Result<KickPlayerFromCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .kick_player_from_community_voice_chat(KickPlayerFromCommunityVoiceChatPayload {
+                community_id,
+                user_address,
+            })
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to kick player from community voice chat: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(response)
+    }
+
+    /// Reject speak request in community voice chat (moderator only)
+    pub async fn reject_speak_request_in_community_voice_chat(
+        &self,
+        community_id: String,
+        user_address: String,
+    ) -> Result<RejectSpeakRequestInCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .reject_speak_request_in_community_voice_chat(
+                RejectSpeakRequestInCommunityVoiceChatPayload {
+                    community_id,
+                    user_address,
+                },
+            )
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to reject speak request in community voice chat: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(response)
+    }
+
+    /// Mute or unmute a speaker in community voice chat (moderator only)
+    pub async fn mute_speaker_from_community_voice_chat(
+        &self,
+        community_id: String,
+        user_address: String,
+        muted: bool,
+    ) -> Result<MuteSpeakerFromCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .mute_speaker_from_community_voice_chat(MuteSpeakerFromCommunityVoiceChatPayload {
+                community_id,
+                user_address,
+                muted,
+            })
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to mute speaker in community voice chat: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(response)
+    }
+
+    /// End community voice chat (moderator/owner only)
+    pub async fn end_community_voice_chat(
+        &self,
+        community_id: String,
+    ) -> Result<EndCommunityVoiceChatResponse> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let response = service
+            .end_community_voice_chat(EndCommunityVoiceChatPayload { community_id })
+            .await
+            .map_err(|e| anyhow!("Failed to end community voice chat: {:?}", e))?;
+
+        Ok(response)
+    }
+
+    /// Subscribe to community voice chat updates
+    pub async fn subscribe_to_community_voice_chat_updates(
+        &self,
+    ) -> Result<tokio::sync::mpsc::UnboundedReceiver<CommunityVoiceChatUpdate>> {
+        let mut state = self.state.write().await;
+        let service = self.ensure_connection(&mut state).await?;
+
+        let mut stream = service
+            .subscribe_to_community_voice_chat_updates()
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to subscribe to community voice chat updates: {:?}", e);
+                anyhow!(
+                    "Failed to subscribe to community voice chat updates: {:?}",
+                    e
+                )
+            })?;
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            while let Some(update) = stream.next().await {
+                if tx.send(update).is_err() {
+                    tracing::warn!("Community voice chat updates receiver dropped");
+                    break;
+                }
+            }
+        });
+
+        Ok(rx)
+    }
 }
 
 #[cfg(test)]
