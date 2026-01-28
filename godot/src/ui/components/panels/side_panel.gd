@@ -54,7 +54,7 @@ func async_load_place_position(pos: Vector2i):
 	_close()
 	show()
 	texture_progress_bar.show()
-	
+
 	var result = await PlacesHelper.async_get_by_position(pos)
 
 	if result is PromiseError:

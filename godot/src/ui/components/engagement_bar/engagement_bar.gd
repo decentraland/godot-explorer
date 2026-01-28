@@ -48,7 +48,9 @@ func _async_on_button_like_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var response = await PlacesHelper.async_post_like(place_id, toggled_on)
+	var response = await PlacesHelper.async_patch_like(
+		place_id, PlacesHelper.LIKE.YES if toggled_on else PlacesHelper.LIKE.UNKNOWN
+	)
 
 	if response is PromiseError:
 		printerr("Error patching likes: ", response.get_error())
@@ -68,8 +70,10 @@ func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var response = await PlacesHelper.async_post_like(place_id, toggled_on)
-	
+	var response = await PlacesHelper.async_patch_like(
+		place_id, PlacesHelper.LIKE.NO if toggled_on else PlacesHelper.LIKE.UNKNOWN
+	)
+
 	if response is PromiseError:
 		printerr("Error patching likes: ", response.get_error())
 	if response != null:
@@ -89,7 +93,7 @@ func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 
 	disable_buttons()
 
-	var response = await PlacesHelper.async_post_favorite(place_id, toggled_on)
+	var response = await PlacesHelper.async_patch_favorite(place_id, toggled_on)
 
 	if response is PromiseError:
 		printerr("Error patching favorites: ", response.get_error())
@@ -114,6 +118,8 @@ func _async_update_buttons_icons() -> void:
 		return
 	if response is PromiseError:
 		printerr("Error getting place's data: ", response.get_error())
+		enable_buttons()
+		return
 
 	var json: Dictionary = response.get_string_response_as_json()
 	var place_data = json.data

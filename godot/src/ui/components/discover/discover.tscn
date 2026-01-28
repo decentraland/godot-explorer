@@ -419,7 +419,7 @@ theme_override_constants/separation = 20
 [node name="PlacesFeatured" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
-generator = NodePath("")
+generator = NodePath("PlacesFeaturedGenerator")
 title = "Featured"
 
 [node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]

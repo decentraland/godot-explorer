@@ -28,12 +28,20 @@ func on_request(offset: int, limit: int) -> void:
 		return  # we reach the capacity...
 
 	if last_places_logic:
-		request_last_places(offset, limit)
+		async_request_last_places(offset, limit)
 	else:
 		request_from_api(offset, limit)
 
+	if only_favorites:
+		Global.favorite_destination_set.connect(reload.bind(offset, limit))
 
-func request_last_places(offset: int, limit: int) -> void:
+
+func reload(offset, limit) -> void:
+	_new_search = true
+	request_from_api(offset, limit)
+
+
+func async_request_last_places(_offset: int, _limit: int) -> void:
 	_no_more_elements = true
 	if _loading:
 		return
@@ -44,30 +52,52 @@ func request_last_places(offset: int, limit: int) -> void:
 			item.queue_free()
 
 	_loading = true
-	
-	var last_places :Array[Dictionary] = Global.get_config().last_places.duplicate()
+
+	var last_places: Array[Dictionary] = Global.get_config().last_places.duplicate()
 	var index = 0
 	for place in last_places:
 		place["index"] = index
 		index += 1
+
+		var realm: String = Realm.ensure_reduce_url(place.get("realm"))
+		var position: Vector2i = place.get("position")
+		var data: Dictionary
+		var response
+
+		if Realm.is_genesis_city(realm):
+			response = await PlacesHelper.async_get_by_position(Vector2i(place.position))
+		else:
+			response = await PlacesHelper.async_get_by_names(place.get("realm"))
+
+		if response:
+			if response is PromiseError:
+				printerr("Error request places ", place, " ", response.get_error())
+				continue
+			var json: Dictionary = response.get_string_response_as_json()
+			if json.data.is_empty():
+				continue
+			data = json.data[0]
+		else:
+			data = {
+				"title": realm,
+				"world": true,
+				"world_name": realm,
+				"base_position": "%d,%d" % [position.x, position.y]
+			}
+
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
-		item.set_data(place)
+		item.set_data(data)
 		item.item_pressed.connect(discover.on_item_pressed)
-		prints("[CAROUSEL]", place)
-	
+
 	if last_places.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
-
 
 	_loading = false
 
 
 func request_from_api(offset: int, limit: int) -> void:
-	#var url = DclUrls.places_api() + "/"
-	#url += "worlds" if only_worlds else "places"
-
-	var url := "https://places.decentraland.zone/api/destinations/"
+	var url := PlacesHelper.get_api_url()
 	url += "?offset=%d&limit=%d" % [offset, limit]
 
 	if _new_search:
@@ -117,9 +147,6 @@ func request_from_api(offset: int, limit: int) -> void:
 func _async_fetch_places(url: String, limit: int = 100) -> void:
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
-	if only_highlighted:
-		prints("[CAROUSEL]", url)
-
 	if is_instance_valid(_discover_carrousel_item_loading):
 		_discover_carrousel_item_loading.hide()
 
@@ -142,7 +169,7 @@ func _async_fetch_places(url: String, limit: int = 100) -> void:
 		_no_more_elements = true
 
 	for item_data in json.data:
-		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
+		var item := DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
 
 		item.set_data(item_data)

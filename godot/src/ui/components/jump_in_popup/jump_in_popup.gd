@@ -35,7 +35,6 @@ func _on_button_jump_in_pressed() -> void:
 
 
 func async_load_place_position():
-
 	var result = await PlacesHelper.async_get_by_position(location)
 
 	if result is PromiseError:
