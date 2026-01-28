@@ -697,6 +697,7 @@ impl CommunicationManager {
                 let movement_packet = rfc4::MovementCompressed {
                     temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
                     movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
+                    head_sync_data: 0, // TODO: implement head sync data compression
                 };
 
                 rfc4::Packet {
@@ -737,6 +738,12 @@ impl CommunicationManager {
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
+                    is_instant: false,
+                    is_emoting: false,
+                    head_ik_yaw_enabled: false,
+                    head_ik_pitch_enabled: false,
+                    head_yaw: 0.0,
+                    head_pitch: 0.0,
                 };
 
                 //tracing::info!("Movement packet: {:?}", movement_packet);
@@ -867,6 +874,7 @@ impl CommunicationManager {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
                 timestamp: self.start_time.elapsed().as_secs_f64(),
+                forwarded_from: None,
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
@@ -900,6 +908,14 @@ impl CommunicationManager {
             message: Some(rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
                 urn: emote_urn.to_string(),
                 incremental_id: self.last_emote_incremental_id,
+                timestamp: self.start_time.elapsed().as_secs_f32(),
+                is_stopping: None,
+                is_repeating: None,
+                interaction_id: None,
+                social_emote_outcome: None,
+                is_reacting: None,
+                social_emote_initiator: None,
+                target_avatar: None,
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
