@@ -90,6 +90,8 @@ pub struct DclCli {
     pub emulate_android: bool,
     #[var(get)]
     pub asset_server: bool,
+    #[var(get)]
+    pub fi_benchmark_size: i32,
 
     // Arguments with values
     #[var(get)]
@@ -106,6 +108,8 @@ pub struct DclCli {
     pub snapshot_folder: GString,
     #[var(get)]
     pub fake_deeplink: GString,
+    #[var(get)]
+    pub fi_benchmark_output: GString,
 }
 
 impl DclCli {
@@ -346,6 +350,20 @@ impl DclCli {
                 arg_type: ArgType::Value("<port>".to_string()),
                 category: "Server".to_string(),
             },
+            // Floating Islands Benchmark
+            ArgDefinition {
+                name: "--fi-benchmark-size".to_string(),
+                description: "Number of parcels to generate for floating islands benchmark"
+                    .to_string(),
+                arg_type: ArgType::Value("<N>".to_string()),
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--fi-benchmark-output".to_string(),
+                description: "Output file path for benchmark results (JSON)".to_string(),
+                arg_type: ArgType::Value("<file>".to_string()),
+                category: "Performance".to_string(),
+            },
         ]
     }
 
@@ -480,6 +498,10 @@ impl INode for DclCli {
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
         let asset_server = args_map.contains_key("--asset-server");
+        let fi_benchmark_size = args_map
+            .get("--fi-benchmark-size")
+            .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
+            .unwrap_or(-1);
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -527,6 +549,11 @@ impl INode for DclCli {
                 }
             })
             .unwrap_or_default();
+        let fi_benchmark_output = args_map
+            .get("--fi-benchmark-output")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
 
         // Convert combined args back to PackedStringArray for storage
         let args: PackedStringArray = args_vec.iter().cloned().collect();
@@ -566,6 +593,7 @@ impl INode for DclCli {
             emulate_ios,
             emulate_android,
             asset_server,
+            fi_benchmark_size,
             asset_server_port,
             realm,
             location,
@@ -573,6 +601,7 @@ impl INode for DclCli {
             avatars_file,
             snapshot_folder,
             fake_deeplink,
+            fi_benchmark_output,
         }
     }
 }

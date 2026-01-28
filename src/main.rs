@@ -17,6 +17,7 @@ mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
+mod fi_benchmark;
 mod helpers;
 mod image_comparison;
 mod install_dependency;
@@ -111,6 +112,16 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
         .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
+        .subcommand(
+            Command::new("fi-benchmark")
+                .about("Run floating islands memory benchmark with multiple client sessions")
+                .arg(
+                    Arg::new("headless")
+                        .long("headless")
+                        .help("Run in headless mode (faster, no screenshots)")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
         .subcommand(
             Command::new("explorer-version")
                 .about("Get Godot Explorer version (reads from .build.version created during build)")
@@ -698,6 +709,7 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
+        ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
         _ => unreachable!("unreachable branch"),
     };
 
