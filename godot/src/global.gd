@@ -351,6 +351,10 @@ func _ready():
 
 ## Async helper to clear cache and wait for completion before anything loads.
 func _async_clear_cache_if_needed() -> void:
+	# Skip cache clearing in asset server mode - we want to preserve the download cache
+	if cli.asset_server:
+		return
+
 	var should_clear_startup = cli.clear_cache_startup
 	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
 
