@@ -739,10 +739,18 @@ pub fn create_default_context() -> ProcessorContext {
         format!("{}/", output_folder)
     };
 
+    // Max concurrent downloads - use env var or default to 4
+    let max_downloads = std::env::var("ASSET_SERVER_MAX_DOWNLOADS")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(4);
+
+    tracing::info!("Asset server max concurrent downloads: {}", max_downloads);
+
     let resource_provider = Arc::new(ResourceProvider::new(
         &content_folder,
         5 * 1024 * 1000 * 1000, // 5GB cache for asset server mode
-        32,
+        max_downloads,
         #[cfg(feature = "use_resource_tracking")]
         Arc::new(crate::content::resource_download_tracking::ResourceDownloadTracking::new()),
     ));
