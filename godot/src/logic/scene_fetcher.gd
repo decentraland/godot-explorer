@@ -894,9 +894,7 @@ func _create_floor_mesh(width: float, height: float, center_x: float, center_z: 
 
 
 ## Create the floor collision for simple floor mode
-func _create_floor_collision(
-	width: float, height: float, center_x: float, center_z: float
-) -> void:
+func _create_floor_collision(width: float, height: float, center_x: float, center_z: float) -> void:
 	var static_body := StaticBody3D.new()
 	static_body.name = "FloorCollision"
 	static_body.collision_layer = EmptyParcel.OBSTACLE_COLLISION_LAYER
@@ -913,9 +911,7 @@ func _create_floor_collision(
 
 
 ## Create a cliff plane on one side of the simple floor
-func _create_cliff(
-	position: Vector3, size: Vector2, rotation: Vector3
-) -> void:
+func _create_cliff(position: Vector3, size: Vector2, rotation: Vector3) -> void:
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = "Cliff"
 
