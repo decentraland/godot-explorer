@@ -1067,14 +1067,17 @@ impl SocialServiceManager {
         let service = self.ensure_connection(&mut state).await?;
 
         let response = service
-            .request_to_speak_in_community_voice_chat(
-                RequestToSpeakInCommunityVoiceChatPayload {
-                    community_id,
-                    is_raising_hand,
-                },
-            )
+            .request_to_speak_in_community_voice_chat(RequestToSpeakInCommunityVoiceChatPayload {
+                community_id,
+                is_raising_hand,
+            })
             .await
-            .map_err(|e| anyhow!("Failed to request to speak in community voice chat: {:?}", e))?;
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to request to speak in community voice chat: {:?}",
+                    e
+                )
+            })?;
 
         Ok(response)
     }
@@ -1094,12 +1097,7 @@ impl SocialServiceManager {
                 user_address,
             })
             .await
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to promote speaker in community voice chat: {:?}",
-                    e
-                )
-            })?;
+            .map_err(|e| anyhow!("Failed to promote speaker in community voice chat: {:?}", e))?;
 
         Ok(response)
     }
@@ -1119,12 +1117,7 @@ impl SocialServiceManager {
                 user_address,
             })
             .await
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to demote speaker in community voice chat: {:?}",
-                    e
-                )
-            })?;
+            .map_err(|e| anyhow!("Failed to demote speaker in community voice chat: {:?}", e))?;
 
         Ok(response)
     }
@@ -1144,12 +1137,7 @@ impl SocialServiceManager {
                 user_address,
             })
             .await
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to kick player from community voice chat: {:?}",
-                    e
-                )
-            })?;
+            .map_err(|e| anyhow!("Failed to kick player from community voice chat: {:?}", e))?;
 
         Ok(response)
     }
@@ -1198,12 +1186,7 @@ impl SocialServiceManager {
                 muted,
             })
             .await
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to mute speaker in community voice chat: {:?}",
-                    e
-                )
-            })?;
+            .map_err(|e| anyhow!("Failed to mute speaker in community voice chat: {:?}", e))?;
 
         Ok(response)
     }
@@ -1235,7 +1218,10 @@ impl SocialServiceManager {
             .subscribe_to_community_voice_chat_updates()
             .await
             .map_err(|e| {
-                tracing::error!("Failed to subscribe to community voice chat updates: {:?}", e);
+                tracing::error!(
+                    "Failed to subscribe to community voice chat updates: {:?}",
+                    e
+                );
                 anyhow!(
                     "Failed to subscribe to community voice chat updates: {:?}",
                     e

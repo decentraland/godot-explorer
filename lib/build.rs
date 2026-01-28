@@ -227,13 +227,14 @@ fn generate_impl_crdt(proto_components: &Vec<Component>) {
 
     let output_str = format!(
         "
+#[allow(unreachable_patterns)]
 impl SceneCrdtState {{
     pub fn from_proto() -> Self {{
         let mut crdt_state = Self::default();
         crdt_state{defining_proto};
         crdt_state
     }}
-    
+
     pub fn get_proto_lww_component_definition(
         &self,
         component_id: SceneComponentId,
@@ -276,6 +277,7 @@ impl SceneCrdtState {{
 }}
 
 pub struct SceneCrdtStateProtoComponents();
+#[allow(unreachable_patterns)]
 impl SceneCrdtStateProtoComponents {{
 {custom_proto_methods}
 }}
