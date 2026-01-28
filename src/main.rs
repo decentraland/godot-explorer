@@ -144,7 +144,7 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
         )
-        .subcommand(Command::new("update-protocol"))
+        .subcommand(Command::new("update-protocol").about("Update protocol to @next version from npm and pin it in source code"))
         .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
         .subcommand(Command::new("strip-ios-templates").about("Strip debug symbols from installed iOS templates (macOS only)"))
         .subcommand(
@@ -399,7 +399,7 @@ fn main() -> Result<(), anyhow::Error> {
             result
         }
         ("clean-cache", _) => clear_cache_dir().map_err(|e| anyhow::anyhow!(e)),
-        ("update-protocol", _) => install_dependency::install_dcl_protocol(),
+        ("update-protocol", _) => install_dependency::update_protocol(),
         ("strip-ios-templates", _) => export::strip_ios_templates(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());

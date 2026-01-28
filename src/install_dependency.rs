@@ -32,7 +32,7 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 }
 
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-21441285601.commit-d8a2d5b.tgz");
-const PROTOCOL_TAG: &str = "protocol-squad";
+const PROTOCOL_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
     if let Some(fixed_version_url) = PROTOCOL_FIXED_VERSION_URL {
@@ -53,6 +53,26 @@ fn get_protocol_url() -> Result<String, anyhow::Error> {
         .unwrap();
 
     Ok(tarball_url.to_string())
+}
+
+/// Fetches the latest @next version URL from npm, ignoring any fixed version
+fn get_next_protocol_url() -> Result<(String, String), anyhow::Error> {
+    let package_name = "@dcl/protocol";
+
+    let client = Client::new();
+    let response = client
+        .get(format!("https://registry.npmjs.org/{package_name}"))
+        .send()?
+        .json::<Value>()?;
+
+    let next_version = response["dist-tags"][PROTOCOL_TAG]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("Could not find @next version in npm registry"))?;
+    let tarball_url = response["versions"][next_version]["dist"]["tarball"]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("Could not find tarball URL for version {}", next_version))?;
+
+    Ok((next_version.to_string(), tarball_url.to_string()))
 }
 
 pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
@@ -89,6 +109,96 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
     spinner.finish_with_message("✅ Protocol files installed");
 
     Ok(())
+}
+
+/// Updates the protocol to the latest @next version from npm and pins it in the source code
+pub fn update_protocol() -> Result<(), anyhow::Error> {
+    print_section("Updating DCL Protocol to @next");
+
+    // 1. Fetch the latest @next version from npm
+    let spinner = create_spinner("Fetching latest @next version from npm...");
+    let (version, tarball_url) = get_next_protocol_url()?;
+    spinner.finish_and_clear();
+    print_message(
+        MessageType::Success,
+        &format!("Found version: {}", version),
+    );
+
+    // 2. Download and extract proto files
+    let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}src/dcl/components");
+    let spinner = create_spinner("Downloading protocol files...");
+
+    let client = Client::new();
+    let response = client.get(&tarball_url).send()?;
+    let tarball = response.bytes()?;
+
+    let decoder = GzDecoder::new(&tarball[..]);
+    let mut archive = Archive::new(decoder);
+
+    for entry in archive.entries()? {
+        let mut entry = entry?;
+        let path = entry.path()?;
+
+        // Ignore the rest of the files
+        if !path.starts_with("package/proto") {
+            continue;
+        }
+
+        let dest_path =
+            Path::new(destination_path.as_str()).join(path.strip_prefix("package/").unwrap());
+        create_directory_all(&dest_path)?;
+        let mut file = File::create(dest_path)?;
+        io::copy(&mut entry, &mut file)?;
+    }
+
+    spinner.finish_with_message("✅ Protocol files installed");
+
+    // 3. Update the source code to pin to the new version
+    let spinner = create_spinner("Updating source code to pin new version...");
+
+    let source_file = Path::new("src/install_dependency.rs");
+    let content = fs::read_to_string(source_file)?;
+
+    // Find and replace the PROTOCOL_FIXED_VERSION_URL line
+    let new_content = update_protocol_version_in_source(&content, &tarball_url)?;
+    fs::write(source_file, new_content)?;
+
+    spinner.finish_with_message("✅ Source code updated");
+
+    print_message(
+        MessageType::Success,
+        &format!("Protocol updated to version: {}", version),
+    );
+    print_message(
+        MessageType::Info,
+        "Run 'cargo run -- build' to rebuild with the new protocol.",
+    );
+    print_message(
+        MessageType::Warning,
+        "Note: You may need to fix breaking changes if the protocol API changed.",
+    );
+
+    Ok(())
+}
+
+/// Updates the PROTOCOL_FIXED_VERSION_URL in the source code
+fn update_protocol_version_in_source(content: &str, new_url: &str) -> Result<String, anyhow::Error> {
+    use regex::Regex;
+
+    let pattern = Regex::new(r#"const PROTOCOL_FIXED_VERSION_URL: Option<&str> = (?:None|Some\("[^"]*"\));"#)?;
+
+    let replacement = format!(
+        r#"const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("{}");"#,
+        new_url
+    );
+
+    if !pattern.is_match(content) {
+        return Err(anyhow::anyhow!(
+            "Could not find PROTOCOL_FIXED_VERSION_URL in source file"
+        ));
+    }
+
+    Ok(pattern.replace(content, replacement.as_str()).to_string())
 }
 
 fn get_protoc_url() -> Option<String> {
