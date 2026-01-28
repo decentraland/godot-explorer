@@ -152,6 +152,32 @@ pub async fn process_asset(
     }
 }
 
+/// Fetch a resource, or verify it exists in cache if cache_only is set.
+async fn fetch_or_require_cache(
+    ctx: &ProcessorContext,
+    url: &str,
+    hash: &str,
+    file_path: &str,
+    cache_only: bool,
+) -> Result<(), anyhow::Error> {
+    if cache_only {
+        // Only use cache - don't download
+        if tokio::fs::metadata(file_path).await.is_ok() {
+            tracing::debug!("Cache-only hit for {}: {}", hash, file_path);
+            return Ok(());
+        }
+        return Err(anyhow::anyhow!(
+            "Cache-only mode: file not in cache for hash {}",
+            hash
+        ));
+    }
+
+    ctx.resource_provider
+        .fetch_resource(url.to_string(), hash.to_string(), file_path.to_string())
+        .await
+        .map_err(anyhow::Error::msg)
+}
+
 /// Build content mapping from the request.
 fn build_content_mapping(request: &AssetRequest) -> ContentMappingAndUrlRef {
     use crate::dcl::common::content_entity::TypedIpfsRef;
@@ -188,16 +214,16 @@ async fn process_scene_gltf(
     // Get base path for resolving relative dependencies
     let base_path = get_base_dir(&file_path);
 
-    // Download the GLTF file first to extract dependencies
+    // Download the GLTF file (or use cache if cache_only)
     let gltf_file_path = format!("{}{}", ctx.content_folder, request.hash);
-    ctx.resource_provider
-        .fetch_resource(
-            request.url.clone(),
-            request.hash.clone(),
-            gltf_file_path.clone(),
-        )
-        .await
-        .map_err(anyhow::Error::msg)?;
+    fetch_or_require_cache(
+        ctx,
+        &request.url,
+        &request.hash,
+        &gltf_file_path,
+        request.cache_only,
+    )
+    .await?;
 
     // Decompress if Draco-compressed (overwrites original file)
     decompress_gltf_if_needed(&gltf_file_path).await?;
@@ -243,16 +269,16 @@ async fn process_wearable_gltf(
     // Get base path for resolving relative dependencies
     let base_path = get_base_dir(&file_path);
 
-    // Download the GLTF file first to extract dependencies
+    // Download the GLTF file (or use cache if cache_only)
     let gltf_file_path = format!("{}{}", ctx.content_folder, request.hash);
-    ctx.resource_provider
-        .fetch_resource(
-            request.url.clone(),
-            request.hash.clone(),
-            gltf_file_path.clone(),
-        )
-        .await
-        .map_err(anyhow::Error::msg)?;
+    fetch_or_require_cache(
+        ctx,
+        &request.url,
+        &request.hash,
+        &gltf_file_path,
+        request.cache_only,
+    )
+    .await?;
 
     // Decompress if Draco-compressed (overwrites original file)
     decompress_gltf_if_needed(&gltf_file_path).await?;
@@ -298,16 +324,16 @@ async fn process_emote_gltf(
     // Get base path for resolving relative dependencies
     let base_path = get_base_dir(&file_path);
 
-    // Download the GLTF file first to extract dependencies
+    // Download the GLTF file (or use cache if cache_only)
     let gltf_file_path = format!("{}{}", ctx.content_folder, request.hash);
-    ctx.resource_provider
-        .fetch_resource(
-            request.url.clone(),
-            request.hash.clone(),
-            gltf_file_path.clone(),
-        )
-        .await
-        .map_err(anyhow::Error::msg)?;
+    fetch_or_require_cache(
+        ctx,
+        &request.url,
+        &request.hash,
+        &gltf_file_path,
+        request.cache_only,
+    )
+    .await?;
 
     // Decompress if Draco-compressed (overwrites original file)
     decompress_gltf_if_needed(&gltf_file_path).await?;
@@ -351,12 +377,29 @@ async fn process_texture(
     // Use .res extension for compressed ImageTexture (Godot binary resource format)
     let res_file_path = format!("{}{}.res", ctx.content_folder, request.hash);
 
-    // Download the raw image file
-    let bytes_vec = ctx
-        .resource_provider
-        .fetch_resource_with_data(&request.url, &request.hash, &raw_file_path)
-        .await
-        .map_err(anyhow::Error::msg)?;
+    // Download the raw image file (or read from cache if cache_only)
+    let bytes_vec = if request.cache_only {
+        if tokio::fs::metadata(&raw_file_path).await.is_ok() {
+            tracing::debug!(
+                "Cache-only hit for texture {}: {}",
+                request.hash,
+                raw_file_path
+            );
+            tokio::fs::read(&raw_file_path)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to read cached texture: {}", e))?
+        } else {
+            return Err(anyhow::anyhow!(
+                "Cache-only mode: file not in cache for hash {}",
+                request.hash
+            ));
+        }
+    } else {
+        ctx.resource_provider
+            .fetch_resource_with_data(&request.url, &request.hash, &raw_file_path)
+            .await
+            .map_err(anyhow::Error::msg)?
+    };
 
     if bytes_vec.is_empty() {
         return Err(anyhow::anyhow!("Empty texture data"));

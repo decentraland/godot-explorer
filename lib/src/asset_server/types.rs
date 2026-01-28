@@ -133,6 +133,10 @@ pub struct AssetRequest {
     /// Content mapping for GLTF dependencies (file_path -> hash)
     #[serde(default)]
     pub content_mapping: HashMap<String, String>,
+    /// If true, only use cached files - don't download anything.
+    /// Useful when another process handles downloads.
+    #[serde(default)]
+    pub cache_only: bool,
 }
 
 /// Request body for POST /process endpoint.
@@ -307,6 +311,10 @@ pub struct ProcessSceneRequest {
     /// If not provided, all processed assets are included.
     #[serde(default)]
     pub pack_hashes: Option<Vec<String>>,
+    /// If true, only use cached files - don't download anything.
+    /// Useful when another process handles downloads.
+    #[serde(default)]
+    pub cache_only: bool,
 }
 
 /// Response for POST /process-scene endpoint.

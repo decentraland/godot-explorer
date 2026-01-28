@@ -342,6 +342,8 @@ pub async fn handle_process_scene(
     let mut jobs = Vec::with_capacity(total_assets);
     let mut job_ids = Vec::with_capacity(total_assets);
 
+    let cache_only = request.cache_only;
+
     // Create jobs for all GLTF assets
     for asset in &scene_assets.gltfs {
         let asset_request = AssetRequest {
@@ -350,6 +352,7 @@ pub async fn handle_process_scene(
             hash: asset.hash.clone(),
             base_url: scene_assets.content_base_url.clone(),
             content_mapping: scene_assets.content_mapping.clone(),
+            cache_only,
         };
 
         match process_single_scene_asset(asset_request, job_manager.clone(), ctx.clone()).await {
@@ -378,6 +381,7 @@ pub async fn handle_process_scene(
             hash: asset.hash.clone(),
             base_url: scene_assets.content_base_url.clone(),
             content_mapping: Default::default(), // Textures don't need content mapping
+            cache_only,
         };
 
         match process_single_scene_asset(asset_request, job_manager.clone(), ctx.clone()).await {
