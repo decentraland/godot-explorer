@@ -812,7 +812,7 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile():
+		if Global.is_mobile() and !Global.is_virtual_mobile():
 			if DclAndroidPlugin.is_available():
 				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
 			elif DclIosPlugin.is_available():

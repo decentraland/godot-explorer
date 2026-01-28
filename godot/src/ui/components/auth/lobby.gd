@@ -232,7 +232,7 @@ func _ready():
 func _notification(what: int) -> void:
 	# On mobile, pause/resume auth timeout when app loses/gains focus
 	# This prevents timeout while user is in external browser for auth
-	if not Global.is_mobile():
+	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
 
 	if not auth_waiting_for_browser:
