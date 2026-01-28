@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::job_manager::JobManager;
-use super::packer::{pack_assets_to_zip, pack_scene_assets_to_zip};
+use super::packer::{pack_assets_to_zip, pack_scene_assets_to_zip, pack_single_asset_to_zip};
 use super::processor::{process_asset, ProcessorContext};
 use super::scene_fetcher::fetch_scene_entity;
 use super::types::{
@@ -247,6 +247,7 @@ pub async fn handle_batch_status(
         jobs: batch_jobs,
         zip_path: batch.zip_path,
         error: batch.error,
+        individual_zips: batch.individual_zips,
     })
 }
 
@@ -326,17 +327,17 @@ pub async fn handle_process_scene(
         .output_hash
         .unwrap_or_else(|| request.scene_hash.clone());
 
-    // Build pack filter from pack_hashes
-    let pack_filter = request
-        .pack_hashes
+    // Build preloaded hashes set
+    let preloaded_hashes = request
+        .preloaded_hashes
         .map(|hashes| hashes.into_iter().collect::<HashSet<String>>());
-    let pack_assets = pack_filter.as_ref().map(|f| f.len());
+    let preloaded_assets = preloaded_hashes.as_ref().map(|h| h.len());
 
     tracing::info!(
-        "Discovered {} assets in scene {}, pack_filter: {:?}",
+        "Discovered {} assets in scene {}, preloaded: {:?}",
         total_assets,
         request.scene_hash,
-        pack_assets
+        preloaded_assets
     );
 
     let mut jobs = Vec::with_capacity(total_assets);
@@ -402,13 +403,13 @@ pub async fn handle_process_scene(
         }
     }
 
-    // Create scene batch with pack filter
+    // Create scene batch with preloaded hashes
     let batch_id = job_manager
         .create_scene_batch(
             output_hash.clone(),
             job_ids,
             request.scene_hash.clone(),
-            pack_filter,
+            preloaded_hashes,
         )
         .await;
 
@@ -427,7 +428,7 @@ pub async fn handle_process_scene(
         output_hash,
         scene_hash: request.scene_hash,
         total_assets,
-        pack_assets,
+        preloaded_assets,
         jobs,
     })
 }
@@ -490,7 +491,8 @@ async fn process_single_scene_asset(
     })
 }
 
-/// Watch for scene batch completion and pack results into a ZIP file with metadata.
+/// Watch for scene batch completion, create individual ZIPs per asset,
+/// then create the main metadata ZIP with optional preloaded assets.
 async fn watch_and_pack_scene_batch(
     batch_id: String,
     job_manager: Arc<JobManager>,
@@ -507,11 +509,10 @@ async fn watch_and_pack_scene_batch(
     }
 
     tracing::info!(
-        "Scene batch {} complete, building metadata and packing",
+        "Scene batch {} complete, creating individual ZIPs and metadata",
         batch_id
     );
 
-    // All jobs done - pack into ZIP with metadata
     job_manager
         .update_batch_status(&batch_id, BatchStatus::Packing)
         .await;
@@ -522,17 +523,6 @@ async fn watch_and_pack_scene_batch(
         batch_id,
         results.len()
     );
-
-    // Log first few results for debugging
-    for (i, (hash, path, asset_type)) in results.iter().take(3).enumerate() {
-        tracing::debug!(
-            "  Result {}: hash={}, path={}, type={:?}",
-            i,
-            hash,
-            path,
-            asset_type
-        );
-    }
 
     let output_hash = match job_manager.get_batch_output_hash(&batch_id).await {
         Some(hash) => hash,
@@ -549,15 +539,31 @@ async fn watch_and_pack_scene_batch(
             "Scene batch {} has NO results! Metadata will be generated but no assets will be packed",
             batch_id
         );
-        // Don't fail - still pack the metadata so the client can know what's available
     }
 
-    // Get pack filter
-    let pack_filter = job_manager.get_batch_pack_filter(&batch_id).await;
+    // Acquire Godot thread for ZIPPacker (held for all ZIP operations)
+    let _permit = ctx.godot_single_thread.acquire().await;
+
+    // Create individual ZIPs for each completed asset
+    for (hash, path, asset_type) in &results {
+        match pack_single_asset_to_zip(hash, path, *asset_type, &ctx.output_folder) {
+            Ok(zip_path) => {
+                job_manager
+                    .add_individual_zip(&batch_id, hash.clone(), zip_path)
+                    .await;
+            }
+            Err(e) => {
+                tracing::warn!("Failed to create individual ZIP for {}: {}", hash, e);
+            }
+        }
+    }
+
+    // Get preloaded hashes
+    let preloaded_hashes = job_manager.get_batch_preloaded_hashes(&batch_id).await;
     tracing::info!(
-        "Scene batch {} pack_filter: {:?}",
+        "Scene batch {} preloaded_hashes: {:?}",
         batch_id,
-        pack_filter.as_ref().map(|f| f.len())
+        preloaded_hashes.as_ref().map(|h| h.len())
     );
 
     // Build metadata from completed jobs
@@ -571,13 +577,11 @@ async fn watch_and_pack_scene_batch(
         metadata.original_sizes.len()
     );
 
-    // Acquire Godot thread for ZIPPacker
-    let _permit = ctx.godot_single_thread.acquire().await;
-
+    // Create main metadata ZIP (with optional preloaded assets)
     match pack_scene_assets_to_zip(
         &output_hash,
         results,
-        pack_filter.as_ref(),
+        preloaded_hashes.as_ref(),
         metadata,
         &ctx.output_folder,
     ) {

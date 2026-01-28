@@ -116,9 +116,17 @@ Returns the status of a batch and all its jobs.
     }
   ],
   "zip_path": "/path/to/output-mobile.zip",
-  "error": null
+  "error": null,
+  "individual_zips": [
+    {
+      "hash": "bafkrei...",
+      "zip_path": "/path/to/bafkrei...-mobile.zip"
+    }
+  ]
 }
 ```
+
+The `individual_zips` field is present for scene batches and lists the per-asset ZIP files created. It is omitted when empty.
 
 ---
 
@@ -128,7 +136,7 @@ Returns the status of a batch and all its jobs.
 POST /process
 ```
 
-Submit individual assets for processing. Creates a batch that packages all assets into a single ZIP.
+Submit individual assets for processing (wearables/emotes). Creates a batch that packages all assets into a single ZIP.
 
 **Request:**
 ```json
@@ -180,7 +188,7 @@ Submit individual assets for processing. Creates a batch that packages all asset
 POST /process-scene
 ```
 
-Process an entire Decentraland scene by its entity hash. The server automatically discovers all assets (GLTFs, textures) in the scene and processes them.
+Process an entire Decentraland scene by its entity hash. The server automatically discovers all assets (GLTFs, textures) in the scene, processes them, creates **one ZIP per asset**, and creates a **main metadata ZIP**.
 
 **Request:**
 ```json
@@ -188,7 +196,7 @@ Process an entire Decentraland scene by its entity hash. The server automaticall
   "scene_hash": "bafkreicnqmtrwpqxgkp5qpa7tka6tq3ef5qm2jfgvqenxhxhvvp4j5odam",
   "content_base_url": "https://peer.decentraland.org/content/contents/",
   "output_hash": "my-scene-v1",
-  "pack_hashes": ["bafkrei...", "bafkrei..."]
+  "preloaded_hashes": ["bafkrei...", "bafkrei..."]
 }
 ```
 
@@ -199,7 +207,8 @@ Process an entire Decentraland scene by its entity hash. The server automaticall
 | `scene_hash` | Yes | The scene entity hash from the content server |
 | `content_base_url` | Yes | Base URL for fetching content (must end with `/`) |
 | `output_hash` | No | Custom output filename (defaults to `scene_hash`) |
-| `pack_hashes` | No | Filter which assets to include in ZIP. If omitted, all assets are included. If empty array `[]`, only metadata is included (no assets). |
+| `preloaded_hashes` | No | Asset hashes to include in the main metadata ZIP alongside the JSON. If omitted, the main ZIP contains only metadata. |
+| `cache_only` | No | If `true`, only use cached files — don't download anything. Default `false`. |
 
 **Response:**
 ```json
@@ -208,7 +217,7 @@ Process an entire Decentraland scene by its entity hash. The server automaticall
   "output_hash": "my-scene-v1",
   "scene_hash": "bafkreicnqmtrwpqxgkp5qpa7tka6tq3ef5qm2jfgvqenxhxhvvp4j5odam",
   "total_assets": 186,
-  "pack_assets": 10,
+  "preloaded_assets": 2,
   "jobs": [
     {
       "job_id": "uuid",
@@ -249,56 +258,58 @@ Process an entire Decentraland scene by its entity hash. The server automaticall
 | Status | Description |
 |--------|-------------|
 | `processing` | Jobs are still being processed |
-| `packing` | All jobs done, creating ZIP file |
-| `completed` | ZIP created successfully |
+| `packing` | All jobs done, creating ZIP files |
+| `completed` | All ZIPs created successfully |
 | `failed` | Error occurred (check `error` field) |
 
 ---
 
 ## ZIP Output Structure
 
-### Full Scene Pack
+### Individual Asset ZIPs
 
-When processing a scene with all assets:
+Each processed asset gets its own ZIP (`{hash}-mobile.zip`):
+
+```
+{gltf_hash}-mobile.zip
+└── glbs/{gltf_hash}.scn
+
+{texture_hash}-mobile.zip
+└── content/{texture_hash}.res
+```
+
+### Main Metadata ZIP
+
+The main ZIP (`{output_hash}-mobile.zip`) always contains the metadata JSON. If `preloaded_hashes` are specified, those assets are also included:
 
 ```
 {output_hash}-mobile.zip
-├── {scene_hash}-optimized.json    # Metadata
+├── {output_hash}-optimized.json   # Always present
 ├── glbs/
-│   ├── {gltf_hash_1}.scn          # Processed GLTFs
-│   ├── {gltf_hash_2}.scn
+│   └── {preloaded_gltf}.scn      # Only if in preloaded_hashes
+└── content/
+    └── {preloaded_texture}.res   # Only if in preloaded_hashes
+```
+
+### Wearable/Emote Pack (`/process`)
+
+All assets packed together:
+
+```
+{output_hash}-mobile.zip
+├── glbs/
+│   ├── {hash_1}.scn
 │   └── ...
 └── content/
-    ├── {texture_hash_1}.res       # Processed textures
-    ├── {texture_hash_2}.res
+    ├── {hash_1}.res
     └── ...
-```
-
-### Metadata-Only Pack
-
-When `pack_hashes` is an empty array:
-
-```
-{output_hash}-mobile.zip
-└── {scene_hash}-optimized.json    # Metadata only
-```
-
-### Individual Asset Pack
-
-When processing a single asset:
-
-```
-{hash}-mobile.zip
-└── glbs/{hash}.scn                # For GLTFs
-    OR
-└── content/{hash}.res             # For textures
 ```
 
 ---
 
 ## Metadata JSON Format
 
-The `{scene_hash}-optimized.json` file contains:
+The `{output_hash}-optimized.json` file contains:
 
 ```json
 {
@@ -333,10 +344,10 @@ The `{scene_hash}-optimized.json` file contains:
 
 ## Example Usage
 
-### Process a Scene (Full Pack)
+### Process a Scene
 
 ```bash
-# Submit scene for processing
+# Submit scene for processing (metadata only + individual ZIPs per asset)
 curl -X POST http://localhost:8080/process-scene \
   -H "Content-Type: application/json" \
   -d '{
@@ -349,10 +360,12 @@ curl -X POST http://localhost:8080/process-scene \
 # Poll for completion
 curl http://localhost:8080/status/abc-123
 
-# When status is "completed", zip_path contains the output file
+# When status is "completed":
+# - zip_path contains the main metadata ZIP
+# - individual_zips lists each per-asset ZIP
 ```
 
-### Process Scene (Metadata Only)
+### Process Scene with Preloaded Assets
 
 ```bash
 curl -X POST http://localhost:8080/process-scene \
@@ -360,21 +373,11 @@ curl -X POST http://localhost:8080/process-scene \
   -d '{
     "scene_hash": "bafkrei...",
     "content_base_url": "https://peer.decentraland.org/content/contents/",
-    "pack_hashes": []
+    "preloaded_hashes": ["bafkrei-gltf-1", "bafkrei-texture-1"]
   }'
 ```
 
-### Process Scene (Selective Packing)
-
-```bash
-curl -X POST http://localhost:8080/process-scene \
-  -H "Content-Type: application/json" \
-  -d '{
-    "scene_hash": "bafkrei...",
-    "content_base_url": "https://peer.decentraland.org/content/contents/",
-    "pack_hashes": ["bafkrei-gltf-1", "bafkrei-texture-1"]
-  }'
-```
+The main metadata ZIP will include the specified assets alongside the JSON metadata.
 
 ---
 
@@ -383,11 +386,11 @@ curl -X POST http://localhost:8080/process-scene \
 A Python test script is provided for testing the server:
 
 ```bash
-# Process Genesis Plaza (full pack)
-./scripts/test_asset_server.py --full 0,0
+# Process a scene (individual ZIPs + metadata-only main ZIP)
+./scripts/test_asset_server.py 0,0
 
-# Process with metadata only, then create individual bundles
-./scripts/test_asset_server.py --individual 0,0
+# Process with preloaded assets in main ZIP
+./scripts/test_asset_server.py --preloaded-hashes hash1,hash2 0,0
 
 # Use custom port
 ./scripts/test_asset_server.py --port 9000 0,0

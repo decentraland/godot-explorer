@@ -78,8 +78,10 @@ pub struct Batch {
     pub created_at: Instant,
     /// Scene hash (for process-scene batches)
     pub scene_hash: Option<String>,
-    /// Filter for which assets to pack (None = pack all)
-    pub pack_filter: Option<HashSet<String>>,
+    /// Hashes of assets to preload into the main metadata ZIP
+    pub preloaded_hashes: Option<HashSet<String>>,
+    /// Individual ZIP files created for each asset
+    pub individual_zips: Vec<IndividualZipInfo>,
 }
 
 impl Batch {
@@ -93,7 +95,8 @@ impl Batch {
             error: None,
             created_at: Instant::now(),
             scene_hash: None,
-            pack_filter: None,
+            preloaded_hashes: None,
+            individual_zips: Vec::new(),
         }
     }
 
@@ -102,7 +105,7 @@ impl Batch {
         output_hash: String,
         job_ids: Vec<String>,
         scene_hash: String,
-        pack_filter: Option<HashSet<String>>,
+        preloaded_hashes: Option<HashSet<String>>,
     ) -> Self {
         Self {
             id,
@@ -113,7 +116,8 @@ impl Batch {
             error: None,
             created_at: Instant::now(),
             scene_hash: Some(scene_hash),
-            pack_filter,
+            preloaded_hashes,
+            individual_zips: Vec::new(),
         }
     }
 }
@@ -270,6 +274,9 @@ pub struct BatchStatusResponse {
     pub zip_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// Individual asset ZIP files created so far
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub individual_zips: Vec<IndividualZipInfo>,
 }
 
 /// Response for GET /jobs endpoint.
@@ -307,10 +314,10 @@ pub struct ProcessSceneRequest {
     /// Output hash for the ZIP filename (defaults to scene_hash)
     #[serde(default)]
     pub output_hash: Option<String>,
-    /// Optional filter for which hashes to include in the ZIP.
-    /// If not provided, all processed assets are included.
+    /// Optional list of asset hashes to preload into the main metadata ZIP.
+    /// If not provided, the main ZIP contains only metadata JSON.
     #[serde(default)]
-    pub pack_hashes: Option<Vec<String>>,
+    pub preloaded_hashes: Option<Vec<String>>,
     /// If true, only use cached files - don't download anything.
     /// Useful when another process handles downloads.
     #[serde(default)]
@@ -328,11 +335,18 @@ pub struct ProcessSceneResponse {
     pub scene_hash: String,
     /// Total number of assets discovered
     pub total_assets: usize,
-    /// Number of assets that will be packed (if pack_hashes provided)
+    /// Number of assets that will be preloaded into the main ZIP
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pack_assets: Option<usize>,
+    pub preloaded_assets: Option<usize>,
     /// List of job responses (one per asset)
     pub jobs: Vec<JobResponse>,
+}
+
+/// Info about an individual asset ZIP file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndividualZipInfo {
+    pub hash: String,
+    pub zip_path: String,
 }
 
 /// Metadata stored in the ZIP file describing the optimization results.

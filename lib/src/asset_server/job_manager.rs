@@ -154,7 +154,7 @@ impl JobManager {
         output_hash: String,
         job_ids: Vec<String>,
         scene_hash: String,
-        pack_filter: Option<HashSet<String>>,
+        preloaded_hashes: Option<HashSet<String>>,
     ) -> String {
         let batch_id = Uuid::new_v4().to_string();
         let batch = Batch::new_scene_batch(
@@ -162,7 +162,7 @@ impl JobManager {
             output_hash,
             job_ids,
             scene_hash,
-            pack_filter,
+            preloaded_hashes,
         );
 
         let mut batches = self.batches.write().await;
@@ -271,10 +271,22 @@ impl JobManager {
         batches.get(batch_id).map(|b| b.output_hash.clone())
     }
 
-    /// Get the pack filter for a batch.
-    pub async fn get_batch_pack_filter(&self, batch_id: &str) -> Option<HashSet<String>> {
+    /// Get the preloaded hashes for a batch.
+    pub async fn get_batch_preloaded_hashes(&self, batch_id: &str) -> Option<HashSet<String>> {
         let batches = self.batches.read().await;
-        batches.get(batch_id).and_then(|b| b.pack_filter.clone())
+        batches
+            .get(batch_id)
+            .and_then(|b| b.preloaded_hashes.clone())
+    }
+
+    /// Add an individual ZIP info to a batch.
+    pub async fn add_individual_zip(&self, batch_id: &str, hash: String, zip_path: String) {
+        let mut batches = self.batches.write().await;
+        if let Some(batch) = batches.get_mut(batch_id) {
+            batch
+                .individual_zips
+                .push(super::types::IndividualZipInfo { hash, zip_path });
+        }
     }
 
     /// Build scene optimization metadata from completed jobs in a batch.

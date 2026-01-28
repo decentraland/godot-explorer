@@ -119,64 +119,112 @@ pub fn pack_assets_to_zip(
     Ok(zip_path)
 }
 
-/// Pack scene assets into a ZIP file with metadata and optional selective packing.
+/// Pack a single asset into its own ZIP file.
+///
+/// Creates `{output_folder}{hash}-mobile.zip` containing a single `.scn` or `.res` file.
+pub fn pack_single_asset_to_zip(
+    hash: &str,
+    optimized_path: &str,
+    asset_type: AssetType,
+    output_folder: &str,
+) -> Result<String, anyhow::Error> {
+    let zip_path = format!("{}{}-mobile.zip", output_folder, hash);
+
+    tracing::info!("Packing single asset {} to ZIP: {}", hash, zip_path);
+
+    let mut packer = ZipPacker::new_gd();
+
+    let err = packer
+        .open_ex(&GString::from(&zip_path))
+        .append(ZipAppend::CREATE)
+        .done();
+    if err != godot::global::Error::OK {
+        return Err(anyhow::anyhow!(
+            "Failed to open ZIP file for writing: {:?}",
+            err
+        ));
+    }
+
+    let file_access = FileAccess::open(&GString::from(optimized_path), ModeFlags::READ);
+    let Some(mut file) = file_access else {
+        packer.close();
+        return Err(anyhow::anyhow!(
+            "Failed to open file for packing: {}",
+            optimized_path
+        ));
+    };
+
+    let data = file.get_buffer(file.get_length() as i64);
+    file.close();
+
+    let zip_internal_path = match asset_type {
+        AssetType::Texture => format!("content/{}.res", hash),
+        _ => format!("glbs/{}.scn", hash),
+    };
+
+    let err = packer.start_file(&GString::from(&zip_internal_path));
+    if err != godot::global::Error::OK {
+        packer.close();
+        return Err(anyhow::anyhow!(
+            "Failed to start file entry in ZIP: {:?}",
+            err
+        ));
+    }
+
+    let err = packer.write_file(&data);
+    if err != godot::global::Error::OK {
+        let _ = packer.close_file();
+        packer.close();
+        return Err(anyhow::anyhow!(
+            "Failed to write file data to ZIP: {:?}",
+            err
+        ));
+    }
+
+    let _ = packer.close_file();
+
+    let err = packer.close();
+    if err != godot::global::Error::OK {
+        return Err(anyhow::anyhow!("Failed to close ZIP file: {:?}", err));
+    }
+
+    tracing::info!("Individual ZIP created: {}", zip_path);
+    Ok(zip_path)
+}
+
+/// Pack scene metadata and optionally preloaded assets into a ZIP file.
 ///
 /// Creates a ZIP file at `{output_folder}{output_hash}-mobile.zip` containing:
-/// - `{output_hash}-optimized.json` with optimization metadata (only for scene-level packs)
-/// - `glbs/{hash}.scn` for GLTF assets
-/// - `content/{hash}.res` for texture assets
-///
-/// Packing modes:
-/// - `pack_filter = None` → Full scene pack: all assets + metadata
-/// - `pack_filter = Some(empty)` → Metadata only: just the JSON file, no assets
-/// - `pack_filter = Some(non-empty)` → Individual bundle: filtered assets only, NO metadata
+/// - `{output_hash}-optimized.json` with optimization metadata (always)
+/// - Assets whose hashes are in `preloaded_hashes` (if any)
 ///
 /// # Arguments
 /// * `output_hash` - The hash to use for the ZIP filename
 /// * `asset_paths` - List of (hash, optimized_path, asset_type) for each completed job
-/// * `pack_filter` - Optional set of hashes to include (None = include all)
+/// * `preloaded_hashes` - Optional set of hashes to include alongside metadata
 /// * `metadata` - Scene optimization metadata to include in the ZIP
 /// * `output_folder` - The output folder path for ZIP files (e.g., `./output/`)
-///
-/// # Returns
-/// * `Ok(String)` - The path to the created ZIP file
-/// * `Err(anyhow::Error)` - If packing fails
 pub fn pack_scene_assets_to_zip(
     output_hash: &str,
     asset_paths: Vec<(String, String, AssetType)>,
-    pack_filter: Option<&HashSet<String>>,
+    preloaded_hashes: Option<&HashSet<String>>,
     metadata: SceneOptimizationMetadata,
     output_folder: &str,
 ) -> Result<String, anyhow::Error> {
     let zip_path = format!("{}{}-mobile.zip", output_folder, output_hash);
 
-    // Determine packing mode based on pack_filter:
-    // - None: full scene pack (all assets + metadata)
-    // - Some(empty): metadata-only pack (just JSON)
-    // - Some(non-empty): individual bundle (filtered assets, NO metadata)
-    let (assets_to_pack, include_metadata): (Vec<_>, bool) = match pack_filter {
-        None => {
-            // Full scene pack: all assets + metadata
-            (asset_paths, true)
-        }
-        Some(filter) if filter.is_empty() => {
-            // Metadata-only pack: no assets, just metadata
-            (Vec::new(), true)
-        }
-        Some(filter) => {
-            // Individual bundle: filtered assets only, NO metadata
-            let filtered = asset_paths
-                .into_iter()
-                .filter(|(hash, _, _)| filter.contains(hash))
-                .collect();
-            (filtered, false)
-        }
+    // Filter assets to only those in preloaded_hashes (if specified)
+    let assets_to_pack: Vec<_> = match preloaded_hashes {
+        Some(hashes) if !hashes.is_empty() => asset_paths
+            .into_iter()
+            .filter(|(hash, _, _)| hashes.contains(hash))
+            .collect(),
+        _ => Vec::new(), // No preloaded hashes or empty set = metadata only
     };
 
     tracing::info!(
-        "Packing {} assets to ZIP (metadata: {}): {}",
+        "Packing scene ZIP with metadata + {} preloaded assets: {}",
         assets_to_pack.len(),
-        include_metadata,
         zip_path
     );
 
@@ -194,8 +242,8 @@ pub fn pack_scene_assets_to_zip(
         ));
     }
 
-    // Add {output_hash}-optimized.json metadata file (only for scene-level packs)
-    if include_metadata {
+    // Always add metadata JSON
+    {
         let metadata_filename = format!("{}-optimized.json", output_hash);
         let metadata_json = serde_json::to_string_pretty(&metadata)
             .map_err(|e| anyhow::anyhow!("Failed to serialize metadata: {}", e))?;
