@@ -232,7 +232,7 @@ func _ready():
 func _notification(what: int) -> void:
 	# On mobile, pause/resume auth timeout when app loses/gains focus
 	# This prevents timeout while user is in external browser for auth
-	if not Global.is_mobile():
+	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
 
 	if not auth_waiting_for_browser:
@@ -340,7 +340,7 @@ func _on_button_different_account_pressed():
 
 func _on_button_continue_pressed():
 	Global.metrics.track_click_button("next", current_screen_name, "")
-	_async_on_profile_changed(backpack.mutable_profile)
+	_async_on_profile_changed(Global.player_identity.get_mutable_profile())
 	show_avatar_naming_screen()
 
 

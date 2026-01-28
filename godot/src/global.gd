@@ -25,6 +25,9 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal camera_mode_set(camera_mode: Global.CameraMode)
+signal run_anyway
+signal reload_scene
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -75,13 +78,12 @@ var preload_assets: PreloadAssets
 
 var locations: Node
 
+var modal_manager: ModalManager
+
 var standalone = false
 
 var network_inspector_window: Window = null
 var selected_avatar: Avatar = null
-
-var url_popup_instance = null
-var jump_in_popup_instance = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
@@ -100,34 +102,6 @@ var _is_portrait: bool = true
 var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
-
-
-func set_url_popup_instance(popup_instance) -> void:
-	url_popup_instance = popup_instance
-
-
-func show_url_popup(url: String) -> void:
-	if url_popup_instance != null:
-		url_popup_instance.open(url)
-
-
-func hide_url_popup() -> void:
-	if url_popup_instance != null:
-		url_popup_instance.close()
-
-
-func set_jump_in_popup_instance(popup_instance) -> void:
-	jump_in_popup_instance = popup_instance
-
-
-func show_jump_in_popup(coordinates: Vector2i) -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.open(coordinates)
-
-
-func hide_jump_in_popup() -> void:
-	if jump_in_popup_instance != null:
-		jump_in_popup_instance.close()
 
 
 func is_xr() -> bool:
@@ -260,6 +234,22 @@ func _ready():
 		test_runner.start.call_deferred()
 		return
 
+	# Floating Islands Benchmark mode
+	if cli.fi_benchmark_size >= 0:
+		print("Running Floating Islands Benchmark...")
+
+		# Create minimal required components for benchmark
+		self.scene_fetcher = SceneFetcher.new()
+		self.scene_fetcher.set_name("scene_fetcher")
+		get_tree().root.add_child.call_deferred(self.scene_fetcher)
+		get_tree().root.add_child.call_deferred(self.scene_runner)
+		get_tree().root.add_child.call_deferred(self.content_provider)
+
+		var fi_runner = load("res://src/tools/fi_benchmark_runner.gd").new()
+		fi_runner.set_name("FIBenchmarkRunner")
+		get_tree().root.add_child.call_deferred(fi_runner)
+		return
+
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
@@ -290,11 +280,15 @@ func _ready():
 	self.locations = load("res://src/helpers_components/locations.gd").new()
 	self.locations.set_name("locations")
 
+	self.modal_manager = load("res://src/ui/components/modal/modal_manager.gd").new()
+	self.modal_manager.set_name("modal_manager")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.locations)
+	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
@@ -636,7 +630,7 @@ func set_orientation_landscape():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(false)
@@ -658,7 +652,7 @@ func set_orientation_portrait():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(true)
@@ -834,7 +828,7 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile():
+		if Global.is_mobile() and !Global.is_virtual_mobile():
 			if DclAndroidPlugin.is_available():
 				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
 			elif DclIosPlugin.is_available():
@@ -854,3 +848,7 @@ func _notification(what: int) -> void:
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
 	NotificationsManager.async_sync_attended_events()
+
+
+func set_camera_mode(camera_mode: Global.CameraMode) -> void:
+	camera_mode_set.emit(camera_mode)

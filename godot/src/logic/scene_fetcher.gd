@@ -126,9 +126,9 @@ func on_loading_finished():
 	if scene_data != null:
 		var target_position = scene_data.scene_entity_definition.get_global_spawn_position()
 		if target_position != null:
-			# Try raycast to find ground, fallback to original position
-			var ground_position := _raycast_to_ground(target_position)
-			Global.get_explorer().move_to(ground_position, true)
+			# Trust the spawn point position, move up if inside a collider
+			var valid_position := _find_valid_spawn_position(target_position)
+			Global.get_explorer().move_to(valid_position, true)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -935,26 +935,40 @@ func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
 		0,
 		-parcel.y * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
 	)
-	var ground_position := _raycast_to_ground(parcel_center)
-	Global.get_explorer().move_to(ground_position, true)
+	# Trust the spawn point position, move up if inside a collider
+	var valid_position := _find_valid_spawn_position(parcel_center)
+	Global.get_explorer().move_to(valid_position, true)
 
 
-func _raycast_to_ground(from_position: Vector3) -> Vector3:
+## Finds a valid spawn position by trusting the spawn point and moving up if inside a collider.
+## This avoids the issue where raycasting from above causes players to spawn on top of tall objects.
+func _find_valid_spawn_position(spawn_position: Vector3) -> Vector3:
 	var space_state := get_tree().root.get_world_3d().direct_space_state
-	var ray_origin := Vector3(from_position.x, 100.0, from_position.z)
-	var ray_end := Vector3(from_position.x, -10.0, from_position.z)
+	var check_position := spawn_position
 
-	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	# Create a small sphere query to check for collisions at player position
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 0.3  # Small check radius
+	query.shape = sphere
 	# Layer 1 = scene geometry, Layer 2 = empty parcel terrain
 	query.collision_mask = 3
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
 
-	var result := space_state.intersect_ray(query)
-	if result.is_empty():
-		# No ground found, use original position or default height
-		return Vector3(from_position.x, maxf(from_position.y, 2.0), from_position.z)
+	# Move up in small increments until we find a clear position
+	var max_iterations := 50  # Prevent infinite loop (50m max)
+	for i in range(max_iterations):
+		query.transform = Transform3D(Basis.IDENTITY, check_position)
+		var results := space_state.intersect_shape(query, 1)
 
-	# Position player slightly above ground
-	return result.position + Vector3(0, 1.0, 0)
+		if results.is_empty():
+			return check_position  # Found clear position
+
+		check_position.y += 1.0  # Move up 1 meter
+
+	# Fallback: return original position if nothing found
+	return spawn_position
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
@@ -1046,9 +1060,12 @@ func async_load_scene(
 	if _purge_cache_on_first_load:
 		_purge_cache_on_first_load = false
 		var files: PackedStringArray = content_mapping.get_files()
+		var purge_promises: Array = []
 		for file_path in files:
 			var file_hash = content_mapping.get_hash(file_path)
-			Global.content_provider.purge_file(file_hash)
+			purge_promises.push_back(Global.content_provider.purge_file(file_hash))
+		# Await all purge operations to complete before fetching
+		await PromiseUtils.async_all(purge_promises)
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null

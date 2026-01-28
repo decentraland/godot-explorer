@@ -175,9 +175,24 @@ func async_take_and_compare_snapshot(
 		dcl_rpc_sender
 	)
 
-	var pending_promises := Global.content_provider.get_pending_promises()
-	if not pending_promises.is_empty():
-		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
+	# Wait for all content to finish loading with retry loop
+	var max_wait_iterations := 100  # Max ~10 seconds (100 * 100ms)
+	var stable_frames := 0
+	for i in range(max_wait_iterations):
+		var pending_promises := Global.content_provider.get_pending_promises()
+		var loading_count := Global.content_provider.count_loading_resources()
+
+		if pending_promises.is_empty() and loading_count == 0:
+			stable_frames += 1
+			# Require 3 consecutive stable checks to ensure loading is truly done
+			if stable_frames >= 3:
+				break
+		else:
+			stable_frames = 0
+			if not pending_promises.is_empty():
+				await PromiseUtils.async_all(pending_promises)
+
+		await get_tree().create_timer(0.1).timeout  # 100ms between checks
 
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()
@@ -208,9 +223,14 @@ func async_take_and_compare_snapshot(
 	Global.scene_runner.player_avatar_node.emote_controller.freeze_on_idle()
 	Global.scene_runner.player_avatar_node.hide()
 
+	# Wait for rendering to settle - more frames for complex scenes
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# Also wait a bit of real time for GPU to finish
+	await get_tree().create_timer(0.2).timeout
 
 	var viewport_img := viewport.get_texture().get_image()
 
