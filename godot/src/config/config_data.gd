@@ -212,7 +212,11 @@ func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 		_last_places.erase(place)
 
 
-func add_place_to_last_places(position: Vector2i, realm: String):
+func add_place_to_last_places(position: Vector2i, realm: String) -> void:
+	if realm == "":
+		return
+	if Realm.is_local_preview(realm):
+		return
 	var place_dict = {
 		"position": position,
 		"realm": realm,

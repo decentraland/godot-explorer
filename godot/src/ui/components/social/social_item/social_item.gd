@@ -395,14 +395,7 @@ func _async_fetch_place_data() -> void:
 	if parcel.size() < 2:
 		return
 
-	var url: String = DclUrls.places_api() + "/places?limit=1"
-	url += "&positions=%d,%d" % [parcel[0], parcel[1]]
-
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_GET, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
+	var result = await PlacesHelper.async_get_by_position(Vector2i(parcel[0], parcel[1]))
 
 	if result is PromiseError:
 		printerr("Error fetching place data: ", result.get_error())
