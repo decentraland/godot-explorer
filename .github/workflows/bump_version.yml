@@ -5,10 +5,11 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   bump-version:
-    name: Bump version and commit
+    name: Bump version and create PR
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,9 +69,17 @@ jobs:
           echo "Detailed diff:"
           git diff
 
-      - name: Commit and push
+      - name: Create branch, commit, and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW=${{ steps.new_version.outputs.new_version }}
+          BRANCH="bump-version-v${NEW}"
+          git checkout -b "$BRANCH"
           git add godot/export_presets.cfg lib/Cargo.toml lib/Cargo.lock
           git commit -m "bump version v${NEW}"
-          git push origin ${{ github.ref_name }}
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "bump version v${NEW}" \
+            --body "Automated version bump from v${{ steps.get_version.outputs.current_version }} to v${NEW}." \
+            --base "${{ github.ref_name }}"
