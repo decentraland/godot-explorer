@@ -38,6 +38,7 @@ var _playing: String
 @onready var auth_error_label = %AuthErrorLabel
 @onready var button_cancel = %Button_Cancel
 @onready var button_cancel_icon = %ButtonCancelIcon
+@onready var label_step2_title: Label = %VBoxContainer_SignInStep2/Label_Title
 
 @onready var label_avatar_name = %Label_Name
 
@@ -125,8 +126,9 @@ func show_auth_home_screen():
 	show_panel(control_signin)
 
 
-func show_auth_browser_open_screen():
+func show_auth_browser_open_screen(message: String = "Opening Browser..."):
 	track_lobby_screen("AUTH_BROWSER_OPEN")
+	label_step2_title.text = message
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
 	show_panel(control_signin)

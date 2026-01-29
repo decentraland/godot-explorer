@@ -30,6 +30,14 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		else:
 			return PackedStringArray([_plugin_name + "/bin/release/" + _plugin_name + "-release.aar"])
 
+	func _get_android_packaging_options(platform, debug):
+		# Resolve OSGI manifest conflicts between jspecify and bcprov-jdk18on
+		# (transitive dependencies of Reown/WalletConnect SDK)
+		# See: https://github.com/bcgit/bc-java/issues/1685
+		return PackedStringArray([
+			"pickFirst:META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+		])
+
 	func _get_android_dependencies(platform, debug):
 		return PackedStringArray([
 			"androidx.browser:browser:1.5.0",
@@ -37,7 +45,16 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			"androidx.media3:media3-exoplayer:1.4.1",
 			"androidx.media3:media3-exoplayer-dash:1.4.1",
 			"androidx.media3:media3-exoplayer-hls:1.4.1",
-			"androidx.media3:media3-ui:1.4.1"
+			"androidx.media3:media3-ui:1.4.1",
+			# Reown/WalletConnect Sign SDK for native wallet connection
+			"com.reown:android-core:1.5.2",
+			"com.reown:sign:1.5.2"
+		])
+
+	func _get_android_dependencies_maven_repos(platform, debug):
+		# JitPack is required for Reown/WalletConnect transitive dependencies
+		return PackedStringArray([
+			"https://jitpack.io"
 		])
 
 	func _get_name():
