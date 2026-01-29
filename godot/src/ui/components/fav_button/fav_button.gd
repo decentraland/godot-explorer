@@ -49,6 +49,7 @@ func _async_update_status() -> void:
 		return
 	if response is PromiseError:
 		printerr("Error getting place's data: ", response.get_error())
+		return
 
 	var json: Dictionary = response.get_string_response_as_json()
 	var place_data = json.data

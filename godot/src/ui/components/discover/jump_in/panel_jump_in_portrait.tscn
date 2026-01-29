@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=41 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -107,6 +107,8 @@ color = Color(0.77254903, 0.6666667, 0.8745098, 0.5019608)
 font = ExtResource("16_j63ba")
 font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 0.5019608)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4wgrb"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_db46w"]
 line_spacing = 0.0
@@ -271,7 +273,7 @@ texture = ExtResource("7_7t5hv")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Panel_Container_Image" type="PanelContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
+[node name="Panel_Container_Image" type="Panel" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
 unique_name_in_owner = true
 visible = false
 clip_children = 2
@@ -288,11 +290,13 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_u7byp")
 [node name="TextureRect_Image" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/Panel_Container_Image"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
-layout_mode = 2
+layout_mode = 0
+offset_right = 624.0
+offset_bottom = 368.0
 size_flags_vertical = 3
 size_flags_stretch_ratio = 210.0
 theme = ExtResource("1_fg6xg")
-expand_mode = 3
+expand_mode = 1
 stretch_mode = 6
 
 [node name="PanelContainer2" type="PanelContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
@@ -429,14 +433,15 @@ theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 [node name="ScrollContainer" type="ScrollContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
-scroll_vertical = 100
+size_flags_vertical = 3
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 16
+theme_override_constants/separation = 0
 
 [node name="Label_DescriptionTitle" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
@@ -447,6 +452,12 @@ theme_override_font_sizes/font_size = 12
 text = "DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
+
+[node name="HSeparator3" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_4wgrb")
 
 [node name="Label_Description" type="RichTextLabel" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -459,33 +470,20 @@ theme_override_font_sizes/bold_italics_font_size = 26
 theme_override_font_sizes/italics_font_size = 26
 theme_override_font_sizes/mono_font_size = 26
 bbcode_enabled = true
-text = "🧉 Chiri Storytelling Community 🍕
-🛠️ Chiri Builds
-Streams to learn how to create 3D Low Poly assets ready for Decentraland. We will cover the full pipeline: Idea, low poly modeling, texturing, colliders, GLB export, and importing into the Creator Hub 💻
-Each event will share a different process
-Follow 🔮 Impossible Studio in the journey of building all crazy cute ideas in the digital world & lets learn together!
-🕓 Agenda
-✨ Asset planning & references
-✨ Low poly modeling of an Asset
-✨ Textures, Colliders & Optimization
-✨ Export GLB + Creator Hub import
-✨ Builder Q&A
-Our community is inclusive, kind, and playful 🌈 everyone is welcome, whether you’re new to building or already creating worlds. Let’s share this process together! 🏡
-🧉 Chiri Storytelling Community 🍕
-🛠️ Chiri Builds
-Streams to learn how to create 3D Low Poly assets ready for Decentraland. We will cover the full pipeline: Idea, low poly modeling, texturing, colliders, GLB export, and importing into the Creator Hub 💻
-Each event will share a different process"
+text = "🧉 Chiri Storytelling Community 🍕"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator2" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
+theme_override_constants/separation = 80
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="CategoriesBar" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description" instance=ExtResource("19_7t5hv")]
+[node name="CategoriesBar" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer" instance=ExtResource("19_7t5hv")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 size_flags_vertical = 1
 
@@ -503,6 +501,7 @@ theme_override_constants/separation = 18
 [node name="EngagementBar" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3" instance=ExtResource("14_nmmsr")]
 unique_name_in_owner = true
 layout_mode = 2
+show_share_button = true
 
 [node name="Button_JumpIn" type="Button" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 custom_minimum_size = Vector2(0, 50)

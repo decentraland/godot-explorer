@@ -6,9 +6,6 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
-const TIME_PILL_BLACK = preload("res://src/ui/components/events/time_pill_black.tres")
-const TIME_PILL_RED = preload("res://src/ui/components/events/time_pill_red.tres")
-
 @export var texture: Texture2D = texture_placeholder
 @export var title: String = "Scene Title"
 @export var event_name: String = "Event Name"
@@ -45,7 +42,7 @@ func _ready():
 		set_online(onlines)
 		set_title(title)
 		set_event_name(event_name)
-		#set_description(description)
+		set_description(description)
 		set_likes_percent(likes_percent)
 		set_location(location)
 		set_event_location(location)
@@ -70,6 +67,10 @@ func _get_node_safe(node_name: String) -> Node:
 
 func _get_engagement_bar() -> HBoxContainer:
 	return _get_node_safe("EngagementBar")
+	
+	
+func _get_event_pills_bar() -> HBoxContainer:
+	return _get_node_safe("EventPillsBar")
 
 
 func _get_categories_bar() -> CategoriesBar:
@@ -150,6 +151,10 @@ func _get_label_event_name() -> Label:
 
 func _get_trending_pill() -> Control:
 	return _get_node_safe("TrendingPill")
+
+
+func _get_featured_pill() -> Control:
+	return _get_node_safe("FeaturedPill")
 
 
 func _get_duration_label() -> Label:
@@ -354,11 +359,12 @@ func set_data(item_data):
 	_data = item_data
 
 	set_title(item_data.get("title", "Unknown place"))
-	#set_description(_get_or_empty_string(item_data, "description"))
+	set_description(_get_or_empty_string(item_data, "description"))
 	set_attendees_number(item_data.get("total_attendees", 0))
-	set_trending(item_data.get("trending", false))
+
 	event_id = item_data.get("id", "id")
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
+	set_event_pills(item_data)
 	set_categories(item_data.get("categories", []))
 	# Parse event timestamp BEFORE set_attending so it's available for notifications
 	set_fav_button_data(item_data.get("id", "-"))
@@ -370,7 +376,7 @@ func set_data(item_data):
 		var timestamp = _parse_iso_timestamp(next_start_at)
 		if timestamp > 0:
 			event_start_timestamp = timestamp  # Store for notification scheduling
-			set_time(timestamp, live)
+
 
 	
 	
@@ -384,6 +390,7 @@ func set_data(item_data):
 		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
+	_update_reminder_and_jump_buttons()
 	set_user_name(item_data.get("user_name", ""))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
@@ -410,9 +417,11 @@ func set_data(item_data):
 
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))
+	
 
 	set_download_warning(item_data)
-
+	
+	
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
@@ -489,12 +498,8 @@ func set_event_name(_event_name: String, _user_name: String = "") -> void:
 		label.text = _event_name
 
 
-func set_trending(_trending: bool) -> void:
-	event_tags = "trending" if _trending else "none"
-	var trending_pill = _get_trending_pill()
-	if trending_pill:
-		trending_pill.set_visible(_trending)
 
+		
 
 func set_duration(_duration: int) -> void:
 	var duration_label = _get_duration_label()
@@ -511,29 +516,7 @@ func set_recurrent(_recurrent: bool) -> void:
 			label.text = "NO"
 
 
-func set_time(_start_at: int, live: bool) -> void:
-	var time_pill = _get_label_time_pill()
-	var live_pill = _get_label_live_pill()
-	var jump_to_event = _get_button_jump_to_event()
-	var reminder_button = _get_reminder_button()
-	var download_warning = _get_download_warning()
 
-	if download_warning:
-		download_warning.hide()
-
-	if time_pill and live_pill:
-		if live:
-			live_pill.text = "LIVE"
-			if jump_to_event and reminder_button and download_warning:
-				jump_to_event.show()
-				download_warning.show()
-				reminder_button.hide()
-			live_pill.get_parent().show()
-			time_pill.get_parent().hide()
-			return
-		var time_text = _format_timestamp(_start_at)
-		time_pill.text = time_text
-		live_pill.text = time_text
 
 
 func set_attendees_number(_attendees: int) -> void:
@@ -555,10 +538,42 @@ func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:
 		reminder_button.update_styles(_attending)
 
 
+func _update_reminder_and_jump_buttons() -> void:
+	var reminder_btn = _get_reminder_button()
+	var jump_btn = _get_button_jump_to_event()
+	if not reminder_btn or not jump_btn:
+		return
+
+	var now = Time.get_unix_time_from_system()
+	var is_live = _data.get("live", false) if _data is Dictionary else false
+	if event_start_timestamp > 0 and now >= event_start_timestamp:
+		is_live = true
+	var time_until_start_sec = event_start_timestamp - now if event_start_timestamp > 0 else 0
+	var starts_in_less_than_5_mins = (
+		event_start_timestamp > 0
+		and time_until_start_sec > 0
+		and time_until_start_sec < 300
+	)
+	var show_jump_hide_reminder = is_live or starts_in_less_than_5_mins
+
+	if show_jump_hide_reminder:
+		reminder_btn.hide()
+		jump_btn.show()
+	else:
+		reminder_btn.show()
+		jump_btn.hide()
+
+
 func set_categories(_categories:Array) -> void:
 	var categories_bar = _get_categories_bar()
 	if categories_bar:
 		categories_bar.set_categories(_categories)
+
+
+func set_event_pills(_item_data) -> void:
+	var event_pills_bar = _get_event_pills_bar()
+	if event_pills_bar:
+		event_pills_bar.set_data(_item_data)
 
 
 func _parse_iso_timestamp(iso_string: String) -> int:
@@ -609,84 +624,6 @@ func _format_timestamp_for_calendar(timestamp: int) -> String:
 			time_dict.second
 		]
 	)
-
-
-func _format_timestamp(timestamp: int) -> String:
-	var now = Time.get_unix_time_from_system()
-	var time_diff = timestamp - now
-	var live_pill_parent = _get_label_live_pill().get_parent()
-	var time_pill = _get_label_time_pill()
-	var time_pill_parent = time_pill.get_parent()
-	var jump_in_button = _get_button_jump_to_event()
-	var reminder_button = _get_reminder_button()
-	# Create unique styles for this instance
-	var time_pill_parent_style = time_pill_parent.get_theme_stylebox("panel")
-	if time_pill_parent_style:
-		var unique_style = time_pill_parent_style.duplicate()
-		unique_style.border_color = Color("#161518")
-		time_pill_parent.add_theme_stylebox_override("panel", unique_style)
-
-	if time_pill:
-		time_pill.label_settings = TIME_PILL_BLACK
-
-	# If event has passed, show date
-	if time_diff <= 0:
-		var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
-		var month_names = [
-			"", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
-		]
-		return month_names[time_dict.month] + " " + str(time_dict.day)
-
-	# Calculate time differences
-	var minutes_diff = time_diff / 60
-	var hours_diff = time_diff / 3600
-	var days_diff = time_diff / 86400
-
-	if minutes_diff < 5:
-		live_pill_parent.show()
-		time_pill_parent.hide()
-		if jump_in_button and reminder_button:
-			jump_in_button.show()
-			reminder_button.hide()
-		return "IN " + str(int(minutes_diff)) + " MINS"
-
-	live_pill_parent.hide()
-	time_pill_parent.show()
-	if jump_in_button and reminder_button:
-		jump_in_button.hide()
-		reminder_button.show()
-
-	# If less than 1 hour remaining: IN XX MINUTES
-	if hours_diff < 1:
-		# Create unique styles for this instance with red color
-		if time_pill_parent:
-			var original_style = time_pill_parent.get_theme_stylebox("panel")
-			if original_style:
-				var red_style = original_style.duplicate()
-				red_style.border_color = Color("#ff2d55")
-				time_pill_parent.add_theme_stylebox_override("panel", red_style)
-
-		if time_pill:
-			time_pill.label_settings = TIME_PILL_RED
-
-		return "IN " + str(int(minutes_diff)) + " MINS"
-
-	# If less than 48 hours remaining: IN XX HOURS
-	if hours_diff < 48:
-		if hours_diff > 2:
-			return "IN " + str(int(hours_diff)) + " HRS"
-		return "IN " + str(int(hours_diff)) + " HR"
-
-	# If 7 days or less remaining: IN X DAYS
-	if days_diff <= 7:
-		return "IN " + str(int(days_diff)) + " DAYS"
-
-	# If more than 7 days remaining: Show date in SEPT 31 format
-	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
-	var month_names = [
-		"", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
-	]
-	return month_names[time_dict.month] + " " + str(time_dict.day)
 
 
 func _format_duration(duration: int) -> String:

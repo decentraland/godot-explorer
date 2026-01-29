@@ -15,7 +15,7 @@ script = ExtResource("1_trky3")
 
 [node name="Button_Share" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(94, 46)
+custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
@@ -29,7 +29,7 @@ expand_icon = true
 
 [node name="Button_Like" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(94, 46)
+custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
@@ -59,7 +59,7 @@ pivot_offset = Vector2(64, 64)
 
 [node name="Button_Dislike" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(94, 46)
+custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0

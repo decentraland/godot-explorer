@@ -1,14 +1,11 @@
-[gd_scene load_steps=26 format=3 uid="uid://dj4nqjjptw0th"]
+[gd_scene load_steps=15 format=3 uid="uid://dj4nqjjptw0th"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gwscp"]
 [ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_0xa1v"]
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_gwscp"]
 [ext_resource type="LabelSettings" uid="uid://c8st3oitu2gpy" path="res://src/ui/components/events/event_title.tres" id="4_xxfdn"]
-[ext_resource type="Script" uid="uid://bvaim5gv74xer" path="res://src/ui/components/circle_rect/circle_rect.gd" id="5_0y7ny"]
-[ext_resource type="LabelSettings" uid="uid://u04j325p422e" path="res://src/ui/components/events/time_pill_black.tres" id="5_7lpam"]
-[ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="5_hq8br"]
+[ext_resource type="PackedScene" uid="uid://mv4erfb0rl17" path="res://src/ui/components/discover/event_pills_bar/event_pills_bar.tscn" id="5_gwscp"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_0y7ny"]
 [ext_resource type="LabelSettings" uid="uid://cxx8iqtxnfbqt" path="res://src/ui/components/events/event_creator.tres" id="9_qwmgv"]
 
@@ -37,59 +34,6 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fhlt6"]
-content_margin_left = 8.0
-content_margin_right = 8.0
-bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="LabelSettings" id="LabelSettings_kyirg"]
-font = ExtResource("4_gwscp")
-font_size = 18
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aes4k"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(1, 1, 1, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0, 0, 0, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kdyy4"]
-content_margin_left = 8.0
-content_margin_right = 8.0
-bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.9019608)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gwscp"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lpam"]
-content_margin_left = 0.0
-content_margin_right = 0.0
-bg_color = Color(0.20392157, 0.7529412, 0.4392157, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="Gradient" id="Gradient_xxfdn"]
-colors = PackedColorArray(0.20392157, 0.7529412, 0.4392157, 1, 0.13333334, 0.75686276, 0.75686276, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_0xa1v"]
-gradient = SubResource("Gradient_xxfdn")
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xxfdn"]
 
@@ -187,110 +131,9 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 12
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer"]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-size_flags_vertical = 0
-mouse_filter = 2
-theme_override_constants/separation = 8
-
-[node name="LivePill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_fhlt6")
-
-[node name="Label_LivePill" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/LivePill"]
+[node name="EventPillsBar" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer" instance=ExtResource("5_gwscp")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 1
-text = "live"
-label_settings = SubResource("LabelSettings_kyirg")
-horizontal_alignment = 1
-vertical_alignment = 1
-uppercase = true
-
-[node name="TimePill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(75, 0)
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_aes4k")
-
-[node name="Label_TimePill" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TimePill"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 1
-text = "IN 35 MINS"
-label_settings = ExtResource("5_7lpam")
-horizontal_alignment = 1
-vertical_alignment = 1
-uppercase = true
-
-[node name="AttendeesPill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_kdyy4")
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill"]
-layout_mode = 2
-theme_override_constants/separation = 1
-
-[node name="ColorRect" type="Control" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill/HBoxContainer"]
-custom_minimum_size = Vector2(10, 10)
-layout_mode = 2
-script = ExtResource("5_0y7ny")
-color = Color(0.1882353, 0.8039216, 0, 1)
-radius = 5.0
-
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill/HBoxContainer"]
-custom_minimum_size = Vector2(22, 22)
-layout_mode = 2
-texture = ExtResource("5_hq8br")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Label_AttendeesNumber" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/AttendeesPill/HBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 1
-text = "000"
-label_settings = SubResource("LabelSettings_kyirg")
-horizontal_alignment = 1
-vertical_alignment = 1
-uppercase = true
-
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_styles/separator = SubResource("StyleBoxEmpty_gwscp")
-
-[node name="TrendingPill" type="PanelContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-clip_children = 2
-custom_minimum_size = Vector2(0, 22)
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_7lpam")
-
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TrendingPill"]
-layout_mode = 2
-texture = SubResource("GradientTexture1D_0xa1v")
-expand_mode = 1
-
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TrendingPill"]
-layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_right = 8
-
-[node name="Label" type="Label" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer/HBoxContainer/TrendingPill/MarginContainer"]
-layout_mode = 2
-size_flags_vertical = 1
-text = "Trending"
-label_settings = SubResource("LabelSettings_kyirg")
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
 layout_mode = 2

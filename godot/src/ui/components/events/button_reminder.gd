@@ -4,7 +4,12 @@ const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
 # DEBUG: Set to true to trigger notifications in 10 seconds instead of actual event time
 const DEBUG_TRIGGER_IN_10_SECONDS = false
+const color_pressed = Color("#FD4766")
+const color_normal = Color("#FCFCFC")
+const color_while = Color("#CFCDD4")
 
+var bell_texture = load("res://assets/ui/bell.svg")
+var check_texture = load("res://assets/ui/check.svg")
 var event_id_value: String
 var event_tags: String
 var event_start_timestamp: int = 0  # Unix timestamp (seconds) when event starts
@@ -12,15 +17,11 @@ var event_name: String = ""
 var event_coordinates: Vector2i = Vector2i(0, 0)
 var event_cover_image_url: String = ""
 
-@onready var texture_progress_bar: TextureProgressBar = $TextureProgressBar
-@onready var texture_rect_add: TextureRect = %TextureRect_Add
-@onready var texture_rect_remove: TextureRect = %TextureRect_Remove
+@onready var texture_rect_icon: TextureRect = %TextureRect_Icon
 @onready var label: Label = %Label
-@onready var h_box_container_content: HBoxContainer = %HBoxContainer_Content
-
 
 func _ready() -> void:
-	pass
+	_set_loading(false)
 
 
 func _async_on_toggled(toggled_on: bool) -> void:
@@ -69,42 +70,31 @@ func _async_on_toggled(toggled_on: bool) -> void:
 
 
 func _set_loading(status: bool) -> void:
-	if status:
-		texture_progress_bar.show()
-		self_modulate = "FFFFFF00"
-		h_box_container_content.modulate = "FFFFFF00"
-		disabled = true
-	else:
-		disabled = false
-		texture_progress_bar.hide()
-		self_modulate = "FFFFFF"
-		h_box_container_content.modulate = "FFFFFF"
-
+	disabled = status
+	texture_rect_icon.texture = bell_texture
+	texture_rect_icon.modulate = color_while
+	label.label_settings.font_color = color_while
+	if status == false:
+		update_styles(button_pressed)
 
 func update_styles(toggled_on):
 	var guest_profile := Global.player_identity.is_guest
 	if guest_profile:
 		disabled = true
 		label.text = "SIGN IN TO USE REMINDERS"
-		label.label_settings.font_color = "#ffffff"
-		label.label_settings.font_size = 18
-		texture_rect_add.hide()
-		texture_rect_remove.hide()
+		texture_rect_icon = null
 	else:
 		disabled = false
-		label.label_settings.font_size = 22
+		label.text = "REMIND ME"
 		if toggled_on:
-			label.text = "REMINDER"
-			label.label_settings.font_color = "#161518"
-			texture_rect_add.hide()
-			texture_rect_remove.show()
+			texture_rect_icon.texture = check_texture
+			texture_rect_icon.modulate = color_pressed
+			label.label_settings.font_color = color_pressed
 		else:
-			label.text = "REMINDER"
-			label.label_settings.font_color = "#ff2d55"
-			texture_rect_add.show()
-			texture_rect_remove.hide()
-
-
+			texture_rect_icon.texture = bell_texture
+			texture_rect_icon.modulate = color_normal
+			label.label_settings.font_color = color_normal
+			
 func _async_schedule_local_notification() -> void:
 	# Validate event data
 	if event_id_value.is_empty():
