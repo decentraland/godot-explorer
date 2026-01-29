@@ -169,24 +169,24 @@ func _create_benchmark_scene() -> void:
 	# Add a camera
 	var camera := Camera3D.new()
 	camera.position = Vector3(0, 8, 20)
-	camera.look_at(Vector3.ZERO)
 	_benchmark_viewport.add_child(camera)
+	camera.look_at(Vector3.ZERO)
 
 	# Add main directional light with high-quality shadows
 	var sun := DirectionalLight3D.new()
 	sun.position = Vector3(10, 20, 10)
-	sun.look_at(Vector3.ZERO)
 	sun.shadow_enabled = true
 	sun.light_energy = 1.2
 	sun.shadow_bias = 0.02
 	_benchmark_viewport.add_child(sun)
+	sun.look_at(Vector3.ZERO)
 
 	# Add secondary fill light
 	var fill_light := DirectionalLight3D.new()
 	fill_light.position = Vector3(-10, 5, -5)
-	fill_light.look_at(Vector3.ZERO)
 	fill_light.light_energy = 0.3
 	_benchmark_viewport.add_child(fill_light)
+	fill_light.look_at(Vector3.ZERO)
 
 	# Add multiple point lights for more realistic lighting
 	for i in range(4):
