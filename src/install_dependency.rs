@@ -31,7 +31,7 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-21486655362.commit-ec8b96e.tgz");
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-21486681149.commit-da1da45.tgz");
 const PROTOCOL_TAG: &str = "protocol-squad";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
@@ -67,7 +67,7 @@ fn get_next_protocol_url() -> Result<(String, String), anyhow::Error> {
 
     let next_version = response["dist-tags"][PROTOCOL_TAG]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Could not find @next version in npm registry"))?;
+        .ok_or_else(|| anyhow::anyhow!("Could not find @{} version in npm registry", PROTOCOL_TAG))?;
     let tarball_url = response["versions"][next_version]["dist"]["tarball"]
         .as_str()
         .ok_or_else(|| anyhow::anyhow!("Could not find tarball URL for version {}", next_version))?;
@@ -111,12 +111,12 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// Updates the protocol to the latest @next version from npm and pins it in the source code
+/// Updates the protocol to the latest version from npm using the configured tag and pins it in the source code
 pub fn update_protocol() -> Result<(), anyhow::Error> {
-    print_section("Updating DCL Protocol to @next");
+    print_section(&format!("Updating DCL Protocol to @{}", PROTOCOL_TAG));
 
-    // 1. Fetch the latest @next version from npm
-    let spinner = create_spinner("Fetching latest @next version from npm...");
+    // 1. Fetch the latest version from npm
+    let spinner = create_spinner(&format!("Fetching latest @{} version from npm...", PROTOCOL_TAG));
     let (version, tarball_url) = get_next_protocol_url()?;
     spinner.finish_and_clear();
     print_message(
