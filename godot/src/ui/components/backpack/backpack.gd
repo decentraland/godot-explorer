@@ -200,9 +200,11 @@ func _unset_avatar_loading(current: int):
 
 
 func _async_update_avatar():
-	Global.player_identity.get_mutable_profile().set_avatar(
-		Global.player_identity.get_mutable_avatar()
-	)
+	var mutable_profile = Global.player_identity.get_mutable_profile()
+	var mutable_avatar = Global.player_identity.get_mutable_avatar()
+	if mutable_profile == null or mutable_avatar == null:
+		return
+	mutable_profile.set_avatar(mutable_avatar)
 
 	var loading_id := _set_avatar_loading()
 	await avatar_preview.avatar.async_update_avatar_from_profile(
@@ -281,16 +283,20 @@ func _on_wearable_filter_button_filter_type(type):
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
 
+	var mutable_avatar = Global.player_identity.get_mutable_avatar()
+	if mutable_avatar == null:
+		return
+
 	var should_hide = false
 	if type == Wearables.Categories.BODY_SHAPE:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
-		skin_color_picker.set_color(Global.player_identity.get_mutable_avatar().get_skin_color())
+		skin_color_picker.set_color(mutable_avatar.get_skin_color())
 	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
-		skin_color_picker.set_color(Global.player_identity.get_mutable_avatar().get_hair_color())
+		skin_color_picker.set_color(mutable_avatar.get_hair_color())
 	elif type == Wearables.Categories.EYES:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
-		skin_color_picker.set_color(Global.player_identity.get_mutable_avatar().get_eyes_color())
+		skin_color_picker.set_color(mutable_avatar.get_eyes_color())
 	else:
 		should_hide = true
 
