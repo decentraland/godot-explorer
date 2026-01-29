@@ -2,13 +2,13 @@
 
 importer="svg"
 type="DPITexture"
-uid="uid://dt2en45rqmrsa"
-path="res://.godot/imported/Exit.svg-b834dc8a7c5dd05761702508df00f2e9.dpitex"
+uid="uid://tb418rt45n8d"
+path="res://.godot/imported/exit.svg-bc80ee5d9be65a0debf09e97bc516c95.dpitex"
 
 [deps]
 
-source_file="res://assets/themes/dark_dcl_theme/icons/Exit.svg"
-dest_files=["res://.godot/imported/Exit.svg-b834dc8a7c5dd05761702508df00f2e9.dpitex"]
+source_file="res://assets/themes/dark_dcl_theme/icons/exit.svg"
+dest_files=["res://.godot/imported/exit.svg-bc80ee5d9be65a0debf09e97bc516c95.dpitex"]
 
 [params]
 

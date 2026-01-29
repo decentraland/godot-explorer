@@ -1,20 +1,21 @@
-[gd_scene load_steps=39 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=40 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
+[ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_4wgrb"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_7t5hv"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_3inh7"]
 [ext_resource type="LabelSettings" uid="uid://h2fat30rck6x" path="res://src/ui/components/discover/jump_in/jump_in_tittle.tres" id="4_7t5hv"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_wln2f"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_4wgrb"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_i8f38"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_jnv06"]
+[ext_resource type="PackedScene" uid="uid://d34drip3k5oc4" path="res://src/ui/components/fav_button/fav_button.tscn" id="6_i8f38"]
 [ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="7_7t5hv"]
-[ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_ysug5"]
 [ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="9_ietwf"]
 [ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="9_vaiub"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_cpvjm"]
 [ext_resource type="LabelSettings" uid="uid://3jaxrloree20" path="res://src/ui/components/discover/jump_in/jump_in_stats.tres" id="11_2e4jp"]
-[ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="11_627ff"]
 [ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="12_rpsre"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="12_whm4w"]
 [ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="14_nmmsr"]
@@ -57,8 +58,14 @@ font = ExtResource("5_i8f38")
 font_size = 26
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u7byp"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_db46w"]
 bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
+corner_radius_top_left = 17
+corner_radius_top_right = 17
+corner_radius_bottom_right = 17
+corner_radius_bottom_left = 17
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u7byp"]
 corner_radius_top_left = 17
 corner_radius_top_right = 17
 corner_radius_bottom_right = 17
@@ -82,6 +89,7 @@ content_margin_top = 4.0
 content_margin_right = 0.0
 content_margin_bottom = 4.0
 color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+thickness = 2
 vertical = true
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_7t5hv"]
@@ -94,22 +102,16 @@ vertical = true
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_4wgrb"]
 color = Color(0.77254903, 0.6666667, 0.8745098, 0.5019608)
-grow_begin = 2.0
-grow_end = 2.0
 
 [sub_resource type="LabelSettings" id="LabelSettings_4wgrb"]
 font = ExtResource("16_j63ba")
 font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 0.5019608)
 
-[sub_resource type="LabelSettings" id="LabelSettings_elce2"]
-font = ExtResource("5_4wgrb")
-font_size = 26
-font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
-
 [sub_resource type="LabelSettings" id="LabelSettings_db46w"]
+line_spacing = 0.0
 font = ExtResource("16_j63ba")
-font_size = 22
+font_size = 30
 
 [node name="PanelJumpInPortrait" type="ColorRect"]
 anchors_preset = 15
@@ -128,7 +130,7 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -869.0
+offset_top = -847.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
@@ -149,19 +151,28 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_vq3of")
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Card/PanelContainer_Content"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="PanelContainer_Card/PanelContainer_Content"]
+layout_mode = 2
+script = ExtResource("2_7t5hv")
+use_left = false
+use_right = false
+use_top = false
+use_bottom = false
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 86
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Panel" type="Button" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(200, 30)
+[node name="Panel" type="Button" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(200, 8)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_i8f38")
@@ -177,24 +188,24 @@ theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_i8f38")
 theme_override_styles/focus = SubResource("StyleBoxFlat_i8f38")
 toggle_mode = true
 
-[node name="HSeparator" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 20
 
-[node name="HBoxContainer2" type="MarginContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="MarginContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/margin_right = 30
 
-[node name="Label_Title" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="Label_Title" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -204,17 +215,17 @@ text = "Scene Title"
 label_settings = ExtResource("4_7t5hv")
 autowrap_mode = 2
 
-[node name="HBoxContainer_Creator" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer_Creator" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Label_by" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_by" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
 layout_mode = 2
 text = "by"
 label_settings = SubResource("LabelSettings_i8f38")
 
-[node name="Label_Creator" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_Creator" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -223,16 +234,46 @@ label_settings = SubResource("LabelSettings_7t5hv")
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="HSeparator2" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="FavButton" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer" instance=ExtResource("6_i8f38")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator2" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 32
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="Control" type="Control" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="Control" type="Control" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 368)
 layout_mode = 2
 
-[node name="Panel_Container" type="PanelContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/Control"]
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
+unique_name_in_owner = true
+clip_children = 2
+custom_minimum_size = Vector2(0, 368)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_db46w")
+
+[node name="TextureRect_NoImage" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/Panel_Container_NoImage"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("1_fg6xg")
+texture = ExtResource("7_7t5hv")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Panel_Container_Image" type="PanelContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
+unique_name_in_owner = true
+visible = false
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
 layout_mode = 1
@@ -244,18 +285,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_u7byp")
 
-[node name="TextureRect_NoImage" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/Control/Panel_Container"]
-custom_minimum_size = Vector2(0, 120)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-size_flags_stretch_ratio = 210.0
-theme = ExtResource("1_fg6xg")
-texture = ExtResource("7_7t5hv")
-expand_mode = 3
-stretch_mode = 5
-
-[node name="TextureRect_Image" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/Control/Panel_Container"]
+[node name="TextureRect_Image" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/Panel_Container_Image"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
@@ -263,9 +293,9 @@ size_flags_vertical = 3
 size_flags_stretch_ratio = 210.0
 theme = ExtResource("1_fg6xg")
 expand_mode = 3
-stretch_mode = 5
+stretch_mode = 6
 
-[node name="PanelContainer2" type="PanelContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/Control"]
+[node name="PanelContainer2" type="PanelContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -275,26 +305,26 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_irfc2")
 
-[node name="DownloadWarning" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/Control/PanelContainer2" instance=ExtResource("18_nmmsr")]
+[node name="DownloadWarning" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/PanelContainer2" instance=ExtResource("18_nmmsr")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 8
 
-[node name="HSeparator4" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="HSeparator4" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 28
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer4" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 0
 
-[node name="Container_Online" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="Container_Online" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="TextureRect" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/Container_Online"]
+[node name="TextureRect" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Container_Online"]
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
@@ -302,7 +332,7 @@ texture = ExtResource("9_vaiub")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Online" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/Container_Online"]
+[node name="Label_Online" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Container_Online"]
 unique_name_in_owner = true
 layout_mode = 2
 theme = ExtResource("5_jnv06")
@@ -314,20 +344,20 @@ label_settings = ExtResource("11_2e4jp")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="VSeparator" type="VSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="VSeparator_Online" type="VSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 7
-theme_override_constants/separation = 80
+size_flags_horizontal = 6
+theme_override_constants/separation = 1
 theme_override_styles/separator = SubResource("StyleBoxLine_i8f38")
 
-[node name="HBoxContainer_Likes" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="HBoxContainer_Likes" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
-size_flags_stretch_ratio = 2.0
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Likes"]
+[node name="TextureRect" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Likes"]
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
@@ -335,7 +365,7 @@ texture = ExtResource("12_rpsre")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Likes" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Likes"]
+[node name="Label_Likes" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Likes"]
 unique_name_in_owner = true
 layout_mode = 2
 theme = ExtResource("5_jnv06")
@@ -347,46 +377,22 @@ label_settings = ExtResource("11_2e4jp")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="HBoxContainer_Views" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-alignment = 1
-
-[node name="TextureRect" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Views"]
-modulate = Color(0.0862745, 0.0823529, 0.0941176, 1)
-custom_minimum_size = Vector2(20, 0)
-layout_mode = 2
-texture = ExtResource("7_ysug5")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Label_Views" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Views"]
+[node name="VSeparator_Likes" type="VSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-theme = ExtResource("5_jnv06")
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("3_3inh7")
-theme_override_font_sizes/font_size = 18
-text = "546"
-horizontal_alignment = 2
-vertical_alignment = 1
-
-[node name="VSeparator2" type="VSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4"]
-layout_mode = 2
-size_flags_horizontal = 7
-theme_override_constants/separation = 80
+size_flags_horizontal = 6
+theme_override_constants/separation = 1
 theme_override_styles/separator = SubResource("StyleBoxLine_7t5hv")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="HBoxContainer_Location" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.0
 theme_override_constants/separation = 5
 alignment = 2
 
-[node name="TextureRect" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
@@ -394,7 +400,7 @@ texture = ExtResource("9_ietwf")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Location" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer"]
+[node name="Label_Location" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -403,32 +409,12 @@ theme_override_font_sizes/font_size = 17
 text = "-000,-000"
 label_settings = ExtResource("11_2e4jp")
 
-[node name="TextureRect2" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer"]
-visible = false
-modulate = Color(0, 0, 0, 1)
-custom_minimum_size = Vector2(20, 20)
-layout_mode = 2
-texture = ExtResource("11_627ff")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Label_Realm" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(180, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("10_cpvjm")
-theme_override_font_sizes/font_size = 17
-text = "Genesis City "
-clip_text = true
-
-[node name="HSeparator3" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="VBoxContainer_Description" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_Description" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 397)
@@ -436,21 +422,24 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 40
 
-[node name="HSeparator" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+[node name="ScrollContainer" type="ScrollContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
-size_flags_vertical = 3
+scroll_vertical = 100
 horizontal_scroll_mode = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 16
 
-[node name="Label_DescriptionTitle" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="Label_DescriptionTitle" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("4_wln2f")
@@ -459,44 +448,63 @@ text = "DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
 
-[node name="Label_Description" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="Label_Description" type="RichTextLabel" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("10_cpvjm")
-theme_override_font_sizes/font_size = 16
-text = "ASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asdASD asd"
-label_settings = SubResource("LabelSettings_elce2")
+size_flags_vertical = 4
+theme_override_font_sizes/normal_font_size = 26
+theme_override_font_sizes/bold_font_size = 26
+theme_override_font_sizes/bold_italics_font_size = 26
+theme_override_font_sizes/italics_font_size = 26
+theme_override_font_sizes/mono_font_size = 26
+bbcode_enabled = true
+text = "🧉 Chiri Storytelling Community 🍕
+🛠️ Chiri Builds
+Streams to learn how to create 3D Low Poly assets ready for Decentraland. We will cover the full pipeline: Idea, low poly modeling, texturing, colliders, GLB export, and importing into the Creator Hub 💻
+Each event will share a different process
+Follow 🔮 Impossible Studio in the journey of building all crazy cute ideas in the digital world & lets learn together!
+🕓 Agenda
+✨ Asset planning & references
+✨ Low poly modeling of an Asset
+✨ Textures, Colliders & Optimization
+✨ Export GLB + Creator Hub import
+✨ Builder Q&A
+Our community is inclusive, kind, and playful 🌈 everyone is welcome, whether you’re new to building or already creating worlds. Let’s share this process together! 🏡
+🧉 Chiri Storytelling Community 🍕
+🛠️ Chiri Builds
+Streams to learn how to create 3D Low Poly assets ready for Decentraland. We will cover the full pipeline: Idea, low poly modeling, texturing, colliders, GLB export, and importing into the Creator Hub 💻
+Each event will share a different process"
+fit_content = true
+scroll_active = false
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator2" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
 layout_mode = 2
+size_flags_vertical = 4
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="ScrollContainer2" type="ScrollContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-
-[node name="CategoriesBar" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer2" instance=ExtResource("19_7t5hv")]
+[node name="CategoriesBar" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description" instance=ExtResource("19_7t5hv")]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 1
 
-[node name="HSeparator5" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator5" type="HSeparator" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
 layout_mode = 2
+size_flags_vertical = 4
 theme_override_constants/separation = 0
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="EngagementBar" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer3" instance=ExtResource("14_nmmsr")]
+[node name="EngagementBar" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3" instance=ExtResource("14_nmmsr")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Button_JumpIn" type="Button" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Button_JumpIn" type="Button" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -507,28 +515,38 @@ theme_override_font_sizes/font_size = 14
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer_Content" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn"]
-custom_minimum_size = Vector2(0, 40)
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn"]
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
+offset_top = -19.0
+offset_bottom = 19.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label" type="Label" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
+[node name="Label" type="Label" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
 layout_mode = 2
 text = "JUMP IN"
 label_settings = SubResource("LabelSettings_db46w")
 
-[node name="TextureRect_Add" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
+custom_minimum_size = Vector2(34, 34)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="TextureRect_Add" type="TextureRect" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content/MarginContainer"]
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("12_whm4w")
 expand_mode = 3
+stretch_mode = 5
 
 [node name="MarginContainer2" type="MarginContainer" parent="PanelContainer_Card/PanelContainer_Content"]
 layout_mode = 2
@@ -537,5 +555,47 @@ theme_override_constants/margin_left = 48
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 20
 
-[connection signal="toggled" from="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/Panel" to="." method="_on_panel_toggled"]
-[connection signal="pressed" from="PanelContainer_Card/PanelContainer_Content/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelContainer_Header" type="PanelContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 176)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Header"]
+layout_mode = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Header/MarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer_Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+alignment = 2
+
+[node name="TextureButton" type="TextureButton" parent="VBoxContainer/PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(55, 55)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture_normal = ExtResource("2_4wgrb")
+texture_pressed = ExtResource("2_4wgrb")
+texture_hover = ExtResource("2_4wgrb")
+texture_disabled = ExtResource("2_4wgrb")
+texture_focused = ExtResource("2_4wgrb")
+ignore_texture_size = true
+stretch_mode = 6
+flip_h = true
+
+[connection signal="toggled" from="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Panel" to="." method="_on_panel_toggled"]
+[connection signal="pressed" from="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer3/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]

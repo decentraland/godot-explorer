@@ -32,12 +32,12 @@ func _ready():
 
 func on_item_pressed(data):
 	jump_in.set_data(data)
-	jump_in.show_animation()
+	jump_in.open_panel()
 
 
 func on_event_pressed(data):
 	event_details.set_data(data)
-	event_details.show_animation()
+	event_details.open_panel()
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):

@@ -45,7 +45,7 @@ func _ready():
 		set_online(onlines)
 		set_title(title)
 		set_event_name(event_name)
-		set_description(description)
+		#set_description(description)
 		set_likes_percent(likes_percent)
 		set_location(location)
 		set_event_location(location)
@@ -188,6 +188,14 @@ func _get_container_online() -> Control:
 	return _get_node_safe("Container_Online")
 
 
+func _get_separator_online() -> VSeparator:
+	return _get_node_safe("VSeparator_Online")
+
+
+func _get_separator_likes() -> VSeparator:
+	return _get_node_safe("VSeparator_Likes")
+
+
 func _get_label_views() -> Label:
 	return _get_node_safe("Label_Views")
 
@@ -206,6 +214,10 @@ func _get_container_likes() -> Control:
 
 func _get_texture_image() -> TextureRect:
 	return _get_node_safe("TextureRect_Image")
+
+
+func _get_fav_button() -> FavButton:
+	return _get_node_safe("FavButton")
 
 
 func _connect_signals():
@@ -270,16 +282,28 @@ func set_views(_views: int):
 func set_likes_percent(_likes: float):
 	var label = _get_label_likes()
 	var container = _get_container_likes()
+	var separator_online = _get_separator_online()
+	var separator_likes = _get_separator_likes()
 	if label and container:
 		container.set_visible(_likes > 0.0)
+		if separator_online:
+			separator_online.set_visible(_likes > 0)
+		if separator_likes:
+			separator_likes.set_visible(_likes > 0)
 		label.text = str(int(round(_likes * 100))) + "%"
 
 
 func set_online(_online: int):
 	var label = _get_label_online()
 	var container = _get_container_online()
+	var separator_online = _get_separator_online()
+	var separator_likes = _get_separator_likes()
 	if label and container:
 		container.set_visible(_online > 0)
+		if separator_online:
+			separator_online.set_visible(_online > 0)
+		if separator_likes:
+			separator_likes.set_visible(_online > 0)
 		label.text = _format_number(_online)
 
 
@@ -330,13 +354,14 @@ func set_data(item_data):
 	_data = item_data
 
 	set_title(item_data.get("title", "Unknown place"))
-	set_description(_get_or_empty_string(item_data, "description"))
+	#set_description(_get_or_empty_string(item_data, "description"))
 	set_attendees_number(item_data.get("total_attendees", 0))
 	set_trending(item_data.get("trending", false))
 	event_id = item_data.get("id", "id")
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
 	set_categories(item_data.get("categories", []))
 	# Parse event timestamp BEFORE set_attending so it's available for notifications
+	set_fav_button_data(item_data.get("id", "-"))
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
 	event_status = "live" if live else "upcoming"
@@ -347,6 +372,8 @@ func set_data(item_data):
 			event_start_timestamp = timestamp  # Store for notification scheduling
 			set_time(timestamp, live)
 
+	
+	
 	# Set location before set_attending so event_coordinates is correct for notifications
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
@@ -780,3 +807,7 @@ func show_image_container(toggle:bool) -> void:
 			image_container.hide()
 			no_image_container.show()
 	
+func set_fav_button_data(_id:String) -> void:
+	var fav_button = _get_fav_button()
+	if fav_button:
+		fav_button.update_data(_id)

@@ -35,7 +35,7 @@ func _close():
 func instantiate_portrait_panel():
 	portrait_panel = portrait_panel_resource.instantiate()
 	self.add_child(portrait_panel)
-	portrait_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	portrait_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	portrait_panel.set_data(item_data)
 	portrait_panel.jump_in.connect(self._emit_jump_in)
 	set_data(item_data)
@@ -77,43 +77,22 @@ func async_load_place_position(pos: Vector2i):
 	else:
 		set_data(json.data[0])
 	texture_progress_bar.hide()
-	show_animation()
+	open_panel()
 
 
 func set_data(data):
 	item_data = data
 
 
-func show_animation() -> void:
+func open_panel() -> void:
 	_close()
 	self.show()
 	if Global.is_orientation_portrait():
 		instantiate_portrait_panel()
 		orientation = "portrait"
-		var animation_target_y = portrait_panel.position.y
-		# Place the menu off-screen above (its height above the target position)
-		portrait_panel.position.y = (portrait_panel.position.y + portrait_panel.size.y)
-
-		(
-			create_tween()
-			. tween_property(portrait_panel, "position:y", animation_target_y, 0.5)
-			. set_trans(Tween.TRANS_SINE)
-			. set_ease(Tween.EASE_OUT)
-		)
 	else:
 		instantiate_landscape_panel()
 		orientation = "landscape"
-		var animation_target_x = landscape_panel.position.x
-		# Place the menu off-screen above (its height above the target position)
-		landscape_panel.position.x = (landscape_panel.position.x + landscape_panel.size.x)
-
-		(
-			create_tween()
-			. tween_property(landscape_panel, "position:x", animation_target_x, 0.5)
-			. set_trans(Tween.TRANS_SINE)
-			. set_ease(Tween.EASE_OUT)
-		)
-
 	if tracking_handler:
 		if item_data.is_empty():
 			printerr("SidePanel: WARNING - item_data is empty!")
