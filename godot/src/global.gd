@@ -58,7 +58,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
 # Increase this value when local assets cache format changes (invalidates cache)
-const LOCAL_ASSETS_CACHE_VERSION: int = 3
+const LOCAL_ASSETS_CACHE_VERSION: int = 4
 
 ## Global classes (singleton pattern)
 
