@@ -48,9 +48,24 @@ impl DclUiText {
                 a: v.a,
             })
             .unwrap_or(godot::prelude::Color::WHITE);
+        let outline_font_color = new_value
+            .outline_color
+            .as_ref()
+            .map(|v| godot::prelude::Color {
+                r: v.r,
+                g: v.g,
+                b: v.b,
+                a: v.a,
+            })
+            .unwrap_or(godot::prelude::Color::BLACK);
+        let outline_width = new_value.outline_width.unwrap_or(0.0) as i32;
 
         self.base_mut()
             .add_theme_color_override("font_color", font_color);
+        self.base_mut()
+            .add_theme_color_override("font_outline_color", outline_font_color);
+        self.base_mut()
+            .add_theme_constant_override("outline_size", outline_width);
         self.base_mut()
             .add_theme_constant_override("line_spacing", 0);
 

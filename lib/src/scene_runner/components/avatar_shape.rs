@@ -92,7 +92,11 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             })
                             .collect(),
                     ),
-                    force_render: None,
+                    force_render: if new_value.force_render.is_empty() {
+                        None
+                    } else {
+                        Some(new_value.force_render)
+                    },
                     show_only_wearables: new_value.show_only_wearables.unwrap_or(false),
                     ..Default::default()
                 };

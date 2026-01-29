@@ -966,7 +966,6 @@ impl MessageProcessor {
                             truncate_utf8_safe(&chat.message, MAX_CHAT_MESSAGE_SIZE)
                         ),
                         timestamp: chat.timestamp,
-                        forwarded_from: chat.forwarded_from.clone(),
                     }
                 } else {
                     chat
@@ -1325,9 +1324,6 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::SceneEmote(_) => {
                 tracing::warn!("Not implemented: SceneEmote handling in message_processor");
-            }
-            rfc4::packet::Message::LookAtPosition(_) => {
-                tracing::warn!("Not implemented: LookAtPosition handling in message_processor");
             }
         }
     }

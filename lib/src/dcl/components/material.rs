@@ -172,6 +172,7 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 .wrap_mode
                 .as_ref()
                 .unwrap_or(&TextureWrapMode::TwmClamp.into()),
+            Tex::UiTexture(_) => todo!("UI Texture not implemented"),
         };
         let filter_mode = match texture {
             Tex::Texture(texture) => *texture
@@ -186,6 +187,7 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 .filter_mode
                 .as_ref()
                 .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
+            Tex::UiTexture(_) => todo!("UI Texture not implemented"),
         };
 
         let wrap_mode = TextureWrapMode::from_i32(wrap_mode).unwrap_or(TextureWrapMode::TwmClamp);
@@ -230,6 +232,7 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
                 tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
             }),
+            Tex::UiTexture(_) => todo!("UI Texture not implemented"),
         }
     }
 }
