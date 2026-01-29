@@ -99,6 +99,10 @@ pub struct ContentProvider {
     network_download_history_mb: VecDeque<f64>, // Last 60 seconds of download sizes in MB
     loading_resources: Arc<AtomicU64>,
     loaded_resources: Arc<AtomicU64>,
+    optimized_scene_count: Arc<AtomicU64>,
+    runtime_scene_count: Arc<AtomicU64>,
+    optimized_wearable_count: Arc<AtomicU64>,
+    runtime_wearable_count: Arc<AtomicU64>,
     #[cfg(feature = "use_resource_tracking")]
     tracking_tick: f64,
     optimized_data: Arc<OptimizedData>,
@@ -165,6 +169,10 @@ impl INode for ContentProvider {
             every_second_tick: 0.0,
             loading_resources: Arc::new(AtomicU64::new(0)),
             loaded_resources: Arc::new(AtomicU64::new(0)),
+            optimized_scene_count: Arc::new(AtomicU64::new(0)),
+            runtime_scene_count: Arc::new(AtomicU64::new(0)),
+            optimized_wearable_count: Arc::new(AtomicU64::new(0)),
+            runtime_wearable_count: Arc::new(AtomicU64::new(0)),
             download_speed_mbs: 0.0,
             network_speed_peak_mbs: 0.0,
             network_download_history_mb: VecDeque::with_capacity(60),
@@ -310,6 +318,7 @@ impl ContentProvider {
         };
 
         let file_hash_clone = file_hash.clone();
+        let runtime_scene_counter = self.runtime_scene_count.clone();
 
         // Spawn async task - cache check and loading all happens here
         TokioRuntime::spawn(async move {
@@ -347,6 +356,9 @@ impl ContentProvider {
                 }
             };
 
+            if result.is_ok() {
+                runtime_scene_counter.fetch_add(1, Ordering::Relaxed);
+            }
             then_promise(get_promise, result);
         });
 
@@ -442,6 +454,8 @@ impl ContentProvider {
 
         let file_hash_clone = file_hash.clone();
         let optimized_base_url = self.optimized_wearable_base_url.clone();
+        let opt_wearable_counter = self.optimized_wearable_count.clone();
+        let rt_wearable_counter = self.runtime_wearable_count.clone();
 
         // Spawn async task - cache check and loading all happens here
         TokioRuntime::spawn(async move {
@@ -452,6 +466,8 @@ impl ContentProvider {
                 ctx,
                 optimized_base_url,
                 false, // is_emote = false
+                opt_wearable_counter,
+                rt_wearable_counter,
             )
             .await;
 
@@ -579,6 +595,8 @@ impl ContentProvider {
 
         let file_hash_clone = file_hash.clone();
         let optimized_base_url = self.optimized_wearable_base_url.clone();
+        let opt_wearable_counter = self.optimized_wearable_count.clone();
+        let rt_wearable_counter = self.runtime_wearable_count.clone();
 
         // Spawn async task - cache check and loading all happens here
         TokioRuntime::spawn(async move {
@@ -589,6 +607,8 @@ impl ContentProvider {
                 ctx,
                 optimized_base_url,
                 true, // is_emote = true
+                opt_wearable_counter,
+                rt_wearable_counter,
             )
             .await;
 
@@ -736,6 +756,7 @@ impl ContentProvider {
         let file_hash = file_hash.to_string();
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
+        let optimized_scene_counter = self.optimized_scene_count.clone();
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
@@ -762,6 +783,7 @@ impl ContentProvider {
             then_promise(get_promise, Ok(None));
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
+            optimized_scene_counter.fetch_add(1, Ordering::Relaxed);
         });
 
         promise
@@ -784,6 +806,7 @@ impl ContentProvider {
 
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
+        let optimized_scene_counter = self.optimized_scene_count.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&file_hash, "optimized_asset");
@@ -809,6 +832,7 @@ impl ContentProvider {
             then_promise(get_promise, Ok(None));
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
+            optimized_scene_counter.fetch_add(1, Ordering::Relaxed);
         });
 
         promise
@@ -1588,6 +1612,26 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn get_optimized_scene_count(&self) -> u64 {
+        self.optimized_scene_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn get_runtime_scene_count(&self) -> u64 {
+        self.runtime_scene_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn get_optimized_wearable_count(&self) -> u64 {
+        self.optimized_wearable_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn get_runtime_wearable_count(&self) -> u64 {
+        self.runtime_wearable_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
     pub fn count_loaded_resources(&self) -> u64 {
         self.loaded_resources.load(Ordering::Relaxed)
     }
@@ -2108,6 +2152,7 @@ impl ContentProvider {
 
     /// Shared async function for loading wearables and emotes.
     /// Checks for optimized ZIP bundles first, falls back to runtime processing.
+    #[allow(clippy::too_many_arguments)]
     async fn async_load_wearable_or_emote(
         file_hash: String,
         file_path: String,
@@ -2115,6 +2160,8 @@ impl ContentProvider {
         ctx: SceneGltfContext,
         optimized_base_url: Option<String>,
         is_emote: bool,
+        optimized_wearable_counter: Arc<AtomicU64>,
+        runtime_wearable_counter: Arc<AtomicU64>,
     ) -> Result<Option<Variant>, anyhow::Error> {
         let asset_type = if is_emote { "emote" } else { "wearable" };
 
@@ -2125,7 +2172,7 @@ impl ContentProvider {
 
         // 2. Determine if we should use optimized version
         let use_optimized = if local_zip_exists {
-            tracing::info!(
+            tracing::debug!(
                 "[OPTIMIZED] {} ZIP found locally: {} (hash={})",
                 asset_type.to_uppercase(),
                 local_zip_path,
@@ -2144,7 +2191,7 @@ impl ContentProvider {
             {
                 Ok(true) => {
                     // File exists on server - download it
-                    tracing::info!(
+                    tracing::debug!(
                         "[OPTIMIZED] Downloading {} ZIP from: {}",
                         asset_type.to_uppercase(),
                         zip_url
@@ -2155,7 +2202,7 @@ impl ContentProvider {
                         .await
                     {
                         Ok(_) => {
-                            tracing::info!(
+                            tracing::debug!(
                                 "[OPTIMIZED] Downloaded {} ZIP: {} (hash={})",
                                 asset_type.to_uppercase(),
                                 zip_name,
@@ -2211,12 +2258,13 @@ impl ContentProvider {
 
             if result {
                 let scene_path = format!("res://glbs/{}.scn", file_hash);
-                tracing::info!(
+                tracing::debug!(
                     "[OPTIMIZED] {} LOADED: hash={} -> {}",
                     asset_type.to_uppercase(),
                     file_hash,
                     scene_path
                 );
+                optimized_wearable_counter.fetch_add(1, Ordering::Relaxed);
                 Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
                 tracing::error!(
@@ -2256,6 +2304,7 @@ impl ContentProvider {
                     report_resource_loaded(&file_hash);
                 }
                 ctx.resource_provider.touch_file_async(&cache_path).await;
+                runtime_wearable_counter.fetch_add(1, Ordering::Relaxed);
                 Ok(Some(GString::from(&cache_path).to_variant()))
             } else {
                 // Cache MISS - load, process, and save
@@ -2273,7 +2322,10 @@ impl ContentProvider {
                 };
 
                 match result {
-                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Ok(path) => {
+                        runtime_wearable_counter.fetch_add(1, Ordering::Relaxed);
+                        Ok(Some(GString::from(&path).to_variant()))
+                    }
                     Err(e) => Err(e),
                 }
             }
