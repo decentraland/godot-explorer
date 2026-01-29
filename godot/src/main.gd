@@ -43,6 +43,10 @@ func start():
 
 
 func _start():
+	# Floating Islands Benchmark mode - don't load any UI scene
+	if Global.cli.fi_benchmark_size >= 0:
+		return
+
 	if Global.is_xr():
 		print("Running in XR mode")
 		Global.set_orientation_landscape()

@@ -1,0 +1,85 @@
+name: 🔢 Bump Version
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-version:
+    name: Bump version and create PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get current version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(grep -oP 'version/code=\K[0-9]+' godot/export_presets.cfg | head -1)
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          CURRENT=${{ steps.get_version.outputs.current_version }}
+          NEW_VERSION=$((CURRENT + 1))
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Update export_presets.cfg (Android version code)
+        run: |
+          CURRENT=${{ steps.get_version.outputs.current_version }}
+          NEW=${{ steps.new_version.outputs.new_version }}
+          sed -i "s/version\/code=${CURRENT}/version\/code=${NEW}/g" godot/export_presets.cfg
+
+      - name: Update export_presets.cfg (iOS version)
+        run: |
+          CURRENT=${{ steps.get_version.outputs.current_version }}
+          NEW=${{ steps.new_version.outputs.new_version }}
+          sed -i "s/application\/version=\"${CURRENT}\"/application\/version=\"${NEW}\"/g" godot/export_presets.cfg
+
+      - name: Update lib/Cargo.toml
+        run: |
+          CURRENT=${{ steps.get_version.outputs.current_version }}
+          NEW=${{ steps.new_version.outputs.new_version }}
+          sed -i "s/^version = \"0\.${CURRENT}\.0\"/version = \"0.${NEW}.0\"/" lib/Cargo.toml
+
+      - name: Update lib/Cargo.lock
+        run: |
+          CURRENT=${{ steps.get_version.outputs.current_version }}
+          NEW=${{ steps.new_version.outputs.new_version }}
+          sed -i "0,/name = \"dclgodot\"/{ /name = \"dclgodot\"/{ n; s/version = \"0\.${CURRENT}\.0\"/version = \"0.${NEW}.0\"/ } }" lib/Cargo.lock
+
+      - name: Verify changes
+        run: |
+          echo "Changes to commit:"
+          git diff --stat
+          echo ""
+          echo "Detailed diff:"
+          git diff
+
+      - name: Create branch, commit, and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW=${{ steps.new_version.outputs.new_version }}
+          BRANCH="bump-version-v${NEW}"
+          git checkout -b "$BRANCH"
+          git add godot/export_presets.cfg lib/Cargo.toml lib/Cargo.lock
+          git commit -m "bump version v${NEW}"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "bump version v${NEW}" \
+            --body "Automated version bump from v${{ steps.get_version.outputs.current_version }} to v${NEW}." \
+            --base "${{ github.ref_name }}"
