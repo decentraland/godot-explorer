@@ -12,7 +12,7 @@ var search_text: String = ""
 @onready var timer_search_debounce: Timer = %Timer_SearchDebounce
 
 @onready var last_visited: VBoxContainer = %LastVisited
-@onready var last_visited_generator: VBoxContainer = %LastVisitGenerator
+@onready var last_visited_generator: Node = %LastVisitGenerator
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
