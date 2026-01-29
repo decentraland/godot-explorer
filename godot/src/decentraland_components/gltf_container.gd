@@ -120,7 +120,6 @@ func _async_load_optimized_asset(gltf_hash: String):
 		currently_loading_assets.append(gltf_hash)
 
 	# Download dependencies (textures, etc.)
-	print("[GltfContainer] Fetching optimized asset: ", gltf_hash)
 	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
