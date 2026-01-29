@@ -1,7 +1,6 @@
 use directories::ProjectDirs;
 use flate2::read::GzDecoder;
 use reqwest::blocking::Client;
-use serde_json::Value;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self};
@@ -31,28 +30,15 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = None; // Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-9110137086.commit-1d6d5b0.tgz");
-const PROTOCOL_TAG: &str = "protocol-squad";
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-21486655362.commit-ec8b96e.tgz");
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
-    if let Some(fixed_version_url) = PROTOCOL_FIXED_VERSION_URL {
-        return Ok(fixed_version_url.to_string());
+    match PROTOCOL_FIXED_VERSION_URL {
+        Some(url) => Ok(url.to_string()),
+        None => Err(anyhow::anyhow!(
+            "PROTOCOL_FIXED_VERSION_URL is not set. Please set it to the desired protocol version URL."
+        )),
     }
-
-    let package_name = "@dcl/protocol";
-
-    let client = Client::new();
-    let response = client
-        .get(format!("https://registry.npmjs.org/{package_name}"))
-        .send()?
-        .json::<Value>()?;
-
-    let next_version = response["dist-tags"][PROTOCOL_TAG].as_str().unwrap();
-    let tarball_url = response["versions"][next_version]["dist"]["tarball"]
-        .as_str()
-        .unwrap();
-
-    Ok(tarball_url.to_string())
 }
 
 pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
