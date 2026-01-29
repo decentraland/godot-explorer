@@ -68,7 +68,7 @@ pub async fn handle_process(
     // Create batch to track all jobs
     let batch_id = job_manager.create_batch(output_hash.clone(), job_ids).await;
 
-    tracing::info!("Created batch {} for {} jobs", batch_id, jobs.len());
+    tracing::debug!("Created batch {} for {} jobs", batch_id, jobs.len());
 
     // Spawn batch completion watcher
     let batch_id_clone = batch_id.clone();
@@ -169,7 +169,7 @@ async fn process_single_asset(
         Ok(id) => id,
         Err(existing_id) => {
             // Job already exists for this hash - return existing job
-            tracing::info!(
+            tracing::debug!(
                 "Job already exists for hash {}: {}",
                 asset.hash,
                 existing_id
@@ -182,7 +182,7 @@ async fn process_single_asset(
         }
     };
 
-    tracing::info!(
+    tracing::debug!(
         "Created job {} for {} ({})",
         job_id,
         asset.hash,
@@ -333,10 +333,10 @@ pub async fn handle_process_scene(
         .map(|hashes| hashes.into_iter().collect::<HashSet<String>>());
     let preloaded_assets = preloaded_hashes.as_ref().map(|h| h.len());
 
-    tracing::info!(
-        "Discovered {} assets in scene {}, preloaded: {:?}",
-        total_assets,
+    tracing::debug!(
+        "Scene {} has {} assets, preloaded: {:?}",
         request.scene_hash,
+        total_assets,
         preloaded_assets
     );
 
@@ -413,7 +413,7 @@ pub async fn handle_process_scene(
         )
         .await;
 
-    tracing::info!("Created scene batch {} for {} jobs", batch_id, jobs.len());
+    tracing::debug!("Created scene batch {} for {} jobs", batch_id, jobs.len());
 
     // Spawn batch completion watcher
     let batch_id_clone = batch_id.clone();
@@ -457,7 +457,7 @@ async fn process_single_scene_asset(
         Ok(id) => id,
         Err(existing_id) => {
             // Job already exists for this hash - return existing job
-            tracing::info!(
+            tracing::debug!(
                 "Job already exists for hash {}: {}",
                 asset.hash,
                 existing_id
@@ -470,7 +470,7 @@ async fn process_single_scene_asset(
         }
     };
 
-    tracing::info!(
+    tracing::debug!(
         "Created job {} for {} ({})",
         job_id,
         asset.hash,
@@ -518,7 +518,7 @@ async fn watch_and_pack_scene_batch(
         .await;
 
     let results = job_manager.get_batch_results(&batch_id).await;
-    tracing::info!(
+    tracing::debug!(
         "Scene batch {} has {} results with optimized_path",
         batch_id,
         results.len()
@@ -560,7 +560,7 @@ async fn watch_and_pack_scene_batch(
 
     // Get preloaded hashes
     let preloaded_hashes = job_manager.get_batch_preloaded_hashes(&batch_id).await;
-    tracing::info!(
+    tracing::debug!(
         "Scene batch {} preloaded_hashes: {:?}",
         batch_id,
         preloaded_hashes.as_ref().map(|h| h.len())
@@ -569,7 +569,7 @@ async fn watch_and_pack_scene_batch(
     // Build metadata from completed jobs
     let metadata = job_manager.build_scene_metadata(&batch_id).await;
 
-    tracing::info!(
+    tracing::debug!(
         "Scene batch {} metadata: {} optimized, {} dependencies, {} sizes",
         batch_id,
         metadata.optimized_content.len(),

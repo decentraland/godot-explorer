@@ -122,8 +122,8 @@ pub async fn process_asset(
 
     match result {
         Ok(process_result) => {
-            tracing::info!(
-                "Asset processed successfully: {} -> {}",
+            tracing::debug!(
+                "Asset processed: {} -> {}",
                 request.hash,
                 process_result.optimized_path
             );
@@ -203,7 +203,7 @@ async fn process_scene_gltf(
     request: &AssetRequest,
     ctx: &ProcessorContext,
 ) -> Result<ProcessResult, anyhow::Error> {
-    tracing::info!("Processing scene GLTF: {}", request.hash);
+    tracing::debug!("Processing scene GLTF: {}", request.hash);
 
     let content_mapping = build_content_mapping(request);
 
@@ -258,7 +258,7 @@ async fn process_wearable_gltf(
     request: &AssetRequest,
     ctx: &ProcessorContext,
 ) -> Result<ProcessResult, anyhow::Error> {
-    tracing::info!("Processing wearable GLTF: {}", request.hash);
+    tracing::debug!("Processing wearable GLTF: {}", request.hash);
 
     let content_mapping = build_content_mapping(request);
 
@@ -313,7 +313,7 @@ async fn process_emote_gltf(
     request: &AssetRequest,
     ctx: &ProcessorContext,
 ) -> Result<ProcessResult, anyhow::Error> {
-    tracing::info!("Processing emote GLTF: {}", request.hash);
+    tracing::debug!("Processing emote GLTF: {}", request.hash);
 
     let content_mapping = build_content_mapping(request);
 
@@ -371,7 +371,7 @@ async fn process_texture(
     request: &AssetRequest,
     ctx: &ProcessorContext,
 ) -> Result<ProcessResult, anyhow::Error> {
-    tracing::info!("Processing texture: {}", request.hash);
+    tracing::debug!("Processing texture: {}", request.hash);
 
     let raw_file_path = format!("{}{}", ctx.content_folder, request.hash);
     // Use .res extension for compressed ImageTexture (Godot binary resource format)
@@ -483,7 +483,7 @@ async fn process_texture(
     // Compress the image using ETC2 (mobile-optimized format)
     // This uses the same approach as texture.rs which works on mobile platforms
     if !image.is_compressed() {
-        tracing::info!(
+        tracing::debug!(
             "Compressing image {}x{} with ETC2",
             image.get_width(),
             image.get_height()
@@ -502,7 +502,7 @@ async fn process_texture(
 
     let texture_width = texture.get_width();
     let texture_height = texture.get_height();
-    tracing::info!(
+    tracing::debug!(
         "Created compressed texture: {}x{}",
         texture_width,
         texture_height
@@ -534,8 +534,8 @@ async fn process_texture(
     // Get optimized file size
     let optimized_file_size = std::fs::metadata(&res_file_path).ok().map(|m| m.len());
 
-    tracing::info!(
-        "Texture compressed and saved: {} -> {} (original: {}x{}, size: {:?})",
+    tracing::debug!(
+        "Texture saved: {} -> {} ({}x{}, {:?} bytes)",
         request.hash,
         res_file_path,
         original_width,

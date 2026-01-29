@@ -114,8 +114,6 @@ pub fn pack_assets_to_zip(
         return Err(anyhow::anyhow!("Failed to close ZIP file: {:?}", err));
     }
 
-    tracing::info!("ZIP file created successfully: {}", zip_path);
-
     Ok(zip_path)
 }
 
@@ -130,7 +128,7 @@ pub fn pack_single_asset_to_zip(
 ) -> Result<String, anyhow::Error> {
     let zip_path = format!("{}{}-mobile.zip", output_folder, hash);
 
-    tracing::info!("Packing single asset {} to ZIP: {}", hash, zip_path);
+    tracing::debug!("Packing single asset {} to ZIP: {}", hash, zip_path);
 
     let mut packer = ZipPacker::new_gd();
 
@@ -188,7 +186,6 @@ pub fn pack_single_asset_to_zip(
         return Err(anyhow::anyhow!("Failed to close ZIP file: {:?}", err));
     }
 
-    tracing::info!("Individual ZIP created: {}", zip_path);
     Ok(zip_path)
 }
 
@@ -333,8 +330,6 @@ pub fn pack_scene_assets_to_zip(
     if err != godot::global::Error::OK {
         return Err(anyhow::anyhow!("Failed to close ZIP file: {:?}", err));
     }
-
-    tracing::info!("Scene ZIP file created successfully: {}", zip_path);
 
     Ok(zip_path)
 }
