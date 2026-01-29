@@ -24,10 +24,10 @@ var request_show_wearables: bool = false  # debounce
 var avatar_wearables_body_shape_cache: Dictionary = {}
 
 var avatar_loading_counter: int = 0
-
-# Timer for debounced blacklist changes
-var blacklist_deploy_timer: Timer
+var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
+
+var _avatar_update_retries: int = 0
 
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
@@ -203,7 +203,24 @@ func _async_update_avatar():
 	var mutable_profile = Global.player_identity.get_mutable_profile()
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()
 	if mutable_profile == null or mutable_avatar == null:
+		_avatar_update_retries += 1
+		if _avatar_update_retries >= 3:
+			_avatar_update_retries = 0
+			printerr("Failed to load avatar after 3 attempts: profile or avatar is null")
+			if Global.modal_manager != null:
+				Global.modal_manager.async_show_connection_lost_modal()
+				Global.modal_manager.connection_lost_retry.connect(
+					func(): request_update_avatar = true, CONNECT_ONE_SHOT
+				)
+				Global.modal_manager.connection_lost_exit.connect(
+					func(): get_tree().quit(), CONNECT_ONE_SHOT
+				)
+		else:
+			printerr("Avatar update retry %d/3, waiting 1s..." % _avatar_update_retries)
+			await get_tree().create_timer(1.0).timeout
+			request_update_avatar = true
 		return
+	_avatar_update_retries = 0
 	mutable_profile.set_avatar(mutable_avatar)
 
 	var loading_id := _set_avatar_loading()
