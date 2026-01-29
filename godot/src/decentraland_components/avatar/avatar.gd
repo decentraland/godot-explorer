@@ -702,6 +702,9 @@ func _process(delta):
 	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
 	emote_controller.process(self_idle)
 
+	if is_local_player:
+		Global.comms.set_emoting(emote_controller.is_playing())
+
 	animation_tree.set("parameters/conditions/idle", self_idle)
 	animation_tree.set("parameters/conditions/emote", emote_controller.playing_single)
 	animation_tree.set("parameters/conditions/nemote", not emote_controller.playing_single)
