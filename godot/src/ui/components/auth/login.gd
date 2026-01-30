@@ -1,6 +1,8 @@
 extends Control
 
 const GOOGLE_ICON = preload("res://src/ui/components/auth/images/google.svg")
+const METAMASK_ICON = preload("res://src/ui/components/auth/images/metamask.svg")
+const WALLETCONNECT_ICON = preload("res://src/ui/components/auth/images/wallet-connect.png")
 
 # TODO: change final project id
 # WalletConnect Project ID from https://dashboard.reown.com/
@@ -19,6 +21,8 @@ var _wc_polling_start_time: int = 0
 @onready var h_box_container_more: HBoxContainer = %HBoxContainer_More
 @onready var button_google: Button = %Button_Google
 @onready var button_apple: Button = %Button_Apple
+@onready var button_wallet_connect: Button = %Button_WalletConnect
+@onready var texture_rect_wallet_icon: TextureRect = %TextureRect_WalletIcon
 
 @onready var texture_rect_google: TextureRect = $Button_Google/TextureRect_Google
 @onready var texture_rect_apple: TextureRect = $HBoxContainer_More/Button_Apple/TextureRect_Apple
@@ -30,6 +34,23 @@ func _ready():
 
 	if Global.is_ios():
 		switch_google_with_apple()
+
+	# Configure wallet button based on platform
+	_configure_wallet_button()
+
+
+func _configure_wallet_button() -> void:
+	if Global.is_android():
+		# Android: Show Metamask button
+		button_wallet_connect.text = "METAMASK"
+		texture_rect_wallet_icon.texture = METAMASK_ICON
+		# Adjust icon position for "METAMASK" text (shorter than "WALLET CONNECT")
+		texture_rect_wallet_icon.offset_left = -135.5
+		texture_rect_wallet_icon.offset_right = -88.5
+	else:
+		# iOS and other platforms: Show WalletConnect button
+		button_wallet_connect.text = "WALLET CONNECT"
+		texture_rect_wallet_icon.texture = WALLETCONNECT_ICON
 
 
 func set_lobby(new_lobby: Lobby):
@@ -164,9 +185,17 @@ func _async_poll_wc_pairing_uri() -> void:
 	print("[WC] URI received, waiting for relay to stabilize...")
 	await get_tree().create_timer(0.5).timeout
 
-	# Open wallet app with the URI (shows system wallet chooser)
+	# Open wallet app with the URI
+	# On Android: opens MetaMask directly
+	# On iOS: opens system wallet chooser
 	if not plugin.walletConnectOpenWallet():
-		_cleanup_wc_flow("No wallet app found. Please install a WalletConnect compatible wallet.")
+		var error_msg = plugin.walletConnectGetError()
+		if error_msg.is_empty():
+			if Global.is_android():
+				error_msg = "MetaMask is not installed. Please install MetaMask from the Play Store."
+			else:
+				error_msg = "No wallet app found. Please install a WalletConnect compatible wallet."
+		_cleanup_wc_flow(error_msg)
 		return
 
 	# Start polling for connection
@@ -320,8 +349,10 @@ func _on_button_wallet_connect_pressed() -> void:
 
 	if native_result == true:
 		lobby.waiting_for_new_wallet = true
-		lobby.show_auth_browser_open_screen("Opening Wallet...")
-		Global.metrics.track_click_button("wallet_connect_native", lobby.current_screen_name, "")
+		var wallet_name = "MetaMask" if Global.is_android() else "Wallet"
+		lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...")
+		var metric_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
+		Global.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
 		return
 
 	# On iOS, don't fall back to web - it doesn't work properly

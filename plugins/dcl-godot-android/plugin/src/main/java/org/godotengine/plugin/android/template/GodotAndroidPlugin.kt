@@ -1478,7 +1478,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
      * Open a wallet app with the WalletConnect URI.
      * Shows system chooser with all installed apps that can handle wc: URIs.
      *
-     * @return true if chooser was opened
+     * @return true if MetaMask was opened
      */
     @UsedByGodot
     fun walletConnectOpenWallet(): Boolean {
@@ -1495,18 +1495,20 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
 
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(wcPairingUri))
-            val chooser = Intent.createChooser(intent, "Select Wallet")
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            act.startActivity(chooser)
-            Log.d(pluginName, "WalletConnect opened wallet chooser with URI: ${wcPairingUri.take(50)}...")
+            // Open MetaMask directly with the WalletConnect URI
+            val encodedUri = java.net.URLEncoder.encode(wcPairingUri, "UTF-8")
+            val metamaskUri = "metamask://wc?uri=$encodedUri"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(metamaskUri))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            act.startActivity(intent)
+            Log.d(pluginName, "WalletConnect opened MetaMask with URI: ${wcPairingUri.take(50)}...")
             return true
         } catch (e: ActivityNotFoundException) {
-            wcErrorMessage = "No wallet apps installed that support WalletConnect"
+            wcErrorMessage = "MetaMask is not installed. Please install MetaMask from the Play Store."
             Log.e(pluginName, wcErrorMessage)
             return false
         } catch (e: Exception) {
-            wcErrorMessage = e.message ?: "Failed to open wallet"
+            wcErrorMessage = e.message ?: "Failed to open MetaMask"
             Log.e(pluginName, "WalletConnect openWallet error: ${wcErrorMessage}", e)
             return false
         }
