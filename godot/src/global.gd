@@ -25,8 +25,10 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal camera_mode_set(camera_mode: Global.CameraMode)
 signal run_anyway
 signal reload_scene
+signal favorite_destination_set
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -231,6 +233,22 @@ func _ready():
 		var test_runner = load("res://src/test/test_runner.gd").new()
 		add_child(test_runner)
 		test_runner.start.call_deferred()
+		return
+
+	# Floating Islands Benchmark mode
+	if cli.fi_benchmark_size >= 0:
+		print("Running Floating Islands Benchmark...")
+
+		# Create minimal required components for benchmark
+		self.scene_fetcher = SceneFetcher.new()
+		self.scene_fetcher.set_name("scene_fetcher")
+		get_tree().root.add_child.call_deferred(self.scene_fetcher)
+		get_tree().root.add_child.call_deferred(self.scene_runner)
+		get_tree().root.add_child.call_deferred(self.content_provider)
+
+		var fi_runner = load("res://src/tools/fi_benchmark_runner.gd").new()
+		fi_runner.set_name("FIBenchmarkRunner")
+		get_tree().root.add_child.call_deferred(fi_runner)
 		return
 
 	if not DirAccess.dir_exists_absolute("user://content/"):
@@ -613,7 +631,7 @@ func set_orientation_landscape():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(false)
@@ -635,7 +653,7 @@ func set_orientation_portrait():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(true)
@@ -811,7 +829,7 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile():
+		if Global.is_mobile() and !Global.is_virtual_mobile():
 			if DclAndroidPlugin.is_available():
 				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
 			elif DclIosPlugin.is_available():
@@ -831,3 +849,7 @@ func _notification(what: int) -> void:
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
 	NotificationsManager.async_sync_attended_events()
+
+
+func set_camera_mode(camera_mode: Global.CameraMode) -> void:
+	camera_mode_set.emit(camera_mode)

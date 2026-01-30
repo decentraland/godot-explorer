@@ -7,6 +7,12 @@ signal notify_pending_loading_scenes(is_pending: bool)
 signal player_parcel_changed(new_position: Vector2i)
 
 const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
+const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_material.tres")
+const CLIFF_MATERIAL = preload("res://assets/empty-scenes/cliff_material.tres")
+
+# Maximum number of empty parcels before switching to simple floor mode
+# Above this threshold, individual floating islands are replaced with a single floor + cliffs
+const MAX_EMPTY_PARCELS_FOR_FLOATING_ISLANDS: int = 100
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
@@ -73,6 +79,9 @@ var _floating_islands_generation_data: Dictionary = {}  # Captured data for gene
 var _floating_islands_queue: Array = []  # Coordinates to generate
 var _floating_islands_total: int = 0
 var _floating_islands_created: int = 0
+
+# Simple floor for large scenes (>100 empty parcels)
+var _large_scene_floor: Node3D = null
 
 
 func _ready():
@@ -178,6 +187,7 @@ func set_dynamic_loading_mode(enabled: bool) -> void:
 		loaded_empty_scenes.clear()
 		if wall_manager:
 			wall_manager.clear_walls()
+		_cleanup_simple_floor()
 
 
 func is_dynamic_loading_mode() -> bool:
@@ -363,6 +373,7 @@ func _async_on_desired_scene_changed():
 			remove_child(empty_scene)
 			empty_scene.queue_free()
 		loaded_empty_scenes.clear()
+		_cleanup_simple_floor()
 
 	if use_floating_islands:
 		# Wait for coordinator to finish fetching all scene metadata before generating islands
@@ -513,6 +524,7 @@ func _on_realm_changed():
 	loaded_empty_scenes.clear()
 	if wall_manager:
 		wall_manager.clear_walls()
+	_cleanup_simple_floor()
 
 	loaded_scenes = {}
 
@@ -629,6 +641,15 @@ func _regenerate_floating_islands() -> void:
 
 	_floating_islands_total = _floating_islands_queue.size()
 	_floating_islands_created = 0
+
+	# For large scenes, use simple floor instead of individual floating islands
+	if _floating_islands_total > MAX_EMPTY_PARCELS_FOR_FLOATING_ISLANDS:
+		_create_simple_floor_with_cliffs(min_x, max_x, min_z, max_z, padding)
+		_floating_islands_generating = false
+		_floating_islands_queue.clear()
+		Global.scene_runner.start_floating_islands(0)
+		Global.scene_runner.finish_floating_islands()
+		return
 
 	# Capture all needed data for async generation
 	_floating_islands_generation_data = {
@@ -776,6 +797,136 @@ func _finish_floating_islands_generation() -> void:
 	Global.scene_runner.finish_floating_islands()
 
 
+## Clean up the simple floor used for large scenes
+func _cleanup_simple_floor() -> void:
+	if _large_scene_floor != null:
+		remove_child(_large_scene_floor)
+		_large_scene_floor.queue_free()
+		_large_scene_floor = null
+
+
+## Create a simple floor with fixed cliffs for large scenes (>100 empty parcels)
+## This reduces memory from ~450MB (individual floating islands) to ~10MB (single floor + 4 cliffs)
+func _create_simple_floor_with_cliffs(
+	min_x: int, max_x: int, min_z: int, max_z: int, padding: int
+) -> void:
+	# Clean up any previous simple floor
+	_cleanup_simple_floor()
+
+	# Clean up existing floating islands
+	for parcel in loaded_empty_scenes:
+		var empty_scene = loaded_empty_scenes[parcel]
+		remove_child(empty_scene)
+		empty_scene.queue_free()
+	loaded_empty_scenes.clear()
+	current_edge_parcels.clear()
+	if wall_manager:
+		wall_manager.clear_walls()
+
+	_large_scene_floor = Node3D.new()
+	_large_scene_floor.name = "LargeSceneFloor"
+	add_child(_large_scene_floor)
+
+	# Calculate world-space bounds
+	var world_min_x = (min_x - padding) * EmptyParcel.PARCEL_SIZE
+	var world_max_x = (max_x + padding + 1) * EmptyParcel.PARCEL_SIZE
+	var world_min_z = -(max_z + padding + 1) * EmptyParcel.PARCEL_SIZE
+	var world_max_z = -(min_z - padding) * EmptyParcel.PARCEL_SIZE
+
+	var width = world_max_x - world_min_x
+	var height = world_max_z - world_min_z
+	var center_x = (world_min_x + world_max_x) / 2.0
+	var center_z = (world_min_z + world_max_z) / 2.0
+
+	# Create floor mesh
+	_create_floor_mesh(width, height, center_x, center_z)
+
+	# Create collision
+	_create_floor_collision(width, height, center_x, center_z)
+
+	# Create cliffs on all 4 sides
+	var cliff_height = 30.0
+	# North cliff (facing +Z toward center)
+	_create_cliff(
+		Vector3(center_x, -cliff_height / 2.0, world_min_z),
+		Vector2(width, cliff_height),
+		Vector3(0, PI, 0)
+	)
+	# South cliff (facing -Z toward center)
+	_create_cliff(
+		Vector3(center_x, -cliff_height / 2.0, world_max_z),
+		Vector2(width, cliff_height),
+		Vector3.ZERO
+	)
+	# West cliff (facing +X toward center)
+	_create_cliff(
+		Vector3(world_min_x, -cliff_height / 2.0, center_z),
+		Vector2(height, cliff_height),
+		Vector3(0, -PI / 2.0, 0)
+	)
+	# East cliff (facing -X toward center)
+	_create_cliff(
+		Vector3(world_max_x, -cliff_height / 2.0, center_z),
+		Vector2(height, cliff_height),
+		Vector3(0, PI / 2.0, 0)
+	)
+
+	# Create walls
+	if wall_manager:
+		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
+
+
+## Create the floor mesh for simple floor mode
+func _create_floor_mesh(width: float, height: float, center_x: float, center_z: float) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = "FloorMesh"
+
+	var plane_mesh := PlaneMesh.new()
+	plane_mesh.size = Vector2(width, height)
+	mesh_instance.mesh = plane_mesh
+
+	# Use the same material as floating islands (grass texture)
+	# The default grass_rect in the material already points to the bottom-left quadrant
+	mesh_instance.material_override = EMPTY_PARCEL_MATERIAL
+
+	mesh_instance.global_position = Vector3(center_x, -0.05, center_z)
+	_large_scene_floor.add_child(mesh_instance)
+
+
+## Create the floor collision for simple floor mode
+func _create_floor_collision(width: float, height: float, center_x: float, center_z: float) -> void:
+	var static_body := StaticBody3D.new()
+	static_body.name = "FloorCollision"
+	static_body.collision_layer = EmptyParcel.OBSTACLE_COLLISION_LAYER
+
+	var collision_shape := CollisionShape3D.new()
+	var box_shape := BoxShape3D.new()
+	box_shape.size = Vector3(width, 0.1, height)
+	collision_shape.shape = box_shape
+
+	static_body.add_child(collision_shape)
+	static_body.global_position = Vector3(center_x, -0.05, center_z)
+
+	_large_scene_floor.add_child(static_body)
+
+
+## Create a cliff plane on one side of the simple floor
+func _create_cliff(position: Vector3, size: Vector2, rotation: Vector3) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = "Cliff"
+
+	var plane_mesh := PlaneMesh.new()
+	plane_mesh.size = size
+	plane_mesh.orientation = PlaneMesh.FACE_Z
+	mesh_instance.mesh = plane_mesh
+
+	mesh_instance.material_override = CLIFF_MATERIAL
+	mesh_instance.global_position = position
+	mesh_instance.rotation = rotation
+
+	_large_scene_floor.add_child(mesh_instance)
+
+
 func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
 	# Wait one more physics frame to ensure collision shape is ready
 	await get_tree().physics_frame
@@ -909,9 +1060,12 @@ func async_load_scene(
 	if _purge_cache_on_first_load:
 		_purge_cache_on_first_load = false
 		var files: PackedStringArray = content_mapping.get_files()
+		var purge_promises: Array = []
 		for file_path in files:
 			var file_hash = content_mapping.get_hash(file_path)
-			Global.content_provider.purge_file(file_hash)
+			purge_promises.push_back(Global.content_provider.purge_file(file_hash))
+		# Await all purge operations to complete before fetching
+		await PromiseUtils.async_all(purge_promises)
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null

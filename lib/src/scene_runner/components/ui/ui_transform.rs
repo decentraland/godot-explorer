@@ -31,7 +31,20 @@ pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .as_mut()
                     .unwrap();
 
+                let old_parent = node.ui_transform.parent;
                 node.ui_transform = UiTransform::from(pb_ui_transform);
+                let style = &node.ui_transform.taffy_style;
+                tracing::debug!(
+                    "[UI_TRANSFORM] Entity {:?} - update: parent={:?}->{:?}, size=({:?}, {:?}), min_size=({:?}, {:?}), has_bkg={}",
+                    entity,
+                    old_parent,
+                    node.ui_transform.parent,
+                    style.size.width,
+                    style.size.height,
+                    style.min_size.width,
+                    style.min_size.height,
+                    node.has_background
+                );
                 node.base_control.set_clip_contents(
                     node.ui_transform.overflow == crate::dcl::components::proto_components::sdk::components::YgOverflow::YgoHidden,
                 );

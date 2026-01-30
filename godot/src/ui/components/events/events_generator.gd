@@ -12,12 +12,12 @@ var discover_carrousel_item_loading: Control = null
 
 
 func on_request(_offset: int, limit: int) -> void:
-	if no_more_elements and not new_search:
+	if no_more_elements and not _new_search:
 		return  # we reach the capacity...
 
-	if new_search:
+	if _new_search:
 		loaded_elements = 0
-		new_search = false
+		_new_search = false
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.LOADING)
 
 		if is_instance_valid(item_container):

@@ -53,9 +53,13 @@ func set_shadow(shadow_quality: int):
 			sky.main_light.shadow_enabled = true
 			# Use base light energy when shadows are on
 			sky.main_light.light_energy = 0.7
+			# Shorter shadow distance for better performance
+			sky.main_light.directional_shadow_max_distance = 30.0
 		2:  # high res shadow
 			sky.main_light.shadow_enabled = true
 			sky.main_light.light_energy = 0.7
+			# Full shadow distance for high quality
+			sky.main_light.directional_shadow_max_distance = 50.0
 			quality = RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM
 
 	RenderingServer.directional_soft_shadow_filter_set_quality(quality)
