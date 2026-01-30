@@ -83,6 +83,10 @@ func _get_description() -> VBoxContainer:
 
 func _get_card() -> PanelContainer:
 	return _get_node_safe("PanelContainer_Card")
+
+
+func _get_header() -> PanelContainer:
+	return _get_node_safe("PanelContainer_Header")
 	
 	
 func _get_image_container() -> PanelContainer:
@@ -115,6 +119,14 @@ func _get_label_location() -> Label:
 
 func _get_label_event_location() -> Label:
 	return _get_node_safe("Label_EventLocation")
+
+
+func _get_texture_rect_location() -> TextureRect:
+	return _get_node_safe("TextureRect_Location")
+
+
+func _get_texture_rect_server() -> TextureRect:
+	return _get_node_safe("TextureRect_Server")
 
 
 func _get_label_realm() -> Label:
@@ -250,11 +262,25 @@ func set_location(_location: Vector2i):
 
 func set_event_location(_location: Vector2i):
 	var label = _get_label_event_location()
+	var texture_rect_location = _get_texture_rect_location()
+	var texture_rect_server = _get_texture_rect_server()
 	if label:
 		location = _location
 		label.text = "%s, %s" % [_location.x, _location.y]
-
-
+	if texture_rect_location and texture_rect_server:
+		texture_rect_location.show()
+		texture_rect_server.hide()
+		
+func set_event_world(world:String):
+	var label = _get_label_event_location()
+	var texture_rect_location = _get_texture_rect_location()
+	var texture_rect_server = _get_texture_rect_server()
+	if label:
+		label.text = world
+	if texture_rect_location and texture_rect_server:
+		texture_rect_location.hide()
+		texture_rect_server.show()
+	
 func set_image(_texture: Texture2D):
 	show_image_container(true)
 	var texture_rect = _get_texture_image()
@@ -380,10 +406,14 @@ func set_data(item_data):
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
 		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
-
-	var event_location_vector = item_data.get("coordinates", [0, 0])
-	if event_location_vector.size() == 2:
-		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
+	
+	var server = item_data.get("server", null)
+	if server:
+		set_event_world(server)
+	else:
+		var event_location_vector = item_data.get("coordinates", [0, 0])
+		if event_location_vector.size() == 2:
+			set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
@@ -494,7 +524,6 @@ func set_recurrent(_recurrent_frequency: String) -> void:
 	var label = _get_recurrent_label()
 	var separator_recurrent = _get_separator_recurrent()
 	var separator_duration = _get_separator_duration()
-	print(_recurrent_frequency)
 	if label:
 		if _recurrent_frequency != "":
 			label.get_parent().show()
@@ -714,13 +743,16 @@ func _on_button_jump_to_event_pressed() -> void:
 func _on_panel_toggled(toggled_on: bool) -> void:
 	var description_container = _get_description()
 	var card = _get_card()
+	var header = _get_header()
 	
-	if description_container and card:
+	if description_container and header and card:
 		if toggled_on:
 			description_container.show()
+			header.show()
 			card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		else:
 			description_container.hide()
+			header.hide()
 			card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 
 func show_image_container(toggle:bool) -> void:

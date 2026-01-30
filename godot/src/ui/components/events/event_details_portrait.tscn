@@ -15,10 +15,10 @@
 [ext_resource type="LabelSettings" uid="uid://3jaxrloree20" path="res://src/ui/components/discover/jump_in/jump_in_stats.tres" id="14_dl51y"]
 [ext_resource type="Texture2D" uid="uid://dxry1i0smofqa" path="res://assets/ui/clock.svg" id="15_wcxms"]
 [ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="16_nrpgh"]
+[ext_resource type="Texture2D" uid="uid://cl6wfontbtg2d" path="res://assets/ui/profile/country.svg" id="16_wcxms"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="17_lrnxc"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="18_w1sx5"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="19_gpni3"]
-[ext_resource type="PackedScene" uid="uid://dsd7bcii8obu6" path="res://src/ui/components/discover/categories/categories_bar.tscn" id="20_txe8v"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="21_44eh7"]
 [ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="22_ycsm3"]
 [ext_resource type="Texture2D" uid="uid://cmfalhha5iitd" path="res://assets/ui/calendar.svg" id="23_a57i1"]
@@ -27,8 +27,6 @@
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2dyqy"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
 
 [sub_resource type="Gradient" id="Gradient_7l6qr"]
 colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.27450982, 0.05882353, 0.43529412, 1)
@@ -126,7 +124,7 @@ theme_override_constants/separation = 0
 script = ExtResource("1_wcxms")
 
 [node name="PanelContainer_Header" type="PanelContainer" parent="."]
-visible = false
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 176)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
@@ -159,38 +157,36 @@ ignore_texture_size = true
 stretch_mode = 6
 flip_h = true
 
-[node name="ColorRect_Card" type="Control" parent="."]
+[node name="Control_Card" type="Control" parent="."]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="PanelContainer_Card" type="PanelContainer" parent="ColorRect_Card"]
+[node name="PanelContainer_Card" type="PanelContainer" parent="Control_Card"]
 unique_name_in_owner = true
 layout_mode = 0
-offset_top = 4.0
+offset_top = 184.0
 offset_right = 720.0
 offset_bottom = 851.0
-grow_horizontal = 2
-grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
 
-[node name="Control_Background" type="Control" parent="ColorRect_Card/PanelContainer_Card"]
+[node name="Control_Background" type="Control" parent="Control_Card/PanelContainer_Card"]
 layout_mode = 2
 
-[node name="TextureRect_Background" type="TextureRect" parent="ColorRect_Card/PanelContainer_Card/Control_Background"]
+[node name="TextureRect_Background" type="TextureRect" parent="Control_Card/PanelContainer_Card/Control_Background"]
 visible = false
 layout_mode = 0
 offset_right = 720.0
 offset_bottom = 572.0
 texture = SubResource("GradientTexture1D_8ey4u")
 
-[node name="PanelContainer_Content" type="PanelContainer" parent="ColorRect_Card/PanelContainer_Card"]
+[node name="PanelContainer_Content" type="PanelContainer" parent="Control_Card/PanelContainer_Card"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_vq3of")
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content"]
 layout_mode = 2
 script = ExtResource("3_ygmng")
 use_left = false
@@ -199,18 +195,17 @@ use_top = false
 use_bottom = false
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="MarginContainer" type="MarginContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 86
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Button" type="Button" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="Button" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(200, 8)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -227,27 +222,28 @@ theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_i8f38")
 theme_override_styles/focus = SubResource("StyleBoxFlat_i8f38")
 toggle_mode = true
 
-[node name="HSeparator" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 20
 
-[node name="HBoxContainer2" type="MarginContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/margin_right = 30
 
-[node name="RichTextLabel_EventName" type="RichTextLabel" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="RichTextLabel_EventName" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/normal_font = ExtResource("4_hgyl2")
 theme_override_fonts/bold_italics_font = ExtResource("4_hgyl2")
 theme_override_fonts/italics_font = ExtResource("4_hgyl2")
@@ -264,17 +260,17 @@ autowrap_mode = 2
 justification_flags = 131
 script = ExtResource("5_bmyvb")
 
-[node name="HBoxContainer_Creator" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Label_by" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
 layout_mode = 2
 text = "by"
 label_settings = SubResource("LabelSettings_i8f38")
 
-[node name="Label_UserName" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_UserName" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -283,16 +279,16 @@ label_settings = SubResource("LabelSettings_7t5hv")
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="HSeparator2" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 32
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="Control" type="Control" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="Control" type="Control" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 368)
 layout_mode = 2
 
-[node name="Panel_Container_NoImage" type="PanelContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
@@ -305,7 +301,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_db46w")
 
-[node name="TextureRect_NoImage" type="TextureRect" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/Panel_Container_NoImage"]
+[node name="TextureRect_NoImage" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/Panel_Container_NoImage"]
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -316,7 +312,7 @@ texture = ExtResource("10_b5skv")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Panel_Container_Image" type="PanelContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
+[node name="Panel_Container_Image" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
@@ -329,7 +325,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_u7byp")
 
-[node name="TextureRect_Image" type="TextureRect" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/Panel_Container_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/Panel_Container_Image"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
@@ -339,7 +335,7 @@ theme = ExtResource("9_2nfo0")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="PanelContainer2" type="PanelContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
+[node name="PanelContainer2" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -349,7 +345,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_irfc2")
 
-[node name="MarginContainer" type="MarginContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/PanelContainer2"]
+[node name="MarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/PanelContainer2"]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/margin_left = 16
@@ -357,29 +353,29 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="EventPillsBar" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/PanelContainer2/MarginContainer" instance=ExtResource("11_wcxms")]
+[node name="EventPillsBar" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/PanelContainer2/MarginContainer" instance=ExtResource("11_wcxms")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="DownloadWarning" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/PanelContainer2" instance=ExtResource("11_iocyg")]
+[node name="DownloadWarning" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control/PanelContainer2" instance=ExtResource("11_iocyg")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 8
 
-[node name="HSeparator4" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="HSeparator4" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 28
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="HBoxContainer4" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer4" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Recurrent" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="Recurrent" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TextureRect" type="TextureRect" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Recurrent"]
+[node name="TextureRect" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Recurrent"]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
@@ -387,7 +383,7 @@ texture = ExtResource("23_a57i1")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Recurrent" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Recurrent"]
+[node name="Label_Recurrent" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Recurrent"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -396,18 +392,18 @@ theme_override_font_sizes/font_size = 13
 text = "Weekly"
 label_settings = ExtResource("14_bmyvb")
 
-[node name="VSeparator_Recurrent" type="VSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="VSeparator_Recurrent" type="VSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 6
 theme_override_constants/separation = 1
 theme_override_styles/separator = SubResource("StyleBoxLine_i8f38")
 
-[node name="Duration" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="Duration" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TextureRect" type="TextureRect" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Duration"]
+[node name="TextureRect" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Duration"]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
@@ -415,7 +411,7 @@ texture = ExtResource("15_wcxms")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Duration" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Duration"]
+[node name="Label_Duration" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/Duration"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -424,14 +420,14 @@ theme_override_font_sizes/font_size = 13
 text = "1 Hr"
 label_settings = ExtResource("14_bmyvb")
 
-[node name="VSeparator_Duration" type="VSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="VSeparator_Duration" type="VSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 6
 theme_override_constants/separation = 1
 theme_override_styles/separator = SubResource("StyleBoxLine_7t5hv")
 
-[node name="HBoxContainer_Location" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="HBoxContainer_Location" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -439,7 +435,16 @@ size_flags_stretch_ratio = 0.0
 theme_override_constants/separation = 5
 alignment = 2
 
-[node name="TextureRect" type="TextureRect" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+[node name="TextureRect_Server" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+layout_mode = 2
+texture = ExtResource("16_wcxms")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="TextureRect_Location" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+unique_name_in_owner = true
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
@@ -447,7 +452,7 @@ texture = ExtResource("16_nrpgh")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Location" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+[node name="Label_EventLocation" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -456,12 +461,12 @@ theme_override_font_sizes/font_size = 17
 text = "-000,-000"
 label_settings = ExtResource("14_dl51y")
 
-[node name="HSeparator3" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="VBoxContainer_Description" type="VBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_Description" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 397)
@@ -469,24 +474,23 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 40
 
-[node name="HSeparator" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
-custom_minimum_size = Vector2(0, 100)
+[node name="ScrollContainer" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="Label_DescriptionTitle" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="Label_DescriptionTitle" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
@@ -496,13 +500,13 @@ text = "DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
 
-[node name="HSeparator3" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4wgrb")
 
-[node name="Label_Description" type="RichTextLabel" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -518,33 +522,13 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 80
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="CategoriesBar" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer" instance=ExtResource("20_txe8v")]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-size_flags_vertical = 1
-
-[node name="HSeparator5" type="HSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_constants/separation = 0
-theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
-
-[node name="MarginContainer2" type="MarginContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content"]
-layout_mode = 2
-size_flags_vertical = 8
-theme_override_constants/margin_left = 48
-theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 20
-
 [node name="PanelContainer_Footer" type="PanelContainer" parent="."]
-visible = false
 custom_minimum_size = Vector2(0, 142)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
@@ -626,4 +610,4 @@ mouse_filter = 2
 texture = ExtResource("25_b2lu2")
 expand_mode = 3
 
-[connection signal="toggled" from="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Button" to="ColorRect_Card" method="_on_panel_toggled"]
+[connection signal="toggled" from="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Button" to="." method="_on_panel_toggled"]
