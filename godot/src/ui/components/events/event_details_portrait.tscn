@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3 uid="uid://berg2gr7ubtll"]
+[gd_scene load_steps=43 format=3 uid="uid://berg2gr7ubtll"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_wcxms"]
 [ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_dbho5"]
@@ -28,13 +28,18 @@
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2dyqy"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bmyvb"]
+bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+
 [sub_resource type="Gradient" id="Gradient_7l6qr"]
 colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.27450982, 0.05882353, 0.43529412, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_8ey4u"]
 gradient = SubResource("Gradient_7l6qr")
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vq3of"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wcxms"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_i8f38"]
 bg_color = Color(0.9882353, 0.9882353, 0.9882353, 0.3019608)
@@ -125,6 +130,7 @@ script = ExtResource("1_wcxms")
 
 [node name="PanelContainer_Header" type="PanelContainer" parent="."]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 176)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
@@ -143,7 +149,8 @@ layout_mode = 2
 layout_mode = 2
 alignment = 2
 
-[node name="TextureButton" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="TextureButton_Close" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(55, 55)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -168,7 +175,7 @@ layout_mode = 0
 offset_top = 184.0
 offset_right = 720.0
 offset_bottom = 851.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
+theme_override_styles/panel = SubResource("StyleBoxFlat_bmyvb")
 
 [node name="Control_Background" type="Control" parent="Control_Card/PanelContainer_Card"]
 layout_mode = 2
@@ -184,7 +191,7 @@ texture = SubResource("GradientTexture1D_8ey4u")
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxEmpty_vq3of")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_wcxms")
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content"]
 layout_mode = 2
@@ -198,14 +205,20 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 [node name="MarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 48
-theme_override_constants/margin_top = 16
+theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 48
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Button" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="MarginContainer_ShowMore" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 16
+
+[node name="Button_ShowMore" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/MarginContainer_ShowMore"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 8)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -610,4 +623,4 @@ mouse_filter = 2
 texture = ExtResource("25_b2lu2")
 expand_mode = 3
 
-[connection signal="toggled" from="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Button" to="." method="_on_panel_toggled"]
+[connection signal="toggled" from="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/MarginContainer_ShowMore/Button_ShowMore" to="." method="_on_show_more_toggled"]

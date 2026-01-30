@@ -89,6 +89,10 @@ func _get_header() -> PanelContainer:
 	return _get_node_safe("PanelContainer_Header")
 	
 	
+func _get_show_more_container() -> Button:
+	return _get_node_safe("MarginContainer_ShowMore")
+	
+	
 func _get_image_container() -> PanelContainer:
 	return _get_node_safe("Panel_Container_Image")
 	
@@ -99,6 +103,10 @@ func _get_no_image_container() -> PanelContainer:
 
 func _get_button_close() -> Button:
 	return _get_node_safe("Button_Close")
+
+
+func _get_texture_button_close() -> TextureButton:
+	return _get_node_safe("TextureButton_Close")
 
 
 func _get_button_jump_in() -> Button:
@@ -242,6 +250,11 @@ func _connect_signals():
 		if not button_close.pressed.is_connected(_on_button_close_pressed):
 			button_close.pressed.connect(_on_button_close_pressed)
 
+	var texture_button_close = _get_texture_button_close()
+	if texture_button_close:
+		if not texture_button_close.pressed.is_connected(_on_texture_button_close_pressed):
+			texture_button_close.pressed.connect(_on_texture_button_close_pressed)
+
 	var button_jump_in = _get_button_jump_in()
 	if button_jump_in:
 		if not button_jump_in.pressed.is_connected(_on_button_jump_in_pressed):
@@ -276,10 +289,16 @@ func set_event_world(world:String):
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
 	if label:
-		label.text = world
+		label.text = format_name(world, 7)
 	if texture_rect_location and texture_rect_server:
 		texture_rect_location.hide()
 		texture_rect_server.show()
+	
+func format_name(full: String, max_len := 7) -> String:
+	var base := full.trim_suffix(".dcl.eth")
+	if base.length() > max_len:
+		return base.substr(0, max_len) + "..."
+	return base	
 	
 func set_image(_texture: Texture2D):
 	show_image_container(true)
@@ -408,7 +427,7 @@ func set_data(item_data):
 		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
 	
 	var server = item_data.get("server", null)
-	if server:
+	if server and server != "main":
 		set_event_world(server)
 	else:
 		var event_location_vector = item_data.get("coordinates", [0, 0])
@@ -466,6 +485,13 @@ func _on_button_jump_in_pressed():
 
 
 func _on_button_close_pressed() -> void:
+	close.emit()
+
+
+func _on_texture_button_close_pressed() -> void:
+	var parent = get_parent()
+	if parent.has_method("_close"):
+		parent._close()
 	close.emit()
 
 
@@ -740,21 +766,36 @@ func _on_button_jump_to_event_pressed() -> void:
 	jump_in.emit(location, realm)
 
 
-func _on_panel_toggled(toggled_on: bool) -> void:
+func _on_show_more_toggled(toggled_on: bool) -> void:
 	var description_container = _get_description()
+	var show_more = _get_show_more_container()
 	var card = _get_card()
 	var header = _get_header()
 	
-	if description_container and header and card:
+	if description_container and header and card and show:
 		if toggled_on:
 			description_container.show()
 			header.show()
 			card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			_set_card_corner_radius(card, 0, 0)
+			show_more.hide()
 		else:
 			description_container.hide()
 			header.hide()
 			card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+			_set_card_corner_radius(card, 24, 24)
+			show_more.show()
 
+
+func _set_card_corner_radius(card: PanelContainer, top_left: int, top_right: int) -> void:
+	var current_style = card.get_theme_stylebox("panel")
+	if current_style is StyleBoxFlat:
+		var style_box := current_style.duplicate() as StyleBoxFlat
+		style_box.corner_radius_top_left = top_left
+		style_box.corner_radius_top_right = top_right
+		card.add_theme_stylebox_override("panel", style_box)
+			
+			
 func show_image_container(toggle:bool) -> void:
 	var image_container = _get_image_container()
 	var no_image_container = _get_no_image_container()

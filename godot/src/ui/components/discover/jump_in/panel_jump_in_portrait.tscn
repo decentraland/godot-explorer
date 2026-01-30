@@ -40,7 +40,7 @@ gradient = SubResource("Gradient_7l6qr")
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vq3of"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_i8f38"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rjvsq"]
 bg_color = Color(0.9882353, 0.9882353, 0.9882353, 0.3019608)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
@@ -153,7 +153,8 @@ layout_mode = 2
 layout_mode = 2
 alignment = 2
 
-[node name="TextureButton" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="TextureButton_Close" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(55, 55)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -170,6 +171,7 @@ flip_h = true
 [node name="Control_Card" type="Control" parent="."]
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 
 [node name="PanelContainer_Card" type="PanelContainer" parent="Control_Card"]
 unique_name_in_owner = true
@@ -208,28 +210,34 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 [node name="MarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 48
-theme_override_constants/margin_top = 16
+theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 48
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Panel" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+[node name="MarginContainer_ShowMore" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 16
+
+[node name="Button_ShowMore" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/MarginContainer_ShowMore"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 8)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_styles/normal = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/hover = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_i8f38")
-theme_override_styles/focus = SubResource("StyleBoxFlat_i8f38")
+theme_override_styles/normal = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/hover = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_rjvsq")
+theme_override_styles/focus = SubResource("StyleBoxFlat_rjvsq")
 toggle_mode = true
 
 [node name="HSeparator" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
@@ -595,4 +603,4 @@ texture = ExtResource("12_whm4w")
 expand_mode = 3
 stretch_mode = 5
 
-[connection signal="toggled" from="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Panel" to="." method="_on_panel_toggled"]
+[connection signal="toggled" from="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/MarginContainer_ShowMore/Button_ShowMore" to="." method="_on_show_more_toggled"]
