@@ -1,10 +1,9 @@
-[gd_scene load_steps=42 format=3 uid="uid://berg2gr7ubtll"]
+[gd_scene load_steps=41 format=3 uid="uid://berg2gr7ubtll"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_wcxms"]
 [ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_dbho5"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_ygmng"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_hgyl2"]
-[ext_resource type="LabelSettings" uid="uid://h2fat30rck6x" path="res://src/ui/components/discover/jump_in/jump_in_tittle.tres" id="5_j8tr7"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="6_ds20p"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_8vff1"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="9_2nfo0"]
@@ -243,15 +242,24 @@ theme_override_constants/separation = 20
 layout_mode = 2
 theme_override_constants/margin_right = 30
 
-[node name="Label_Title" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="RichTextLabel_EventName" type="RichTextLabel" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("4_hgyl2")
-theme_override_font_sizes/font_size = 20
-text = "Scene Title"
-label_settings = ExtResource("5_j8tr7")
+theme_override_fonts/normal_font = ExtResource("4_hgyl2")
+theme_override_fonts/bold_italics_font = ExtResource("4_hgyl2")
+theme_override_fonts/italics_font = ExtResource("4_hgyl2")
+theme_override_fonts/mono_font = ExtResource("4_hgyl2")
+theme_override_font_sizes/normal_font_size = 42
+theme_override_font_sizes/bold_font_size = 42
+theme_override_font_sizes/bold_italics_font_size = 42
+theme_override_font_sizes/italics_font_size = 42
+theme_override_font_sizes/mono_font_size = 42
+text = "Scene Title Scene "
+fit_content = true
+scroll_active = false
 autowrap_mode = 2
+justification_flags = 131
 
 [node name="HBoxContainer_Creator" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
