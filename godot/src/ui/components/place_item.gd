@@ -164,8 +164,13 @@ func _get_label_title() -> Label:
 func _get_label_event_name() -> Label:
 	return _get_node_safe("Label_EventName")
 
+
 func _get_rich_label_event_name() -> TrimmedRichTextLabel:
 	return _get_node_safe("RichTextLabel_EventName")
+
+
+func _get_rich_label_title() -> TrimmedRichTextLabel:
+	return _get_node_safe("RichTextLabel_Title")
 
 
 
@@ -309,9 +314,11 @@ func set_image(_texture: Texture2D):
 
 func set_title(_title: String):
 	var label = _get_label_title()
+	var rtl_title = _get_rich_label_title()
 	if label:
 		label.text = _title
-
+	if rtl_title:
+		rtl_title.text = _title
 
 func set_description(_description: String):
 	description = _description

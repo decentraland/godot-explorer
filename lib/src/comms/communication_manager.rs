@@ -737,6 +737,8 @@ impl CommunicationManager {
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
+                    is_instant: false,
+                    is_emoting: false,
                 };
 
                 //tracing::info!("Movement packet: {:?}", movement_packet);
@@ -900,6 +902,7 @@ impl CommunicationManager {
             message: Some(rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
                 urn: emote_urn.to_string(),
                 incremental_id: self.last_emote_incremental_id,
+                timestamp: timestamp as f32,
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };

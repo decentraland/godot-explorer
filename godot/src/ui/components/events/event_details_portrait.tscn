@@ -1,9 +1,9 @@
-[gd_scene load_steps=43 format=3 uid="uid://berg2gr7ubtll"]
+[gd_scene load_steps=45 format=3 uid="uid://berg2gr7ubtll"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_wcxms"]
 [ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_dbho5"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_ygmng"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_hgyl2"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="4_hgyl2"]
 [ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="5_bmyvb"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="6_ds20p"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_8vff1"]
@@ -20,6 +20,7 @@
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="18_w1sx5"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="19_gpni3"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="21_44eh7"]
+[ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="21_wcxms"]
 [ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="22_ycsm3"]
 [ext_resource type="Texture2D" uid="uid://cmfalhha5iitd" path="res://assets/ui/calendar.svg" id="23_a57i1"]
 [ext_resource type="PackedScene" uid="uid://cm0sccjf036pe" path="res://src/ui/components/events/button_reminder.tscn" id="24_utb4h"]
@@ -113,6 +114,10 @@ font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 0.5019608)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4wgrb"]
+
+[sub_resource type="FontVariation" id="FontVariation_dbho5"]
+fallbacks = Array[Font]([ExtResource("21_wcxms")])
+base_font = ExtResource("17_lrnxc")
 
 [sub_resource type="LabelSettings" id="LabelSettings_hxdex"]
 font = ExtResource("19_gpni3")
@@ -524,6 +529,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 size_flags_vertical = 4
+theme_override_fonts/normal_font = SubResource("FontVariation_dbho5")
 theme_override_font_sizes/normal_font_size = 26
 theme_override_font_sizes/bold_font_size = 26
 theme_override_font_sizes/bold_italics_font_size = 26

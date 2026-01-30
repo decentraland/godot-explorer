@@ -4,10 +4,10 @@
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
 [ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_4wgrb"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_7t5hv"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_3inh7"]
-[ext_resource type="LabelSettings" uid="uid://h2fat30rck6x" path="res://src/ui/components/discover/jump_in/jump_in_tittle.tres" id="4_7t5hv"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="3_3inh7"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_wln2f"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_4wgrb"]
+[ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="5_elce2"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_i8f38"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_jnv06"]
 [ext_resource type="PackedScene" uid="uid://d34drip3k5oc4" path="res://src/ui/components/fav_button/fav_button.tscn" id="6_i8f38"]
@@ -257,15 +257,26 @@ theme_override_constants/separation = 20
 layout_mode = 2
 theme_override_constants/margin_right = 30
 
-[node name="Label_Title" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("3_3inh7")
-theme_override_font_sizes/font_size = 20
-text = "🧉 Chiri Storytelling Community 🍕"
-label_settings = ExtResource("4_7t5hv")
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("3_3inh7")
+theme_override_fonts/bold_italics_font = ExtResource("3_3inh7")
+theme_override_fonts/italics_font = ExtResource("3_3inh7")
+theme_override_fonts/mono_font = ExtResource("3_3inh7")
+theme_override_font_sizes/normal_font_size = 42
+theme_override_font_sizes/bold_font_size = 42
+theme_override_font_sizes/bold_italics_font_size = 42
+theme_override_font_sizes/italics_font_size = 42
+theme_override_font_sizes/mono_font_size = 42
+text = "Scene Title Scene "
+fit_content = true
+scroll_active = false
 autowrap_mode = 2
+justification_flags = 131
+script = ExtResource("5_elce2")
 
 [node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true

@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="3_w66jn"]
 [ext_resource type="LabelSettings" uid="uid://iia6jgjebpg" path="res://assets/themes/discover_item_title.tres" id="5_2d6b2"]
 [ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="6_2d6b2"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="6_ak6x4"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="6_ak6x4"]
 [ext_resource type="LabelSettings" uid="uid://bf7gvemmb0487" path="res://assets/themes/discover_item_info.tres" id="7_qlstj"]
 [ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="10_0qlyj"]
 

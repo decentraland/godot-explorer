@@ -1,6 +1,6 @@
 [gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://iia6jgjebpg"]
 
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="1_3olo2"]
+[ext_resource type="FontVariation" path="res://assets/themes/fonts/inter_semibold_emoji_fallback.tres" id="1_3olo2"]
 
 [resource]
 line_spacing = 0.0
