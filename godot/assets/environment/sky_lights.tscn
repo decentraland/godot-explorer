@@ -9,3 +9,4 @@ light_energy = 0.7
 light_bake_mode = 0
 shadow_enabled = true
 shadow_opacity = 0.7
+directional_shadow_max_distance = 50.0
