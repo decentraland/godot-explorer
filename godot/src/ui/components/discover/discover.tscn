@@ -423,8 +423,7 @@ generator = NodePath("PlacesFeaturedGenerator")
 title = "Featured"
 
 [node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
-order_by = 1
-only_highlighted = true
+only_featured = true
 discover = NodePath("../../../../../../../..")
 
 [node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]

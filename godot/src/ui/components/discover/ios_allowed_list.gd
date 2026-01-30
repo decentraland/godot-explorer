@@ -17,8 +17,6 @@ static func async_load() -> void:
 		return
 
 	_loading = true
-	print("[IosAllowedList] Fetching allowed list from: ", BFF_URL)
-
 	var response = await Global.async_signed_fetch(BFF_URL, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:
@@ -51,12 +49,6 @@ static func async_load() -> void:
 
 	_loaded = true
 	_loading = false
-	print(
-		(
-			"[IosAllowedList] Loaded: %d parcels, %d worlds"
-			% [_allowed_parcels.size(), _allowed_worlds.size()]
-		)
-	)
 
 
 static func async_ensure_loaded() -> void:
@@ -100,23 +92,56 @@ static func get_names_query_params() -> String:
 	return result
 
 
+## Fetches a BFF URL and returns a positions query string from the response.
+## Returns "" on error or if not on iOS.
+static func async_fetch_bff_positions(bff_url: String) -> String:
+	if not Global.is_ios_or_emulating():
+		return ""
+
+	var response = await Global.async_signed_fetch(bff_url, HTTPClient.METHOD_GET, "")
+
+	if response is PromiseError:
+		printerr("[IosAllowedList] Failed to fetch BFF positions: ", response.get_error())
+		return ""
+
+	var json: Dictionary = response.get_string_response_as_json()
+	if not json.get("ok", false) or not json.has("data"):
+		printerr("[IosAllowedList] Invalid BFF response format")
+		return ""
+
+	var positions: Array[String] = []
+	for entry in json.data:
+		var group: Dictionary = entry.get("group", {})
+		var parcels: Array = group.get("parcels", [])
+		if parcels.size() > 0:
+			var parcel = parcels[0]
+			var x = parcel.get("x", null)
+			var y = parcel.get("y", null)
+			if x != null and y != null:
+				positions.append("%d,%d" % [x, y])
+		if positions.size() >= 200:
+			break
+
+	if positions.is_empty():
+		return ""
+
+	var result := ""
+	for pos in positions:
+		result += "&positions=" + pos
+	return result
+
+
 static func is_place_allowed(place_data: Dictionary) -> bool:
 	if not Global.is_ios_or_emulating():
 		return true
 
 	if not _loaded:
-		print(
-			"[IosAllowedList] Not loaded yet, allowing place: ",
-			place_data.get("title", place_data.get("name", "unknown"))
-		)
 		return true
 
 	var is_world: bool = place_data.get("world", false)
 	if is_world:
 		var world_name: String = place_data.get("world_name", "")
-		var allowed = _allowed_worlds.has(world_name.to_lower())
-		print("[IosAllowedList] World '%s' allowed=%s" % [world_name, str(allowed)])
-		return allowed
+		return _allowed_worlds.has(world_name.to_lower())
 
 	var base_position: String = place_data.get("base_position", "")
 	if base_position.is_empty():
@@ -126,21 +151,6 @@ static func is_place_allowed(place_data: Dictionary) -> bool:
 			base_position = "%d,%d" % [int(coords[0]), int(coords[1])]
 
 	if base_position.is_empty():
-		print(
-			"[IosAllowedList] No position found for place: ",
-			place_data.get("title", place_data.get("name", "unknown"))
-		)
 		return false
 
-	var allowed = _allowed_parcels.has(base_position)
-	print(
-		(
-			"[IosAllowedList] Place '%s' at %s allowed=%s"
-			% [
-				place_data.get("title", place_data.get("name", "unknown")),
-				base_position,
-				str(allowed)
-			]
-		)
-	)
-	return allowed
+	return _allowed_parcels.has(base_position)

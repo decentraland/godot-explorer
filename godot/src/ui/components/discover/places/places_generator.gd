@@ -14,6 +14,7 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 @export var categories: String = "all"
 @export var only_favorites: bool = false
 @export var only_highlighted: bool = false
+@export var only_featured: bool = false
 @export var only_worlds: bool = false
 @export var last_places_logic: bool = false
 
@@ -53,7 +54,6 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 	_loading = true
 
-	await IosAllowedList.async_ensure_loaded()
 	var last_places: Array[Dictionary] = Global.get_config().last_places.duplicate()
 	var index = 0
 	for place in last_places:
@@ -85,9 +85,6 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 				"world_name": realm,
 				"base_position": "%d,%d" % [position.x, position.y]
 			}
-
-		if not IosAllowedList.is_place_allowed(data):
-			continue
 
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
@@ -140,21 +137,44 @@ func async_request_from_api(offset: int, limit: int) -> void:
 	if only_favorites:
 		url += "&only_favorites=true"
 
-	if only_highlighted:
-		url += "&only_highlighted=true"
+	# iOS BFF-driven filtering for Featured and Most Active carousels
+	var is_ios := Global.is_ios_or_emulating()
+	var use_bff_featured := is_ios and (only_highlighted or only_featured)
+	var use_bff_most_active := (
+		is_ios
+		and order_by == OrderBy.MOST_ACTIVE
+		and not only_highlighted
+		and not only_featured
+		and not only_favorites
+	)
 
-	if order_by != OrderBy.NONE:
-		url += "&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
+	if use_bff_featured:
+		var bff_url := "https://mobile-bff.decentraland.org/places?tag=allowed_ios&tag=featured"
+		var bff_positions := await IosAllowedList.async_fetch_bff_positions(bff_url)
+		url += bff_positions
+	elif use_bff_most_active:
+		var bff_url := "https://mobile-bff.decentraland.org/places?tag=allowed_ios&orderBy=mostActive"
+		var bff_positions := await IosAllowedList.async_fetch_bff_positions(bff_url)
+		url += bff_positions
+		url += "&order_by=most_active"
+	else:
+		if only_highlighted:
+			url += "&only_highlighted=true"
+
+		if order_by != OrderBy.NONE:
+			url += (
+				"&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
+			)
+
+		if only_worlds:
+			url += IosAllowedList.get_names_query_params()
+		else:
+			url += IosAllowedList.get_positions_query_params()
 
 	if categories != "all":
 		var categories_array = categories.split(",")
 		for category in categories_array:
 			url += "&categories=" + category
-
-	if only_worlds:
-		url += IosAllowedList.get_names_query_params()
-	else:
-		url += IosAllowedList.get_positions_query_params()
 
 	_async_fetch_places(url, limit)
 
