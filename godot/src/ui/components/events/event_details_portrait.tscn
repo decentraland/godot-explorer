@@ -1,9 +1,10 @@
-[gd_scene load_steps=41 format=3 uid="uid://berg2gr7ubtll"]
+[gd_scene load_steps=42 format=3 uid="uid://berg2gr7ubtll"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_wcxms"]
 [ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_dbho5"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_ygmng"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_hgyl2"]
+[ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="5_bmyvb"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="6_ds20p"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_8vff1"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="9_2nfo0"]
@@ -66,6 +67,7 @@ corner_radius_bottom_right = 17
 corner_radius_bottom_left = 17
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u7byp"]
+bg_color = Color(0, 0, 0, 1)
 corner_radius_top_left = 17
 corner_radius_top_right = 17
 corner_radius_bottom_right = 17
@@ -260,6 +262,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 2
 justification_flags = 131
+script = ExtResource("5_bmyvb")
 
 [node name="HBoxContainer_Creator" type="HBoxContainer" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -271,7 +274,7 @@ layout_mode = 2
 text = "by"
 label_settings = SubResource("LabelSettings_i8f38")
 
-[node name="Label_Creator" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_UserName" type="Label" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -393,7 +396,7 @@ theme_override_font_sizes/font_size = 13
 text = "Weekly"
 label_settings = ExtResource("14_bmyvb")
 
-[node name="VSeparator_Online" type="VSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="VSeparator_Recurrent" type="VSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 6
@@ -421,7 +424,7 @@ theme_override_font_sizes/font_size = 13
 text = "1 Hr"
 label_settings = ExtResource("14_bmyvb")
 
-[node name="VSeparator_Likes" type="VSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
+[node name="VSeparator_Duration" type="VSeparator" parent="ColorRect_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 6
@@ -541,6 +544,7 @@ theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 20
 
 [node name="PanelContainer_Footer" type="PanelContainer" parent="."]
+visible = false
 custom_minimum_size = Vector2(0, 142)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")

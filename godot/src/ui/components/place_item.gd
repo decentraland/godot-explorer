@@ -144,7 +144,7 @@ func _get_label_title() -> Label:
 func _get_label_event_name() -> Label:
 	return _get_node_safe("Label_EventName")
 
-func _get_rich_label_event_name() -> RichTextLabel:
+func _get_rich_label_event_name() -> TrimmedRichTextLabel:
 	return _get_node_safe("RichTextLabel_EventName")
 
 
@@ -192,6 +192,13 @@ func _get_separator_online() -> VSeparator:
 func _get_separator_likes() -> VSeparator:
 	return _get_node_safe("VSeparator_Likes")
 
+
+func _get_separator_recurrent() -> VSeparator:
+	return _get_node_safe("VSeparator_Recurrent")
+
+
+func _get_separator_duration() -> VSeparator:
+	return _get_node_safe("VSeparator_Duration")
 
 func _get_label_views() -> Label:
 	return _get_node_safe("Label_Views")
@@ -369,9 +376,6 @@ func set_data(item_data):
 		if timestamp > 0:
 			event_start_timestamp = timestamp  # Store for notification scheduling
 
-
-	
-	
 	# Set location before set_attending so event_coordinates is correct for notifications
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
@@ -389,7 +393,7 @@ func set_data(item_data):
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
 	set_duration(item_data.get("duration", 0))
-	set_recurrent(item_data.get("recurrent", false))
+	set_recurrent(_get_or_empty_string(item_data, "recurrent_frequency"))
 
 	if _get_texture_image():
 		var image_url = item_data.get("image", "")
@@ -399,6 +403,7 @@ func set_data(item_data):
 			show_image_container(false)
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
+	
 	var world = item_data.get("world", false)
 	if world:
 		var world_name = item_data.get("world_name")
@@ -469,97 +474,37 @@ func _get_or_empty_string(dict: Dictionary, key: String) -> String:
 
 func set_event_name(_event_name: String, _user_name: String = "") -> void:
 	event_name = _event_name
+	
 	var rtl = _get_rich_label_event_name()
 	if rtl:
-
-		rtl.text = _event_name
-		await get_tree().process_frame
-
-		var font := rtl.get_theme_font("normal_font")
-		var font_size := rtl.get_theme_font_size("normal_font_size")
-		var line_height := font.get_height(font_size)
-
-		var max_width = rtl.size.x
-		if max_width <= 0:
-			return
-
-		var full_size := font.get_multiline_string_size(
-			_event_name,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			max_width,
-			font_size
-		)
+		rtl.set_text_trimmed(_event_name)
 		
-
-		var one_line_h := line_height * 1.2
-		var two_lines_h := line_height * 2.2
-		print(full_size.y, one_line_h, two_lines_h)
-		if full_size.y <= one_line_h:
-			rtl.custom_minimum_size.y = one_line_h
-			return
-
-		# Caso 2: entra en dos líneas
-		if full_size.y <= two_lines_h:
-			rtl.custom_minimum_size.y = two_lines_h
-			return
-
-		# Caso 3: más de dos líneas → trim + altura fija a 2
-		rtl.text = trim_to_two_lines_fill(rtl, _event_name)
-		rtl.custom_minimum_size.y = two_lines_h
-
-	var label = _get_label_event_name()
-	if label:
-		label.text = _event_name
-	
-	
-func _apply_trim(text: String) -> void:
-	var rich_text_label = _get_rich_label_event_name()
-	rich_text_label.text = trim_to_two_lines_fill(
-		rich_text_label,
-		text
-	)
-	
-	
-func trim_to_two_lines_fill(rtl: RichTextLabel, text: String) -> String:
-	var font := rtl.get_theme_font("normal_font")
-	var font_size := rtl.get_theme_font_size("normal_font_size")
-	var max_width := rtl.size.x
-
-	var ellipsis := "…"
-	var best := ""
-	var current := ""
-
-	for i in text.length():
-		current += text[i]
-
-		var size := font.get_multiline_string_size(
-			current + ellipsis,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			max_width,
-			font_size
-		)
-
-		if size.y > font.get_height(font_size) * 2.2:
-			break
-
-		best = current
-
-	return best.rstrip(" ") + ellipsis
-
+	var label_user_name = _get_label_user_name()
+	if label_user_name:
+		label_user_name.text = _user_name
+		
+		
 func set_duration(_duration: int) -> void:
 	var duration_label = _get_duration_label()
 	if duration_label:
 		duration_label.text = _format_duration(_duration)
 
 
-func set_recurrent(_recurrent: bool) -> void:
+func set_recurrent(_recurrent_frequency: String) -> void:
 	var label = _get_recurrent_label()
+	var separator_recurrent = _get_separator_recurrent()
+	var separator_duration = _get_separator_duration()
+	print(_recurrent_frequency)
 	if label:
-		if _recurrent:
-			label.text = "YES"
+		if _recurrent_frequency != "":
+			label.get_parent().show()
+			separator_recurrent.show()
+			separator_duration.show()
+			label.text = _recurrent_frequency.capitalize()
 		else:
-			label.text = "NO"
-
+			label.get_parent().hide()
+			separator_recurrent.hide()
+			separator_duration.hide()
 
 
 

@@ -66,6 +66,7 @@ corner_radius_bottom_right = 17
 corner_radius_bottom_left = 17
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u7byp"]
+bg_color = Color(0, 0, 0, 1)
 corner_radius_top_left = 17
 corner_radius_top_right = 17
 corner_radius_bottom_right = 17
@@ -275,7 +276,6 @@ stretch_mode = 5
 
 [node name="Panel_Container_Image" type="Panel" parent="PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/Control"]
 unique_name_in_owner = true
-visible = false
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
 layout_mode = 1
