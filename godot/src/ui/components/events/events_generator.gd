@@ -81,7 +81,6 @@ func _async_fetch_events(url: String, limit: int = 100):
 		json.data = filtered_data
 
 	await IosAllowedList.async_ensure_loaded()
-	var pre_filter_count = json.data.size()
 	json.data = json.data.filter(func(item): return IosAllowedList.is_place_allowed(item))
 
 	if no_more_from_api:
