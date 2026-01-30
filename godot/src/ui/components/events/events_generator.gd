@@ -65,10 +65,8 @@ func _async_fetch_events(url: String, limit: int = 100):
 			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
 
-	loaded_elements += json.data.size()
-
-	if json.data.size() != limit:
-		no_more_elements = true
+	var api_result_count = json.data.size()
+	var no_more_from_api = api_result_count != limit
 
 	var filtered_data = []
 	for event_data in json.data:
@@ -82,8 +80,18 @@ func _async_fetch_events(url: String, limit: int = 100):
 				filtered_data.append(event_data)
 		json.data = filtered_data
 
+	await IosAllowedList.async_ensure_loaded()
+	var pre_filter_count = json.data.size()
+	json.data = json.data.filter(func(item): return IosAllowedList.is_place_allowed(item))
+	print("[EventsGenerator] iOS filter: %d -> %d events (api exhausted=%s)" % [pre_filter_count, json.data.size(), str(no_more_from_api)])
+
+	if no_more_from_api:
+		no_more_elements = true
+
+	loaded_elements += json.data.size()
+
 	if json.data.is_empty():
-		if loaded_elements == 0:
+		if loaded_elements == 0 and no_more_elements:
 			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
 

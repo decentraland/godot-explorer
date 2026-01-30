@@ -41,11 +41,8 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 		label_not_found.hide()
 		label_error.hide()
 	elif status == CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS:
-		label_not_found.show()
-
-		scroll_container.hide()
-		h_box_container_loading.hide()
-		label_error.hide()
+		self.hide()
+		return
 	else:
 		#elif not ok:
 		h_box_container_loading.hide()

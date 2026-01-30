@@ -30,7 +30,7 @@ func on_request(offset: int, limit: int) -> void:
 	if last_places_logic:
 		async_request_last_places(offset, limit)
 	else:
-		request_from_api(offset, limit)
+		async_request_from_api(offset, limit)
 
 	if only_favorites:
 		Global.favorite_destination_set.connect(reload.bind(offset, limit))
@@ -38,7 +38,7 @@ func on_request(offset: int, limit: int) -> void:
 
 func reload(offset, limit) -> void:
 	_new_search = true
-	request_from_api(offset, limit)
+	async_request_from_api(offset, limit)
 
 
 func async_request_last_places(_offset: int, _limit: int) -> void:
@@ -53,6 +53,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 	_loading = true
 
+	await IosAllowedList.async_ensure_loaded()
 	var last_places: Array[Dictionary] = Global.get_config().last_places.duplicate()
 	var index = 0
 	for place in last_places:
@@ -85,6 +86,9 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 				"base_position": "%d,%d" % [position.x, position.y]
 			}
 
+		if not IosAllowedList.is_place_allowed(data):
+			continue
+
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
 		item.set_data(data)
@@ -96,8 +100,14 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = false
 
 
-func request_from_api(offset: int, limit: int) -> void:
-	var url := PlacesHelper.get_api_url()
+func async_request_from_api(offset: int, limit: int) -> void:
+	await IosAllowedList.async_ensure_loaded()
+
+	var url: String
+	if only_worlds:
+		url = DclUrls.places_api() + "/worlds"
+	else:
+		url = PlacesHelper.get_api_url()
 	url += "?offset=%d&limit=%d" % [offset, limit]
 
 	if _new_search:
@@ -141,6 +151,11 @@ func request_from_api(offset: int, limit: int) -> void:
 		for category in categories_array:
 			url += "&categories=" + category
 
+	if only_worlds:
+		url += IosAllowedList.get_names_query_params()
+	else:
+		url += IosAllowedList.get_positions_query_params()
+
 	_async_fetch_places(url, limit)
 
 
@@ -158,15 +173,14 @@ func _async_fetch_places(url: String, limit: int = 100) -> void:
 
 	var json: Dictionary = response.get_string_response_as_json()
 
+	_no_more_elements = json.data.size() != limit
+
 	if json.data.is_empty():
-		if _loaded_elements == 0:
+		if _loaded_elements == 0 and _no_more_elements:
 			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
 
 	_loaded_elements += json.data.size()
-
-	if json.data.size() != limit:
-		_no_more_elements = true
 
 	for item_data in json.data:
 		var item := DISCOVER_CARROUSEL_ITEM.instantiate()

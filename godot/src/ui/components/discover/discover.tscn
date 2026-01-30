@@ -468,6 +468,17 @@ order_by = 1
 only_favorites = true
 discover = NodePath("../../../../../../../..")
 
+[node name="PlacesWorlds" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "Worlds"
+
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesWorlds" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+order_by = 1
+only_worlds = true
+discover = NodePath("../../../../../../../..")
+
 [node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 128

@@ -9,7 +9,7 @@ const USE_DESTINATIONS := false
 
 static func get_api_url() -> String:
 	if USE_DESTINATIONS:
-		return "https://places.decentraland.zone/api/destinations/"
+		return DclUrls.destinations_api() + "/"
 	return DclUrls.places_api() + "/places/"
 
 
