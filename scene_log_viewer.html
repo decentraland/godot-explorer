@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scene Log Viewer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; }
+        .header { background: #16213e; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .header h1 { font-size: 1.1rem; color: #00d9ff; }
+        .stats { font-size: 0.85rem; color: #888; }
+        .main { display: flex; height: calc(100vh - 50px); }
+        .sidebar { width: 260px; background: #0f0f23; padding: 0.75rem; overflow-y: auto; border-right: 1px solid #333; flex-shrink: 0; }
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .detail { width: 350px; background: #0f0f23; padding: 0.75rem; overflow-y: auto; border-left: 1px solid #333; flex-shrink: 0; }
+        .panel { margin-bottom: 0.75rem; }
+        .panel h2 { font-size: 0.8rem; color: #666; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tabs { display: flex; gap: 0.25rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+        .tab { padding: 0.4rem 0.75rem; background: #1a1a2e; border: 1px solid #333; color: #888; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+        .tab.active { background: #00d9ff; color: #000; border-color: #00d9ff; }
+        input, select { width: 100%; padding: 0.4rem; background: #1a1a2e; border: 1px solid #333; color: #eee; border-radius: 4px; margin-bottom: 0.4rem; font-size: 0.85rem; }
+        .btn { padding: 0.4rem 0.75rem; background: #333; border: none; color: #eee; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+        .btn.primary { background: #00d9ff; color: #000; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .list-item { padding: 0.5rem; background: #1a1a2e; margin-bottom: 0.25rem; border-radius: 4px; cursor: pointer; border: 1px solid transparent; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+        .list-item:hover { border-color: #00d9ff; }
+        .list-item.selected { border-color: #00d9ff; background: #16213e; }
+        .badge { display: inline-block; padding: 0.15rem 0.4rem; font-size: 0.7rem; border-radius: 3px; }
+        .badge.s2r { background: #2ecc71; color: #000; }
+        .badge.r2s { background: #9b59b6; color: #fff; }
+        .badge.p, .badge.put { background: #3498db; }
+        .badge.d, .badge.delete { background: #e74c3c; }
+        .badge.a, .badge.append { background: #f39c12; }
+        .badge.de { background: #c0392b; }
+        .badge.lifecycle { background: #1abc9c; }
+        .badge.op { background: #e67e22; }
+        .timestamp { color: #555; font-size: 0.75rem; }
+        .entity-id { color: #00d9ff; font-weight: bold; font-size: 0.85rem; }
+        .component { color: #f39c12; font-size: 0.85rem; }
+        pre { background: #0a0a15; padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+        .drop-zone { border: 2px dashed #333; padding: 3rem; text-align: center; border-radius: 8px; margin: 2rem; }
+        .drop-zone.drag-over { border-color: #00d9ff; background: rgba(0,217,255,0.1); }
+        .filter-row { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
+        .filter-row input, .filter-row select { flex: 1; }
+        #file-input { display: none; }
+        .upload-btn { display: inline-block; padding: 1rem 2rem; background: #00d9ff; color: #000; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .hidden { display: none !important; }
+
+        /* Timeline */
+        .timeline-container { padding: 0.5rem 1rem; background: #0f0f23; border-bottom: 1px solid #333; }
+        .timeline-slider { width: 100%; cursor: pointer; }
+        .timeline-info { display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-top: 0.25rem; }
+
+        /* Entries list */
+        .entries-container { flex: 1; overflow-y: auto; padding: 0.5rem; }
+        .pagination { display: flex; justify-content: center; gap: 0.5rem; align-items: center; padding: 0.5rem; background: #0f0f23; border-top: 1px solid #333; }
+
+        /* Stats */
+        .stat-card { background: #1a1a2e; padding: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; }
+        .stat-card h3 { font-size: 0.75rem; color: #666; margin-bottom: 0.25rem; }
+        .stat-card .value { font-size: 1.25rem; color: #00d9ff; font-weight: bold; }
+        .stat-card .sub { font-size: 0.75rem; color: #888; }
+
+        /* Bar chart */
+        .bar-chart { margin-top: 0.5rem; }
+        .bar-row { display: flex; align-items: center; margin-bottom: 0.25rem; font-size: 0.75rem; }
+        .bar-label { width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bar-container { flex: 1; height: 16px; background: #1a1a2e; border-radius: 2px; margin: 0 0.5rem; }
+        .bar { height: 100%; background: #00d9ff; border-radius: 2px; transition: width 0.3s; }
+        .bar-value { width: 50px; text-align: right; color: #888; }
+
+        /* Tree view */
+        .tree-node { padding-left: 1rem; }
+        .tree-item { padding: 0.3rem 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; border-radius: 3px; font-size: 0.85rem; }
+        .tree-item:hover { background: #1a1a2e; }
+        .tree-item.selected { background: #16213e; border-left: 2px solid #00d9ff; }
+        .tree-toggle { width: 16px; color: #666; cursor: pointer; }
+        .tree-icon { color: #f39c12; }
+        .tree-components { font-size: 0.7rem; color: #666; margin-left: auto; }
+        .tree-root { border-left: 1px solid #333; margin-left: 0.5rem; }
+
+        /* Scrollable list */
+        .scrollable-list { max-height: 150px; overflow-y: auto; }
+        .comp-item { padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; display: flex; justify-content: space-between; border-radius: 3px; }
+        .comp-item:hover { background: #1a1a2e; }
+        .comp-item.hidden-comp { opacity: 0.4; }
+
+        /* Clickable bar rows */
+        .bar-row.clickable:hover { background: rgba(0, 217, 255, 0.1); border-radius: 3px; }
+        .bar-row.clickable .bar-label { text-decoration: underline; text-decoration-style: dotted; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Scene Log Viewer</h1>
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <div id="upload-screen">
+        <div class="drop-zone" id="drop-zone">
+            <p style="font-size: 1.2rem; margin-bottom: 1rem;">Drag & drop .jsonl files here</p>
+            <p style="color: #666; margin-bottom: 1rem;">You can select multiple files to merge</p>
+            <label class="upload-btn">
+                Choose Files
+                <input type="file" id="file-input" accept=".jsonl" multiple>
+            </label>
+        </div>
+    </div>
+
+    <div class="main hidden" id="main-view">
+        <div class="sidebar">
+            <div class="panel">
+                <h2>View</h2>
+                <div class="tabs">
+                    <button class="tab active" data-view="timeline">Timeline</button>
+                    <button class="tab" data-view="stats">Stats</button>
+                    <button class="tab" data-view="tree">Tree</button>
+                    <button class="tab" data-view="tick-analysis">Tick Analysis</button>
+                    <button class="tab" data-view="playground">Playground</button>
+                </div>
+            </div>
+
+            <div class="panel" id="filters-panel">
+                <h2>Filters</h2>
+                <div class="tabs" style="margin-bottom: 0.5rem;">
+                    <button class="tab active filter-type" data-filter="all">All</button>
+                    <button class="tab filter-type" data-filter="crdt">CRDT</button>
+                    <button class="tab filter-type" data-filter="ops">Ops</button>
+                </div>
+                <div class="filter-row">
+                    <input type="number" id="filter-entity" placeholder="Entity ID">
+                    <select id="filter-direction">
+                        <option value="">Dir</option>
+                        <option value="s2r">S→R</option>
+                        <option value="r2s">R→S</option>
+                    </select>
+                </div>
+                <input type="text" id="filter-component" placeholder="Component...">
+                <input type="text" id="filter-op" placeholder="Op name...">
+                <div class="filter-row">
+                    <button class="btn primary" id="apply-filters">Apply</button>
+                    <button class="btn" id="clear-filters">Clear</button>
+                </div>
+            </div>
+
+            <div class="panel" id="components-panel">
+                <h2>Components <span id="comp-toggle" style="cursor:pointer;color:#00d9ff;">[hide Transform]</span></h2>
+                <div id="component-list" class="scrollable-list"></div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Timeline slider -->
+            <div class="timeline-container">
+                <input type="range" id="timeline-slider" class="timeline-slider" min="0" max="100" value="0">
+                <div class="timeline-info">
+                    <span id="timeline-pos">Entry 0</span>
+                    <span id="timeline-total">of 0</span>
+                </div>
+            </div>
+
+            <!-- Views -->
+            <div id="timeline-view" class="entries-container">
+                <div id="entries-list"></div>
+            </div>
+
+            <div id="stats-view" class="entries-container hidden" style="padding: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="stat-card">
+                        <h3>Total Entries</h3>
+                        <div class="value" id="stat-total">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>CRDT Messages</h3>
+                        <div class="value" id="stat-crdt">0</div>
+                        <div class="sub" id="stat-crdt-sub"></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Op Calls</h3>
+                        <div class="value" id="stat-ops">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Entities Created</h3>
+                        <div class="value" id="stat-created">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Entities Deleted</h3>
+                        <div class="value" id="stat-deleted">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Avg R→S Bytes/msg</h3>
+                        <div class="value" id="stat-r2s-bytes">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Avg S→R Bytes/msg</h3>
+                        <div class="value" id="stat-s2r-bytes">0</div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top: 1rem;">
+                    <h2>Top Components (excl. Transform) <span id="chart-toggle" style="cursor:pointer;color:#00d9ff;">[toggle Transform]</span></h2>
+                    <div id="component-chart" class="bar-chart"></div>
+                </div>
+
+                <div class="panel" style="margin-top: 1rem;">
+                    <h2>Entity + Component Distribution</h2>
+                    <div id="entity-chart" class="bar-chart"></div>
+                </div>
+            </div>
+
+            <div id="tree-view" class="entries-container hidden" style="padding: 0.5rem;">
+                <div class="panel" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <h2 style="margin: 0;">Tick:</h2>
+                    <input type="range" id="tree-tick-slider" min="0" max="0" value="0" style="width: 300px;">
+                    <input type="number" id="tree-tick-input" value="0" min="0" style="width: 80px;">
+                    <span id="tree-tick-max" style="color: #666;">/ 0</span>
+                    <span id="tree-entity-count" style="color: #888; margin-left: auto;"></span>
+                    <button class="btn primary" id="export-state-btn">Export State</button>
+                    <button class="btn" id="show-schema-btn">Show Schema</button>
+                </div>
+                <div id="tree-content"></div>
+                <!-- Schema modal -->
+                <div id="schema-modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: #0f0f23; padding: 1.5rem; border-radius: 8px; max-width: 800px; max-height: 80vh; overflow-y: auto; border: 1px solid #333;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="color: #00d9ff;">Export Schema (types.ts)</h3>
+                            <button class="btn" onclick="document.getElementById('schema-modal').classList.add('hidden')">Close</button>
+                        </div>
+                        <button class="btn primary" style="margin-bottom: 1rem;" onclick="copySchema()">Copy Schema</button>
+                        <pre id="schema-content" style="font-size: 0.8rem; max-height: 60vh; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tick-analysis-view" class="entries-container hidden" style="padding: 1rem;">
+                <div class="panel" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <h2 style="margin: 0;">Tick Range:</h2>
+                    <input type="number" id="tick-analysis-from" value="0" min="0" style="width: 80px;" placeholder="From">
+                    <span style="color: #666;">to</span>
+                    <input type="number" id="tick-analysis-to" value="0" min="0" style="width: 80px;" placeholder="To">
+                    <span id="tick-analysis-max" style="color: #666;">/ 0</span>
+                    <button class="btn primary" id="analyze-ticks-btn">Analyze</button>
+                    <span style="color: #888; margin-left: auto;">
+                        <span id="tick-analysis-summary"></span>
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <!-- S2R Column -->
+                    <div class="stat-card">
+                        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #2ecc71;">S→R (Scene to Renderer)</span>
+                            <span id="tick-s2r-total" style="color: #888; font-size: 0.85rem;"></span>
+                        </h3>
+                        <div id="tick-s2r-chart" class="bar-chart" style="margin-top: 0.5rem; max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+
+                    <!-- R2S Column -->
+                    <div class="stat-card">
+                        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #9b59b6;">R→S (Renderer to Scene)</span>
+                            <span id="tick-r2s-total" style="color: #888; font-size: 0.85rem;"></span>
+                        </h3>
+                        <div id="tick-r2s-chart" class="bar-chart" style="margin-top: 0.5rem; max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Combined table -->
+                <div class="stat-card" style="margin-top: 1rem;">
+                    <h3>Component Comparison <span style="font-size: 0.75rem; color: #666;">(click component for timeline)</span></h3>
+                    <div style="overflow-x: auto;">
+                        <table id="tick-comparison-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.5rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <th style="text-align: left; padding: 0.5rem; color: #888;">Component</th>
+                                    <th style="text-align: right; padding: 0.5rem; color: #2ecc71;">S→R</th>
+                                    <th style="text-align: right; padding: 0.5rem; color: #9b59b6;">R→S</th>
+                                    <th style="text-align: right; padding: 0.5rem; color: #888;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tick-comparison-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Timeline chart for selected component -->
+                <div id="component-timeline-container" class="stat-card hidden" style="margin-top: 1rem;">
+                    <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Timeline: <span id="timeline-component-name" style="color: #f39c12;"></span></span>
+                        <button class="btn" onclick="closeComponentTimeline()">Close</button>
+                    </h3>
+                    <div style="display: flex; gap: 1rem; margin: 0.5rem 0; font-size: 0.8rem;">
+                        <label style="color: #888;">
+                            <input type="checkbox" id="timeline-show-s2r" checked>
+                            <span style="color: #2ecc71;">S→R</span>
+                        </label>
+                        <label style="color: #888;">
+                            <input type="checkbox" id="timeline-show-r2s" checked>
+                            <span style="color: #9b59b6;">R→S</span>
+                        </label>
+                        <span style="color: #666; margin-left: auto;" id="timeline-stats"></span>
+                    </div>
+                    <div id="component-timeline-chart" style="height: 200px; position: relative; background: #1a1a2e; border-radius: 4px; overflow: hidden;">
+                        <canvas id="timeline-canvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-top: 0.25rem;">
+                        <span id="timeline-start-tick">Tick 0</span>
+                        <span id="timeline-end-tick">Tick 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="playground-view" class="entries-container hidden" style="padding: 0.5rem; display: flex; flex-direction: column; height: 100%;">
+                <div class="panel" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <h2 style="margin: 0;">Playground</h2>
+                    <span style="color: #666; font-size: 0.8rem;">Live JavaScript console with access to scene data</span>
+                    <button class="btn" id="playground-help-btn" style="margin-left: auto;">Help</button>
+                </div>
+
+                <!-- Code editor -->
+                <div style="flex: 1; min-height: 150px; display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <span style="font-size: 0.75rem; color: #666;">Code (auto-executes on change)</span>
+                        <span id="playground-status" style="font-size: 0.75rem; color: #666;"></span>
+                    </div>
+                    <textarea id="playground-code" spellcheck="false" style="
+                        flex: 1;
+                        width: 100%;
+                        background: #0a0a15;
+                        color: #eee;
+                        border: 1px solid #333;
+                        border-radius: 4px;
+                        padding: 0.75rem;
+                        font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+                        font-size: 0.85rem;
+                        resize: none;
+                        tab-size: 2;
+                    ">// Example: Get all entities with Transform at tick 100
+const state = getState(100);
+const entities = state.getEntitiesWithComponent("Transform");
+return { entityCount: entities.length, entities: entities.slice(0, 20) };</textarea>
+                </div>
+
+                <!-- Results -->
+                <div style="flex: 1; min-height: 150px; display: flex; flex-direction: column; margin-top: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <span style="font-size: 0.75rem; color: #666;">Result</span>
+                        <span id="playground-exec-time" style="font-size: 0.75rem; color: #666;"></span>
+                    </div>
+                    <pre id="playground-result" style="
+                        flex: 1;
+                        margin: 0;
+                        background: #0a0a15;
+                        border: 1px solid #333;
+                        border-radius: 4px;
+                        padding: 0.75rem;
+                        overflow: auto;
+                        font-size: 0.8rem;
+                    "></pre>
+                </div>
+
+                <!-- Help modal -->
+                <div id="playground-help-modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: #0f0f23; padding: 1.5rem; border-radius: 8px; max-width: 700px; max-height: 80vh; overflow-y: auto; border: 1px solid #333;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="color: #00d9ff;">Playground API Reference</h3>
+                            <button class="btn" onclick="document.getElementById('playground-help-modal').classList.add('hidden')">Close</button>
+                        </div>
+                        <div style="font-size: 0.85rem; line-height: 1.6;">
+                            <h4 style="color: #f39c12; margin-top: 0;">State Functions</h4>
+                            <pre style="background: #1a1a2e; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+<span style="color:#2ecc71">getState(tick)</span>
+  Returns state object at given tick with methods:
+  - .getEntitiesWithComponent(name) → [entityId, ...]
+  - .getComponent(entityId, name) → payload or null
+  - .getAllComponents(entityId) → {name: payload, ...}
+  - .entities → {entityId: {components, parent}, ...}
+
+<span style="color:#2ecc71">getChangesForEntity(entityId)</span>
+  Returns all CRDT changes for an entity:
+  → [{tick, component, operation, direction, payload}, ...]
+
+<span style="color:#2ecc71">getChangesForComponent(componentName)</span>
+  Returns all CRDT changes for a component:
+  → [{tick, entityId, operation, direction, payload}, ...]
+
+<span style="color:#2ecc71">getChangesBetweenTicks(fromTick, toTick)</span>
+  Returns all changes in tick range:
+  → [{tick, entityId, component, operation, direction}, ...]
+</pre>
+                            <h4 style="color: #f39c12;">Global Variables</h4>
+                            <pre style="background: #1a1a2e; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+<span style="color:#9b59b6">maxTick</span>        - Maximum tick number
+<span style="color:#9b59b6">crdtEntries</span>   - All CRDT log entries (raw)
+<span style="color:#9b59b6">allEntries</span>    - All log entries (CRDT + ops)
+</pre>
+                            <h4 style="color: #f39c12;">Examples</h4>
+                            <pre style="background: #1a1a2e; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0;">
+// Find entities with most component changes
+const counts = {};
+crdtEntries.forEach(e => {
+  counts[e._eid] = (counts[e._eid] || 0) + 1;
+});
+return Object.entries(counts)
+  .sort((a,b) => b[1] - a[1])
+  .slice(0, 10);
+
+// Get Transform changes for entity 512
+return getChangesForEntity(512)
+  .filter(c => c.component === "Transform");
+
+// Compare state between two ticks
+const s1 = getState(100);
+const s2 = getState(200);
+return {
+  tick100: s1.getEntitiesWithComponent("GltfContainer").length,
+  tick200: s2.getEntitiesWithComponent("GltfContainer").length
+};
+</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pagination" id="pagination">
+                <button class="btn" id="prev-page" disabled>← Prev</button>
+                <span id="page-info">Page 1</span>
+                <button class="btn" id="next-page">Next →</button>
+                <select id="page-size" style="width: auto; margin-left: 1rem;">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="detail">
+            <div class="panel">
+                <h2>Details</h2>
+                <div id="detail-content">
+                    <p style="color: #666;">Select an entry to view details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let PAGE_SIZE = 100;
+    let allEntries = [];
+    let filteredEntries = [];
+    let currentPage = 0;
+    let currentView = 'timeline';
+    let currentFilter = 'all';
+    let selectedEntry = null;
+    let hideTransform = true;
+    let showTransformInChart = false;
+    let maxTick = 0;
+    let selectedTreeEntityId = null;
+
+    // Component name to ID mapping (from Decentraland SDK)
+    const COMPONENT_NAME_TO_ID = {
+        "Transform": 1,
+        "MeshRenderer": 1018,
+        "MeshCollider": 1019,
+        "Material": 1017,
+        "AudioSource": 1020,
+        "AudioStream": 1021,
+        "TextShape": 1030,
+        "NftShape": 1040,
+        "GltfContainer": 1041,
+        "Animator": 1042,
+        "VideoPlayer": 1043,
+        "VideoEvent": 1044,
+        "EngineInfo": 1048,
+        "GltfContainerLoadingState": 1049,
+        "UiTransform": 1050,
+        "UiText": 1052,
+        "UiBackground": 1053,
+        "UiCanvasInformation": 1054,
+        "TriggerArea": 1060,
+        "TriggerAreaResult": 1061,
+        "PointerEvents": 1062,
+        "PointerEventsResult": 1063,
+        "Raycast": 1067,
+        "RaycastResult": 1068,
+        "AvatarModifierArea": 1070,
+        "CameraModeArea": 1071,
+        "CameraMode": 1072,
+        "AvatarAttach": 1073,
+        "PointerLock": 1074,
+        "MainCamera": 1075,
+        "VirtualCamera": 1076,
+        "InputModifier": 1078,
+        "LightSource": 1079,
+        "AvatarShape": 1080,
+        "VisibilityComponent": 1081,
+        "AvatarBase": 1087,
+        "AvatarEmoteCommand": 1088,
+        "PlayerIdentityData": 1089,
+        "Billboard": 1090,
+        "AvatarEquippedData": 1091,
+        "UiInput": 1093,
+        "UiDropdown": 1094,
+        "UiInputResult": 1095,
+        "UiDropdownResult": 1096,
+        "MapPin": 1097,
+        "GltfNodeModifiers": 1099,
+        "Tween": 1102,
+        "TweenState": 1103,
+        "TweenSequence": 1104,
+        "AudioEvent": 1105,
+        "RealmInfo": 1106,
+        "GltfNode": 1200,
+        "GltfNodeState": 1201,
+        "UiScrollResult": 1202,
+        "UiCanvas": 1203,
+        "GlobalLight": 1206,
+        "TextureCamera": 1207,
+        "CameraLayers": 1208,
+        "PrimaryPointerInfo": 1209,
+        "SkyboxTime": 1210,
+        "CameraLayer": 1211,
+    };
+
+    // Schema for types.ts (embedded for display)
+    const SCHEMA_CONTENT = `/**
+ * Schema for exported scene state at a specific tick.
+ * This file defines the types for the JSON export from the Scene Log Viewer.
+ */
+
+/** A single component entry in the exported state */
+export interface ExportedComponent {
+  /** Entity ID (combined number and version as u32) */
+  entity_id: number;
+  /** Component ID (matches Decentraland SDK component IDs) */
+  component_id: number;
+  /** Raw binary payload encoded as hex string */
+  bin_payload: string;
+}
+
+/** Exported state at a specific tick */
+export interface ExportedState {
+  /** The tick number at which this state was captured */
+  tick: number;
+  /** Export timestamp in milliseconds since epoch */
+  exported_at: number;
+  /** Total number of entities in the state */
+  entity_count: number;
+  /** Total number of components in the state */
+  component_count: number;
+  /** All components in the state (LWW components appear once, GOS components may have multiple entries) */
+  components: ExportedComponent[];
+}`;
+
+    // File handling
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    let loadedFiles = []; // Track which files have been loaded
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) loadFiles(Array.from(e.dataTransfer.files));
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) loadFiles(Array.from(e.target.files));
+    });
+
+    async function loadFiles(files) {
+        const jsonlFiles = files.filter(f => f.name.endsWith('.jsonl'));
+        if (jsonlFiles.length === 0) return;
+
+        allEntries = [];
+        loadedFiles = [];
+        let globalIdx = 0;
+
+        for (const file of jsonlFiles) {
+            const text = await file.text();
+            const lines = text.split('\n').filter(l => l.trim());
+
+            lines.forEach(line => {
+                try {
+                    const entry = JSON.parse(line);
+                    entry._idx = globalIdx++;
+                    entry._file = file.name; // Track source file
+                    allEntries.push(entry);
+                } catch { /* skip invalid lines */ }
+            });
+
+            loadedFiles.push(file.name);
+        }
+
+        // Sort all entries by timestamp to merge properly
+        allEntries.sort((a, b) => {
+            const tA = a.t || a.timestamp_ms || 0;
+            const tB = b.t || b.timestamp_ms || 0;
+            return tA - tB;
+        });
+
+        // Re-index after sorting
+        allEntries.forEach((e, idx) => e._idx = idx);
+
+        document.getElementById('upload-screen').classList.add('hidden');
+        document.getElementById('main-view').classList.remove('hidden');
+
+        processData();
+        updateStats();
+        buildComponentList();
+        applyFilters();
+    }
+
+    // All CRDT entries sorted by tick
+    let crdtEntries = [];
+    const GOS_LIMIT = 100;
+
+    function processData() {
+        maxTick = 0;
+        crdtEntries = allEntries.filter(e => e.type === 'crdt').map(e => ({
+            ...e,
+            _tk: e.tk || e.tick || 0,
+            _eid: e.e || e.entity_id,
+            _comp: e.c || e.component_name,
+            _op: e.op || e.operation
+        }));
+
+        // Sort by tick for correct state reconstruction
+        crdtEntries.sort((a, b) => a._tk - b._tk);
+
+        crdtEntries.forEach(e => {
+            if (e._tk > maxTick) maxTick = e._tk;
+        });
+
+        document.getElementById('tree-tick-slider').max = maxTick;
+        document.getElementById('tree-tick-input').max = maxTick;
+        document.getElementById('tree-tick-max').textContent = `/ ${maxTick}`;
+    }
+
+    // Reconstruct state from tick 0 up to targetTick
+    // Each component stores: { payload, bin } for LWW or [{ payload, bin }, ...] for GOS
+    function reconstructStateAtTick(targetTick) {
+        const state = {}; // entityId -> { components: { name -> {payload, bin} or array }, parent: number, componentsBin: {} }
+
+        for (const entry of crdtEntries) {
+            if (entry._tk > targetTick) break;
+
+            const eid = entry._eid;
+            const comp = entry._comp;
+            const op = entry._op;
+
+            if (op === 'de' || op === 'delete_entity') {
+                delete state[eid];
+                continue;
+            }
+
+            if (!state[eid]) {
+                state[eid] = { components: {}, componentsBin: {}, parent: 0 };
+            }
+
+            if (op === 'd' || op === 'delete') {
+                delete state[eid].components[comp];
+                delete state[eid].componentsBin[comp];
+            } else if (op === 'a' || op === 'append') {
+                // GOS: append to array (limit 100)
+                if (!Array.isArray(state[eid].components[comp])) {
+                    state[eid].components[comp] = [];
+                    state[eid].componentsBin[comp] = [];
+                }
+                const arr = state[eid].components[comp];
+                const binArr = state[eid].componentsBin[comp];
+                arr.push(entry.payload || {});
+                binArr.push(entry.bin || null);
+                // Keep only last GOS_LIMIT entries
+                if (arr.length > GOS_LIMIT) {
+                    arr.shift();
+                    binArr.shift();
+                }
+            } else {
+                // LWW: put/overwrite
+                state[eid].components[comp] = entry.payload || true;
+                state[eid].componentsBin[comp] = entry.bin || null;
+
+                // Extract parent from Transform
+                if (comp === 'Transform' && entry.payload && entry.payload.parent !== undefined) {
+                    state[eid].parent = entry.payload.parent || 0;
+                }
+                // UiTransform uses proto format
+                if (comp === 'UiTransform' && entry.payload) {
+                    const p = entry.payload.parent || entry.payload.parent_entity || 0;
+                    state[eid].parent = p;
+                }
+            }
+        }
+
+        return state;
+    }
+
+    function updateStats() {
+        const crdt = allEntries.filter(e => e.type === 'crdt');
+        const ops = allEntries.filter(e => e.type === 'op_call_start' || e.type === 'op_call_end');
+        const lifecycle = allEntries.filter(e => e.type === 'scene_lifecycle');
+
+        const s2r = crdt.filter(e => (e.d || 's2r') === 's2r');
+        const r2s = crdt.filter(e => (e.d) === 'r2s');
+
+        const s2rBytes = s2r.reduce((sum, e) => sum + (e.l || e.raw_size_bytes || 0), 0);
+        const r2sBytes = r2s.reduce((sum, e) => sum + (e.l || e.raw_size_bytes || 0), 0);
+
+        // Count entities created/deleted
+        const created = new Set();
+        const deleted = new Set();
+        crdt.forEach(e => {
+            const eid = e.e || e.entity_id;
+            const op = e.op || e.operation;
+            if (op === 'p' || op === 'put' || op === 'a' || op === 'append') created.add(eid);
+            if (op === 'de' || op === 'delete_entity') deleted.add(eid);
+        });
+
+        const filesInfo = loadedFiles.length > 1 ? ` | Files: ${loadedFiles.length}` : '';
+        document.getElementById('stats').textContent = `Total: ${allEntries.length} | CRDT: ${crdt.length} | Ops: ${ops.length} | Max Tick: ${maxTick}${filesInfo}`;
+
+        // Stats view
+        document.getElementById('stat-total').textContent = allEntries.length;
+        document.getElementById('stat-crdt').textContent = crdt.length;
+        document.getElementById('stat-crdt-sub').textContent = `S→R: ${s2r.length} | R→S: ${r2s.length}`;
+        document.getElementById('stat-ops').textContent = ops.length;
+        document.getElementById('stat-created').textContent = created.size;
+        document.getElementById('stat-deleted').textContent = deleted.size;
+        document.getElementById('stat-r2s-bytes').textContent = r2s.length ? Math.round(r2sBytes / r2s.length) : 0;
+        document.getElementById('stat-s2r-bytes').textContent = s2r.length ? Math.round(s2rBytes / s2r.length) : 0;
+
+        // Component chart
+        buildComponentChart();
+        buildEntityChart();
+    }
+
+    function buildComponentChart() {
+        const components = {};
+        allEntries.filter(e => e.type === 'crdt').forEach(e => {
+            const name = e.c || e.component_name || 'Unknown';
+            if (!showTransformInChart && name === 'Transform') return;
+            components[name] = (components[name] || 0) + 1;
+        });
+
+        const sorted = Object.entries(components).sort((a, b) => b[1] - a[1]).slice(0, 15);
+        const max = sorted[0]?.[1] || 1;
+
+        document.getElementById('component-chart').innerHTML = sorted.map(([name, count]) => `
+            <div class="bar-row">
+                <span class="bar-label" title="${name}">${name}</span>
+                <div class="bar-container"><div class="bar" style="width: ${(count/max)*100}%"></div></div>
+                <span class="bar-value">${count}</span>
+            </div>
+        `).join('');
+    }
+
+    function buildEntityChart() {
+        const entityComps = {};
+        allEntries.filter(e => e.type === 'crdt').forEach(e => {
+            const eid = e.e || e.entity_id;
+            const comp = e.c || e.component_name || 'Unknown';
+            if (hideTransform && comp === 'Transform') return;
+            const key = `E${eid}:${comp}`;
+            entityComps[key] = (entityComps[key] || 0) + 1;
+        });
+
+        const sorted = Object.entries(entityComps).sort((a, b) => b[1] - a[1]).slice(0, 20);
+        const max = sorted[0]?.[1] || 1;
+
+        document.getElementById('entity-chart').innerHTML = sorted.map(([name, count]) => `
+            <div class="bar-row">
+                <span class="bar-label" title="${name}">${name}</span>
+                <div class="bar-container"><div class="bar" style="width: ${(count/max)*100}%; background: #f39c12;"></div></div>
+                <span class="bar-value">${count}</span>
+            </div>
+        `).join('');
+    }
+
+    function buildComponentList() {
+        const components = {};
+        allEntries.filter(e => e.type === 'crdt').forEach(e => {
+            const name = e.c || e.component_name || 'Unknown';
+            components[name] = (components[name] || 0) + 1;
+        });
+
+        const sorted = Object.entries(components).sort((a, b) => b[1] - a[1]);
+        document.getElementById('component-list').innerHTML = sorted.map(([name, count]) =>
+            `<div class="comp-item ${hideTransform && name === 'Transform' ? 'hidden-comp' : ''}" onclick="filterByComponent('${name}')">${name} <span style="color:#666">${count}</span></div>`
+        ).join('');
+    }
+
+    function filterByComponent(name) {
+        document.getElementById('filter-component').value = name;
+        applyFilters();
+    }
+
+    // View tabs
+    document.querySelectorAll('.tab[data-view]').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab[data-view]').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentView = tab.dataset.view;
+
+            document.getElementById('timeline-view').classList.toggle('hidden', currentView !== 'timeline');
+            document.getElementById('stats-view').classList.toggle('hidden', currentView !== 'stats');
+            document.getElementById('tree-view').classList.toggle('hidden', currentView !== 'tree');
+            document.getElementById('tick-analysis-view').classList.toggle('hidden', currentView !== 'tick-analysis');
+            document.getElementById('playground-view').classList.toggle('hidden', currentView !== 'playground');
+            document.getElementById('pagination').classList.toggle('hidden', currentView !== 'timeline');
+            document.getElementById('filters-panel').classList.toggle('hidden', currentView === 'stats' || currentView === 'tick-analysis' || currentView === 'playground');
+            document.getElementById('components-panel').classList.toggle('hidden', currentView !== 'timeline' && currentView !== 'tree');
+
+            if (currentView === 'tree') renderTree();
+            if (currentView === 'tick-analysis') initTickAnalysis();
+            if (currentView === 'playground') initPlayground();
+        });
+    });
+
+    // Filter type tabs
+    document.querySelectorAll('.filter-type').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.filter-type').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentFilter = tab.dataset.filter;
+            currentPage = 0;
+            applyFilters();
+        });
+    });
+
+    // Toggles
+    document.getElementById('comp-toggle').addEventListener('click', () => {
+        hideTransform = !hideTransform;
+        document.getElementById('comp-toggle').textContent = hideTransform ? '[show Transform]' : '[hide Transform]';
+        buildComponentList();
+        buildEntityChart();
+    });
+
+    document.getElementById('chart-toggle').addEventListener('click', () => {
+        showTransformInChart = !showTransformInChart;
+        buildComponentChart();
+    });
+
+    // Filters
+    document.getElementById('apply-filters').addEventListener('click', () => { currentPage = 0; applyFilters(); });
+    document.getElementById('clear-filters').addEventListener('click', () => {
+        document.getElementById('filter-entity').value = '';
+        document.getElementById('filter-direction').value = '';
+        document.getElementById('filter-component').value = '';
+        document.getElementById('filter-op').value = '';
+        currentPage = 0;
+        applyFilters();
+
+        // Re-select entity in tree if we're in tree view and have a selection
+        if (currentView === 'tree' && selectedTreeEntityId !== null) {
+            setTimeout(() => {
+                highlightTreeEntity(selectedTreeEntityId);
+                showTreeEntityDetails(selectedTreeEntityId);
+            }, 50);
+        }
+    });
+
+    // Timeline slider
+    document.getElementById('timeline-slider').addEventListener('input', (e) => {
+        const pos = parseInt(e.target.value);
+        const idx = Math.floor((pos / 100) * filteredEntries.length);
+        currentPage = Math.floor(idx / PAGE_SIZE);
+        renderEntries();
+        document.getElementById('timeline-pos').textContent = `Entry ${idx}`;
+    });
+
+    // Page size
+    document.getElementById('page-size').addEventListener('change', (e) => {
+        PAGE_SIZE = parseInt(e.target.value);
+        currentPage = 0;
+        renderEntries();
+    });
+
+    // Tree tick slider and input
+    document.getElementById('tree-tick-slider').addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        document.getElementById('tree-tick-input').value = val;
+        renderTree();
+    });
+
+    document.getElementById('tree-tick-input').addEventListener('change', (e) => {
+        let val = parseInt(e.target.value) || 0;
+        val = Math.max(0, Math.min(val, maxTick));
+        e.target.value = val;
+        document.getElementById('tree-tick-slider').value = val;
+        renderTree();
+    });
+
+    function applyFilters() {
+        const entityFilter = document.getElementById('filter-entity').value;
+        const dirFilter = document.getElementById('filter-direction').value;
+        const compFilter = document.getElementById('filter-component').value.toLowerCase();
+        const opFilter = document.getElementById('filter-op').value.toLowerCase();
+
+        filteredEntries = allEntries.filter(entry => {
+            if (currentFilter === 'crdt' && entry.type !== 'crdt') return false;
+            if (currentFilter === 'ops' && entry.type !== 'op_call_start' && entry.type !== 'op_call_end') return false;
+
+            if (entityFilter) {
+                const eid = entry.e || entry.entity_id;
+                if (eid !== parseInt(entityFilter)) return false;
+            }
+            if (dirFilter && entry.d !== dirFilter) return false;
+            if (compFilter) {
+                const comp = (entry.c || entry.component_name || '').toLowerCase();
+                if (!comp.includes(compFilter)) return false;
+            }
+            if (opFilter) {
+                const op = (entry.op_name || '').toLowerCase();
+                if (!op.includes(opFilter)) return false;
+            }
+            return true;
+        });
+
+        document.getElementById('timeline-slider').max = 100;
+        document.getElementById('timeline-total').textContent = `of ${filteredEntries.length}`;
+        renderEntries();
+    }
+
+    function renderEntries() {
+        const start = currentPage * PAGE_SIZE;
+        const pageEntries = filteredEntries.slice(start, start + PAGE_SIZE);
+
+        document.getElementById('entries-list').innerHTML = pageEntries.map(entry => renderEntry(entry)).join('');
+
+        document.getElementById('prev-page').disabled = currentPage === 0;
+        document.getElementById('next-page').disabled = start + PAGE_SIZE >= filteredEntries.length;
+        document.getElementById('page-info').textContent = `Page ${currentPage + 1} / ${Math.ceil(filteredEntries.length / PAGE_SIZE)}`;
+
+        const sliderPos = filteredEntries.length ? Math.round((start / filteredEntries.length) * 100) : 0;
+        document.getElementById('timeline-slider').value = sliderPos;
+        document.getElementById('timeline-pos').textContent = `Entry ${start}`;
+    }
+
+    function renderEntry(entry) {
+        const idx = entry._idx;
+        const selected = selectedEntry === idx ? 'selected' : '';
+
+        if (entry.type === 'crdt') {
+            const dir = entry.d || 's2r';
+            const op = entry.op || entry.operation || 'p';
+            const comp = entry.c || entry.component_name || '?';
+            const eid = entry.e || entry.entity_id || 0;
+            const tick = entry.tk || entry.tick || 0;
+            const bytes = entry.l || entry.raw_size_bytes || 0;
+            return `<div class="list-item ${selected}" onclick="selectEntry(${idx})">
+                <span class="badge ${dir}">${dir}</span>
+                <span class="badge ${op}">${op}</span>
+                <span class="entity-id">E${eid}</span>
+                <span class="component">${comp}</span>
+                <span class="timestamp">tk:${tick} ${bytes}b</span>
+            </div>`;
+        }
+
+        if (entry.type === 'op_call_start' || entry.type === 'op_call_end') {
+            const isStart = entry.type === 'op_call_start';
+            return `<div class="list-item ${selected}" onclick="selectEntry(${idx})">
+                <span class="badge op">${isStart ? '→' : '←'}</span>
+                <span style="font-family: monospace; font-size: 0.8rem;">${entry.op_name}</span>
+                <span class="timestamp">#${entry.call_id} ${entry.duration_ms ? entry.duration_ms.toFixed(1) + 'ms' : ''}</span>
+                ${entry.error ? '<span style="color:#e74c3c">ERR</span>' : ''}
+            </div>`;
+        }
+
+        if (entry.type === 'scene_lifecycle') {
+            return `<div class="list-item ${selected}" onclick="selectEntry(${idx})">
+                <span class="badge lifecycle">${entry.event}</span>
+                ${entry.tick !== undefined ? `<span class="timestamp">tk:${entry.tick}</span>` : ''}
+            </div>`;
+        }
+
+        return `<div class="list-item ${selected}" onclick="selectEntry(${idx})"><span class="badge">${entry.type}</span></div>`;
+    }
+
+    function selectEntry(idx) {
+        selectedEntry = idx;
+        const entry = allEntries.find(e => e._idx === idx);
+        if (entry) {
+            const clean = {...entry};
+            delete clean._idx;
+            delete clean._file;
+
+            // For CRDT entries, show payload and bin separately
+            if (entry.type === 'crdt' && (entry.payload || entry.bin)) {
+                const hasBin = entry.bin && entry.bin.length > 0;
+                const binSize = hasBin ? entry.bin.length / 2 : 0; // hex is 2 chars per byte
+
+                // Create a clean version without payload/bin for the header
+                const header = {...clean};
+                delete header.payload;
+                delete header.bin;
+
+                // Format hex with spaces every 2 chars for readability
+                const formattedHex = hasBin ? entry.bin.match(/.{1,2}/g).join(' ') : '';
+
+                const fileInfo = loadedFiles.length > 1 && entry._file
+                    ? `<div style="font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">File: ${entry._file}</div>`
+                    : '';
+
+                document.getElementById('detail-content').innerHTML = `
+                    ${fileInfo}
+                    <div style="margin-bottom: 0.5rem;">
+                        <pre style="max-height: 100px;">${JSON.stringify(header, null, 2)}</pre>
+                    </div>
+                    ${entry.payload ? `
+                        <h3 style="font-size: 0.8rem; color: #00d9ff; margin: 0.5rem 0;">Payload (JSON)</h3>
+                        <pre>${JSON.stringify(entry.payload, null, 2)}</pre>
+                    ` : ''}
+                    ${hasBin ? `
+                        <h3 style="font-size: 0.8rem; color: #f39c12; margin: 0.5rem 0;">
+                            Binary (hex) - ${binSize} bytes
+                            <button class="btn" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; margin-left: 0.5rem;"
+                                onclick="copyToClipboard('${entry.bin}')">Copy</button>
+                        </h3>
+                        <pre style="font-size: 0.75rem; word-break: break-all; font-family: monospace;">${formattedHex}</pre>
+                    ` : ''}
+                `;
+            } else {
+                document.getElementById('detail-content').innerHTML = `<pre>${JSON.stringify(clean, null, 2)}</pre>`;
+            }
+        }
+        renderEntries();
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Brief feedback
+            const btn = event.target;
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 1000);
+        });
+    }
+
+    // Pagination
+    document.getElementById('prev-page').addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderEntries(); } });
+    document.getElementById('next-page').addEventListener('click', () => { if ((currentPage + 1) * PAGE_SIZE < filteredEntries.length) { currentPage++; renderEntries(); } });
+
+    // Tree view - current state cache
+    let currentTreeState = {};
+    let currentTreeTick = -1;
+
+    function renderTree() {
+        const tick = parseInt(document.getElementById('tree-tick-slider').value);
+
+        // Reconstruct state from tick 0 to selected tick
+        const state = reconstructStateAtTick(tick);
+        currentTreeState = state;
+        currentTreeTick = tick;
+
+        // Build tree structure
+        const entities = Object.entries(state);
+        const children = {};
+        const roots = [];
+
+        entities.forEach(([eid, data]) => {
+            const parent = data.parent || 0;
+            if (!children[parent]) children[parent] = [];
+            children[parent].push({ eid: parseInt(eid), ...data });
+        });
+
+        // Sort children by entity ID
+        Object.values(children).forEach(arr => arr.sort((a, b) => a.eid - b.eid));
+
+        // Roots are entities with parent 0 or whose parent doesn't exist
+        entities.forEach(([eid, data]) => {
+            const parent = data.parent || 0;
+            if (parent === 0 || !state[parent]) {
+                roots.push({ eid: parseInt(eid), ...data });
+            }
+        });
+        roots.sort((a, b) => a.eid - b.eid);
+
+        // Update entity count
+        document.getElementById('tree-entity-count').textContent = `${entities.length} entities`;
+
+        function renderNode(node, depth = 0) {
+            const nodeChildren = children[node.eid] || [];
+            const hasChildren = nodeChildren.length > 0;
+            const compNames = Object.keys(node.components);
+            const comps = compNames.filter(c => c !== 'Transform' && c !== 'UiTransform');
+            const gosCount = compNames.filter(c => Array.isArray(node.components[c])).length;
+
+            return `
+                <div class="tree-item" onclick="selectTreeEntity(${node.eid})" style="padding-left: ${depth * 16}px">
+                    <span class="tree-toggle">${hasChildren ? '▼' : '·'}</span>
+                    <span class="tree-icon">◆</span>
+                    <span class="entity-id">E${node.eid}</span>
+                    <span class="tree-components">${comps.slice(0, 4).join(', ')}${comps.length > 4 ? '...' : ''}</span>
+                    ${gosCount > 0 ? `<span style="color:#f39c12;font-size:0.7rem;">[${gosCount} GOS]</span>` : ''}
+                </div>
+                ${hasChildren ? `<div class="tree-root">${nodeChildren.map(c => renderNode(c, depth + 1)).join('')}</div>` : ''}
+            `;
+        }
+
+        document.getElementById('tree-content').innerHTML = roots.length
+            ? roots.map(r => renderNode(r)).join('')
+            : '<p style="color:#666; padding: 1rem;">No entities at tick ' + tick + '</p>';
+    }
+
+    function selectTreeEntity(eid) {
+        selectedTreeEntityId = eid;
+
+        // Highlight the selected entity
+        document.querySelectorAll('#tree-content .tree-item').forEach(item => {
+            item.classList.remove('selected');
+            if (item.querySelector('.entity-id')?.textContent === `E${eid}`) {
+                item.classList.add('selected');
+            }
+        });
+
+        const entity = currentTreeState[eid];
+
+        if (entity) {
+            const compCount = Object.keys(entity.components).length;
+            const gosComps = Object.entries(entity.components)
+                .filter(([_, v]) => Array.isArray(v))
+                .map(([k, v]) => `${k}: ${v.length} items`);
+
+            const changesCount = crdtEntries.filter(e => e._eid === eid).length;
+
+            document.getElementById('detail-content').innerHTML = `
+                <h3 style="margin-bottom: 0.5rem;">Entity ${eid}</h3>
+                <p style="color: #666; margin-bottom: 0.5rem;">Parent: ${entity.parent || 0} | Components: ${compCount}</p>
+                <p style="color: #888; margin-bottom: 0.5rem; font-size: 0.8rem;">Total changes: ${changesCount}</p>
+                ${gosComps.length ? `<p style="color: #f39c12; font-size: 0.8rem; margin-bottom: 0.5rem;">GOS: ${gosComps.join(', ')}</p>` : ''}
+                <div style="margin-bottom: 0.5rem;">
+                    <button class="btn" onclick="filterTreeEntityInTimeline(${eid})">View in Timeline</button>
+                    <button class="btn" onclick="showEntityChangesInPlayground(${eid})">Analyze</button>
+                </div>
+                <pre>${JSON.stringify(entity.components, null, 2)}</pre>
+            `;
+        }
+    }
+
+    function filterTreeEntityInTimeline(eid) {
+        document.getElementById('filter-entity').value = eid;
+        document.querySelectorAll('.tab[data-view]').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="timeline"]').classList.add('active');
+        currentView = 'timeline';
+
+        document.getElementById('timeline-view').classList.remove('hidden');
+        document.getElementById('tree-view').classList.add('hidden');
+        document.getElementById('stats-view').classList.add('hidden');
+        document.getElementById('tick-analysis-view').classList.add('hidden');
+        document.getElementById('playground-view').classList.add('hidden');
+        document.getElementById('pagination').classList.remove('hidden');
+        document.getElementById('filters-panel').classList.remove('hidden');
+        document.getElementById('components-panel').classList.remove('hidden');
+
+        currentPage = 0;
+        applyFilters();
+    }
+
+    function showEntityChangesInPlayground(eid) {
+        document.getElementById('playground-code').value = `// Changes for Entity ${eid}
+const changes = getChangesForEntity(${eid});
+return {
+    totalChanges: changes.length,
+    byComponent: changes.reduce((acc, c) => {
+        acc[c.component] = (acc[c.component] || 0) + 1;
+        return acc;
+    }, {}),
+    byDirection: {
+        s2r: changes.filter(c => c.direction === 's2r').length,
+        r2s: changes.filter(c => c.direction === 'r2s').length
+    },
+    changes: changes.slice(0, 50)
+};`;
+
+        document.querySelectorAll('.tab[data-view]').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="playground"]').classList.add('active');
+        currentView = 'playground';
+
+        document.getElementById('playground-view').classList.remove('hidden');
+        document.getElementById('tree-view').classList.add('hidden');
+        document.getElementById('timeline-view').classList.add('hidden');
+        document.getElementById('stats-view').classList.add('hidden');
+        document.getElementById('tick-analysis-view').classList.add('hidden');
+        document.getElementById('pagination').classList.add('hidden');
+        document.getElementById('filters-panel').classList.add('hidden');
+        document.getElementById('components-panel').classList.add('hidden');
+
+        initPlayground();
+        executePlayground();
+    }
+
+    // Export state functionality
+    document.getElementById('export-state-btn').addEventListener('click', exportState);
+    document.getElementById('show-schema-btn').addEventListener('click', showSchema);
+
+    function exportState() {
+        const tick = parseInt(document.getElementById('tree-tick-slider').value);
+        const state = reconstructStateAtTick(tick);
+
+        // Build exported components array
+        const components = [];
+
+        for (const [entityId, entityData] of Object.entries(state)) {
+            const eid = parseInt(entityId);
+
+            for (const [compName, compValue] of Object.entries(entityData.components)) {
+                const componentId = COMPONENT_NAME_TO_ID[compName] || 0;
+                const binPayload = entityData.componentsBin[compName];
+
+                if (Array.isArray(compValue)) {
+                    // GOS component - multiple entries
+                    const binArr = Array.isArray(binPayload) ? binPayload : [];
+                    compValue.forEach((_, idx) => {
+                        if (binArr[idx]) {
+                            components.push({
+                                entity_id: eid,
+                                component_id: componentId,
+                                bin_payload: binArr[idx]
+                            });
+                        }
+                    });
+                } else {
+                    // LWW component - single entry
+                    if (binPayload) {
+                        components.push({
+                            entity_id: eid,
+                            component_id: componentId,
+                            bin_payload: binPayload
+                        });
+                    }
+                }
+            }
+        }
+
+        const exportedState = {
+            tick: tick,
+            exported_at: Date.now(),
+            entity_count: Object.keys(state).length,
+            component_count: components.length,
+            components: components
+        };
+
+        // Create and download JSON file
+        const json = JSON.stringify(exportedState, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `state_tick_${tick}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function showSchema() {
+        document.getElementById('schema-content').textContent = SCHEMA_CONTENT;
+        document.getElementById('schema-modal').classList.remove('hidden');
+    }
+
+    function copySchema() {
+        navigator.clipboard.writeText(SCHEMA_CONTENT).then(() => {
+            const btn = event.target;
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 1000);
+        });
+    }
+
+    // Tick Analysis
+    function initTickAnalysis() {
+        document.getElementById('tick-analysis-to').value = maxTick;
+        document.getElementById('tick-analysis-to').max = maxTick;
+        document.getElementById('tick-analysis-from').max = maxTick;
+        document.getElementById('tick-analysis-max').textContent = `/ ${maxTick}`;
+        analyzeTickRange();
+    }
+
+    document.getElementById('analyze-ticks-btn').addEventListener('click', analyzeTickRange);
+    document.getElementById('tick-analysis-from').addEventListener('change', analyzeTickRange);
+    document.getElementById('tick-analysis-to').addEventListener('change', analyzeTickRange);
+
+    function analyzeTickRange() {
+        const fromTick = parseInt(document.getElementById('tick-analysis-from').value) || 0;
+        const toTick = parseInt(document.getElementById('tick-analysis-to').value) || maxTick;
+
+        // Filter CRDT entries within tick range
+        const entriesInRange = crdtEntries.filter(e => e._tk >= fromTick && e._tk <= toTick);
+
+        // Separate by direction
+        const s2rEntries = entriesInRange.filter(e => (e.d || 's2r') === 's2r');
+        const r2sEntries = entriesInRange.filter(e => e.d === 'r2s');
+
+        // Count by component for each direction
+        const s2rByComponent = {};
+        const r2sByComponent = {};
+
+        s2rEntries.forEach(e => {
+            const comp = e._comp || 'Unknown';
+            s2rByComponent[comp] = (s2rByComponent[comp] || 0) + 1;
+        });
+
+        r2sEntries.forEach(e => {
+            const comp = e._comp || 'Unknown';
+            r2sByComponent[comp] = (r2sByComponent[comp] || 0) + 1;
+        });
+
+        // Update summary
+        document.getElementById('tick-analysis-summary').textContent =
+            `Ticks ${fromTick}-${toTick} | ${entriesInRange.length} changes`;
+
+        // Render S2R chart
+        renderTickChart('tick-s2r-chart', s2rByComponent, '#2ecc71');
+        document.getElementById('tick-s2r-total').textContent = `${s2rEntries.length} total`;
+
+        // Render R2S chart
+        renderTickChart('tick-r2s-chart', r2sByComponent, '#9b59b6');
+        document.getElementById('tick-r2s-total').textContent = `${r2sEntries.length} total`;
+
+        // Build comparison table
+        const allComponents = new Set([...Object.keys(s2rByComponent), ...Object.keys(r2sByComponent)]);
+        const tableData = Array.from(allComponents).map(comp => ({
+            name: comp,
+            s2r: s2rByComponent[comp] || 0,
+            r2s: r2sByComponent[comp] || 0,
+            total: (s2rByComponent[comp] || 0) + (r2sByComponent[comp] || 0)
+        })).sort((a, b) => b.total - a.total);
+
+        document.getElementById('tick-comparison-tbody').innerHTML = tableData.map(row => `
+            <tr style="border-bottom: 1px solid #222; cursor: pointer;" onclick="showComponentTimeline('${row.name}')" onmouseover="this.style.background='#1a1a2e'" onmouseout="this.style.background=''">
+                <td style="padding: 0.4rem 0.5rem; color: #f39c12;">${row.name}</td>
+                <td style="padding: 0.4rem 0.5rem; text-align: right; color: #2ecc71;">${row.s2r || '-'}</td>
+                <td style="padding: 0.4rem 0.5rem; text-align: right; color: #9b59b6;">${row.r2s || '-'}</td>
+                <td style="padding: 0.4rem 0.5rem; text-align: right; color: #fff; font-weight: bold;">${row.total}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderTickChart(containerId, data, color) {
+        const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
+        const max = sorted[0]?.[1] || 1;
+
+        document.getElementById(containerId).innerHTML = sorted.length ? sorted.map(([name, count]) => `
+            <div class="bar-row clickable" style="cursor: pointer;" onclick="showComponentTimeline('${name}')">
+                <span class="bar-label" title="${name}" style="color: #f39c12;">${name}</span>
+                <div class="bar-container"><div class="bar" style="width: ${(count/max)*100}%; background: ${color};"></div></div>
+                <span class="bar-value">${count}</span>
+            </div>
+        `).join('') : '<p style="color: #666; text-align: center;">No changes</p>';
+    }
+
+    // Component Timeline Chart
+    let selectedTimelineComponent = null;
+
+    function showComponentTimeline(componentName) {
+        selectedTimelineComponent = componentName;
+        document.getElementById('timeline-component-name').textContent = componentName;
+        document.getElementById('component-timeline-container').classList.remove('hidden');
+        renderComponentTimeline();
+    }
+
+    function closeComponentTimeline() {
+        document.getElementById('component-timeline-container').classList.add('hidden');
+        selectedTimelineComponent = null;
+    }
+
+    document.getElementById('timeline-show-s2r').addEventListener('change', renderComponentTimeline);
+    document.getElementById('timeline-show-r2s').addEventListener('change', renderComponentTimeline);
+    window.addEventListener('resize', () => { if (selectedTimelineComponent) renderComponentTimeline(); });
+
+    function renderComponentTimeline() {
+        if (!selectedTimelineComponent) return;
+
+        const showS2R = document.getElementById('timeline-show-s2r').checked;
+        const showR2S = document.getElementById('timeline-show-r2s').checked;
+
+        // Get all entries for this component
+        const componentEntries = crdtEntries.filter(e => e._comp === selectedTimelineComponent);
+
+        // Group by tick
+        const s2rByTick = {};
+        const r2sByTick = {};
+        let minTick = Infinity, maxTickLocal = 0;
+
+        componentEntries.forEach(e => {
+            const tick = e._tk;
+            const dir = e.d || 's2r';
+            if (tick < minTick) minTick = tick;
+            if (tick > maxTickLocal) maxTickLocal = tick;
+
+            if (dir === 's2r') {
+                s2rByTick[tick] = (s2rByTick[tick] || 0) + 1;
+            } else {
+                r2sByTick[tick] = (r2sByTick[tick] || 0) + 1;
+            }
+        });
+
+        if (minTick === Infinity) minTick = 0;
+
+        // Update labels
+        document.getElementById('timeline-start-tick').textContent = `Tick ${minTick}`;
+        document.getElementById('timeline-end-tick').textContent = `Tick ${maxTickLocal}`;
+
+        const totalS2R = Object.values(s2rByTick).reduce((a, b) => a + b, 0);
+        const totalR2S = Object.values(r2sByTick).reduce((a, b) => a + b, 0);
+        document.getElementById('timeline-stats').textContent = `S→R: ${totalS2R} | R→S: ${totalR2S}`;
+
+        // Draw the chart
+        const canvas = document.getElementById('timeline-canvas');
+        const container = document.getElementById('component-timeline-chart');
+        canvas.width = container.clientWidth * window.devicePixelRatio;
+        canvas.height = container.clientHeight * window.devicePixelRatio;
+        canvas.style.width = container.clientWidth + 'px';
+        canvas.style.height = container.clientHeight + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        // Clear canvas
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, width, height);
+
+        // Find max value for scale
+        let maxValue = 0;
+        if (showS2R) maxValue = Math.max(maxValue, ...Object.values(s2rByTick));
+        if (showR2S) maxValue = Math.max(maxValue, ...Object.values(r2sByTick));
+        if (maxValue === 0) maxValue = 1;
+
+        const tickRange = maxTickLocal - minTick || 1;
+
+        // Draw grid
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 4; i++) {
+            const y = padding.top + (chartHeight * i / 4);
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+        }
+        ctx.stroke();
+
+        // Draw Y axis labels
+        ctx.fillStyle = '#666';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= 4; i++) {
+            const y = padding.top + (chartHeight * i / 4);
+            const value = Math.round(maxValue * (1 - i / 4));
+            ctx.fillText(value.toString(), padding.left - 5, y + 3);
+        }
+
+        // Function to draw a line chart
+        function drawLine(dataByTick, color) {
+            const ticks = Object.keys(dataByTick).map(Number).sort((a, b) => a - b);
+            if (ticks.length === 0) return;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            ticks.forEach((tick, i) => {
+                const x = padding.left + ((tick - minTick) / tickRange) * chartWidth;
+                const y = padding.top + chartHeight - (dataByTick[tick] / maxValue) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+
+            // Draw dots
+            ctx.fillStyle = color;
+            ticks.forEach(tick => {
+                const x = padding.left + ((tick - minTick) / tickRange) * chartWidth;
+                const y = padding.top + chartHeight - (dataByTick[tick] / maxValue) * chartHeight;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Draw lines
+        if (showS2R) drawLine(s2rByTick, '#2ecc71');
+        if (showR2S) drawLine(r2sByTick, '#9b59b6');
+
+        // Draw X axis
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, height - padding.bottom);
+        ctx.lineTo(width - padding.right, height - padding.bottom);
+        ctx.stroke();
+    }
+
+    // ============== PLAYGROUND ==============
+
+    let playgroundInitialized = false;
+    let playgroundDebounceTimer = null;
+
+    function initPlayground() {
+        if (playgroundInitialized) return;
+        playgroundInitialized = true;
+
+        const codeArea = document.getElementById('playground-code');
+        codeArea.addEventListener('input', () => {
+            clearTimeout(playgroundDebounceTimer);
+            playgroundDebounceTimer = setTimeout(executePlayground, 300);
+        });
+
+        // Handle Tab key for indentation
+        codeArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = codeArea.selectionStart;
+                const end = codeArea.selectionEnd;
+                codeArea.value = codeArea.value.substring(0, start) + '  ' + codeArea.value.substring(end);
+                codeArea.selectionStart = codeArea.selectionEnd = start + 2;
+            }
+        });
+
+        document.getElementById('playground-help-btn').addEventListener('click', () => {
+            document.getElementById('playground-help-modal').classList.remove('hidden');
+        });
+
+        // Run initial code
+        executePlayground();
+    }
+
+    // Playground API functions
+    function getState(tick) {
+        const state = reconstructStateAtTick(tick);
+
+        return {
+            entities: state,
+            tick: tick,
+
+            getEntitiesWithComponent(componentName) {
+                return Object.entries(state)
+                    .filter(([_, data]) => componentName in data.components)
+                    .map(([eid, _]) => parseInt(eid));
+            },
+
+            getComponent(entityId, componentName) {
+                const entity = state[entityId];
+                if (!entity) return null;
+                return entity.components[componentName] || null;
+            },
+
+            getAllComponents(entityId) {
+                const entity = state[entityId];
+                if (!entity) return {};
+                return { ...entity.components };
+            },
+
+            getEntityCount() {
+                return Object.keys(state).length;
+            },
+
+            getComponentCount() {
+                let count = 0;
+                Object.values(state).forEach(e => {
+                    count += Object.keys(e.components).length;
+                });
+                return count;
+            }
+        };
+    }
+
+    function getChangesForEntity(entityId) {
+        return crdtEntries
+            .filter(e => e._eid === entityId)
+            .map(e => ({
+                tick: e._tk,
+                component: e._comp,
+                operation: e._op,
+                direction: e.d || 's2r',
+                payload: e.payload,
+                timestamp: e.ct
+            }));
+    }
+
+    function getChangesForComponent(componentName) {
+        return crdtEntries
+            .filter(e => e._comp === componentName)
+            .map(e => ({
+                tick: e._tk,
+                entityId: e._eid,
+                operation: e._op,
+                direction: e.d || 's2r',
+                payload: e.payload,
+                timestamp: e.ct
+            }));
+    }
+
+    function getChangesBetweenTicks(fromTick, toTick) {
+        return crdtEntries
+            .filter(e => e._tk >= fromTick && e._tk <= toTick)
+            .map(e => ({
+                tick: e._tk,
+                entityId: e._eid,
+                component: e._comp,
+                operation: e._op,
+                direction: e.d || 's2r',
+                payload: e.payload
+            }));
+    }
+
+    function executePlayground() {
+        const code = document.getElementById('playground-code').value;
+        const resultEl = document.getElementById('playground-result');
+        const statusEl = document.getElementById('playground-status');
+        const execTimeEl = document.getElementById('playground-exec-time');
+
+        if (!code.trim()) {
+            resultEl.textContent = '';
+            statusEl.textContent = '';
+            execTimeEl.textContent = '';
+            return;
+        }
+
+        const startTime = performance.now();
+
+        try {
+            // Create a function with access to our API
+            const fn = new Function(
+                'getState', 'getChangesForEntity', 'getChangesForComponent', 'getChangesBetweenTicks',
+                'maxTick', 'crdtEntries', 'allEntries',
+                code.includes('return') ? code : `return (${code})`
+            );
+
+            const result = fn(
+                getState, getChangesForEntity, getChangesForComponent, getChangesBetweenTicks,
+                maxTick, crdtEntries, allEntries
+            );
+
+            const endTime = performance.now();
+
+            resultEl.style.color = '#eee';
+            resultEl.textContent = JSON.stringify(result, null, 2);
+            statusEl.textContent = '✓';
+            statusEl.style.color = '#2ecc71';
+            execTimeEl.textContent = `${(endTime - startTime).toFixed(1)}ms`;
+
+        } catch (err) {
+            const endTime = performance.now();
+
+            resultEl.style.color = '#e74c3c';
+            resultEl.textContent = `Error: ${err.message}`;
+            statusEl.textContent = '✗';
+            statusEl.style.color = '#e74c3c';
+            execTimeEl.textContent = `${(endTime - startTime).toFixed(1)}ms`;
+        }
+    }
+
+    // ============== TREE SELECTION HELPERS ==============
+
+    function highlightTreeEntity(eid) {
+        // Remove previous selection
+        document.querySelectorAll('#tree-content .tree-item.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+
+        // Find and highlight the entity
+        const items = document.querySelectorAll('#tree-content .tree-item');
+        items.forEach(item => {
+            if (item.querySelector('.entity-id')?.textContent === `E${eid}`) {
+                item.classList.add('selected');
+                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+
+    function showTreeEntityDetails(eid) {
+        selectTreeEntity(eid);
+    }
+    </script>
+</body>
+</html>
