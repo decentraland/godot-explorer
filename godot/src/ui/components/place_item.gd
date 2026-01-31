@@ -117,6 +117,21 @@ func _get_button_jump_to_event() -> Button:
 	return _get_node_safe("Button_JumpToEvent")
 
 
+func _get_button_calendar() -> CalendarButton:
+	return _get_node_safe("Button_Calendar")
+
+
+func _get_recurrent_dates_separator() -> Node:
+	return _get_node_safe("HSeparator_RecurrentDates")
+
+func _get_recurrent_dates_container() -> Node:
+	return _get_node_safe("VBoxContainer_RecurrentDates")
+
+
+func _get_button_share() -> Button:
+	return _get_node_safe("Button_Share")
+
+
 func _get_download_warning() -> Button:
 	return _get_node_safe("DownloadWarning")
 
@@ -270,6 +285,10 @@ func _connect_signals():
 		if not button_jump_to_event.pressed.is_connected(_on_button_jump_to_event_pressed):
 			button_jump_to_event.pressed.connect(_on_button_jump_to_event_pressed)
 
+	var button_share = _get_button_share()
+	if button_share:
+		if not button_share.pressed.is_connected(_on_button_share_pressed):
+			button_share.pressed.connect(_on_button_share_pressed)
 
 func set_location(_location: Vector2i):
 	var label = _get_label_location()
@@ -450,7 +469,7 @@ func set_data(item_data):
 	set_online(item_data.get("user_count", 0))
 	set_duration(item_data.get("duration", 0))
 	set_recurrent(_get_or_empty_string(item_data, "recurrent_frequency"))
-
+	set_recurrent_dates(item_data)
 	if _get_texture_image():
 		var image_url = item_data.get("image", "")
 		if not image_url.is_empty():
@@ -470,11 +489,14 @@ func set_data(item_data):
 
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))
-	
 
 	set_download_warning(item_data)
-	
-	
+
+	var calendar_btn = _get_button_calendar()
+	if calendar_btn:
+		calendar_btn.set_data(item_data)
+		calendar_btn.next_event = true
+
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
@@ -569,6 +591,27 @@ func set_recurrent(_recurrent_frequency: String) -> void:
 			separator_duration.hide()
 
 
+const _calendar_button_scene: PackedScene = preload("res://src/ui/components/calendar_button/calendar_button.tscn")
+
+
+func set_recurrent_dates(item_data:Dictionary) -> void:
+	var recurrent_dates = item_data.get("recurrent_dates", [])
+	if recurrent_dates.size() < 1:
+		return
+	var recurrent_dates_container = _get_recurrent_dates_container()
+	if not recurrent_dates_container:
+		return
+	for child in recurrent_dates_container.get_children():
+		recurrent_dates_container.remove_child(child)
+		child.queue_free()
+
+	for i in recurrent_dates.size():
+		var btn: CalendarButton = _calendar_button_scene.instantiate() as CalendarButton
+		btn.set_index(i)
+		btn.set_data(item_data)
+		btn.next_event = false
+		recurrent_dates_container.add_child(btn)
+
 
 
 func set_attendees_number(_attendees: int) -> void:
@@ -662,20 +705,14 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 	return Time.get_unix_time_from_datetime_dict(date_dict)
 
 
-func _format_timestamp_for_calendar(timestamp: int) -> String:
-	# Convert Unix timestamp to ISO format for Google Calendar (YYYYMMDDTHHMMSSZ)
-	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
-	return (
-		"%04d%02d%02dT%02d%02d%02dZ"
-		% [
-			time_dict.year,
-			time_dict.month,
-			time_dict.day,
-			time_dict.hour,
-			time_dict.minute,
-			time_dict.second
-		]
-	)
+func _parse_iso_timestamp_utc(iso_string: String) -> int:
+	## Parse ISO string (UTC, e.g. "2025-05-31T19:00:00.000Z") and return Unix timestamp (UTC).
+	if iso_string.is_empty():
+		return 0
+	var local_unix: int = _parse_iso_timestamp(iso_string)
+	var tz: Dictionary = Time.get_time_zone_from_system()
+	var bias_minutes: int = tz.get("bias", 0)
+	return local_unix - (bias_minutes * 60)
 
 
 func _format_duration(duration: int) -> String:
@@ -698,43 +735,6 @@ func _format_duration(duration: int) -> String:
 	# If more than 72 hours, show days
 	var days = hours / 24
 	return str(int(days)) + " DAYS"
-
-
-func schedule_event() -> void:
-	if not _data:
-		return
-
-	# Get event data
-	var next_start_at = _data.get("next_start_at", "")
-	var next_finish_at = _data.get("next_finish_at", "")
-
-	# Create jump in URL with location coordinates
-	var jump_in_url = (
-		DclUrls.jump_events() + "?position=%d%%2C%d&realm=main" % [location.x, location.y]
-	)
-
-	# Combine description with jump in URL
-	var details = description
-	if not description.is_empty():
-		details += "\n\n"
-	details += "jump in: " + jump_in_url
-
-	# Create dates for Google Calendar
-	#var dates_param = ""
-	if not next_start_at.is_empty() and not next_finish_at.is_empty():
-		var start_timestamp = _parse_iso_timestamp(next_start_at)
-		var finish_timestamp = _parse_iso_timestamp(next_finish_at)
-		var start_time_millis = start_timestamp * 1000
-		var end_time_millis = finish_timestamp * 1000
-		var event_location: String = "Decentraland at " + str(location.x) + "," + str(location.y)
-		if DclAndroidPlugin.is_available():
-			DclAndroidPlugin.add_calendar_event(
-				event_name, details, start_time_millis, end_time_millis, event_location
-			)
-		elif DclIosPlugin.is_available():
-			DclIosPlugin.add_calendar_event(
-				event_name, details, start_time_millis, end_time_millis, event_location
-			)
 
 
 func _on_event_pressed() -> void:
@@ -763,7 +763,9 @@ func _on_button_share_pressed() -> void:
 
 
 func _on_button_calendar_pressed() -> void:
-	schedule_event()
+	var btn = _get_button_calendar()
+	if btn is CalendarButton:
+		btn.add_event_to_calendar()
 
 
 func _on_button_jump_to_event_pressed() -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3 uid="uid://berg2gr7ubtll"]
+[gd_scene load_steps=46 format=3 uid="uid://berg2gr7ubtll"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_wcxms"]
 [ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_dbho5"]
@@ -25,12 +25,13 @@
 [ext_resource type="Texture2D" uid="uid://cmfalhha5iitd" path="res://assets/ui/calendar.svg" id="23_a57i1"]
 [ext_resource type="PackedScene" uid="uid://cm0sccjf036pe" path="res://src/ui/components/events/button_reminder.tscn" id="24_utb4h"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="25_b2lu2"]
+[ext_resource type="PackedScene" uid="uid://dqj2ytukxfyc0" path="res://src/ui/components/calendar_button/calendar_button.tscn" id="26_calbtn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2dyqy"]
-bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bmyvb"]
-bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
 
@@ -529,6 +530,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_fonts/normal_font = SubResource("FontVariation_dbho5")
 theme_override_font_sizes/normal_font_size = 26
 theme_override_font_sizes/bold_font_size = 26
@@ -542,6 +544,19 @@ scroll_active = false
 autowrap_mode = 2
 
 [node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 80
+theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
+
+[node name="VBoxContainer_RecurrentDates" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 32
+
+[node name="HSeparator_RecurrentDates" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 80
@@ -566,6 +581,7 @@ theme_override_constants/separation = 20
 alignment = 2
 
 [node name="Button_Share" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
 focus_mode = 0
@@ -576,16 +592,10 @@ icon = ExtResource("22_ycsm3")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Calendar" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons"]
+[node name="Button_Calendar" parent="PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons" instance=ExtResource("26_calbtn")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
-focus_mode = 0
-theme = ExtResource("21_44eh7")
-theme_type_variation = &"EngagementButton"
-theme_override_constants/icon_max_width = 35
-icon = ExtResource("23_a57i1")
-icon_alignment = 1
-expand_icon = true
 
 [node name="Button_Reminder" parent="PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons" instance=ExtResource("24_utb4h")]
 unique_name_in_owner = true

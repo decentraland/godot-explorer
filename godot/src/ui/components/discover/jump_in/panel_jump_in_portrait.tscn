@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=45 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -23,6 +23,7 @@
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="16_j63ba"]
 [ext_resource type="PackedScene" uid="uid://dj0cviotsdvg2" path="res://src/ui/components/discover/jump_in/download_warning.tscn" id="18_nmmsr"]
 [ext_resource type="PackedScene" uid="uid://dsd7bcii8obu6" path="res://src/ui/components/discover/categories/categories_bar.tscn" id="19_7t5hv"]
+[ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="20_elce2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4wgrb"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
@@ -113,6 +114,10 @@ font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 0.5019608)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4wgrb"]
+
+[sub_resource type="FontVariation" id="FontVariation_rjvsq"]
+fallbacks = Array[Font]([ExtResource("20_elce2")])
+base_font = ExtResource("10_cpvjm")
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_elce2"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
@@ -524,6 +529,8 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
+theme_override_fonts/normal_font = SubResource("FontVariation_rjvsq")
 theme_override_font_sizes/normal_font_size = 26
 theme_override_font_sizes/bold_font_size = 26
 theme_override_font_sizes/bold_italics_font_size = 26
