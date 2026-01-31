@@ -133,6 +133,16 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 script = ExtResource("1_wcxms")
+title = null
+event_name = null
+description = null
+views = null
+onlines = null
+likes_percent = null
+metadata = null
+location = null
+realm_title = null
+categories = null
 
 [node name="PanelContainer_Header" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -471,7 +481,7 @@ texture = ExtResource("16_nrpgh")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_EventLocation" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+[node name="Label_Location" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -563,6 +573,7 @@ theme_override_constants/separation = 80
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
 [node name="PanelContainer_Footer" type="PanelContainer" parent="."]
+visible = false
 custom_minimum_size = Vector2(0, 142)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")

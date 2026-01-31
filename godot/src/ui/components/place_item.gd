@@ -6,7 +6,7 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
-const CALENDAR_BUTTON_SCENE: PackedScene = preload(
+const _CALENDAR_BUTTON_SCENE: PackedScene = preload(
 	"res://src/ui/components/calendar_button/calendar_button.tscn"
 )
 
@@ -49,7 +49,6 @@ func _ready():
 		set_description(description)
 		set_likes_percent(likes_percent)
 		set_location(location)
-		set_event_location(location)
 		set_categories(categories)
 	else:
 		set_data(metadata)
@@ -143,10 +142,6 @@ func _get_download_warning() -> Button:
 
 func _get_label_location() -> Label:
 	return _get_node_safe("Label_Location")
-
-
-func _get_label_event_location() -> Label:
-	return _get_node_safe("Label_EventLocation")
 
 
 func _get_texture_rect_location() -> TextureRect:
@@ -298,13 +293,6 @@ func _connect_signals():
 
 func set_location(_location: Vector2i):
 	var label = _get_label_location()
-	if label:
-		location = _location
-		label.text = "%s, %s" % [_location.x, _location.y]
-
-
-func set_event_location(_location: Vector2i):
-	var label = _get_label_event_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
 	if label:
@@ -315,8 +303,8 @@ func set_event_location(_location: Vector2i):
 		texture_rect_server.hide()
 
 
-func set_event_world(world: String):
-	var label = _get_label_event_location()
+func set_world(world: String):
+	var label = _get_label_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
 	if label:
@@ -392,13 +380,6 @@ func set_online(_online: int):
 		label.text = _format_number(_online)
 
 
-func set_realm(_realm: String, _realm_title: String):
-	realm = _realm
-	var label = _get_label_realm()
-	if label:
-		label.text = _realm_title
-
-
 func set_user_name(_user_name: String):
 	var label = _get_label_user_name()
 	var container = _get_container_user_name()
@@ -458,19 +439,27 @@ func set_data(item_data):
 			event_start_timestamp = timestamp  # Store for notification scheduling
 
 	# Set location before set_attending so event_coordinates is correct for notifications
-	var location_vector = item_data.get("base_position", "0,0").split(",")
-	if location_vector.size() == 2:
-		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
+	
 
 	var server = item_data.get("server", null)
+	var world_name = item_data.get("world_name", null)
+	
 	if server and server != "main":
-		set_event_world(server)
+		set_world(server)
+	elif world_name:
+		set_world(world_name)
 	else:
-		var event_location_vector = item_data.get("coordinates", [0, 0])
-		if event_location_vector.size() == 2:
-			set_event_location(
-				Vector2i(int(event_location_vector[0]), int(event_location_vector[1]))
-			)
+		var coordinates = item_data.get("coordinates", null)
+		if coordinates:
+			if coordinates.size() == 2:
+				set_location(
+					Vector2i(int(coordinates[0]), int(coordinates[1]))
+				)
+		var base_position = item_data.get("base_position", null)
+		if base_position:
+			var location_vector = base_position.split(",")
+			set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
+			
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
@@ -490,14 +479,6 @@ func set_data(item_data):
 			show_image_container(false)
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
-
-	var world = item_data.get("world", false)
-	if world:
-		var world_name = item_data.get("world_name")
-		if world_name:
-			set_realm(world_name, world_name)
-	else:
-		set_realm(DclUrls.main_realm(), "Genesis City")
 
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))

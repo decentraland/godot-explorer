@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=46 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="14_nmmsr"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="15_nmmsr"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="16_j63ba"]
+[ext_resource type="Texture2D" uid="uid://cl6wfontbtg2d" path="res://assets/ui/profile/country.svg" id="16_rjvsq"]
 [ext_resource type="PackedScene" uid="uid://dj0cviotsdvg2" path="res://src/ui/components/discover/jump_in/download_warning.tscn" id="18_nmmsr"]
 [ext_resource type="PackedScene" uid="uid://dsd7bcii8obu6" path="res://src/ui/components/discover/categories/categories_bar.tscn" id="19_7t5hv"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="20_elce2"]
@@ -136,6 +137,16 @@ grow_vertical = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 0
 script = ExtResource("1_ggr1j")
+title = null
+event_name = null
+description = null
+views = null
+onlines = null
+likes_percent = null
+metadata = null
+location = null
+realm_title = null
+categories = null
 
 [node name="PanelContainer_Header" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -461,7 +472,16 @@ size_flags_stretch_ratio = 0.0
 theme_override_constants/separation = 5
 alignment = 2
 
-[node name="TextureRect" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+[node name="TextureRect_Server" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+layout_mode = 2
+texture = ExtResource("16_rjvsq")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="TextureRect_Location" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
+unique_name_in_owner = true
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
