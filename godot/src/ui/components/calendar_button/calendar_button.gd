@@ -12,13 +12,12 @@ var _event_description: String = ""
 var _event_location: Vector2i = Vector2i.ZERO
 var _server: String = "main"
 
-var _weekday_short: PackedStringArray = PackedStringArray([
-	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-])
-var _month_short: PackedStringArray = PackedStringArray([
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-])
+var _weekday_short: PackedStringArray = PackedStringArray(
+	["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+)
+var _month_short: PackedStringArray = PackedStringArray(
+	["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+)
 
 @onready var h_box_container_text: HBoxContainer = $HBoxContainer_Text
 @onready var label_day: Label = $HBoxContainer_Text/Label_Day
@@ -42,7 +41,9 @@ func set_event(start_iso: String, duration_ms: int) -> void:
 	_update_labels()
 
 
-func set_event_metadata(event_name: String, event_description: String, event_location: Vector2i, server: String = "main") -> void:
+func set_event_metadata(
+	event_name: String, event_description: String, event_location: Vector2i, server: String = "main"
+) -> void:
 	_event_name = event_name
 	_event_description = event_description
 	_event_location = event_location
@@ -98,7 +99,7 @@ func _update_labels() -> void:
 	h_box_container_text.visible = false
 	if next_event:
 		return
-	
+
 	var start_iso: String = _get_start_iso()
 	if start_iso.is_empty():
 		label_day.text = ""
@@ -123,7 +124,10 @@ func _format_day(unix_sec: int) -> String:
 	var wd: int = dt.get("weekday", 0)
 	var month: int = dt.get("month", 1)
 	var day: int = dt.get("day", 1)
-	return "%s, %s %d." % [_weekday_short[clampi(wd, 0, 6)], _month_short[clampi(month - 1, 0, 11)], day]
+	return (
+		"%s, %s %d."
+		% [_weekday_short[clampi(wd, 0, 6)], _month_short[clampi(month - 1, 0, 11)], day]
+	)
 
 
 func _format_time_range(start_unix_sec: int, duration_ms: int) -> String:
@@ -131,11 +135,14 @@ func _format_time_range(start_unix_sec: int, duration_ms: int) -> String:
 	var end_unix_sec: int = start_unix_sec + (duration_ms / 1000)
 	var end_dt: Dictionary = Time.get_datetime_dict_from_unix_time(end_unix_sec)
 	var tz_str: String = _get_local_timezone_string()
-	return "%s to %s %s" % [
-		_format_12h(start_dt.hour, start_dt.minute),
-		_format_12h(end_dt.hour, end_dt.minute),
-		tz_str
-	]
+	return (
+		"%s to %s %s"
+		% [
+			_format_12h(start_dt.hour, start_dt.minute),
+			_format_12h(end_dt.hour, end_dt.minute),
+			tz_str
+		]
+	)
 
 
 func _format_12h(hour: int, minute: int) -> String:
@@ -175,15 +182,31 @@ func add_event_to_calendar() -> void:
 	if not description_str.is_empty():
 		description_str += "\n\n"
 	description_str += "jump in: " + _build_jump_in_url(_event_location)
-	var event_location_str: String = "Decentraland at %d,%d" % [_event_location.x, _event_location.y]
+	var event_location_str: String = (
+		"Decentraland at %d,%d" % [_event_location.x, _event_location.y]
+	)
 	if DclAndroidPlugin.is_available():
-		DclAndroidPlugin.add_calendar_event(_event_name, description_str, start_time_millis_for_calendar, end_time_millis_for_calendar, event_location_str)
+		DclAndroidPlugin.add_calendar_event(
+			_event_name,
+			description_str,
+			start_time_millis_for_calendar,
+			end_time_millis_for_calendar,
+			event_location_str
+		)
 	elif DclIosPlugin.is_available():
-		DclIosPlugin.add_calendar_event(_event_name, description_str, start_time_millis_for_calendar, end_time_millis_for_calendar, event_location_str)
+		DclIosPlugin.add_calendar_event(
+			_event_name,
+			description_str,
+			start_time_millis_for_calendar,
+			end_time_millis_for_calendar,
+			event_location_str
+		)
 
 
 func _build_jump_in_url(loc: Vector2i) -> String:
-	var realm_param: String = "main" if (_server == "" or _server == "main") else _server.uri_encode()
+	var realm_param: String = (
+		"main" if (_server == "" or _server == "main") else _server.uri_encode()
+	)
 	return DclUrls.jump_events() + "?position=%d%%2C%d&realm=%s" % [loc.x, loc.y, realm_param]
 
 

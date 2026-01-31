@@ -1,12 +1,12 @@
 class_name CategoriesBar
 extends HBoxContainer
 
-const category_tag_scene = preload("res://src/ui/components/discover/categories/category_tag.tscn")
+const CATEGORY_TAG_SCENE = preload("res://src/ui/components/discover/categories/category_tag.tscn")
 
 
-func set_categories(categories:Array) -> void:
+func set_categories(categories: Array) -> void:
 	for category in categories:
 		if category is String:
-			var category_tag:CategoryTag = category_tag_scene.instantiate()
+			var category_tag: CategoryTag = CATEGORY_TAG_SCENE.instantiate()
 			add_child(category_tag)
 			category_tag.set_category(category)

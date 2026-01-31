@@ -124,7 +124,7 @@ func disable_buttons() -> void:
 	if button_dislike:
 		button_dislike.disabled = true
 		button_dislike.get_node("TextureProgressBar").show()
-	
+
 
 func enable_buttons() -> void:
 	if button_like:
@@ -133,4 +133,3 @@ func enable_buttons() -> void:
 	if button_dislike:
 		button_dislike.disabled = false
 		button_dislike.get_node("TextureProgressBar").hide()
-	

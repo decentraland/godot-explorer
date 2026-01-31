@@ -16,6 +16,7 @@ var event_status = ""
 @onready var featured_pill: PanelContainer = %FeaturedPill
 @onready var trending_pill: PanelContainer = %TrendingPill
 
+
 func set_data(item_data) -> void:
 	live = item_data.get("live", false)
 	next_start_at = item_data.get("next_start_at", "")
@@ -29,7 +30,8 @@ func set_data(item_data) -> void:
 	set_trending(item_data.get("trending", false))
 	set_featured(item_data.get("highlighted", false))
 	set_users_in_event(item_data.get("user_count", 0))
-	
+
+
 func set_trending(_trending: bool) -> void:
 	trending_pill.set_visible(_trending)
 
@@ -37,11 +39,13 @@ func set_trending(_trending: bool) -> void:
 func set_featured(_featured: bool) -> void:
 	featured_pill.set_visible(_featured)
 
-func set_users_in_event(_users:int = 0) -> void:
+
+func set_users_in_event(_users: int = 0) -> void:
 	if _users == 0:
 		users_pill.hide()
 		return
 	label_users_in_event.text = str(_users)
+
 
 func _parse_iso_timestamp(iso_string: String) -> int:
 	# Convert ISO string (e.g. "2025-10-06T12:00:00.000Z") to Unix timestamp

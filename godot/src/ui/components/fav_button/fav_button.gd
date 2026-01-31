@@ -5,9 +5,11 @@ var _place_id
 
 @onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 
+
 func update_data(id = null) -> void:
 	_place_id = id
 	async_update_visibility()
+
 
 func async_update_visibility() -> void:
 	if _place_id != null and _place_id != "-":
@@ -23,7 +25,7 @@ func _async_set_fav(toggled_on) -> void:
 		return
 
 	disable_button()
-	
+
 	var url = DclUrls.places_api() + "/places/" + _place_id + "/favorites"
 	var body = JSON.stringify({"favorites": toggled_on})
 
@@ -36,6 +38,7 @@ func _async_set_fav(toggled_on) -> void:
 		set_pressed_no_signal(!toggled_on)
 		printerr("Error patching favorites")
 	enable_button()
+
 
 func _async_update_status() -> void:
 	disable_button()
@@ -53,12 +56,10 @@ func _async_update_status() -> void:
 
 	var json: Dictionary = response.get_string_response_as_json()
 	var place_data = json.data
-	
+
 	set_pressed_no_signal(place_data.user_favorite)
 
-
 	enable_button()
-
 
 
 func disable_button() -> void:

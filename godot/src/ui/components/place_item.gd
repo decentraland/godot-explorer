@@ -6,6 +6,10 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal close
 
+const CALENDAR_BUTTON_SCENE: PackedScene = preload(
+	"res://src/ui/components/calendar_button/calendar_button.tscn"
+)
+
 @export var texture: Texture2D = texture_placeholder
 @export var title: String = "Scene Title"
 @export var event_name: String = "Event Name"
@@ -49,11 +53,11 @@ func _ready():
 		set_categories(categories)
 	else:
 		set_data(metadata)
-		
+
 	var card = _get_card()
 	if card:
 		card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-		
+
 	var description_container = _get_description()
 	if description_container:
 		description_container.hide()
@@ -67,8 +71,8 @@ func _get_node_safe(node_name: String) -> Node:
 
 func _get_engagement_bar() -> HBoxContainer:
 	return _get_node_safe("EngagementBar")
-	
-	
+
+
 func _get_event_pills_bar() -> HBoxContainer:
 	return _get_node_safe("EventPillsBar")
 
@@ -87,16 +91,16 @@ func _get_card() -> PanelContainer:
 
 func _get_header() -> PanelContainer:
 	return _get_node_safe("PanelContainer_Header")
-	
-	
+
+
 func _get_show_more_container() -> Button:
 	return _get_node_safe("MarginContainer_ShowMore")
-	
-	
+
+
 func _get_image_container() -> PanelContainer:
 	return _get_node_safe("Panel_Container_Image")
-	
-	
+
+
 func _get_no_image_container() -> PanelContainer:
 	return _get_node_safe("Panel_Container_NoImage")
 
@@ -123,6 +127,7 @@ func _get_button_calendar() -> CalendarButton:
 
 func _get_recurrent_dates_separator() -> Node:
 	return _get_node_safe("HSeparator_RecurrentDates")
+
 
 func _get_recurrent_dates_container() -> Node:
 	return _get_node_safe("VBoxContainer_RecurrentDates")
@@ -188,7 +193,6 @@ func _get_rich_label_title() -> TrimmedRichTextLabel:
 	return _get_node_safe("RichTextLabel_Title")
 
 
-
 func _get_duration_label() -> Label:
 	return _get_node_safe("Label_Duration")
 
@@ -240,6 +244,7 @@ func _get_separator_recurrent() -> VSeparator:
 func _get_separator_duration() -> VSeparator:
 	return _get_node_safe("VSeparator_Duration")
 
+
 func _get_label_views() -> Label:
 	return _get_node_safe("Label_Views")
 
@@ -290,6 +295,7 @@ func _connect_signals():
 		if not button_share.pressed.is_connected(_on_button_share_pressed):
 			button_share.pressed.connect(_on_button_share_pressed)
 
+
 func set_location(_location: Vector2i):
 	var label = _get_label_location()
 	if label:
@@ -307,8 +313,9 @@ func set_event_location(_location: Vector2i):
 	if texture_rect_location and texture_rect_server:
 		texture_rect_location.show()
 		texture_rect_server.hide()
-		
-func set_event_world(world:String):
+
+
+func set_event_world(world: String):
 	var label = _get_label_event_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
@@ -317,13 +324,15 @@ func set_event_world(world:String):
 	if texture_rect_location and texture_rect_server:
 		texture_rect_location.hide()
 		texture_rect_server.show()
-	
+
+
 func format_name(full: String, max_len := 7) -> String:
 	var base := full.trim_suffix(".dcl.eth")
 	if base.length() > max_len:
 		return base.substr(0, max_len) + "..."
-	return base	
-	
+	return base
+
+
 func set_image(_texture: Texture2D):
 	show_image_container(true)
 	var texture_rect = _get_texture_image()
@@ -338,6 +347,7 @@ func set_title(_title: String):
 		label.text = _title
 	if rtl_title:
 		rtl_title.text = _title
+
 
 func set_description(_description: String):
 	description = _description
@@ -451,14 +461,16 @@ func set_data(item_data):
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
 		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
-	
+
 	var server = item_data.get("server", null)
 	if server and server != "main":
 		set_event_world(server)
 	else:
 		var event_location_vector = item_data.get("coordinates", [0, 0])
 		if event_location_vector.size() == 2:
-			set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
+			set_event_location(
+				Vector2i(int(event_location_vector[0]), int(event_location_vector[1]))
+			)
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
@@ -478,7 +490,7 @@ func set_data(item_data):
 			show_image_container(false)
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
-	
+
 	var world = item_data.get("world", false)
 	if world:
 		var world_name = item_data.get("world_name")
@@ -559,16 +571,16 @@ func _get_or_empty_string(dict: Dictionary, key: String) -> String:
 
 func set_event_name(_event_name: String, _user_name: String = "") -> void:
 	event_name = _event_name
-	
+
 	var rtl = _get_rich_label_event_name()
 	if rtl:
 		rtl.set_text_trimmed(_event_name)
-		
+
 	var label_user_name = _get_label_user_name()
 	if label_user_name:
 		label_user_name.text = _user_name
-		
-		
+
+
 func set_duration(_duration: int) -> void:
 	var duration_label = _get_duration_label()
 	if duration_label:
@@ -591,10 +603,7 @@ func set_recurrent(_recurrent_frequency: String) -> void:
 			separator_duration.hide()
 
 
-const _calendar_button_scene: PackedScene = preload("res://src/ui/components/calendar_button/calendar_button.tscn")
-
-
-func set_recurrent_dates(item_data:Dictionary) -> void:
+func set_recurrent_dates(item_data: Dictionary) -> void:
 	var recurrent_dates = item_data.get("recurrent_dates", [])
 	if recurrent_dates.size() < 1:
 		return
@@ -606,12 +615,11 @@ func set_recurrent_dates(item_data:Dictionary) -> void:
 		child.queue_free()
 
 	for i in recurrent_dates.size():
-		var btn: CalendarButton = _calendar_button_scene.instantiate() as CalendarButton
+		var btn: CalendarButton = _CALENDAR_BUTTON_SCENE.instantiate() as CalendarButton
 		btn.set_index(i)
 		btn.set_data(item_data)
 		btn.next_event = false
 		recurrent_dates_container.add_child(btn)
-
 
 
 func set_attendees_number(_attendees: int) -> void:
@@ -645,9 +653,7 @@ func _update_reminder_and_jump_buttons() -> void:
 		is_live = true
 	var time_until_start_sec = event_start_timestamp - now if event_start_timestamp > 0 else 0
 	var starts_in_less_than_5_mins = (
-		event_start_timestamp > 0
-		and time_until_start_sec > 0
-		and time_until_start_sec < 300
+		event_start_timestamp > 0 and time_until_start_sec > 0 and time_until_start_sec < 300
 	)
 	var show_jump_hide_reminder = is_live or starts_in_less_than_5_mins
 
@@ -659,7 +665,7 @@ func _update_reminder_and_jump_buttons() -> void:
 		jump_btn.hide()
 
 
-func set_categories(_categories:Array) -> void:
+func set_categories(_categories: Array) -> void:
 	var categories_bar = _get_categories_bar()
 	if categories_bar:
 		categories_bar.set_categories(_categories)
@@ -780,7 +786,7 @@ func _on_show_more_toggled(toggled_on: bool) -> void:
 	var show_more = _get_show_more_container()
 	var card = _get_card()
 	var header = _get_header()
-	
+
 	if description_container and header and card and show:
 		if toggled_on:
 			description_container.show()
@@ -803,9 +809,9 @@ func _set_card_corner_radius(card: PanelContainer, top_left: int, top_right: int
 		style_box.corner_radius_top_left = top_left
 		style_box.corner_radius_top_right = top_right
 		card.add_theme_stylebox_override("panel", style_box)
-			
-			
-func show_image_container(toggle:bool) -> void:
+
+
+func show_image_container(toggle: bool) -> void:
 	var image_container = _get_image_container()
 	var no_image_container = _get_no_image_container()
 	if image_container and no_image_container:
@@ -815,8 +821,9 @@ func show_image_container(toggle:bool) -> void:
 		else:
 			image_container.hide()
 			no_image_container.show()
-	
-func set_fav_button_data(_id:String) -> void:
+
+
+func set_fav_button_data(_id: String) -> void:
 	var fav_button = _get_fav_button()
 	if fav_button:
 		fav_button.update_data(_id)

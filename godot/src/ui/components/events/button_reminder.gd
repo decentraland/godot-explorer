@@ -4,9 +4,9 @@ const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
 # DEBUG: Set to true to trigger notifications in 10 seconds instead of actual event time
 const DEBUG_TRIGGER_IN_10_SECONDS = false
-const color_pressed = Color("#FD4766")
-const color_normal = Color("#FCFCFC")
-const color_while = Color("#CFCDD4")
+const COLOR_PRESSED = Color("#FD4766")
+const COLOR_NORMAL = Color("#FCFCFC")
+const COLOR_WHILE = Color("#CFCDD4")
 
 var bell_texture = load("res://assets/ui/bell.svg")
 var check_texture = load("res://assets/ui/check.svg")
@@ -19,6 +19,7 @@ var event_cover_image_url: String = ""
 
 @onready var texture_rect_icon: TextureRect = %TextureRect_Icon
 @onready var label: Label = %Label
+
 
 func _ready() -> void:
 	_set_loading(false)
@@ -72,10 +73,11 @@ func _async_on_toggled(toggled_on: bool) -> void:
 func _set_loading(status: bool) -> void:
 	disabled = status
 	texture_rect_icon.texture = bell_texture
-	texture_rect_icon.modulate = color_while
-	label.label_settings.font_color = color_while
+	texture_rect_icon.modulate = COLOR_WHILE
+	label.label_settings.font_color = COLOR_WHILE
 	if status == false:
 		update_styles(button_pressed)
+
 
 func update_styles(toggled_on):
 	var guest_profile := Global.player_identity.is_guest
@@ -88,13 +90,14 @@ func update_styles(toggled_on):
 		label.text = "REMIND ME"
 		if toggled_on:
 			texture_rect_icon.texture = check_texture
-			texture_rect_icon.modulate = color_pressed
-			label.label_settings.font_color = color_pressed
+			texture_rect_icon.modulate = COLOR_PRESSED
+			label.label_settings.font_color = COLOR_PRESSED
 		else:
 			texture_rect_icon.texture = bell_texture
-			texture_rect_icon.modulate = color_normal
-			label.label_settings.font_color = color_normal
-			
+			texture_rect_icon.modulate = COLOR_NORMAL
+			label.label_settings.font_color = COLOR_NORMAL
+
+
 func _async_schedule_local_notification() -> void:
 	# Validate event data
 	if event_id_value.is_empty():
