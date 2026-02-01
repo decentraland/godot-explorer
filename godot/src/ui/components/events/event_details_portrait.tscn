@@ -133,16 +133,6 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 script = ExtResource("1_wcxms")
-title = null
-event_name = null
-description = null
-views = null
-onlines = null
-likes_percent = null
-metadata = null
-location = null
-realm_title = null
-categories = null
 
 [node name="PanelContainer_Header" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -573,7 +563,6 @@ theme_override_constants/separation = 80
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
 [node name="PanelContainer_Footer" type="PanelContainer" parent="."]
-visible = false
 custom_minimum_size = Vector2(0, 142)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
