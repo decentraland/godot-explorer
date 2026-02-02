@@ -28,6 +28,7 @@ func update_data(data: Dictionary = {}) -> void:
 	place_id = data.get("id", null)
 	if place_id != null:
 		_apply_button_state(data)
+		enable_buttons()
 		show()
 	else:
 		hide()
