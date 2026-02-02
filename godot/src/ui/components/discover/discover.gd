@@ -16,6 +16,7 @@ var search_text: String = ""
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
+@onready var places_my_places: VBoxContainer = %PlacesMyPlaces
 
 
 func _ready():
@@ -74,9 +75,11 @@ func set_search_filter_text(new_text: String) -> void:
 	if new_text.is_empty():
 		last_visited.show()
 		places_featured.show()
+		places_my_places.show()
 	else:
 		last_visited.hide()
 		places_featured.hide()
+		places_my_places.hide()
 	places_most_active.set_search_param(new_text)
 	events.set_search_param(new_text)
 
