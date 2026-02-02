@@ -15,6 +15,7 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 @export var only_favorites: bool = false
 @export var only_highlighted: bool = false
 @export var only_featured: bool = false
+@export var only_my_places: bool = false
 @export var only_worlds: bool = false
 @export var last_places_logic: bool = false
 
@@ -131,6 +132,11 @@ func async_request_from_api(offset: int, limit: int) -> void:
 
 	if only_favorites:
 		url += "&only_favorites=true"
+
+	if only_my_places:
+		var address := Global.player_identity.get_address_str()
+		if not address.is_empty():
+			url += "&owner=" + address
 
 	if only_highlighted:
 		url += "&only_highlighted=true"
