@@ -44,11 +44,27 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             existing_ui_background.has_background = true;
 
             let value = value.as_ref().unwrap();
+            let parent_size = existing_ui_background.base_control.get_size();
+            tracing::debug!(
+                "[UI_BKG] Entity {:?} - update_ui_background: parent_control_size={:?}, texture_mode={:?}, has_texture={:?}",
+                entity,
+                parent_size,
+                value.texture_mode,
+                value.texture.is_some()
+            );
 
             let mut existing_ui_background_control =
                 if let Some(node) = existing_ui_background.base_control.get_node_or_null("bkg") {
+                    tracing::debug!(
+                        "[UI_BKG] Entity {:?} - reusing existing background node",
+                        entity
+                    );
                     node.cast::<DclUiBackground>()
                 } else {
+                    tracing::debug!(
+                        "[UI_BKG] Entity {:?} - creating NEW background node",
+                        entity
+                    );
                     let mut node: Gd<DclUiBackground> = DclUiBackground::new_alloc();
                     node.set_name("bkg");
                     node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
@@ -62,9 +78,27 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     node
                 };
 
+            let bkg_size_before = existing_ui_background_control.get_size();
+            let bkg_pos_before = existing_ui_background_control.get_position();
+            tracing::debug!(
+                "[UI_BKG] Entity {:?} - calling change_value, bkg_size_before={:?}, bkg_pos_before={:?}",
+                entity,
+                bkg_size_before,
+                bkg_pos_before
+            );
+
             existing_ui_background_control
                 .bind_mut()
                 .change_value(value.clone(), scene.content_mapping.clone());
+
+            let bkg_size_after = existing_ui_background_control.get_size();
+            let bkg_pos_after = existing_ui_background_control.get_position();
+            tracing::debug!(
+                "[UI_BKG] Entity {:?} - after change_value: bkg_size_after={:?}, bkg_pos_after={:?}",
+                entity,
+                bkg_size_after,
+                bkg_pos_after
+            );
         }
     }
 }

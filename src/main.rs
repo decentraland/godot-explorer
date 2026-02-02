@@ -17,6 +17,7 @@ mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
+mod fi_benchmark;
 mod helpers;
 mod image_comparison;
 mod install_dependency;
@@ -112,6 +113,16 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
+            Command::new("fi-benchmark")
+                .about("Run floating islands memory benchmark with multiple client sessions")
+                .arg(
+                    Arg::new("headless")
+                        .long("headless")
+                        .help("Run in headless mode (faster, no screenshots)")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
+        .subcommand(
             Command::new("explorer-version")
                 .about("Get Godot Explorer version (reads from .build.version created during build)")
                 .arg(
@@ -144,7 +155,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
         )
-        .subcommand(Command::new("update-protocol"))
         .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
         .subcommand(Command::new("strip-ios-templates").about("Strip debug symbols from installed iOS templates (macOS only)"))
         .subcommand(
@@ -284,6 +294,17 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("use-tuned-glibc")
                         .help("Tune glibc malloc for better memory release (Linux only)")
                         .takes_value(false),
+                ).arg(
+                    Arg::new("asset-server")
+                        .long("asset-server")
+                        .help("Start the asset optimization server instead of the normal client")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("asset-server-port")
+                        .long("asset-server-port")
+                        .help("Port for asset optimization server (default: 8080)")
+                        .takes_value(true)
+                        .default_value("8080"),
                 ),
         ).subcommand(
             Command::new("update-ios-xcode")
@@ -399,7 +420,6 @@ fn main() -> Result<(), anyhow::Error> {
             result
         }
         ("clean-cache", _) => clear_cache_dir().map_err(|e| anyhow::anyhow!(e)),
-        ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("strip-ios-templates", _) => export::strip_ios_templates(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
@@ -425,6 +445,11 @@ fn main() -> Result<(), anyhow::Error> {
 
             if sm.is_present("resource-tracking") {
                 build_args.extend(&["-F", "use_resource_tracking"]);
+            }
+
+            // Add asset_server feature if running in asset-server mode
+            if sm.is_present("asset-server") {
+                build_args.extend(&["-F", "asset_server"]);
             }
 
             // Handle feature flags
@@ -543,12 +568,24 @@ fn main() -> Result<(), anyhow::Error> {
             }
 
             // Now run
+            let mut extras: Vec<String> = sm
+                .values_of("extras")
+                .map(|v| v.map(|it| it.into()).collect())
+                .unwrap_or_default();
+
+            // Add asset-server arguments if present
+            if sm.is_present("asset-server") {
+                extras.push("--asset-server".to_string());
+                if let Some(port) = sm.value_of("asset-server-port") {
+                    extras.push("--asset-server-port".to_string());
+                    extras.push(port.to_string());
+                }
+            }
+
             run::run(
                 sm.is_present("editor"),
                 sm.is_present("itest"),
-                sm.values_of("extras")
-                    .map(|v| v.map(|it| it.into()).collect())
-                    .unwrap_or_default(),
+                extras,
                 sm.is_present("stest"),
                 sm.is_present("ctest"),
                 sm.is_present("use-tuned-glibc"),
@@ -670,6 +707,7 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
+        ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
         _ => unreachable!("unreachable branch"),
     };
 

@@ -58,7 +58,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
 # Increase this value when local assets cache format changes (invalidates cache)
-const LOCAL_ASSETS_CACHE_VERSION: int = 3
+const LOCAL_ASSETS_CACHE_VERSION: int = 4
 
 ## Global classes (singleton pattern)
 
@@ -234,25 +234,44 @@ func _ready():
 		test_runner.start.call_deferred()
 		return
 
+	# Floating Islands Benchmark mode
+	if cli.fi_benchmark_size >= 0:
+		print("Running Floating Islands Benchmark...")
+
+		# Create minimal required components for benchmark
+		self.scene_fetcher = SceneFetcher.new()
+		self.scene_fetcher.set_name("scene_fetcher")
+		get_tree().root.add_child.call_deferred(self.scene_fetcher)
+		get_tree().root.add_child.call_deferred(self.scene_runner)
+		get_tree().root.add_child.call_deferred(self.content_provider)
+
+		var fi_runner = load("res://src/tools/fi_benchmark_runner.gd").new()
+		fi_runner.set_name("FIBenchmarkRunner")
+		get_tree().root.add_child.call_deferred(fi_runner)
+		return
+
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
 	session_id = DclConfig.generate_uuid_v4()
-	# Initialize metrics with proper user_id and session_id
-	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
-	self.metrics.set_debug_level(0)  # 0 off - 1 on
-	self.metrics.set_name("metrics")
+	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
+	if not cli.asset_server:
+		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
+		self.metrics.set_debug_level(0)  # 0 off - 1 on
+		self.metrics.set_name("metrics")
 
-	var sentry_user = SentryUser.new()
-	sentry_user.id = self.config.analytics_user_id
-	SentrySDK.set_tag("dcl_session_id", session_id)
+	# Skip Sentry setup in asset server mode
+	if not cli.asset_server:
+		var sentry_user = SentryUser.new()
+		sentry_user.id = self.config.analytics_user_id
+		SentrySDK.set_tag("dcl_session_id", session_id)
 
-	# Emit test messages to verify Sentry integration (all builds except production)
-	# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
-	# and we want Rust breadcrumbs to be included in that event
-	if not DclGlobal.is_production():
-		DclGlobal.emit_sentry_rust_test_messages()
-		_emit_sentry_godot_test_messages()
+		# Emit test messages to verify Sentry integration (all builds except production)
+		# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
+		# and we want Rust breadcrumbs to be included in that event
+		if not DclGlobal.is_production():
+			DclGlobal.emit_sentry_rust_test_messages()
+			_emit_sentry_godot_test_messages()
 
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
@@ -282,7 +301,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 	get_tree().root.add_child.call_deferred(self.testing_tools)
-	get_tree().root.add_child.call_deferred(self.metrics)
+	if self.metrics != null:
+		get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
@@ -331,6 +351,10 @@ func _ready():
 
 ## Async helper to clear cache and wait for completion before anything loads.
 func _async_clear_cache_if_needed() -> void:
+	# Skip cache clearing in asset server mode - we want to preserve the download cache
+	if cli.asset_server:
+		return
+
 	var should_clear_startup = cli.clear_cache_startup
 	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
 
@@ -812,7 +836,7 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
-		if Global.is_mobile():
+		if Global.is_mobile() and !Global.is_virtual_mobile():
 			if DclAndroidPlugin.is_available():
 				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
 			elif DclIosPlugin.is_available():
