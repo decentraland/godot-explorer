@@ -8,7 +8,7 @@ static func get_api_url() -> String:
 
 
 static func async_patch_like(place_id: String, like: LIKE) -> Variant:
-	var url := get_api_url() + place_id + "/likes"
+	var url := DclUrls.places_api() + "/places/" + place_id + "/likes"
 
 	var body: String
 	match like:
@@ -23,7 +23,7 @@ static func async_patch_like(place_id: String, like: LIKE) -> Variant:
 
 
 static func async_patch_favorite(place_id: String, toggled_on: bool) -> Variant:
-	var url := get_api_url() + place_id + "/favorites"
+	var url := DclUrls.places_api() + "/places/" + place_id + "/favorites"
 
 	var body: String
 	if toggled_on:
