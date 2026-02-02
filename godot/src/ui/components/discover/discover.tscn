@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=32 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="2_73ifx"]
@@ -21,8 +21,6 @@
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_iyg6d"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_753ow"]
 
@@ -111,8 +109,6 @@ _data = {
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_73ifx"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]
-
 [node name="Discover" type="TextureRect"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -126,50 +122,36 @@ expand_mode = 5
 stretch_mode = 6
 script = ExtResource("2_f08es")
 
-[node name="TextureRect" type="Control" parent="."]
+[node name="SafeMarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="PanelContainer_Navbar" type="PanelContainer" parent="TextureRect/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxEmpty_iyg6d")
-
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar"]
-layout_mode = 2
 script = ExtResource("6_b1byu")
-default_margin = 30
-use_left = false
-use_right = false
-use_bottom = false
+default_margin = 50
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer"]
+layout_mode = 2
+
+[node name="PanelContainer_Navbar" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 176)
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar"]
 layout_mode = 2
-size_flags_vertical = 4
+size_flags_vertical = 8
 theme_override_constants/separation = 14
 
-[node name="Button_Back" type="TextureButton" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="Button_Back" type="TextureButton" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -178,20 +160,20 @@ texture_normal = ExtResource("4_dn5gj")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
 theme_override_font_sizes/font_size = 28
 text = "Discover"
 label_settings = ExtResource("5_q2sj0")
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
 theme_override_styles/separator = SubResource("StyleBoxEmpty_753ow")
 
-[node name="Button_Search" type="TextureButton" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="Button_Search" type="TextureButton" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -200,7 +182,7 @@ texture_normal = ExtResource("7_242e4")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="LineEdit_SearchBar" type="LineEdit" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="LineEdit_SearchBar" type="LineEdit" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(350, 0)
@@ -209,7 +191,7 @@ placeholder_text = "Search Genesis City and Worlds"
 clear_button_enabled = true
 right_icon = ExtResource("4_64qur")
 
-[node name="Button_SearchBar" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="Button_SearchBar" type="Button" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 41)
 layout_mode = 2
@@ -220,8 +202,9 @@ theme_override_font_sizes/font_size = 16
 text = "Search"
 icon = ExtResource("4_64qur")
 
-[node name="Button_ClearFilter" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="Button_ClearFilter" type="Button" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 41)
 layout_mode = 2
 size_flags_vertical = 4
@@ -231,32 +214,32 @@ theme_override_font_sizes/font_size = 16
 text = "Clear filter"
 icon = ExtResource("4_ck13e")
 
-[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+[node name="Timer_SearchDebounce" type="Timer" parent="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer"]
 unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("6_b1byu")
 use_top = false
 use_bottom = false
 
-[node name="ScrollContainer" type="ScrollContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 scroll_deadzone = 100
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="Banners" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="Banners" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
@@ -266,13 +249,13 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
-[node name="Control" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
+[node name="Control" type="Control" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 
-[node name="GenesisBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
+[node name="GenesisBanner" type="PanelContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
@@ -285,11 +268,11 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner"]
+[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner"]
 layout_mode = 2
 texture = SubResource("GradientTexture2D_cci5n")
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -301,28 +284,28 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 texture = ExtResource("8_t3lcc")
 expand_mode = 2
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_pwm2g")
 theme_override_font_sizes/font_size = 16
 text = "Genesis City"
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_2ra1o")
@@ -330,7 +313,7 @@ theme_override_font_sizes/font_size = 10
 text = "Map Made up of thousands of parcels owned and populated with dynamic content by its diverse community."
 autowrap_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
+[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
@@ -345,7 +328,7 @@ texture = ExtResource("11_t2lm2")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="WorldsBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
+[node name="WorldsBanner" type="PanelContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
@@ -360,11 +343,11 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner"]
+[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner"]
 layout_mode = 2
 texture = SubResource("GradientTexture2D_3q3ud")
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -376,28 +359,28 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 texture = ExtResource("8_t3lcc")
 expand_mode = 2
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_pwm2g")
 theme_override_font_sizes/font_size = 16
 text = "Decentraland Worlds"
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_2ra1o")
@@ -405,7 +388,7 @@ theme_override_font_sizes/font_size = 10
 text = "Personal 3D space separate from Genesis City, where you can unleash your creativity, host events, and more!"
 autowrap_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
+[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
@@ -420,80 +403,87 @@ texture = ExtResource("12_74ecw")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
 libraries = {
 &"": SubResource("AnimationLibrary_xfp2p")
 }
 autoplay = "default"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 42
+theme_override_constants/separation = 0
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
-[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFeatured" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesFeaturedGenerator")
 title = "Featured"
 
-[node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesFeaturedGenerator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" instance=ExtResource("4_q55yj")]
 order_by = 1
 only_highlighted = true
-discover = NodePath("")
 
-[node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="HSeparator2" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 42
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="Events" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("EventsGenerator")
 title = "Events"
 
-[node name="EventsGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
-discover = NodePath("")
+[node name="EventsGenerator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/Events" instance=ExtResource("15_edk0s")]
 
-[node name="LastVisited" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="HSeparator3" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 42
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="LastVisited" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("LastVisitGenerator")
 title = "Last Visited"
 
-[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="LastVisitGenerator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" instance=ExtResource("4_q55yj")]
 unique_name_in_owner = true
 last_places_logic = true
-discover = NodePath("")
 
-[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="HSeparator4" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 42
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="PlacesMostActive" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Most Actives"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" instance=ExtResource("4_q55yj")]
 order_by = 1
-discover = NodePath("")
 
-[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="HSeparator5" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 42
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="PlacesFavorites" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Favorites"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="SafeMarginContainer/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" instance=ExtResource("4_q55yj")]
 order_by = 1
 only_favorites = true
-discover = NodePath("")
-
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 128
-theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
-
-[node name="PanelContainer" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
-layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
@@ -506,11 +496,11 @@ unique_name_in_owner = true
 visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
-[connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
-[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
-[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
+[connection signal="focus_exited" from="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
+[connection signal="text_changed" from="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
+[connection signal="timeout" from="SafeMarginContainer/VBoxContainer/PanelContainer_Navbar/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
 [connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
 [connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]

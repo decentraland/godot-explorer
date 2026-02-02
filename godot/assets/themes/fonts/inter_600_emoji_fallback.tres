@@ -4,5 +4,5 @@
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="2_emoji"]
 
 [resource]
-base_font = ExtResource("1_600")
 fallbacks = Array[Font]([ExtResource("2_emoji")])
+base_font = ExtResource("1_600")
