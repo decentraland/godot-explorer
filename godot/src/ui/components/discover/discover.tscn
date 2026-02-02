@@ -559,7 +559,7 @@ visible = false
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/TextureButton_BackToExplorer" to="." method="_on_texture_button_back_to_explorer_pressed"]
 [connection signal="editing_toggled" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_editing_toggled"]
 [connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
-[connection signal="text_submitted" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_submitted"]
+[connection signal="text_submitted" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
 [connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]

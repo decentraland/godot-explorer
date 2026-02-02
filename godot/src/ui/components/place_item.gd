@@ -781,11 +781,12 @@ func set_fav_button_data(_id: String) -> void:
 	if fav_button:
 		fav_button.update_data(_id)
 
+
 func _update_separators() -> void:
 	var separator_likes = _get_separator_likes()
 	var separator_online = _get_separator_online()
 	var container_likes = _get_container_likes()
-	var container_online = _get_container_online() 
+	var container_online = _get_container_online()
 	if container_likes and container_online:
 		if separator_likes and separator_online:
 			if container_likes.visible and container_online.visible:

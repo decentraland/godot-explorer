@@ -101,7 +101,7 @@ func _on_line_edit_search_bar_text_changed(new_text: String) -> void:
 	search_container.set_keyword_search_text(search_text)
 
 
-func _on_line_edit_search_bar_text_submitted(new_text: String) -> void:
+func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	var coordinates := {}
 	if PlacesHelper.parse_coordinates(new_text, coordinates):
 		new_text = await PlacesHelper.async_get_name_from_coordinates(
@@ -196,7 +196,6 @@ func _async_handle_event_notification(event_id: String) -> void:
 
 	# Show event details
 	on_event_pressed(event_data)
-
 
 
 func _on_error_loading_notification() -> void:

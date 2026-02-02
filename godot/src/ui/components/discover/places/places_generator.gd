@@ -30,7 +30,7 @@ func on_request(offset: int, limit: int) -> void:
 	if last_places_logic:
 		async_request_last_places(offset, limit)
 	else:
-		request_from_api(offset, limit)
+		async_request_from_api(offset, limit)
 
 	if only_favorites:
 		Global.favorite_destination_set.connect(reload.bind(offset, limit))
@@ -38,7 +38,7 @@ func on_request(offset: int, limit: int) -> void:
 
 func reload(offset, limit) -> void:
 	_new_search = true
-	request_from_api(offset, limit)
+	async_request_from_api(offset, limit)
 
 
 func async_request_last_places(_offset: int, _limit: int) -> void:
@@ -96,7 +96,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = false
 
 
-func request_from_api(offset: int, limit: int) -> void:
+func async_request_from_api(offset: int, limit: int) -> void:
 	var url := PlacesHelper.get_api_url()
 	url += "?offset=%d&limit=%d" % [offset, limit]
 
