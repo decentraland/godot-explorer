@@ -64,16 +64,6 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 		var realm: String = Realm.ensure_reduce_url(place.get("realm"))
 		var position: Vector2i = place.get("position")
-
-		var dedup_key: String
-		if Realm.is_genesis_city(realm):
-			dedup_key = "%d,%d" % [position.x, position.y]
-		else:
-			dedup_key = realm.to_lower()
-		if seen.has(dedup_key):
-			continue
-		seen[dedup_key] = true
-
 		var data: Dictionary
 		var response
 
@@ -97,6 +87,14 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 				"world_name": realm,
 				"base_position": "%d,%d" % [position.x, position.y]
 			}
+
+		var dedup_key: String = data.get("id", data.get("base_position", ""))
+		if dedup_key.is_empty():
+			dedup_key = data.get("world_name", "")
+		if not dedup_key.is_empty() and seen.has(dedup_key):
+			continue
+		if not dedup_key.is_empty():
+			seen[dedup_key] = true
 
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
