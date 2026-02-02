@@ -24,14 +24,10 @@ func _ready() -> void:
 		button_share.visible = show_share_button
 
 
-func update_data(id = null) -> void:
-	place_id = id
-	async_update_visibility()
-
-
-func async_update_visibility() -> void:
+func update_data(data: Dictionary = {}) -> void:
+	place_id = data.get("id", null)
 	if place_id != null:
-		await _async_update_buttons_icons()
+		_apply_button_state(data)
 		show()
 	else:
 		hide()
@@ -53,12 +49,16 @@ func _async_on_button_like_toggled(toggled_on: bool) -> void:
 	)
 
 	if response is PromiseError:
+		button_like.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching likes: ", response.get_error())
-	if response != null:
-		await _async_update_buttons_icons()
-	else:
+	elif response == null:
 		button_like.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching likes")
+	else:
+		button_like.icon = LIKE_SOLID if toggled_on else LIKE
+		if toggled_on:
+			button_dislike.set_pressed_no_signal(false)
+			button_dislike.icon = DISLIKE
 
 	enable_buttons()
 
@@ -75,13 +75,16 @@ func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 	)
 
 	if response is PromiseError:
+		button_dislike.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching likes: ", response.get_error())
-	if response != null:
-		await _async_update_buttons_icons()
-	else:
-		if button_dislike:
-			button_dislike.set_pressed_no_signal(!toggled_on)
+	elif response == null:
+		button_dislike.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching likes")
+	else:
+		button_dislike.icon = DISLIKE_SOLID if toggled_on else DISLIKE
+		if toggled_on:
+			button_like.set_pressed_no_signal(false)
+			button_like.icon = LIKE
 
 	enable_buttons()
 
@@ -96,49 +99,29 @@ func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 	var response = await PlacesHelper.async_patch_favorite(place_id, toggled_on)
 
 	if response is PromiseError:
+		button_fav.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching favorites: ", response.get_error())
-	if response != null:
-		await _async_update_buttons_icons()
-	else:
-		if button_fav:
-			button_fav.set_pressed_no_signal(!toggled_on)
+	elif response == null:
+		button_fav.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching favorites")
 
 	enable_buttons()
 
 
-func _async_update_buttons_icons() -> void:
-	disable_buttons()
-
-	var response = await PlacesHelper.async_get_by_id(place_id)
-
-	if response == null:
-		printerr("Error getting place's data")
-		enable_buttons()
-		return
-	if response is PromiseError:
-		printerr("Error getting place's data: ", response.get_error())
-		enable_buttons()
-		return
-
-	var json: Dictionary = response.get_string_response_as_json()
-	var place_data = json.data
-
-	button_like.set_pressed_no_signal(place_data.user_like)
+func _apply_button_state(data: Dictionary) -> void:
+	button_like.set_pressed_no_signal(data.get("user_like", false))
 	if button_like.is_pressed():
 		button_like.icon = LIKE_SOLID
 	else:
 		button_like.icon = LIKE
 
-	button_dislike.set_pressed_no_signal(place_data.user_dislike)
+	button_dislike.set_pressed_no_signal(data.get("user_dislike", false))
 	if button_dislike.is_pressed():
 		button_dislike.icon = DISLIKE_SOLID
 	else:
 		button_dislike.icon = DISLIKE
 
-	button_fav.set_pressed_no_signal(place_data.user_favorite)
-
-	enable_buttons()
+	button_fav.set_pressed_no_signal(data.get("user_favorite", false))
 
 
 func disable_buttons() -> void:

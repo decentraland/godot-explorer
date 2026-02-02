@@ -57,9 +57,3 @@ static func async_get_by_names(name: String) -> Variant:
 		url, HTTPClient.METHOD_GET, "", headers
 	)
 	return await PromiseUtils.async_awaiter(promise)
-
-
-static func async_get_by_id(place_id: String) -> Variant:
-	var url: String = get_api_url() + place_id
-
-	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)

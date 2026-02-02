@@ -355,7 +355,7 @@ func set_data(item_data):
 		set_realm(DclUrls.main_realm(), "Genesis City")
 
 	if engagement_bar:
-		engagement_bar.update_data(_data.get("id", null))
+		engagement_bar.update_data(_data)
 
 	set_download_warning(item_data)
 
