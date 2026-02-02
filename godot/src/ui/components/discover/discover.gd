@@ -94,7 +94,6 @@ func set_search_filter_text(new_text: String) -> void:
 
 func _on_line_edit_search_bar_text_changed(new_text: String) -> void:
 	search_text = new_text
-	#timer_search_debounce.start()
 	search_container.set_keyword_search_text(search_text)
 
 
@@ -106,9 +105,6 @@ func _on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 		)
 	new_text = new_text.lstrip(" .")
 	new_text = new_text.rstrip(" .")
-	# TODO only save on history if returns a result
-	#if Global.get_config().add_search_history(new_text):
-	#	Global.get_config().save_to_settings_file()
 	search_text = new_text
 	set_search_filter_text(search_text)
 	search_container.hide()

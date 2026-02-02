@@ -54,21 +54,8 @@ func async_get_popular_keywords() -> void:
 				coordinates_destinations[px] = {}
 			coordinates_destinations[px][py] = destination
 
-		#var destination_textsearch: String = destination.textsearch.to_lower()
-		#var regex = RegEx.new()
-		#regex.compile("\'(?<textsearch>.+?)\'")
-		#var regex_match := regex.search_all(destination_textsearch)
-		#for m in regex_match:
-		#var textsearch := m.strings[1]
-		#if textsearch.length() < 3:
-		#continue
-		#popular_keywords.push_back(Keyword.new(textsearch, KeywordType.POPULAR))
-
 
 func set_keyword_search_text(_search_text: String) -> void:
-	#if _search_text.length() < 3:
-	#	_search_text = ""
-
 	var keywords_available: Array[Keyword] = []
 	var keywords_result: Array[Keyword] = []
 
@@ -106,30 +93,6 @@ func set_keyword_search_text(_search_text: String) -> void:
 
 	for k in Global.get_config().search_history:
 		keywords_available.append(Keyword.new(k, KeywordType.HISTORY))
-
-	#var coordinates := {}
-	#var is_coordinates := PlacesHelper.parse_coordinates(_search_text, coordinates)
-#
-	#if is_coordinates:
-	#var coordinates_string := await PlacesHelper.async_get_name_from_coordinates(
-	#Vector2i(coordinates.x, coordinates.y)
-	#)
-#
-	#if coordinates_string == "":
-	#coordinates_string = "%d,%d" % [coordinates.x, coordinates.y]
-	#var coordinate_keyword := Keyword.new(coordinates_string, KeywordType.COORDINATES)
-	#coordinate_keyword.coordinates = Vector2i(coordinates.x, coordinates.y)
-	#keywords_result.push_back(coordinate_keyword)
-#
-
-	#var response = await PlacesHelper.async_get_by_names(_search_text)
-	#if response:
-	#if response is PromiseError:
-	#printerr("Error request places ", _search_text, " ", response.get_error())
-	#var json: Dictionary = response.get_string_response_as_json()
-	#if not json.data.is_empty():
-	#for s in json.data:
-	#keywords_available.append(Keyword.new(s.title, KeywordType.POPULAR))
 
 	for k in popular_keywords:
 		keywords_available.append(k)
@@ -182,7 +145,8 @@ func _on_keyword_selected(keyword: Keyword) -> void:
 
 
 func trim_string(text: String) -> String:
-	const STRIP_CHARS = " .*!?¡¿-_[]<>'\"%&\\/,.;:"
+	const STRIP_CHARS = ".*!?¡¿-_[]<>'\"%&\\/,.;:"
 	text = text.lstrip(STRIP_CHARS)
 	text = text.rstrip(STRIP_CHARS)
+	text = text.strip_edges()
 	return text

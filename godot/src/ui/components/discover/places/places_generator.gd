@@ -126,7 +126,6 @@ func request_from_api(offset: int, limit: int) -> void:
 	if search_param.length() > 0:
 		url += "&search=" + search_param.uri_encode()
 
-	#TODO Authorization required?
 	if only_favorites:
 		url += "&only_favorites=true"
 
