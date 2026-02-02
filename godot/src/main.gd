@@ -43,6 +43,11 @@ func start():
 
 
 func _start():
+	if Global.cli.asset_server:
+		print("Running in Asset Server mode")
+		_start_asset_server()
+		return
+
 	# Floating Islands Benchmark mode - don't load any UI scene
 	if Global.cli.fi_benchmark_size >= 0:
 		return
@@ -90,3 +95,22 @@ func _start():
 			)
 		else:
 			get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+
+
+func _start_asset_server():
+	# Check if asset_server feature was compiled
+	if not ClassDB.class_exists(&"DclAssetServer"):
+		push_error("Asset server requires the 'asset_server' feature to be enabled during build.")
+		push_error("Build with: cargo run -- build --features asset_server")
+		get_tree().quit(1)
+		return
+
+	# Create and start the asset server
+	var asset_server = ClassDB.instantiate(&"DclAssetServer")
+	asset_server.set_port(Global.cli.asset_server_port)
+	asset_server.set_name("AssetServer")
+	get_tree().root.add_child(asset_server)
+	asset_server.start()
+
+	# Keep the process running in headless mode
+	print("Asset server is running. Press Ctrl+C to stop.")
