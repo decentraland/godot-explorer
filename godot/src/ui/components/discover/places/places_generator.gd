@@ -56,6 +56,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = true
 
 	var last_places: Array[Dictionary] = Global.get_config().last_places.duplicate()
+	var seen: Dictionary = {}
 	var index = 0
 	for place in last_places:
 		place["index"] = index
@@ -63,6 +64,16 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 		var realm: String = Realm.ensure_reduce_url(place.get("realm"))
 		var position: Vector2i = place.get("position")
+
+		var dedup_key: String
+		if Realm.is_genesis_city(realm):
+			dedup_key = "%d,%d" % [position.x, position.y]
+		else:
+			dedup_key = realm.to_lower()
+		if seen.has(dedup_key):
+			continue
+		seen[dedup_key] = true
+
 		var data: Dictionary
 		var response
 
