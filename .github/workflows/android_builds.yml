@@ -25,7 +25,7 @@ jobs:
   build:
     name: Build VR and Mobile
     runs-on: warp-ubuntu-latest-x64-4x
-    timeout-minutes: 25
+    timeout-minutes: 35
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15

@@ -11,7 +11,7 @@ val pluginPackageName = "org.decentraland.godotexplorer"
 
 android {
     namespace = pluginPackageName
-    compileSdk = 33
+    compileSdk = 34
     ndkVersion = "28.1.13356709"  // NDK version for native build (matches xtask ANDROID_NDK_VERSION)
 
     buildFeatures {
@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 23  // Increased for Reown/WalletConnect SDK compatibility
 
         manifestPlaceholders["godotPluginName"] = pluginName
         manifestPlaceholders["godotPluginPackageName"] = pluginPackageName
@@ -81,6 +81,15 @@ dependencies {
     api("androidx.media3:media3-exoplayer-dash:1.4.1")
     api("androidx.media3:media3-exoplayer-hls:1.4.1")
     api("androidx.media3:media3-ui:1.4.1")
+
+    // Reown Sign SDK (WalletConnect successor) for native wallet connection
+    api(platform("com.reown:android-bom:1.5.2"))
+    api("com.reown:android-core") {
+        exclude(group = "org.jspecify", module = "jspecify")
+    }
+    api("com.reown:sign") {
+        exclude(group = "org.jspecify", module = "jspecify")
+    }
 }
 
 // BUILD TASKS DEFINITION

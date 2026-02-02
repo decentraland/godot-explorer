@@ -32,6 +32,10 @@ pub struct DclParseDeepLink {
     /// Valid values: "org", "zone", "today"
     #[var]
     dclenv: GString,
+
+    /// True if this is a WalletConnect callback that should be ignored
+    #[var]
+    is_walletconnect_callback: bool,
 }
 
 #[godot_api]
@@ -46,6 +50,7 @@ impl IRefCounted for DclParseDeepLink {
             dynamic_scene_loading: false,
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
+            is_walletconnect_callback: false,
             dclenv: GString::new(),
         }
     }
@@ -63,6 +68,7 @@ impl DclParseDeepLink {
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
             dclenv: GString::new(),
+            is_walletconnect_callback: false,
         };
 
         if url_str.is_empty() {
@@ -81,6 +87,15 @@ impl DclParseDeepLink {
         if url.scheme() != "decentraland" {
             godot_error!("Invalid scheme: expected 'decentraland' - {url_str}");
             return Gd::from_object(return_object);
+        }
+
+        // Check for WalletConnect callback (decentraland://walletconnect or decentraland://walletconnect/...)
+        // This is a callback from wallet apps and should be ignored
+        if let Some(host) = url.host_str() {
+            if host == "walletconnect" {
+                return_object.is_walletconnect_callback = true;
+                return Gd::from_object(return_object);
+            }
         }
 
         // Parse query parameters

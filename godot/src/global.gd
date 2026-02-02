@@ -58,7 +58,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
 # Increase this value when local assets cache format changes (invalidates cache)
-const LOCAL_ASSETS_CACHE_VERSION: int = 3
+const LOCAL_ASSETS_CACHE_VERSION: int = 4
 
 ## Global classes (singleton pattern)
 
@@ -254,21 +254,24 @@ func _ready():
 		DirAccess.make_dir_absolute("user://content/")
 
 	session_id = DclConfig.generate_uuid_v4()
-	# Initialize metrics with proper user_id and session_id
-	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
-	self.metrics.set_debug_level(0)  # 0 off - 1 on
-	self.metrics.set_name("metrics")
+	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
+	if not cli.asset_server:
+		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
+		self.metrics.set_debug_level(0)  # 0 off - 1 on
+		self.metrics.set_name("metrics")
 
-	var sentry_user = SentryUser.new()
-	sentry_user.id = self.config.analytics_user_id
-	SentrySDK.set_tag("dcl_session_id", session_id)
+	# Skip Sentry setup in asset server mode
+	if not cli.asset_server:
+		var sentry_user = SentryUser.new()
+		sentry_user.id = self.config.analytics_user_id
+		SentrySDK.set_tag("dcl_session_id", session_id)
 
-	# Emit test messages to verify Sentry integration (all builds except production)
-	# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
-	# and we want Rust breadcrumbs to be included in that event
-	if not DclGlobal.is_production():
-		DclGlobal.emit_sentry_rust_test_messages()
-		_emit_sentry_godot_test_messages()
+		# Emit test messages to verify Sentry integration (all builds except production)
+		# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
+		# and we want Rust breadcrumbs to be included in that event
+		if not DclGlobal.is_production():
+			DclGlobal.emit_sentry_rust_test_messages()
+			_emit_sentry_godot_test_messages()
 
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
@@ -298,7 +301,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 	get_tree().root.add_child.call_deferred(self.testing_tools)
-	get_tree().root.add_child.call_deferred(self.metrics)
+	if self.metrics != null:
+		get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
@@ -347,6 +351,10 @@ func _ready():
 
 ## Async helper to clear cache and wait for completion before anything loads.
 func _async_clear_cache_if_needed() -> void:
+	# Skip cache clearing in asset server mode - we want to preserve the download cache
+	if cli.asset_server:
+		return
+
 	var should_clear_startup = cli.clear_cache_startup
 	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
 
@@ -805,6 +813,10 @@ func check_deep_link_teleport_to():
 			deep_link_url = new_deep_link_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
+		# Ignore WalletConnect callbacks
+		if Global.deep_link_obj.is_walletconnect_callback:
+			return
+
 		if Global.deep_link_obj.is_location_defined():
 			# Use preview URL as realm if specified, otherwise use realm, otherwise main
 			var realm = Global.deep_link_obj.preview
@@ -825,6 +837,11 @@ func _on_deeplink_received(url: String) -> void:
 	if not url.is_empty():
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
+
+		# Ignore WalletConnect callbacks (decentraland://walletconnect)
+		if deep_link_obj.is_walletconnect_callback:
+			print("[DEEPLINK] Ignoring WalletConnect callback")
+			return
 
 		# Handle signin deep link for mobile auth flow
 		if deep_link_obj.is_signin_request():
@@ -850,6 +867,11 @@ func _notification(what: int) -> void:
 
 			if not deep_link_url.is_empty():
 				deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+
+				# Ignore WalletConnect callbacks
+				if deep_link_obj.is_walletconnect_callback:
+					return
+
 				# Handle signin deep link for mobile auth flow
 				if deep_link_obj.is_signin_request():
 					_handle_signin_deep_link(deep_link_obj.signin_identity_id)

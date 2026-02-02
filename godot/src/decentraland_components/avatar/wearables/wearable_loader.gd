@@ -82,6 +82,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 
 
 ## Get a wearable node from cached scene, using threaded loading.
+## Handles both optimized assets (res:// paths) and runtime-processed assets (user:// paths).
 func async_get_wearable_node(file_hash: String) -> Node3D:
 	var scene_path = _completed_loads.get(file_hash, "")
 	if scene_path.is_empty():
@@ -91,9 +92,17 @@ func async_get_wearable_node(file_hash: String) -> Node3D:
 		printerr("WearableLoader: no scene_path for hash ", file_hash)
 		return null
 
-	if not FileAccess.file_exists(scene_path):
-		printerr("WearableLoader: scene file does not exist: ", scene_path)
-		return null
+	# Check if scene exists - use appropriate method for path type
+	if scene_path.begins_with("res://"):
+		# Optimized asset loaded via resource pack - use ResourceLoader.exists()
+		if not ResourceLoader.exists(scene_path):
+			printerr("WearableLoader: optimized scene not found: ", scene_path)
+			return null
+	else:
+		# Runtime-processed asset on disk - use FileAccess.file_exists()
+		if not FileAccess.file_exists(scene_path):
+			printerr("WearableLoader: scene file does not exist: ", scene_path)
+			return null
 
 	# Use threaded loading for non-blocking
 	var err = ResourceLoader.load_threaded_request(scene_path)

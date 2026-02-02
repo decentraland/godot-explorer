@@ -5,6 +5,8 @@ const MODAL_ALERT_ICON = preload("res://assets/ui/modal-alert-icon.svg")
 const MODAL_BLOCK_ICON = preload("res://assets/ui/modal-block-icon.svg")
 const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg")
 
+var dismissable: bool = true
+
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
 @onready var label_title: Label = %Label_Title
 @onready var label_body: Label = %Label_Body
@@ -98,6 +100,8 @@ func _async_update_modal_size() -> void:
 
 
 func _on_gui_input(event: InputEvent) -> void:
+	if not dismissable:
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			Global.modal_manager.close_current_modal()
