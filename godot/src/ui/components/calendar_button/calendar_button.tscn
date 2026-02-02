@@ -23,6 +23,7 @@ script = ExtResource("1_script")
 
 [node name="HBoxContainer_Text" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 50.0

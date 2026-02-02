@@ -16,6 +16,7 @@ var search_text: String = ""
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
+@onready var button_back: TextureButton = %Button_Back
 
 
 func _ready():
@@ -25,6 +26,7 @@ func _ready():
 	button_search_bar.show()
 	button_clear_filter.hide()
 	line_edit_search_bar.hide()
+	button_back.hide()
 
 	# Connect to notification clicked signal
 	Global.notification_clicked.connect(_on_notification_clicked)
@@ -46,8 +48,14 @@ func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 
 
 func _on_visibility_changed():
+	if button_back:
+		if Global.get_explorer():
+			button_back.show()
+		else:
+			button_back.hide()
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		last_visited_generator.async_request_last_places(0, 10)
+		Global.set_orientation_portrait()
 
 
 func _on_line_edit_search_bar_focus_exited() -> void:
@@ -164,9 +172,10 @@ func _async_handle_event_notification(event_id: String) -> void:
 	on_event_pressed(event_data)
 
 
-func _on_button_close_pressed() -> void:
-	Global.close_menu.emit()
-
-
 func _on_error_loading_notification() -> void:
 	Global.close_navbar.emit()
+
+
+func _on_button_back_pressed() -> void:
+	Global.close_menu.emit()
+	Global.set_orientation_landscape()

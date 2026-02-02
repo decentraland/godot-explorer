@@ -45,11 +45,10 @@ func _on_button_share_pressed() -> void:
 	var world = place_data.get("world", false)
 	var world_name = place_data.get("world_name", "")
 	if world:
-		place_url += "/places/world/?name="+ world_name 
+		place_url += "/places/world/?name=" + world_name
 	else:
 		var base_position = place_data.get("base_position", "0,0")
 		place_url += "/places/place/?position=" + base_position
-
 
 	var place_title = place_data.get("title", "Decentraland Place")
 

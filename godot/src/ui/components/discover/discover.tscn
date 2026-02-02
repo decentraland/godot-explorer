@@ -1,28 +1,28 @@
-[gd_scene load_steps=32 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=34 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
+[ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="2_73ifx"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_17slp"]
 [ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/components/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
 [ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="4_64qur"]
 [ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_ck13e"]
+[ext_resource type="Texture2D" uid="uid://c7jecqrruri3t" path="res://assets/ui/back.svg" id="4_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_5g6gd"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
+[ext_resource type="Texture2D" uid="uid://b0i03g4ptu6yg" path="res://assets/ui/search.svg" id="7_242e4"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="8_t3lcc"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="9_2ra1o"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="9_pwm2g"]
-[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="10_73ifx"]
 [ext_resource type="Texture2D" uid="uid://cj4xqne10w3ka" path="res://assets/ui/discover/genesis_banner.png" id="11_t2lm2"]
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
-bg_color = Color(0, 0, 0, 0.2)
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_iyg6d"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_753ow"]
 
@@ -109,10 +109,11 @@ _data = {
 &"default": SubResource("Animation_mh318")
 }
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_73ifx"]
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]
 
-[node name="Discover" type="Control"]
-layout_mode = 3
+[node name="Discover" type="TextureRect"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -120,6 +121,9 @@ grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 1
 theme = ExtResource("1_tkk7t")
+texture = ExtResource("2_73ifx")
+expand_mode = 5
+stretch_mode = 6
 script = ExtResource("2_f08es")
 
 [node name="TextureRect" type="Control" parent="."]
@@ -142,37 +146,61 @@ grow_vertical = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_746xu")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_iyg6d")
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar"]
-custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 8
 script = ExtResource("6_b1byu")
 default_margin = 30
+use_left = false
+use_right = false
 use_bottom = false
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
 layout_mode = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 4
 theme_override_constants/separation = 14
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Button_Back" type="TextureButton" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture_normal = ExtResource("4_dn5gj")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
 theme_override_font_sizes/font_size = 28
 text = "Discover"
 label_settings = ExtResource("5_q2sj0")
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
 theme_override_styles/separator = SubResource("StyleBoxEmpty_753ow")
 
-[node name="LineEdit_SearchBar" type="LineEdit" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Button_Search" type="TextureButton" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture_normal = ExtResource("7_242e4")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="LineEdit_SearchBar" type="LineEdit" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(350, 0)
@@ -181,7 +209,7 @@ placeholder_text = "Search Genesis City and Worlds"
 clear_button_enabled = true
 right_icon = ExtResource("4_64qur")
 
-[node name="Button_SearchBar" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Button_SearchBar" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 41)
 layout_mode = 2
@@ -192,7 +220,7 @@ theme_override_font_sizes/font_size = 16
 text = "Search"
 icon = ExtResource("4_64qur")
 
-[node name="Button_ClearFilter" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Button_ClearFilter" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 41)
 layout_mode = 2
@@ -203,21 +231,7 @@ theme_override_font_sizes/font_size = 16
 text = "Clear filter"
 icon = ExtResource("4_ck13e")
 
-[node name="Button_Close" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 41)
-layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("6_5g6gd")
-theme_type_variation = &"SnowButton"
-theme_override_constants/h_separation = 0
-theme_override_constants/icon_max_width = 10
-theme_override_font_sizes/font_size = 16
-icon = ExtResource("9_g4fdo")
-script = ExtResource("10_73ifx")
-hide_on_portrait = true
-
-[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
@@ -414,7 +428,12 @@ autoplay = "default"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 42
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
 [node name="PlacesFeatured" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
@@ -425,7 +444,7 @@ title = "Featured"
 [node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 only_highlighted = true
-discover = NodePath("../../../../../../../..")
+discover = NodePath("")
 
 [node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
@@ -434,7 +453,7 @@ generator = NodePath("EventsGenerator")
 title = "Events"
 
 [node name="EventsGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
-discover = NodePath("../../../../../../../..")
+discover = NodePath("")
 
 [node name="LastVisited" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
@@ -445,7 +464,7 @@ title = "Last Visited"
 [node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 unique_name_in_owner = true
 last_places_logic = true
-discover = NodePath("../../../../../../../..")
+discover = NodePath("")
 
 [node name="PlacesMostActive" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
@@ -455,7 +474,7 @@ title = "Most Actives"
 
 [node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
-discover = NodePath("../../../../../../../..")
+discover = NodePath("")
 
 [node name="PlacesFavorites" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
@@ -466,7 +485,7 @@ title = "Favorites"
 [node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 only_favorites = true
-discover = NodePath("../../../../../../../..")
+discover = NodePath("")
 
 [node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
@@ -487,11 +506,11 @@ unique_name_in_owner = true
 visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
-[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
-[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
+[connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
+[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
+[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
 [connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
 [connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]

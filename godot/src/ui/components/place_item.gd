@@ -439,11 +439,10 @@ func set_data(item_data):
 			event_start_timestamp = timestamp  # Store for notification scheduling
 
 	# Set location before set_attending so event_coordinates is correct for notifications
-	
 
 	var server = item_data.get("server", null)
 	var world_name = item_data.get("world_name", null)
-	
+
 	if server and server != "main":
 		set_world(server)
 	elif world_name:
@@ -452,14 +451,11 @@ func set_data(item_data):
 		var coordinates = item_data.get("coordinates", null)
 		if coordinates:
 			if coordinates.size() == 2:
-				set_location(
-					Vector2i(int(coordinates[0]), int(coordinates[1]))
-				)
+				set_location(Vector2i(int(coordinates[0]), int(coordinates[1])))
 		var base_position = item_data.get("base_position", null)
 		if base_position:
 			var location_vector = base_position.split(",")
 			set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
-			
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
