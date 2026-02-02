@@ -51,7 +51,7 @@ impl ContentMappingAndUrl {
 
         let audio_hash = self.find_audio_for_base_name(base_name);
 
-        tracing::info!(
+        tracing::debug!(
             "get_scene_emote_hash: file={}, glb_hash={}, base_name={}, audio_hash={:?}",
             emote_file,
             glb_hash,

@@ -3,7 +3,10 @@ extends RefCounted
 
 ## Helper class for promise-based batched emote loading.
 ## Emotes have a special structure with animations that need extraction.
-## Scene paths are retrieved from ContentProvider's cache rather than tracked locally.
+## Tracks completed loads to handle both optimized (res://) and runtime-processed (user://) paths.
+
+# Tracks completed loads: file_hash -> scene_path
+var _completed_loads: Dictionary = {}
 
 
 ## Load a single emote using promise-based loading.
@@ -53,6 +56,8 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 		var result = gltf_promise.get_data()
 		if result is String:
 			scene_path = result
+			# Store in completed loads for async_get_emote_gltf to find
+			_completed_loads[file_hash] = scene_path
 
 	# Wait for audio (if any)
 	if not audio_promises.is_empty():
@@ -92,6 +97,8 @@ func async_load_scene_emote(glb_hash: String, audio_hash: String, base_url: Stri
 	if gltf_promise.is_resolved() and not gltf_promise.is_rejected():
 		var result = gltf_promise.get_data()
 		if result is String:
+			# Store in completed loads for async_get_emote_gltf to find
+			_completed_loads[glb_hash] = result
 			return result
 
 	return ""
@@ -99,17 +106,29 @@ func async_load_scene_emote(glb_hash: String, audio_hash: String, base_url: Stri
 
 ## Get a DclEmoteGltf from cached scene using threaded loading.
 ## Uses ContentProvider's extract_emote_from_scene which extracts animations properly.
+## Handles both optimized assets (res:// paths) and runtime-processed assets (user:// paths).
 func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
-	# Get scene path from ContentProvider's cache
-	var scene_path = Global.content_provider.get_emote_cache_path(file_hash)
+	# First check _completed_loads (handles optimized res:// paths)
+	var scene_path = _completed_loads.get(file_hash, "")
+	if scene_path.is_empty():
+		# Fall back to ContentProvider's cache path (runtime-processed user:// paths)
+		scene_path = Global.content_provider.get_emote_cache_path(file_hash)
 
 	if scene_path.is_empty():
 		printerr("EmoteLoader: no scene_path for hash ", file_hash)
 		return null
 
-	if not FileAccess.file_exists(scene_path):
-		printerr("EmoteLoader: scene file does not exist: ", scene_path)
-		return null
+	# Check if scene exists - use appropriate method for path type
+	if scene_path.begins_with("res://"):
+		# Optimized asset loaded via resource pack - use ResourceLoader.exists()
+		if not ResourceLoader.exists(scene_path):
+			printerr("EmoteLoader: optimized scene not found: ", scene_path)
+			return null
+	else:
+		# Runtime-processed asset on disk - use FileAccess.file_exists()
+		if not FileAccess.file_exists(scene_path):
+			printerr("EmoteLoader: scene file does not exist: ", scene_path)
+			return null
 
 	# Use threaded loading for non-blocking
 	var err = ResourceLoader.load_threaded_request(scene_path)

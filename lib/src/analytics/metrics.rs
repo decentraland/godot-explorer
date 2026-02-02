@@ -455,6 +455,31 @@ impl Metrics {
                         metrics.benchmark_gpu_score = Some(score as f32);
                     }
                 }
+
+                // Optimized asset counters
+                let opt_scenes = content_provider_bind.get_optimized_scene_count();
+                let rt_scenes = content_provider_bind.get_runtime_scene_count();
+                let opt_wearables = content_provider_bind.get_optimized_wearable_count();
+                let rt_wearables = content_provider_bind.get_runtime_wearable_count();
+
+                metrics.optimized_scene_count = Some(opt_scenes);
+                metrics.runtime_scene_count = Some(rt_scenes);
+                metrics.optimized_wearable_count = Some(opt_wearables);
+                metrics.runtime_wearable_count = Some(rt_wearables);
+
+                let total_scenes = opt_scenes + rt_scenes;
+                metrics.optimized_scene_pct = if total_scenes > 0 {
+                    Some((opt_scenes as f32 / total_scenes as f32) * 100.0)
+                } else {
+                    None
+                };
+
+                let total_wearables = opt_wearables + rt_wearables;
+                metrics.optimized_wearable_pct = if total_wearables > 0 {
+                    Some((opt_wearables as f32 / total_wearables as f32) * 100.0)
+                } else {
+                    None
+                };
             }
         }
     }
