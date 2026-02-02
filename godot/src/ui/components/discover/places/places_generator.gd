@@ -158,7 +158,7 @@ func async_request_from_api(offset: int, limit: int) -> void:
 
 	if Global.is_ios_or_emulating():
 		url += "&tag=allowed_ios"
-	
+
 	url += "&sdk=7"
 
 	if categories != "all":
