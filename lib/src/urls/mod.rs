@@ -75,7 +75,7 @@ pub fn places_api() -> String {
     format!("https://places.decentraland.{}/api", env())
 }
 pub fn destinations_api() -> String {
-    format!("https://places.decentraland.{}/api/destinations", env())
+    format!("https://mobile-bff.decentraland.org/destinations")
 }
 pub fn events_api() -> String {
     format!("https://events.decentraland.{}/api", env())
