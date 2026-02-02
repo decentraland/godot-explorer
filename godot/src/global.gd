@@ -103,6 +103,9 @@ var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
 
+# Startup instrumentation timestamp (set once at load time)
+var _startup_time: int = Time.get_ticks_msec()
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
@@ -143,6 +146,7 @@ func send_haptic_feedback() -> void:
 
 # gdlint: ignore=async-function-name
 func _ready():
+	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
@@ -224,7 +228,11 @@ func _ready():
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
 	# Clear cache if needed (startup flag or version changed) - await completion
+	print(
+		"[Startup] global._async_clear_cache start: %dms" % (Time.get_ticks_msec() - _startup_time)
+	)
 	await _async_clear_cache_if_needed()
+	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -347,6 +355,20 @@ func _ready():
 		self.network_inspector.set_is_active(false)
 
 	DclMeshRenderer.init_primitive_shapes()
+	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
+
+
+## Check if first launch benchmark should run (mobile only, first launch or dev builds)
+## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
+func should_run_first_launch_benchmark() -> bool:
+	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
+
+
+## Run the first launch benchmark. Called by lobby.gd after loading screen is visible.
+func run_first_launch_benchmark() -> void:
+	if _hardware_benchmark != null:
+		return  # Already running
+	_run_first_launch_benchmark()
 
 
 ## Async helper to clear cache and wait for completion before anything loads.
@@ -357,14 +379,6 @@ func _async_clear_cache_if_needed() -> void:
 
 	var should_clear_startup = cli.clear_cache_startup
 	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
-
-	# Run hardware benchmark on first launch (mobile only)
-	# In dev builds, always run to help with testing
-	var should_run_benchmark: bool = (
-		is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
-	)
-	if should_run_benchmark:
-		_run_first_launch_benchmark.call_deferred()
 
 	if should_clear_startup or version_changed:
 		if should_clear_startup:
@@ -391,14 +405,6 @@ func _init_dynamic_graphics_manager() -> void:
 	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
 	# Listen for FPS limit changes
 	get_config().param_changed.connect(_on_config_param_changed)
-
-	# Run hardware benchmark on first launch (mobile only)
-	# In debug builds, always run to help with testing
-	var should_run_benchmark: bool = (
-		is_mobile() and (not get_config().first_launch_completed or OS.is_debug_build())
-	)
-	if should_run_benchmark:
-		_run_first_launch_benchmark.call_deferred()
 
 
 func _run_first_launch_benchmark() -> void:
