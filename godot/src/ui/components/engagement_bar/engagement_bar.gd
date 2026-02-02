@@ -12,6 +12,7 @@ const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 			button_share.visible = value
 
 var place_id
+var place_data
 
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
@@ -37,7 +38,27 @@ func async_update_visibility() -> void:
 
 
 func _on_button_share_pressed() -> void:
-	pass  # Replace with function body.
+	if not place_data or not place_data.has("id"):
+		printerr("No place data available to share")
+		return
+	var place_url = DclUrls.host()
+	var world = place_data.get("world", false)
+	var world_name = place_data.get("world_name", "")
+	if world:
+		place_url += "/places/world/?name="+ world_name 
+	else:
+		var base_position = place_data.get("base_position", "0,0")
+		place_url += "/places/place/?position=" + base_position
+
+
+	var place_title = place_data.get("title", "Decentraland Place")
+
+	var text = "Visit " + place_title + "' following this link " + place_url
+
+	if Global.is_android():
+		DclAndroidPlugin.share_text(text)
+	elif Global.is_ios():
+		DclIosPlugin.share_text(text)
 
 
 func _async_on_button_like_toggled(toggled_on: bool) -> void:
@@ -100,7 +121,7 @@ func _async_update_buttons_icons() -> void:
 		return
 
 	var json: Dictionary = response.get_string_response_as_json()
-	var place_data = json.data
+	place_data = json.data
 
 	button_like.set_pressed_no_signal(place_data.user_like)
 	if button_like.is_pressed():

@@ -12,6 +12,7 @@ custom_minimum_size = Vector2(0, 96)
 size_flags_horizontal = 0
 theme_override_constants/separation = 14
 script = ExtResource("1_trky3")
+show_share_button = null
 
 [node name="Button_Share" type="Button" parent="."]
 unique_name_in_owner = true
@@ -21,7 +22,6 @@ size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("2_g1nd3")
 theme_type_variation = &"EngagementButton"
-disabled = true
 toggle_mode = true
 icon = ExtResource("7_k1hts")
 icon_alignment = 1
