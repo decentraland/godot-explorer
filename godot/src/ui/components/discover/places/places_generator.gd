@@ -98,8 +98,6 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 
 func async_request_from_api(offset: int, limit: int) -> void:
-	await IosAllowedList.async_ensure_loaded()
-
 	var url: String = PlacesHelper.get_api_url()
 	url += "?offset=%d&limit=%d" % [offset, limit]
 	if only_worlds:
@@ -131,43 +129,20 @@ func async_request_from_api(offset: int, limit: int) -> void:
 	if search_param.length() > 0:
 		url += "&search=" + search_param.uri_encode()
 
-	#TODO Authorization required?
 	if only_favorites:
 		url += "&only_favorites=true"
 
-	# iOS BFF-driven filtering for Featured and Most Active carousels
-	var is_ios := Global.is_ios_or_emulating()
-	var use_bff_featured := is_ios and (only_highlighted or only_featured)
-	var use_bff_most_active := (
-		is_ios
-		and order_by == OrderBy.MOST_ACTIVE
-		and not only_highlighted
-		and not only_featured
-		and not only_favorites
-	)
+	if only_highlighted:
+		url += "&only_highlighted=true"
 
-	if use_bff_featured:
-		var bff_url := DclUrls.mobile_bff() + "/destinations/?tag=allowed_ios&tag=featured"
-		var bff_positions := await IosAllowedList.async_fetch_bff_positions(bff_url)
-		url += bff_positions
-	elif use_bff_most_active:
-		var bff_url := DclUrls.mobile_bff() + "/destinations/?tag=allowed_ios&orderBy=mostActive"
-		var bff_positions := await IosAllowedList.async_fetch_bff_positions(bff_url)
-		url += bff_positions
-		url += "&order_by=most_active"
-	else:
-		if only_highlighted:
-			url += "&only_highlighted=true"
+	if only_featured:
+		url += "&only_featured=true"
 
-		if order_by != OrderBy.NONE:
-			url += (
-				"&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
-			)
+	if order_by != OrderBy.NONE:
+		url += "&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
 
-		if only_worlds:
-			url += IosAllowedList.get_names_query_params()
-		else:
-			url += IosAllowedList.get_positions_query_params()
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
 
 	if categories != "all":
 		var categories_array = categories.split(",")

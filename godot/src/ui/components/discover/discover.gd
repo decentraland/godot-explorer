@@ -26,10 +26,6 @@ func _ready():
 	button_clear_filter.hide()
 	line_edit_search_bar.hide()
 
-	print("[Discover] is_ios_or_emulating=", Global.is_ios_or_emulating())
-	if Global.is_ios_or_emulating():
-		IosAllowedList.async_load()
-
 	# Connect to notification clicked signal
 	Global.notification_clicked.connect(_on_notification_clicked)
 
