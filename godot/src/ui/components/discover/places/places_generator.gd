@@ -142,7 +142,7 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		url += "&only_highlighted=true"
 
 	if only_featured:
-		url += "&only_featured=true"
+		url += "&tag=featured"
 
 	if order_by != OrderBy.NONE:
 		url += "&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
