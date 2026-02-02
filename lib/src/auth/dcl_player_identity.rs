@@ -2,6 +2,7 @@ use ethers_core::types::H160;
 use ethers_signers::LocalWallet;
 use godot::prelude::*;
 use rand::thread_rng;
+use std::time::UNIX_EPOCH;
 use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
@@ -12,7 +13,10 @@ use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
-use super::auth_identity::{complete_mobile_auth, create_local_ephemeral, start_mobile_auth};
+use super::auth_identity::{
+    complete_mobile_auth, create_ephemeral_from_external_signature, create_local_ephemeral,
+    generate_ephemeral_for_signing, start_mobile_auth,
+};
 use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
@@ -329,6 +333,89 @@ impl DclPlayerIdentity {
     #[func]
     fn has_pending_mobile_auth(&self) -> bool {
         self.pending_mobile_auth.is_some()
+    }
+
+    /// Generates ephemeral identity data for external signing (e.g., WalletConnect).
+    /// Returns a Dictionary with:
+    /// - "message": The message to be signed by the wallet
+    /// - "ephemeral_private_key": PackedByteArray of the ephemeral private key
+    /// - "expiration_timestamp": Unix timestamp (seconds) when the auth expires
+    #[func]
+    fn generate_ephemeral_for_signing(&self) -> VarDictionary {
+        let (ephemeral_message, signing_key_bytes, expiration) = generate_ephemeral_for_signing();
+
+        let expiration_timestamp = expiration
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+
+        let mut dict = VarDictionary::new();
+        let _ = dict.insert("message", ephemeral_message.to_variant());
+        let _ = dict.insert(
+            "ephemeral_private_key",
+            PackedByteArray::from(signing_key_bytes.as_slice()).to_variant(),
+        );
+        let _ = dict.insert("expiration_timestamp", expiration_timestamp.to_variant());
+        dict
+    }
+
+    /// Completes WalletConnect authentication using an externally-signed message.
+    /// This should be called after getting a signature from a native wallet app.
+    ///
+    /// # Arguments
+    /// * `signer_address` - The wallet address that signed the message (0x...)
+    /// * `signature` - The signature hex string from the wallet
+    /// * `ephemeral_private_key` - The ephemeral private key from generate_ephemeral_for_signing
+    /// * `expiration_timestamp` - Unix timestamp from generate_ephemeral_for_signing
+    ///
+    /// # Returns
+    /// true if authentication was successful, false otherwise
+    #[func]
+    fn try_set_walletconnect_auth(
+        &mut self,
+        signer_address: GString,
+        signature: GString,
+        ephemeral_private_key: PackedByteArray,
+        expiration_timestamp: i64,
+    ) -> bool {
+        let expiration = std::time::SystemTime::UNIX_EPOCH
+            + std::time::Duration::from_secs(expiration_timestamp as u64);
+
+        match create_ephemeral_from_external_signature(
+            &signer_address.to_string(),
+            &signature.to_string(),
+            ephemeral_private_key.as_slice(),
+            expiration,
+        ) {
+            Ok(ephemeral_auth_chain) => {
+                let address = ephemeral_auth_chain.signer();
+                self.wallet = Some(CurrentWallet::Remote(RemoteWallet::new(address, 1)));
+                self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
+
+                let address_str = format!("{:#x}", address);
+                self.base_mut().call_deferred(
+                    "emit_signal",
+                    &[
+                        "wallet_connected".to_variant(),
+                        address_str.to_variant(),
+                        1_u64.to_variant(),
+                        false.to_variant(),
+                    ],
+                );
+                self.is_guest = false;
+
+                tracing::info!("WalletConnect auth successful for address: {:#x}", address);
+                true
+            }
+            Err(e) => {
+                tracing::error!("WalletConnect auth failed: {}", e);
+                self.base_mut().call_deferred(
+                    "_error_getting_wallet",
+                    &[format!("WalletConnect auth error: {}", e).to_variant()],
+                );
+                false
+            }
+        }
     }
 
     #[func]

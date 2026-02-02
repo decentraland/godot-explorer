@@ -799,6 +799,10 @@ func check_deep_link_teleport_to():
 			deep_link_url = new_deep_link_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
+		# Ignore WalletConnect callbacks
+		if Global.deep_link_obj.is_walletconnect_callback:
+			return
+
 		if Global.deep_link_obj.is_location_defined():
 			# Use preview URL as realm if specified, otherwise use realm, otherwise main
 			var realm = Global.deep_link_obj.preview
@@ -819,6 +823,11 @@ func _on_deeplink_received(url: String) -> void:
 	if not url.is_empty():
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
+
+		# Ignore WalletConnect callbacks (decentraland://walletconnect)
+		if deep_link_obj.is_walletconnect_callback:
+			print("[DEEPLINK] Ignoring WalletConnect callback")
+			return
 
 		# Handle signin deep link for mobile auth flow
 		if deep_link_obj.is_signin_request():
@@ -844,6 +853,11 @@ func _notification(what: int) -> void:
 
 			if not deep_link_url.is_empty():
 				deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+
+				# Ignore WalletConnect callbacks
+				if deep_link_obj.is_walletconnect_callback:
+					return
+
 				# Handle signin deep link for mobile auth flow
 				if deep_link_obj.is_signin_request():
 					_handle_signin_deep_link(deep_link_obj.signin_identity_id)
