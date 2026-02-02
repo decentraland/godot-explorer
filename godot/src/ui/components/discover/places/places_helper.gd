@@ -6,7 +6,7 @@ enum FetchResultStatus { OK, ERROR }
 
 ## Temp constant to test the new Destinations endpoint.
 ## Currently not 100% functional
-const USE_DESTINATIONS := true
+const USE_DESTINATIONS := false
 
 
 class FetchResult:
@@ -96,6 +96,7 @@ static func async_get_by_id(place_id: String) -> Variant:
 	var url: String = get_api_url() + place_id
 
 	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+	#return await async_fetch_places(url)
 
 
 static func async_fetch_places(url: String) -> FetchResult:
@@ -113,7 +114,7 @@ static func async_fetch_places(url: String) -> FetchResult:
 
 ## Given some coordinates finds the name of the place
 ## at genesis city. Returns an empty String if can't find one
-static func async_replace_get_name_from_coordinates(coordinates: Vector2i) -> String:
+static func async_get_name_from_coordinates(coordinates: Vector2i) -> String:
 	var response = await PlacesHelper.async_get_by_position(coordinates)
 	if response:
 		if response is PromiseError:

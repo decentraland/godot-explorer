@@ -94,19 +94,21 @@ func set_search_filter_text(new_text: String) -> void:
 
 func _on_line_edit_search_bar_text_changed(new_text: String) -> void:
 	search_text = new_text
-	timer_search_debounce.start()
+	#timer_search_debounce.start()
+	search_container.set_keyword_search_text(search_text)
 
 
 func _on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	var coordinates := {}
 	if PlacesHelper.parse_coordinates(new_text, coordinates):
-		new_text = await PlacesHelper.async_replace_get_name_from_coordinates(
+		new_text = await PlacesHelper.async_get_name_from_coordinates(
 			Vector2i(coordinates.x, coordinates.y)
 		)
 	new_text = new_text.lstrip(" .")
 	new_text = new_text.rstrip(" .")
-	if Global.get_config().add_search_history(new_text):
-		Global.get_config().save_to_settings_file()
+	# TODO only save on history if returns a result
+	#if Global.get_config().add_search_history(new_text):
+	#	Global.get_config().save_to_settings_file()
 	search_text = new_text
 	set_search_filter_text(search_text)
 	search_container.hide()
@@ -116,7 +118,7 @@ func _on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 
 
 func _on_timer_search_debounce_timeout() -> void:
-	if search_text.length() >= 3:
+	if search_text.length() >= 3 or true:
 		search_container.set_keyword_search_text(search_text)
 	else:
 		search_container.set_keyword_search_text("")
@@ -210,13 +212,16 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 			%MessageNoResultsFound.show()
 		CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
 			%MessageNoResultsFound.hide()
+			if Global.get_config().add_search_history(search_text):
+				Global.get_config().save_to_settings_file()
 
 
 func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 	var search_keyword := keyword.keyword
 	if keyword.type == SearchSuggestions.KeywordType.COORDINATES:
-		search_keyword = await PlacesHelper.async_replace_get_name_from_coordinates(
-			keyword.coordinates
-		)
+		search_keyword = await PlacesHelper.async_get_name_from_coordinates(keyword.coordinates)
 	set_search_filter_text(search_keyword)
 	search_container.hide()
+	button_search_bar.show()
+	line_edit_search_bar.hide()
+	line_edit_search_bar.text = ""
