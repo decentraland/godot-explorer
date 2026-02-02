@@ -38,7 +38,7 @@ static func is_genesis_city(_realm_name: String) -> bool:
 
 static func is_local_preview(_realm_name: String) -> bool:
 	var regex = RegEx.new()
-	regex.compile("^https*://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+(?gmi)")
+	regex.compile("(?gmi)^https*://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
 	return regex.search(_realm_name) != null
 
 
