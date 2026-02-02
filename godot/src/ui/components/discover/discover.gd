@@ -6,9 +6,9 @@ var search_text: String = ""
 @onready var jump_in: SidePanelWrapper = %JumpIn
 @onready var event_details: SidePanelWrapper = %EventDetails
 
-@onready var button_search_bar: Button = %Button_SearchBar
+@onready var button_search_bar: TextureButton = %Button_SearchBar
 @onready var line_edit_search_bar: LineEdit = %LineEdit_SearchBar
-@onready var button_clear_filter: Button = %Button_ClearFilter
+@onready var button_clear_filter: TextureButton = %Button_ClearFilter
 @onready var timer_search_debounce: Timer = %Timer_SearchDebounce
 
 @onready var last_visited: VBoxContainer = %LastVisited
@@ -17,10 +17,13 @@ var search_text: String = ""
 @onready var events: VBoxContainer = %Events
 
 @onready var search_container := %SearchSuggestionsContainer
+@onready var texture_button_back_to_explorer: TextureButton = %TextureButton_BackToExplorer
+@onready var label_title: Label = %Label_Title
 
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
+	texture_button_back_to_explorer.hide()
 	jump_in.hide()
 	event_details.hide()
 	button_search_bar.show()
@@ -41,12 +44,12 @@ func _ready():
 
 func on_item_pressed(data):
 	jump_in.set_data(data)
-	jump_in.show_animation()
+	jump_in.open_panel()
 
 
 func on_event_pressed(data):
 	event_details.set_data(data)
-	event_details.show_animation()
+	event_details.open_panel()
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
@@ -57,11 +60,10 @@ func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		last_visited.generator.async_request_last_places(0, 10)
-
-
-func _on_line_edit_search_bar_focus_exited() -> void:
-	button_search_bar.show()
-	line_edit_search_bar.hide()
+		Global.set_orientation_portrait()
+		if Global.get_explorer():
+			if texture_button_back_to_explorer:
+				texture_button_back_to_explorer.show()
 
 
 func _on_button_search_bar_pressed() -> void:
@@ -70,6 +72,8 @@ func _on_button_search_bar_pressed() -> void:
 	line_edit_search_bar.grab_focus()
 	search_container.show()
 	search_container.set_keyword_search_text("")
+	texture_button_back_to_explorer.show()
+	label_title.hide()
 
 
 func _on_button_clear_filter_pressed() -> void:
@@ -194,9 +198,6 @@ func _async_handle_event_notification(event_id: String) -> void:
 	on_event_pressed(event_data)
 
 
-func _on_button_close_pressed() -> void:
-	Global.close_menu.emit()
-
 
 func _on_error_loading_notification() -> void:
 	Global.close_navbar.emit()
@@ -221,3 +222,27 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 	button_search_bar.show()
 	line_edit_search_bar.hide()
 	line_edit_search_bar.text = ""
+	_reset_header()
+
+
+func _on_texture_button_back_to_explorer_pressed() -> void:
+	if line_edit_search_bar.visible:
+		_reset_header()
+		search_container.hide()
+		return
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
+
+
+func _reset_header() -> void:
+	print("RESET")
+	button_search_bar.show()
+	line_edit_search_bar.hide()
+	line_edit_search_bar.text = ""
+	texture_button_back_to_explorer.hide()
+	label_title.show()
+	if Global.get_explorer():
+		texture_button_back_to_explorer.show()
+	else:
+		texture_button_back_to_explorer.hide()

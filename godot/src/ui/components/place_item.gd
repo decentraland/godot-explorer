@@ -42,7 +42,6 @@ func _ready():
 
 	if metadata.is_empty():
 		set_image(texture)
-		set_views(views)
 		set_online(onlines)
 		set_title(title)
 		set_event_name(event_name)
@@ -240,10 +239,6 @@ func _get_separator_duration() -> VSeparator:
 	return _get_node_safe("VSeparator_Duration")
 
 
-func _get_label_views() -> Label:
-	return _get_node_safe("Label_Views")
-
-
 func _get_container_views() -> Control:
 	return _get_node_safe("HBoxContainer_Views")
 
@@ -344,40 +339,22 @@ func set_description(_description: String):
 		label.text = _description
 
 
-func set_views(_views: int):
-	var label = _get_label_views()
-	var container = _get_container_views()
-	if label and container:
-		container.set_visible(_views > 0)
-		label.text = _format_number(_views)
-
-
 func set_likes_percent(_likes: float):
 	var label = _get_label_likes()
 	var container = _get_container_likes()
-	var separator_online = _get_separator_online()
-	var separator_likes = _get_separator_likes()
 	if label and container:
 		container.set_visible(_likes > 0.0)
-		if separator_online:
-			separator_online.set_visible(_likes > 0)
-		if separator_likes:
-			separator_likes.set_visible(_likes > 0)
 		label.text = str(int(round(_likes * 100))) + "%"
+		_update_separators()
 
 
 func set_online(_online: int):
 	var label = _get_label_online()
 	var container = _get_container_online()
-	var separator_online = _get_separator_online()
-	var separator_likes = _get_separator_likes()
 	if label and container:
 		container.set_visible(_online > 0)
-		if separator_online:
-			separator_online.set_visible(_online > 0)
-		if separator_likes:
-			separator_likes.set_visible(_online > 0)
 		label.text = _format_number(_online)
+		_update_separators()
 
 
 func set_user_name(_user_name: String):
@@ -460,7 +437,6 @@ func set_data(item_data):
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
 	set_user_name(item_data.get("user_name", ""))
-	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
@@ -804,3 +780,17 @@ func set_fav_button_data(_id: String) -> void:
 	var fav_button = _get_fav_button()
 	if fav_button:
 		fav_button.update_data(_id)
+
+func _update_separators() -> void:
+	var separator_likes = _get_separator_likes()
+	var separator_online = _get_separator_online()
+	var container_likes = _get_container_likes()
+	var container_online = _get_container_online() 
+	if container_likes and container_online:
+		if separator_likes and separator_online:
+			if container_likes.visible and container_online.visible:
+				separator_likes.show()
+				separator_online.show()
+			else:
+				separator_likes.hide()
+				separator_online.hide()

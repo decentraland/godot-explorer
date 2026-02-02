@@ -2,7 +2,7 @@
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
-[ext_resource type="Texture2D" uid="uid://tb418rt45n8d" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_4wgrb"]
+[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_4wgrb"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_7t5hv"]
 [ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="3_3inh7"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_wln2f"]
@@ -137,16 +137,6 @@ grow_vertical = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 0
 script = ExtResource("1_ggr1j")
-title = null
-event_name = null
-description = null
-views = null
-onlines = null
-likes_percent = null
-metadata = null
-location = null
-realm_title = null
-categories = null
 
 [node name="PanelContainer_Header" type="PanelContainer" parent="."]
 unique_name_in_owner = true

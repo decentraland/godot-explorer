@@ -97,7 +97,7 @@ layout_mode = 2
 
 [node name="VSeparator" type="VSeparator" parent="VBoxContainer/ScrollContainer/HBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
 
 [node name="HBoxContainer_Items" type="HBoxContainer" parent="VBoxContainer/ScrollContainer/HBoxContainer"]
@@ -106,4 +106,4 @@ custom_minimum_size = Vector2(0, 185)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
-theme_override_constants/separation = 19
+theme_override_constants/separation = 32
