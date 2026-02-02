@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=33 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -20,6 +20,7 @@
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
+[ext_resource type="PackedScene" uid="uid://s4d117fg1v4l" path="res://src/ui/components/discover/search_suggestions.tscn" id="19_73ifx"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -412,6 +413,30 @@ libraries = {
 }
 autoplay = "default"
 
+[node name="MessageSearching" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageSearching"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 20.0
+text = "Searching!"
+
+[node name="MessageNoResultsFound" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 20.0
+text = "No Results Founds"
+
 [node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 20
@@ -476,6 +501,10 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
 [node name="PanelContainer" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
+[node name="SearchSuggestionsContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer" instance=ExtResource("19_73ifx")]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="JumpIn" parent="CanvasLayer" instance=ExtResource("9_gh6mh")]
@@ -489,6 +518,7 @@ visible = false
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
 [connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="text_submitted" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_submitted"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]

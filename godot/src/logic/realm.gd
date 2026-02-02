@@ -78,11 +78,8 @@ static func ensure_starts_with_https(str_param: String) -> String:
 
 
 static func remove_scheme(str_param: String) -> String:
-	if str_param.begins_with("https://"):
-		return str_param.substr(8)
-
-	if str_param.begins_with("http://"):
-		return str_param.substr(7)
+	str_param = str_param.trim_prefix("https://")
+	str_param = str_param.trim_prefix("http://")
 
 	return str_param
 

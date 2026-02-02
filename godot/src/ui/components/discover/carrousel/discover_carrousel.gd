@@ -34,18 +34,21 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 		scroll_container.hide()
 		label_not_found.hide()
 		label_error.hide()
+		show()
 	elif status == CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
 		scroll_container.show()
 
 		h_box_container_loading.hide()
 		label_not_found.hide()
 		label_error.hide()
+		show()
 	elif status == CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS:
 		label_not_found.show()
 
 		scroll_container.hide()
 		h_box_container_loading.hide()
 		label_error.hide()
+		hide()
 	else:
 		#elif not ok:
 		h_box_container_loading.hide()
@@ -53,6 +56,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 		scroll_container.hide()
 		label_not_found.hide()
 		label_error.show()
+		hide()
 
 
 func set_search_param(new_search_param: String):
