@@ -4,7 +4,9 @@ extends RefCounted
 ## Fetches and caches the iOS allowed scenes list from the BFF endpoint.
 ## Used to filter Discover carousel results on iOS.
 
-const BFF_URL = "https://mobile-bff.decentraland.org/places?tag=allowed_ios"
+static var _bff_url: String:
+	get:
+		return DclUrls.mobile_bff() + "/destinations/?tag=allowed_ios"
 
 static var _allowed_parcels: Dictionary = {}
 static var _allowed_worlds: Dictionary = {}
@@ -17,7 +19,7 @@ static func async_load() -> void:
 		return
 
 	_loading = true
-	var response = await Global.async_signed_fetch(BFF_URL, HTTPClient.METHOD_GET, "")
+	var response = await Global.async_signed_fetch(_bff_url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:
 		printerr("[IosAllowedList] Failed to fetch allowed list: ", response.get_error())

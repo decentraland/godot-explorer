@@ -100,12 +100,10 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 func async_request_from_api(offset: int, limit: int) -> void:
 	await IosAllowedList.async_ensure_loaded()
 
-	var url: String
-	if only_worlds:
-		url = DclUrls.places_api() + "/worlds"
-	else:
-		url = PlacesHelper.get_api_url()
+	var url: String = PlacesHelper.get_api_url()
 	url += "?offset=%d&limit=%d" % [offset, limit]
+	if only_worlds:
+		url += "&only_worlds=true"
 
 	if _new_search:
 		_loaded_elements = 0
@@ -149,11 +147,11 @@ func async_request_from_api(offset: int, limit: int) -> void:
 	)
 
 	if use_bff_featured:
-		var bff_url := "https://mobile-bff.decentraland.org/places?tag=allowed_ios&tag=featured"
+		var bff_url := DclUrls.mobile_bff() + "/destinations/?tag=allowed_ios&tag=featured"
 		var bff_positions := await IosAllowedList.async_fetch_bff_positions(bff_url)
 		url += bff_positions
 	elif use_bff_most_active:
-		var bff_url := "https://mobile-bff.decentraland.org/places?tag=allowed_ios&orderBy=mostActive"
+		var bff_url := DclUrls.mobile_bff() + "/destinations/?tag=allowed_ios&orderBy=mostActive"
 		var bff_positions := await IosAllowedList.async_fetch_bff_positions(bff_url)
 		url += bff_positions
 		url += "&order_by=most_active"
