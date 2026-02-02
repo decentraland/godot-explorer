@@ -29,12 +29,14 @@ func _ready():
 
 func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
 	if status == CarrouselGenerator.LoadingStatus.LOADING:
+		self.show()
 		h_box_container_loading.show()
 
 		scroll_container.hide()
 		label_not_found.hide()
 		label_error.hide()
 	elif status == CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
+		self.show()
 		scroll_container.show()
 
 		h_box_container_loading.hide()
