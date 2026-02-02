@@ -12,11 +12,11 @@ var search_text: String = ""
 @onready var timer_search_debounce: Timer = %Timer_SearchDebounce
 
 @onready var last_visited: VBoxContainer = %LastVisited
-@onready var last_visited_generator: Node = %LastVisitGenerator
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
-@onready var button_back: TextureButton = %Button_Back
+
+@onready var search_container := %SearchSuggestionsContainer
 
 
 func _ready():
@@ -26,20 +26,27 @@ func _ready():
 	button_search_bar.show()
 	button_clear_filter.hide()
 	line_edit_search_bar.hide()
-	button_back.hide()
 
 	# Connect to notification clicked signal
 	Global.notification_clicked.connect(_on_notification_clicked)
 
+	search_container.hide()
+	search_container.keyword_selected.connect(_async_on_keyword_selected)
+
+	last_visited.generator.report_loading_status.connect(_on_report_loading_status)
+	places_featured.generator.report_loading_status.connect(_on_report_loading_status)
+	places_most_active.generator.report_loading_status.connect(_on_report_loading_status)
+	events.generator.report_loading_status.connect(_on_report_loading_status)
+
 
 func on_item_pressed(data):
 	jump_in.set_data(data)
-	jump_in.open_panel()
+	jump_in.show_animation()
 
 
 func on_event_pressed(data):
 	event_details.set_data(data)
-	event_details.open_panel()
+	event_details.show_animation()
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
@@ -48,14 +55,8 @@ func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 
 
 func _on_visibility_changed():
-	if button_back:
-		if Global.get_explorer():
-			button_back.show()
-		else:
-			button_back.hide()
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		last_visited_generator.async_request_last_places(0, 10)
-		Global.set_orientation_portrait()
+		last_visited.generator.async_request_last_places(0, 10)
 
 
 func _on_line_edit_search_bar_focus_exited() -> void:
@@ -67,6 +68,8 @@ func _on_button_search_bar_pressed() -> void:
 	button_search_bar.hide()
 	line_edit_search_bar.show()
 	line_edit_search_bar.grab_focus()
+	search_container.show()
+	search_container.set_keyword_search_text("")
 
 
 func _on_button_clear_filter_pressed() -> void:
@@ -91,11 +94,30 @@ func set_search_filter_text(new_text: String) -> void:
 
 func _on_line_edit_search_bar_text_changed(new_text: String) -> void:
 	search_text = new_text
-	timer_search_debounce.start()
+	search_container.set_keyword_search_text(search_text)
+
+
+func _on_line_edit_search_bar_text_submitted(new_text: String) -> void:
+	var coordinates := {}
+	if PlacesHelper.parse_coordinates(new_text, coordinates):
+		new_text = await PlacesHelper.async_get_name_from_coordinates(
+			Vector2i(coordinates.x, coordinates.y)
+		)
+	new_text = new_text.lstrip(" .")
+	new_text = new_text.rstrip(" .")
+	search_text = new_text
+	set_search_filter_text(search_text)
+	search_container.hide()
+	button_search_bar.show()
+	line_edit_search_bar.hide()
+	line_edit_search_bar.text = ""
 
 
 func _on_timer_search_debounce_timeout() -> void:
-	set_search_filter_text(search_text)
+	if search_text.length() >= 3 or true:
+		search_container.set_keyword_search_text(search_text)
+	else:
+		search_container.set_keyword_search_text("")
 
 
 func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
@@ -172,10 +194,30 @@ func _async_handle_event_notification(event_id: String) -> void:
 	on_event_pressed(event_data)
 
 
+func _on_button_close_pressed() -> void:
+	Global.close_menu.emit()
+
+
 func _on_error_loading_notification() -> void:
 	Global.close_navbar.emit()
 
 
-func _on_button_back_pressed() -> void:
-	Global.close_menu.emit()
-	Global.set_orientation_landscape()
+func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
+	match status:
+		CarrouselGenerator.LoadingStatus.LOADING:
+			%MessageNoResultsFound.show()
+		CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
+			%MessageNoResultsFound.hide()
+			if Global.get_config().add_search_history(search_text):
+				Global.get_config().save_to_settings_file()
+
+
+func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
+	var search_keyword := keyword.keyword
+	if keyword.type == SearchSuggestions.KeywordType.COORDINATES:
+		search_keyword = await PlacesHelper.async_get_name_from_coordinates(keyword.coordinates)
+	set_search_filter_text(search_keyword)
+	search_container.hide()
+	button_search_bar.show()
+	line_edit_search_bar.hide()
+	line_edit_search_bar.text = ""
