@@ -2,8 +2,8 @@
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_sa8fa"]
 [ext_resource type="Script" uid="uid://dge4etmtlo1k5" path="res://src/ui/components/calendar_button/calendar_button.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://cmfalhha5iitd" path="res://assets/ui/calendar.svg" id="2_qn3h6"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_tgdi4"]
+[ext_resource type="Texture2D" uid="uid://dp1ksiy53fsep" path="res://src/ui/components/discover/icons/calendar-outlined.svg" id="4_tgdi4"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_lutqg"]
 font = ExtResource("2_tgdi4")
@@ -49,7 +49,7 @@ size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("1_sa8fa")
 theme_type_variation = &"EngagementButton"
-theme_override_constants/icon_max_width = 35
-icon = ExtResource("2_qn3h6")
+theme_override_constants/icon_max_width = 42
+icon = ExtResource("4_tgdi4")
 icon_alignment = 1
 expand_icon = true

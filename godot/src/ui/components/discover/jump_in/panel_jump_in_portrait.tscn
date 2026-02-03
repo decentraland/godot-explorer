@@ -579,7 +579,7 @@ layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 86
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="PanelContainer_Footer/MarginContainer"]
 custom_minimum_size = Vector2(0, 60)

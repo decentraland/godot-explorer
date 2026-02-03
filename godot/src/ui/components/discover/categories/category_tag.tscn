@@ -7,6 +7,7 @@
 
 [sub_resource type="LabelSettings" id="LabelSettings_vq3of"]
 font = ExtResource("3_7ciks")
+font_size = 18
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [node name="CategoryTag" type="PanelContainer"]
@@ -25,7 +26,7 @@ layout_mode = 2
 [node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
-custom_minimum_size = Vector2(20, 26)
+custom_minimum_size = Vector2(22, 26)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4

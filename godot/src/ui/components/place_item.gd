@@ -427,8 +427,6 @@ func set_data(item_data):
 	set_title(item_data.get("title", "Unknown place"))
 
 	var event_scene_name = _get_or_empty_string(item_data, "scene_name")
-	if event_scene_name.length() == 0:
-		event_scene_name = "Scene without name"
 	set_scene_event_name(event_scene_name)
 	set_description(_get_or_empty_string(item_data, "description"))
 

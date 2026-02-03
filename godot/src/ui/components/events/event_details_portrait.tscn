@@ -21,8 +21,8 @@
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="19_gpni3"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="21_44eh7"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="21_wcxms"]
-[ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="22_ycsm3"]
 [ext_resource type="Texture2D" uid="uid://cmfalhha5iitd" path="res://assets/ui/calendar.svg" id="23_a57i1"]
+[ext_resource type="Texture2D" uid="uid://c25e6v41fpnh2" path="res://src/ui/components/discover/icons/share-outlined.svg" id="24_dbho5"]
 [ext_resource type="PackedScene" uid="uid://cm0sccjf036pe" path="res://src/ui/components/events/button_reminder.tscn" id="24_utb4h"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="25_b2lu2"]
 [ext_resource type="PackedScene" uid="uid://dqj2ytukxfyc0" path="res://src/ui/components/calendar_button/calendar_button.tscn" id="26_calbtn"]
@@ -223,7 +223,7 @@ layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_bottom = 18
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
 layout_mode = 2
@@ -263,7 +263,7 @@ layout_mode = 2
 [node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 20
+theme_override_constants/separation = 6
 
 [node name="HBoxContainer2" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
@@ -271,7 +271,6 @@ theme_override_constants/margin_right = 30
 
 [node name="RichTextLabel_EventName" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/normal_font = ExtResource("4_hgyl2")
@@ -493,7 +492,7 @@ label_settings = ExtResource("14_dl51y")
 
 [node name="HSeparator3" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 30
+theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
 [node name="VBoxContainer_Description" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
@@ -521,7 +520,6 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
 [node name="Label_DescriptionTitle" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("18_w1sx5")
@@ -616,7 +614,7 @@ layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 86
 
 [node name="HBoxContainer_Buttons" type="HBoxContainer" parent="PanelContainer_Footer/MarginContainer"]
 custom_minimum_size = Vector2(0, 66)
@@ -631,8 +629,8 @@ layout_mode = 2
 focus_mode = 0
 theme = ExtResource("21_44eh7")
 theme_type_variation = &"EngagementButton"
-theme_override_constants/icon_max_width = 35
-icon = ExtResource("22_ycsm3")
+theme_override_constants/icon_max_width = 52
+icon = ExtResource("24_dbho5")
 icon_alignment = 1
 expand_icon = true
 
@@ -640,6 +638,7 @@ expand_icon = true
 unique_name_in_owner = true
 custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
+icon_max_size = 63
 
 [node name="Button_Reminder" parent="PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons" instance=ExtResource("24_utb4h")]
 unique_name_in_owner = true

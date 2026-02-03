@@ -17,7 +17,7 @@ corner_radius_bottom_left = 4
 
 [sub_resource type="LabelSettings" id="LabelSettings_kdyy4"]
 font = ExtResource("1_f3ecm")
-font_size = 18
+font_size = 20
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mwxpt"]
 content_margin_left = 10.0

@@ -2,6 +2,7 @@ class_name CalendarButton
 extends HBoxContainer
 
 @export var next_event: bool = true
+@export var icon_max_size: int = 42
 
 var data: Dictionary = {}
 var _index: int = 0
@@ -96,6 +97,8 @@ func _update_labels() -> void:
 		return
 	if not label_day or not label_time or not h_box_container_text:
 		return
+	if button:
+		button.add_theme_constant_override("icon_max_width", icon_max_size)
 	h_box_container_text.visible = false
 	if next_event:
 		return
