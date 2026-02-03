@@ -10,7 +10,6 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 	"res://src/ui/components/discover/carrousel/place_discover_card.tscn"
 )
 
-
 @export var order_by: OrderBy = OrderBy.NONE
 @export var categories: String = "all"
 @export var only_favorites: bool = false

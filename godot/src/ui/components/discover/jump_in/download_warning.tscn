@@ -6,7 +6,7 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_ni886"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g0uym"]
-bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.69803923)
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.9019608)
 border_color = Color(0.988235, 0.988235, 0.988235, 1)
 corner_radius_bottom_right = 17
 corner_radius_bottom_left = 17

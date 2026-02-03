@@ -65,7 +65,7 @@ colors = PackedColorArray(0.20392157, 0.7529412, 0.4392157, 1, 0.13333334, 0.756
 gradient = SubResource("Gradient_xxfdn")
 
 [node name="EventPillsBar" type="HBoxContainer"]
-custom_minimum_size = Vector2(0, 30)
+custom_minimum_size = Vector2(0, 32)
 size_flags_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 12
