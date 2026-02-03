@@ -189,6 +189,7 @@ func _setup_benchmark_viewport() -> void:
 
 ## Create benchmark scene asynchronously to avoid blocking the UI thread
 ## Yields between batches of mesh creation to allow UI updates
+# gdlint:ignore = async-function-name
 func _create_benchmark_scene_async() -> void:
 	if not _benchmark_viewport:
 		return
