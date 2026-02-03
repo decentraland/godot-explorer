@@ -2,8 +2,8 @@
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
-[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_4wgrb"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_7t5hv"]
+[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_rjvsq"]
 [ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="3_3inh7"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_wln2f"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_4wgrb"]
@@ -165,11 +165,11 @@ custom_minimum_size = Vector2(55, 55)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-texture_normal = ExtResource("2_4wgrb")
-texture_pressed = ExtResource("2_4wgrb")
-texture_hover = ExtResource("2_4wgrb")
-texture_disabled = ExtResource("2_4wgrb")
-texture_focused = ExtResource("2_4wgrb")
+texture_normal = ExtResource("2_rjvsq")
+texture_pressed = ExtResource("2_rjvsq")
+texture_hover = ExtResource("2_rjvsq")
+texture_disabled = ExtResource("2_rjvsq")
+texture_focused = ExtResource("2_rjvsq")
 ignore_texture_size = true
 stretch_mode = 6
 flip_h = true
