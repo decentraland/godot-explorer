@@ -187,9 +187,12 @@ func _ready():
 	login.show()
 
 	show_loading_screen()
-	print(
-		"[Startup] lobby.show_loading_screen: %dms" % (Time.get_ticks_msec() - Global._startup_time)
-	)
+	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
+	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
+
+	# Track startup metric for analytics
+	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
+	Global.metrics.track_screen_viewed("START", JSON.stringify(startup_data))
 
 	# Run hardware benchmark AFTER loading screen is visible to avoid black screen
 	# on iOS fresh install (Metal shader compilation can take 10-20s)
