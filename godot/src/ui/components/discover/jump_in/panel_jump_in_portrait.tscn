@@ -1,4 +1,4 @@
-[gd_scene load_steps=46 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=47 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -11,20 +11,21 @@
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_i8f38"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_jnv06"]
 [ext_resource type="PackedScene" uid="uid://d34drip3k5oc4" path="res://src/ui/components/fav_button/fav_button.tscn" id="6_i8f38"]
+[ext_resource type="Texture2D" uid="uid://w7ciggpcmxfp" path="res://src/ui/components/discover/icons/fav-outlined.svg" id="7_2e4jp"]
 [ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="7_7t5hv"]
-[ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="9_ietwf"]
-[ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="9_vaiub"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_cpvjm"]
 [ext_resource type="LabelSettings" uid="uid://3jaxrloree20" path="res://src/ui/components/discover/jump_in/jump_in_stats.tres" id="11_2e4jp"]
-[ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="12_rpsre"]
-[ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="12_whm4w"]
+[ext_resource type="Texture2D" uid="uid://dpljrb0u30btt" path="res://src/ui/components/discover/icons/player-outlined.svg" id="14_2e4jp"]
 [ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="14_nmmsr"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="15_nmmsr"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="16_j63ba"]
-[ext_resource type="Texture2D" uid="uid://cl6wfontbtg2d" path="res://assets/ui/profile/country.svg" id="16_rjvsq"]
+[ext_resource type="Texture2D" uid="uid://bophi8ynjvekk" path="res://src/ui/components/discover/icons/like-outlined.svg" id="17_rpsre"]
+[ext_resource type="Texture2D" uid="uid://bkfni1wuiyk61" path="res://src/ui/components/discover/icons/world-outlined.svg" id="18_2dyqy"]
 [ext_resource type="PackedScene" uid="uid://dj0cviotsdvg2" path="res://src/ui/components/discover/jump_in/download_warning.tscn" id="18_nmmsr"]
+[ext_resource type="Texture2D" uid="uid://bima3bhrtxlq8" path="res://src/ui/components/discover/icons/location-outlined.svg" id="19_7l6qr"]
 [ext_resource type="PackedScene" uid="uid://dsd7bcii8obu6" path="res://src/ui/components/discover/categories/categories_bar.tscn" id="19_7t5hv"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="20_elce2"]
+[ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/components/discover/icons/jump-in.svg" id="26_vaiub"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4wgrb"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
@@ -251,19 +252,21 @@ layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 20
 
-[node name="HBoxContainer2" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/margin_right = 30
+alignment = 1
 
-[node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer2" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
@@ -284,17 +287,23 @@ autowrap_mode = 2
 justification_flags = 131
 script = ExtResource("5_elce2")
 
-[node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="FavButton" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer" instance=ExtResource("6_i8f38")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+texture_normal = ExtResource("7_2e4jp")
+
+[node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer_Creator"]
 layout_mode = 2
 text = "by"
 label_settings = SubResource("LabelSettings_i8f38")
 
-[node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer_Creator"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -302,10 +311,6 @@ text = "Lazaro"
 label_settings = SubResource("LabelSettings_7t5hv")
 clip_text = true
 text_overrun_behavior = 3
-
-[node name="FavButton" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer" instance=ExtResource("6_i8f38")]
-unique_name_in_owner = true
-layout_mode = 2
 
 [node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -398,7 +403,7 @@ size_flags_vertical = 0
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
-texture = ExtResource("9_vaiub")
+texture = ExtResource("14_2e4jp")
 expand_mode = 1
 stretch_mode = 5
 
@@ -431,7 +436,7 @@ alignment = 1
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
-texture = ExtResource("12_rpsre")
+texture = ExtResource("17_rpsre")
 expand_mode = 1
 stretch_mode = 5
 
@@ -466,16 +471,16 @@ alignment = 2
 unique_name_in_owner = true
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 layout_mode = 2
-texture = ExtResource("16_rjvsq")
+texture = ExtResource("18_2dyqy")
 expand_mode = 3
 stretch_mode = 5
 
 [node name="TextureRect_Location" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/HBoxContainer4/HBoxContainer_Location"]
 unique_name_in_owner = true
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
-texture = ExtResource("9_ietwf")
+texture = ExtResource("19_7l6qr")
 expand_mode = 1
 stretch_mode = 5
 
@@ -625,9 +630,10 @@ theme_override_constants/margin_top = 2
 theme_override_constants/margin_bottom = 2
 
 [node name="TextureRect_Add" type="TextureRect" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content/MarginContainer"]
+custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("12_whm4w")
+texture = ExtResource("26_vaiub")
 expand_mode = 3
 stretch_mode = 5
 

@@ -1,9 +1,9 @@
 extends HBoxContainer
 
-const DISLIKE = preload("res://assets/ui/dislike.svg")
-const DISLIKE_SOLID = preload("res://assets/ui/dislike_solid.svg")
-const LIKE = preload("res://assets/ui/like.svg")
-const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
+const DISLIKE = preload("res://src/ui/components/discover/icons/dislike-outlined.svg")
+const DISLIKE_SOLID = preload("res://src/ui/components/discover/icons/dislike-solid.svg")
+const LIKE = preload("res://src/ui/components/discover/icons/like-outlined.svg")
+const LIKE_SOLID = preload("res://src/ui/components/discover/icons/like-solid.svg")
 
 @export var show_share_button: bool = false:
 	set(value):

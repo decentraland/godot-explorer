@@ -1,14 +1,14 @@
 [gd_scene load_steps=14 format=3 uid="uid://nexo8k0ub5ty"]
 
-[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_w66jn"]
-[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
-[ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_7kg7x"]
-[ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="3_w66jn"]
-[ext_resource type="LabelSettings" uid="uid://iia6jgjebpg" path="res://assets/themes/discover_item_title.tres" id="5_2d6b2"]
-[ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="6_2d6b2"]
-[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="6_ak6x4"]
-[ext_resource type="LabelSettings" uid="uid://bf7gvemmb0487" path="res://assets/themes/discover_item_info.tres" id="7_qlstj"]
-[ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="10_0qlyj"]
+[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_42xhx"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_qu68w"]
+[ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_7ps4n"]
+[ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="4_4et6p"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="5_sbcai"]
+[ext_resource type="LabelSettings" uid="uid://iia6jgjebpg" path="res://assets/themes/discover_item_title.tres" id="6_6e6mj"]
+[ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="7_37ec5"]
+[ext_resource type="LabelSettings" uid="uid://bf7gvemmb0487" path="res://assets/themes/discover_item_info.tres" id="8_4h84g"]
+[ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="9_ht01g"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
 bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
@@ -44,7 +44,7 @@ custom_minimum_size = Vector2(290, 250)
 offset_right = 225.0
 offset_bottom = 175.0
 mouse_filter = 1
-script = ExtResource("1_w66jn")
+script = ExtResource("1_42xhx")
 title = null
 event_name = null
 description = null
@@ -86,8 +86,8 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 size_flags_stretch_ratio = 210.0
-theme = ExtResource("2_gao81")
-texture = ExtResource("3_7kg7x")
+theme = ExtResource("2_qu68w")
+texture = ExtResource("3_7ps4n")
 expand_mode = 3
 stretch_mode = 5
 
@@ -108,8 +108,8 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 210.0
-theme = ExtResource("2_gao81")
-texture = ExtResource("3_w66jn")
+theme = ExtResource("2_qu68w")
+texture = ExtResource("4_4et6p")
 expand_mode = 1
 stretch_mode = 6
 
@@ -134,9 +134,9 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_fonts/font = ExtResource("6_ak6x4")
+theme_override_fonts/font = ExtResource("5_sbcai")
 text = "Scene Title"
-label_settings = ExtResource("5_2d6b2")
+label_settings = ExtResource("6_6e6mj")
 vertical_alignment = 1
 clip_text = true
 text_overrun_behavior = 3
@@ -162,7 +162,7 @@ mouse_filter = 2
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("6_2d6b2")
+texture = ExtResource("7_37ec5")
 expand_mode = 3
 stretch_mode = 5
 
@@ -170,9 +170,9 @@ stretch_mode = 5
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_fonts/font = ExtResource("6_ak6x4")
+theme_override_fonts/font = ExtResource("5_sbcai")
 text = "000"
-label_settings = ExtResource("7_qlstj")
+label_settings = ExtResource("8_4h84g")
 horizontal_alignment = 2
 
 [node name="HBoxContainer_Likes" type="HBoxContainer" parent="VBoxContainer_Content/HBoxContainer2"]
@@ -184,7 +184,7 @@ mouse_filter = 2
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("10_0qlyj")
+texture = ExtResource("9_ht01g")
 expand_mode = 3
 stretch_mode = 5
 
@@ -192,9 +192,9 @@ stretch_mode = 5
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_fonts/font = ExtResource("6_ak6x4")
+theme_override_fonts/font = ExtResource("5_sbcai")
 text = "100%"
-label_settings = ExtResource("7_qlstj")
+label_settings = ExtResource("8_4h84g")
 horizontal_alignment = 2
 
 [connection signal="pressed" from="." to="." method="_on_pressed"]

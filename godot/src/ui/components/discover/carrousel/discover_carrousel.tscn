@@ -15,6 +15,7 @@ offset_bottom = 35.0
 grow_horizontal = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
+theme_override_constants/separation = 20
 script = ExtResource("1_somjb")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
