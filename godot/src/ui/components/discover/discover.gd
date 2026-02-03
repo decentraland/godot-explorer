@@ -19,6 +19,7 @@ var search_text: String = ""
 @onready var search_container := %SearchSuggestionsContainer
 @onready var texture_button_back_to_explorer: TextureButton = %TextureButton_BackToExplorer
 @onready var label_title: Label = %Label_Title
+@onready var container_content: ScrollContainer = %ScrollContainer_Content
 
 
 func _ready():
@@ -35,6 +36,7 @@ func _ready():
 
 	search_container.hide()
 	search_container.keyword_selected.connect(_async_on_keyword_selected)
+	container_content.show()
 
 	last_visited.generator.report_loading_status.connect(_on_report_loading_status)
 	places_featured.generator.report_loading_status.connect(_on_report_loading_status)
@@ -71,6 +73,7 @@ func _on_button_search_bar_pressed() -> void:
 	line_edit_search_bar.show()
 	line_edit_search_bar.grab_focus()
 	search_container.show()
+	container_content.hide()
 	search_container.set_keyword_search_text("")
 	texture_button_back_to_explorer.show()
 	label_title.hide()
@@ -113,6 +116,7 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	set_search_filter_text(search_text)
 	_reset_header()
 	search_container.hide()
+	container_content.show()
 
 
 func _on_timer_search_debounce_timeout() -> void:
@@ -221,6 +225,7 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 		search_keyword = await PlacesHelper.async_get_name_from_coordinates(keyword.coordinates)
 	set_search_filter_text(search_keyword)
 	search_container.hide()
+	container_content.show()
 	button_search_bar.show()
 	line_edit_search_bar.hide()
 	line_edit_search_bar.text = ""
@@ -231,6 +236,7 @@ func _on_texture_button_back_to_explorer_pressed() -> void:
 	if line_edit_search_bar.visible:
 		_reset_header()
 		search_container.hide()
+		container_content.show()
 		return
 	if Global.get_explorer():
 		Global.close_menu.emit()

@@ -24,7 +24,7 @@
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="18_8uyq4"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="18_iyg6d"]
-[ext_resource type="PackedScene" path="res://src/ui/components/discover/search_suggestions.tscn" id="19_73ifx"]
+[ext_resource type="PackedScene" uid="uid://t4c4tddaae7s" path="res://src/ui/components/discover/search_suggestions.tscn" id="19_73ifx"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="20_umltx"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
@@ -284,20 +284,21 @@ script = ExtResource("6_b1byu")
 use_top = false
 use_bottom = false
 
-[node name="ScrollContainer" type="ScrollContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer"]
+[node name="ScrollContainer_Content" type="ScrollContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 scroll_deadzone = 100
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="Banners" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="Banners" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
@@ -307,13 +308,13 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
-[node name="Control" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
+[node name="Control" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 
-[node name="GenesisBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
+[node name="GenesisBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
@@ -326,11 +327,11 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner"]
 layout_mode = 2
 texture = SubResource("GradientTexture2D_cci5n")
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -342,28 +343,28 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 texture = ExtResource("8_t3lcc")
 expand_mode = 2
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_pwm2g")
 theme_override_font_sizes/font_size = 16
 text = "Genesis City"
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_2ra1o")
@@ -371,7 +372,7 @@ theme_override_font_sizes/font_size = 10
 text = "Map Made up of thousands of parcels owned and populated with dynamic content by its diverse community."
 autowrap_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
@@ -386,7 +387,7 @@ texture = ExtResource("11_t2lm2")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="WorldsBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
+[node name="WorldsBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
@@ -401,11 +402,11 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner"]
 layout_mode = 2
 texture = SubResource("GradientTexture2D_3q3ud")
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -417,28 +418,28 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 texture = ExtResource("8_t3lcc")
 expand_mode = 2
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_pwm2g")
 theme_override_font_sizes/font_size = 16
 text = "Decentraland Worlds"
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_2ra1o")
@@ -446,7 +447,7 @@ theme_override_font_sizes/font_size = 10
 text = "Personal 3D space separate from Genesis City, where you can unleash your creativity, host events, and more!"
 autowrap_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
@@ -461,32 +462,32 @@ texture = ExtResource("12_74ecw")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/Banners"]
 libraries = {
 &"": SubResource("AnimationLibrary_xfp2p")
 }
 autoplay = "default"
 
-[node name="MessageSearching" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="MessageSearching" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageSearching"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageSearching"]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 20.0
 text = "Searching!"
 
-[node name="MessageNoResultsFound" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="MessageNoResultsFound" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -496,7 +497,7 @@ grow_vertical = 2
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -505,32 +506,32 @@ texture = ExtResource("18_8uyq4")
 expand_mode = 4
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ndv83")
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
 layout_mode = 2
 text = "No result found"
 label_settings = SubResource("LabelSettings_86ojj")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
 layout_mode = 2
 text = "Try searching with
 different keywords."
 label_settings = SubResource("LabelSettings_8bqvr")
 horizontal_alignment = 1
 
-[node name="MessageError" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="MessageError" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageError"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -540,7 +541,7 @@ grow_vertical = 2
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageError/VBoxContainer"]
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -549,87 +550,87 @@ texture = ExtResource("18_8uyq4")
 expand_mode = 4
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageError/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ndv83")
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageError/VBoxContainer"]
 layout_mode = 2
 text = "Something
 went wrong"
 label_settings = SubResource("LabelSettings_86ojj")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/MessageError/VBoxContainer"]
 layout_mode = 2
 text = "We couldn’t load the results.
 Please try again."
 label_settings = SubResource("LabelSettings_8bqvr")
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 38
 
-[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesFeaturedGenerator")
 title = "Featured"
 
-[node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 only_highlighted = true
 discover = NodePath("../../../../../../../..")
 
-[node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("EventsGenerator")
 title = "Events"
 
-[node name="EventsGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
+[node name="EventsGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
 discover = NodePath("../../../../../../../..")
 
-[node name="LastVisited" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="LastVisited" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("LastVisitGenerator")
 title = "Last Visited"
 
-[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 unique_name_in_owner = true
 last_places_logic = true
 discover = NodePath("../../../../../../../..")
 
-[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Most Actives"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 discover = NodePath("../../../../../../../..")
 
-[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Favorites"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 only_favorites = true
 discover = NodePath("../../../../../../../..")
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 
 [node name="SearchSuggestionsContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer" instance=ExtResource("19_73ifx")]

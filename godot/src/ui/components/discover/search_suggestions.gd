@@ -114,20 +114,14 @@ func set_keyword_search_text(_search_text: String) -> void:
 	for c in search_sugestions.get_children():
 		c.queue_free()
 
-	const SEARCH = preload("res://src/ui/components/debug_panel/icons/Search.svg")
-	const CLOCK = preload("res://assets/ui/clock.svg")
-	const MAP = preload("res://assets/maphud.svg")
+	const SEARCH = preload("res://src/ui/components/discover/icons/search-outlined.svg")
+	const CLOCK = preload("res://src/ui/components/discover/icons/clock.svg")
+	const MAP = preload("res://src/ui/components/discover/icons/world-outlined.svg")
+	const KEYWORD = preload("res://src/ui/components/discover/search_keyword.tscn")
 
 	for k in keywords_result:
-		var keyword := Button.new()
-		keyword.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		keyword.mouse_filter = Control.MOUSE_FILTER_PASS
-		keyword.flat = true
-		keyword.expand_icon = true
-		keyword.add_theme_constant_override("icon_max_width", 64)
+		var keyword := KEYWORD.instantiate()
 		keyword.pressed.connect(_on_keyword_selected.bind(k))
-		keyword.add_theme_color_override("font_color", Color.WHITE)
-		keyword.add_theme_font_size_override("font_size", 30)
 
 		match k.type:
 			KeywordType.HISTORY:
@@ -136,7 +130,7 @@ func set_keyword_search_text(_search_text: String) -> void:
 				keyword.icon = SEARCH
 			KeywordType.COORDINATES:
 				keyword.icon = MAP
-		keyword.text = k.keyword
+		keyword.text = k.keyword.capitalize()
 		search_sugestions.add_child(keyword)
 
 
