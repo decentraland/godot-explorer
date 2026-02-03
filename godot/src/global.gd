@@ -659,7 +659,7 @@ func set_orientation_landscape():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(false)
