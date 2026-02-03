@@ -96,7 +96,9 @@ impl DclParseDeepLink {
                     match Url::parse(&decentraland_url) {
                         Ok(converted) => converted,
                         Err(_) => {
-                            godot_error!("Failed to convert URL to decentraland scheme - {url_str}");
+                            godot_error!(
+                                "Failed to convert URL to decentraland scheme - {url_str}"
+                            );
                             return Gd::from_object(return_object);
                         }
                     }
