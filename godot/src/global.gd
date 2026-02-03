@@ -28,6 +28,7 @@ signal delete_account
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal run_anyway
 signal reload_scene
+signal favorite_destination_set
 
 enum CameraMode {
 	FIRST_PERSON = 0,

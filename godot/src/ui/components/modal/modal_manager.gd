@@ -235,14 +235,7 @@ func _async_load_place_name(location: Vector2i) -> void:
 		# Modal was already freed, cannot recreate it here as it would lose button connections
 		return
 
-	var place_url: String = "https://places.decentraland.org/api/places?limit=1"
-	place_url += "&positions=%d,%d" % [location.x, location.y]
-
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		place_url, HTTPClient.METHOD_GET, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
+	var result = await PlacesHelper.async_get_by_position(location)
 
 	if result is PromiseError:
 		printerr("Error requesting place name for teleport", result.get_error())

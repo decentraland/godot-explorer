@@ -12,10 +12,11 @@ var search_text: String = ""
 @onready var timer_search_debounce: Timer = %Timer_SearchDebounce
 
 @onready var last_visited: VBoxContainer = %LastVisited
+@onready var last_visited_generator: Node = %LastVisitGenerator
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
-@onready var places_worlds: VBoxContainer = %PlacesWorlds
 @onready var events: VBoxContainer = %Events
+@onready var places_my_places: VBoxContainer = %PlacesMyPlaces
 
 
 func _ready():
@@ -47,7 +48,7 @@ func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 
 func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		%LastVisitGenerator.request_last_places()
+		last_visited_generator.async_request_last_places(0, 10)
 
 
 func _on_line_edit_search_bar_focus_exited() -> void:
@@ -74,11 +75,12 @@ func set_search_filter_text(new_text: String) -> void:
 	if new_text.is_empty():
 		last_visited.show()
 		places_featured.show()
+		places_my_places.show()
 	else:
 		last_visited.hide()
 		places_featured.hide()
+		places_my_places.hide()
 	places_most_active.set_search_param(new_text)
-	places_worlds.set_search_param(new_text)
 	events.set_search_param(new_text)
 
 
