@@ -308,9 +308,3 @@ jobs:
         with:
           header: build-report
           path: build-report.md
-
-      # Debug session with tmate (30 min timeout)
-      - name: Setup tmate session
-        if: always()
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
