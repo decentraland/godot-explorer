@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=42 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="2_73ifx"]
@@ -22,7 +22,10 @@
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
+[ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="18_8uyq4"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="18_iyg6d"]
 [ext_resource type="PackedScene" path="res://src/ui/components/discover/search_suggestions.tscn" id="19_73ifx"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="20_umltx"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
@@ -135,6 +138,18 @@ _data = {
 &"RESET": SubResource("Animation_b4fwa"),
 &"default": SubResource("Animation_mh318")
 }
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ndv83"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_86ojj"]
+font = ExtResource("18_iyg6d")
+font_size = 48
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_8bqvr"]
+font = ExtResource("20_umltx")
+font_size = 34
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]
 
@@ -469,12 +484,89 @@ unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound"]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 20.0
-text = "No Results Founds"
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("18_8uyq4")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ndv83")
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+layout_mode = 2
+text = "No result found"
+label_settings = SubResource("LabelSettings_86ojj")
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageNoResultsFound/VBoxContainer"]
+layout_mode = 2
+text = "Try searching with
+different keywords."
+label_settings = SubResource("LabelSettings_8bqvr")
+horizontal_alignment = 1
+
+[node name="MessageError" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("18_8uyq4")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ndv83")
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+layout_mode = 2
+text = "Something
+went wrong"
+label_settings = SubResource("LabelSettings_86ojj")
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/MessageError/VBoxContainer"]
+layout_mode = 2
+text = "We couldn’t load the results.
+Please try again."
+label_settings = SubResource("LabelSettings_8bqvr")
+horizontal_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
