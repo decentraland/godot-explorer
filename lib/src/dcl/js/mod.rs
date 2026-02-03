@@ -87,6 +87,26 @@ pub struct InspectorServer;
 pub static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
 
+/// Global flag to pause all scene threads during app lifecycle events (iOS watchdog fix).
+/// When true, scene threads skip onUpdate processing to reduce CPU usage when app is backgrounded.
+/// This helps threads respond faster to kill signals and prevents iOS watchdog timeouts.
+pub static APP_LIFECYCLE_PAUSED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Set the app lifecycle pause state.
+/// Call with `true` when app goes to background (NOTIFICATION_APPLICATION_PAUSED).
+/// Call with `false` when app returns to foreground (NOTIFICATION_APPLICATION_RESUMED).
+pub fn set_app_lifecycle_paused(paused: bool) {
+    APP_LIFECYCLE_PAUSED.store(paused, std::sync::atomic::Ordering::SeqCst);
+    tracing::info!("App lifecycle paused: {}", paused);
+}
+
+/// Check if app lifecycle is paused.
+#[inline]
+pub fn is_app_lifecycle_paused() -> bool {
+    APP_LIFECYCLE_PAUSED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// must be called from main thread on linux before any isolates are created
 pub fn init_runtime() {
     let _ = deno_core::v8::Platform::new(1, false);
@@ -362,6 +382,22 @@ pub(crate) fn scene_thread(
     let mut last_memory_stats_update = std::time::Instant::now();
 
     loop {
+        // Check if scene is dying first (fast path for shutdown)
+        let is_dying = state.borrow().borrow::<SceneDying>().0;
+        if is_dying {
+            tracing::debug!("{} shutting down", log_info.prefix());
+            break;
+        }
+
+        // iOS watchdog fix: When app is backgrounded, sleep briefly and skip processing.
+        // This reduces CPU usage and helps the thread respond faster to kill signals.
+        if is_app_lifecycle_paused() {
+            rt.block_on(async {
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            });
+            continue;
+        }
+
         let dt = std::time::SystemTime::now()
             .duration_since(start_time)
             .unwrap_or(elapsed)
@@ -427,12 +463,6 @@ pub(crate) fn scene_thread(
 
             state.borrow_mut().put(deno_stats);
             last_memory_stats_update = std::time::Instant::now();
-        }
-
-        let value = state.borrow().borrow::<SceneDying>().0;
-        if value {
-            tracing::debug!("{} shutting down", log_info.prefix());
-            break;
         }
 
         state.borrow_mut().try_take::<CommunicatedWithRenderer>();

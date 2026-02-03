@@ -844,7 +844,20 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
+	# iOS/Android watchdog fix: Pause scene threads when app is backgrounded
+	# to reduce CPU usage and help threads respond faster to kill signals.
+	# This prevents iOS watchdog timeout (0x8BADF00D) crashes.
+	if what == NOTIFICATION_APPLICATION_PAUSED:
+		print("[LIFECYCLE] App paused - pausing scene threads")
+		DclGlobal.set_app_lifecycle_paused(true)
+		if is_instance_valid(scene_runner):
+			scene_runner.set_pause(true)
+	elif what == NOTIFICATION_APPLICATION_RESUMED:
+		print("[LIFECYCLE] App resumed - resuming scene threads")
+		DclGlobal.set_app_lifecycle_paused(false)
+		if is_instance_valid(scene_runner):
+			scene_runner.set_pause(false)
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():
 			if DclAndroidPlugin.is_available():
 				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
