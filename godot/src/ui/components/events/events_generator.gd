@@ -40,9 +40,15 @@ func on_request(_offset: int, limit: int) -> void:
 
 	# TODO: Implement more filters (categories, sorting, etc.)
 	# For now we only query the events API URL
-	var url = DclUrls.events_api() + "/events/"
+	var url = DclUrls.events_api() + "/"
+	url += "?sdk=7"
+
 	if search_param.length() > 0:
-		url += "?search=" + search_param.replace(" ", "%20")
+		url += "&search=" + search_param.replace(" ", "%20")
+
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
+	prints("_async_fetch_events", url)
 	_async_fetch_events(url, limit)
 
 
