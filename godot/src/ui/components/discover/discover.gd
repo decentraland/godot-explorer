@@ -205,7 +205,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 	%MessageNoResultsFound.hide()
 	match status:
 		#CarrouselGenerator.LoadingStatus.LOADING:
-			#%MessageNoResultsFound.show()
+		#%MessageNoResultsFound.show()
 		CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
 			if Global.get_config().add_search_history(search_text):
 				Global.get_config().save_to_settings_file()
@@ -213,6 +213,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 			%MessageError.show()
 		CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS:
 			%MessageNoResultsFound.show()
+
 
 func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 	var search_keyword := keyword.keyword
