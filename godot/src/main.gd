@@ -1,12 +1,17 @@
 extends Node
 
+# Startup instrumentation - capture engine boot time
+var _startup_time: int = Time.get_ticks_msec()
+
 
 func _ready():
+	print("[Startup] main._ready: %dms" % (Time.get_ticks_msec() - _startup_time))
 	Global.set_orientation_portrait()
 	start.call_deferred()
 
 
 func start():
+	print("[Startup] main.start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	get_tree().quit_on_go_back = false
 
 	# Check if help was requested
@@ -43,6 +48,7 @@ func start():
 
 
 func _start():
+	print("[Startup] main._start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	if Global.cli.asset_server:
 		print("Running in Asset Server mode")
 		_start_asset_server()

@@ -173,6 +173,7 @@ func async_close_sign_in():
 
 # gdlint:ignore = async-function-name
 func _ready():
+	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_guest.visible = not DclGlobal.is_production()
 
@@ -188,6 +189,18 @@ func _ready():
 	login.show()
 
 	show_loading_screen()
+	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
+	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
+
+	# Track startup metric for analytics
+	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
+	Global.metrics.track_screen_viewed("START", JSON.stringify(startup_data))
+
+	# Run hardware benchmark AFTER loading screen is visible to avoid black screen
+	# on iOS fresh install (Metal shader compilation can take 10-20s)
+	if Global.should_run_first_launch_benchmark():
+		print("[Startup] lobby: triggering first launch benchmark")
+		Global.run_first_launch_benchmark()
 
 	UiSounds.install_audio_recusirve(self)
 	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
