@@ -119,6 +119,18 @@ func _get_button_jump_to_event() -> Button:
 	return _get_node_safe("Button_JumpToEvent")
 
 
+func _get_button_jump_to_event_small() -> Button:
+	return _get_node_safe("Button_JumpToEventSmall")
+
+
+func _get_label_event_location_name() -> Label:
+	return _get_node_safe("Label_EventLocationName")
+
+
+func _get_label_event_location_coords() -> Label:
+	return _get_node_safe("Label_EventLocationCoords")
+
+
 func _get_button_calendar() -> CalendarButton:
 	return _get_node_safe("Button_Calendar")
 
@@ -276,9 +288,13 @@ func _connect_signals():
 			button_jump_in.pressed.connect(_on_button_jump_in_pressed)
 
 	var button_jump_to_event = _get_button_jump_to_event()
+	var button_jump_to_event_small = _get_button_jump_to_event_small()
 	if button_jump_to_event:
 		if not button_jump_to_event.pressed.is_connected(_on_button_jump_to_event_pressed):
 			button_jump_to_event.pressed.connect(_on_button_jump_to_event_pressed)
+	if button_jump_to_event_small:
+		if not button_jump_to_event_small.pressed.is_connected(_on_button_jump_to_event_pressed):
+			button_jump_to_event_small.pressed.connect(_on_button_jump_to_event_pressed)
 
 	var button_share = _get_button_share()
 	if button_share:
@@ -290,20 +306,32 @@ func set_location(_location: Vector2i):
 	var label = _get_label_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
+	var event_location_coords = _get_label_event_location_coords()
 	if label:
 		location = _location
 		label.text = "%s, %s" % [_location.x, _location.y]
+	if event_location_coords:
+		event_location_coords.text = "(%s,%s)" % [_location.x, _location.y]
 	if texture_rect_location and texture_rect_server:
 		texture_rect_location.show()
 		texture_rect_server.hide()
+
+
+func set_scene_event_name(scene_name: String) -> void:
+	var event_location_name = _get_label_event_location_name()
+	if event_location_name:
+		event_location_name.text = scene_name
 
 
 func set_world(world: String):
 	var label = _get_label_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
+	var event_location_coords = _get_label_event_location_coords()
 	if label:
 		label.text = format_name(world, 7)
+	if event_location_coords:
+		event_location_coords.text = format_name(world, 30)
 	if texture_rect_location and texture_rect_server:
 		texture_rect_location.hide()
 		texture_rect_server.show()
@@ -397,8 +425,12 @@ func set_data(item_data):
 	_data = item_data
 
 	set_title(item_data.get("title", "Unknown place"))
+
+	var event_scene_name = _get_or_empty_string(item_data, "scene_name")
+	if event_scene_name.length() == 0:
+		event_scene_name = "Scene without name"
+	set_scene_event_name(event_scene_name)
 	set_description(_get_or_empty_string(item_data, "description"))
-	set_attendees_number(item_data.get("total_attendees", 0))
 
 	event_id = item_data.get("id", "id")
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
@@ -573,12 +605,6 @@ func set_recurrent_dates(item_data: Dictionary) -> void:
 		btn.set_data(item_data)
 		btn.next_event = false
 		recurrent_dates_container.add_child(btn)
-
-
-func set_attendees_number(_attendees: int) -> void:
-	var label = _get_label_attendees_number()
-	if label:
-		label.text = str(_attendees)
 
 
 func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:

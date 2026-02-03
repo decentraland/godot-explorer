@@ -111,10 +111,8 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	new_text = new_text.rstrip(" .")
 	search_text = new_text
 	set_search_filter_text(search_text)
+	_reset_header()
 	search_container.hide()
-	button_search_bar.show()
-	line_edit_search_bar.hide()
-	line_edit_search_bar.text = ""
 
 
 func _on_timer_search_debounce_timeout() -> void:

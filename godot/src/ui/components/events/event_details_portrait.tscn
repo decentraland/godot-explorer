@@ -1,7 +1,7 @@
-[gd_scene load_steps=46 format=3 uid="uid://berg2gr7ubtll"]
+[gd_scene load_steps=48 format=3 uid="uid://berg2gr7ubtll"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_wcxms"]
-[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/exit.svg" id="2_dbho5"]
+[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_dbho5"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_ygmng"]
 [ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="4_hgyl2"]
 [ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="5_bmyvb"]
@@ -120,6 +120,16 @@ font_color = Color(0.9098039, 0.7254902, 1, 0.5019608)
 fallbacks = Array[Font]([ExtResource("21_wcxms")])
 base_font = ExtResource("17_lrnxc")
 
+[sub_resource type="LabelSettings" id="LabelSettings_dbho5"]
+font = ExtResource("7_8vff1")
+font_size = 22
+font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_ygmng"]
+font = ExtResource("6_ds20p")
+font_size = 22
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
 [sub_resource type="LabelSettings" id="LabelSettings_hxdex"]
 font = ExtResource("19_gpni3")
 font_size = 22
@@ -213,6 +223,7 @@ layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 16
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
 layout_mode = 2
@@ -561,6 +572,39 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 80
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
+
+[node name="MarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_bottom = 40
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Label_EventLocationName" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "DCL Japan Lab beta"
+label_settings = SubResource("LabelSettings_dbho5")
+
+[node name="Label_EventLocationCoords" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "(37,-4)"
+label_settings = SubResource("LabelSettings_ygmng")
+
+[node name="Button_JumpToEventSmall" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("21_44eh7")
+theme_override_constants/icon_max_width = 35
+theme_override_font_sizes/font_size = 14
+icon = ExtResource("25_b2lu2")
+icon_alignment = 2
+expand_icon = true
 
 [node name="PanelContainer_Footer" type="PanelContainer" parent="."]
 custom_minimum_size = Vector2(0, 142)
