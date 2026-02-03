@@ -77,17 +77,21 @@ jobs:
       # Sign the APK file
       - name: Sign Android APK
         run: |
+          # Find Android build-tools
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
+          echo "Using build-tools: $BUILD_TOOLS_DIR"
+
           # Align the APK first (required for apksigner)
-          zipalign -v -p 4 exports/decentraland.godot.client.apk exports/decentraland.godot.client-aligned.apk
+          ${BUILD_TOOLS_DIR}zipalign -v -p 4 exports/decentraland.godot.client.apk exports/decentraland.godot.client-aligned.apk
 
           # Sign the APK
-          apksigner sign --ks apk-release.keystore \
+          ${BUILD_TOOLS_DIR}apksigner sign --ks apk-release.keystore \
             --ks-pass pass:"${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}" \
             --out exports/decentraland.godot.client-signed.apk \
             exports/decentraland.godot.client-aligned.apk
 
           # Verify the signature
-          apksigner verify --verbose exports/decentraland.godot.client-signed.apk
+          ${BUILD_TOOLS_DIR}apksigner verify --verbose exports/decentraland.godot.client-signed.apk
 
           # Replace unsigned with signed
           mv exports/decentraland.godot.client-signed.apk exports/decentraland.godot.client.apk
