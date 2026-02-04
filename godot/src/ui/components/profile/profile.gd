@@ -859,16 +859,46 @@ func _update_buttons() -> void:
 func _on_button_block_user_pressed() -> void:
 	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+
+	# Disable button during RPC call
+	button_block_user.disabled = true
+
 	if is_blocked_user:
-		# user_unblock metric
 		Global.metrics.track_click_button("user_unblock", "PROFILE", "")
-		Global.social_blacklist.remove_blocked(current_avatar.avatar_id)
+		_async_unblock_user_from_profile(current_avatar.avatar_id)
 	else:
-		# user_block metric
 		Global.metrics.track_click_button("user_block", "PROFILE", "")
-		Global.social_blacklist.add_blocked(current_avatar.avatar_id)
-		# When blocking, also delete friendship if it exists
-		_async_delete_friendship_if_exists(current_avatar.avatar_id)
+		_async_block_user(current_avatar.avatar_id)
+
+
+func _async_block_user(user_address: String) -> void:
+	var promise = Global.social_service.block_user(user_address)
+	await PromiseUtils.async_awaiter(promise)
+
+	button_block_user.disabled = false
+
+	if promise.is_rejected():
+		printerr("Block failed: ", PromiseUtils.get_error_message(promise))
+		return
+
+	Global.social_blacklist.add_blocked(user_address)  # Update local cache
+	_async_delete_friendship_if_exists(user_address)  # Keep existing logic
+	_update_buttons()
+	_notify_other_components_of_change()
+	button_menu.button_pressed = false
+
+
+func _async_unblock_user_from_profile(user_address: String) -> void:
+	var promise = Global.social_service.unblock_user(user_address)
+	await PromiseUtils.async_awaiter(promise)
+
+	button_block_user.disabled = false
+
+	if promise.is_rejected():
+		printerr("Unblock failed: ", PromiseUtils.get_error_message(promise))
+		return
+
+	Global.social_blacklist.remove_blocked(user_address)  # Update local cache
 	_update_buttons()
 	_notify_other_components_of_change()
 	button_menu.button_pressed = false
