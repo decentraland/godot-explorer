@@ -30,8 +30,8 @@ use crate::{
     },
     godot_classes::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
-        dcl_ui_control::DclUiControl, dcl_video_player::DclVideoPlayer,
-        dcl_virtual_camera::DclVirtualCamera,
+        dcl_locomotion_settings::DclLocomotionSettings, dcl_ui_control::DclUiControl,
+        dcl_video_player::DclVideoPlayer, dcl_virtual_camera::DclVirtualCamera,
     },
     realm::scene_definition::SceneEntityDefinition,
 };
@@ -120,6 +120,7 @@ pub enum SceneUpdateState {
     VideoPlayer,
     AudioStream,
     AvatarModifierArea,
+    AvatarLocomotionSettings,
     CameraModeArea,
     InputModifier,
     SkyboxTime,
@@ -157,7 +158,8 @@ impl SceneUpdateState {
             Self::Raycasts => Self::VideoPlayer,
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
-            Self::AvatarModifierArea => Self::CameraModeArea,
+            Self::AvatarModifierArea => Self::AvatarLocomotionSettings,
+            Self::AvatarLocomotionSettings => Self::CameraModeArea,
             Self::CameraModeArea => Self::InputModifier,
             Self::InputModifier => Self::SkyboxTime,
             Self::SkyboxTime => Self::TriggerArea,
@@ -268,6 +270,8 @@ pub struct Scene {
     pub last_player_scene_id: SceneId,
 
     pub virtual_camera: Gd<DclVirtualCamera>,
+
+    pub locomotion_settings: Gd<DclLocomotionSettings>,
 
     pub paused: bool,
 
@@ -381,6 +385,7 @@ impl Scene {
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
+            locomotion_settings: Default::default(),
             deno_memory_stats: None,
         }
     }
@@ -454,6 +459,7 @@ impl Scene {
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
+            locomotion_settings: Default::default(),
             deno_memory_stats: None,
         }
     }

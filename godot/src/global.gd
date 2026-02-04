@@ -807,37 +807,41 @@ func _emit_sentry_godot_test_messages() -> void:
 
 
 func check_deep_link_teleport_to():
-	if Global.is_mobile():
-		var new_deep_link_url: String = ""
-		if DclAndroidPlugin.is_available():
-			var args = DclAndroidPlugin.get_deeplink_args()
-			new_deep_link_url = args.get("data", "")
-		elif DclIosPlugin.is_available():
-			var args = DclIosPlugin.get_deeplink_args()
-			new_deep_link_url = args.get("data", "")
+	# Only process deep links on real mobile devices (not emulation/desktop)
+	# This prevents re-teleporting on every focus change with --fake-deeplink
+	if not Global.is_mobile() or Global.is_virtual_mobile():
+		return
 
-		if not new_deep_link_url.is_empty():
-			deep_link_url = new_deep_link_url
-			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+	var new_deep_link_url: String = ""
+	if DclAndroidPlugin.is_available():
+		var args = DclAndroidPlugin.get_deeplink_args()
+		new_deep_link_url = args.get("data", "")
+	elif DclIosPlugin.is_available():
+		var args = DclIosPlugin.get_deeplink_args()
+		new_deep_link_url = args.get("data", "")
 
-		# Ignore WalletConnect callbacks
-		if Global.deep_link_obj.is_walletconnect_callback:
-			return
+	if not new_deep_link_url.is_empty():
+		deep_link_url = new_deep_link_url
+		deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
-		if Global.deep_link_obj.is_location_defined():
-			# Use preview URL as realm if specified, otherwise use realm, otherwise main
-			var realm = Global.deep_link_obj.preview
-			if realm.is_empty():
-				realm = Global.deep_link_obj.realm
-			if realm.is_empty():
-				realm = DclUrls.main_realm()
+	# Ignore WalletConnect callbacks
+	if Global.deep_link_obj.is_walletconnect_callback:
+		return
 
-			Global.teleport_to(Global.deep_link_obj.location, realm)
-		elif not Global.deep_link_obj.preview.is_empty():
-			# Preview without location - just set realm, don't teleport
-			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
-		elif not Global.deep_link_obj.realm.is_empty():
-			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
+	if Global.deep_link_obj.is_location_defined():
+		# Use preview URL as realm if specified, otherwise use realm, otherwise main
+		var realm = Global.deep_link_obj.preview
+		if realm.is_empty():
+			realm = Global.deep_link_obj.realm
+		if realm.is_empty():
+			realm = DclUrls.main_realm()
+
+		Global.teleport_to(Global.deep_link_obj.location, realm)
+	elif not Global.deep_link_obj.preview.is_empty():
+		# Preview without location - just set realm, don't teleport
+		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
+	elif not Global.deep_link_obj.realm.is_empty():
+		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
 
 
 func _on_deeplink_received(url: String) -> void:
