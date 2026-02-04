@@ -1,0 +1,92 @@
+[gd_scene load_steps=9 format=3 uid="uid://3uibe7yuvd3j"]
+
+[ext_resource type="Script" uid="uid://dh1ht2mfxwsxb" path="res://src/ui/components/search-bar/search_bar.gd" id="1_51t0l"]
+[ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="2_vuyfd"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="3_6axsy"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="3_8j38y"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_51t0l"]
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_o46gv"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vuyfd"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8j38y"]
+
+[node name="SearchBar" type="Control"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 3
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+size_flags_vertical = 0
+script = ExtResource("1_51t0l")
+closed = null
+
+[node name="SearchBar_PanelContainer" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -27.0
+offset_bottom = 27.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 8
+theme_override_styles/panel = SubResource("StyleBoxFlat_51t0l")
+
+[node name="MarginContainer" type="MarginContainer" parent="SearchBar_PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_right = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SearchBar_PanelContainer/MarginContainer"]
+layout_mode = 2
+alignment = 2
+
+[node name="Button_Search" type="Button" parent="SearchBar_PanelContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+focus_mode = 0
+icon = ExtResource("2_vuyfd")
+flat = true
+icon_alignment = 1
+
+[node name="LineEdit" type="LineEdit" parent="SearchBar_PanelContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_uneditable_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/font_placeholder_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_fonts/font = ExtResource("3_6axsy")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_o46gv")
+theme_override_styles/read_only = SubResource("StyleBoxEmpty_vuyfd")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_8j38y")
+
+[node name="Button_EraseText" type="Button" parent="SearchBar_PanelContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+focus_mode = 0
+icon = ExtResource("3_8j38y")
+flat = true
+icon_alignment = 1
+
+[connection signal="pressed" from="SearchBar_PanelContainer/MarginContainer/HBoxContainer/Button_Search" to="." method="_on_button_search_pressed"]
+[connection signal="pressed" from="SearchBar_PanelContainer/MarginContainer/HBoxContainer/Button_EraseText" to="SearchBar_PanelContainer" method="_on_button_erase_text_pressed"]

@@ -20,7 +20,7 @@
 [ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
-[ext_resource type="PackedScene" uid="uid://s4d117fg1v4l" path="res://src/ui/components/discover/search_suggestions.tscn" id="19_73ifx"]
+[ext_resource type="PackedScene" uid="uid://t4c4tddaae7s" path="res://src/ui/components/search-bar/search_suggestions.tscn" id="19_73ifx"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -175,7 +175,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_753ow")
 
 [node name="LineEdit_SearchBar" type="LineEdit" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 placeholder_text = "Search Genesis City and Worlds"
