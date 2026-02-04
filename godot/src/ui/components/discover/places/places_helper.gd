@@ -57,8 +57,8 @@ static func async_patch_favorite(place_id: String, toggled_on: bool) -> Variant:
 
 
 static func async_get_by_position(pos: Vector2i) -> Variant:
-	var url: String = DclUrls.places_api() + "/places/" + "?limit=1"
-	url += "&positions=%d,%d" % [pos.x, pos.y]
+	var url: String = get_api_url()
+	url += "?only_places=true&pointer=%d,%d" % [pos.x, pos.y]
 
 	var headers = {"Content-Type": "application/json"}
 	var promise: Promise = Global.http_requester.request_json(
