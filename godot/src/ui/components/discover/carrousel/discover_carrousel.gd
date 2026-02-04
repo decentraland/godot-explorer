@@ -8,7 +8,7 @@ extends Control
 		%Label_Title.text = new_value
 		title = new_value
 
-var _last_search_text: String = ""
+#var _last_search_text: String = ""
 
 @onready var scroll_container = %ScrollContainer
 @onready var item_container = %HBoxContainer_Items

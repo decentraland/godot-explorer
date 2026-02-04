@@ -88,8 +88,6 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 				"base_position": "%d,%d" % [position.x, position.y]
 			}
 
-<<<<<<< HEAD
-=======
 		var dedup_key: String = data.get("id", data.get("base_position", ""))
 		if dedup_key.is_empty():
 			dedup_key = data.get("world_name", "")
@@ -98,7 +96,6 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 		if not dedup_key.is_empty():
 			seen[dedup_key] = true
 
->>>>>>> main
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
 		item.set_data(data)
@@ -169,24 +166,9 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		for category in categories_array:
 			url += "&categories=" + category
 
-	if is_instance_valid(_discover_carrousel_item_loading):
-		_discover_carrousel_item_loading.hide()
+	_async_fetch_places(url, limit)
 
-	var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
-	match fetch_result.status:
-		PlacesHelper.FetchResultStatus.ERROR:
-			if _loaded_elements == 0:
-				report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
-				printerr("Error request places ", url, " ", fetch_result.premise_error.get_error())
-		PlacesHelper.FetchResultStatus.OK:
-			if fetch_result.result.is_empty():
-				if _loaded_elements == 0:
-					report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
-			else:
-				_loaded_elements += fetch_result.result.size()
-				#NOTE is this right? Shouldnt be >=?
-				if fetch_result.result.size() != limit:
-					_no_more_elements = true
+
 
 func _async_fetch_places(url: String, limit: int = 100) -> void:
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")

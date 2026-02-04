@@ -28,8 +28,6 @@ static func get_api_url() -> String:
 
 static func async_patch_like(place_id: String, like: LIKE) -> Variant:
 	var url := DclUrls.places_api() + "/places/" + place_id + "/likes"
->>>>>>> main
-
 	var body: String
 	match like:
 		LIKE.UNKNOWN:
@@ -59,7 +57,7 @@ static func async_patch_favorite(place_id: String, toggled_on: bool) -> Variant:
 
 
 static func async_get_by_position(pos: Vector2i) -> Variant:
-	var url: String = get_api_url() + "?limit=1"
+	var url: String = DclUrls.places_api() + "/places/" + "?limit=1"
 	url += "&positions=%d,%d" % [pos.x, pos.y]
 
 	var headers = {"Content-Type": "application/json"}

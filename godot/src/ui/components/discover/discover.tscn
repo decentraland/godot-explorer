@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=33 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -532,5 +532,3 @@ visible = false
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
-[connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
-[connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]
