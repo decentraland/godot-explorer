@@ -56,7 +56,11 @@ func async_get_popular_keywords() -> void:
 			var py := p_split[1].to_int()
 			if not coordinates_destinations.has(px):
 				coordinates_destinations[px] = {}
-			coordinates_destinations[px][py] = destination
+			coordinates_destinations[px][py] = {
+				"title": destination.title,
+				"id": destination.id,
+				"first_position": destination.positions[0]
+			}
 
 
 func set_keyword_search_text(_search_text: String) -> void:
@@ -87,7 +91,7 @@ func set_keyword_search_text(_search_text: String) -> void:
 						continue
 					var title: String = trim_string(dd.title)
 					title = NotificationUtils.sanitize_notification_text(title, true, false)
-					var p_split: Array = dd.positions[0].split(",")
+					var p_split: Array = dd.first_position.split(",")
 					var px: int = p_split[0].to_int()
 					var py: int = p_split[1].to_int()
 					var coordinate_keyword := Keyword.new(title, KeywordType.COORDINATES)
@@ -103,6 +107,8 @@ func set_keyword_search_text(_search_text: String) -> void:
 
 	var count_history := 0
 	for k in keywords_available:
+		# NOTE Godot may add FuzzySearch soon:
+		# https://github.com/godotengine/godot/pull/107126
 		if (
 			_search_text == ""
 			or k.keyword.contains(_search_text)
