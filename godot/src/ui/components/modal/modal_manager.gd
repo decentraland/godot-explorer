@@ -5,6 +5,9 @@ extends Node
 ## Does not require the modal to be previously in any scene.
 ## Contains all business logic for different modal types.
 
+signal connection_lost_retry
+signal connection_lost_exit
+
 const MODAL_SCENE_PATH = "res://src/ui/components/modal/modal.tscn"
 
 # Modal text constants
@@ -87,6 +90,7 @@ func async_show_connection_lost_modal() -> void:
 			print("NOT CREATED MODAL")
 			return
 
+	current_modal.dismissable = false
 	current_modal.set_title(CONNECTION_LOST_TITLE)
 	current_modal.set_body(CONNECTION_LOST_BODY)
 	current_modal.set_primary_button_text(CONNECTION_LOST_PRIMARY)
@@ -275,12 +279,12 @@ func _on_scene_timeout_secondary() -> void:
 
 
 func _on_connection_lost_primary() -> void:
-	# Retry connection logic would go here
+	connection_lost_retry.emit()
 	close_current_modal()
 
 
 func _on_connection_lost_secondary() -> void:
-	# Exit app logic would go here
+	connection_lost_exit.emit()
 	close_current_modal()
 
 

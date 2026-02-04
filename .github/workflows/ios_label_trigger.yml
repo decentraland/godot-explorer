@@ -13,13 +13,13 @@ jobs:
   pre-build:
     name: Prepare iOS Build
     runs-on: ubuntu-latest
-    if: ${{ github.event.label.name == 'build-ios-internal' }}
+    if: ${{ github.event.label.name == 'build-ios-internal' || github.event.label.name == 'build-ios-external' }}
     steps:
-      - name: Remove build-ios-internal label
+      - name: Remove iOS build label
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "build-ios-internal"
+          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "${{ github.event.label.name }}"
 
       - name: Cancel previous iOS builds for this branch
         env:
@@ -80,9 +80,10 @@ jobs:
   ios-build:
     name: iOS Build
     needs: pre-build
-    if: ${{ github.event.label.name == 'build-ios-internal' }}
+    if: ${{ github.event.label.name == 'build-ios-internal' || github.event.label.name == 'build-ios-external' }}
     uses: ./.github/workflows/ios_builds.yml
     with:
       ref: ${{ github.event.pull_request.head.ref }}
       pr_number: ${{ github.event.pull_request.number }}
+      external: ${{ github.event.label.name == 'build-ios-external' }}
     secrets: inherit

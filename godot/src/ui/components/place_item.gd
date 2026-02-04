@@ -483,7 +483,7 @@ func set_data(item_data):
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
 
 	if engagement_bar:
-		engagement_bar.update_data(_data.get("id", null))
+		engagement_bar.update_data(_data)
 
 	set_download_warning(item_data)
 

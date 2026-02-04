@@ -29,6 +29,9 @@ func async_get_popular_keywords() -> void:
 	var url := PlacesHelper.get_api_url()
 	url += "?offset=0&limit=100"
 	url += "&order_by=most_active"
+	url += "&sdk=7"
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
 
 	var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
 	match fetch_result.status:
@@ -39,6 +42,7 @@ func async_get_popular_keywords() -> void:
 			pass
 
 	for destination in fetch_result.result:
+		if destination.world: continue
 		var destination_name: String = NotificationUtils.sanitize_notification_text(
 			trim_string(destination.title.to_lower())
 		)
