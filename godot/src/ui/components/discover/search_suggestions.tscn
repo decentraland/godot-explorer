@@ -1,6 +1,6 @@
-[gd_scene load_steps=6 format=3 uid="uid://t4c4tddaae7s"]
+[gd_scene load_steps=6 format=3 uid="uid://ct64rhq0dtpa3"]
 
-[ext_resource type="Script" uid="uid://8804vpyob5mu" path="res://src/ui/components/discover/search_suggestions.gd" id="1_dpmtn"]
+[ext_resource type="Script" path="res://src/ui/components/search-bar/search_suggestions.gd" id="1_dpmtn"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_2i8jq"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_kov7k"]
 

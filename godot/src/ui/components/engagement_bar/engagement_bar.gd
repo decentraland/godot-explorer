@@ -15,7 +15,6 @@ var place_id
 
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
-@onready var button_fav: Button = %Button_Fav
 @onready var button_share: Button = %Button_Share
 
 
@@ -90,25 +89,6 @@ func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 	enable_buttons()
 
 
-func _async_on_button_fav_toggled(toggled_on: bool) -> void:
-	if place_id == null:
-		button_fav.set_pressed_no_signal(!toggled_on)
-		return
-
-	disable_buttons()
-
-	var response = await PlacesHelper.async_patch_favorite(place_id, toggled_on)
-
-	if response is PromiseError:
-		button_fav.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching favorites: ", response.get_error())
-	elif response == null:
-		button_fav.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching favorites")
-
-	enable_buttons()
-
-
 func _apply_button_state(data: Dictionary) -> void:
 	button_like.set_pressed_no_signal(data.get("user_like", false))
 	if button_like.is_pressed():
@@ -122,8 +102,6 @@ func _apply_button_state(data: Dictionary) -> void:
 	else:
 		button_dislike.icon = DISLIKE
 
-	button_fav.set_pressed_no_signal(data.get("user_favorite", false))
-
 
 func disable_buttons() -> void:
 	if button_like:
@@ -132,11 +110,8 @@ func disable_buttons() -> void:
 	if button_dislike:
 		button_dislike.disabled = true
 		button_dislike.get_node("TextureProgressBar").show()
-	if button_fav:
-		button_fav.disabled = true
-		button_fav.get_node("TextureProgressBar").show()
-
-
+	
+	
 func enable_buttons() -> void:
 	if button_like:
 		button_like.disabled = false
@@ -144,6 +119,4 @@ func enable_buttons() -> void:
 	if button_dislike:
 		button_dislike.disabled = false
 		button_dislike.get_node("TextureProgressBar").hide()
-	if button_fav:
-		button_fav.disabled = false
-		button_fav.get_node("TextureProgressBar").hide()
+	
