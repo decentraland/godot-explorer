@@ -39,7 +39,7 @@ func _ready():
 	last_activity_time = Time.get_ticks_msec()
 	item_count = carousel.item_count()
 	set_item(randi_range(0, item_count - 1))
-
+	
 
 # Forward
 func enable_loading_screen():

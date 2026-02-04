@@ -22,8 +22,14 @@ func set_data(item_data) -> void:
 	next_start_at = item_data.get("next_start_at", "")
 
 	event_status = "live" if live else "upcoming"
+	# Usar el flag "live" del API como fuente de verdad para mostrar LIVE (unifica card y detalles)
+	if live:
+		_show_live_state()
+		set_trending(item_data.get("trending", false))
+		set_featured(item_data.get("highlighted", false))
+		set_users_in_event(item_data.get("user_count", 0))
+		return
 	if next_start_at != "":
-		# Convert ISO string to Unix timestamp
 		var timestamp = _parse_iso_timestamp(next_start_at)
 		if timestamp > 0:
 			set_time(timestamp)
@@ -81,16 +87,20 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 	return Time.get_unix_time_from_datetime_dict(date_dict)
 
 
+func _show_live_state() -> void:
+	label_live_pill.text = "LIVE"
+	live_pill.show()
+	time_pill.hide()
+	if users_pill:
+		users_pill.show()
+	live_pill.get_parent().show()
+
+
 func set_time(_start_at: int) -> void:
 	var now = Time.get_unix_time_from_system()
 	# Si ya empezó (tiempo <= 0) → mostrar LIVE y USERS, ocultar TIME
 	if _start_at <= now:
-		label_live_pill.text = "LIVE"
-		live_pill.show()
-		time_pill.hide()
-		if users_pill:
-			users_pill.show()
-		live_pill.get_parent().show()
+		_show_live_state()
 		return
 	# Si va a empezar en el futuro → mostrar TIME (borde rojo si <= 5 min, negro si > 5 min)
 	live_pill.hide()

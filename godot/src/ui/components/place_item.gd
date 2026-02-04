@@ -324,6 +324,7 @@ func set_scene_event_name(scene_name: String) -> void:
 
 
 func set_world(world: String):
+	# Solo actualiza la UI (etiqueta, icono). El realm para teleport se fija en set_data desde server.
 	var label = _get_label_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
@@ -445,24 +446,48 @@ func set_data(item_data):
 		if timestamp > 0:
 			event_start_timestamp = timestamp  # Store for notification scheduling
 
-	# Set location before set_attending so event_coordinates is correct for notifications
-
+	# Set location and realm for Jump In (teleport: mismo realm = solo posición; otro realm = cambiar realm + posición)
 	var server = item_data.get("server", null)
 	var world_name = item_data.get("world_name", null)
+	var is_world = item_data.get("world", false)
 
-	if server and server != "main":
+	# Realm: "main"/null → Genesis City; si no, world (ej. fractilians.dcl.eth). Events usan "server", places pueden usar "world_name".
+	if server and str(server) != "main":
+		var realm_id = str(server)
+		if not realm_id.ends_with(".dcl.eth"):
+			realm_id = realm_id + ".dcl.eth"
+		realm = realm_id
 		set_world(server)
-	elif world_name:
+	elif is_world and world_name:
+		var wn = str(world_name)
+		if wn.ends_with(".dcl.eth"):
+			realm = wn
+		else:
+			realm = wn + ".dcl.eth"
 		set_world(world_name)
 	else:
-		var coordinates = item_data.get("coordinates", null)
-		if coordinates:
-			if coordinates.size() == 2:
-				set_location(Vector2i(int(coordinates[0]), int(coordinates[1])))
-		var base_position = item_data.get("base_position", null)
-		if base_position:
-			var location_vector = base_position.split(",")
-			set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
+		realm = DclUrls.main_realm()
+
+	# Coordenadas: para Jump In siempre; para UI solo si no es world (world muestra icono map + nombre trimmeado)
+	var parsed_loc: Vector2i = Vector2i.ZERO
+	var coordinates = item_data.get("coordinates", null)
+	var position = item_data.get("position", null)
+	var base_position = item_data.get("base_position", null)
+	if coordinates is Array and coordinates.size() >= 2:
+		parsed_loc = Vector2i(int(coordinates[0]), int(coordinates[1]))
+	elif position is Array and position.size() >= 2:
+		parsed_loc = Vector2i(int(position[0]), int(position[1]))
+	elif item_data.get("x") != null and item_data.get("y") != null:
+		parsed_loc = Vector2i(int(item_data.x), int(item_data.y))
+	elif base_position:
+		var location_vector = str(base_position).split(",")
+		if location_vector.size() >= 2:
+			parsed_loc = Vector2i(int(location_vector[0]), int(location_vector[1]))
+	location = parsed_loc
+	var is_world_place = (server and str(server) != "main") or is_world
+	if not is_world_place:
+		set_location(parsed_loc)
+	# Si es world, la UI ya quedó con icono map + nombre trimmeado en set_world()
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
@@ -505,7 +530,56 @@ func _async_download_image(url: String):
 
 
 func _on_button_jump_in_pressed():
-	jump_in.emit(location, realm)
+	_do_jump_in()
+
+
+func _get_jump_in_position_and_realm_from_data(item_data: Dictionary) -> Array:
+	# Devuelve [Vector2i posición, String realm] para Jump In (eventos y places).
+	var pos: Vector2i = Vector2i.ZERO
+	var r: String = ""
+	var server = item_data.get("server", null)
+	var world_name = item_data.get("world_name", null)
+	var is_world = item_data.get("world", false)
+	if server and str(server) != "main":
+		r = str(server)
+		if not r.ends_with(".dcl.eth"):
+			r = r + ".dcl.eth"
+	elif is_world and world_name:
+		r = str(world_name)
+		if not r.ends_with(".dcl.eth"):
+			r = r + ".dcl.eth"
+	else:
+		r = DclUrls.main_realm()
+	var coords = item_data.get("coordinates", null)
+	var pos_arr = item_data.get("position", null)
+	var base_pos = item_data.get("base_position", null)
+	if coords is Array and coords.size() >= 2:
+		pos = Vector2i(int(coords[0]), int(coords[1]))
+	elif typeof(coords) == TYPE_STRING:
+		var parts = str(coords).split(",")
+		if parts.size() >= 2:
+			pos = Vector2i(int(parts[0]), int(parts[1]))
+	elif pos_arr is Array and pos_arr.size() >= 2:
+		pos = Vector2i(int(pos_arr[0]), int(pos_arr[1]))
+	elif item_data.get("x") != null and item_data.get("y") != null:
+		pos = Vector2i(int(item_data.x), int(item_data.y))
+	elif base_pos:
+		var parts = str(base_pos).split(",")
+		if parts.size() >= 2:
+			pos = Vector2i(int(parts[0]), int(parts[1]))
+	return [pos, r]
+
+
+func _do_jump_in() -> void:
+	# Misma lógica para Jump In y Jump to event: teleport a position + realm. Resolver desde _data al hacer click por si set_data no aplicó (ej. panel detalles desde tarjeta).
+	var jump_pos := location
+	var jump_realm := realm
+	if _data is Dictionary and not _data.is_empty():
+		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+		if pos_realm[0] != Vector2i.ZERO or not pos_realm[1].is_empty():
+			jump_pos = pos_realm[0]
+			jump_realm = pos_realm[1]
+	jump_in.emit(jump_pos, jump_realm)
 
 
 func _on_button_close_pressed() -> void:
@@ -721,7 +795,11 @@ func _format_duration(duration: int) -> String:
 
 
 func _on_event_pressed() -> void:
-	event_pressed.emit(event_id)
+	# Emitir datos completos del evento para que card y detalles muestren lo mismo (LIVE, IN X DAYS)
+	if _data is Dictionary and not _data.is_empty():
+		event_pressed.emit(_data)
+	else:
+		event_pressed.emit(event_id)
 
 
 func _on_button_share_pressed() -> void:
@@ -755,7 +833,7 @@ func _on_button_jump_to_event_pressed() -> void:
 	Global.metrics.track_click_button(
 		"jump_to", "EVENT_DETAILS", JSON.stringify({"event_id": event_id, "event_tag": event_tags})
 	)
-	jump_in.emit(location, realm)
+	_do_jump_in()
 
 
 func _on_show_more_toggled(toggled_on: bool) -> void:

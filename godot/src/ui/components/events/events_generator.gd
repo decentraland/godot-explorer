@@ -50,8 +50,6 @@ func on_request(_offset: int, limit: int) -> void:
 		url += "&tag=allowed_ios"
 	prints("_async_fetch_events", url)
 	_async_fetch_events(url, limit)
-
-
 func _async_fetch_events(url: String, limit: int = 100):
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
@@ -103,7 +101,7 @@ func _async_fetch_events(url: String, limit: int = 100):
 		item_container.add_child(item)
 
 		item.set_data(event_data)
-		item.event_pressed.connect(discover._async_handle_event_notification)
+		item.event_pressed.connect(discover.on_event_pressed)
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
 

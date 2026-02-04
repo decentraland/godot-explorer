@@ -26,8 +26,6 @@ signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
 signal camera_mode_set(camera_mode: Global.CameraMode)
-signal run_anyway
-signal reload_scene
 signal favorite_destination_set
 
 enum CameraMode {

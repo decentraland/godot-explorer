@@ -467,7 +467,7 @@ func _on_panel_chat_submit_message(message: String):
 				Time.get_unix_time_from_system()
 			)
 			Global.realm.async_set_realm(world_realm, true)
-			loading_ui.enable_loading_screen()
+			#loading_ui.enable_loading_screen()
 			# LOADING_START metric
 			var loading_data = {
 				"position": str(Global.scene_fetcher.current_position),
@@ -532,11 +532,18 @@ func move_to(position: Vector3, skip_loading: bool):
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
+	_teleport_to_async(parcel, realm)
+
+
+func _teleport_to_async(parcel: Vector2i, realm: String = "") -> void:
+	# Si hay que cambiar de realm, esperar a que termine antes de mover y actualizar posición.
+	# Así el scene_fetcher se reconfigura con el nuevo realm y la carga termina correctamente (no se traba el loading).
+	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+		loading_ui.enable_loading_screen()
+		await Global.realm.async_set_realm(realm)
+
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
-
-	if not realm.is_empty() && realm != Global.realm.get_realm_string():
-		Global.realm.async_set_realm(realm)
 
 	Global.scene_fetcher.update_position(parcel, true)
 
