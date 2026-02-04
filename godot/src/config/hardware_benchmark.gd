@@ -19,28 +19,47 @@ const PROFILE_THRESHOLDS: Array[Dictionary] = [
 	{"gpu_max_ms": 8.0, "ram_min_gb": 6.0, "name": "High"},
 ]
 
+# Benchmark configuration
+const FRAMES_TO_RENDER: int = 60
+const WARMUP_FRAMES: int = 10
+const MESH_GRID_SIZE: int = 10  # Creates a 10x4x10 grid (400 meshes)
+const MESH_GRID_HEIGHT: int = 4
+const MESHES_PER_BATCH: int = 20  # Meshes created per frame to avoid UI freeze
+
 # Benchmark state
 var _is_running: bool = false
 var _frame_times: Array[float] = []
-var _frames_to_render: int = 60  # Number of frames to benchmark
 var _frames_rendered: int = 0
 var _benchmark_viewport: SubViewport = null
+var _benchmark_start_time: int = 0
 
 
 func _ready() -> void:
 	set_process(false)
 
 
+# gdlint:ignore = async-function-name
 func run_benchmark() -> void:
 	if _is_running:
 		return
+
+	_benchmark_start_time = Time.get_ticks_msec()
+	print("[Startup] hardware_benchmark.run_benchmark start: %dms" % _benchmark_start_time)
 
 	_is_running = true
 	_frame_times.clear()
 	_frames_rendered = 0
 
-	# Create benchmark viewport
+	# Create benchmark viewport and scene asynchronously to avoid UI freeze
 	_setup_benchmark_viewport()
+	await _async_create_benchmark_scene()
+
+	print(
+		(
+			"[Startup] hardware_benchmark scene created: %dms"
+			% (Time.get_ticks_msec() - _benchmark_start_time)
+		)
+	)
 
 	# Enable render time measurement
 	if _benchmark_viewport:
@@ -62,20 +81,28 @@ func _process(_delta: float) -> void:
 	var gpu_time: float = RenderingServer.viewport_get_measured_render_time_gpu(rid)
 	var frame_time: float = maxf(cpu_time, gpu_time)
 
-	# Skip first few frames (warm-up)
-	if _frames_rendered >= 10:
+	# Skip first few frames (warm-up for shader compilation)
+	if _frames_rendered >= WARMUP_FRAMES:
 		_frame_times.append(frame_time)
 
 	_frames_rendered += 1
 
 	# Check if benchmark is complete
-	if _frames_rendered >= _frames_to_render + 10:  # +10 for warm-up
+	if _frames_rendered >= FRAMES_TO_RENDER + WARMUP_FRAMES:
 		_finish_benchmark()
 
 
 func _finish_benchmark() -> void:
 	set_process(false)
 	_is_running = false
+
+	var benchmark_duration: int = Time.get_ticks_msec() - _benchmark_start_time
+	print(
+		(
+			"[Startup] hardware_benchmark._finish_benchmark: %dms (duration: %dms)"
+			% [Time.get_ticks_msec(), benchmark_duration]
+		)
+	)
 
 	# Calculate average GPU score (render time in ms)
 	var gpu_score: float = _calculate_average_frame_time()
@@ -156,13 +183,13 @@ func _setup_benchmark_viewport() -> void:
 	_benchmark_viewport.size = Vector2i(1280, 720)  # Fixed size for consistent benchmark
 	_benchmark_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_benchmark_viewport.disable_3d = false
+	_benchmark_viewport.own_world_3d = true  # Isolate benchmark from main scene
 	add_child(_benchmark_viewport)
 
-	# Create a simple benchmark scene
-	_create_benchmark_scene()
 
-
-func _create_benchmark_scene() -> void:
+## Create benchmark scene asynchronously to avoid blocking the UI thread
+## Yields between batches of mesh creation to allow UI updates
+func _async_create_benchmark_scene() -> void:
 	if not _benchmark_viewport:
 		return
 
@@ -172,7 +199,7 @@ func _create_benchmark_scene() -> void:
 	camera.look_at(Vector3.ZERO)
 	_benchmark_viewport.add_child(camera)
 
-	# Add main directional light with high-quality shadows
+	# Add main directional light with shadows
 	var sun := DirectionalLight3D.new()
 	sun.position = Vector3(10, 20, 10)
 	sun.look_at(Vector3.ZERO)
@@ -198,7 +225,7 @@ func _create_benchmark_scene() -> void:
 		point_light.shadow_enabled = true
 		_benchmark_viewport.add_child(point_light)
 
-	# Add environment with bloom and SSAO
+	# Add environment with bloom
 	var env := WorldEnvironment.new()
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_SKY
@@ -211,14 +238,16 @@ func _create_benchmark_scene() -> void:
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	environment.ambient_light_energy = 0.5
-	# Enable bloom
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.8
 	environment.glow_bloom = 0.3
 	env.environment = environment
 	_benchmark_viewport.add_child(env)
 
-	# Create different mesh types
+	# Allow UI to update after creating lights/environment
+	await get_tree().process_frame
+
+	# Create mesh types
 	var box_mesh := BoxMesh.new()
 	box_mesh.size = Vector3(0.8, 0.8, 0.8)
 
@@ -233,24 +262,24 @@ func _create_benchmark_scene() -> void:
 	cylinder_mesh.bottom_radius = 0.4
 	cylinder_mesh.height = 1.0
 
-	# Create materials with different properties
+	# Create materials with different shader paths for coverage
 	var materials: Array[StandardMaterial3D] = []
 
-	# Metallic red
+	# Metallic (PBR metallic shader path)
 	var mat1 := StandardMaterial3D.new()
 	mat1.albedo_color = Color(0.9, 0.2, 0.2)
 	mat1.metallic = 0.9
 	mat1.roughness = 0.1
 	materials.append(mat1)
 
-	# Rough blue
+	# Rough diffuse (PBR diffuse shader path)
 	var mat2 := StandardMaterial3D.new()
 	mat2.albedo_color = Color(0.2, 0.4, 0.9)
 	mat2.metallic = 0.1
 	mat2.roughness = 0.8
 	materials.append(mat2)
 
-	# Emissive green
+	# Emissive (emission shader path)
 	var mat3 := StandardMaterial3D.new()
 	mat3.albedo_color = Color(0.2, 0.8, 0.3)
 	mat3.emission_enabled = true
@@ -258,7 +287,7 @@ func _create_benchmark_scene() -> void:
 	mat3.emission_energy_multiplier = 2.0
 	materials.append(mat3)
 
-	# Semi-transparent
+	# Transparent (alpha blend shader path)
 	var mat4 := StandardMaterial3D.new()
 	mat4.albedo_color = Color(0.8, 0.8, 0.2, 0.5)
 	mat4.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -268,22 +297,23 @@ func _create_benchmark_scene() -> void:
 
 	var meshes: Array[Mesh] = [box_mesh, sphere_mesh, cylinder_mesh]
 
-	# Create 10x4x10 grid (400 meshes) - much more demanding
+	# Create mesh grid using all materials and mesh types for shader coverage
 	var mesh_count: int = 0
-	for x in range(-5, 5):
-		for y in range(0, 4):
-			for z in range(-5, 5):
+	var half_size: int = MESH_GRID_SIZE / 2
+	for x in range(-half_size, half_size):
+		for y in range(0, MESH_GRID_HEIGHT):
+			for z in range(-half_size, half_size):
 				var mesh_instance := MeshInstance3D.new()
 				mesh_instance.mesh = meshes[mesh_count % meshes.size()]
 				mesh_instance.position = Vector3(x * 1.5, y * 1.5, z * 1.5)
 				mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-
-				# Apply material
-				var mat: StandardMaterial3D = materials[mesh_count % materials.size()]
-				mesh_instance.material_override = mat
-
+				mesh_instance.material_override = materials[mesh_count % materials.size()]
 				_benchmark_viewport.add_child(mesh_instance)
 				mesh_count += 1
+
+				# Yield every MESHES_PER_BATCH to allow UI updates
+				if mesh_count % MESHES_PER_BATCH == 0:
+					await get_tree().process_frame
 
 
 func _exit_tree() -> void:

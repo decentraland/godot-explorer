@@ -89,9 +89,13 @@ pub struct DclCli {
     #[var(get)]
     pub emulate_android: bool,
     #[var(get)]
+    pub asset_server: bool,
+    #[var(get)]
     pub fi_benchmark_size: i32,
 
     // Arguments with values
+    #[var(get)]
+    pub asset_server_port: i32,
     #[var(get)]
     pub realm: GString,
     #[var(get)]
@@ -332,6 +336,20 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
+            // Asset Server
+            ArgDefinition {
+                name: "--asset-server".to_string(),
+                description: "Start the asset optimization server instead of the normal client"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Server".to_string(),
+            },
+            ArgDefinition {
+                name: "--asset-server-port".to_string(),
+                description: "Port for asset optimization server (default: 8080)".to_string(),
+                arg_type: ArgType::Value("<port>".to_string()),
+                category: "Server".to_string(),
+            },
             // Floating Islands Benchmark
             ArgDefinition {
                 name: "--fi-benchmark-size".to_string(),
@@ -474,17 +492,23 @@ impl INode for DclCli {
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
         let only_optimized = args_map.contains_key("--only-optimized");
-        let only_no_optimized = true; // args_map.contains_key("--only-no-optimized");
+        let only_no_optimized = args_map.contains_key("--only-no-optimized");
         let emote_test_mode = args_map.contains_key("--emote-test");
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
+        let asset_server = args_map.contains_key("--asset-server");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
 
         // Extract arguments with values
+        let asset_server_port = args_map
+            .get("--asset-server-port")
+            .and_then(|v| v.as_ref())
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(8080);
         let realm = args_map
             .get("--realm")
             .and_then(|v| v.as_ref())
@@ -568,7 +592,9 @@ impl INode for DclCli {
             stress_test,
             emulate_ios,
             emulate_android,
+            asset_server,
             fi_benchmark_size,
+            asset_server_port,
             realm,
             location,
             scene_input_file,

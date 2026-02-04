@@ -32,6 +32,10 @@ pub struct DclParseDeepLink {
     /// Valid values: "org", "zone", "today"
     #[var]
     dclenv: GString,
+
+    /// True if this is a WalletConnect callback that should be ignored
+    #[var]
+    is_walletconnect_callback: bool,
 }
 
 #[godot_api]
@@ -46,6 +50,7 @@ impl IRefCounted for DclParseDeepLink {
             dynamic_scene_loading: false,
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
+            is_walletconnect_callback: false,
             dclenv: GString::new(),
         }
     }
@@ -63,13 +68,15 @@ impl DclParseDeepLink {
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
             dclenv: GString::new(),
+            is_walletconnect_callback: false,
         };
 
         if url_str.is_empty() {
             return Gd::from_object(return_object);
         }
 
-        let url = match Url::parse(url_str.to_string().as_str()) {
+        let url_string = url_str.to_string();
+        let url = match Url::parse(url_string.as_str()) {
             Ok(url) => url,
             Err(err) => {
                 godot_error!("Deep link URL unparsed {} - {url_str}", err.to_string());
@@ -77,10 +84,46 @@ impl DclParseDeepLink {
             }
         };
 
-        // Verify scheme
-        if url.scheme() != "decentraland" {
-            godot_error!("Invalid scheme: expected 'decentraland' - {url_str}");
+        // Handle both decentraland:// scheme and https://mobile.dclexplorer.com URLs
+        // For https URLs from mobile.dclexplorer.com, convert to decentraland:// format
+        let url = if url.scheme() == "https" || url.scheme() == "http" {
+            if let Some(host) = url.host_str() {
+                if host == "mobile.dclexplorer.com" {
+                    // Convert https://mobile.dclexplorer.com/open?params to decentraland://open?params
+                    let path = url.path();
+                    let query = url.query().map(|q| format!("?{}", q)).unwrap_or_default();
+                    let decentraland_url = format!("decentraland:/{}{}", path, query);
+                    match Url::parse(&decentraland_url) {
+                        Ok(converted) => converted,
+                        Err(_) => {
+                            godot_error!(
+                                "Failed to convert URL to decentraland scheme - {url_str}"
+                            );
+                            return Gd::from_object(return_object);
+                        }
+                    }
+                } else {
+                    godot_error!("Invalid host: expected 'mobile.dclexplorer.com' - {url_str}");
+                    return Gd::from_object(return_object);
+                }
+            } else {
+                godot_error!("No host in URL - {url_str}");
+                return Gd::from_object(return_object);
+            }
+        } else if url.scheme() == "decentraland" {
+            url
+        } else {
+            godot_error!("Invalid scheme: expected 'decentraland' or 'https' - {url_str}");
             return Gd::from_object(return_object);
+        };
+
+        // Check for WalletConnect callback (decentraland://walletconnect or decentraland://walletconnect/...)
+        // This is a callback from wallet apps and should be ignored
+        if let Some(host) = url.host_str() {
+            if host == "walletconnect" {
+                return_object.is_walletconnect_callback = true;
+                return Gd::from_object(return_object);
+            }
         }
 
         // Parse query parameters

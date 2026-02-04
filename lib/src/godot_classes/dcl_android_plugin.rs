@@ -105,6 +105,15 @@ impl DclAndroidPlugin {
             .unwrap_or_default()
     }
 
+    /// Get current charging state
+    /// Returns: "charging", "unplugged", or "unknown" if unavailable
+    #[func]
+    pub fn get_charging_state() -> GString {
+        Self::get_mobile_metrics_internal()
+            .map(|m| GString::from(&m.charging_state))
+            .unwrap_or_else(|| GString::from("unknown"))
+    }
+
     /// Get total device RAM in megabytes
     /// Returns -1 if unavailable
     #[func]

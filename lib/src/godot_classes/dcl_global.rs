@@ -425,6 +425,11 @@ impl DclGlobal {
     }
 
     #[func]
+    fn is_ios_or_emulating(&self) -> bool {
+        self.is_ios || self.cli.bind().emulate_ios
+    }
+
+    #[func]
     fn is_virtual_mobile(&self) -> bool {
         self.is_virtual_mobile
     }

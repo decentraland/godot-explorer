@@ -10,6 +10,7 @@ use crate::{
     path::{adjust_canonicalization, get_godot_path},
     platform::validate_platform_for_target,
     ui::{create_spinner, print_build_status, print_message, MessageType},
+    version::read_version,
 };
 
 /// Configuration for ADB device detection retry logic
@@ -526,7 +527,11 @@ fn run_cargo_build(
 
 /// Runs Godot with the provided arguments and checks for successful exit.
 fn run_godot(program: &str, args: &[&str], use_tuned_glibc: bool) -> anyhow::Result<()> {
-    print_message(MessageType::Step, "Starting Godot...");
+    let version = read_version().unwrap_or_else(|_| "unknown".to_string());
+    print_message(
+        MessageType::Step,
+        &format!("Starting Godot (version={})", version),
+    );
 
     let mut cmd = std::process::Command::new(program);
     cmd.args(args);

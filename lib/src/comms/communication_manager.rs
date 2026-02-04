@@ -140,6 +140,7 @@ pub struct CommunicationManager {
     current_connection_str: GString,
     last_position_broadcast_index: u64,
     last_emote_incremental_id: u32,
+    is_emoting: bool,
     voice_chat_enabled: bool,
     start_time: Instant,
     last_profile_version_broadcast: Instant,
@@ -179,6 +180,7 @@ impl INode for CommunicationManager {
             current_connection_str: GString::default(),
             last_position_broadcast_index: 0,
             last_emote_incremental_id: 0,
+            is_emoting: false,
             voice_chat_enabled: false,
             start_time: Instant::now(),
             last_profile_version_broadcast: Instant::now(),
@@ -737,6 +739,8 @@ impl CommunicationManager {
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
+                    is_instant: false,
+                    is_emoting: self.is_emoting,
                 };
 
                 //tracing::info!("Movement packet: {:?}", movement_packet);
@@ -895,11 +899,13 @@ impl CommunicationManager {
         ));
 
         self.last_emote_incremental_id += 1;
+        self.is_emoting = true;
 
         let packet = rfc4::Packet {
             message: Some(rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
                 urn: emote_urn.to_string(),
                 incremental_id: self.last_emote_incremental_id,
+                timestamp: self.start_time.elapsed().as_secs_f32(),
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
@@ -918,6 +924,11 @@ impl CommunicationManager {
         }
 
         sent
+    }
+
+    #[func]
+    pub fn set_emoting(&mut self, emoting: bool) {
+        self.is_emoting = emoting;
     }
 
     #[func]

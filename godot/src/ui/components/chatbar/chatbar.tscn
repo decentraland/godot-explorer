@@ -66,7 +66,7 @@ icon_alignment = 1
 
 [node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(66, 0)
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 
@@ -89,10 +89,9 @@ toggle_mode = true
 button_group = SubResource("ButtonGroup_grvqo")
 icon = ExtResource("3_2fmgn")
 flat = true
-icon_alignment = 1
+icon_alignment = 2
 
 [node name="HudButton_Share" type="Button" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons"]
-visible = false
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
