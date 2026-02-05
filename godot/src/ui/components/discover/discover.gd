@@ -17,23 +17,32 @@ var search_text: String = ""
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
 @onready var places_my_places: VBoxContainer = %PlacesMyPlaces
-
-@onready var search_container := %SearchSuggestionsContainer
+@onready var search_container: SearchSuggestions = %SearchSugestionsContainer
+@onready var button_back_to_explorer: Button = %Button_BackToExplorer
+@onready var label_title: Label = %Label_Title
+@onready var container_content: ScrollContainer = %ScrollContainer_Content
 
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
+	button_back_to_explorer.hide()
 	jump_in.hide()
 	event_details.hide()
 	button_search_bar.show()
 	button_clear_filter.hide()
 	line_edit_search_bar.hide()
 
+	jump_in.jump_in.connect(_on_jump_in_jump_in)
+	jump_in.jump_in_world.connect(_on_jump_in_world)
+	event_details.jump_in.connect(_on_event_details_jump_in)
+	event_details.jump_in_world.connect(_on_event_details_jump_in_world)
+
 	# Connect to notification clicked signal
 	Global.notification_clicked.connect(_on_notification_clicked)
 
 	search_container.hide()
 	search_container.keyword_selected.connect(_async_on_keyword_selected)
+	container_content.show()
 
 	last_visited.generator.report_loading_status.connect(_on_report_loading_status)
 	places_featured.generator.report_loading_status.connect(_on_report_loading_status)
@@ -43,12 +52,16 @@ func _ready():
 
 func on_item_pressed(data):
 	jump_in.set_data(data)
-	jump_in.show_animation()
+	jump_in.open_panel()
 
 
 func on_event_pressed(data):
+	# data puede ser el diccionario completo (click en card) o solo event_id string (notificación)
+	if data is String:
+		_async_handle_event_notification(data)
+		return
 	event_details.set_data(data)
-	event_details.show_animation()
+	event_details.open_panel()
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
@@ -56,14 +69,18 @@ func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	Global.teleport_to(parcel_position, realm)
 
 
+func _on_jump_in_world(realm: String):
+	jump_in.hide()
+	Global.join_world(realm)
+
+
 func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		last_visited.generator.async_request_last_places(0, 10)
-
-
-func _on_line_edit_search_bar_focus_exited() -> void:
-	button_search_bar.show()
-	line_edit_search_bar.hide()
+		Global.set_orientation_portrait()
+		if Global.get_explorer():
+			if button_back_to_explorer:
+				button_back_to_explorer.show()
 
 
 func _on_button_search_bar_pressed() -> void:
@@ -71,7 +88,10 @@ func _on_button_search_bar_pressed() -> void:
 	line_edit_search_bar.show()
 	line_edit_search_bar.grab_focus()
 	search_container.show()
+	container_content.hide()
 	search_container.set_keyword_search_text("")
+	button_back_to_explorer.show()
+	label_title.hide()
 
 
 func _on_button_clear_filter_pressed() -> void:
@@ -101,7 +121,7 @@ func _on_line_edit_search_bar_text_changed(new_text: String) -> void:
 	search_container.set_keyword_search_text(search_text)
 
 
-func _on_line_edit_search_bar_text_submitted(new_text: String) -> void:
+func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	var coordinates := {}
 	if PlacesHelper.parse_coordinates(new_text, coordinates):
 		new_text = await PlacesHelper.async_get_name_from_coordinates(
@@ -111,10 +131,9 @@ func _on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	new_text = new_text.rstrip(" .")
 	search_text = new_text
 	set_search_filter_text(search_text)
+	_reset_header()
 	search_container.hide()
-	button_search_bar.show()
-	line_edit_search_bar.hide()
-	line_edit_search_bar.text = ""
+	container_content.show()
 
 
 func _on_timer_search_debounce_timeout() -> void:
@@ -127,6 +146,11 @@ func _on_timer_search_debounce_timeout() -> void:
 func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
 	event_details.hide()
 	Global.teleport_to(parcel_position, realm)
+
+
+func _on_event_details_jump_in_world(realm: String) -> void:
+	event_details.hide()
+	Global.join_world(realm)
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
@@ -198,22 +222,23 @@ func _async_handle_event_notification(event_id: String) -> void:
 	on_event_pressed(event_data)
 
 
-func _on_button_close_pressed() -> void:
-	Global.close_menu.emit()
-
-
 func _on_error_loading_notification() -> void:
 	Global.close_navbar.emit()
 
 
 func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
+	%MessageError.hide()
+	%MessageNoResultsFound.hide()
 	match status:
-		CarrouselGenerator.LoadingStatus.LOADING:
-			%MessageNoResultsFound.show()
+		#CarrouselGenerator.LoadingStatus.LOADING:
+		#%MessageNoResultsFound.show()
 		CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
-			%MessageNoResultsFound.hide()
 			if Global.get_config().add_search_history(search_text):
 				Global.get_config().save_to_settings_file()
+		CarrouselGenerator.LoadingStatus.ERROR:
+			%MessageError.show()
+		CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS:
+			%MessageNoResultsFound.show()
 
 
 func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
@@ -222,6 +247,31 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 		search_keyword = await PlacesHelper.async_get_name_from_coordinates(keyword.coordinates)
 	set_search_filter_text(search_keyword)
 	search_container.hide()
+	container_content.show()
 	button_search_bar.show()
 	line_edit_search_bar.hide()
 	line_edit_search_bar.text = ""
+	_reset_header()
+
+
+func _on_button_back_to_explorer_pressed() -> void:
+	if line_edit_search_bar.visible:
+		_reset_header()
+		search_container.hide()
+		container_content.show()
+		return
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
+
+
+func _reset_header() -> void:
+	button_search_bar.show()
+	line_edit_search_bar.hide()
+	line_edit_search_bar.text = ""
+	button_back_to_explorer.hide()
+	label_title.show()
+	if Global.get_explorer():
+		button_back_to_explorer.show()
+	else:
+		button_back_to_explorer.hide()

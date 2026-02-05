@@ -1,71 +1,55 @@
-[gd_scene load_steps=15 format=3 uid="uid://dj4nqjjptw0th"]
+[gd_scene load_steps=17 format=3 uid="uid://dj4nqjjptw0th"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
-[ext_resource type="FontVariation" uid="uid://ct75rjpcbx4cb" path="res://src/ui/components/events/inter600_icons.tres" id="3_7lpam"]
-[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_6bu5y"]
-[ext_resource type="Texture2D" uid="uid://b0k4v00d0rp5e" path="res://assets/ui/player-fill.svg" id="4_kyirg"]
-[ext_resource type="LabelSettings" uid="uid://u04j325p422e" path="res://src/ui/components/events/time_pill_black.tres" id="5_7lpam"]
-[ext_resource type="LabelSettings" uid="uid://k8jblhm4mnv4" path="res://src/ui/components/events/event_info.tres" id="5_aes4k"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gwscp"]
+[ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_0xa1v"]
+[ext_resource type="PackedScene" uid="uid://mv4erfb0rl17" path="res://src/ui/components/discover/event_pills_bar/event_pills_bar.tscn" id="5_gwscp"]
+[ext_resource type="FontVariation" uid="uid://cuqtrxxsqnp3w" path="res://assets/themes/fonts/inter_600_emoji_fallback.tres" id="6_0xa1v"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="7_hq8br"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_0y7ny"]
+[ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="8_qwmgv"]
+[ext_resource type="LabelSettings" uid="uid://cxx8iqtxnfbqt" path="res://src/ui/components/events/event_creator.tres" id="9_qwmgv"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kyirg"]
-bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 52
-corner_radius_top_right = 52
-corner_radius_bottom_right = 52
-corner_radius_bottom_left = 52
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0y7ny"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0vt0d"]
-bg_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 48
-corner_radius_top_right = 48
-corner_radius_bottom_right = 48
-corner_radius_bottom_left = 48
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0xa1v"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
 
-[sub_resource type="LabelSettings" id="LabelSettings_aes4k"]
-line_spacing = 0.0
-font = ExtResource("3_7lpam")
-font_size = 22
-font_color = Color(0, 0, 0, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fhlt6"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(1, 0.176471, 0.333333, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
-
-[sub_resource type="LabelSettings" id="LabelSettings_kyirg"]
-font = ExtResource("4_6bu5y")
-font_size = 15
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aes4k"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(1, 1, 1, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hq8br"]
+draw_center = false
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0, 0, 0, 1)
-corner_radius_top_left = 11
-corner_radius_top_right = 11
-corner_radius_bottom_right = 11
-corner_radius_bottom_left = 11
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lpam"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(0.188235, 0.803922, 0, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xxfdn"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0xa1v"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_mwxpt"]
+line_spacing = 0.0
+font = ExtResource("8_0y7ny")
+font_size = 24
+font_color = Color(0.9098039, 0.7254902, 1, 1)
 
 [node name="EventDiscoverCard" type="TextureButton"]
-custom_minimum_size = Vector2(290, 250)
+custom_minimum_size = Vector2(406, 359)
 offset_right = 290.0
 offset_bottom = 250.0
 size_flags_horizontal = 0
@@ -74,11 +58,7 @@ mouse_filter = 1
 mouse_force_pass_scroll_events = false
 script = ExtResource("1_kyirg")
 
-[node name="Border" type="PanelContainer" parent="."]
-unique_name_in_owner = true
-self_modulate = Color(1, 1, 1, 0)
-clip_contents = true
-custom_minimum_size = Vector2(290, 250)
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -86,144 +66,124 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_kyirg")
-
-[node name="Content" type="MarginContainer" parent="Border"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 4
-
-[node name="PanelContainer" type="PanelContainer" parent="Border/Content"]
-clip_children = 2
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_0vt0d")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Border/Content/PanelContainer"]
-layout_mode = 2
-mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="TextureRect_Image" type="TextureRect" parent="Border/Content/PanelContainer/VBoxContainer"]
+[node name="Control_Image" type="Control" parent="VBoxContainer"]
+custom_minimum_size = Vector2(406, 240)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+unique_name_in_owner = true
+clip_children = 2
+layout_mode = 0
+offset_right = 406.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0y7ny")
+
+[node name="TextureRect_NoImage" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_NoImage"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("2_gwscp")
+texture = ExtResource("3_0xa1v")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Panel_Container_Image" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+unique_name_in_owner = true
+clip_children = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0xa1v")
+
+[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_Image"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 210.0
-mouse_filter = 2
+theme = ExtResource("2_gwscp")
 texture = ExtResource("1_vtdag")
-expand_mode = 2
+expand_mode = 1
 stretch_mode = 6
 
-[node name="MarginContainer" type="MarginContainer" parent="Border/Content/PanelContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_stretch_ratio = 90.0
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = -1
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 10
+theme_override_styles/panel = SubResource("StyleBoxFlat_hq8br")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Control_Image/PanelContainer"]
 layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 3
-alignment = 1
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
 
-[node name="Label_EventName" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="EventPillsBar" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer" instance=ExtResource("5_gwscp")]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Wednesday studio LIVE"
-label_settings = SubResource("LabelSettings_aes4k")
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xxfdn")
+
+[node name="RichTextLabel_EventName" type="RichTextLabel" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("6_0xa1v")
+theme_override_fonts/bold_italics_font = ExtResource("7_hq8br")
+theme_override_fonts/italics_font = ExtResource("7_hq8br")
+theme_override_fonts/mono_font = ExtResource("7_hq8br")
+theme_override_font_sizes/normal_font_size = 28
+theme_override_font_sizes/bold_font_size = 28
+theme_override_font_sizes/bold_italics_font_size = 28
+theme_override_font_sizes/italics_font_size = 28
+theme_override_font_sizes/mono_font_size = 28
+text = "Scene Title Scene "
+fit_content = true
+scroll_active = false
+autowrap_mode = 2
+justification_flags = 131
+script = ExtResource("8_qwmgv")
+max_lines = 1
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_0xa1v")
+
+[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label_by" type="Label" parent="VBoxContainer/HBoxContainer_UserName"]
+layout_mode = 2
+text = "by"
+label_settings = SubResource("LabelSettings_mwxpt")
+
+[node name="Label_UserName" type="Label" parent="VBoxContainer/HBoxContainer_UserName"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Lazaro"
+label_settings = ExtResource("9_qwmgv")
 clip_text = true
 text_overrun_behavior = 3
-
-[node name="HBoxContainer" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 8
-
-[node name="LivePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(75, 0)
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_fhlt6")
-
-[node name="Label_LivePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/LivePill"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 1
-text = "live"
-label_settings = SubResource("LabelSettings_kyirg")
-horizontal_alignment = 1
-vertical_alignment = 1
-uppercase = true
-
-[node name="TimePill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(75, 0)
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_aes4k")
-
-[node name="Label_TimePill" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TimePill"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 1
-text = "IN 35 MINS"
-label_settings = ExtResource("5_7lpam")
-horizontal_alignment = 1
-vertical_alignment = 1
-uppercase = true
-
-[node name="TrendingPill" type="PanelContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(75, 24)
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_7lpam")
-
-[node name="Label" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TrendingPill"]
-layout_mode = 2
-size_flags_vertical = 1
-text = "trending"
-label_settings = SubResource("LabelSettings_kyirg")
-horizontal_alignment = 1
-vertical_alignment = 1
-uppercase = true
-
-[node name="Attendees" type="HBoxContainer" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="Control" type="Control" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees"]
-custom_minimum_size = Vector2(20, 0)
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees/Control"]
-modulate = Color(0, 0, 0, 1)
-custom_minimum_size = Vector2(22, 0)
-layout_mode = 0
-offset_left = -3.0
-offset_right = 19.0
-offset_bottom = 24.0
-mouse_filter = 2
-texture = ExtResource("4_kyirg")
-expand_mode = 5
-stretch_mode = 5
-
-[node name="Label_AttendeesNumber" type="Label" parent="Border/Content/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/Attendees"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 1
-text = "263"
-label_settings = ExtResource("5_aes4k")
-vertical_alignment = 1
-uppercase = true
 
 [connection signal="pressed" from="." to="." method="_on_event_pressed"]
