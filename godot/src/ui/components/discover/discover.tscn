@@ -12,7 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="12_g4fdo"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
-[ext_resource type="PackedScene" uid="uid://c5ejxp1ckw3a2" path="res://src/ui/components/discover/search_sugestions_container.tscn" id="14_5g6gd"]
+[ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/components/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]

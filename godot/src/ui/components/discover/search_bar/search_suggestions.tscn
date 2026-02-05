@@ -61,7 +61,8 @@ size_flags_horizontal = 3
 text = "Recent searches"
 label_settings = SubResource("LabelSettings_prili")
 
-[node name="Button" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer"]
+[node name="Button_ClearHistory" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/h_separation = 0
@@ -76,7 +77,7 @@ toggle_mode = true
 text = "Clean all"
 flat = true
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer/Button"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer/Button_ClearHistory"]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0

@@ -7,9 +7,9 @@ signal text_submitted(text)
 signal cleared
 
 @onready var line_edit: LineEdit = %LineEdit
-@onready var button_erase_text: Button = %Button_EraseText
+@onready var button_erase_text: TextureButton = %Button_EraseText
 @onready var search_bar_panel_container: PanelContainer = %SearchBar_PanelContainer
-@onready var button_search: Button = %Button_Search
+@onready var button_search: TextureButton = %Button_Search
 
 var _text: String = ""
 var _placeholder_text: String = ""
@@ -22,6 +22,7 @@ var _editable: bool = true
 		_text = value
 		if line_edit:
 			line_edit.text = value
+			_update_erase_button_visibility()
 
 @export var placeholder_text: String:
 	get:
@@ -81,6 +82,7 @@ func _on_focus_exited() -> void:
 func _on_button_erase_text_pressed() -> void:
 	line_edit.clear()
 	cleared.emit()
+	line_edit.release_focus()
 
 
 func _on_button_search_pressed() -> void:
