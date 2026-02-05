@@ -1,12 +1,6 @@
-<<<<<<<< HEAD:godot/src/ui/components/search-bar/search_suggestions.tscn
-[gd_scene load_steps=2 format=3 uid="uid://t4c4tddaae7s"]
-
-[ext_resource type="Script" uid="uid://8804vpyob5mu" path="res://src/ui/components/search-bar/search_suggestions.gd" id="1_dpmtn"]
-========
-[gd_scene load_steps=2 format=3 uid="uid://b7d6h1f8p1jl3"]
+[gd_scene load_steps=2 format=3 uid="uid://c5ejxp1ckw3a2"]
 
 [ext_resource type="Script" uid="uid://8804vpyob5mu" path="res://src/ui/components/discover/search_bar/search_suggestions.gd" id="1_j438p"]
->>>>>>>> discover-v1:godot/src/ui/components/discover/search_sugestions_container.tscn
 
 [node name="SearchSugestionsContainer" type="Control"]
 visible = false
@@ -27,7 +21,14 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="SearchSugestions" type="VBoxContainer" parent="ScrollContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+
+[node name="SearchSugestions" type="VBoxContainer" parent="ScrollContainer/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

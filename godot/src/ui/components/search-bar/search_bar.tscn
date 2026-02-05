@@ -1,9 +1,9 @@
 [gd_scene load_steps=9 format=3 uid="uid://3uibe7yuvd3j"]
 
 [ext_resource type="Script" uid="uid://dh1ht2mfxwsxb" path="res://src/ui/components/search-bar/search_bar.gd" id="1_51t0l"]
-[ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="2_vuyfd"]
+[ext_resource type="Texture2D" uid="uid://bcrranrms7sm4" path="res://src/ui/components/discover/icons/search-outlined.svg" id="2_8wi6p"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="3_6axsy"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="3_8j38y"]
+[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/components/discover/icons/close.svg" id="4_sigf8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_51t0l"]
 bg_color = Color(0, 0, 0, 0.4)
@@ -24,16 +24,13 @@ corner_radius_bottom_left = 12
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8j38y"]
 
 [node name="SearchBar" type="Control"]
-custom_minimum_size = Vector2(300, 68)
+custom_minimum_size = Vector2(50, 68)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 100.0
-offset_bottom = 68.0
 size_flags_horizontal = 3
-size_flags_vertical = 0
+size_flags_vertical = 4
 script = ExtResource("1_51t0l")
 placeholder_text = "Search"
-closed = false
 
 [node name="SearchBar_PanelContainer" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -44,13 +41,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_horizontal = 8
 theme_override_styles/panel = SubResource("StyleBoxFlat_51t0l")
 
 [node name="MarginContainer" type="MarginContainer" parent="SearchBar_PanelContainer"]
 layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_right = 10
 
 [node name="HBoxContainer" type="HBoxContainer" parent="SearchBar_PanelContainer/MarginContainer"]
 layout_mode = 2
@@ -58,10 +52,11 @@ alignment = 2
 
 [node name="Button_Search" type="Button" parent="SearchBar_PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 0)
+custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
 focus_mode = 0
-icon = ExtResource("2_vuyfd")
+theme_override_constants/icon_max_width = 48
+icon = ExtResource("2_8wi6p")
 flat = true
 icon_alignment = 1
 
@@ -84,9 +79,14 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 focus_mode = 0
-icon = ExtResource("3_8j38y")
+theme_override_colors/icon_normal_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_focus_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_constants/icon_max_width = 30
+icon = ExtResource("4_sigf8")
 flat = true
 icon_alignment = 1
 
 [connection signal="pressed" from="SearchBar_PanelContainer/MarginContainer/HBoxContainer/Button_Search" to="." method="_on_button_search_pressed"]
-[connection signal="pressed" from="SearchBar_PanelContainer/MarginContainer/HBoxContainer/Button_EraseText" to="SearchBar_PanelContainer" method="_on_button_erase_text_pressed"]
+[connection signal="pressed" from="SearchBar_PanelContainer/MarginContainer/HBoxContainer/Button_EraseText" to="." method="_on_button_erase_text_pressed"]

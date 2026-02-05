@@ -6,9 +6,7 @@ var search_text: String = ""
 @onready var jump_in: SidePanelWrapper = %JumpIn
 @onready var event_details: SidePanelWrapper = %EventDetails
 
-@onready var button_search_bar: Button = %Button_SearchBar
-@onready var line_edit_search_bar: LineEdit = %LineEdit_SearchBar
-@onready var button_clear_filter: Button = %Button_ClearFilter
+@onready var search_bar: SearchBar = %SearchBar
 @onready var timer_search_debounce: Timer = %Timer_SearchDebounce
 
 @onready var last_visited: VBoxContainer = %LastVisited
@@ -16,6 +14,7 @@ var search_text: String = ""
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
+@onready var places_favorites: VBoxContainer = %PlacesFavorites
 @onready var places_my_places: VBoxContainer = %PlacesMyPlaces
 @onready var search_container: SearchSuggestions = %SearchSugestionsContainer
 @onready var button_back_to_explorer: Button = %Button_BackToExplorer
@@ -28,9 +27,7 @@ func _ready():
 	button_back_to_explorer.hide()
 	jump_in.hide()
 	event_details.hide()
-	button_search_bar.show()
-	button_clear_filter.hide()
-	line_edit_search_bar.hide()
+	search_bar.close_searchbar()
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
 	jump_in.jump_in_world.connect(_on_jump_in_world)
@@ -42,6 +39,7 @@ func _ready():
 
 	search_container.hide()
 	search_container.keyword_selected.connect(_async_on_keyword_selected)
+	search_bar.cleared.connect(_on_search_bar_cleared)
 	container_content.show()
 
 	last_visited.generator.report_loading_status.connect(_on_report_loading_status)
@@ -83,27 +81,27 @@ func _on_visibility_changed():
 				button_back_to_explorer.show()
 
 
-func _on_button_search_bar_pressed() -> void:
-	button_search_bar.hide()
-	line_edit_search_bar.show()
-	line_edit_search_bar.grab_focus()
+func _on_search_bar_opened() -> void:
 	search_container.show()
 	container_content.hide()
 	search_container.set_keyword_search_text("")
-	button_back_to_explorer.show()
 	label_title.hide()
 
 
 func _on_button_clear_filter_pressed() -> void:
 	search_text = ""
 	set_search_filter_text("")
-	line_edit_search_bar.text = ""
+	search_bar.text = ""
+	timer_search_debounce.stop()
+
+
+func _on_search_bar_cleared() -> void:
+	search_text = ""
+	set_search_filter_text("")
 	timer_search_debounce.stop()
 
 
 func set_search_filter_text(new_text: String) -> void:
-	button_clear_filter.visible = !new_text.is_empty()
-
 	if new_text.is_empty():
 		last_visited.show()
 		places_featured.show()
@@ -114,10 +112,21 @@ func set_search_filter_text(new_text: String) -> void:
 		places_my_places.hide()
 	places_most_active.set_search_param(new_text)
 	events.set_search_param(new_text)
+	_scroll_all_carousels_to_start()
+
+
+func _scroll_all_carousels_to_start() -> void:
+	container_content.scroll_vertical = 0
+	for carousel in [places_featured, events, last_visited, places_most_active, places_favorites, places_my_places]:
+		if carousel.has_method("scroll_to_start"):
+			carousel.scroll_to_start()
 
 
 func _on_line_edit_search_bar_text_changed(new_text: String) -> void:
 	search_text = new_text
+	if not new_text.is_empty() and not search_container.visible:
+		search_container.show()
+		container_content.hide()
 	search_container.set_keyword_search_text(search_text)
 
 
@@ -131,7 +140,6 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	new_text = new_text.rstrip(" .")
 	search_text = new_text
 	set_search_filter_text(search_text)
-	_reset_header()
 	search_container.hide()
 	container_content.show()
 
@@ -245,33 +253,14 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 	var search_keyword := keyword.keyword
 	if keyword.type == SearchSuggestions.KeywordType.COORDINATES:
 		search_keyword = await PlacesHelper.async_get_name_from_coordinates(keyword.coordinates)
+	search_bar.text = search_keyword
+	search_text = search_keyword
 	set_search_filter_text(search_keyword)
 	search_container.hide()
 	container_content.show()
-	button_search_bar.show()
-	line_edit_search_bar.hide()
-	line_edit_search_bar.text = ""
-	_reset_header()
 
 
 func _on_button_back_to_explorer_pressed() -> void:
-	if line_edit_search_bar.visible:
-		_reset_header()
-		search_container.hide()
-		container_content.show()
-		return
 	if Global.get_explorer():
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
-
-
-func _reset_header() -> void:
-	button_search_bar.show()
-	line_edit_search_bar.hide()
-	line_edit_search_bar.text = ""
-	button_back_to_explorer.hide()
-	label_title.show()
-	if Global.get_explorer():
-		button_back_to_explorer.show()
-	else:
-		button_back_to_explorer.hide()

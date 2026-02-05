@@ -4,6 +4,7 @@ class_name SearchBar
 
 signal text_changed(new_text)
 signal text_submitted(text)
+signal cleared
 
 @onready var line_edit: LineEdit = %LineEdit
 @onready var button_erase_text: Button = %Button_EraseText
@@ -60,10 +61,12 @@ func _ready() -> void:
 
 func _on_text_changed(new_text: String) -> void:
 	text_changed.emit(new_text)
-	if new_text.length() <= 0:
-		button_erase_text.hide()
-		return
-	button_erase_text.show()
+	_update_erase_button_visibility()
+
+
+func _update_erase_button_visibility() -> void:
+	var has_content := line_edit.text.length() > 0
+	button_erase_text.visible = has_content
 
 func _on_text_submitted(submitted_text: String) -> void:
 	text_submitted.emit(submitted_text)
@@ -77,6 +80,7 @@ func _on_focus_exited() -> void:
 
 func _on_button_erase_text_pressed() -> void:
 	line_edit.clear()
+	cleared.emit()
 
 
 func _on_button_search_pressed() -> void:
@@ -88,12 +92,11 @@ func close_searchbar() -> void:
 	line_edit.hide()
 	line_edit.clear()
 	button_erase_text.hide()
-	button_search.show()
 	search_bar_panel_container.self_modulate = Color.TRANSPARENT
-	search_bar_panel_container.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	
+
 func open_searchbar() -> void:
 	closed = false
-	button_search.hide()
+	line_edit.show()
 	search_bar_panel_container.self_modulate = Color.WHITE
-	search_bar_panel_container.set_anchors_preset(Control.PRESET_HCENTER_WIDE)
+	_update_erase_button_visibility()
+	line_edit.grab_focus()

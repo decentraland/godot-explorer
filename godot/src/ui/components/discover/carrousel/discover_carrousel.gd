@@ -60,3 +60,8 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 func set_search_param(new_search_param: String):
 	generator.search_param = new_search_param
 	scroll_container.restart()
+
+
+func scroll_to_start() -> void:
+	scroll_container.scroll_horizontal = 0
+	scroll_container.scroll_vertical = 0
