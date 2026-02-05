@@ -111,7 +111,14 @@ func set_search_filter_text(new_text: String) -> void:
 
 func _scroll_all_carousels_to_start() -> void:
 	container_content.scroll_vertical = 0
-	for carousel in [places_featured, events, last_visited, places_most_active, places_favorites, places_my_places]:
+	for carousel in [
+		places_featured,
+		events,
+		last_visited,
+		places_most_active,
+		places_favorites,
+		places_my_places
+	]:
 		if carousel.has_method("scroll_to_start"):
 			carousel.scroll_to_start()
 

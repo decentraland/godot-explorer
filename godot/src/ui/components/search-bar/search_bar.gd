@@ -1,19 +1,10 @@
 @tool
-extends Control
 class_name SearchBar
+extends Control
 
 signal text_changed(new_text)
 signal text_submitted(text)
 signal cleared
-
-@onready var line_edit: LineEdit = %LineEdit
-@onready var button_erase_text: TextureButton = %Button_EraseText
-@onready var search_bar_panel_container: PanelContainer = %SearchBar_PanelContainer
-@onready var button_search: TextureButton = %Button_Search
-
-var _text: String = ""
-var _placeholder_text: String = ""
-var _editable: bool = true
 
 @export var text: String:
 	get:
@@ -39,13 +30,21 @@ var _editable: bool = true
 		_editable = value
 		if line_edit:
 			line_edit.editable = value
-			
+
 @export var closed: bool = true:
 	get:
 		return closed
 	set(value):
 		closed = value
 
+var _text: String = ""
+var _placeholder_text: String = ""
+var _editable: bool = true
+
+@onready var line_edit: LineEdit = %LineEdit
+@onready var button_erase_text: TextureButton = %Button_EraseText
+@onready var search_bar_panel_container: PanelContainer = %SearchBar_PanelContainer
+@onready var button_search: TextureButton = %Button_Search
 
 
 func _ready() -> void:
@@ -58,7 +57,7 @@ func _ready() -> void:
 	line_edit.focus_entered.connect(_on_focus_entered)
 	line_edit.focus_exited.connect(_on_focus_exited)
 	close_searchbar()
-	
+
 
 func _on_text_changed(new_text: String) -> void:
 	text_changed.emit(new_text)
@@ -69,11 +68,14 @@ func _update_erase_button_visibility() -> void:
 	var has_content := line_edit.text.length() > 0
 	button_erase_text.visible = has_content
 
+
 func _on_text_submitted(submitted_text: String) -> void:
 	text_submitted.emit(submitted_text)
 
+
 func _on_focus_entered() -> void:
 	focus_entered.emit()
+
 
 func _on_focus_exited() -> void:
 	focus_exited.emit()
@@ -95,6 +97,7 @@ func close_searchbar() -> void:
 	line_edit.clear()
 	button_erase_text.hide()
 	search_bar_panel_container.self_modulate = Color.TRANSPARENT
+
 
 func open_searchbar() -> void:
 	closed = false
