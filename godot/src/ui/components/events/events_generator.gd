@@ -50,6 +50,8 @@ func on_request(_offset: int, limit: int) -> void:
 		url += "&tag=allowed_ios"
 	prints("_async_fetch_events", url)
 	_async_fetch_events(url, limit)
+
+
 func _async_fetch_events(url: String, limit: int = 100):
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 

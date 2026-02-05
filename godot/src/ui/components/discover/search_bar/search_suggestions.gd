@@ -42,7 +42,8 @@ func async_get_popular_keywords() -> void:
 			pass
 
 	for destination in fetch_result.result:
-		if destination.world: continue
+		if destination.world:
+			continue
 		var destination_name: String = NotificationUtils.sanitize_notification_text(
 			trim_string(destination.title.to_lower())
 		)

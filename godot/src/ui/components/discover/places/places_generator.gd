@@ -169,7 +169,6 @@ func async_request_from_api(offset: int, limit: int) -> void:
 	_async_fetch_places(url, limit)
 
 
-
 func _async_fetch_places(url: String, limit: int = 100) -> void:
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
