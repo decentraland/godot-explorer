@@ -14,6 +14,8 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 @export var categories: String = "all"
 @export var only_favorites: bool = false
 @export var only_highlighted: bool = false
+@export var only_featured: bool = false
+@export var only_my_places: bool = false
 @export var only_worlds: bool = false
 @export var last_places_logic: bool = false
 
@@ -30,7 +32,7 @@ func on_request(offset: int, limit: int) -> void:
 	if last_places_logic:
 		async_request_last_places(offset, limit)
 	else:
-		request_from_api(offset, limit)
+		async_request_from_api(offset, limit)
 
 	if only_favorites:
 		Global.favorite_destination_set.connect(reload.bind(offset, limit))
@@ -38,7 +40,7 @@ func on_request(offset: int, limit: int) -> void:
 
 func reload(offset, limit) -> void:
 	_new_search = true
-	request_from_api(offset, limit)
+	async_request_from_api(offset, limit)
 
 
 func async_request_last_places(_offset: int, _limit: int) -> void:
@@ -54,6 +56,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = true
 
 	var last_places: Array[Dictionary] = Global.get_config().last_places.duplicate()
+	var seen: Dictionary = {}
 	var index = 0
 	for place in last_places:
 		place["index"] = index
@@ -85,6 +88,14 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 				"base_position": "%d,%d" % [position.x, position.y]
 			}
 
+		var dedup_key: String = data.get("id", data.get("base_position", ""))
+		if dedup_key.is_empty():
+			dedup_key = data.get("world_name", "")
+		if not dedup_key.is_empty() and seen.has(dedup_key):
+			continue
+		if not dedup_key.is_empty():
+			seen[dedup_key] = true
+
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
 		item.set_data(data)
@@ -96,9 +107,11 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = false
 
 
-func request_from_api(offset: int, limit: int) -> void:
-	var url := PlacesHelper.get_api_url()
+func async_request_from_api(offset: int, limit: int) -> void:
+	var url: String = PlacesHelper.get_api_url()
 	url += "?offset=%d&limit=%d" % [offset, limit]
+	if only_worlds:
+		url += "&only_worlds=true"
 
 	if _new_search:
 		_loaded_elements = 0
@@ -129,41 +142,62 @@ func request_from_api(offset: int, limit: int) -> void:
 	if only_favorites:
 		url += "&only_favorites=true"
 
+	if only_my_places:
+		var address := Global.player_identity.get_address_str()
+		if not address.is_empty():
+			url += "&owner=" + address
+
 	if only_highlighted:
 		url += "&only_highlighted=true"
 
+	if only_featured:
+		url += "&tag=featured"
+
 	if order_by != OrderBy.NONE:
 		url += "&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
+
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
+
+	url += "&sdk=7"
 
 	if categories != "all":
 		var categories_array = categories.split(",")
 		for category in categories_array:
 			url += "&categories=" + category
 
+	_async_fetch_places(url, limit)
+
+
+
+func _async_fetch_places(url: String, limit: int = 100) -> void:
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+
 	if is_instance_valid(_discover_carrousel_item_loading):
 		_discover_carrousel_item_loading.hide()
 
-	var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
-	match fetch_result.status:
-		PlacesHelper.FetchResultStatus.ERROR:
-			if _loaded_elements == 0:
-				report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
-				printerr("Error request places ", url, " ", fetch_result.premise_error.get_error())
-		PlacesHelper.FetchResultStatus.OK:
-			if fetch_result.result.is_empty():
-				if _loaded_elements == 0:
-					report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
-			else:
-				_loaded_elements += fetch_result.result.size()
-				#NOTE is this right? Shouldnt be >=?
-				if fetch_result.result.size() != limit:
-					_no_more_elements = true
+	if response is PromiseError:
+		if _loaded_elements == 0:
+			report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
+		printerr("Error request places ", url, " ", response.get_error())
+		return
 
-				for item_data in fetch_result.result:
-					var item := DISCOVER_CARROUSEL_ITEM.instantiate()
-					item_container.add_child(item)
+	var json: Dictionary = response.get_string_response_as_json()
 
-					item.set_data(item_data)
-					item.item_pressed.connect(discover.on_item_pressed)
+	_no_more_elements = json.data.size() != limit
 
-				report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
+	if json.data.is_empty():
+		if _loaded_elements == 0 and _no_more_elements:
+			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
+		return
+
+	_loaded_elements += json.data.size()
+
+	for item_data in json.data:
+		var item := DISCOVER_CARROUSEL_ITEM.instantiate()
+		item_container.add_child(item)
+
+		item.set_data(item_data)
+		item.item_pressed.connect(discover.on_item_pressed)
+
+	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)

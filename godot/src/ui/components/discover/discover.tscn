@@ -447,8 +447,7 @@ generator = NodePath("PlacesFeaturedGenerator")
 title = "Featured"
 
 [node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
-order_by = 1
-only_highlighted = true
+only_featured = true
 discover = NodePath("../../../../../../../..")
 
 [node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
@@ -492,6 +491,16 @@ order_by = 1
 only_favorites = true
 discover = NodePath("../../../../../../../..")
 
+[node name="PlacesMyPlaces" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "My Places"
+
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMyPlaces" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+only_my_places = true
+discover = NodePath("../../../../../../../..")
+
 [node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 128
@@ -522,5 +531,3 @@ visible = false
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
-[connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
-[connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]

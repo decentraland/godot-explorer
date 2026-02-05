@@ -29,6 +29,9 @@ func async_get_popular_keywords() -> void:
 	var url := PlacesHelper.get_api_url()
 	url += "?offset=0&limit=100"
 	url += "&order_by=most_active"
+	url += "&sdk=7"
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
 
 	var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
 	match fetch_result.status:
@@ -39,6 +42,7 @@ func async_get_popular_keywords() -> void:
 			pass
 
 	for destination in fetch_result.result:
+		if destination.world: continue
 		var destination_name: String = NotificationUtils.sanitize_notification_text(
 			trim_string(destination.title.to_lower())
 		)
@@ -52,7 +56,11 @@ func async_get_popular_keywords() -> void:
 			var py := p_split[1].to_int()
 			if not coordinates_destinations.has(px):
 				coordinates_destinations[px] = {}
-			coordinates_destinations[px][py] = destination
+			coordinates_destinations[px][py] = {
+				"title": destination.title,
+				"id": destination.id,
+				"first_position": destination.positions[0]
+			}
 
 
 func set_keyword_search_text(_search_text: String) -> void:
@@ -83,7 +91,7 @@ func set_keyword_search_text(_search_text: String) -> void:
 						continue
 					var title: String = trim_string(dd.title)
 					title = NotificationUtils.sanitize_notification_text(title, true, false)
-					var p_split: Array = dd.positions[0].split(",")
+					var p_split: Array = dd.first_position.split(",")
 					var px: int = p_split[0].to_int()
 					var py: int = p_split[1].to_int()
 					var coordinate_keyword := Keyword.new(title, KeywordType.COORDINATES)
@@ -99,6 +107,8 @@ func set_keyword_search_text(_search_text: String) -> void:
 
 	var count_history := 0
 	for k in keywords_available:
+		# NOTE Godot may add FuzzySearch soon:
+		# https://github.com/godotengine/godot/pull/107126
 		if (
 			_search_text == ""
 			or k.keyword.contains(_search_text)

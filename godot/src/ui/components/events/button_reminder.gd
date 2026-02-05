@@ -31,7 +31,7 @@ func _async_on_toggled(toggled_on: bool) -> void:
 
 	_set_loading(true)
 
-	var url = DclUrls.events_api() + "/events/" + event_id_value + "/attendees"
+	var url = DclUrls.events_api() + "/" + event_id_value + "/attendees"
 	var method: HTTPClient.Method
 
 	if toggled_on:

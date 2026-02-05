@@ -502,6 +502,7 @@ impl ResourceProvider {
             self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
                 .await;
         } else {
+            tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
             self.handle_existing_file(&absolute_file_path).await?;
         }
 

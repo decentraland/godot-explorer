@@ -5,6 +5,7 @@
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_f6pdb"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="3_kk1uc"]
 [ext_resource type="Texture2D" uid="uid://c8mj35upr63j4" path="res://src/ui/components/auth/images/wallet-connect.png" id="5_mqpw2"]
+[ext_resource type="Texture2D" uid="uid://btobm3j64qmev" path="res://src/ui/components/auth/images/metamask.svg" id="10_metamask"]
 [ext_resource type="Texture2D" uid="uid://wywgcgt311ft" path="res://src/ui/components/auth/images/google.svg" id="5_ys0bb"]
 [ext_resource type="Texture2D" uid="uid://cbukvmu67blst" path="res://src/ui/components/auth/images/discord.svg" id="7_apdvw"]
 [ext_resource type="Texture2D" uid="uid://b1wknyg6nwrwo" path="res://src/ui/components/auth/images/x.svg" id="8_8hgbb"]
@@ -50,6 +51,7 @@ texture = ExtResource("5_ys0bb")
 expand_mode = 1
 
 [node name="Button_WalletConnect" type="Button" parent="."]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 focus_mode = 0
@@ -62,7 +64,8 @@ theme_override_font_sizes/font_size = 24
 text = "WALLET CONNECT"
 expand_icon = true
 
-[node name="TextureRect" type="TextureRect" parent="Button_WalletConnect"]
+[node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_WalletConnect"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

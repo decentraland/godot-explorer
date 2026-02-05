@@ -1,12 +1,17 @@
 extends Node
 
+# Startup instrumentation - capture engine boot time
+var _startup_time: int = Time.get_ticks_msec()
+
 
 func _ready():
+	print("[Startup] main._ready: %dms" % (Time.get_ticks_msec() - _startup_time))
 	Global.set_orientation_portrait()
 	start.call_deferred()
 
 
 func start():
+	print("[Startup] main.start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	get_tree().quit_on_go_back = false
 
 	# Check if help was requested
@@ -43,6 +48,12 @@ func start():
 
 
 func _start():
+	print("[Startup] main._start: %dms" % (Time.get_ticks_msec() - _startup_time))
+	if Global.cli.asset_server:
+		print("Running in Asset Server mode")
+		_start_asset_server()
+		return
+
 	# Floating Islands Benchmark mode - don't load any UI scene
 	if Global.cli.fi_benchmark_size >= 0:
 		return
@@ -90,3 +101,22 @@ func _start():
 			)
 		else:
 			get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+
+
+func _start_asset_server():
+	# Check if asset_server feature was compiled
+	if not ClassDB.class_exists(&"DclAssetServer"):
+		push_error("Asset server requires the 'asset_server' feature to be enabled during build.")
+		push_error("Build with: cargo run -- build --features asset_server")
+		get_tree().quit(1)
+		return
+
+	# Create and start the asset server
+	var asset_server = ClassDB.instantiate(&"DclAssetServer")
+	asset_server.set_port(Global.cli.asset_server_port)
+	asset_server.set_name("AssetServer")
+	get_tree().root.add_child(asset_server)
+	asset_server.start()
+
+	# Keep the process running in headless mode
+	print("Asset server is running. Press Ctrl+C to stop.")
