@@ -16,10 +16,11 @@
 [ext_resource type="Texture2D" uid="uid://bcrranrms7sm4" path="res://src/ui/components/discover/icons/search-outlined.svg" id="9_lvgj0"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="12_g4fdo"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
-[ext_resource type="PackedScene" uid="uid://b7d6h1f8p1jl3" path="res://src/ui/components/discover/search_sugestions_container.tscn" id="14_5g6gd"]
+[ext_resource type="PackedScene" path="res://src/ui/components/discover/search_sugestions_container.tscn" id="14_5g6gd"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
+
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lvgj0"]
 
