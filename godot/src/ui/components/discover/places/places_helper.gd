@@ -3,6 +3,7 @@ class_name PlacesHelper
 enum LIKE { UNKNOWN, YES, NO }
 enum FetchResultStatus { OK, ERROR }
 
+
 class FetchResult:
 	var status: FetchResultStatus
 	var promise: Promise

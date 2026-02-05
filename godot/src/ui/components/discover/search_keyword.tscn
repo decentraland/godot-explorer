@@ -1,0 +1,45 @@
+[gd_scene load_steps=4 format=3 uid="uid://vc5mpg212okm"]
+
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="1_fthv8"]
+[ext_resource type="Texture2D" uid="uid://bcrranrms7sm4" path="res://src/ui/components/discover/icons/search-outlined.svg" id="1_v37wn"]
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_v37wn"]
+content_margin_left = 4.0
+content_margin_top = 0.0
+content_margin_right = 4.0
+content_margin_bottom = 0.0
+color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="SearchKeyword" type="Button"]
+custom_minimum_size = Vector2(0, 120)
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 42.0
+grow_horizontal = 2
+focus_mode = 0
+mouse_filter = 1
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/h_separation = 11
+theme_override_constants/icon_max_width = 40
+theme_override_fonts/font = ExtResource("1_fthv8")
+theme_override_font_sizes/font_size = 32
+text = "label"
+icon = ExtResource("1_v37wn")
+flat = true
+alignment = 0
+text_overrun_behavior = 3
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 0
+theme_override_styles/separator = SubResource("StyleBoxLine_v37wn")

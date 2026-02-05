@@ -27,6 +27,7 @@ func enable_loading_screen():
 	AudioSettings.apply_voice_chat_volume_settings(0.0)
 
 	loading_screen.show()
+	Global.set_orientation_landscape()
 	loading_screen.set_progress(0)
 	loading_show_requested.emit()
 

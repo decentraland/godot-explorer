@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://s4d117fg1v4l"]
+[gd_scene load_steps=2 format=3 uid="uid://b7d6h1f8p1jl3"]
 
-[ext_resource type="Script" uid="uid://8804vpyob5mu" path="res://src/ui/components/discover/search_suggestions.gd" id="1_dpmtn"]
+[ext_resource type="Script" uid="uid://8804vpyob5mu" path="res://src/ui/components/discover/search_bar/search_suggestions.gd" id="1_j438p"]
 
 [node name="SearchSugestionsContainer" type="Control"]
 visible = false
@@ -11,16 +11,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_vertical = 3
-script = ExtResource("1_dpmtn")
-
-[node name="ColorRect" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.34857216, 0.24454251, 0.594691, 1)
+script = ExtResource("1_j438p")
 
 [node name="ScrollContainer" type="ScrollContainer" parent="."]
 layout_mode = 1

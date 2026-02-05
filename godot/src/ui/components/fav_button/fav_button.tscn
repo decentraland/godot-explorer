@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3 uid="uid://d34drip3k5oc4"]
+
+[ext_resource type="Texture2D" uid="uid://ba11hrmvgrth1" path="res://assets/ui/heart-outlined.svg" id="1_ippe3"]
+[ext_resource type="Texture2D" uid="uid://dr2whjr8r1yvj" path="res://assets/ui/heart-color.svg" id="2_2eil8"]
+[ext_resource type="Script" uid="uid://yo35b316fjjd" path="res://src/ui/components/fav_button/fav_button.gd" id="3_prvw4"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_atua3"]
+
+[node name="FavButton" type="TextureButton"]
+custom_minimum_size = Vector2(72, 72)
+focus_mode = 0
+toggle_mode = true
+texture_normal = ExtResource("1_ippe3")
+texture_pressed = ExtResource("2_2eil8")
+ignore_texture_size = true
+stretch_mode = 5
+script = ExtResource("3_prvw4")
+
+[node name="TextureProgressBar" parent="." instance=ExtResource("4_atua3")]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0.470588)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.2, 0.2)
+pivot_offset = Vector2(64, 64)
+
+[connection signal="toggled" from="." to="." method="_async_set_fav"]
