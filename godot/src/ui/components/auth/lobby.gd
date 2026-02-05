@@ -161,6 +161,9 @@ func async_close_sign_in():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
+	# Login Success metric
+	Global.metrics.track_login_success()
+
 	if _should_go_to_explorer_from_deeplink():
 		go_to_explorer()
 		return
