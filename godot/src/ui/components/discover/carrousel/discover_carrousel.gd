@@ -14,7 +14,7 @@ extends Control
 @onready var item_container = %HBoxContainer_Items
 @onready var label_error = $VBoxContainer/Label_Error
 @onready var label_not_found = $VBoxContainer/Label_NotFound
-@onready var h_box_container_loading = $VBoxContainer/HBoxContainer_Loading
+@onready var h_box_container_loading = $VBoxContainer/SkeletonControl
 
 
 func _ready():
