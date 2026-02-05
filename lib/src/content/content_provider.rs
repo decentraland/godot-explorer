@@ -285,8 +285,11 @@ impl ContentProvider {
             }
         };
 
+        // Use prefixed cache key to avoid conflicts with wearable/emote loaders
+        let cache_key = format!("scene_{}", file_hash);
+
         // Return existing promise if already loading/loaded
-        if let Some(existing) = self.get_cached_promise(&file_hash) {
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
             // If the promise is still loading (not resolved), return it
             if !existing.bind().is_resolved() {
                 return Some(existing);
@@ -301,12 +304,12 @@ impl ContentProvider {
             // NOTE: Any caller still holding the old promise may try to load a non-existent file.
             // This is handled gracefully in GDScript by checking file existence before loading.
             tracing::debug!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
-            self.promises.remove(&file_hash);
+            self.promises.remove(&cache_key);
         }
 
         // Create new promise and cache it
         let (promise, get_promise) = Promise::make_to_async();
-        self.cache_promise(file_hash.clone(), &promise);
+        self.cache_promise(cache_key, &promise);
 
         // Create context for async operation
         let ctx = SceneGltfContext {
@@ -411,8 +414,11 @@ impl ContentProvider {
             }
         };
 
+        // Use prefixed cache key to avoid conflicts with scene/emote loaders
+        let cache_key = format!("wearable_{}", file_hash);
+
         // Return existing promise if already loading/loaded
-        if let Some(existing) = self.get_cached_promise(&file_hash) {
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
             // If the promise is still loading (not resolved), return it
             if !existing.bind().is_resolved() {
                 return Some(existing);
@@ -436,12 +442,12 @@ impl ContentProvider {
                 "Wearable GLTF cache EVICTED: {} - re-downloading",
                 file_hash
             );
-            self.promises.remove(&file_hash);
+            self.promises.remove(&cache_key);
         }
 
         // Create new promise and cache it
         let (promise, get_promise) = Promise::make_to_async();
-        self.cache_promise(file_hash.clone(), &promise);
+        self.cache_promise(cache_key, &promise);
 
         // Create context for async operation
         let ctx = SceneGltfContext {
@@ -481,9 +487,10 @@ impl ContentProvider {
     #[func]
     pub fn is_wearable_cached(&self, file_hash: GString) -> bool {
         let hash_str = file_hash.to_string();
+        let cache_key = format!("wearable_{}", hash_str);
 
         // Check if we have a cached promise with a valid path (handles optimized res:// assets)
-        if let Some(promise) = self.get_cached_promise(&hash_str) {
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
             if promise.bind().is_resolved() && !promise.bind().is_rejected() {
                 let data = promise.bind().get_data();
                 if let Ok(scene_path) = data.try_to::<GString>() {
@@ -505,9 +512,10 @@ impl ContentProvider {
     #[func]
     pub fn get_wearable_cache_path(&self, file_hash: GString) -> GString {
         let hash_str = file_hash.to_string();
+        let cache_key = format!("wearable_{}", hash_str);
 
         // Check if we have a cached promise with the actual path
-        if let Some(promise) = self.get_cached_promise(&hash_str) {
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
             if promise.bind().is_resolved() && !promise.bind().is_rejected() {
                 let data = promise.bind().get_data();
                 if let Ok(scene_path) = data.try_to::<GString>() {
@@ -555,8 +563,11 @@ impl ContentProvider {
             }
         };
 
+        // Use prefixed cache key to avoid conflicts with scene/wearable loaders
+        let cache_key = format!("emote_{}", file_hash);
+
         // Return existing promise if already loading/loaded
-        if let Some(existing) = self.get_cached_promise(&file_hash) {
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
             // If the promise is still loading (not resolved), return it
             if !existing.bind().is_resolved() {
                 return Some(existing);
@@ -577,12 +588,12 @@ impl ContentProvider {
             }
             // File was evicted from cache or data invalid - remove stale promise and re-download
             tracing::debug!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
-            self.promises.remove(&file_hash);
+            self.promises.remove(&cache_key);
         }
 
         // Create new promise and cache it
         let (promise, get_promise) = Promise::make_to_async();
-        self.cache_promise(file_hash.clone(), &promise);
+        self.cache_promise(cache_key, &promise);
 
         // Create context for async operation
         let ctx = SceneGltfContext {
@@ -618,13 +629,86 @@ impl ContentProvider {
         Some(promise)
     }
 
+    /// Load emote GLTF without using optimized assets (runtime processing only).
+    /// Use this for scene emotes when --only-no-optimized-scene-emotes is set.
+    #[func]
+    pub fn load_emote_gltf_runtime_only(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Use prefixed cache key - add "_rt" suffix for runtime-only to avoid conflicts
+        let cache_key = format!("emote_{}_rt", file_hash);
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            let existing_data = existing.bind().get_data();
+            if let Ok(scene_path_str) = existing_data.try_to::<GString>() {
+                let scene_path = scene_path_str.to_string();
+                // Runtime-only assets should never be res://
+                if !scene_path.starts_with("res://") && std::path::Path::new(&scene_path).exists() {
+                    return Some(existing);
+                }
+            }
+            self.promises.remove(&cache_key);
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(cache_key, &promise);
+
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+            force_compress: false,
+        };
+
+        let file_hash_clone = file_hash.clone();
+        let rt_wearable_counter = self.runtime_wearable_count.clone();
+
+        // Spawn async task - NO optimized URL = runtime processing only
+        TokioRuntime::spawn(async move {
+            let result = Self::async_load_wearable_or_emote(
+                file_hash_clone,
+                file_path_str,
+                content_mapping_ref,
+                ctx,
+                None, // No optimized URL - forces runtime processing
+                true, // is_emote = true
+                std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)), // Dummy counter
+                rt_wearable_counter,
+            )
+            .await;
+
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
     /// Check if an emote is cached (either in promise cache as optimized asset, or on disk)
     #[func]
     pub fn is_emote_cached(&self, file_hash: GString) -> bool {
         let hash_str = file_hash.to_string();
+        let cache_key = format!("emote_{}", hash_str);
 
         // Check if we have a cached promise with a valid path (handles optimized res:// assets)
-        if let Some(promise) = self.get_cached_promise(&hash_str) {
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
             if promise.bind().is_resolved() && !promise.bind().is_rejected() {
                 let data = promise.bind().get_data();
                 if let Ok(scene_path) = data.try_to::<GString>() {
@@ -646,9 +730,10 @@ impl ContentProvider {
     #[func]
     pub fn get_emote_cache_path(&self, file_hash: GString) -> GString {
         let hash_str = file_hash.to_string();
+        let cache_key = format!("emote_{}", hash_str);
 
         // Check if we have a cached promise with the actual path
-        if let Some(promise) = self.get_cached_promise(&hash_str) {
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
             if promise.bind().is_resolved() && !promise.bind().is_rejected() {
                 let data = promise.bind().get_data();
                 if let Ok(scene_path) = data.try_to::<GString>() {
@@ -692,8 +777,25 @@ impl ContentProvider {
     ) -> Option<Gd<DclEmoteGltf>> {
         use godot::classes::AnimationPlayer;
 
-        let instance = packed_scene.instantiate()?;
-        let root = instance.try_cast::<Node3D>().ok()?;
+        tracing::debug!("[extract_emote] Starting for hash={}", file_hash);
+
+        let Some(instance) = packed_scene.instantiate() else {
+            tracing::debug!("[extract_emote] FAILED: packed_scene.instantiate() returned None");
+            return None;
+        };
+
+        let Ok(root) = instance.try_cast::<Node3D>() else {
+            tracing::debug!("[extract_emote] FAILED: instance is not Node3D");
+            return None;
+        };
+
+        // Log children for debugging
+        let children: Vec<String> = root
+            .get_children()
+            .iter_shared()
+            .map(|c| format!("{}({})", c.get_name(), c.get_class()))
+            .collect();
+        tracing::debug!("[extract_emote] Root children: {:?}", children);
 
         // Read armature_prop (first Node3D child that's not AnimationPlayer)
         let mut armature_prop: Option<Gd<Node3D>> = None;
@@ -708,23 +810,102 @@ impl ContentProvider {
         }
 
         // Read animations from embedded AnimationPlayer
-        let anim_player = root.try_get_node_as::<AnimationPlayer>("EmoteAnimations")?;
+        // Try "EmoteAnimations" first (runtime-processed), then fallback to "AnimationPlayer" (optimized assets)
+        let anim_player = root
+            .try_get_node_as::<AnimationPlayer>("EmoteAnimations")
+            .or_else(|| root.try_get_node_as::<AnimationPlayer>("AnimationPlayer"));
+
+        let Some(anim_player) = anim_player else {
+            tracing::debug!("[extract_emote] FAILED: No AnimationPlayer found (tried 'EmoteAnimations' and 'AnimationPlayer')");
+            return None;
+        };
 
         let hash_suffix = get_last_16_alphanumeric(&file_hash.to_string());
         let default_anim_name = StringName::from(&hash_suffix);
         let prop_anim_name = StringName::from(&format!("{}_prop", hash_suffix));
 
-        // Check if animations exist before getting them to avoid Godot errors
-        let default_animation = if anim_player.has_animation(&default_anim_name) {
+        // Log available animations for debugging
+        let anim_list: Vec<String> = anim_player
+            .get_animation_list()
+            .as_slice()
+            .iter()
+            .map(|v| v.to_string())
+            .collect();
+        tracing::debug!(
+            "[extract_emote] AnimationPlayer has {} animations: {:?}, looking for '{}' or '{}'",
+            anim_list.len(),
+            anim_list,
+            hash_suffix,
+            format!("{}_prop", hash_suffix)
+        );
+
+        // Try to find animations by hash suffix (runtime-processed assets)
+        let mut default_animation = if anim_player.has_animation(&default_anim_name) {
+            tracing::debug!(
+                "[extract_emote] Found default animation by hash suffix: {}",
+                hash_suffix
+            );
             anim_player.get_animation(&default_anim_name)
         } else {
             None
         };
-        let prop_animation = if anim_player.has_animation(&prop_anim_name) {
+        let mut prop_animation = if anim_player.has_animation(&prop_anim_name) {
+            tracing::debug!(
+                "[extract_emote] Found prop animation by hash suffix: {}_prop",
+                hash_suffix
+            );
             anim_player.get_animation(&prop_anim_name)
         } else {
             None
         };
+
+        // If hash-based lookup failed, fall back to heuristics for optimized assets
+        // which may have original animation names like "Animation", "Take 001", "_avatar", "_prop"
+        if default_animation.is_none() && !anim_list.is_empty() {
+            tracing::debug!(
+                "[extract_emote] Hash suffix not found, using heuristics for optimized assets"
+            );
+
+            let is_single = anim_list.len() == 1;
+
+            for anim_name in &anim_list {
+                let name_lower = anim_name.to_lowercase();
+
+                if default_animation.is_none() {
+                    // For single animation, use it as default
+                    // Otherwise look for "_avatar" suffix or use first non-prop animation
+                    if is_single || name_lower.ends_with("_avatar") {
+                        default_animation = anim_player.get_animation(&StringName::from(anim_name));
+                        tracing::debug!(
+                            "[extract_emote] Selected default animation: {}",
+                            anim_name
+                        );
+                    }
+                }
+
+                if prop_animation.is_none() && !is_single {
+                    // Look for prop animations
+                    if name_lower.ends_with("_prop")
+                        || name_lower.contains("prop")
+                        || name_lower == "action"
+                    {
+                        prop_animation = anim_player.get_animation(&StringName::from(anim_name));
+                        tracing::debug!("[extract_emote] Selected prop animation: {}", anim_name);
+                    }
+                }
+            }
+
+            // If still no default animation, just use the first one
+            if default_animation.is_none() {
+                if let Some(first_anim) = anim_list.first() {
+                    default_animation = anim_player.get_animation(&StringName::from(first_anim));
+                    tracing::debug!(
+                        "[extract_emote] Fallback: using first animation as default: {}",
+                        first_anim
+                    );
+                }
+            }
+        }
 
         // Remove armature_prop from root before freeing (so it survives)
         // Animations are Resources, they survive independently
@@ -2165,75 +2346,90 @@ impl ContentProvider {
     ) -> Result<Option<Variant>, anyhow::Error> {
         let asset_type = if is_emote { "emote" } else { "wearable" };
 
-        // 1. Check if optimized ZIP is already downloaded locally
+        // 1. Check if optimized ZIP is already downloaded locally (only if optimized URL is provided)
         let zip_name = format!("{}-mobile.zip", file_hash);
         let local_zip_path = format!("{}{}", ctx.content_folder, zip_name);
-        let local_zip_exists = std::path::Path::new(&local_zip_path).exists();
 
         // 2. Determine if we should use optimized version
-        let use_optimized = if local_zip_exists {
-            tracing::debug!(
-                "[OPTIMIZED] {} ZIP found locally: {} (hash={})",
-                asset_type.to_uppercase(),
-                local_zip_path,
-                file_hash
-            );
-            true
-        } else if let Some(base_url) = optimized_base_url {
-            // Try to check if optimized version exists on remote server
-            let zip_url = format!("{}{}", base_url, zip_name);
-            tracing::debug!("Checking for optimized {} at: {}", asset_type, zip_url);
+        // IMPORTANT: Only check for local ZIP if optimized_base_url is Some
+        // When None is passed (runtime-only mode), skip optimized assets entirely
+        let use_optimized = if let Some(base_url) = optimized_base_url {
+            // Check local cache first
+            let local_zip_exists = std::path::Path::new(&local_zip_path).exists();
+            if local_zip_exists {
+                tracing::debug!(
+                    "[OPTIMIZED] {} ZIP found locally: {} (hash={})",
+                    asset_type.to_uppercase(),
+                    local_zip_path,
+                    file_hash
+                );
+                true
+            } else {
+                // Try to check if optimized version exists on remote server
+                let zip_url = format!("{}{}", base_url, zip_name);
+                tracing::debug!("Checking for optimized {} at: {}", asset_type, zip_url);
 
-            match ctx
-                .resource_provider
-                .check_remote_file_exists(&zip_url)
-                .await
-            {
-                Ok(true) => {
-                    // File exists on server - download it
-                    tracing::debug!(
-                        "[OPTIMIZED] Downloading {} ZIP from: {}",
-                        asset_type.to_uppercase(),
-                        zip_url
-                    );
-                    match ctx
-                        .resource_provider
-                        .fetch_resource(zip_url.clone(), zip_name.clone(), local_zip_path.clone())
-                        .await
-                    {
-                        Ok(_) => {
-                            tracing::debug!(
-                                "[OPTIMIZED] Downloaded {} ZIP: {} (hash={})",
-                                asset_type.to_uppercase(),
-                                zip_name,
-                                file_hash
-                            );
-                            true
-                        }
-                        Err(e) => {
-                            tracing::warn!(
-                                "Failed to download optimized {}: {} - falling back to runtime processing",
-                                asset_type,
-                                e
-                            );
-                            false
+                match ctx
+                    .resource_provider
+                    .check_remote_file_exists(&zip_url)
+                    .await
+                {
+                    Ok(true) => {
+                        // File exists on server - download it
+                        tracing::debug!(
+                            "[OPTIMIZED] Downloading {} ZIP from: {}",
+                            asset_type.to_uppercase(),
+                            zip_url
+                        );
+                        match ctx
+                            .resource_provider
+                            .fetch_resource(
+                                zip_url.clone(),
+                                zip_name.clone(),
+                                local_zip_path.clone(),
+                            )
+                            .await
+                        {
+                            Ok(_) => {
+                                tracing::debug!(
+                                    "[OPTIMIZED] Downloaded {} ZIP: {} (hash={})",
+                                    asset_type.to_uppercase(),
+                                    zip_name,
+                                    file_hash
+                                );
+                                true
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    "Failed to download optimized {}: {} - falling back to runtime processing",
+                                    asset_type,
+                                    e
+                                );
+                                false
+                            }
                         }
                     }
-                }
-                Ok(false) => {
-                    tracing::debug!("No optimized {} available at: {}", asset_type, zip_url);
-                    false
-                }
-                Err(e) => {
-                    tracing::debug!(
-                        "Failed to check optimized {} existence: {} - falling back to runtime processing",
-                        asset_type,
-                        e
-                    );
-                    false
+                    Ok(false) => {
+                        tracing::debug!("No optimized {} available at: {}", asset_type, zip_url);
+                        false
+                    }
+                    Err(e) => {
+                        tracing::debug!(
+                            "Failed to check optimized {} existence: {} - falling back to runtime processing",
+                            asset_type,
+                            e
+                        );
+                        false
+                    }
                 }
             }
         } else {
+            // No optimized_base_url provided - use runtime processing only
+            tracing::debug!(
+                "[RUNTIME] {} forced runtime-only mode (no optimized URL): hash={}",
+                asset_type.to_uppercase(),
+                file_hash
+            );
             false
         };
 
