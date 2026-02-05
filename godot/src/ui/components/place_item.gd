@@ -897,3 +897,54 @@ func _update_separators() -> void:
 			else:
 				separator_likes.hide()
 				separator_online.hide()
+
+
+var start_pos: Vector2
+var initial_pos: Vector2
+var drag_tween: Tween
+
+enum STATE {
+	HIDDEN,
+	HALF,
+	FULL
+}
+
+enum GESTURE {
+	IDLE,
+	UP,
+	DOWN
+}
+
+var state := STATE.HALF
+
+func _input(event: InputEvent) -> void:
+	if not visible: return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			start_pos = event.position
+			initial_pos = position
+		else:
+			var drag_distance = event.position.y - start_pos.y
+			var gesture := GESTURE.IDLE
+			if drag_distance > 50:
+				gesture = GESTURE.DOWN
+			elif drag_distance < -50:
+				gesture = GESTURE.UP
+			
+			match gesture:
+				GESTURE.UP:
+					match state:
+						STATE.HALF:
+							_on_show_more_toggled(true)
+							state = STATE.FULL
+				GESTURE.DOWN:
+					match state:
+						STATE.FULL:
+							_on_show_more_toggled(false)
+							state = STATE.HALF
+						STATE.HALF:
+							_on_texture_button_close_pressed()
+							state = STATE.HIDDEN
+			
+	elif event is InputEventScreenDrag:
+		pass

@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://yox6vvdafsgu"]
+
+[ext_resource type="Shader" uid="uid://r2o1b71iq1qh" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton.gdshader" id="1_4p8aq"]
+
+[resource]
+shader = ExtResource("1_4p8aq")
+shader_parameter/scale = -2.0
+shader_parameter/time_scale = 3.0
+shader_parameter/bar_color = Color(1, 1, 1, 0.16000001)
+shader_parameter/background_color = Color(1, 1, 1, 0.080000006)
