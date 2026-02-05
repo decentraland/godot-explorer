@@ -532,12 +532,10 @@ func move_to(position: Vector3, skip_loading: bool):
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
-	_teleport_to_async(parcel, realm)
+	_async_teleport_to(parcel, realm)
 
 
-func _teleport_to_async(parcel: Vector2i, realm: String = "") -> void:
-	# Si hay que cambiar de realm, esperar a que termine antes de mover y actualizar posición.
-	# Así el scene_fetcher se reconfigura con el nuevo realm y la carga termina correctamente (no se traba el loading).
+func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 	if not realm.is_empty() and realm != Global.realm.get_realm_string():
 		loading_ui.enable_loading_screen()
 		await Global.realm.async_set_realm(realm)
