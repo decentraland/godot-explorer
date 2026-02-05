@@ -19,6 +19,7 @@ pub mod dcl_global_time;
 pub mod dcl_gltf_container;
 pub mod dcl_hashing;
 pub mod dcl_ios_plugin;
+pub mod dcl_locomotion_settings;
 pub mod dcl_node_entity_3d;
 pub mod dcl_parse_deep_link;
 pub mod dcl_realm;
