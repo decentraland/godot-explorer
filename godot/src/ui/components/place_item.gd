@@ -7,6 +7,9 @@ signal jump_in(position: Vector2i, realm: String)
 signal jump_in_world(realm: String)
 signal close
 
+enum DragState { HIDDEN, HALF, FULL }
+enum DragGesture { IDLE, UP, DOWN }
+
 const _CALENDAR_BUTTON_SCENE: PackedScene = preload(
 	"res://src/ui/components/calendar_button/calendar_button.tscn"
 )
@@ -30,6 +33,11 @@ var event_tags: String
 var event_start_timestamp: int = 0
 var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
+var start_pos: Vector2
+var initial_pos: Vector2
+var drag_tween: Tween
+var drag_state := DragState.HALF
+
 var _data = null
 var _node_cache: Dictionary = {}
 
@@ -880,3 +888,34 @@ func _update_separators() -> void:
 			else:
 				separator_likes.hide()
 				separator_online.hide()
+
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			start_pos = event.position
+			initial_pos = position
+		else:
+			var drag_distance = event.position.y - start_pos.y
+			var gesture := DragGesture.IDLE
+			if drag_distance > 50:
+				gesture = DragGesture.DOWN
+			elif drag_distance < -50:
+				gesture = DragGesture.UP
+
+			match gesture:
+				DragGesture.UP:
+					match drag_state:
+						DragState.HALF:
+							_on_show_more_toggled(true)
+							drag_state = DragState.FULL
+				DragGesture.DOWN:
+					match drag_state:
+						DragState.FULL:
+							_on_show_more_toggled(false)
+							drag_state = DragState.HALF
+						DragState.HALF:
+							_on_texture_button_close_pressed()
+							drag_state = DragState.HIDDEN
