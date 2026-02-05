@@ -17,5 +17,9 @@ float interpolation(float value, float in_from, float in_to, float out_from, flo
 void fragment() {
 	float level = sin(UV.x*scale + TIME*time_scale);
 	level = interpolation(level, 0.92, 1.0, 0.0, 1.0);
-	COLOR = mix(background_color, bar_color, level);
+	//COLOR = mix(background_color, bar_color, level);
+	if (COLOR.a > 0.0) {
+		COLOR += mix(vec4(0,0,0,0), bar_color, level);
+	}
+	
 }

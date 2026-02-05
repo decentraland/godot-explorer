@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://nexo8k0ub5ty"]
+[gd_scene load_steps=16 format=3 uid="uid://nexo8k0ub5ty"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_42xhx"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_qu68w"]
@@ -9,6 +9,8 @@
 [ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="7_37ec5"]
 [ext_resource type="LabelSettings" uid="uid://bf7gvemmb0487" path="res://assets/themes/discover_item_info.tres" id="8_4h84g"]
 [ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="9_ht01g"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="10_7ps4n"]
+[ext_resource type="Texture2D" uid="uid://cyb3aek31ytom" path="res://assets/ui/discover/card-discover-skeleton.svg" id="10_qu68w"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
 bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
@@ -196,5 +198,13 @@ theme_override_fonts/font = ExtResource("5_sbcai")
 text = "100%"
 label_settings = ExtResource("8_4h84g")
 horizontal_alignment = 2
+
+[node name="CardDiscoverSkeleton" type="TextureRect" parent="."]
+visible = false
+material = ExtResource("10_7ps4n")
+layout_mode = 1
+offset_right = 294.0
+offset_bottom = 260.0
+texture = ExtResource("10_qu68w")
 
 [connection signal="pressed" from="." to="." method="_on_pressed"]
