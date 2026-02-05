@@ -24,25 +24,24 @@ corner_radius_bottom_left = 12
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8j38y"]
 
 [node name="SearchBar" type="Control"]
-custom_minimum_size = Vector2(0, 68)
+custom_minimum_size = Vector2(300, 68)
 layout_mode = 3
-anchors_preset = 10
-anchor_right = 1.0
-grow_horizontal = 2
+anchors_preset = 0
+offset_right = 100.0
+offset_bottom = 68.0
+size_flags_horizontal = 3
 size_flags_vertical = 0
 script = ExtResource("1_51t0l")
-closed = null
+placeholder_text = "Search"
+closed = false
 
 [node name="SearchBar_PanelContainer" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
+anchors_preset = 15
 anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = -27.0
-offset_bottom = 27.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 8
@@ -78,6 +77,7 @@ theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("StyleBoxEmpty_o46gv")
 theme_override_styles/read_only = SubResource("StyleBoxEmpty_vuyfd")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_8j38y")
+placeholder_text = "Search"
 
 [node name="Button_EraseText" type="Button" parent="SearchBar_PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
