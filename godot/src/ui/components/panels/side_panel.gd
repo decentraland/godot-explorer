@@ -2,6 +2,7 @@ class_name SidePanelWrapper
 extends Control
 
 signal jump_in(position: Vector2i, realm: String)
+signal jump_in_world(realm: String)
 signal close
 
 @export var portrait_panel_resource: PackedScene
@@ -24,6 +25,10 @@ func _emit_jump_in(pos: Vector2i, realm: String):
 	jump_in.emit(pos, realm)
 
 
+func _emit_jump_in_world(realm: String):
+	jump_in_world.emit(realm)
+
+
 func _close():
 	self.hide()
 	for child in get_children():
@@ -38,6 +43,7 @@ func instantiate_portrait_panel():
 	portrait_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	portrait_panel.set_data(item_data)
 	portrait_panel.jump_in.connect(self._emit_jump_in)
+	portrait_panel.jump_in_world.connect(self._emit_jump_in_world)
 	set_data(item_data)
 
 
@@ -47,6 +53,7 @@ func instantiate_landscape_panel():
 	landscape_panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	landscape_panel.set_data(item_data)
 	landscape_panel.jump_in.connect(self._emit_jump_in)
+	landscape_panel.jump_in_world.connect(self._emit_jump_in_world)
 	set_data(item_data)
 
 

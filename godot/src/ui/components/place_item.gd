@@ -4,6 +4,7 @@ extends Control
 signal item_pressed(data)
 signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
+signal jump_in_world(realm: String)
 signal close
 
 const _CALENDAR_BUTTON_SCENE: PackedScene = preload(
@@ -26,7 +27,7 @@ const _CALENDAR_BUTTON_SCENE: PackedScene = preload(
 var event_id: String
 var event_status: String
 var event_tags: String
-var event_start_timestamp: int = 0  # Unix timestamp (seconds) when event starts
+var event_start_timestamp: int = 0
 var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
@@ -324,7 +325,6 @@ func set_scene_event_name(scene_name: String) -> void:
 
 
 func set_world(world: String):
-	# Solo actualiza la UI (etiqueta, icono). El realm para teleport se fija en set_data desde server.
 	var label = _get_label_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
@@ -411,13 +411,13 @@ func set_download_warning(item_data: Dictionary) -> void:
 	var max_size_mb: int
 
 	if is_world:
-		max_size_mb = 100  # Worlds have ~100MB dynamic capacity
+		max_size_mb = 100
 	else:
 		var positions = item_data.get("positions", [])
 		var parcel_count = positions.size() if positions is Array else 1
 		if parcel_count == 0:
-			parcel_count = 20  # Fallback to worst-case scenario (300mb)
-		max_size_mb = mini(parcel_count * 15, 300)  # 15MB per parcel, max 300MB
+			parcel_count = 20
+		max_size_mb = mini(parcel_count * 15, 300)
 
 	download_warning.set_warning_text("May download up to %dMB of data" % max_size_mb)
 
@@ -435,23 +435,18 @@ func set_data(item_data):
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
 	set_event_pills(item_data)
 	set_categories(item_data.get("categories", []))
-	# Parse event timestamp BEFORE set_attending so it's available for notifications
 	set_fav_button_data(item_data.get("id", "-"))
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
 	event_status = "live" if live else "upcoming"
 	if next_start_at != "":
-		# Convert ISO string to Unix timestamp
 		var timestamp = _parse_iso_timestamp(next_start_at)
 		if timestamp > 0:
-			event_start_timestamp = timestamp  # Store for notification scheduling
+			event_start_timestamp = timestamp
 
-	# Set location and realm for Jump In (teleport: mismo realm = solo posición; otro realm = cambiar realm + posición)
 	var server = item_data.get("server", null)
 	var world_name = item_data.get("world_name", null)
 	var is_world = item_data.get("world", false)
-
-	# Realm: "main"/null → Genesis City; si no, world (ej. fractilians.dcl.eth). Events usan "server", places pueden usar "world_name".
 	if server and str(server) != "main":
 		var realm_id = str(server)
 		if not realm_id.ends_with(".dcl.eth"):
@@ -468,26 +463,10 @@ func set_data(item_data):
 	else:
 		realm = DclUrls.main_realm()
 
-	# Coordenadas: para Jump In siempre; para UI solo si no es world (world muestra icono map + nombre trimmeado)
-	var parsed_loc: Vector2i = Vector2i.ZERO
-	var coordinates = item_data.get("coordinates", null)
-	var position = item_data.get("position", null)
-	var base_position = item_data.get("base_position", null)
-	if coordinates is Array and coordinates.size() >= 2:
-		parsed_loc = Vector2i(int(coordinates[0]), int(coordinates[1]))
-	elif position is Array and position.size() >= 2:
-		parsed_loc = Vector2i(int(position[0]), int(position[1]))
-	elif item_data.get("x") != null and item_data.get("y") != null:
-		parsed_loc = Vector2i(int(item_data.x), int(item_data.y))
-	elif base_position:
-		var location_vector = str(base_position).split(",")
-		if location_vector.size() >= 2:
-			parsed_loc = Vector2i(int(location_vector[0]), int(location_vector[1]))
-	location = parsed_loc
+	location = _parse_position_from_item(item_data)
 	var is_world_place = (server and str(server) != "main") or is_world
 	if not is_world_place:
-		set_location(parsed_loc)
-	# Si es world, la UI ya quedó con icono map + nombre trimmeado en set_world()
+		set_location(location)
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
@@ -533,52 +512,66 @@ func _on_button_jump_in_pressed():
 	_do_jump_in()
 
 
+static func _parse_position_from_item(item_data: Dictionary) -> Vector2i:
+	var coords = item_data.get("coordinates", null)
+	var pos_arr = item_data.get("position", null)
+	var base_pos = item_data.get("base_position", null)
+	if coords is Array and coords.size() >= 2:
+		return Vector2i(int(coords[0]), int(coords[1]))
+	if pos_arr is Array and pos_arr.size() >= 2:
+		return Vector2i(int(pos_arr[0]), int(pos_arr[1]))
+	if item_data.get("x") != null and item_data.get("y") != null:
+		return Vector2i(int(item_data.x), int(item_data.y))
+	if base_pos:
+		var parts = str(base_pos).split(",")
+		if parts.size() >= 2:
+			return Vector2i(int(parts[0]), int(parts[1]))
+	return Vector2i.ZERO
+
+
 func _get_jump_in_position_and_realm_from_data(item_data: Dictionary) -> Array:
-	# Devuelve [Vector2i posición, String realm] para Jump In (eventos y places).
-	var pos: Vector2i = Vector2i.ZERO
-	var r: String = ""
 	var server = item_data.get("server", null)
 	var world_name = item_data.get("world_name", null)
-	var is_world = item_data.get("world", false)
+	var r: String
 	if server and str(server) != "main":
 		r = str(server)
 		if not r.ends_with(".dcl.eth"):
 			r = r + ".dcl.eth"
-	elif is_world and world_name:
+	elif item_data.get("world", false) and world_name:
 		r = str(world_name)
 		if not r.ends_with(".dcl.eth"):
 			r = r + ".dcl.eth"
 	else:
 		r = DclUrls.main_realm()
-	var coords = item_data.get("coordinates", null)
-	var pos_arr = item_data.get("position", null)
-	var base_pos = item_data.get("base_position", null)
-	if coords is Array and coords.size() >= 2:
-		pos = Vector2i(int(coords[0]), int(coords[1]))
-	elif typeof(coords) == TYPE_STRING:
-		var parts = str(coords).split(",")
-		if parts.size() >= 2:
-			pos = Vector2i(int(parts[0]), int(parts[1]))
-	elif pos_arr is Array and pos_arr.size() >= 2:
-		pos = Vector2i(int(pos_arr[0]), int(pos_arr[1]))
-	elif item_data.get("x") != null and item_data.get("y") != null:
-		pos = Vector2i(int(item_data.x), int(item_data.y))
-	elif base_pos:
-		var parts = str(base_pos).split(",")
-		if parts.size() >= 2:
-			pos = Vector2i(int(parts[0]), int(parts[1]))
+	var pos := _parse_position_from_item(item_data)
 	return [pos, r]
 
 
+static func _is_event_in_world(item_data: Dictionary) -> bool:
+	if not item_data is Dictionary or item_data.is_empty():
+		return false
+	if not item_data.has("duration"):
+		return false
+	var server = item_data.get("server", null)
+	if server == null:
+		return false
+	var s = str(server).strip_edges()
+	return s != "" and s != "main"
+
+
 func _do_jump_in() -> void:
-	# Misma lógica para Jump In y Jump to event: teleport a position + realm. Resolver desde _data al hacer click por si set_data no aplicó (ej. panel detalles desde tarjeta).
+	if _data is Dictionary and not _data.is_empty() and _is_event_in_world(_data):
+		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+		var world_realm: String = pos_realm[1]
+		jump_in_world.emit(world_realm)
+		return
+
 	var jump_pos := location
 	var jump_realm := realm
 	if _data is Dictionary and not _data.is_empty():
 		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
-		if pos_realm[0] != Vector2i.ZERO or not pos_realm[1].is_empty():
-			jump_pos = pos_realm[0]
-			jump_realm = pos_realm[1]
+		jump_pos = pos_realm[0]
+		jump_realm = pos_realm[1]
 	jump_in.emit(jump_pos, jump_realm)
 
 
@@ -729,17 +722,15 @@ func set_event_pills(_item_data) -> void:
 
 
 func _parse_iso_timestamp(iso_string: String) -> int:
-	# Convert ISO string (e.g. "2025-10-06T12:00:00.000Z") to Unix timestamp
 	if iso_string.is_empty():
 		return 0
 
-	# Parse ISO date
 	var date_parts = iso_string.split("T")
 	if date_parts.size() != 2:
 		return 0
 
-	var date_part = date_parts[0]  # "2025-10-06"
-	var time_part = date_parts[1].replace("Z", "").split(".")[0]  # "12:00:00"
+	var date_part = date_parts[0]
+	var time_part = date_parts[1].replace("Z", "").split(".")[0]
 
 	var date_components = date_part.split("-")
 	var time_components = time_part.split(":")
@@ -754,7 +745,6 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 	var minute = int(time_components[1])
 	var second = int(time_components[2])
 
-	# Create date dictionary and convert to timestamp
 	var date_dict = {
 		"year": year, "month": month, "day": day, "hour": hour, "minute": minute, "second": second
 	}
@@ -763,7 +753,6 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 
 
 func _parse_iso_timestamp_utc(iso_string: String) -> int:
-	## Parse ISO string (UTC, e.g. "2025-05-31T19:00:00.000Z") and return Unix timestamp (UTC).
 	if iso_string.is_empty():
 		return 0
 	var local_unix: int = _parse_iso_timestamp(iso_string)
@@ -773,29 +762,23 @@ func _parse_iso_timestamp_utc(iso_string: String) -> int:
 
 
 func _format_duration(duration: int) -> String:
-	# Convert milliseconds to hours
 	var hours = duration / (1000 * 60 * 60)
-
-	# If less than 1 hour, show minutes
 	if hours < 1:
 		var minutes = duration / (1000 * 60)
 		if minutes == 1:
 			return "1 MIN"
 		return str(int(minutes)) + " MINS"
 
-	# If less than 72 hours, show hours
 	if hours < 72:
 		if hours == 1:
 			return "1 HR"
 		return str(int(hours)) + " HRS"
 
-	# If more than 72 hours, show days
 	var days = hours / 24
 	return str(int(days)) + " DAYS"
 
 
 func _on_event_pressed() -> void:
-	# Emitir datos completos del evento para que card y detalles muestren lo mismo (LIVE, IN X DAYS)
 	if _data is Dictionary and not _data.is_empty():
 		event_pressed.emit(_data)
 	else:

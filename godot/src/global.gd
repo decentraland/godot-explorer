@@ -710,6 +710,31 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
+func join_world(world_realm: String) -> void:
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+		Time.get_unix_time_from_system()
+	)
+	var loading_data = {
+		"position": str(Global.scene_fetcher.current_position),
+		"realm": world_realm,
+		"when": "on_world"
+	}
+	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		Global.realm.async_set_realm(world_realm, true)
+		explorer.hide_menu()
+		Global.close_menu.emit()
+	else:
+		Global.close_menu.emit()
+		Global.get_config().last_realm_joined = world_realm
+		Global.get_config().last_parcel_position = Vector2i.ZERO
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
 func http_method_to_string(method: int) -> String:
 	match method:
 		HTTPClient.METHOD_GET:

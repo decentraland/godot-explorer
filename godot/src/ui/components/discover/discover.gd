@@ -33,7 +33,9 @@ func _ready():
 	line_edit_search_bar.hide()
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
+	jump_in.jump_in_world.connect(_on_jump_in_world)
 	event_details.jump_in.connect(_on_event_details_jump_in)
+	event_details.jump_in_world.connect(_on_event_details_jump_in_world)
 
 	# Connect to notification clicked signal
 	Global.notification_clicked.connect(_on_notification_clicked)
@@ -65,6 +67,11 @@ func on_event_pressed(data):
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	jump_in.hide()
 	Global.teleport_to(parcel_position, realm)
+
+
+func _on_jump_in_world(realm: String):
+	jump_in.hide()
+	Global.join_world(realm)
 
 
 func _on_visibility_changed():
@@ -139,6 +146,11 @@ func _on_timer_search_debounce_timeout() -> void:
 func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
 	event_details.hide()
 	Global.teleport_to(parcel_position, realm)
+
+
+func _on_event_details_jump_in_world(realm: String) -> void:
+	event_details.hide()
+	Global.join_world(realm)
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
@@ -254,7 +266,6 @@ func _on_button_back_to_explorer_pressed() -> void:
 
 
 func _reset_header() -> void:
-	print("RESET")
 	button_search_bar.show()
 	line_edit_search_bar.hide()
 	line_edit_search_bar.text = ""
