@@ -600,7 +600,6 @@ func async_load_wearables():
 
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
-
 	# Emotes - get from cached emote scenes
 	for emote_urn in avatar_data.get_emotes():
 		if not emote_urn.begins_with("urn"):
@@ -619,6 +618,7 @@ func async_load_wearables():
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
+
 	avatar_ready = true
 	avatar_loaded.emit()
 

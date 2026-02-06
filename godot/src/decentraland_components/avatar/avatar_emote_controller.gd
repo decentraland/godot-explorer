@@ -556,28 +556,29 @@ func _load_emote_from_gltf_internal(
 	var armature_prop: Node3D = null
 
 	if obj.armature_prop != null:
-		if not avatar.has_node(NodePath(obj.armature_prop.name)):
-			# Take ownership of the prop node directly (no need to duplicate since
-			# DclEmoteGltf is temporary and gets garbage collected after this)
-			armature_prop = obj.armature_prop
-			armature_prop.set_owner(null)  # Clear owner since we're reparenting
+		# Only treat as a prop if the name starts with "Armature_Prop" to avoid
+		# matching the avatar's own "Armature" node. Some emotes have their root
+		# armature named just "Armature" which collides with the avatar's scene tree.
+		# When clean_unused_emotes later frees this reference, it would destroy the
+		# avatar's entire skeleton/nickname subtree.
+		var prop_name = obj.armature_prop.name
+		if prop_name.begins_with("Armature_Prop"):
+			if not avatar.has_node(NodePath(prop_name)):
+				armature_prop = obj.armature_prop
+				armature_prop.set_owner(null)
 
-			# Stop and remove any AnimationPlayer on the prop to prevent independent animation
-			# The prop animation should be controlled by the avatar's AnimationTree via merged tracks
-			var prop_anim_player = armature_prop.get_node_or_null("AnimationPlayer")
-			if prop_anim_player != null:
-				prop_anim_player.stop()
-				prop_anim_player.queue_free()
+				var prop_anim_player = armature_prop.get_node_or_null("AnimationPlayer")
+				if prop_anim_player != null:
+					prop_anim_player.stop()
+					prop_anim_player.queue_free()
 
-			avatar.add_child(armature_prop)
-			armature_prop.hide()  # Start hidden
+				avatar.add_child(armature_prop)
+				armature_prop.hide()
 
-			# Track the prop name for hiding during idle - DON'T modify idle_anim at runtime
-			# Modifying idle_anim while animation system could access it causes crashes
-			if not _prop_armature_names.has(armature_prop.name):
-				_prop_armature_names.append(armature_prop.name)
-		else:
-			armature_prop = avatar.get_node(NodePath(obj.armature_prop.name))
+				if not _prop_armature_names.has(armature_prop.name):
+					_prop_armature_names.append(armature_prop.name)
+			else:
+				armature_prop = avatar.get_node(NodePath(prop_name))
 
 	var emote_item_data = EmoteItemData.new(urn, "", "", file_hash, armature_prop, null)
 	emote_item_data.from_scene = from_scene
