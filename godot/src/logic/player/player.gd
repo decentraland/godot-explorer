@@ -8,11 +8,14 @@ const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder vi
 var last_position: Vector3
 var actual_velocity_xz: float
 
-var walk_speed = 1.5
-var jog_speed = 8.0
-var run_speed = 11.0
+# Locomotion settings - these are updated from the current scene's DclLocomotionSettings
+var walk_speed: float = 1.5
+var jog_speed: float = 8.0
+var run_speed: float = 11.0
 var gravity := 10.0
-var jump_height := 1.8
+var jump_height: float = 1.8
+var run_jump_height: float = 1.8
+var hard_landing_cooldown: float = 0.0
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
 var jump_time := 0.0
@@ -24,6 +27,10 @@ var current_direction: Vector3 = Vector3()
 
 var time_falling := 0.0
 var current_profile_version: int = -1
+
+# Private variables (prefixed with _)
+var _hard_landing_timer: float = 0.0
+var _locomotion_settings: DclLocomotionSettings = null
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -138,6 +145,11 @@ func _ready():
 	# entity_id=1 (SceneEntityId::PLAYER)
 	avatar.setup_trigger_detection(1)
 
+	# Locomotion settings - subscribe to scene changes and settings updates
+	Global.scene_runner.on_change_scene_id.connect(_on_scene_changed)
+	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
+	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
+
 
 func _on_player_profile_changed(new_profile: DclUserProfile):
 	var new_version = new_profile.get_profile_version()
@@ -145,6 +157,29 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 	if new_version != current_profile_version:
 		current_profile_version = new_version
 		avatar.async_update_avatar_from_profile(new_profile)
+
+
+func _on_scene_changed(_scene_id: int) -> void:
+	_locomotion_settings = Global.scene_runner.get_current_scene_locomotion_settings()
+	_apply_locomotion_settings()
+
+
+func _on_locomotion_settings_changed(settings: DclLocomotionSettings) -> void:
+	_locomotion_settings = settings
+	_apply_locomotion_settings()
+
+
+func _apply_locomotion_settings() -> void:
+	if _locomotion_settings == null:
+		return
+
+	walk_speed = _locomotion_settings.walk_speed
+	jog_speed = _locomotion_settings.jog_speed
+	run_speed = _locomotion_settings.run_speed
+	jump_height = _locomotion_settings.jump_height
+	run_jump_height = _locomotion_settings.run_jump_height
+	hard_landing_cooldown = _locomotion_settings.hard_landing_cooldown
+	jump_velocity_0 = sqrt(2 * jump_height * gravity)
 
 
 func clamp_camera_rotation():
@@ -156,6 +191,13 @@ func clamp_camera_rotation():
 
 
 func _physics_process(dt: float) -> void:
+	# Handle hard landing cooldown
+	if _hard_landing_timer > 0:
+		_hard_landing_timer -= dt
+		# During cooldown, prevent horizontal movement
+		velocity.x = move_toward(velocity.x, 0, 20 * dt)
+		velocity.z = move_toward(velocity.z, 0, 20 * dt)
+
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 
 	if not Global.explorer_has_focus():  # ignore input
@@ -168,8 +210,8 @@ func _physics_process(dt: float) -> void:
 	var run_disabled := Global.is_run_disabled()
 	var jump_disabled := Global.is_jump_disabled()
 
-	# If all input is disabled, clear input direction
-	if all_disabled:
+	# If all input is disabled or during hard landing cooldown, clear input direction
+	if all_disabled or _hard_landing_timer > 0:
 		input_dir = Vector2(0, 0)
 
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -189,6 +231,7 @@ func _physics_process(dt: float) -> void:
 	current_direction = current_direction.move_toward(direction, 8 * dt)
 
 	var on_floor = is_on_floor() or position.y <= 0.0
+	var was_falling = avatar.fall
 	jump_time -= dt
 
 	if !on_floor:
@@ -204,8 +247,17 @@ func _physics_process(dt: float) -> void:
 		avatar.rise = velocity.y > .3
 		avatar.fall = velocity.y < -.3 && !in_grace_time
 		velocity.y -= gravity * dt
-	elif Input.is_action_pressed("ia_jump") and jump_time < 0 and not jump_disabled:
-		velocity.y = jump_velocity_0
+	elif (
+		Input.is_action_pressed("ia_jump")
+		and jump_time < 0
+		and not jump_disabled
+		and _hard_landing_timer <= 0
+	):
+		# Use run_jump_height if sprinting
+		var effective_jump_height := jump_height
+		if Input.is_action_pressed("ia_sprint"):
+			effective_jump_height = run_jump_height
+		velocity.y = sqrt(2 * effective_jump_height * gravity)
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
@@ -213,6 +265,9 @@ func _physics_process(dt: float) -> void:
 	else:
 		if not avatar.land:
 			avatar.land = true
+			# Check for hard landing (landing after falling for more than 1 second)
+			if was_falling and hard_landing_cooldown > 0 and time_falling > 1.0:
+				_hard_landing_timer = hard_landing_cooldown
 
 		velocity.y = 0
 		avatar.rise = false

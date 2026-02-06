@@ -303,8 +303,39 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 
 func _async_initialize_social_service() -> void:
 	# Initialize the social service with player identity
-	# Note: Subscriptions are now handled by FriendsPanel when it opens/closes
+	# Note: Friendship subscriptions are handled by FriendsPanel when it opens/closes
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
+
+	# Connect to block update signal for real-time sync
+	if not Global.social_service.block_update_received.is_connected(_on_block_update_received):
+		Global.social_service.block_update_received.connect(_on_block_update_received)
+
+	# Fetch blocked users from server and initialize local cache (fire-and-forget)
+	_async_fetch_blocking_status()
+
+	# Subscribe to block updates for real-time sync across devices
+	Global.social_service.subscribe_to_block_updates()
+
+
+func _async_fetch_blocking_status() -> void:
+	var promise = Global.social_service.get_blocking_status()
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		printerr("Failed to get blocking status: ", PromiseUtils.get_error_message(promise))
+		return
+
+	var data = promise.get_data()
+	if data is Dictionary:
+		var blocked_users: Array = data.get("blocked_users", [])
+		Global.social_blacklist.init_from_blocking_status(blocked_users)
+
+
+func _on_block_update_received(address: String, is_blocked: bool) -> void:
+	if is_blocked:
+		Global.social_blacklist.add_blocked(address)
+	else:
+		Global.social_blacklist.remove_blocked(address)
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -977,16 +1008,24 @@ func _share_place():
 	var url: String
 
 	if is_genesis_city:
+		var share_position = parcel_position
+		# If we're in an empty parcel and there's exactly one loaded scene, use that scene's position
+		var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
+		if current_scene_id == -1 and Global.scene_fetcher.loaded_scenes.size() == 1:
+			var scene: SceneFetcher.SceneItem = Global.scene_fetcher.loaded_scenes.values()[0]
+			if scene.parcels.size() > 0:
+				share_position = scene.parcels[0]
+
 		url = (
-			"decentraland://open?position="
-			+ str(parcel_position[0])
+			"https://mobile.dclexplorer.com/open?position="
+			+ str(share_position[0])
 			+ ","
-			+ str(parcel_position[1])
+			+ str(share_position[1])
 		)
 	else:
 		var realm_url = Global.realm.realm_url
 		var short_realm_url = _extract_short_realm_url(realm_url)
-		url = "decentraland://open?realm=" + short_realm_url
+		url = "https://mobile.dclexplorer.com/open?realm=" + short_realm_url
 
 	if scene_title.length() == 0:
 		scene_title = "Decentraland"

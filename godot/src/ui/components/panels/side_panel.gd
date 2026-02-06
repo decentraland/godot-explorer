@@ -54,14 +54,8 @@ func async_load_place_position(pos: Vector2i):
 	_close()
 	show()
 	texture_progress_bar.show()
-	var url: String = DclUrls.places_api() + "/places?limit=1"
-	url += "&positions=%d,%d" % [pos.x, pos.y]
 
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_GET, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
+	var result = await PlacesHelper.async_get_by_position(pos)
 
 	if result is PromiseError:
 		printerr("Error request places jump in", result.get_error())

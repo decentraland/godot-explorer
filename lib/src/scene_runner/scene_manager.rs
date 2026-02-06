@@ -17,7 +17,8 @@ use crate::{
     },
     godot_classes::{
         dcl_avatar::DclAvatar, dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal,
-        dcl_ui_control::DclUiControl, dcl_virtual_camera::DclVirtualCamera,
+        dcl_locomotion_settings::DclLocomotionSettings, dcl_ui_control::DclUiControl,
+        dcl_virtual_camera::DclVirtualCamera,
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
         JsonGodotClass,
     },
@@ -1388,6 +1389,9 @@ impl SceneManager {
     #[signal]
     fn on_change_scene_id(scene_id: i32);
 
+    #[signal]
+    fn locomotion_settings_changed(settings: Gd<DclLocomotionSettings>);
+
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
     }
@@ -1426,6 +1430,24 @@ impl SceneManager {
         self.scenes
             .get(&SceneId(scene_id))
             .map(|x| x.virtual_camera.clone())
+    }
+
+    #[func]
+    pub fn get_scene_locomotion_settings(
+        &self,
+        scene_id: i32,
+    ) -> Option<Gd<DclLocomotionSettings>> {
+        self.scenes
+            .get(&SceneId(scene_id))
+            .map(|x| x.locomotion_settings.clone())
+    }
+
+    #[func]
+    pub fn get_current_scene_locomotion_settings(&self) -> Gd<DclLocomotionSettings> {
+        self.scenes
+            .get(&self.current_parcel_scene_id)
+            .map(|x| x.locomotion_settings.clone())
+            .unwrap_or_default()
     }
 
     #[func]

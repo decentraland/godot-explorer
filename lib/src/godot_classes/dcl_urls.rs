@@ -90,6 +90,10 @@ impl DclUrls {
         urls::places_api().to_godot()
     }
     #[func]
+    pub fn destinations_api() -> GString {
+        urls::destinations_api().to_godot()
+    }
+    #[func]
     pub fn events_api() -> GString {
         urls::events_api().to_godot()
     }
