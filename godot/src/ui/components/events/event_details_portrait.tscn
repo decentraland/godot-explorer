@@ -9,7 +9,7 @@
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_8vff1"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="9_2nfo0"]
 [ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="10_b5skv"]
-[ext_resource type="PackedScene" uid="uid://cjli636t2wu4o" path="res://src/ui/components/discover/jump_in/download_warning.tscn" id="11_iocyg"]
+[ext_resource type="PackedScene" uid="uid://dj0cviotsdvg2" path="res://src/ui/components/discover/jump_in/download_warning.tscn" id="11_iocyg"]
 [ext_resource type="PackedScene" uid="uid://mv4erfb0rl17" path="res://src/ui/components/discover/event_pills_bar/event_pills_bar.tscn" id="11_wcxms"]
 [ext_resource type="LabelSettings" uid="uid://k8jblhm4mnv4" path="res://src/ui/components/events/event_info.tres" id="14_bmyvb"]
 [ext_resource type="LabelSettings" uid="uid://3jaxrloree20" path="res://src/ui/components/discover/jump_in/jump_in_stats.tres" id="14_dl51y"]
@@ -143,6 +143,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 script = ExtResource("1_wcxms")
+is_draggable = true
 
 [node name="PanelContainer_Header" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -681,5 +682,3 @@ layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("25_b2lu2")
 expand_mode = 3
-
-[connection signal="toggled" from="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/MarginContainer_ShowMore/Button_ShowMore" to="." method="_on_show_more_toggled"]
