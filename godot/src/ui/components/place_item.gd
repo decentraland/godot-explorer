@@ -37,6 +37,7 @@ var start_pos: Vector2
 var initial_pos: Vector2
 var drag_tween: Tween
 var drag_state := DragState.HALF
+var dragging: bool = false
 
 var _data = null
 var _node_cache: Dictionary = {}
@@ -897,7 +898,9 @@ func _input(event: InputEvent) -> void:
 		if event.pressed:
 			start_pos = event.position
 			initial_pos = position
-		else:
+			dragging = true
+		elif dragging:
+			dragging = false
 			var drag_distance = event.position.y - start_pos.y
 			var gesture := DragGesture.IDLE
 			if drag_distance > 50:

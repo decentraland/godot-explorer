@@ -1,0 +1,107 @@
+@tool
+class_name SearchBar
+extends Control
+
+signal text_changed(new_text)
+signal text_submitted(text)
+signal cleared
+
+@export var text: String:
+	get:
+		return line_edit.text if line_edit else _text
+	set(value):
+		_text = value
+		if line_edit:
+			line_edit.text = value
+			_update_erase_button_visibility()
+
+@export var placeholder_text: String:
+	get:
+		return line_edit.placeholder_text if line_edit else _placeholder_text
+	set(value):
+		_placeholder_text = value
+		if line_edit:
+			line_edit.placeholder_text = value
+
+@export var editable: bool = true:
+	get:
+		return line_edit.editable if line_edit else _editable
+	set(value):
+		_editable = value
+		if line_edit:
+			line_edit.editable = value
+
+@export var closed: bool = true:
+	get:
+		return closed
+	set(value):
+		closed = value
+
+var _text: String = ""
+var _placeholder_text: String = ""
+var _editable: bool = true
+
+@onready var line_edit: LineEdit = %LineEdit
+@onready var button_erase_text: TextureButton = %Button_EraseText
+@onready var search_bar_panel_container: PanelContainer = %SearchBar_PanelContainer
+@onready var button_search: TextureButton = %Button_Search
+
+
+func _ready() -> void:
+	button_erase_text.hide()
+	line_edit.text = _text
+	line_edit.placeholder_text = _placeholder_text
+	line_edit.editable = _editable
+	line_edit.text_changed.connect(_on_text_changed)
+	line_edit.text_submitted.connect(_on_text_submitted)
+	line_edit.focus_entered.connect(_on_focus_entered)
+	line_edit.focus_exited.connect(_on_focus_exited)
+	close_searchbar()
+
+
+func _on_text_changed(new_text: String) -> void:
+	text_changed.emit(new_text)
+	_update_erase_button_visibility()
+
+
+func _update_erase_button_visibility() -> void:
+	var has_content := line_edit.text.length() > 0
+	button_erase_text.visible = has_content
+
+
+func _on_text_submitted(submitted_text: String) -> void:
+	text_submitted.emit(submitted_text)
+
+
+func _on_focus_entered() -> void:
+	focus_entered.emit()
+
+
+func _on_focus_exited() -> void:
+	focus_exited.emit()
+
+
+func _on_button_erase_text_pressed() -> void:
+	line_edit.clear()
+	cleared.emit()
+	line_edit.release_focus()
+
+
+func _on_button_search_pressed() -> void:
+	open_searchbar()
+
+
+func close_searchbar() -> void:
+	closed = true
+	line_edit.hide()
+	line_edit.clear()
+	button_erase_text.hide()
+	search_bar_panel_container.self_modulate = Color.TRANSPARENT
+
+
+func open_searchbar() -> void:
+	closed = false
+	line_edit.show()
+	search_bar_panel_container.self_modulate = Color.WHITE
+	_update_erase_button_visibility()
+	line_edit.grab_focus()

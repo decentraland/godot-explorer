@@ -45,16 +45,6 @@ offset_right = 225.0
 offset_bottom = 175.0
 mouse_filter = 1
 script = ExtResource("1_42xhx")
-title = null
-event_name = null
-description = null
-views = null
-onlines = null
-likes_percent = null
-metadata = null
-location = null
-realm_title = null
-categories = null
 
 [node name="VBoxContainer_Content" type="VBoxContainer" parent="."]
 layout_mode = 0
