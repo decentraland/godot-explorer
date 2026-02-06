@@ -1,16 +1,13 @@
-[gd_scene load_steps=3 format=3 uid="uid://bqx2staticbutton01"]
-
-[ext_resource type="Script" path="res://src/ui/components/static_button/static_button.gd" id="1_script"]
+[gd_scene load_steps=2 format=3 uid="uid://cqnj0gb2vybsi"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
-bg_color = Color(1, 0.2, 0.3, 1)
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
 [node name="StaticButton" type="TextureButton"]
-script = ExtResource("1_script")
 custom_minimum_size = Vector2(60, 60)
 focus_mode = 0
 toggle_mode = true
