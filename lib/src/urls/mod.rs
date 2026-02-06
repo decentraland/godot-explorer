@@ -10,16 +10,32 @@ fn env() -> &'static str {
 
 // Auth
 pub fn auth_frontend() -> String {
-    format!("https://decentraland.{}/auth/requests", env())
+    if env() == "today" {
+        "http://localhost:5173/auth/requests".to_string()
+    } else {
+        format!("https://decentraland.{}/auth/requests", env())
+    }
 }
 pub fn auth_mobile_frontend() -> String {
-    format!("https://decentraland.{}/auth/mobile", env())
+    if env() == "today" {
+        "http://localhost:5173/auth/mobile".to_string()
+    } else {
+        format!("https://decentraland.{}/auth/mobile", env())
+    }
 }
 pub fn auth_api_base() -> String {
-    format!("https://auth-api.decentraland.{}", env())
+    if env() == "today" {
+        "https://auth-api.decentraland.zone".to_string()
+    } else {
+        format!("https://auth-api.decentraland.{}", env())
+    }
 }
 pub fn auth_api_requests() -> String {
-    format!("https://auth-api.decentraland.{}/requests", env())
+    if env() == "today" {
+        "https://auth-api.decentraland.zone/requests".to_string()
+    } else {
+        format!("https://auth-api.decentraland.{}/requests", env())
+    }
 }
 
 // Content

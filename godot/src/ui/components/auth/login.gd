@@ -62,7 +62,9 @@ func async_login(provider: String = ""):
 	# Desktop uses polling-based flow even when --force-mobile is used for UI testing
 	var is_real_mobile = Global.is_android() or Global.is_ios()
 	if is_real_mobile:
-		Global.player_identity.start_mobile_connect_account(provider)
+		Global.player_identity.start_mobile_connect_account(
+			provider, Global.config.analytics_user_id, Global.session_id
+		)
 	else:
 		Global.player_identity.try_connect_account()
 
