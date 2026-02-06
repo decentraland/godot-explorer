@@ -39,6 +39,7 @@ func _close():
 
 func instantiate_portrait_panel():
 	portrait_panel = portrait_panel_resource.instantiate()
+	portrait_panel.is_draggable = true
 	self.add_child(portrait_panel)
 	portrait_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	portrait_panel.set_data(item_data)

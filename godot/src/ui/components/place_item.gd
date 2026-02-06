@@ -26,6 +26,7 @@ const _CALENDAR_BUTTON_SCENE: PackedScene = preload(
 @export var realm: String = DclUrls.main_realm()
 @export var realm_title: String = "Genesis City"
 @export var categories: Array = []
+@export var is_draggable := false
 
 var event_id: String
 var event_status: String
@@ -64,11 +65,23 @@ func _ready():
 
 	var card = _get_card()
 	if card:
-		card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		# NOTE must call deferred
+		# otherwise the UI is broken
+		card.set_anchors_and_offsets_preset.call_deferred(Control.PRESET_FULL_RECT)
 
 	var description_container = _get_description()
 	if description_container:
-		description_container.hide()
+		#description_container.hide()
+		description_container.show()
+
+	if is_draggable and card:
+		var initial_positon := func():
+			card.position.y = 1300
+			tween_to(700)
+		# NOTE must call deferred
+		# otherwise the UI is broken
+		initial_positon.call_deferred()
+
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -837,14 +850,14 @@ func _on_show_more_toggled(toggled_on: bool) -> void:
 	if description_container and header and card and show:
 		if toggled_on:
 			description_container.show()
-			header.show()
-			card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			#header.show()
+			#card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			_set_card_corner_radius(card, 0, 0)
-			show_more.hide()
+			#show_more.hide()
 		else:
-			description_container.hide()
+			#description_container.hide()
 			header.hide()
-			card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+			#card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 			_set_card_corner_radius(card, 24, 24)
 			show_more.show()
 
@@ -892,7 +905,7 @@ func _update_separators() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not visible:
+	if not visible or not is_draggable:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -914,11 +927,24 @@ func _input(event: InputEvent) -> void:
 						DragState.HALF:
 							_on_show_more_toggled(true)
 							drag_state = DragState.FULL
+							tween_to(0)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:
 							_on_show_more_toggled(false)
 							drag_state = DragState.HALF
+							tween_to(700)
 						DragState.HALF:
-							_on_texture_button_close_pressed()
 							drag_state = DragState.HIDDEN
+							#_on_texture_button_close_pressed()
+							tween_to(1300, _on_texture_button_close_pressed)
+
+func tween_to(y_position: float, callback: Callable = func():return) -> void:
+	var card := _get_card()
+	if not card: return
+	if drag_tween and drag_tween.is_running():
+		drag_tween.stop()
+		drag_tween = null
+	drag_tween = create_tween().set_trans(Tween.TRANS_QUART)
+	drag_tween.tween_property(card, "position:y", y_position, 0.2)
+	drag_tween.tween_callback(callback)
