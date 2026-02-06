@@ -161,9 +161,9 @@ corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_3qks0"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_voda5"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ee11b"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_i4dir"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_ckthm"]
 resource_local_to_scene = false
@@ -237,7 +237,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_3qks0")
+button_group = SubResource("ButtonGroup_voda5")
 script = ExtResource("3_lur8b")
 sprite_frames_source = ExtResource("4_hvf0m")
 
@@ -246,7 +246,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_ee11b")
+button_group = SubResource("ButtonGroup_i4dir")
 script = ExtResource("5_ly2kd")
 sprite_frames_source = ExtResource("6_fmmda")
 

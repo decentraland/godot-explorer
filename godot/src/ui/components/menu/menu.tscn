@@ -114,6 +114,7 @@ script = ExtResource("3_rdch8")
 clean_on_landscape = true
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/BottomBar_Portrait"]
+custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
 theme_override_constants/margin_left = 64
 theme_override_constants/margin_top = 32
@@ -162,7 +163,7 @@ script = ExtResource("18_3id7u")
 
 [node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 60)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 button_group = SubResource("ButtonGroup_udswp")
 
