@@ -345,19 +345,20 @@ func _cleanup_wc_flow(error_message: String) -> void:
 
 func _on_button_wallet_connect_pressed() -> void:
 	# Try native WalletConnect flow on Android/iOS
-	var native_result = _try_native_walletconnect()
+	if Global.is_android():
+		var native_result = _try_native_walletconnect()
 
-	if native_result == true:
-		lobby.waiting_for_new_wallet = true
-		var wallet_name = "MetaMask" if Global.is_android() else "Wallet"
-		lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...")
-		var metric_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
-		Global.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
-		return
+		if native_result == true:
+			lobby.waiting_for_new_wallet = true
+			var wallet_name = "MetaMask" if Global.is_android() else "Wallet"
+			lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...")
+			var metric_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
+			Global.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
+			return
 
-	# On iOS, don't fall back to web - it doesn't work properly
+	# On Android, don't fall back to web - it doesn't work properly
 	# Show error message if native WalletConnect failed to initialize
-	if Global.is_ios():
+	if Global.is_android():
 		lobby._show_auth_error(
 			"WalletConnect failed to initialize. Please try again or use another sign-in method."
 		)
@@ -365,7 +366,7 @@ func _on_button_wallet_connect_pressed() -> void:
 		return
 
 	# On other platforms (desktop), fall back to web-based flow
-	async_login("")
+	async_login("wallet_connect")
 	Global.metrics.track_click_button("wallet_connect", lobby.current_screen_name, "")
 
 
