@@ -149,9 +149,15 @@ fn main() -> Result<(), anyhow::Error> {
                         .multiple_values(true),
                 )
                 .arg(
-                    Arg::new("no-strip")
-                        .long("no-strip")
-                        .help("skip stripping debug symbols from iOS templates (needed for CI to generate Sentry dSYMs)")
+                    Arg::new("cache")
+                        .long("cache")
+                        .help("use cached downloads instead of re-downloading (default: always download fresh)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("strip-ios")
+                        .long("strip-ios")
+                        .help("strip debug symbols from iOS templates to save disk space (default: keep debug symbols)")
                         .takes_value(false),
                 )
         )
@@ -411,9 +417,11 @@ fn main() -> Result<(), anyhow::Error> {
                 .unwrap_or_default();
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
-            let no_strip = sm.is_present("no-strip");
+            let use_cache = sm.is_present("cache");
+            let strip_ios = sm.is_present("strip-ios");
             // Call your install function and pass the templates
-            let result = install_dependency::install(no_templates, &platforms, no_strip);
+            let result =
+                install_dependency::install(no_templates, &platforms, use_cache, strip_ios);
             if result.is_ok() {
                 dependencies::suggest_next_steps("install", None);
             }
