@@ -3,6 +3,7 @@ pub mod audio_source;
 pub mod audio_stream;
 pub mod avatar_attach;
 pub mod avatar_data;
+pub mod avatar_locomotion_settings;
 pub mod avatar_modifier_area;
 pub mod avatar_shape;
 pub mod billboard;

@@ -889,8 +889,8 @@ func _create_floor_mesh(width: float, height: float, center_x: float, center_z: 
 	# The default grass_rect in the material already points to the bottom-left quadrant
 	mesh_instance.material_override = EMPTY_PARCEL_MATERIAL
 
-	mesh_instance.global_position = Vector3(center_x, -0.05, center_z)
 	_large_scene_floor.add_child(mesh_instance)
+	mesh_instance.global_position = Vector3(center_x, -0.05, center_z)
 
 
 ## Create the floor collision for simple floor mode
@@ -905,9 +905,9 @@ func _create_floor_collision(width: float, height: float, center_x: float, cente
 	collision_shape.shape = box_shape
 
 	static_body.add_child(collision_shape)
-	static_body.global_position = Vector3(center_x, -0.05, center_z)
 
 	_large_scene_floor.add_child(static_body)
+	static_body.global_position = Vector3(center_x, -0.05, center_z)
 
 
 ## Create a cliff plane on one side of the simple floor
@@ -921,10 +921,10 @@ func _create_cliff(position: Vector3, size: Vector2, rotation: Vector3) -> void:
 	mesh_instance.mesh = plane_mesh
 
 	mesh_instance.material_override = CLIFF_MATERIAL
-	mesh_instance.global_position = position
-	mesh_instance.rotation = rotation
 
 	_large_scene_floor.add_child(mesh_instance)
+	mesh_instance.global_position = position
+	mesh_instance.rotation = rotation
 
 
 func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
