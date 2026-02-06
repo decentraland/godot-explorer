@@ -426,7 +426,11 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     Ok(())
 }
 
-pub fn prepare_templates(platforms: &[String], no_strip: bool) -> Result<(), anyhow::Error> {
+pub fn prepare_templates(
+    platforms: &[String],
+    use_cache: bool,
+    strip_ios: bool,
+) -> Result<(), anyhow::Error> {
     // Convert GODOT_PLATFORM_FILES into a HashMap
     let file_map: HashMap<&str, Vec<&str>> = GODOT_PLATFORM_FILES
         .iter()
@@ -450,6 +454,15 @@ pub fn prepare_templates(platforms: &[String], no_strip: bool) -> Result<(), any
     // Process each template and download the associated files
     let dest_path = godot_export_templates_path().expect("Failed to get template path");
 
+    // Helper: only pass cache key when --cache is enabled
+    let cache_key = |key: String| -> Option<String> {
+        if use_cache {
+            Some(key)
+        } else {
+            None
+        }
+    };
+
     for template in &templates {
         if let Some(files) = file_map.get(template.as_str()) {
             for file in files {
@@ -459,7 +472,7 @@ pub fn prepare_templates(platforms: &[String], no_strip: bool) -> Result<(), any
                 download_and_extract_zip(
                     url.as_str(),
                     dest_path.as_str(),
-                    Some(format!(
+                    cache_key(format!(
                         "{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"
                     )),
                 )?;
@@ -469,13 +482,13 @@ pub fn prepare_templates(platforms: &[String], no_strip: bool) -> Result<(), any
         }
     }
 
-    // Strip iOS templates if downloaded (unless --no-strip is specified)
-    if templates.iter().any(|t| t == "ios") && !no_strip {
+    // Strip iOS templates only if --strip-ios is specified
+    if templates.iter().any(|t| t == "ios") && strip_ios {
         strip_ios_template_symbols(&dest_path)?;
-    } else if templates.iter().any(|t| t == "ios") && no_strip {
+    } else if templates.iter().any(|t| t == "ios") && !strip_ios {
         print_message(
             MessageType::Info,
-            "Skipping iOS template stripping (--no-strip specified, debug symbols preserved for Sentry)",
+            "Keeping iOS debug symbols (use --strip-ios to strip them and save disk space)",
         );
     }
 
