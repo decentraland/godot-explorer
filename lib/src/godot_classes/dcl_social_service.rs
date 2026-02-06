@@ -12,6 +12,9 @@ use crate::social::social_service_manager::SocialServiceManager;
 /// Friendship request data: (address, name, has_claimed_name, profile_picture_url, message, created_at)
 type FriendshipRequestData = (String, String, bool, String, String, i64);
 
+/// Blocked user data: (address, name, has_claimed_name, profile_picture_url, blocked_at)
+type BlockedUserData = (String, String, bool, String, i64);
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclSocialService {
@@ -20,6 +23,8 @@ pub struct DclSocialService {
     friendship_updates_cancel: Arc<RwLock<Option<CancellationToken>>>,
     /// Cancellation token for connectivity updates subscription
     connectivity_updates_cancel: Arc<RwLock<Option<CancellationToken>>>,
+    /// Cancellation token for block updates subscription
+    block_updates_cancel: Arc<RwLock<Option<CancellationToken>>>,
     base: Base<Node>,
 }
 
@@ -30,6 +35,7 @@ impl INode for DclSocialService {
             manager: Arc::new(RwLock::new(None)),
             friendship_updates_cancel: Arc::new(RwLock::new(None)),
             connectivity_updates_cancel: Arc::new(RwLock::new(None)),
+            block_updates_cancel: Arc::new(RwLock::new(None)),
             base,
         }
     }
@@ -65,6 +71,18 @@ impl DclSocialService {
     /// This can happen when the app is minimized or the connection is lost
     #[signal]
     pub fn subscription_dropped();
+
+    /// Signal emitted when a user is blocked
+    #[signal]
+    pub fn user_blocked(address: GString);
+
+    /// Signal emitted when a user is unblocked
+    #[signal]
+    pub fn user_unblocked(address: GString);
+
+    /// Signal emitted when a block update is received from the server (real-time sync)
+    #[signal]
+    pub fn block_update_received(address: GString, is_blocked: bool);
 
     /// Initialize the service with DclPlayerIdentity
     #[func]
@@ -402,6 +420,127 @@ impl DclSocialService {
             let mut guard = cancel_handle.write().await;
             if let Some(token) = guard.take() {
                 tracing::debug!("Cancelling connectivity updates subscription");
+                token.cancel();
+            }
+        });
+    }
+
+    // ========================================
+    // Blocking Features
+    // ========================================
+
+    /// Block a user via RPC
+    #[func]
+    pub fn block_user(&mut self, address: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let manager = self.manager.clone();
+        let address = address.to_string();
+
+        TokioRuntime::spawn(async move {
+            let result = Self::async_block_user(manager, address).await;
+            Self::resolve_simple_promise(get_promise, result);
+        });
+
+        promise
+    }
+
+    /// Unblock a user via RPC
+    #[func]
+    pub fn unblock_user(&mut self, address: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let manager = self.manager.clone();
+        let address = address.to_string();
+
+        TokioRuntime::spawn(async move {
+            let result = Self::async_unblock_user(manager, address).await;
+            Self::resolve_simple_promise(get_promise, result);
+        });
+
+        promise
+    }
+
+    /// Get the list of blocked users
+    #[func]
+    pub fn get_blocked_users(&mut self, limit: i32, offset: i32) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let manager = self.manager.clone();
+
+        TokioRuntime::spawn(async move {
+            let result = Self::async_get_blocked_users(manager, limit, offset).await;
+            Self::resolve_blocked_users_promise(get_promise, result);
+        });
+
+        promise
+    }
+
+    /// Get blocking status (who you blocked and who blocked you)
+    #[func]
+    pub fn get_blocking_status(&mut self) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let manager = self.manager.clone();
+
+        TokioRuntime::spawn(async move {
+            let result = Self::async_get_blocking_status(manager).await;
+            Self::resolve_blocking_status_promise(get_promise, result);
+        });
+
+        promise
+    }
+
+    /// Subscribe to block updates (real-time streaming)
+    #[func]
+    pub fn subscribe_to_block_updates(&mut self) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let manager = self.manager.clone();
+        let instance_id = self.base().instance_id();
+
+        // Create a new cancellation token for this subscription
+        let cancel_token = CancellationToken::new();
+        let cancel_token_clone = cancel_token.clone();
+        let cancel_handle = self.block_updates_cancel.clone();
+
+        TokioRuntime::spawn(async move {
+            // Cancel any existing subscription first
+            {
+                let mut guard = cancel_handle.write().await;
+                if let Some(old_token) = guard.take() {
+                    old_token.cancel();
+                }
+                *guard = Some(cancel_token);
+            }
+
+            // Add timeout to prevent hanging forever
+            let result = tokio::time::timeout(
+                std::time::Duration::from_secs(15),
+                Self::async_subscribe_to_block_updates(manager, instance_id, cancel_token_clone),
+            )
+            .await;
+
+            match result {
+                Ok(inner_result) => {
+                    Self::resolve_simple_promise(get_promise, inner_result);
+                }
+                Err(_) => {
+                    tracing::error!("subscribe_to_block_updates: timeout after 15s");
+                    Self::resolve_simple_promise(
+                        get_promise,
+                        Err("Timeout subscribing to block updates".to_string()),
+                    );
+                }
+            }
+        });
+
+        promise
+    }
+
+    /// Unsubscribe from block updates (cancels the streaming subscription)
+    #[func]
+    pub fn unsubscribe_from_block_updates(&mut self) {
+        let cancel_handle = self.block_updates_cancel.clone();
+        TokioRuntime::spawn(async move {
+            let mut guard = cancel_handle.write().await;
+            if let Some(token) = guard.take() {
+                tracing::debug!("Cancelling block updates subscription");
                 token.cancel();
             }
         });
@@ -982,6 +1121,244 @@ impl DclSocialService {
             }
             Err(e) => {
                 tracing::error!("Social service operation failed: {}", e);
+                promise.bind_mut().reject(GString::from(e.as_str()));
+            }
+        }
+    }
+
+    // ========================================
+    // Blocking Async Helpers
+    // ========================================
+
+    async fn async_block_user(
+        manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
+        address: String,
+    ) -> Result<(), String> {
+        let manager_guard = manager.read().await;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
+
+        mgr.block_user(address)
+            .await
+            .map_err(|e| format!("Failed to block user: {}", e))?;
+
+        Ok(())
+    }
+
+    async fn async_unblock_user(
+        manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
+        address: String,
+    ) -> Result<(), String> {
+        let manager_guard = manager.read().await;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
+
+        mgr.unblock_user(address)
+            .await
+            .map_err(|e| format!("Failed to unblock user: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, blocked_at)
+    async fn async_get_blocked_users(
+        manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
+        limit: i32,
+        offset: i32,
+    ) -> Result<Vec<BlockedUserData>, String> {
+        let manager_guard = manager.read().await;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
+
+        let pagination = if limit > 0 {
+            Some(Pagination { limit, offset })
+        } else {
+            None
+        };
+
+        let response = mgr
+            .get_blocked_users(pagination)
+            .await
+            .map_err(|e| format!("Failed to get blocked users: {}", e))?;
+
+        let blocked_users: Vec<BlockedUserData> = response
+            .profiles
+            .into_iter()
+            .map(|profile| {
+                (
+                    profile.address,
+                    profile.name,
+                    profile.has_claimed_name,
+                    profile.profile_picture_url,
+                    profile.blocked_at.unwrap_or(0),
+                )
+            })
+            .collect();
+
+        Ok(blocked_users)
+    }
+
+    /// Returns (blocked_users_addresses, blocked_by_addresses)
+    async fn async_get_blocking_status(
+        manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
+    ) -> Result<(Vec<String>, Vec<String>), String> {
+        let manager_guard = manager.read().await;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
+
+        let response = mgr
+            .get_blocking_status()
+            .await
+            .map_err(|e| format!("Failed to get blocking status: {}", e))?;
+
+        // blocked_users and blocked_by_users are already Vec<String> in the proto
+        let blocked_users = response.blocked_users;
+        let blocked_by = response.blocked_by_users;
+
+        Ok((blocked_users, blocked_by))
+    }
+
+    async fn async_subscribe_to_block_updates(
+        manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
+        instance_id: InstanceId,
+        cancel_token: CancellationToken,
+    ) -> Result<(), String> {
+        let manager_guard = manager.read().await;
+        let mgr = manager_guard
+            .as_ref()
+            .ok_or("Social service not initialized")?;
+
+        let mut rx = mgr
+            .subscribe_to_block_updates()
+            .await
+            .map_err(|e| format!("Failed to subscribe to block updates: {}", e))?;
+
+        // Spawn update listener task
+        tokio::spawn(async move {
+            Self::handle_block_updates(&mut rx, instance_id, cancel_token).await;
+        });
+
+        Ok(())
+    }
+
+    async fn handle_block_updates(
+        rx: &mut tokio::sync::mpsc::UnboundedReceiver<BlockUpdate>,
+        instance_id: InstanceId,
+        cancel_token: CancellationToken,
+    ) {
+        loop {
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    tracing::debug!("Block updates subscription cancelled");
+                    return;
+                }
+                update = rx.recv() => {
+                    match update {
+                        Some(update) => {
+                            let Some(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id).ok()
+                            else {
+                                break;
+                            };
+                            Self::emit_block_update_signal(&mut node, update);
+                        }
+                        None => {
+                            // Stream ended
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stream ended - emit subscription_dropped signal (only if not cancelled)
+        if !cancel_token.is_cancelled() {
+            if let Ok(mut node) = Gd::<DclSocialService>::try_from_instance_id(instance_id) {
+                tracing::debug!(
+                    "Block updates stream ended - emitting subscription_dropped signal"
+                );
+                node.call_deferred("emit_signal", &["subscription_dropped".to_variant()]);
+            }
+        }
+    }
+
+    fn emit_block_update_signal(node: &mut Gd<DclSocialService>, update: BlockUpdate) {
+        // BlockUpdate has fields: address (string) and is_blocked (bool)
+        let address = update.address;
+        let is_blocked = update.is_blocked;
+
+        node.call_deferred(
+            "emit_signal",
+            &[
+                "block_update_received".to_variant(),
+                address.to_variant(),
+                is_blocked.to_variant(),
+            ],
+        );
+    }
+
+    fn resolve_blocked_users_promise(
+        get_promise: impl Fn() -> Option<Gd<Promise>>,
+        result: Result<Vec<BlockedUserData>, String>,
+    ) {
+        let Some(mut promise) = get_promise() else {
+            return;
+        };
+
+        match result {
+            Ok(blocked_users) => {
+                let mut array = Array::new();
+                for (address, name, has_claimed_name, profile_picture_url, blocked_at) in
+                    blocked_users
+                {
+                    let mut dict = VarDictionary::new();
+                    dict.set("address", address);
+                    dict.set("name", name);
+                    dict.set("has_claimed_name", has_claimed_name);
+                    dict.set("profile_picture_url", profile_picture_url);
+                    dict.set("blocked_at", blocked_at);
+                    array.push(&dict.to_variant());
+                }
+                promise.bind_mut().resolve_with_data(array.to_variant());
+            }
+            Err(e) => {
+                tracing::error!("get_blocked_users failed: {}", e);
+                promise.bind_mut().reject(e.as_str().into());
+            }
+        }
+    }
+
+    fn resolve_blocking_status_promise(
+        get_promise: impl Fn() -> Option<Gd<Promise>>,
+        result: Result<(Vec<String>, Vec<String>), String>,
+    ) {
+        let Some(mut promise) = get_promise() else {
+            return;
+        };
+
+        match result {
+            Ok((blocked_users, blocked_by)) => {
+                let mut dict = VarDictionary::new();
+
+                let mut blocked_array = Array::new();
+                for address in blocked_users {
+                    blocked_array.push(&address.to_variant());
+                }
+                dict.set("blocked_users", blocked_array.to_variant());
+
+                let mut blocked_by_array = Array::new();
+                for address in blocked_by {
+                    blocked_by_array.push(&address.to_variant());
+                }
+                dict.set("blocked_by_users", blocked_by_array.to_variant());
+
+                promise.bind_mut().resolve_with_data(dict.to_variant());
+            }
+            Err(e) => {
+                tracing::error!("get_blocking_status failed: {}", e);
                 promise.bind_mut().reject(GString::from(e.as_str()));
             }
         }

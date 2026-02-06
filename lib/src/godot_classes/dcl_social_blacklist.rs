@@ -191,6 +191,32 @@ impl DclSocialBlacklist {
         arr
     }
 
+    /// Initialize blocked list from RPC blocking status response
+    /// This clears the existing blocked list and adds all addresses from the server
+    #[func]
+    pub fn init_from_blocking_status(&mut self, blocked_users: VarArray) {
+        // Store current state to check if anything changed
+        let old_blocked = self.blocked_addresses.clone();
+
+        // Clear existing blocked list
+        self.blocked_addresses.clear();
+
+        // Add all addresses from RPC response
+        for variant in blocked_users.iter_shared() {
+            let address_str = variant.stringify().to_string();
+            if let Ok(addr) = address_str.parse::<H160>() {
+                self.blocked_addresses.insert(addr);
+            } else {
+                godot_error!("Invalid address format in blocking status: {}", address_str);
+            }
+        }
+
+        // Only emit signal if the list actually changed
+        if old_blocked != self.blocked_addresses {
+            self.base_mut().emit_signal("blacklist_changed", &[]);
+        }
+    }
+
     /// Initialize from a user profile (to load existing blocked/muted lists)
     #[func]
     pub fn init_from_profile(&mut self, profile: Gd<DclUserProfile>) {

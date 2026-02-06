@@ -2127,6 +2127,16 @@ impl ContentProvider {
             let exists = std::path::Path::new(&absolute_path).exists();
             tracing::debug!("Loading resource pack: {} (exists: {})", zip_path, exists);
 
+            // Load resource pack on main thread via semaphore to prevent SIGSEGV crashes
+            // from concurrent Godot API access (COW string reference counting corruption)
+            let sem = ctx.godot_single_thread.clone();
+            let _permit = sem.acquire().await.map_err(|e| {
+                format!(
+                    "Failed to acquire semaphore for resource pack loading: {}",
+                    e
+                )
+            })?;
+
             let result = godot::classes::ProjectSettings::singleton()
                 .load_resource_pack_ex(zip_path)
                 .replace_files(false)

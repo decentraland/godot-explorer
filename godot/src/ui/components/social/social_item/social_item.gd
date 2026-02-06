@@ -430,7 +430,26 @@ func _on_button_unblock_pressed() -> void:
 	# user_unblock metric
 	Global.metrics.track_click_button("user_unblock", "SOCIAL_PANEL", "")
 
-	Global.social_blacklist.remove_blocked(social_data.address)
+	# Disable button during RPC call
+	var unblock_button = %Button_Unblock
+	if unblock_button:
+		unblock_button.disabled = true
+
+	_async_unblock_user(social_data.address)
+
+
+func _async_unblock_user(address: String) -> void:
+	var promise = Global.social_service.unblock_user(address)
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		var unblock_button = %Button_Unblock
+		if unblock_button:
+			unblock_button.disabled = false
+		printerr("Unblock failed: ", PromiseUtils.get_error_message(promise))
+		return
+
+	Global.social_blacklist.remove_blocked(address)  # Update local cache
 	# Update the containing list
 	var parent_list = get_parent()
 	if parent_list != null and parent_list.has_method("async_update_list"):

@@ -162,8 +162,19 @@ func set_hidden(value):
 	hidden = value
 	if hidden:
 		hide()
+		# Disable click detection so blocked/hidden avatars can't be interacted with
+		_set_click_area_enabled(false)
 	else:
 		try_show()
+		# Re-enable click detection
+		_set_click_area_enabled(true)
+
+
+func _set_click_area_enabled(enabled: bool) -> void:
+	if click_area:
+		var collision_shape = click_area.get_node_or_null("CollisionShape3D")
+		if collision_shape:
+			collision_shape.disabled = not enabled
 
 
 func _unset_avatar_modifier_area():
