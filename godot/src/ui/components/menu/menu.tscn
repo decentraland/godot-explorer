@@ -23,8 +23,11 @@ colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_8oh0n"]
 gradient = SubResource("Gradient_6v8vt")
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_080im"]
-bg_color = Color(0.0862745, 0.0784314, 0.105882, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2tihm"]
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+shadow_color = Color(0, 0, 0, 0.2509804)
+shadow_size = 4
+shadow_offset = Vector2(0, -4)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_udswp"]
 resource_local_to_scene = false
@@ -109,7 +112,7 @@ backpack = NodePath("../Control_Backpack")
 [node name="BottomBar_Portrait" type="PanelContainer" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_080im")
+theme_override_styles/panel = SubResource("StyleBoxFlat_2tihm")
 script = ExtResource("3_rdch8")
 clean_on_landscape = true
 
