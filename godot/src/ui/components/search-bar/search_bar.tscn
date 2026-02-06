@@ -34,6 +34,7 @@ placeholder_text = "Search"
 
 [node name="SearchBar_PanelContainer" type="PanelContainer" parent="."]
 unique_name_in_owner = true
+self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 1
 anchors_preset = 15
@@ -74,15 +75,19 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/font_uneditable_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
 theme_override_colors/font_placeholder_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("3_6axsy")
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("StyleBoxEmpty_o46gv")
 theme_override_styles/read_only = SubResource("StyleBoxEmpty_vuyfd")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_8j38y")
 placeholder_text = "Search"
+caret_blink = true
+caret_force_displayed = true
 
 [node name="Button_EraseText" type="TextureButton" parent="SearchBar_PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 self_modulate = Color(0.9098039, 0.7254902, 1, 1)
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
