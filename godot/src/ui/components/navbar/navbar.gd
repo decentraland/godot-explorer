@@ -11,21 +11,21 @@ var _manually_hidden: bool = false
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
 @onready var panel_container: PanelContainer = %PanelContainer
 @onready var v_box_container_buttons: VBoxContainer = %VBoxContainer_Buttons
-@onready var hud_button_friends: Button = %HudButton_Friends
-@onready var hud_button_notifications: Button = %HudButton_Notifications
-@onready var hud_button_backpack: Button = %HudButton_Backpack
-@onready var hud_button_settings: Button = %HudButton_Settings
+@onready var static_button_friends: TextureButton = %StaticButton_Friends
+@onready var static_button_notifications: TextureButton = %StaticButton_Notifications
 @onready var button: Button = %Button
-@onready var portrait_button_profile: Button = %Portrait_Button_Profile
+@onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
+@onready var static_button_backpack: TextureButton = %StaticButton_Backpack
+@onready var static_button_settings: TextureButton = %StaticButton_Settings
 
 
 func _ready() -> void:
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
-	hud_button_friends.button_group = btn_group
-	hud_button_notifications.button_group = btn_group
-	hud_button_backpack.button_group = btn_group
-	hud_button_settings.button_group = btn_group
+	static_button_friends.button_group = btn_group
+	static_button_notifications.button_group = btn_group
+	static_button_backpack.button_group = btn_group
+	static_button_settings.button_group = btn_group
 	portrait_button_profile.button_group = btn_group
 	# Ensure there's always a pressed button at startup
 	# The ButtonGroup with allow_unpress = false ensures one is always pressed
@@ -83,13 +83,13 @@ func _on_button_toggled(toggled_on: bool) -> void:
 func set_button_pressed(button_to_press: BUTTON) -> void:
 	match button_to_press:
 		BUTTON.FRIENDS:
-			hud_button_friends.button_pressed = true
+			static_button_friends.button_pressed = true
 		BUTTON.NOTIFICATIONS:
-			hud_button_notifications.button_pressed = true
+			static_button_notifications.button_pressed = true
 		BUTTON.BACKPACK:
-			hud_button_backpack.button_pressed = true
+			static_button_backpack.button_pressed = true
 		BUTTON.SETTINGS:
-			hud_button_settings.button_pressed = true
+			static_button_settings.button_pressed = true
 
 
 func capture_mouse():

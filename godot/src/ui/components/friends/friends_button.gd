@@ -1,4 +1,4 @@
-extends AnimatedButton
+extends StaticButton
 
 var _pending_requests_count: int = 0
 

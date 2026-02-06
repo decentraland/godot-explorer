@@ -30,27 +30,27 @@ var fade_in_tween: Tween = null
 
 @onready var control_deploying_profile := %Control_DeployingProfile
 
-@onready var portrait_button_profile: Button = %Portrait_Button_Profile
+@onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
 
 @onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
 @onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
 @onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
 
-@onready var hud_button_backpack: Button = %HudButton_Backpack
-@onready var hud_button_discover: Button = %HudButton_Discover
-@onready var hud_button_settings: Button = %HudButton_Settings
+@onready var static_button_backpack: TextureButton = %StaticButton_Backpack
+@onready var static_button_discover: TextureButton = %StaticButton_Discover
+@onready var static_button_settings: TextureButton = %StaticButton_Settings
 @onready var control_modal: Control = %Control_Modal
 
 
 func _ready():
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
-	hud_button_backpack.button_group = btn_group
-	hud_button_discover.button_group = btn_group
-	hud_button_settings.button_group = btn_group
+	static_button_backpack.button_group = btn_group
+	static_button_discover.button_group = btn_group
+	static_button_settings.button_group = btn_group
 	portrait_button_profile.button_group = btn_group
 	Global.open_discover.emit()
-	hud_button_discover.button_pressed = true
+	static_button_discover.button_pressed = true
 
 	account_deletion_pop_up.hide()
 
@@ -112,8 +112,8 @@ func close():
 func async_show_discover(open_menu := true):
 	await control_discover._async_instantiate()
 	select_discover_screen()
-	if is_instance_valid(hud_button_discover):
-		hud_button_discover.toggled.emit(true)
+	if is_instance_valid(static_button_discover):
+		static_button_discover.toggled.emit(true)
 	if open_menu:
 		_open()
 
