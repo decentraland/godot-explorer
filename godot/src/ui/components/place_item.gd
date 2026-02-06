@@ -71,17 +71,15 @@ func _ready():
 
 	var description_container = _get_description()
 	if description_container:
-		#description_container.hide()
 		description_container.show()
 
 	if is_draggable and card:
 		var initial_positon := func():
-			card.position.y = 1300
-			tween_to(700)
+			card.position.y = _get_card_hidden_position()
+			tween_to(_get_card_half_position())
 		# NOTE must call deferred
 		# otherwise the UI is broken
 		initial_positon.call_deferred()
-
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -106,12 +104,20 @@ func _get_description() -> VBoxContainer:
 	return _get_node_safe("VBoxContainer_Description")
 
 
+func _get_description_scroll() -> VBoxContainer:
+	return _get_node_safe("ScrollDescription")
+
+
 func _get_card() -> PanelContainer:
 	return _get_node_safe("PanelContainer_Card")
 
 
 func _get_header() -> PanelContainer:
 	return _get_node_safe("PanelContainer_Header")
+
+
+func _get_footer() -> PanelContainer:
+	return _get_node_safe("PanelContainer_Footer")
 
 
 func _get_show_more_container() -> Button:
@@ -856,7 +862,7 @@ func _on_show_more_toggled(toggled_on: bool) -> void:
 			#show_more.hide()
 		else:
 			#description_container.hide()
-			header.hide()
+			#header.hide()
 			#card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 			_set_card_corner_radius(card, 24, 24)
 			show_more.show()
@@ -921,23 +927,50 @@ func _input(event: InputEvent) -> void:
 			elif drag_distance < -50:
 				gesture = DragGesture.UP
 
+			if _is_scrolling(event.position, gesture):
+				return
+
 			match gesture:
 				DragGesture.UP:
 					match drag_state:
 						DragState.HALF:
 							_on_show_more_toggled(true)
 							drag_state = DragState.FULL
-							tween_to(0)
+							tween_to(0.0)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:
 							_on_show_more_toggled(false)
 							drag_state = DragState.HALF
-							tween_to(700)
+							tween_to(_get_card_half_position())
 						DragState.HALF:
 							drag_state = DragState.HIDDEN
-							#_on_texture_button_close_pressed()
-							tween_to(1300, _on_texture_button_close_pressed)
+							tween_to(_get_card_hidden_position(), _on_texture_button_close_pressed)
+
+
+## Is the user scrolling trough the description?
+func _is_scrolling(pos: Vector2, gesture: DragGesture) -> bool:
+	var description_rect := _get_description_scroll().get_global_rect()
+	if not description_rect.has_point(pos):
+		return false
+	var v_scroll: float = _get_description_scroll().get_v_scroll()
+	if gesture == DragGesture.DOWN:
+		if v_scroll > 50.0:
+			return true
+	return false
+
+
+func _get_card_half_position() -> float:
+	var footer := _get_footer()
+	var footer_height: float = footer.get_rect().size.y
+	var description_position := _get_description().get_rect().position.y
+	var full_height := get_rect().size.y
+	return full_height - description_position - footer_height
+
+
+func _get_card_hidden_position() -> float:
+	return get_rect().size.y
+
 
 func tween_to(y_position: float, callback: Callable = func():return) -> void:
 	var card := _get_card()
