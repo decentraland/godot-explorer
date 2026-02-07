@@ -510,20 +510,21 @@ theme_override_constants/separation = 40
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+[node name="ScrollDescription" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollDescription"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="Label_DescriptionTitle" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="Label_DescriptionTitle" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollDescription/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
@@ -533,13 +534,13 @@ text = "DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
 
-[node name="HSeparator3" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollDescription/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4wgrb")
 
-[node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollDescription/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -557,19 +558,20 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollDescription/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 80
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="CategoriesBar" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollContainer/VBoxContainer" instance=ExtResource("19_7t5hv")]
+[node name="CategoriesBar" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/VBoxContainer/VBoxContainer_Description/ScrollDescription/VBoxContainer" instance=ExtResource("19_7t5hv")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 size_flags_vertical = 1
 
 [node name="PanelContainer_Footer" type="PanelContainer" parent="."]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 142)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_elce2")
