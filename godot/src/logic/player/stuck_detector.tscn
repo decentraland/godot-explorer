@@ -3,9 +3,9 @@
 [ext_resource type="Script" path="res://src/logic/player/stuck_detector.gd" id="1_script"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_stuck"]
-margin = 0.05
-radius = 0.25
-height = 1.5
+margin = 0.08
+radius = 0.3
+height = 1.6
 
 [node name="StuckDetector" type="Area3D"]
 collision_layer = 0
