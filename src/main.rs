@@ -28,6 +28,7 @@ mod platform;
 mod run;
 mod tests;
 mod ui;
+mod update_snapshots;
 mod version;
 mod version_check;
 
@@ -338,6 +339,36 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("pck")
                         .help("Re-export and update the PCK file")
                         .takes_value(false),
+                ),
+        ).subcommand(
+            Command::new("update-docker-snapshots")
+                .about("Update Docker avatar/scene test snapshots from CI artifacts")
+                .arg(
+                    Arg::new("run-id")
+                        .long("run-id")
+                        .help("GitHub Actions run ID (defaults to latest on current branch)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("Branch to find runs on (defaults to current branch)")
+                        .takes_value(true),
+                ),
+        ).subcommand(
+            Command::new("update-coverage-snapshots")
+                .about("Update coverage test snapshots from CI artifacts")
+                .arg(
+                    Arg::new("run-id")
+                        .long("run-id")
+                        .help("GitHub Actions run ID (defaults to latest on current branch)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("Branch to find runs on (defaults to current branch)")
+                        .takes_value(true),
                 ),
         ).subcommand(
             Command::new("update-libgodot-android")
@@ -713,6 +744,14 @@ fn main() -> Result<(), anyhow::Error> {
         ("update-libgodot-android", sm) => {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
+        ("update-docker-snapshots", sm) => update_snapshots::update_docker_snapshots(
+            sm.value_of("run-id"),
+            sm.value_of("branch"),
+        ),
+        ("update-coverage-snapshots", sm) => update_snapshots::update_coverage_snapshots(
+            sm.value_of("run-id"),
+            sm.value_of("branch"),
+        ),
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),

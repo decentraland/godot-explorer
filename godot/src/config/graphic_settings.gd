@@ -35,7 +35,7 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	},
 	# High (3) - Best quality
 	{
-		"aa": 3,
+		"aa": 1,
 		"shadow": 2,
 		"bloom": 2,
 		"skybox": 2,

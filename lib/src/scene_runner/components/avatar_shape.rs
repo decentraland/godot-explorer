@@ -240,13 +240,38 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                     );
                     continue;
                 };
+
+                // Build scene-emote URN (same format used for comms)
+                let scene_emote_urn = format!(
+                    "urn:decentraland:off-chain:scene-emote:{}-{}-{}",
+                    scene.scene_entity_definition.id, emote_hash.glb_hash, emote.r#loop
+                );
+
                 tracing::debug!(
-                    "AvatarEmoteCommand: playing scene emote glb_hash={}, audio_hash={:?}",
+                    "AvatarEmoteCommand: playing scene emote urn={}, glb_hash={}, audio_hash={:?}",
+                    scene_emote_urn,
                     emote_hash.glb_hash,
                     emote_hash.audio_hash
                 );
-                let emote_data = emote_hash.to_godot_data(emote.r#loop);
-                avatar_node.call_deferred("async_play_scene_emote", &[emote_data.to_variant()]);
+
+                // Register content URL for this scene (so GDScript can look it up)
+                avatar_node.call_deferred(
+                    "register_scene_emote_content",
+                    &[
+                        scene.scene_entity_definition.id.to_godot().to_variant(),
+                        scene.content_mapping.base_url.to_godot().to_variant(),
+                        emote_hash.glb_hash.to_godot().to_variant(),
+                        emote_hash
+                            .audio_hash
+                            .as_deref()
+                            .unwrap_or_default()
+                            .to_godot()
+                            .to_variant(),
+                    ],
+                );
+
+                // Call the SAME function as wearable emotes!
+                avatar_node.call_deferred("async_play_emote", &[scene_emote_urn.to_variant()]);
             } else {
                 tracing::debug!(
                     "AvatarEmoteCommand: playing wearable emote urn={}",

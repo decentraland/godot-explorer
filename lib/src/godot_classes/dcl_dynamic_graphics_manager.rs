@@ -35,6 +35,7 @@ const COOLDOWN_AFTER_DOWNGRADE: f64 = 120.0; // 2 minutes after downgrade
 const COOLDOWN_AFTER_UPGRADE: f64 = 300.0; // 5 minutes after upgrade
 const THERMAL_HIGH_DOWNGRADE_TIME: f64 = 30.0; // Seconds of HIGH thermal before downgrade
 const SAMPLE_INTERVAL: f64 = 1.0; // Sample frame time every second
+const PLATFORM_POLL_INTERVAL: f64 = 5.0; // Poll thermal/charging state every 5 seconds
 
 /// Threshold constants
 const FRAME_TIME_DOWNGRADE_RATIO: f64 = 1.2;
@@ -476,6 +477,12 @@ pub struct DclDynamicGraphicsManager {
     is_charging: bool,
     /// Whether thermal FPS cap system is enabled
     thermal_fps_cap_enabled: bool,
+
+    // === Platform polling throttle ===
+    /// Timer for throttling JNI/platform calls
+    platform_poll_timer: f64,
+    /// Cached thermal state string from last platform poll
+    cached_thermal_str: String,
 }
 
 #[godot_api]
@@ -497,6 +504,9 @@ impl INode for DclDynamicGraphicsManager {
             thermal_fps_cooldown_timer: 0.0,
             is_charging: false,
             thermal_fps_cap_enabled: true,
+            // Platform polling throttle
+            platform_poll_timer: PLATFORM_POLL_INTERVAL, // Start at limit to poll immediately on first frame
+            cached_thermal_str: "nominal".to_string(),
         }
     }
 
@@ -504,11 +514,13 @@ impl INode for DclDynamicGraphicsManager {
         if let Some(viewport) = self.base().get_viewport() {
             let rid = viewport.get_viewport_rid();
             self.viewport_rid = Some(rid);
-            RenderingServer::singleton().viewport_set_measure_render_time(rid, true);
-            self.render_time_enabled = true;
+            // Don't enable render time measurement yet - it will be enabled
+            // when the manager transitions to an active state (WarmingUp/Monitoring/Cooldown).
+            // GPU timestamp queries can hurt performance on mobile tile-based renderers.
+            self.render_time_enabled = false;
 
             godot_print!(
-                "[DynamicGraphics] ready: render time measurement enabled (iOS={}, Android={})",
+                "[DynamicGraphics] ready: viewport acquired, render time measurement deferred (iOS={}, Android={})",
                 self.has_ios_plugin,
                 self.has_android_plugin
             );
@@ -523,10 +535,16 @@ impl INode for DclDynamicGraphicsManager {
 
     fn process(&mut self, delta: f64) {
         let render_time_ms = self.get_total_render_time_ms();
-        let thermal_str = self.get_thermal_state_from_platform();
 
-        // Update charging state
-        self.update_charging_state();
+        // Throttle platform calls (JNI on Android) to avoid per-frame overhead
+        self.platform_poll_timer += delta;
+        if self.platform_poll_timer >= PLATFORM_POLL_INTERVAL {
+            self.platform_poll_timer = 0.0;
+            let (thermal, charging) = self.get_platform_metrics();
+            self.cached_thermal_str = thermal;
+            self.is_charging = charging == "charging";
+        }
+        let thermal_str = self.cached_thermal_str.clone();
 
         // Process thermal FPS cap (independent of profile management)
         if self.thermal_fps_cap_enabled {
@@ -565,6 +583,7 @@ impl DclDynamicGraphicsManager {
     #[func]
     pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {
         self.state.initialize(enabled, current_profile, fps_limit);
+        self.set_render_time_measurement(self.state.is_active());
         godot_print!(
             "[DynamicGraphics] initialized: enabled={}, profile={}, target={}ms",
             enabled,
@@ -597,11 +616,13 @@ impl DclDynamicGraphicsManager {
     #[func]
     pub fn on_manual_profile_change(&mut self, new_profile: i32) {
         self.state.on_manual_profile_change(new_profile);
+        self.set_render_time_measurement(self.state.is_active());
     }
 
     #[func]
     pub fn set_enabled(&mut self, enabled: bool) {
         self.state.set_enabled(enabled);
+        self.set_render_time_measurement(self.state.is_active());
         godot_print!("[DynamicGraphics] set_enabled({})", enabled);
     }
 
@@ -745,24 +766,29 @@ impl DclDynamicGraphicsManager {
 }
 
 impl DclDynamicGraphicsManager {
-    fn get_thermal_state_from_platform(&self) -> String {
-        if self.has_ios_plugin {
-            return DclIosPlugin::get_thermal_state().to_string();
+    fn set_render_time_measurement(&mut self, enabled: bool) {
+        if self.render_time_enabled == enabled {
+            return;
         }
-        if self.has_android_plugin {
-            return DclAndroidPlugin::get_thermal_state().to_string();
+        if let Some(rid) = self.viewport_rid {
+            RenderingServer::singleton().viewport_set_measure_render_time(rid, enabled);
+            self.render_time_enabled = enabled;
+            godot_print!(
+                "[DynamicGraphics] render time measurement {}",
+                if enabled { "enabled" } else { "disabled" }
+            );
         }
-        "nominal".to_string()
     }
 
-    fn get_charging_state_from_platform(&self) -> String {
+    /// Get thermal and charging state from the platform in a single call
+    fn get_platform_metrics(&self) -> (String, String) {
         if self.has_ios_plugin {
-            return DclIosPlugin::get_charging_state().to_string();
+            return DclIosPlugin::get_thermal_and_charging_state();
         }
         if self.has_android_plugin {
-            return DclAndroidPlugin::get_charging_state().to_string();
+            return DclAndroidPlugin::get_thermal_and_charging_state();
         }
-        "unknown".to_string()
+        ("nominal".to_string(), "unknown".to_string())
     }
 
     fn get_total_render_time_ms(&self) -> f64 {
@@ -778,11 +804,6 @@ impl DclDynamicGraphicsManager {
         } else {
             self.state.target_frame_time_ms
         }
-    }
-
-    fn update_charging_state(&mut self) {
-        let charging_str = self.get_charging_state_from_platform();
-        self.is_charging = charging_str == "charging";
     }
 
     /// Process thermal FPS cap logic
