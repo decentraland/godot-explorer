@@ -39,7 +39,7 @@ var drag_tween: Tween
 var drag_state := DragState.HALF
 var dragging: bool = false
 
-var _data = null
+var _data: Dictionary = {}
 var _node_cache: Dictionary = {}
 
 
@@ -262,6 +262,10 @@ func _get_container_online() -> Control:
 	return _get_node_safe("Container_Online")
 
 
+func _get_container_location() -> HBoxContainer:
+	return _get_node_safe("HBoxContainer_Location")
+
+
 func _get_separator_online() -> VSeparator:
 	return _get_node_safe("VSeparator_Online")
 
@@ -329,6 +333,32 @@ func _connect_signals():
 			button_share.pressed.connect(_on_button_share_pressed)
 
 
+func set_server_or_location(unlimited:bool = false) -> void:
+	var server = _data.get("server", null)
+	var world_name = _data.get("world_name", null)
+	var is_world = _data.get("world", false)
+	if server and str(server) != "main":
+		var realm_id = str(server)
+		if not realm_id.ends_with(".dcl.eth"):
+			realm_id = realm_id + ".dcl.eth"
+		realm = realm_id
+		set_world(server, unlimited)
+	elif is_world and world_name:
+		var wn = str(world_name)
+		if wn.ends_with(".dcl.eth"):
+			realm = wn
+		else:
+			realm = wn + ".dcl.eth"
+		set_world(world_name, unlimited)
+	else:
+		realm = DclUrls.main_realm()
+
+	location = _parse_position_from_item(_data)
+	var is_world_place = (server and str(server) != "main") or is_world
+	if not is_world_place:
+		set_location(location)
+
+
 func set_location(_location: Vector2i):
 	var label = _get_label_location()
 	var texture_rect_location = _get_texture_rect_location()
@@ -342,6 +372,7 @@ func set_location(_location: Vector2i):
 	if texture_rect_location and texture_rect_server:
 		texture_rect_location.show()
 		texture_rect_server.hide()
+	 
 
 
 func set_scene_event_name(scene_name: String) -> void:
@@ -350,13 +381,16 @@ func set_scene_event_name(scene_name: String) -> void:
 		event_location_name.text = scene_name
 
 
-func set_world(world: String):
+func set_world(world: String, unlimited: bool = false):
 	var label = _get_label_location()
 	var texture_rect_location = _get_texture_rect_location()
 	var texture_rect_server = _get_texture_rect_server()
 	var event_location_coords = _get_label_event_location_coords()
 	if label:
-		label.text = format_name(world, 7)
+		if unlimited:
+			label.text = world
+		else:
+			label.text = format_name(world, 7)
 	if event_location_coords:
 		event_location_coords.text = format_name(world, 30)
 	if texture_rect_location and texture_rect_server:
@@ -471,29 +505,7 @@ func set_data(item_data):
 		if timestamp > 0:
 			event_start_timestamp = timestamp
 
-	var server = item_data.get("server", null)
-	var world_name = item_data.get("world_name", null)
-	var is_world = item_data.get("world", false)
-	if server and str(server) != "main":
-		var realm_id = str(server)
-		if not realm_id.ends_with(".dcl.eth"):
-			realm_id = realm_id + ".dcl.eth"
-		realm = realm_id
-		set_world(server)
-	elif is_world and world_name:
-		var wn = str(world_name)
-		if wn.ends_with(".dcl.eth"):
-			realm = wn
-		else:
-			realm = wn + ".dcl.eth"
-		set_world(world_name)
-	else:
-		realm = DclUrls.main_realm()
-
-	location = _parse_position_from_item(item_data)
-	var is_world_place = (server and str(server) != "main") or is_world
-	if not is_world_place:
-		set_location(location)
+	set_server_or_location()
 
 	set_attending(item_data.get("attending", false), event_id, event_tags)
 	_update_reminder_and_jump_buttons()
@@ -903,15 +915,21 @@ func _update_separators() -> void:
 	var separator_online = _get_separator_online()
 	var container_likes = _get_container_likes()
 	var container_online = _get_container_online()
+	var container_location = _get_container_location()
 	if container_likes and container_online:
 		if separator_likes and separator_online:
 			if container_likes.visible and container_online.visible:
 				separator_likes.show()
-				separator_online.show()
+				separator_online.show()					
 			else:
 				separator_likes.hide()
 				separator_online.hide()
-
+			if container_location:
+				if	!container_likes.visible and !container_online.visible:
+					container_location.alignment = BoxContainer.ALIGNMENT_BEGIN
+					set_server_or_location(true)
+				else:
+					container_location.alignment = BoxContainer.ALIGNMENT_END
 
 func _input(event: InputEvent) -> void:
 	if not visible or not is_draggable:
