@@ -40,7 +40,7 @@ func on_request(_offset: int, limit: int) -> void:
 
 	# TODO: Implement more filters (categories, sorting, etc.)
 	# For now we only query the events API URL
-	var url = DclUrls.events_api() + "/"
+	var url = DclUrls.mobile_events_api() + "/"
 	url += "?sdk=7"
 
 	if search_param.length() > 0:
