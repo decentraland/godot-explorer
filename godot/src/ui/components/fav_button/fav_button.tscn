@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://ba11hrmvgrth1" path="res://assets/ui/heart-outlined.svg" id="1_ippe3"]
 [ext_resource type="Texture2D" uid="uid://dr2whjr8r1yvj" path="res://assets/ui/heart-color.svg" id="2_2eil8"]
 [ext_resource type="Script" uid="uid://yo35b316fjjd" path="res://src/ui/components/fav_button/fav_button.gd" id="3_prvw4"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_atua3"]
+[ext_resource type="Texture2D" uid="uid://bevnklj01pdyp" path="res://src/ui/components/discover/icons/fav-solid.svg" id="4_prvw4"]
 
 [node name="FavButton" type="TextureButton"]
 custom_minimum_size = Vector2(72, 72)
@@ -15,23 +15,25 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("3_prvw4")
 
-[node name="TextureProgressBar" parent="." instance=ExtResource("4_atua3")]
+[node name="TextureRect_Pressed" type="TextureRect" parent="."]
 unique_name_in_owner = true
 visible = false
-modulate = Color(1, 1, 1, 0.470588)
+modulate = Color(0.7529412, 0.10980392, 0.22352941, 1)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
-scale = Vector2(0.2, 0.2)
-pivot_offset = Vector2(64, 64)
+mouse_filter = 2
+texture = ExtResource("4_prvw4")
+expand_mode = 3
 
 [connection signal="toggled" from="." to="." method="_async_set_fav"]

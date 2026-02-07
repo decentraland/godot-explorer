@@ -31,7 +31,6 @@ var event_id: String
 var event_status: String
 var event_tags: String
 var event_start_timestamp: int = 0
-var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var start_pos: Vector2
 var initial_pos: Vector2
@@ -48,7 +47,6 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
 
-	engagement_bar = _get_engagement_bar()
 
 	if metadata.is_empty():
 		set_image(texture)
@@ -445,6 +443,7 @@ func set_data(item_data):
 	set_event_pills(item_data)
 	set_categories(item_data.get("categories", []))
 	set_fav_button_data(item_data.get("id", "-"))
+	set_engagement_bar_data(item_data.get("id", "-"))
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
 	event_status = "live" if live else "upcoming"
@@ -495,8 +494,6 @@ func set_data(item_data):
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
 
-	if engagement_bar:
-		engagement_bar.update_data(_data)
 
 	set_download_warning(item_data)
 
@@ -874,6 +871,12 @@ func set_fav_button_data(_id: String) -> void:
 	var fav_button = _get_fav_button()
 	if fav_button:
 		fav_button.update_data(_id)
+
+
+func set_engagement_bar_data(_id: String) -> void:
+	var engagement_bar = _get_engagement_bar()
+	if engagement_bar:
+		engagement_bar.update_data(_id)
 
 
 func _update_separators() -> void:
