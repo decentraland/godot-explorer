@@ -253,7 +253,7 @@ pub(crate) fn scene_thread(
     }
 
     let scene_code = format!(
-        "var module = {{ exports: {{}} }};{};module.exports.__after__ = async function() {{}};module.exports",
+        "var module = {{ exports: {{}} }};(function(){{{}}})();module.exports.__after__ = async function() {{}};module.exports",
         file.unwrap().get_as_text()
     );
 
