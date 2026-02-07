@@ -20,8 +20,12 @@ use crate::dcl::common::{
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
+use super::crdt::message::{
+    append_gos_component, delete_entity, process_many_messages, put_or_delete_lww_component,
+};
 use super::crdt::SceneCrdtState;
-use super::{crdt::message::process_many_messages, serialization::reader::DclReader};
+use super::serialization::reader::DclReader;
+use super::serialization::writer::DclWriter;
 use super::{RendererResponse, SceneId, SceneResponse, SpawnDclSceneData};
 
 use std::cell::RefCell;
@@ -222,6 +226,39 @@ pub(crate) fn scene_thread(
             process_many_messages(&mut stream, &mut scene_crdt_state);
 
             let dirty = scene_crdt_state.take_dirty();
+
+            // Re-serialize only known components for JS (filters out unknown component IDs
+            // that would cause "[receiveMessages] ERROR processing message" in the SDK)
+            let mut filtered_buf = Vec::new();
+            let mut writer = DclWriter::new(&mut filtered_buf);
+
+            for (component_id, entities) in dirty.lww.iter() {
+                for entity_id in entities {
+                    let _ = put_or_delete_lww_component(
+                        &scene_crdt_state,
+                        entity_id,
+                        component_id,
+                        &mut writer,
+                    );
+                }
+            }
+            for (component_id, entities) in dirty.gos.iter() {
+                for (entity_id, element_count) in entities {
+                    let _ = append_gos_component(
+                        &scene_crdt_state,
+                        entity_id,
+                        component_id,
+                        element_count,
+                        &mut writer,
+                    );
+                }
+            }
+            for entity_id in dirty.entities.died.iter() {
+                delete_entity(entity_id, &mut writer);
+            }
+
+            scene_main_crdt = Some(filtered_buf);
+
             thread_sender_to_main
                 .send(SceneResponse::Ok {
                     scene_id,
@@ -232,8 +269,6 @@ pub(crate) fn scene_thread(
                     deno_memory_stats: None,
                 })
                 .expect("error sending scene response!!");
-
-            scene_main_crdt = Some(buf);
         }
     }
 
