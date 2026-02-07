@@ -41,6 +41,8 @@ var dragging: bool = false
 
 var _data: Dictionary = {}
 var _node_cache: Dictionary = {}
+var _tween_callback: Callable
+var _tween_header_visible: bool
 
 
 func _ready():
@@ -54,7 +56,7 @@ func _ready():
 		set_online(onlines)
 		set_title(title)
 		set_event_name(event_name)
-		set_description(description)
+		#set_description(description)
 		set_likes_percent(likes_percent)
 		set_location(location)
 		set_categories(categories)
@@ -67,11 +69,15 @@ func _ready():
 		# otherwise the UI is broken
 		card.set_anchors_and_offsets_preset.call_deferred(Control.PRESET_FULL_RECT)
 
-	var description_container = _get_description()
+	var description_container = _get_hide_from_here()
 	if description_container:
 		description_container.show()
 
 	if is_draggable and card:
+		var header = _get_header()
+		if header:
+			header.modulate = Color.TRANSPARENT
+			header.hide()
 		var initial_positon := func():
 			card.position.y = _get_card_hidden_position()
 			tween_to(_get_card_half_position())
@@ -98,8 +104,8 @@ func _get_categories_bar() -> CategoriesBar:
 	return _get_node_safe("CategoriesBar")
 
 
-func _get_description() -> VBoxContainer:
-	return _get_node_safe("VBoxContainer_Description")
+func _get_hide_from_here() -> HSeparator:
+	return _get_node_safe("HSeparator_HideFromHere")
 
 
 func _get_description_scroll() -> VBoxContainer:
@@ -489,7 +495,7 @@ func set_data(item_data):
 
 	var event_scene_name = _get_or_empty_string(item_data, "scene_name")
 	set_scene_event_name(event_scene_name)
-	set_description(_get_or_empty_string(item_data, "description"))
+	#set_description(_get_or_empty_string(item_data, "description"))
 
 	event_id = item_data.get("id", "id")
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
@@ -857,24 +863,18 @@ func _on_button_jump_to_event_pressed() -> void:
 
 
 func _on_show_more_toggled(toggled_on: bool) -> void:
-	var description_container = _get_description()
-	var show_more = _get_show_more_container()
+	var hide_from_here = _get_hide_from_here()
+	#var show_more = _get_show_more_container()
 	var card = _get_card()
 	var header = _get_header()
 
-	if description_container and header and card and show:
+	if hide_from_here and header and card and show:
 		if toggled_on:
-			description_container.show()
-			#header.show()
-			#card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			hide_from_here.show()
 			_set_card_corner_radius(card, 0, 0)
-			#show_more.hide()
 		else:
-			#description_container.hide()
-			#header.hide()
-			#card.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 			_set_card_corner_radius(card, 24, 24)
-			show_more.show()
+	# header and show_more visibility are animated via modulate in tween_to()
 
 
 func _set_card_corner_radius(card: PanelContainer, top_left: int, top_right: int) -> void:
@@ -957,16 +957,14 @@ func _input(event: InputEvent) -> void:
 						DragState.HALF:
 							_on_show_more_toggled(true)
 							drag_state = DragState.FULL
-							tween_to(0.0)
+							tween_to(0.0, func(): return, true)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:
-							_on_show_more_toggled(false)
-							drag_state = DragState.HALF
-							tween_to(_get_card_half_position())
+							pass  # From full only close button closes; gesture does nothing
 						DragState.HALF:
 							drag_state = DragState.HIDDEN
-							tween_to(_get_card_hidden_position(), _on_texture_button_close_pressed)
+							tween_to(_get_card_hidden_position(), _on_texture_button_close_pressed, false)
 
 
 ## Is the user scrolling trough the description?
@@ -981,24 +979,71 @@ func _is_scrolling(pos: Vector2, gesture: DragGesture) -> bool:
 	return false
 
 
+func _get_offset_y_in_ancestor(node: Node, ancestor: Node) -> float:
+	var y: float = 0.0
+	var n: Node = node
+	while n != null and n != ancestor:
+		if n is Control:
+			y += (n as Control).position.y
+		n = n.get_parent()
+	return y
+
+
 func _get_card_half_position() -> float:
-	var footer := _get_footer()
-	var footer_height: float = footer.get_rect().size.y
-	var description_position := _get_description().get_rect().position.y
-	var full_height := get_rect().size.y
-	return full_height - description_position - footer_height
+	var card := _get_card()
+	var hide_from_here := _get_hide_from_here()
+	if not card or not hide_from_here:
+		return 0.0
+	# Layout-independent offset: bottom of hide_from_here relative to card, so half is consistent (places/events)
+	var offset_to_separator_top: float = _get_offset_y_in_ancestor(hide_from_here, card)
+	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y
+	var full_height: float = get_rect().size.y
+	return full_height - offset_to_separator_bottom
 
 
 func _get_card_hidden_position() -> float:
 	return get_rect().size.y
 
 
-func tween_to(y_position: float, callback: Callable = func():return) -> void:
+const _TWEEN_DURATION := 0.2
+
+
+func _on_tween_to_finished() -> void:
+	var header := _get_header()
+	var show_more := _get_show_more_container()
+	if header and is_draggable and not _tween_header_visible:
+		header.hide()
+	if show_more and is_draggable and _tween_header_visible:
+		show_more.hide()
+	if _tween_callback.is_valid():
+		_tween_callback.call()
+
+
+func tween_to(y_position: float, callback: Callable = Callable(), header_visible: bool = false) -> void:
 	var card := _get_card()
-	if not card: return
+	if not card:
+		return
 	if drag_tween and drag_tween.is_running():
 		drag_tween.stop()
 		drag_tween = null
+	_tween_callback = callback if callback.is_valid() else Callable()
+	_tween_header_visible = header_visible
+	var header := _get_header()
+	var show_more := _get_show_more_container()
+	if header and is_draggable and header_visible:
+		header.show()
+		header.self_modulate = Color.TRANSPARENT
+	if show_more and is_draggable and not header_visible:
+		show_more.show()
+		show_more.self_modulate = Color.TRANSPARENT
 	drag_tween = create_tween().set_trans(Tween.TRANS_QUART)
-	drag_tween.tween_property(card, "position:y", y_position, 0.2)
-	drag_tween.tween_callback(callback)
+	drag_tween.set_parallel(true)
+	drag_tween.tween_property(card, "position:y", y_position, _TWEEN_DURATION)
+	if header and is_draggable:
+		var header_target := Color.WHITE if header_visible else Color.TRANSPARENT
+		drag_tween.tween_property(header, "self_modulate", header_target, _TWEEN_DURATION)
+	if show_more and is_draggable:
+		var show_more_target := Color.TRANSPARENT if header_visible else Color.WHITE
+		drag_tween.tween_property(show_more, "self_modulate", show_more_target, _TWEEN_DURATION)
+	drag_tween.set_parallel(false)
+	drag_tween.tween_callback(_on_tween_to_finished)

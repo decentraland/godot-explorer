@@ -3,7 +3,6 @@ extends TextureButton
 
 var _place_id
 
-@onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 @onready var texture_rect_pressed: TextureRect = %TextureRect_Pressed
 
 
