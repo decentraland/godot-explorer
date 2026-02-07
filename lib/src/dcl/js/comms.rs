@@ -23,6 +23,15 @@ pub fn ops() -> Vec<OpDecl> {
 pub(crate) const COMMS_MSG_TYPE_STRING: u8 = 1;
 pub(crate) const COMMS_MSG_TYPE_BINARY: u8 = 2;
 
+/// The LiveKit identity string for the authoritative server.
+/// The SDK expects this exact string as the sender address for auth server messages.
+const AUTH_SERVER_IDENTITY: &str = "authoritative-server";
+
+/// Synthetic H160 address used internally for non-Ethereum identities like the auth server.
+fn auth_server_synthetic_address() -> H160 {
+    H160::from_low_u64_be(1)
+}
+
 /// Helper function to parse an address string (with or without 0x prefix) to H160
 fn parse_address(address: &str) -> Option<H160> {
     let addr = if let Some(stripped) = address.strip_prefix("0x") {
@@ -71,15 +80,27 @@ fn recv_binary_internal(state: Rc<RefCell<OpState>>) -> Vec<Vec<u8>> {
         .borrow_mut()
         .try_take::<InternalPendingBinaryMessages>()
     {
+        if !pending_messages.messages.is_empty() {
+            tracing::debug!(
+                "📥 recv_binary_internal: processing {} binary messages",
+                pending_messages.messages.len()
+            );
+        }
         pending_messages
             .messages
             .into_iter()
             .map(|(sender_address, mut data)| {
-                let sender_address_str = format!("{:#x}", sender_address);
+                // Use the original identity string for non-player addresses (e.g., auth server).
+                // The SDK checks sender === "authoritative-server" to identify auth server messages.
+                let sender_address_str = if sender_address == auth_server_synthetic_address() {
+                    AUTH_SERVER_IDENTITY.to_string()
+                } else {
+                    format!("{:#x}", sender_address)
+                };
                 let sender_address_str_bytes = sender_address_str.as_bytes();
 
                 // Remove the comms message type(-1 byte), add the sender address size (+1 byte)
-                //  and add the address in bytes (for H160=20 to string 2+40)
+                //  and add the address in bytes
                 let sender_len = sender_address_str_bytes.len();
                 let original_data_len = data.len();
                 let new_data_size = original_data_len + 1 + sender_len - 1;

@@ -70,22 +70,6 @@ impl MainRoom {
         }
     }
 
-    fn send_rfc4_targeted(
-        &mut self,
-        packet: rfc4::Packet,
-        unreliable: bool,
-        recipient: NetworkMessageRecipient,
-    ) -> bool {
-        match self {
-            // WebSocket doesn't support targeted messages, fall back to broadcast
-            MainRoom::WebSocket(ws_room) => ws_room.send_rfc4(packet, unreliable),
-            #[cfg(feature = "use_livekit")]
-            MainRoom::LiveKit(livekit_room) => {
-                livekit_room.send_rfc4_targeted(packet, unreliable, recipient)
-            }
-        }
-    }
-
     fn clean(&mut self) {
         match self {
             MainRoom::WebSocket(ws_room) => ws_room.clean(),
@@ -436,23 +420,28 @@ impl CommunicationManager {
         data: Vec<u8>,
         recipient: NetworkMessageRecipient,
     ) {
+        let data_len = data.len();
         let scene_message = rfc4::Packet {
-            message: Some(rfc4::packet::Message::Scene(rfc4::Scene {
-                scene_id,
-                data: data.clone(),
-            })),
+            message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
 
-        // Send to main room if available
-        if let Some(main_room) = &mut self.main_room {
-            main_room.send_rfc4_targeted(scene_message.clone(), true, recipient);
-        }
-
-        // Also send to scene room if available
+        // Send only through scene room (matching bevy behavior - scene comms
+        // are isolated to the scene room channel, not broadcast via main room)
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
-            scene_room.send_rfc4_targeted(scene_message, true, recipient);
+            tracing::debug!(
+                "📤 Sending scene message ({} bytes) via scene room, recipient: {:?}",
+                data_len,
+                recipient
+            );
+            scene_room.send_rfc4_targeted(scene_message, false, recipient);
+        }
+        #[cfg(feature = "use_livekit")]
+        if self.scene_room.is_none() {
+            tracing::warn!(
+                "⚠️ send_scene_message called but scene_room is None — message dropped!"
+            );
         }
     }
 
