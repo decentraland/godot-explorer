@@ -66,57 +66,22 @@ func _notification(what):
 		custom_minimum_size.y = child_min_size.y
 		fit_child_in_rect(c, Rect2(child_position, child_min_size))
 
-"""
-## Destroy all events inside ScrollRubber
-## that are unrelated to scrolling
-func _input(event: InputEvent) -> void:
-	if not event.get("position"): return
-	if not get_global_rect().has_point(event.position):
-		return
-	if event is InputEventMouseButton:
-		if event.is_pressed:
-			is_scrolling_mouse = false
-		if is_scrolling_mouse:
-			accept_event()
-			print("Destroy event mouse!")
-	if event is InputEventScreenTouch:
-		if is_scrolling_touch:
-			accept_event()
-			print("Destroy event touch!")
-		if not event.pressed:
-			is_touching = false
-			is_scrolling_mouse = false
-"""
 
-## Cancelling on _gui_input is not working
-
+# NOTE accept_event() on _gui_input is not working
+# using get_viewport().gui_release_focus() instead
 func _gui_input(event: InputEvent) -> void:
-	accept_event()
-	get_viewport().set_input_as_handled()
 	if not is_valid_child(): return
 	var c: Control = get_child(0)
-	c.accept_event()
-	if event is InputEventMouseButton:
-		if event.pressed:
-			is_scrolling_mouse = false
-			accept_event()
-			print("Mouse pressed")
-		else:
-			if is_scrolling_mouse:
-				accept_event()
-			is_scrolling_mouse = false
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			accept_event()
 			is_touching = true
 			is_scrolling_touch = false
 			start_pos = event.position
 			child_drag_position = c.position
 			previous_position = c.position
-			print("Touch pressed")
 		else:
 			if is_scrolling_touch:
-				accept_event()
+				get_viewport().gui_release_focus()
 			is_touching = false
 			is_scrolling_touch = false
 	elif event is InputEventScreenDrag:
@@ -136,7 +101,7 @@ func _physics_process(delta: float) -> void:
 		previous_position = c.position
 		child_physics_position = child_drag_position
 	else:
-		force = -c.position * 10.0
+		#force = -c.position * 10.0
 		velocity += force * delta
 		velocity *= 1.0 - (drag / Engine.physics_ticks_per_second)
 		child_physics_position += velocity * delta
