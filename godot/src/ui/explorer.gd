@@ -652,6 +652,13 @@ func _on_timer_fps_label_timeout():
 				]
 			)
 
+	# Show JNI timing stats on Android (debug builds only, returns 0 in release)
+	if DclAndroidPlugin.is_available():
+		var jni_ms = DclAndroidPlugin.take_jni_time_ms()
+		var jni_calls = DclAndroidPlugin.take_jni_call_count()
+		if jni_calls > 0:
+			fps_text += " | JNI: %.2fms (%d)" % [jni_ms, jni_calls]
+
 	label_fps.set_text(fps_text)
 	if dirty_save_position:
 		dirty_save_position = false

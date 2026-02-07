@@ -162,22 +162,13 @@ impl DclIosPlugin {
         }
     }
 
-    /// Get current thermal state for dynamic graphics adjustment
-    /// Returns: "nominal", "fair", "serious", "critical", or empty string if unavailable
-    #[func]
-    pub fn get_thermal_state() -> GString {
-        Self::get_mobile_metrics_internal()
-            .map(|m| GString::from(&m.device_thermal_state))
-            .unwrap_or_default()
-    }
-
-    /// Get current charging state
-    /// Returns: "charging", "unplugged", or "unknown" if unavailable
-    #[func]
-    pub fn get_charging_state() -> GString {
-        Self::get_mobile_metrics_internal()
-            .map(|m| GString::from(&m.charging_state))
-            .unwrap_or_else(|| GString::from("unknown"))
+    /// Get thermal and charging state in a single platform call
+    /// Returns (thermal_state, charging_state) with defaults if unavailable
+    pub(crate) fn get_thermal_and_charging_state() -> (String, String) {
+        match Self::get_mobile_metrics_internal() {
+            Some(m) => (m.device_thermal_state, m.charging_state),
+            None => (String::new(), "unknown".to_string()),
+        }
     }
 
     /// Get total device RAM in megabytes
