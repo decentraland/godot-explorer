@@ -243,10 +243,7 @@ func _physics_process(dt: float) -> void:
 		time_falling = 0.0
 
 	var can_coyote_jump = (
-		not on_floor
-		and time_falling < COYOTE_TIME
-		and velocity.y <= 0.0
-		and jump_time < 0
+		not on_floor and time_falling < COYOTE_TIME and velocity.y <= 0.0 and jump_time < 0
 	)
 
 	if (
