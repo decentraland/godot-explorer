@@ -540,8 +540,9 @@ impl INode for DclDynamicGraphicsManager {
         self.platform_poll_timer += delta;
         if self.platform_poll_timer >= PLATFORM_POLL_INTERVAL {
             self.platform_poll_timer = 0.0;
-            self.cached_thermal_str = self.get_thermal_state_from_platform();
-            self.update_charging_state();
+            let (thermal, charging) = self.get_platform_metrics();
+            self.cached_thermal_str = thermal;
+            self.is_charging = charging == "charging";
         }
         let thermal_str = self.cached_thermal_str.clone();
 
@@ -779,24 +780,15 @@ impl DclDynamicGraphicsManager {
         }
     }
 
-    fn get_thermal_state_from_platform(&self) -> String {
+    /// Get thermal and charging state from the platform in a single call
+    fn get_platform_metrics(&self) -> (String, String) {
         if self.has_ios_plugin {
-            return DclIosPlugin::get_thermal_state().to_string();
+            return DclIosPlugin::get_thermal_and_charging_state();
         }
         if self.has_android_plugin {
-            return DclAndroidPlugin::get_thermal_state().to_string();
+            return DclAndroidPlugin::get_thermal_and_charging_state();
         }
-        "nominal".to_string()
-    }
-
-    fn get_charging_state_from_platform(&self) -> String {
-        if self.has_ios_plugin {
-            return DclIosPlugin::get_charging_state().to_string();
-        }
-        if self.has_android_plugin {
-            return DclAndroidPlugin::get_charging_state().to_string();
-        }
-        "unknown".to_string()
+        ("nominal".to_string(), "unknown".to_string())
     }
 
     fn get_total_render_time_ms(&self) -> f64 {
@@ -812,11 +804,6 @@ impl DclDynamicGraphicsManager {
         } else {
             self.state.target_frame_time_ms
         }
-    }
-
-    fn update_charging_state(&mut self) {
-        let charging_str = self.get_charging_state_from_platform();
-        self.is_charging = charging_str == "charging";
     }
 
     /// Process thermal FPS cap logic
