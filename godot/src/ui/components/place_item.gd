@@ -76,7 +76,7 @@ func _ready():
 	if is_draggable and card:
 		var header = _get_header()
 		if header:
-			header.modulate = Color.TRANSPARENT
+			header.self_modulate = Color.TRANSPARENT
 			header.hide()
 		var initial_positon := func():
 			card.position.y = _get_card_hidden_position()
