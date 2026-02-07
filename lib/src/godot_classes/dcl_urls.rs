@@ -62,6 +62,10 @@ impl DclUrls {
         urls::comms_gatekeeper().to_godot()
     }
     #[func]
+    pub fn comms_gatekeeper_local() -> GString {
+        urls::comms_gatekeeper_local().to_godot()
+    }
+    #[func]
     pub fn social_service() -> GString {
         urls::social_service().to_godot()
     }

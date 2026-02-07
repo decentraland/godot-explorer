@@ -18,7 +18,7 @@ use crate::{
         consts::DEFAULT_PROTOCOL_VERSION,
         signed_login::SignedLoginMeta,
     },
-    dcl::components::proto_components::kernel::comms::rfc4,
+    dcl::{components::proto_components::kernel::comms::rfc4, scene_apis::NetworkMessageRecipient},
     godot_classes::dcl_global::DclGlobal,
 };
 use serde::{Deserialize, Serialize};
@@ -74,7 +74,7 @@ impl MainRoom {
         &mut self,
         packet: rfc4::Packet,
         unreliable: bool,
-        recipient: Option<H160>,
+        recipient: NetworkMessageRecipient,
     ) -> bool {
         match self {
             // WebSocket doesn't support targeted messages, fall back to broadcast
@@ -430,7 +430,12 @@ impl CommunicationManager {
         }
     }
 
-    pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>, recipient: Option<H160>) {
+    pub fn send_scene_message(
+        &mut self,
+        scene_id: String,
+        data: Vec<u8>,
+        recipient: NetworkMessageRecipient,
+    ) {
         let scene_message = rfc4::Packet {
             message: Some(rfc4::packet::Message::Scene(rfc4::Scene {
                 scene_id,
@@ -1543,16 +1548,23 @@ async fn get_scene_adapter(
     // Create the request body
 
     use crate::{
-        comms::consts::gatekeeper_url,
+        comms::consts::{gatekeeper_url, gatekeeper_url_local},
         http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
     };
+
+    // Use preview gatekeeper for local scenes (b64- prefix indicates local preview)
+    let gatekeeper = if scene_id.starts_with("b64-") {
+        gatekeeper_url_local()
+    } else {
+        gatekeeper_url()
+    };
+
     let request_body = serde_json::json!({
         "sceneId": scene_id,
         "realmName": realm_name
     });
     let metadata_json_string = request_body.to_string();
 
-    let gatekeeper = gatekeeper_url();
     tracing::debug!("🔄 Making scene adapter request to: {}", gatekeeper);
     tracing::debug!("📋 Request body: {}", metadata_json_string);
 
