@@ -101,19 +101,27 @@ func _physics_process(delta: float) -> void:
 		previous_position = c.position
 		child_physics_position = child_drag_position
 	else:
-		#force = -c.position * 10.0
-		velocity += force * delta
-		velocity *= 1.0 - (drag / Engine.physics_ticks_per_second)
+		if c.position.x > 0:
+			#force = -c.position * 10.0
+			velocity.x = (0.0 - c.position.x) * 2.0
+		elif -c.position.x > (c.size.x - size.x):
+			velocity.x = ((c.size.x - size.x) - -c.position.x) * -2.0
+		else:
+			velocity += force * delta
+			velocity *= 1.0 - (drag / Engine.physics_ticks_per_second)
+		
 		child_physics_position += velocity * delta
 		queue_sort()
 
 
 func tween_to(drag_position: Vector2) -> void:
+	if not is_valid_child(): return
+	var c = get_child(0)
 	if drag_tween and drag_tween.is_running():
 		drag_tween.stop()
 		drag_tween = null
 	drag_tween = create_tween().set_trans(Tween.TRANS_QUART)
-	drag_tween.tween_property(self, "position", drag_position, 0.2)
+	drag_tween.tween_property(c, "position", drag_position, 0.2)
 
 
 func is_valid_child() -> bool:
