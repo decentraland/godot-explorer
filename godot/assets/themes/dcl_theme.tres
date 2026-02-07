@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=96 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=99 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -18,7 +18,10 @@
 [ext_resource type="StyleBox" uid="uid://df8k6h14mxhcr" path="res://assets/themes/general_slider/grabber_area.tres" id="13_aywie"]
 [ext_resource type="StyleBox" uid="uid://b7b33rteyw7y0" path="res://assets/themes/general_slider/grabber_highlight_area.tres" id="14_0c0kf"]
 [ext_resource type="StyleBox" uid="uid://bujf67k8oji3g" path="res://assets/themes/general_slider/slider.tres" id="15_wftf5"]
+[ext_resource type="StyleBox" uid="uid://yky3w8m5bb5j" path="res://assets/themes/dcl_theme/engagement_disabled.tres" id="16_1x5yb"]
+[ext_resource type="StyleBox" uid="uid://do8fl73m88q6v" path="res://assets/themes/dcl_theme/engagement_normal.tres" id="16_3kpjx"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="16_k33ds"]
+[ext_resource type="StyleBox" uid="uid://cg1rof45xyk4i" path="res://assets/themes/dcl_theme/engagement_pressed.tres" id="17_1x5yb"]
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="17_xiu8x"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="18_uv0rg"]
 [ext_resource type="StyleBox" uid="uid://nw2w7vul1wnx" path="res://assets/themes/option_button_disabled.tres" id="19_njqlq"]
@@ -356,6 +359,31 @@ CheckButton/styles/hover = SubResource("StyleBoxEmpty_7pwwu")
 CheckButton/styles/hover_pressed = SubResource("StyleBoxEmpty_ga84a")
 CheckButton/styles/normal = SubResource("StyleBoxEmpty_5vc47")
 CheckButton/styles/pressed = SubResource("StyleBoxEmpty_0wbub")
+EngagementButton/base_type = &"Button"
+EngagementButton/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+EngagementButton/colors/font_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.47058824)
+EngagementButton/colors/font_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+EngagementButton/colors/font_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+EngagementButton/colors/font_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+EngagementButton/colors/font_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+EngagementButton/colors/icon_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.47058824)
+EngagementButton/colors/icon_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+EngagementButton/colors/icon_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+EngagementButton/colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+EngagementButton/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+EngagementButton/colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+EngagementButton/constants/icon_max_width = 52
+EngagementButton/styles/disabled = ExtResource("16_1x5yb")
+EngagementButton/styles/disabled_mirrored = ExtResource("16_1x5yb")
+EngagementButton/styles/focus = ExtResource("16_3kpjx")
+EngagementButton/styles/hover = ExtResource("16_3kpjx")
+EngagementButton/styles/hover_mirrored = ExtResource("16_3kpjx")
+EngagementButton/styles/hover_pressed = ExtResource("17_1x5yb")
+EngagementButton/styles/hover_pressed_mirrored = ExtResource("17_1x5yb")
+EngagementButton/styles/normal = ExtResource("16_3kpjx")
+EngagementButton/styles/normal_mirrored = ExtResource("16_3kpjx")
+EngagementButton/styles/pressed = ExtResource("17_1x5yb")
+EngagementButton/styles/pressed_mirrored = ExtResource("17_1x5yb")
 HScrollBar/styles/grabber = SubResource("StyleBoxFlat_t010i")
 HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_on1kl")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_aqont")

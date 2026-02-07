@@ -1,0 +1,42 @@
+[gd_scene load_steps=6 format=3 uid="uid://epmfrytaggib"]
+
+[ext_resource type="StyleBox" uid="uid://bbpboh50cfhkv" path="res://assets/themes/dcl_theme/category_pill.tres" id="1_aabwc"]
+[ext_resource type="Texture2D" uid="uid://vvy3lmew34mg" path="res://assets/ui/places_categories/art.svg" id="2_1u7bb"]
+[ext_resource type="Script" uid="uid://ycx76vg1tikm" path="res://src/ui/components/discover/categories/category_tag.gd" id="2_7ciks"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_7ciks"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_vq3of"]
+font = ExtResource("3_7ciks")
+font_size = 18
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="CategoryTag" type="PanelContainer"]
+custom_minimum_size = Vector2(10, 42)
+theme_override_styles/panel = ExtResource("1_aabwc")
+script = ExtResource("2_7ciks")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_right = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
+custom_minimum_size = Vector2(22, 26)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("2_1u7bb")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "ART"
+label_settings = SubResource("LabelSettings_vq3of")
+uppercase = true

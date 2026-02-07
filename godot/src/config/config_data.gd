@@ -154,6 +154,10 @@ var last_places: Array[Dictionary] = []:
 	set(value):
 		last_places = value
 
+var search_history: Array[String] = []:
+	set(value):
+		search_history = value
+
 var session_account: Dictionary = {}:
 	set(value):
 		session_account = value
@@ -227,6 +231,21 @@ func add_place_to_last_places(position: Vector2i, realm: String) -> void:
 
 	if last_places.size() >= 10:
 		last_places.pop_back()
+
+
+## Adds search history,
+## if already exists returns false,
+## if not returns true.
+func add_search_history(keyword: String) -> bool:
+	if keyword.length() < 3:
+		return false
+	keyword = keyword.to_lower()
+	if search_history.has(keyword):
+		return false
+	search_history.push_front(keyword)
+	if search_history.size() >= 10:
+		search_history.pop_back()
+	return true
 
 
 func load_from_default():
@@ -367,6 +386,10 @@ func load_from_settings_file():
 
 	self.last_places = settings_file.get_value("user", "last_places", data_default.last_places)
 
+	self.search_history = settings_file.get_value(
+		"user", "search_history", data_default.search_history
+	)
+
 	self.terms_and_conditions_version = settings_file.get_value(
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
@@ -419,6 +442,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	new_settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	new_settings_file.set_value("user", "last_places", self.last_places)
+	new_settings_file.set_value("user", "search_history", self.search_history)
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)

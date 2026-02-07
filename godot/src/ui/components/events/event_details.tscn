@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://bic3gcms4bi8g"]
+[gd_scene load_steps=6 format=3 uid="uid://bic3gcms4bi8g"]
 
 [ext_resource type="Script" uid="uid://d22htbtk8w5kn" path="res://src/ui/components/panels/side_panel.gd" id="1_vapvi"]
-[ext_resource type="PackedScene" uid="uid://4luuuxo6tbcp" path="res://src/ui/components/events/event_details_portrait.tscn" id="2_q0ryf"]
-[ext_resource type="PackedScene" uid="uid://jel6s7s7w8h3" path="res://src/ui/components/events/event_details_landscape.tscn" id="3_tlmcm"]
+[ext_resource type="PackedScene" uid="uid://berg2gr7ubtll" path="res://src/ui/components/events/event_details_portrait.tscn" id="2_q0ryf"]
 [ext_resource type="Script" uid="uid://njubmev0le2o" path="res://src/logic/metrics/event_details_screen_tracking_handler.gd" id="4_sxxyt"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="5_q0ryf"]
 
@@ -19,7 +18,7 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
 script = ExtResource("1_vapvi")
 portrait_panel_resource = ExtResource("2_q0ryf")
-landscape_panel_resource = ExtResource("3_tlmcm")
+landscape_panel_resource = ExtResource("2_q0ryf")
 tracking_handler = SubResource("Resource_q0ryf")
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("5_q0ryf")]

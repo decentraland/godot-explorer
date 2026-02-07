@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/country.svg-b925afd0a7a05fc1d2b6e7b9a567f578.
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

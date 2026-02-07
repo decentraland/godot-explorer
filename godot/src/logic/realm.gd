@@ -38,7 +38,7 @@ static func is_genesis_city(_realm_name: String) -> bool:
 
 static func is_local_preview(_realm_name: String) -> bool:
 	var regex = RegEx.new()
-	regex.compile("^https?://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
+	regex.compile("(?gmi)^https?://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
 	return regex.search(_realm_name) != null
 
 
@@ -78,11 +78,8 @@ static func ensure_starts_with_https(str_param: String) -> String:
 
 
 static func remove_scheme(str_param: String) -> String:
-	if str_param.begins_with("https://"):
-		return str_param.substr(8)
-
-	if str_param.begins_with("http://"):
-		return str_param.substr(7)
+	str_param = str_param.trim_prefix("https://")
+	str_param = str_param.trim_prefix("http://")
 
 	return str_param
 

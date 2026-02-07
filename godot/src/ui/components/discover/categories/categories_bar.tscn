@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://dsd7bcii8obu6"]
+
+[ext_resource type="Script" uid="uid://bl7drgk24rxl1" path="res://src/ui/components/discover/categories/categories_bar.gd" id="1_vj73w"]
+
+[node name="CategoriesBar" type="HBoxContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+script = ExtResource("1_vj73w")

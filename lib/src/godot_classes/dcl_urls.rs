@@ -94,6 +94,10 @@ impl DclUrls {
         urls::events_api().to_godot()
     }
     #[func]
+    pub fn mobile_events_api() -> GString {
+        urls::mobile_events_api().to_godot()
+    }
+    #[func]
     pub fn notifications_api() -> GString {
         urls::notifications_api().to_godot()
     }

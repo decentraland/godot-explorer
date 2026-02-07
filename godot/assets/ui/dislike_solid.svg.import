@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/dislike_solid.svg-7b012a543e2db73e958af775047
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
