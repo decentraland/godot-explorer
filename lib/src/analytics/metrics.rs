@@ -17,9 +17,10 @@ use crate::{
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, SegmentEvent, SegmentEventChatMessageSent,
-        SegmentEventClickButton, SegmentEventCommonExplorerFields,
-        SegmentEventExplorerMoveToParcel, SegmentEventScreenViewed,
+        build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
+        SegmentEventBlockDeleteFriend, SegmentEventChatMessageSent, SegmentEventClickButton,
+        SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
+        SegmentEventLoginSuccess, SegmentEventRequestFriend, SegmentEventScreenViewed,
     },
     frame::Frame,
 };
@@ -223,6 +224,41 @@ impl Metrics {
         });
         self.events.push(event.clone());
         self.debug_print_event("Screen Viewed", &event);
+    }
+
+    #[func]
+    pub fn track_login_success(&mut self) {
+        let event = SegmentEvent::LoginSuccess(SegmentEventLoginSuccess {});
+        self.events.push(event.clone());
+        self.debug_print_event("Auth Success", &event);
+    }
+
+    #[func]
+    pub fn track_request_friend(&mut self, receiver_id: String) {
+        let event = SegmentEvent::RequestFriend(SegmentEventRequestFriend { receiver_id });
+        self.events.push(event.clone());
+        self.debug_print_event("Friend Request", &event);
+    }
+
+    #[func]
+    pub fn track_accept_friend(&mut self, receiver_id: String, friendship_id: String) {
+        let event = SegmentEvent::AcceptFriend(SegmentEventAcceptFriend {
+            receiver_id,
+            friendship_id: if friendship_id.is_empty() {
+                None
+            } else {
+                Some(friendship_id)
+            },
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Friend Accept", &event);
+    }
+
+    #[func]
+    pub fn track_block_delete_friend(&mut self, receiver_id: String) {
+        let event = SegmentEvent::BlockDeleteFriend(SegmentEventBlockDeleteFriend { receiver_id });
+        self.events.push(event.clone());
+        self.debug_print_event("Friend Block Delete", &event);
     }
 
     #[func]
