@@ -81,6 +81,8 @@ pub struct DclCli {
     #[var(get)]
     pub only_no_optimized: bool,
     #[var(get)]
+    pub only_no_optimized_scene_emotes: bool,
+    #[var(get)]
     pub emote_test_mode: bool,
     #[var(get)]
     pub stress_test: bool,
@@ -320,6 +322,14 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Asset Loading".to_string(),
             },
+            // TODO: Remove after asset-server re-processes scene emotes correctly
+            ArgDefinition {
+                name: "--use-optimized-scene-emotes".to_string(),
+                description: "Use optimized scene emotes (disabled by default due to asset issues)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Asset Loading".to_string(),
+            },
             // Deep Link
             ArgDefinition {
                 name: "--fake-deeplink".to_string(),
@@ -493,6 +503,9 @@ impl INode for DclCli {
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
         let only_optimized = args_map.contains_key("--only-optimized");
         let only_no_optimized = args_map.contains_key("--only-no-optimized");
+        // TODO: Remove this default=true after asset-server re-processes scene emotes correctly.
+        // Currently optimized scene emotes have incorrect animation structure.
+        let only_no_optimized_scene_emotes = !args_map.contains_key("--use-optimized-scene-emotes");
         let emote_test_mode = args_map.contains_key("--emote-test");
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
@@ -588,6 +601,7 @@ impl INode for DclCli {
             help_requested,
             only_optimized,
             only_no_optimized,
+            only_no_optimized_scene_emotes,
             emote_test_mode,
             stress_test,
             emulate_ios,

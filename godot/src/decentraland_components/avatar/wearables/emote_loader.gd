@@ -66,42 +66,56 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 	return scene_path
 
 
-## Load a scene emote (from SDK scene, not wearable).
+## Load an emote from a content mapping directly (used by unified scene emote loading).
 ## Returns the scene_path if successful, empty string on failure.
-func async_load_scene_emote(glb_hash: String, audio_hash: String, base_url: String) -> String:
-	# Create content mapping for the scene emote
-	var files_dict = {"emote.glb": glb_hash}
-	if not audio_hash.is_empty():
-		files_dict["emote_audio.mp3"] = audio_hash
-
-	var content_mapping = DclContentMappingAndUrl.from_values(base_url + "contents/", files_dict)
-
-	# Load audio file if provided (in parallel with GLTF)
-	var audio_promise = null
-	if not audio_hash.is_empty():
-		audio_promise = Global.content_provider.fetch_audio("emote_audio.mp3", content_mapping)
-
-	# Start loading - ContentProvider handles caching and deduplication
-	var gltf_promise = Global.content_provider.load_emote_gltf("emote.glb", content_mapping)
-	if gltf_promise == null:
-		printerr("EmoteLoader: failed to start loading scene emote ", glb_hash)
+## Set force_runtime_only=true to skip optimized assets (for scene emotes).
+func async_load_emote_from_mapping(
+	emote_key: String,
+	file_name: String,
+	content_mapping: DclContentMappingAndUrl,
+	force_runtime_only: bool = false
+) -> String:
+	var file_hash = content_mapping.get_hash(file_name)
+	if file_hash.is_empty():
+		printerr("EmoteLoader: empty file_hash for ", emote_key, " file ", file_name)
 		return ""
 
-	# Wait for load
+	# Load audio files via promises (in parallel with GLTF)
+	var audio_promise = null
+	for audio_file in content_mapping.get_files():
+		if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
+			audio_promise = Global.content_provider.fetch_audio(audio_file, content_mapping)
+			break
+
+	# Start loading GLTF - ContentProvider handles caching and deduplication
+	var gltf_promise = null
+	if force_runtime_only:
+		# Use runtime-only loader to skip optimized assets
+		gltf_promise = Global.content_provider.load_emote_gltf_runtime_only(
+			file_name, content_mapping
+		)
+	else:
+		gltf_promise = Global.content_provider.load_emote_gltf(file_name, content_mapping)
+	if gltf_promise == null:
+		printerr("EmoteLoader: failed to start loading emote ", emote_key)
+		return ""
+
+	# Wait for GLTF to load
 	await PromiseUtils.async_awaiter(gltf_promise)
+
+	var scene_path = ""
+	if gltf_promise.is_resolved() and not gltf_promise.is_rejected():
+		var result = gltf_promise.get_data()
+		if result is String:
+			scene_path = result
+			# Store in completed loads for async_get_emote_gltf to find
+			_completed_loads[file_hash] = scene_path
 
 	# Wait for audio (if any)
 	if audio_promise != null:
 		await PromiseUtils.async_awaiter(audio_promise)
 
-	if gltf_promise.is_resolved() and not gltf_promise.is_rejected():
-		var result = gltf_promise.get_data()
-		if result is String:
-			# Store in completed loads for async_get_emote_gltf to find
-			_completed_loads[glb_hash] = result
-			return result
-
-	return ""
+	return scene_path
 
 
 ## Get a DclEmoteGltf from cached scene using threaded loading.

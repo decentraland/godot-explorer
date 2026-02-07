@@ -322,6 +322,13 @@ pub fn trigger_scene_emote(
     emote_src: &str,
     looping: &bool,
 ) {
+    tracing::debug!(
+        "SCENE_EMOTE_TRIGGERED: src={}, loop={}, scene={}",
+        emote_src,
+        looping,
+        scene.scene_entity_definition.id
+    );
+
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         tracing::warn!("triggerSceneEmote failed: Primary Player is outside the scene");
@@ -349,21 +356,38 @@ pub fn trigger_scene_emote(
         emote_hash.audio_hash
     );
 
-    let emote_data = emote_hash.to_godot_data(*looping);
-
-    let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("async_play_scene_emote", &[emote_data.to_variant()]);
-
-    // Broadcast to other players - construct URN for network compatibility
-    // Format: urn:decentraland:off-chain:scene-emote:{sceneId}-{glbHash}-{loop}
-    let urn = format!(
+    // Build scene-emote URN (same format used for comms)
+    let scene_emote_urn = format!(
         "urn:decentraland:off-chain:scene-emote:{}-{}-{}",
         scene.scene_entity_definition.id, emote_hash.glb_hash, looping
     );
-    tracing::info!("triggerSceneEmote: broadcasting URN={}", urn);
+
+    let mut avatar_node = get_avatar_node(scene);
+
+    // Register content URL for this scene (so GDScript can look it up)
+    avatar_node.call(
+        "register_scene_emote_content",
+        &[
+            scene.scene_entity_definition.id.to_godot().to_variant(),
+            scene.content_mapping.base_url.to_godot().to_variant(),
+            emote_hash.glb_hash.to_godot().to_variant(),
+            emote_hash
+                .audio_hash
+                .as_deref()
+                .unwrap_or_default()
+                .to_godot()
+                .to_variant(),
+        ],
+    );
+
+    // Call the SAME function as wearable emotes!
+    avatar_node.call("async_play_emote", &[scene_emote_urn.to_variant()]);
+
+    // Broadcast to other players
+    tracing::info!("triggerSceneEmote: broadcasting URN={}", scene_emote_urn);
     DclGlobal::singleton()
         .bind()
         .get_comms()
         .bind_mut()
-        .send_emote(urn.to_godot());
+        .send_emote(scene_emote_urn.to_godot());
 }
