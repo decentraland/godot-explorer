@@ -10,14 +10,13 @@ signal request(offsett: int, limit: int)
 @export var drag := 0.8
 @export var item_container: Container = null
 
+var global_start_pos: Vector2
 var start_pos: Vector2
 var offset: Vector2
 var child_drag_position: Vector2
 var child_physics_position: Vector2
 var drag_tween: Tween
 var is_touching := false
-var is_scrolling_mouse := false
-var is_scrolling_touch := false
 
 var velocity: Vector2
 var force: Vector2
@@ -75,21 +74,20 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			is_touching = true
-			is_scrolling_touch = false
 			start_pos = event.position
 			child_drag_position = c.position
 			previous_position = c.position
+			global_start_pos = event.position - get_global_rect().position
+			offset = Vector2.ZERO
 		else:
-			if is_scrolling_touch:
+			var global_release_pos :Vector2 = event.position - get_global_rect().position
+			if global_release_pos.distance_to(global_start_pos) > 50.0:
 				get_viewport().gui_release_focus()
+				accept_event()
 			is_touching = false
-			is_scrolling_touch = false
 	elif event is InputEventScreenDrag:
 		if is_touching:
 			offset = event.position - start_pos
-			if offset.length() > 50:
-				is_scrolling_mouse = true
-				is_scrolling_touch = true
 			queue_sort()
 
 
@@ -102,7 +100,6 @@ func _physics_process(delta: float) -> void:
 		child_physics_position = child_drag_position
 	else:
 		if c.position.x > 0:
-			#force = -c.position * 10.0
 			velocity.x = (0.0 - c.position.x) * 2.0
 		elif -c.position.x > (c.size.x - size.x):
 			velocity.x = ((c.size.x - size.x) - -c.position.x) * -2.0
