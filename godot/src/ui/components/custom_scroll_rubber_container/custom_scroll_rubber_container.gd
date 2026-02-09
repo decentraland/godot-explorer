@@ -27,7 +27,6 @@ var threshold_limit = 10
 
 
 func start():
-	#self.scroll_ended.connect(self._on_scroll_container_scroll_ended)
 	emit_request()
 
 
@@ -37,6 +36,8 @@ func restart():
 
 
 func emit_request():
+	if not is_valid_child(): return
+	current_offset = item_container.get_child_count()
 	request.emit(current_offset, threshold_limit)
 
 
@@ -68,6 +69,7 @@ func _notification(what):
 
 # NOTE accept_event() on _gui_input is not preventing
 # button presses while scrolling. Using it here instead.
+# TODO prevent button presses on Editor
 func _input(event: InputEvent) -> void:
 	if not is_scrolling: return
 	if event is InputEventScreenTouch:
@@ -107,14 +109,18 @@ func _gui_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if not is_valid_child(): return
 	var c = get_child(0)
+	var is_outside_right:bool = -c.position.x > (c.size.x - size.x)
 	if is_touching:
 		velocity = lerp(velocity, (c.position - previous_position) * Engine.physics_ticks_per_second, 1.0)
 		previous_position = c.position
 		child_physics_position = child_drag_position
+		if is_outside_right:
+			emit_request()
 	else:
+		#TODO add Y axis
 		if c.position.x > 0:
 			velocity.x = (0.0 - c.position.x) * 2.0
-		elif -c.position.x > (c.size.x - size.x):
+		elif is_outside_right:
 			velocity.x = ((c.size.x - size.x) - -c.position.x) * -2.0
 		else:
 			velocity += force * delta
@@ -122,16 +128,6 @@ func _physics_process(delta: float) -> void:
 		
 		child_physics_position += velocity * delta
 		queue_sort()
-
-
-func tween_to(drag_position: Vector2) -> void:
-	if not is_valid_child(): return
-	var c = get_child(0)
-	if drag_tween and drag_tween.is_running():
-		drag_tween.stop()
-		drag_tween = null
-	drag_tween = create_tween().set_trans(Tween.TRANS_QUART)
-	drag_tween.tween_property(c, "position", drag_position, 0.2)
 
 
 func is_valid_child() -> bool:
