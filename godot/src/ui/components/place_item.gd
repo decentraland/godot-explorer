@@ -83,7 +83,10 @@ func _ready():
 			tween_to(_get_card_half_position())
 		# NOTE must call deferred
 		# otherwise the UI is broken
-		initial_positon.call_deferred()
+		# NOTE 2: deferred is not enough here
+		# tween set delay must be used
+		var deferred_tween := create_tween()
+		deferred_tween.tween_callback(initial_positon).set_delay(0.2)
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -998,6 +1001,7 @@ func _get_card_half_position() -> float:
 	# Layout-independent offset: bottom of hide_from_here relative to card, so half is consistent (places/events)
 	var offset_to_separator_top: float = _get_offset_y_in_ancestor(hide_from_here, card)
 	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y
+	offset_to_separator_bottom += _get_footer().size.y
 	var full_height: float = get_rect().size.y
 	return full_height - offset_to_separator_bottom
 
