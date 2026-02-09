@@ -50,7 +50,6 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
 
-
 	if metadata.is_empty():
 		set_image(texture)
 		set_online(onlines)
@@ -339,7 +338,7 @@ func _connect_signals():
 			button_share.pressed.connect(_on_button_share_pressed)
 
 
-func set_server_or_location(unlimited:bool = false) -> void:
+func set_server_or_location(unlimited: bool = false) -> void:
 	var server = _data.get("server", null)
 	var world_name = _data.get("world_name", null)
 	var is_world = _data.get("world", false)
@@ -378,7 +377,6 @@ func set_location(_location: Vector2i):
 	if texture_rect_location and texture_rect_server:
 		texture_rect_location.show()
 		texture_rect_server.hide()
-	 
 
 
 func set_scene_event_name(scene_name: String) -> void:
@@ -530,7 +528,6 @@ func set_data(item_data):
 			show_image_container(false)
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
-
 
 	set_download_warning(item_data)
 
@@ -920,16 +917,17 @@ func _update_separators() -> void:
 		if separator_likes and separator_online:
 			if container_likes.visible and container_online.visible:
 				separator_likes.show()
-				separator_online.show()					
+				separator_online.show()
 			else:
 				separator_likes.hide()
 				separator_online.hide()
 			if container_location:
-				if	!container_likes.visible and !container_online.visible:
+				if !container_likes.visible and !container_online.visible:
 					container_location.alignment = BoxContainer.ALIGNMENT_BEGIN
 					set_server_or_location(true)
 				else:
 					container_location.alignment = BoxContainer.ALIGNMENT_END
+
 
 func _input(event: InputEvent) -> void:
 	if not visible or not is_draggable:
@@ -964,7 +962,9 @@ func _input(event: InputEvent) -> void:
 							pass  # From full only close button closes; gesture does nothing
 						DragState.HALF:
 							drag_state = DragState.HIDDEN
-							tween_to(_get_card_hidden_position(), _on_texture_button_close_pressed, false)
+							tween_to(
+								_get_card_hidden_position(), _on_texture_button_close_pressed, false
+							)
 
 
 ## Is the user scrolling trough the description?
@@ -1019,7 +1019,9 @@ func _on_tween_to_finished() -> void:
 		_tween_callback.call()
 
 
-func tween_to(y_position: float, callback: Callable = Callable(), header_visible: bool = false) -> void:
+func tween_to(
+	y_position: float, callback: Callable = Callable(), header_visible: bool = false
+) -> void:
 	var card := _get_card()
 	if not card:
 		return

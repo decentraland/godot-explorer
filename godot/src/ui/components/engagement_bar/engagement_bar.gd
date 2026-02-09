@@ -142,6 +142,7 @@ func disable_buttons() -> void:
 		button_dislike.self_modulate = Color.TRANSPARENT
 		button_dislike_pressed.show()
 
+
 func enable_buttons() -> void:
 	if button_like:
 		button_like.disabled = false

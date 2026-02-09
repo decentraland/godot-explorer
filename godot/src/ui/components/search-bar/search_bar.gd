@@ -36,7 +36,7 @@ signal cleared
 		return closed
 	set(value):
 		closed = value
-	
+
 var _text: String = ""
 var _placeholder_text: String = ""
 var _editable: bool = true
