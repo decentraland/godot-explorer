@@ -10,13 +10,13 @@ signal request(offsett: int, limit: int)
 @export var drag := 0.8
 @export var item_container: Container = null
 
-var global_start_pos: Vector2
 var start_pos: Vector2
 var offset: Vector2
 var child_drag_position: Vector2
 var child_physics_position: Vector2
 var drag_tween: Tween
 var is_touching := false
+var is_scrolling := false
 
 var velocity: Vector2
 var force: Vector2
@@ -66,6 +66,19 @@ func _notification(what):
 		fit_child_in_rect(c, Rect2(child_position, child_min_size))
 
 
+
+func _input(event: InputEvent) -> void:
+	if not is_scrolling: return
+	if event is InputEventScreenTouch:
+		if not event.pressed:
+			accept_event()
+			is_touching = false
+	elif event is InputEventMouseButton:
+		if not event.pressed:
+			accept_event()
+			is_touching = false
+
+
 # NOTE accept_event() on _gui_input is not working
 # using get_viewport().gui_release_focus() instead
 func _gui_input(event: InputEvent) -> void:
@@ -74,20 +87,18 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			is_touching = true
+			is_scrolling = false
 			start_pos = event.position
 			child_drag_position = c.position
 			previous_position = c.position
-			global_start_pos = event.position - get_global_rect().position
 			offset = Vector2.ZERO
 		else:
-			var global_release_pos :Vector2 = event.position - get_global_rect().position
-			if global_release_pos.distance_to(global_start_pos) > 50.0:
-				get_viewport().gui_release_focus()
-				accept_event()
 			is_touching = false
 	elif event is InputEventScreenDrag:
 		if is_touching:
 			offset = event.position - start_pos
+			if start_pos.distance_to(event.position) > 50:
+				is_scrolling = true
 			queue_sort()
 
 
