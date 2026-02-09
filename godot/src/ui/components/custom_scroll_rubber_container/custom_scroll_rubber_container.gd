@@ -102,6 +102,8 @@ func _gui_input(event: InputEvent) -> void:
 		else:
 			is_touching = false
 			is_scrolling = false
+			if is_outside_right(200):
+				emit_request()
 	elif event is InputEventScreenDrag:
 		if is_touching:
 			offset = event.position - start_pos
@@ -120,8 +122,6 @@ func _physics_process(delta: float) -> void:
 		)
 		previous_position = c.position
 		child_physics_position = child_drag_position
-		if is_outside_right(200):
-			emit_request()
 	else:
 		#TODO add Y axis
 		if is_outside_left():
@@ -143,6 +143,8 @@ func is_outside_left(margin: float = 0.0) -> bool:
 
 func is_outside_right(margin: float = 0.0) -> bool:
 	var c = get_child(0)
+	if c.size.x < size.x:
+		return -c.position.x > margin
 	return -c.position.x > (c.size.x - size.x) + margin
 
 

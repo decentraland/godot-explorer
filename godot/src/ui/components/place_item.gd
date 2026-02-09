@@ -1056,7 +1056,7 @@ func _get_card_half_position() -> float:
 		return 0.0
 	# Layout-independent offset: bottom of hide_from_here relative to card, so half is consistent (places/events)
 	var offset_to_separator_top: float = _get_offset_y_in_ancestor(hide_from_here, card)
-	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y
+	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y * 0.5
 	offset_to_separator_bottom += _get_footer().size.y
 	var full_height: float = get_rect().size.y
 	return full_height - offset_to_separator_bottom
