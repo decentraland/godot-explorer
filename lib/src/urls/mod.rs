@@ -78,6 +78,9 @@ pub fn destinations_api() -> String {
     format!("https://mobile-bff.decentraland.{}/destinations", env())
 }
 pub fn events_api() -> String {
+    format!("https://events.decentraland.{}/api/events", env())
+}
+pub fn mobile_events_api() -> String {
     format!("https://mobile-bff.decentraland.{}/events", env())
 }
 pub fn notifications_api() -> String {

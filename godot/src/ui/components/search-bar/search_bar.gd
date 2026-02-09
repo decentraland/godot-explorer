@@ -84,7 +84,7 @@ func _on_focus_exited() -> void:
 func _on_button_erase_text_pressed() -> void:
 	line_edit.clear()
 	cleared.emit()
-	line_edit.release_focus()
+	# No release_focus: keep keyboard open on mobile so user can keep typing
 
 
 func _on_button_search_pressed() -> void:

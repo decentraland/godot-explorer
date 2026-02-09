@@ -103,7 +103,8 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 	if last_places.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
-
+	else:
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 	_loading = false
 
 

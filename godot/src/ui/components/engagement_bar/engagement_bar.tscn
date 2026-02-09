@@ -5,7 +5,13 @@
 [ext_resource type="Texture2D" uid="uid://c25e6v41fpnh2" path="res://src/ui/components/discover/icons/share-outlined.svg" id="3_g1nd3"]
 [ext_resource type="Texture2D" uid="uid://bophi8ynjvekk" path="res://src/ui/components/discover/icons/like-outlined.svg" id="4_vgr3q"]
 [ext_resource type="Texture2D" uid="uid://dh2xs52fsmrva" path="res://src/ui/components/discover/icons/dislike-outlined.svg" id="6_cp6lm"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="7_hx3j2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r2vyf"]
+bg_color = Color(0.4117647, 0.12156863, 0.6627451, 0.3019608)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [node name="EngagementBar" type="HBoxContainer"]
 custom_minimum_size = Vector2(0, 96)
@@ -22,7 +28,6 @@ focus_mode = 0
 theme = ExtResource("2_g1nd3")
 theme_type_variation = &"EngagementButton"
 theme_override_constants/icon_max_width = 62
-toggle_mode = true
 icon = ExtResource("3_g1nd3")
 icon_alignment = 1
 expand_icon = true
@@ -41,22 +46,24 @@ icon = ExtResource("4_vgr3q")
 icon_alignment = 1
 expand_icon = true
 
-[node name="TextureProgressBar" parent="Button_Like" instance=ExtResource("7_hx3j2")]
-modulate = Color(1, 1, 1, 0.470588)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
-grow_horizontal = 2
-grow_vertical = 2
-scale = Vector2(0.2, 0.2)
-pivot_offset = Vector2(64, 64)
+[node name="Button_Like_Pressed" type="Button" parent="Button_Like"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(94, 96)
+layout_mode = 0
+size_flags_horizontal = 3
+focus_mode = 0
+mouse_filter = 2
+theme = ExtResource("2_g1nd3")
+theme_type_variation = &"EngagementButton"
+theme_override_colors/icon_normal_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_constants/icon_max_width = 62
+theme_override_styles/normal = SubResource("StyleBoxFlat_r2vyf")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r2vyf")
+toggle_mode = true
+icon = ExtResource("4_vgr3q")
+icon_alignment = 1
+expand_icon = true
 
 [node name="Button_Dislike" type="Button" parent="."]
 unique_name_in_owner = true
@@ -72,22 +79,24 @@ icon = ExtResource("6_cp6lm")
 icon_alignment = 1
 expand_icon = true
 
-[node name="TextureProgressBar" parent="Button_Dislike" instance=ExtResource("7_hx3j2")]
-modulate = Color(1, 1, 1, 0.470588)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
-grow_horizontal = 2
-grow_vertical = 2
-scale = Vector2(0.2, 0.2)
-pivot_offset = Vector2(64, 64)
+[node name="Button_Dislike_Pressed" type="Button" parent="Button_Dislike"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(94, 96)
+layout_mode = 0
+size_flags_horizontal = 3
+focus_mode = 0
+mouse_filter = 2
+theme = ExtResource("2_g1nd3")
+theme_type_variation = &"EngagementButton"
+theme_override_colors/icon_normal_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_constants/icon_max_width = 62
+theme_override_styles/normal = SubResource("StyleBoxFlat_r2vyf")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_r2vyf")
+toggle_mode = true
+icon = ExtResource("6_cp6lm")
+icon_alignment = 1
+expand_icon = true
 
 [connection signal="pressed" from="Button_Share" to="." method="_on_button_share_pressed"]
 [connection signal="toggled" from="Button_Like" to="." method="_async_on_button_like_toggled"]

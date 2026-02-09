@@ -3,7 +3,7 @@ extends TextureButton
 
 var _place_id
 
-@onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
+@onready var texture_rect_pressed: TextureRect = %TextureRect_Pressed
 
 
 func update_data(id = null) -> void:
@@ -65,10 +65,10 @@ func _async_update_status() -> void:
 func disable_button() -> void:
 	disabled = true
 	self_modulate = Color.TRANSPARENT
-	texture_progress_bar.show()
+	texture_rect_pressed.show()
 
 
 func enable_button() -> void:
 	disabled = false
 	self_modulate = Color.WHITE
-	texture_progress_bar.hide()
+	texture_rect_pressed.hide()

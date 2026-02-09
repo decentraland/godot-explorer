@@ -16,6 +16,8 @@ var place_id
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
 @onready var button_share: Button = %Button_Share
+@onready var button_like_pressed: Button = %Button_Like_Pressed
+@onready var button_dislike_pressed: Button = %Button_Dislike_Pressed
 
 
 func _ready() -> void:
@@ -23,14 +25,17 @@ func _ready() -> void:
 		button_share.visible = show_share_button
 
 
-func update_data(data: Dictionary = {}) -> void:
-	place_id = data.get("id", null)
-	if place_id != null:
-		_apply_button_state(data)
-		enable_buttons()
-		show()
+func update_data(id = null) -> void:
+	place_id = id
+	if place_id != null and place_id != "-":
+		async_update_state()
 	else:
 		hide()
+
+
+func async_update_state() -> void:
+	await _async_update_status()
+	show()
 
 
 func _on_button_share_pressed() -> void:
@@ -103,19 +108,47 @@ func _apply_button_state(data: Dictionary) -> void:
 		button_dislike.icon = DISLIKE
 
 
+func _async_update_status() -> void:
+	if place_id == null:
+		enable_buttons()
+		return
+
+	disable_buttons()
+
+	var url = DclUrls.places_api() + "/places/" + str(place_id)
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+
+	if response == null:
+		enable_buttons()
+		return
+	if response is PromiseError:
+		printerr("Error getting place data for likes: ", response.get_error())
+		enable_buttons()
+		return
+
+	var json: Dictionary = response.get_string_response_as_json()
+	var place_data = json.get("data", json)
+	_apply_button_state(place_data)
+	enable_buttons()
+
+
 func disable_buttons() -> void:
 	if button_like:
 		button_like.disabled = true
-		button_like.get_node("TextureProgressBar").show()
+		button_like.self_modulate = Color.TRANSPARENT
+		button_like_pressed.show()
 	if button_dislike:
 		button_dislike.disabled = true
-		button_dislike.get_node("TextureProgressBar").show()
+		button_dislike.self_modulate = Color.TRANSPARENT
+		button_dislike_pressed.show()
 
 
 func enable_buttons() -> void:
 	if button_like:
 		button_like.disabled = false
-		button_like.get_node("TextureProgressBar").hide()
+		button_like.self_modulate = Color.WHITE
+		button_like_pressed.hide()
 	if button_dislike:
 		button_dislike.disabled = false
-		button_dislike.get_node("TextureProgressBar").hide()
+		button_dislike.self_modulate = Color.WHITE
+		button_dislike_pressed.hide()
