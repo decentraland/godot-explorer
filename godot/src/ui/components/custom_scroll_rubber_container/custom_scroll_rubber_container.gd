@@ -114,20 +114,19 @@ func _physics_process(delta: float) -> void:
 	if not is_valid_child():
 		return
 	var c = get_child(0)
-	var is_outside_right: bool = -c.position.x > (c.size.x - size.x)
 	if is_touching:
 		velocity = lerp(
 			velocity, (c.position - previous_position) * Engine.physics_ticks_per_second, 1.0
 		)
 		previous_position = c.position
 		child_physics_position = child_drag_position
-		if is_outside_right:
+		if is_outside_right(200):
 			emit_request()
 	else:
 		#TODO add Y axis
-		if c.position.x > 0:
+		if is_outside_left():
 			velocity.x = (0.0 - c.position.x) * 2.0
-		elif is_outside_right:
+		elif is_outside_right():
 			velocity.x = ((c.size.x - size.x) - -c.position.x) * -2.0
 		else:
 			velocity += force * delta
@@ -135,6 +134,16 @@ func _physics_process(delta: float) -> void:
 
 		child_physics_position += velocity * delta
 		queue_sort()
+
+
+func is_outside_left(margin: float = 0.0) -> bool:
+	var c = get_child(0)
+	return c.position.x > margin
+
+
+func is_outside_right(margin: float = 0.0) -> bool:
+	var c = get_child(0)
+	return -c.position.x > (c.size.x - size.x) + margin
 
 
 func is_valid_child() -> bool:
