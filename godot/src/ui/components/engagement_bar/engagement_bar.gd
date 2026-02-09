@@ -5,24 +5,12 @@ const DISLIKE_SOLID = preload("res://assets/ui/dislike_solid.svg")
 const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 
-@export var show_share_button: bool = false:
-	set(value):
-		show_share_button = value
-		if button_share:
-			button_share.visible = value
-
 var place_id
 
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
-@onready var button_share: Button = %Button_Share
 @onready var button_like_pressed: Button = %Button_Like_Pressed
 @onready var button_dislike_pressed: Button = %Button_Dislike_Pressed
-
-
-func _ready() -> void:
-	if button_share:
-		button_share.visible = show_share_button
 
 
 func update_data(id = null) -> void:
@@ -36,10 +24,6 @@ func update_data(id = null) -> void:
 func async_update_state() -> void:
 	await _async_update_status()
 	show()
-
-
-func _on_button_share_pressed() -> void:
-	pass  # Replace with function body.
 
 
 func _async_on_button_like_toggled(toggled_on: bool) -> void:
