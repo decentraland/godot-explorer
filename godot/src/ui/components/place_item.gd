@@ -56,7 +56,7 @@ func _ready():
 		set_online(onlines)
 		set_title(title)
 		set_event_name(event_name)
-		#set_description(description)
+		set_description(description)
 		set_likes_percent(likes_percent)
 		set_location(location)
 		set_categories(categories)
@@ -497,7 +497,7 @@ func set_data(item_data):
 
 	var event_scene_name = _get_or_empty_string(item_data, "scene_name")
 	set_scene_event_name(event_scene_name)
-	#set_description(_get_or_empty_string(item_data, "description"))
+	set_description(_get_or_empty_string(item_data, "description"))
 
 	event_id = item_data.get("id", "id")
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
@@ -515,7 +515,9 @@ func set_data(item_data):
 
 	set_server_or_location()
 
-	set_attending(item_data.get("attending", false), event_id, event_tags)
+	var reminder_btn = _get_reminder_button()
+	if reminder_btn:
+		reminder_btn.set_data(_data)
 	_update_reminder_and_jump_buttons()
 	set_user_name(item_data.get("user_name", ""))
 	var like_score = item_data.get("like_score", 0.0)
@@ -714,19 +716,6 @@ func set_recurrent_dates(item_data: Dictionary) -> void:
 		btn.set_data(item_data)
 		btn.next_event = false
 		recurrent_dates_container.add_child(btn)
-
-
-func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:
-	var reminder_button = _get_reminder_button()
-	if reminder_button:
-		reminder_button.event_id_value = _id
-		reminder_button.event_tags = _event_tags
-		reminder_button.event_start_timestamp = event_start_timestamp
-		reminder_button.event_name = event_name
-		reminder_button.event_coordinates = location
-		reminder_button.event_cover_image_url = _data.get("image", "") if _data else ""
-		reminder_button.set_pressed_no_signal(_attending)
-		reminder_button.update_styles(_attending)
 
 
 func _update_reminder_and_jump_buttons() -> void:
