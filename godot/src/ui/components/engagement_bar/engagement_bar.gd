@@ -5,14 +5,12 @@ const DISLIKE_SOLID = preload("res://assets/ui/dislike_solid.svg")
 const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 
-
 var place_id
 
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
 @onready var button_like_pressed: Button = %Button_Like_Pressed
 @onready var button_dislike_pressed: Button = %Button_Dislike_Pressed
-
 
 
 func update_data(id = null) -> void:

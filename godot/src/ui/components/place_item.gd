@@ -736,7 +736,9 @@ func _update_reminder_and_jump_buttons() -> void:
 	var is_live = _data.get("live", false) if _data is Dictionary else false
 	if event_start_timestamp > 0 and now >= event_start_timestamp:
 		is_live = true
-	var time_until_start_sec: int = int(event_start_timestamp - now) if event_start_timestamp > 0 else 0
+	var time_until_start_sec: int = (
+		int(event_start_timestamp - now) if event_start_timestamp > 0 else 0
+	)
 	var starts_in_less_than_5_mins = (
 		event_start_timestamp > 0 and time_until_start_sec > 0 and time_until_start_sec < 300
 	)
@@ -848,7 +850,7 @@ func _share_place_or_event() -> void:
 		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
 		var share_pos: Vector2i = pos_realm[0]
 		var share_realm: String = pos_realm[1]
-		var is_main = (share_realm == DclUrls.main_realm())
+		var is_main = share_realm == DclUrls.main_realm()
 
 		if is_main:
 			url = (
@@ -858,12 +860,20 @@ func _share_place_or_event() -> void:
 				+ str(share_pos.y)
 			)
 		else:
-			var short_realm = share_realm if share_realm.ends_with(".dcl.eth") else _extract_short_realm_url(share_realm)
+			var short_realm = (
+				share_realm
+				if share_realm.ends_with(".dcl.eth")
+				else _extract_short_realm_url(share_realm)
+			)
 			url = "https://mobile.dclexplorer.com/open?realm=" + short_realm
 
-		share_title = _data.get("name", _data.get("title", "Decentraland")) if is_event else _data.get("title", "Decentraland")
+		share_title = (
+			_data.get("name", _data.get("title", "Decentraland"))
+			if is_event
+			else _data.get("title", "Decentraland")
+		)
 	else:
-		var is_main = (realm == DclUrls.main_realm())
+		var is_main = realm == DclUrls.main_realm()
 		if is_main:
 			url = (
 				"https://mobile.dclexplorer.com/open?position="
@@ -872,7 +882,9 @@ func _share_place_or_event() -> void:
 				+ str(location.y)
 			)
 		else:
-			var short_realm = realm if realm.ends_with(".dcl.eth") else _extract_short_realm_url(realm)
+			var short_realm = (
+				realm if realm.ends_with(".dcl.eth") else _extract_short_realm_url(realm)
+			)
 			url = "https://mobile.dclexplorer.com/open?realm=" + short_realm
 		share_title = event_name if not event_name.is_empty() else title
 
