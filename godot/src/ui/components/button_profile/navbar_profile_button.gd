@@ -1,6 +1,5 @@
 extends TextureButton
 
-
 var stylebox: StyleBoxFlat
 @onready var texture_rect: TextureRect = %TextureRect
 @onready var panel: Panel = %Panel
