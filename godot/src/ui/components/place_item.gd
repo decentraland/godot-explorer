@@ -13,6 +13,7 @@ enum DragGesture { IDLE, UP, DOWN }
 const _CALENDAR_BUTTON_SCENE: PackedScene = preload(
 	"res://src/ui/components/calendar_button/calendar_button.tscn"
 )
+const _TWEEN_DURATION := 0.2
 
 @export var texture: Texture2D = texture_placeholder
 @export var title: String = "Scene Title"
@@ -1003,9 +1004,6 @@ func _get_card_half_position() -> float:
 
 func _get_card_hidden_position() -> float:
 	return get_rect().size.y
-
-
-const _TWEEN_DURATION := 0.2
 
 
 func _on_tween_to_finished() -> void:
