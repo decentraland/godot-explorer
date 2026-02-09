@@ -738,7 +738,7 @@ func _update_reminder_and_jump_buttons() -> void:
 	var is_live = _data.get("live", false) if _data is Dictionary else false
 	if event_start_timestamp > 0 and now >= event_start_timestamp:
 		is_live = true
-	var time_until_start_sec = event_start_timestamp - now if event_start_timestamp > 0 else 0
+	var time_until_start_sec: int = int(event_start_timestamp - now) if event_start_timestamp > 0 else 0
 	var starts_in_less_than_5_mins = (
 		event_start_timestamp > 0 and time_until_start_sec > 0 and time_until_start_sec < 300
 	)
@@ -805,20 +805,20 @@ func _parse_iso_timestamp_utc(iso_string: String) -> int:
 
 
 func _format_duration(duration: int) -> String:
-	var hours = duration / (1000 * 60 * 60)
+	var hours: int = duration / (1000 * 60 * 60)
 	if hours < 1:
-		var minutes = duration / (1000 * 60)
+		var minutes: int = duration / (1000 * 60)
 		if minutes == 1:
 			return "1 MIN"
-		return str(int(minutes)) + " MINS"
+		return str(minutes) + " MINS"
 
 	if hours < 72:
 		if hours == 1:
 			return "1 HR"
-		return str(int(hours)) + " HRS"
+		return str(hours) + " HRS"
 
-	var days = hours / 24
-	return str(int(days)) + " DAYS"
+	var days: int = hours / 24
+	return str(days) + " DAYS"
 
 
 func _on_event_pressed() -> void:
@@ -828,25 +828,80 @@ func _on_event_pressed() -> void:
 		event_pressed.emit(event_id)
 
 
-func _on_button_share_pressed() -> void:
-	if not _data or not _data.has("id"):
-		printerr("No event data available to share")
-		return
+func _extract_short_realm_url(full_url: String) -> String:
+	var url_trimmed = full_url.trim_suffix("/")
+	var parts = url_trimmed.split("/")
+	if parts.size() > 0:
+		return parts[parts.size() - 1]
+	return full_url
 
-	if event_id.is_empty():
-		printerr("Event ID not available")
-		return
 
-	var event_url = DclUrls.host() + "/events/event/?id=" + event_id
+func _is_place_item_event(item_data: Dictionary) -> bool:
+	return item_data.has("duration")
 
-	var event_title = _data.get("name", "Decentraland Event")
 
-	var text = "Visit the event '" + event_title + "' following this link " + event_url
+func _share_place_or_event() -> void:
+	var share_title: String
+	var url: String
+	var is_event := false
+
+	if _data is Dictionary and not _data.is_empty():
+		is_event = _is_place_item_event(_data)
+		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+		var share_pos: Vector2i = pos_realm[0]
+		var share_realm: String = pos_realm[1]
+		var is_main = (share_realm == DclUrls.main_realm())
+
+		if is_main:
+			url = (
+				"https://mobile.dclexplorer.com/open?position="
+				+ str(share_pos.x)
+				+ ","
+				+ str(share_pos.y)
+			)
+		else:
+			var short_realm = share_realm if share_realm.ends_with(".dcl.eth") else _extract_short_realm_url(share_realm)
+			url = "https://mobile.dclexplorer.com/open?realm=" + short_realm
+
+		share_title = _data.get("name", _data.get("title", "Decentraland")) if is_event else _data.get("title", "Decentraland")
+	else:
+		var is_main = (realm == DclUrls.main_realm())
+		if is_main:
+			url = (
+				"https://mobile.dclexplorer.com/open?position="
+				+ str(location.x)
+				+ ","
+				+ str(location.y)
+			)
+		else:
+			var short_realm = realm if realm.ends_with(".dcl.eth") else _extract_short_realm_url(realm)
+			url = "https://mobile.dclexplorer.com/open?realm=" + short_realm
+		share_title = event_name if not event_name.is_empty() else title
+
+	if share_title.is_empty():
+		share_title = "Decentraland"
+
+	var msg: String
+	if is_event:
+		msg = "📍 Visit the event '" + share_title + "' following this link: " + url
+	else:
+		msg = "📍 Join me at " + share_title + " following this link: " + url
 
 	if Global.is_android():
-		DclAndroidPlugin.share_text(text)
+		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
-		DclIosPlugin.share_text(text)
+		DclIosPlugin.share_text(msg)
+
+
+func _on_button_share_pressed() -> void:
+	if not _data or _data.is_empty():
+		if title.is_empty() and event_name.is_empty():
+			printerr("No place or event data available to share")
+			return
+		_share_place_or_event()
+		return
+
+	_share_place_or_event()
 
 
 func _on_button_calendar_pressed() -> void:

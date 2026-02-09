@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://cmarw81knjomw"]
+[gd_scene load_steps=6 format=3 uid="uid://cmarw81knjomw"]
 
 [ext_resource type="Script" uid="uid://2bpphti4ixii" path="res://src/ui/components/engagement_bar/engagement_bar.gd" id="1_trky3"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_g1nd3"]
-[ext_resource type="Texture2D" uid="uid://c25e6v41fpnh2" path="res://src/ui/components/discover/icons/share-outlined.svg" id="3_g1nd3"]
 [ext_resource type="Texture2D" uid="uid://bophi8ynjvekk" path="res://src/ui/components/discover/icons/like-outlined.svg" id="4_vgr3q"]
 [ext_resource type="Texture2D" uid="uid://dh2xs52fsmrva" path="res://src/ui/components/discover/icons/dislike-outlined.svg" id="6_cp6lm"]
 
@@ -16,21 +15,8 @@ corner_radius_bottom_left = 16
 [node name="EngagementBar" type="HBoxContainer"]
 custom_minimum_size = Vector2(0, 96)
 size_flags_horizontal = 0
-theme_override_constants/separation = 14
+theme_override_constants/separation = 18
 script = ExtResource("1_trky3")
-
-[node name="Button_Share" type="Button" parent="."]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(94, 96)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme = ExtResource("2_g1nd3")
-theme_type_variation = &"EngagementButton"
-theme_override_constants/icon_max_width = 62
-icon = ExtResource("3_g1nd3")
-icon_alignment = 1
-expand_icon = true
 
 [node name="Button_Like" type="Button" parent="."]
 unique_name_in_owner = true
@@ -98,6 +84,5 @@ icon = ExtResource("6_cp6lm")
 icon_alignment = 1
 expand_icon = true
 
-[connection signal="pressed" from="Button_Share" to="." method="_on_button_share_pressed"]
 [connection signal="toggled" from="Button_Like" to="." method="_async_on_button_like_toggled"]
 [connection signal="toggled" from="Button_Dislike" to="." method="_async_on_button_dislike_toggled"]

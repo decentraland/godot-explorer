@@ -1,4 +1,4 @@
-[gd_scene load_steps=49 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=50 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -25,6 +25,7 @@
 [ext_resource type="Texture2D" uid="uid://bima3bhrtxlq8" path="res://src/ui/components/discover/icons/location-outlined.svg" id="19_7l6qr"]
 [ext_resource type="PackedScene" uid="uid://dsd7bcii8obu6" path="res://src/ui/components/discover/categories/categories_bar.tscn" id="19_7t5hv"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="20_elce2"]
+[ext_resource type="Texture2D" uid="uid://c25e6v41fpnh2" path="res://src/ui/components/discover/icons/share-outlined.svg" id="25_2e4jp"]
 [ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/components/discover/icons/jump-in.svg" id="26_vaiub"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4wgrb"]
@@ -601,10 +602,21 @@ custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_constants/separation = 18
 
+[node name="Button_Share" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(94, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("15_nmmsr")
+theme_type_variation = &"EngagementButton"
+theme_override_constants/icon_max_width = 52
+icon = ExtResource("25_2e4jp")
+icon_alignment = 1
+expand_icon = true
+
 [node name="EngagementBar" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3" instance=ExtResource("14_nmmsr")]
 unique_name_in_owner = true
 layout_mode = 2
-show_share_button = true
 
 [node name="Button_JumpIn" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3"]
 unique_name_in_owner = true
