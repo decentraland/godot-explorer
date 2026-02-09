@@ -175,6 +175,16 @@ cargo run -- run --stest
 rustup component add llvm-tools-preview
 cargo install grcov
 cargo run -- coverage --dev
+
+# Update Docker test snapshots from CI artifacts (requires gh CLI)
+cargo run -- update-docker-snapshots
+
+# Update coverage test snapshots from CI artifacts
+cargo run -- update-coverage-snapshots
+
+# Optionally specify a branch or run ID
+cargo run -- update-docker-snapshots --branch main
+cargo run -- update-docker-snapshots --run-id 21769476899
 ```
 
 ## 🎮 Supported Platforms

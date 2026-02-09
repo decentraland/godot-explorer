@@ -28,6 +28,7 @@ mod platform;
 mod run;
 mod tests;
 mod ui;
+mod update_snapshots;
 mod version;
 mod version_check;
 
@@ -149,9 +150,15 @@ fn main() -> Result<(), anyhow::Error> {
                         .multiple_values(true),
                 )
                 .arg(
-                    Arg::new("no-strip")
-                        .long("no-strip")
-                        .help("skip stripping debug symbols from iOS templates (needed for CI to generate Sentry dSYMs)")
+                    Arg::new("cache")
+                        .long("cache")
+                        .help("use cached downloads instead of re-downloading (default: always download fresh)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("strip-ios")
+                        .long("strip-ios")
+                        .help("strip debug symbols from iOS templates to save disk space (default: keep debug symbols)")
                         .takes_value(false),
                 )
         )
@@ -334,6 +341,36 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 ),
         ).subcommand(
+            Command::new("update-docker-snapshots")
+                .about("Update Docker avatar/scene test snapshots from CI artifacts")
+                .arg(
+                    Arg::new("run-id")
+                        .long("run-id")
+                        .help("GitHub Actions run ID (defaults to latest on current branch)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("Branch to find runs on (defaults to current branch)")
+                        .takes_value(true),
+                ),
+        ).subcommand(
+            Command::new("update-coverage-snapshots")
+                .about("Update coverage test snapshots from CI artifacts")
+                .arg(
+                    Arg::new("run-id")
+                        .long("run-id")
+                        .help("GitHub Actions run ID (defaults to latest on current branch)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("Branch to find runs on (defaults to current branch)")
+                        .takes_value(true),
+                ),
+        ).subcommand(
             Command::new("update-libgodot-android")
                 .about("Update Godot Android library (libgodot_android.so) in the AAR template")
                 .arg(
@@ -411,9 +448,11 @@ fn main() -> Result<(), anyhow::Error> {
                 .unwrap_or_default();
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
-            let no_strip = sm.is_present("no-strip");
+            let use_cache = sm.is_present("cache");
+            let strip_ios = sm.is_present("strip-ios");
             // Call your install function and pass the templates
-            let result = install_dependency::install(no_templates, &platforms, no_strip);
+            let result =
+                install_dependency::install(no_templates, &platforms, use_cache, strip_ios);
             if result.is_ok() {
                 dependencies::suggest_next_steps("install", None);
             }
@@ -705,6 +744,14 @@ fn main() -> Result<(), anyhow::Error> {
         ("update-libgodot-android", sm) => {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
+        ("update-docker-snapshots", sm) => update_snapshots::update_docker_snapshots(
+            sm.value_of("run-id"),
+            sm.value_of("branch"),
+        ),
+        ("update-coverage-snapshots", sm) => update_snapshots::update_coverage_snapshots(
+            sm.value_of("run-id"),
+            sm.value_of("branch"),
+        ),
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),

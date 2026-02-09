@@ -427,7 +427,8 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
 pub fn install(
     skip_download_templates: bool,
     platforms: &[String],
-    no_strip: bool,
+    use_cache: bool,
+    strip_ios: bool,
 ) -> Result<(), anyhow::Error> {
     print_section("Installing Dependencies");
 
@@ -465,11 +466,24 @@ pub fn install(
         }
     }
 
-    let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
-    print_message(
-        MessageType::Info,
-        &format!("Cache directory: {}", persistent_path),
-    );
+    if use_cache {
+        let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
+        print_message(
+            MessageType::Info,
+            &format!("Cache directory: {}", persistent_path),
+        );
+    } else {
+        print_message(MessageType::Info, "Cache disabled (use --cache to enable)");
+    }
+
+    // Helper: only pass cache key when --cache is enabled
+    let cache_key = |key: String| -> Option<String> {
+        if use_cache {
+            Some(key)
+        } else {
+            None
+        }
+    };
 
     // Check required tools first
     if !check_command("protoc") {
@@ -506,7 +520,7 @@ pub fn install(
         download_and_extract_zip(
             get_godot_url().unwrap().as_str(),
             BinPaths::godot().to_str().unwrap(),
-            Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
+            cache_key(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
         )?;
 
         let program_path = BinPaths::godot().join(get_godot_executable_path().unwrap());
@@ -532,7 +546,7 @@ pub fn install(
         download_and_extract_zip(
             SENTRY_ADDON_URL,
             uncompressed_folder.to_str().unwrap(),
-            Some(format!("sentry.zip")),
+            cache_key("sentry.zip".into()),
         )?;
 
         fs::rename(
@@ -555,7 +569,7 @@ pub fn install(
     };
 
     if !skip_download_templates {
-        prepare_templates(platforms, no_strip)?;
+        prepare_templates(platforms, use_cache, strip_ios)?;
     }
 
     print_message(MessageType::Success, "Installation complete!");

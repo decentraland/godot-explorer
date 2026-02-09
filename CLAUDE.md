@@ -20,16 +20,18 @@ All commands use the xtask pattern via `cargo run --`:
 cargo run -- doctor
 
 # Install dependencies (specify platforms: linux, windows, macos, android, ios)
-cargo run -- install                      # Installs protoc and Godot only
+cargo run -- install                      # Installs protoc and Godot only (fresh download)
 cargo run -- install --targets linux      # Also installs Linux export templates
 cargo run -- install --targets android    # Also installs Android tools and templates
-cargo run -- install --targets ios        # iOS templates (auto-strips debug symbols)
-cargo run -- install --targets ios --no-strip  # iOS templates with debug symbols (for Sentry)
+cargo run -- install --targets ios        # iOS templates (keeps debug symbols)
+cargo run -- install --targets ios --strip-ios  # iOS templates (strips debug symbols to save disk)
+cargo run -- install --cache              # Use cached downloads instead of re-downloading
+cargo run -- install --cache --targets ios --strip-ios  # Cached + strip iOS
 
 # Strip iOS templates manually (saves ~1.9GB disk space)
 cargo run -- strip-ios-templates
 
-# Clear download cache (useful if you need to re-download templates)
+# Clear download cache
 cargo run -- clean-cache
 ```
 
@@ -163,25 +165,20 @@ cargo run -- export --target ios
 
 4. **For iOS development** (macOS only):
    ```bash
-   # Install iOS templates (strips debug symbols by default to save ~1.9GB)
+   # Install iOS templates (keeps debug symbols by default)
    cargo run -- install --targets ios
 
-   # Install WITHOUT stripping (preserves debug symbols for Sentry crash reports)
-   cargo run -- install --targets ios --no-strip
+   # Install with stripping (saves ~1.9GB disk space)
+   cargo run -- install --targets ios --strip-ios
 
    # Strip already-installed templates manually
    cargo run -- strip-ios-templates
    ```
 
    **Important notes about iOS templates:**
-   - Local installs **strip debug symbols by default** to save disk space (~2.1GB → ~234MB)
-   - Stripping can take a few minutes (extracts, strips, re-compresses the zip)
-   - **Cached templates are already stripped** - if you need debug symbols for crash symbolication, you must clear the cache and reinstall with `--no-strip`:
-     ```bash
-     cargo run -- clean-cache
-     cargo run -- install --targets ios --no-strip
-     ```
-   - CI uses `--no-strip` to preserve debug symbols for Sentry dSYM uploads
+   - Local installs **keep debug symbols by default** (useful for Sentry crash symbolication)
+   - Use `--strip-ios` to strip debug symbols and save disk space (~2.1GB -> ~234MB)
+   - Use `--cache` to reuse previously downloaded files instead of re-downloading
    - The strip command auto-detects already-stripped templates (< 1GB) and skips
 
 5. **Triggering iOS CI builds**:

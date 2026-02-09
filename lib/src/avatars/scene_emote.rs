@@ -16,18 +16,10 @@ impl SceneEmoteHash {
             audio_hash,
         }
     }
-
-    /// Create DclSceneEmoteData for passing to GDScript
-    pub fn to_godot_data(&self, looping: bool) -> Gd<DclSceneEmoteData> {
-        DclSceneEmoteData::create(
-            self.glb_hash.as_str().into(),
-            self.audio_hash.as_deref().unwrap_or_default().into(),
-            looping,
-        )
-    }
 }
 
 /// Scene emote data passed from Rust to GDScript.
+/// Now includes base_url and scene_id for content resolution.
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct DclSceneEmoteData {
@@ -38,17 +30,29 @@ pub struct DclSceneEmoteData {
     pub audio_hash: GString,
     #[var]
     pub looping: bool,
+    #[var]
+    pub base_url: GString,
+    #[var]
+    pub scene_id: GString,
 }
 
 #[godot_api]
 impl DclSceneEmoteData {
     #[func]
-    pub fn create(glb_hash: GString, audio_hash: GString, looping: bool) -> Gd<Self> {
+    pub fn create(
+        glb_hash: GString,
+        audio_hash: GString,
+        looping: bool,
+        base_url: GString,
+        scene_id: GString,
+    ) -> Gd<Self> {
         Gd::from_init_fn(|base| Self {
             base,
             glb_hash,
             audio_hash,
             looping,
+            base_url,
+            scene_id,
         })
     }
 }
