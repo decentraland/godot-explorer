@@ -1,6 +1,6 @@
 [gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://yox6vvdafsgu"]
 
-[ext_resource type="Shader" uid="uid://cf88qlvtprpye" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton.gdshader" id="1_4p8aq"]
+[ext_resource type="Shader" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton.gdshader" id="1_4p8aq"]
 
 [resource]
 shader = ExtResource("1_4p8aq")
