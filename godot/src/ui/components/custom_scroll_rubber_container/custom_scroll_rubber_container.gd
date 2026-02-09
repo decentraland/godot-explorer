@@ -66,21 +66,22 @@ func _notification(what):
 		fit_child_in_rect(c, Rect2(child_position, child_min_size))
 
 
-
+# NOTE accept_event() on _gui_input is not preventing
+# button presses while scrolling. Using it here instead.
 func _input(event: InputEvent) -> void:
 	if not is_scrolling: return
 	if event is InputEventScreenTouch:
 		if not event.pressed:
 			accept_event()
 			is_touching = false
+			is_scrolling = false
 	elif event is InputEventMouseButton:
 		if not event.pressed:
 			accept_event()
 			is_touching = false
+			is_scrolling = false
 
 
-# NOTE accept_event() on _gui_input is not working
-# using get_viewport().gui_release_focus() instead
 func _gui_input(event: InputEvent) -> void:
 	if not is_valid_child(): return
 	var c: Control = get_child(0)
@@ -94,6 +95,7 @@ func _gui_input(event: InputEvent) -> void:
 			offset = Vector2.ZERO
 		else:
 			is_touching = false
+			is_scrolling = false
 	elif event is InputEventScreenDrag:
 		if is_touching:
 			offset = event.position - start_pos
