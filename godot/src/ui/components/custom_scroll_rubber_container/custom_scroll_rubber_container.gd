@@ -36,7 +36,8 @@ func restart():
 
 
 func emit_request():
-	if not is_valid_child(): return
+	if not is_valid_child():
+		return
 	current_offset = item_container.get_child_count()
 	request.emit(current_offset, threshold_limit)
 
@@ -54,7 +55,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 func _notification(what):
-	if not is_valid_child(): return
+	if not is_valid_child():
+		return
 	if what == NOTIFICATION_SORT_CHILDREN:
 		var c: Control = get_child(0)
 		var child_position: Vector2
@@ -71,7 +73,8 @@ func _notification(what):
 # button presses while scrolling. Using it here instead.
 # TODO prevent button presses on Editor
 func _input(event: InputEvent) -> void:
-	if not is_scrolling: return
+	if not is_scrolling:
+		return
 	if event is InputEventScreenTouch:
 		if not event.pressed:
 			accept_event()
@@ -85,7 +88,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if not is_valid_child(): return
+	if not is_valid_child():
+		return
 	var c: Control = get_child(0)
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -107,11 +111,14 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if not is_valid_child(): return
+	if not is_valid_child():
+		return
 	var c = get_child(0)
-	var is_outside_right:bool = -c.position.x > (c.size.x - size.x)
+	var is_outside_right: bool = -c.position.x > (c.size.x - size.x)
 	if is_touching:
-		velocity = lerp(velocity, (c.position - previous_position) * Engine.physics_ticks_per_second, 1.0)
+		velocity = lerp(
+			velocity, (c.position - previous_position) * Engine.physics_ticks_per_second, 1.0
+		)
 		previous_position = c.position
 		child_physics_position = child_drag_position
 		if is_outside_right:
@@ -125,13 +132,15 @@ func _physics_process(delta: float) -> void:
 		else:
 			velocity += force * delta
 			velocity *= 1.0 - (drag / Engine.physics_ticks_per_second)
-		
+
 		child_physics_position += velocity * delta
 		queue_sort()
 
 
 func is_valid_child() -> bool:
-	if get_child_count() != 1: return false
+	if get_child_count() != 1:
+		return false
 	var c = get_child(0)
-	if c is not Control: return false
+	if c is not Control:
+		return false
 	return true
