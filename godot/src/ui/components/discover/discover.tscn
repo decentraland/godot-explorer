@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=22 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -8,7 +8,6 @@
 [ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/components/discover/icons/back.svg" id="4_edk0s"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
-[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="12_g4fdo"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
@@ -46,11 +45,13 @@ script = ExtResource("2_f08es")
 
 [node name="TextureRect" type="TextureRect" parent="."]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -360.0
+offset_right = 360.0
+offset_bottom = 1600.0
 grow_horizontal = 2
-grow_vertical = 2
 texture = ExtResource("3_lvgj0")
 stretch_mode = 6
 
@@ -62,15 +63,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PanelContainer_Navbar" type="MarginContainer" parent="TextureRect/VBoxContainer"]
-layout_mode = 2
-script = ExtResource("6_b1byu")
-use_left = false
-use_right = false
-use_bottom = false
-metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
-
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar"]
+[node name="MarginContainer2" type="MarginContainer" parent="TextureRect/VBoxContainer"]
 custom_minimum_size = Vector2(0, 176)
 layout_mode = 2
 theme_override_constants/margin_left = 48
@@ -78,12 +71,12 @@ theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 20
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer2"]
 layout_mode = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 14
 
-[node name="Button_BackToExplorer" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Button_BackToExplorer" type="Button" parent="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -92,7 +85,7 @@ icon = ExtResource("4_edk0s")
 flat = true
 expand_icon = true
 
-[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
@@ -100,12 +93,12 @@ theme_override_font_sizes/font_size = 28
 text = "Discover"
 label_settings = ExtResource("5_q2sj0")
 
-[node name="SearchBar" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer" instance=ExtResource("18_sbar")]
+[node name="SearchBar" parent="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer" instance=ExtResource("18_sbar")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 
-[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer"]
 unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
@@ -208,7 +201,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_242e4")
 
 [node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError"]
 layout_mode = 2
-text = "Something
+text = "Somethin
 went wrong"
 label_settings = SubResource("LabelSettings_iyg6d")
 horizontal_alignment = 1
@@ -300,6 +293,7 @@ layout_mode = 2
 
 [node name="SearchSugestionsContainer" parent="TextureRect/VBoxContainer/MarginContainer" instance=ExtResource("14_5g6gd")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
@@ -313,8 +307,8 @@ unique_name_in_owner = true
 visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
-[connection signal="focus_entered" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
-[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
-[connection signal="text_submitted" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
-[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
+[connection signal="focus_entered" from="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
+[connection signal="text_changed" from="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="text_submitted" from="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
+[connection signal="timeout" from="TextureRect/VBoxContainer/MarginContainer2/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
