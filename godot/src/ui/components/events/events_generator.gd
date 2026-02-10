@@ -11,6 +11,13 @@ var loading = false
 var discover_carrousel_item_loading: Control = null
 
 
+func clean_items():
+	if is_instance_valid(item_container):
+		for child in item_container.get_children():
+			child.queue_free()
+			item_container.remove_child(child)
+
+
 func on_request(_offset: int, limit: int) -> void:
 	if no_more_elements and not _new_search:
 		return  # we reach the capacity...
@@ -20,10 +27,7 @@ func on_request(_offset: int, limit: int) -> void:
 		_new_search = false
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.LOADING)
 
-		if is_instance_valid(item_container):
-			for child in item_container.get_children():
-				child.queue_free()
-				item_container.remove_child(child)
+		clean_items()
 	else:
 		if is_instance_valid(discover_carrousel_item_loading):
 			discover_carrousel_item_loading.show()

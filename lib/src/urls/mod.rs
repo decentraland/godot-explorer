@@ -55,6 +55,12 @@ pub fn comms_gatekeeper() -> String {
         env()
     )
 }
+pub fn comms_gatekeeper_local() -> String {
+    format!(
+        "https://comms-gatekeeper-local.decentraland.{}/get-scene-adapter",
+        env()
+    )
+}
 pub fn social_service() -> String {
     format!("wss://rpc-social-service-ea.decentraland.{}", env())
 }
@@ -113,7 +119,7 @@ pub fn jump_events() -> String {
     format!("https://decentraland.{}/jump/events", env())
 }
 pub fn account_deletion() -> String {
-    format!("https://decentraland.{}/account-deletion", env())
+    format!("https://mobile-bff.decentraland.{}/deletion", env())
 }
 
 // Proxy
@@ -168,11 +174,13 @@ mod tests {
             peer_content(),
             peer_lambdas(),
             comms_gatekeeper(),
+            comms_gatekeeper_local(),
             social_service(),
             archipelago_stats(),
             ethereum_rpc(),
             places_api(),
             events_api(),
+            mobile_events_api(),
             notifications_api(),
             mobile_bff(),
             host(),

@@ -35,16 +35,22 @@ func restart():
 	emit_request()
 
 
+func reset_position():
+	if not is_valid_child():
+		return
+	var c: Control = get_child(0)
+	c.position = Vector2.ZERO
+	velocity = Vector2.ZERO
+	offset = Vector2.ZERO
+	child_physics_position = Vector2.ZERO
+	queue_sort()
+
+
 func emit_request():
 	if not is_valid_child():
 		return
 	current_offset = item_container.get_child_count()
 	request.emit(current_offset, threshold_limit)
-
-
-func _on_scroll_container_scroll_ended():
-	if false:
-		emit_request()
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -102,6 +108,8 @@ func _gui_input(event: InputEvent) -> void:
 		else:
 			is_touching = false
 			is_scrolling = false
+			if is_outside_right(200):
+				emit_request()
 	elif event is InputEventScreenDrag:
 		if is_touching:
 			offset = event.position - start_pos
@@ -120,8 +128,6 @@ func _physics_process(delta: float) -> void:
 		)
 		previous_position = c.position
 		child_physics_position = child_drag_position
-		if is_outside_right(200):
-			emit_request()
 	else:
 		#TODO add Y axis
 		if is_outside_left():
@@ -143,6 +149,8 @@ func is_outside_left(margin: float = 0.0) -> bool:
 
 func is_outside_right(margin: float = 0.0) -> bool:
 	var c = get_child(0)
+	if c.size.x < size.x:
+		return -c.position.x > margin
 	return -c.position.x > (c.size.x - size.x) + margin
 
 

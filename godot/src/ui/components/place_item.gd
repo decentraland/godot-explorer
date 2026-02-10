@@ -47,6 +47,7 @@ var _tween_callback: Callable
 var _tween_header_visible: bool
 
 
+# gdlint:ignore = async-function-name
 func _ready():
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	UiSounds.install_audio_recusirve(self)
@@ -69,6 +70,7 @@ func _ready():
 		# NOTE must call deferred
 		# otherwise the UI is broken
 		card.set_anchors_and_offsets_preset.call_deferred(Control.PRESET_FULL_RECT)
+		card.set_position.call_deferred(Vector2(0, _get_card_hidden_position()))
 
 	var description_container = _get_hide_from_here()
 	if description_container:
@@ -86,15 +88,11 @@ func _ready():
 		if header:
 			header.self_modulate = Color.TRANSPARENT
 			header.hide()
-		var initial_positon := func():
-			card.position.y = _get_card_hidden_position()
-			tween_to(_get_card_half_position())
-		# NOTE must call deferred
-		# otherwise the UI is broken
-		# NOTE 2: deferred is not enough here
-		# tween set delay must be used
-		var deferred_tween := create_tween()
-		deferred_tween.tween_callback(initial_positon).set_delay(0.2)
+
+		await get_tree().process_frame
+		await get_tree().process_frame
+		card.position.y = _get_card_hidden_position()
+		tween_to(_get_card_half_position())
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -1068,7 +1066,8 @@ func _input(event: InputEvent) -> void:
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:
-							pass  # From full only close button closes; gesture does nothing
+							tween_to(_get_card_half_position())
+							drag_state = DragState.HALF
 						DragState.HALF:
 							drag_state = DragState.HIDDEN
 							tween_to(
@@ -1105,7 +1104,7 @@ func _get_card_half_position() -> float:
 		return 0.0
 	# Layout-independent offset: bottom of hide_from_here relative to card, so half is consistent (places/events)
 	var offset_to_separator_top: float = _get_offset_y_in_ancestor(hide_from_here, card)
-	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y
+	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y * 0.5
 	offset_to_separator_bottom += _get_footer().size.y
 	var full_height: float = get_rect().size.y
 	return full_height - offset_to_separator_bottom

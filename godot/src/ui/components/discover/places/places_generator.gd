@@ -29,6 +29,10 @@ func on_request(offset: int, limit: int) -> void:
 	if _no_more_elements and not _new_search:
 		return  # we reach the capacity...
 
+	if _new_search:
+		clean_items()
+		offset = 0
+
 	if last_places_logic:
 		async_request_last_places(offset, limit)
 	else:
@@ -43,15 +47,17 @@ func reload(offset, limit) -> void:
 	async_request_from_api(offset, limit)
 
 
-func async_request_last_places(_offset: int, _limit: int) -> void:
-	_no_more_elements = true
-	if _loading:
-		return
-
+func clean_items():
 	for item in item_container.get_children():
 		if item is PlaceItem:
 			item_container.remove_child(item)
 			item.queue_free()
+
+
+func async_request_last_places(_offset: int, _limit: int) -> void:
+	_no_more_elements = true
+	if _loading:
+		return
 
 	_loading = true
 
@@ -167,6 +173,7 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		for category in categories_array:
 			url += "&categories=" + category
 
+	prints(url)
 	_async_fetch_places(url, limit)
 
 

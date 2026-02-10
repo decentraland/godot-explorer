@@ -40,6 +40,11 @@ fn process_message(
             let Some(component_definition) =
                 scene_crdt_state.get_lww_component_definition_mut(component)
             else {
+                tracing::warn!(
+                    "CRDT: unknown LWW component {} for entity {:?} (PutComponent skipped)",
+                    component.0,
+                    entity
+                );
                 return Ok(());
             };
 
@@ -57,6 +62,11 @@ fn process_message(
             let Some(component_definition) =
                 scene_crdt_state.get_lww_component_definition_mut(component)
             else {
+                tracing::warn!(
+                    "CRDT: unknown LWW component {} for entity {:?} (DeleteComponent skipped)",
+                    component.0,
+                    entity
+                );
                 return Ok(());
             };
 
@@ -79,6 +89,11 @@ fn process_message(
             let Some(component_definition) =
                 scene_crdt_state.get_gos_component_definition_mut(component)
             else {
+                tracing::warn!(
+                    "CRDT: unknown GOS component {} for entity {:?} (AppendValue skipped)",
+                    component.0,
+                    entity
+                );
                 return Ok(());
             };
 
@@ -193,4 +208,76 @@ pub fn delete_entity(entity_id: &SceneEntityId, writer: &mut DclWriter) {
     writer.write_u32(CRDT_DELETE_ENTITY_HEADER_SIZE as u32);
     writer.write(&CrdtMessageType::DeleteEntity);
     writer.write(entity_id);
+}
+
+/// Filters raw CRDT bytes, preserving only messages for components known to
+/// `scene_crdt_state`. Unknown component messages are dropped at the byte level,
+/// which avoids prost re-serialization that can strip unknown proto fields.
+pub fn filter_known_crdt_messages(raw: &[u8], scene_crdt_state: &SceneCrdtState) -> Vec<u8> {
+    let mut out = Vec::with_capacity(raw.len());
+    let mut pos = 0;
+
+    while pos + CRDT_HEADER_SIZE <= raw.len() {
+        // Read message length (4 bytes LE) – includes the 8-byte header
+        let msg_len = u32::from_le_bytes(raw[pos..pos + 4].try_into().unwrap()) as usize;
+        let crdt_type = u32::from_le_bytes(raw[pos + 4..pos + 8].try_into().unwrap());
+
+        // Total bytes this message occupies (length field itself + body)
+        let total = 4 + msg_len.saturating_sub(4);
+        // Guard: make sure we don't read past the buffer
+        if pos + 4 + msg_len.saturating_sub(4) > raw.len() {
+            tracing::warn!(
+                "CRDT filter: truncated message at pos={}, msg_len={}, remaining={}",
+                pos,
+                msg_len,
+                raw.len() - pos
+            );
+            break;
+        }
+
+        let keep = match FromPrimitive::from_u32(crdt_type) {
+            Some(CrdtMessageType::DeleteEntity) => true,
+            Some(CrdtMessageType::PutComponent) | Some(CrdtMessageType::DeleteComponent) => {
+                // entity(4) + component_id(4) start at offset 8 inside the message
+                if msg_len >= 16 {
+                    let comp_id_offset = pos + 12; // 4(len) + 4(type) + 4(entity)
+                    let comp_id = u32::from_le_bytes(
+                        raw[comp_id_offset..comp_id_offset + 4].try_into().unwrap(),
+                    );
+                    let cid = SceneComponentId(comp_id);
+                    scene_crdt_state.get_lww_component_definition(cid).is_some()
+                } else {
+                    true // malformed but let the normal parser handle it
+                }
+            }
+            Some(CrdtMessageType::AppendValue) => {
+                if msg_len >= 16 {
+                    let comp_id_offset = pos + 12;
+                    let comp_id = u32::from_le_bytes(
+                        raw[comp_id_offset..comp_id_offset + 4].try_into().unwrap(),
+                    );
+                    let cid = SceneComponentId(comp_id);
+                    scene_crdt_state.get_gos_component_definition(cid).is_some()
+                } else {
+                    true
+                }
+            }
+            None => {
+                tracing::warn!(
+                    "CRDT filter: unknown message type {} at pos={}",
+                    crdt_type,
+                    pos
+                );
+                false
+            }
+        };
+
+        if keep {
+            out.extend_from_slice(&raw[pos..pos + total]);
+        }
+
+        pos += total;
+    }
+
+    out
 }

@@ -83,7 +83,7 @@ func set_keyword_search_text(_search_text: String) -> void:
 			coordinates.x = trimmed_search_text.to_int()
 			coordinates.y = int(INF)
 
-	if text_len < 2:
+	if text_len <= 2:
 		var count_history := 0
 		for k in Global.get_config().search_history:
 			if count_history >= 4:

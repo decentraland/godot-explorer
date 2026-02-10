@@ -25,8 +25,6 @@ func _ready() -> void:
 	_set_loading(false)
 
 
-## Setea el botón con los datos del evento y actualiza el estado "attending" desde la API.
-## Ver: https://decentraland.org/events/docs/ (GET /api/events/{event_id} devuelve data.attending con auth)
 func set_data(item_data: Dictionary) -> void:
 	if item_data.is_empty():
 		hide()
@@ -47,24 +45,21 @@ func set_data(item_data: Dictionary) -> void:
 	async_update_attending_state()
 
 
-## Obtiene el estado de attending actualizado desde la API (no usa el diccionario cacheado).
 func async_update_attending_state() -> void:
 	if event_id_value.is_empty():
 		return
 
 	_set_loading(true)
 
-	# GET /api/events/{event_id} con auth devuelve data.attending
 	var url = DclUrls.events_api() + "/" + event_id_value
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:
-		printerr("Error fetching event attending state: ", response.get_error())
 		set_pressed_no_signal(false)
 		update_styles(false)
 	elif response != null:
-		var json: Dictionary = response.get_string_response_as_json()
-		var data = json.get("data", json)
+		var json = response.get_string_response_as_json()
+		var data = json.get("data", json) if json is Dictionary else null
 		if data is Dictionary:
 			var attending: bool = data.get("attending", false)
 			set_pressed_no_signal(attending)
