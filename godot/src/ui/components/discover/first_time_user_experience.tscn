@@ -1,0 +1,320 @@
+[gd_scene load_steps=22 format=3 uid="uid://u3erpvsji5wi"]
+
+[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_7ysho"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_voa0q"]
+[ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="2_7ysho"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_ilnjm"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_l4c7q"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="4_2dr64"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_gu70x"]
+[ext_resource type="PackedScene" uid="uid://dj0cviotsdvg2" path="res://src/ui/components/discover/jump_in/download_warning.tscn" id="5_0p8pw"]
+[ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/components/discover/icons/jump-in.svg" id="5_2dr64"]
+[ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="5_l4c7q"]
+[ext_resource type="Texture2D" uid="uid://crdwdswkt0f1i" path="res://src/ui/components/discover/genesis_plaza.png" id="5_uk8f2"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_73ifx"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_q2sj0"]
+font = ExtResource("1_voa0q")
+font_size = 48
+
+[sub_resource type="LabelSettings" id="LabelSettings_g4fdo"]
+font = ExtResource("1_voa0q")
+font_size = 48
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uk8f2"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
+corner_radius_top_left = 17
+corner_radius_top_right = 17
+corner_radius_bottom_right = 17
+corner_radius_bottom_left = 17
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cpcvp"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 17
+corner_radius_top_right = 17
+corner_radius_bottom_right = 17
+corner_radius_bottom_left = 17
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yb3pm"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="LabelSettings" id="LabelSettings_86ojj"]
+font = ExtResource("3_ilnjm")
+font_size = 26
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_umltx"]
+font = ExtResource("3_ilnjm")
+font_size = 26
+
+[sub_resource type="LabelSettings" id="LabelSettings_ndv83"]
+line_spacing = 0.0
+font = ExtResource("1_voa0q")
+font_size = 30
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_8bqvr"]
+content_margin_left = 4.0
+content_margin_top = 0.0
+content_margin_right = 4.0
+content_margin_bottom = 0.0
+color = Color(1, 1, 1, 0.69803923)
+thickness = 2
+
+[node name="FTUE" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_7ysho")
+
+[node name="HSeparator6" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 216
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 2
+text = "Welcome"
+label_settings = SubResource("LabelSettings_q2sj0")
+horizontal_alignment = 1
+
+[node name="Label_NickNameFTUE" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+text = "{UserName}"
+label_settings = SubResource("LabelSettings_g4fdo")
+horizontal_alignment = 1
+
+[node name="Label3" type="Label" parent="."]
+layout_mode = 2
+text = "start here"
+label_settings = SubResource("LabelSettings_q2sj0")
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 89
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="Control" type="Control" parent="."]
+custom_minimum_size = Vector2(550, 440)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="Control"]
+unique_name_in_owner = true
+clip_children = 2
+custom_minimum_size = Vector2(0, 368)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_uk8f2")
+
+[node name="TextureRect_NoImage" type="TextureRect" parent="Control/Panel_Container_NoImage"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("3_l4c7q")
+texture = ExtResource("2_7ysho")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Panel_Container_Image" type="Panel" parent="Control"]
+unique_name_in_owner = true
+clip_children = 2
+custom_minimum_size = Vector2(0, 368)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_cpcvp")
+
+[node name="TextureRect_Image" type="TextureRect" parent="Control/Panel_Container_Image"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("3_l4c7q")
+texture = ExtResource("5_uk8f2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="PanelContainer2" type="PanelContainer" parent="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_yb3pm")
+
+[node name="DownloadWarning" parent="Control/PanelContainer2" instance=ExtResource("5_0p8pw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="HSeparator2" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="RichTextLabel_Title" type="RichTextLabel" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 54)
+layout_mode = 2
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("3_ilnjm")
+theme_override_fonts/bold_italics_font = ExtResource("4_2dr64")
+theme_override_fonts/italics_font = ExtResource("4_2dr64")
+theme_override_fonts/mono_font = ExtResource("4_2dr64")
+theme_override_font_sizes/normal_font_size = 44
+theme_override_font_sizes/bold_font_size = 42
+theme_override_font_sizes/bold_italics_font_size = 42
+theme_override_font_sizes/italics_font_size = 42
+theme_override_font_sizes/mono_font_size = 42
+text = "Genesis Plaza"
+fit_content = true
+scroll_active = false
+autowrap_mode = 2
+horizontal_alignment = 1
+justification_flags = 131
+script = ExtResource("5_l4c7q")
+
+[node name="HSeparator3" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Label_by" type="Label" parent="HBoxContainer"]
+layout_mode = 2
+text = "by "
+label_settings = SubResource("LabelSettings_86ojj")
+horizontal_alignment = 1
+
+[node name="Label_Creator" type="Label" parent="HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Decentraland Foundation"
+label_settings = SubResource("LabelSettings_umltx")
+horizontal_alignment = 1
+
+[node name="HSeparator4" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 32
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="HSeparator5" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 56
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="Button_JumpIn_FTUE" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("4_gu70x")
+theme_override_constants/icon_max_width = 35
+theme_override_font_sizes/font_size = 14
+icon_alignment = 2
+expand_icon = true
+
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="Button_JumpIn_FTUE"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -19.0
+offset_bottom = 19.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label" type="Label" parent="Button_JumpIn_FTUE/HBoxContainer_Content"]
+layout_mode = 2
+text = "JUMP IN"
+label_settings = SubResource("LabelSettings_ndv83")
+
+[node name="MarginContainer" type="MarginContainer" parent="Button_JumpIn_FTUE/HBoxContainer_Content"]
+custom_minimum_size = Vector2(34, 34)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="TextureRect_Add" type="TextureRect" parent="Button_JumpIn_FTUE/HBoxContainer_Content/MarginContainer"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("5_2dr64")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="HSeparator7" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 46
+theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
+
+[node name="Button_Skip" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 1, 1, 0.69803923)
+theme_override_constants/h_separation = 0
+theme_override_fonts/font = ExtResource("1_voa0q")
+theme_override_font_sizes/font_size = 30
+text = "Skip and explore"
+flat = true
+
+[node name="HSeparator" type="HSeparator" parent="Button_Skip"]
+custom_minimum_size = Vector2(245, 25)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -1.5
+offset_top = -4.0
+offset_right = 1.5
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/separator = SubResource("StyleBoxLine_8bqvr")
