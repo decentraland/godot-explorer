@@ -113,7 +113,7 @@ pub fn jump_events() -> String {
     format!("https://decentraland.{}/jump/events", env())
 }
 pub fn account_deletion() -> String {
-    format!("https://decentraland.{}/account-deletion", env())
+    format!("https://mobile-bff.decentraland.{}/deletion", env())
 }
 
 // Proxy
@@ -173,6 +173,7 @@ mod tests {
             ethereum_rpc(),
             places_api(),
             events_api(),
+            mobile_events_api(),
             notifications_api(),
             mobile_bff(),
             host(),

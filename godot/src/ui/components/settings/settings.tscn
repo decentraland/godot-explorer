@@ -994,6 +994,7 @@ theme_override_font_sizes/font_size = 22
 text = "REPORT CONTENT"
 
 [node name="Button_ReportBug" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
