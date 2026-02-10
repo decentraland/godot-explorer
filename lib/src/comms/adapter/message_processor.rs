@@ -274,6 +274,15 @@ impl MessageProcessor {
         }
     }
 
+    /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
+    /// Synthetic addresses (like H160::from_low_u64_be(1) for the auth server) are non-player.
+    fn is_player_address(address: H160) -> bool {
+        // Addresses in the first 0xff range are Ethereum precompiles / synthetic,
+        // not real players. Real Ethereum addresses are derived from public keys
+        // and are effectively random 160-bit values.
+        address > H160::from_low_u64_be(0xff)
+    }
+
     /// Sets the social blacklist reference for filtering blocked/muted users
     pub fn set_social_blacklist(&mut self, blacklist: Gd<DclSocialBlacklist>) {
         // Update cached sets when blacklist changes
@@ -535,7 +544,59 @@ impl MessageProcessor {
         true
     }
 
+    /// Handle non-player participant messages (e.g., "authoritative-server").
+    /// Matching bevy's NonPlayerUpdate path: no avatar, no profile, only Scene messages.
+    fn process_non_player_message(&mut self, message: IncomingMessage) {
+        if let MessageType::Rfc4(rfc4_msg) = message.message {
+            if let rfc4::packet::Message::Scene(scene) = rfc4_msg.message {
+                tracing::debug!(
+                    "📨 Non-player Scene message received for scene '{}' ({} bytes)",
+                    scene.scene_id,
+                    scene.data.len()
+                );
+
+                // Limit the number of scene IDs we track
+                if !self.incoming_scene_messages.contains_key(&scene.scene_id)
+                    && self.incoming_scene_messages.len() >= MAX_SCENE_IDS
+                {
+                    if let Some(oldest_key) = self.incoming_scene_messages.keys().next().cloned() {
+                        self.incoming_scene_messages.remove(&oldest_key);
+                    }
+                }
+
+                let entry = self
+                    .incoming_scene_messages
+                    .entry(scene.scene_id.clone())
+                    .or_default();
+
+                if entry.len() >= MAX_SCENE_MESSAGES_PER_SCENE {
+                    entry.pop_front();
+                }
+                entry.push_back((message.address, scene.data));
+            } else {
+                tracing::debug!(
+                    "📨 Non-player non-Scene message ignored from {:#x} (room '{}')",
+                    message.address,
+                    message.room_id
+                );
+            }
+        }
+    }
+
     fn process_message(&mut self, message: IncomingMessage) {
+        // Skip messages from ourselves (can happen if local participant events leak through)
+        if message.address == self.player_address {
+            return;
+        }
+
+        // Non-player participants (like "authoritative-server" with synthetic address)
+        // bypass the full peer lifecycle — no avatar, no profile, only Scene messages.
+        // This matches bevy's NonPlayerUpdate path.
+        if !Self::is_player_address(message.address) {
+            self.process_non_player_message(message);
+            return;
+        }
+
         let room_id = message.room_id.clone(); // Extract room_id for later use
 
         // Handle peer creation/updates first
@@ -1334,8 +1395,23 @@ impl MessageProcessor {
 
     pub fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
         if let Some(messages) = self.incoming_scene_messages.get_mut(scene_id) {
-            messages.drain(..).collect()
+            let result: Vec<_> = messages.drain(..).collect();
+            if !result.is_empty() {
+                tracing::debug!(
+                    "📤 consume_scene_messages: delivering {} messages for scene '{}'",
+                    result.len(),
+                    scene_id
+                );
+            }
+            result
         } else {
+            if !self.incoming_scene_messages.is_empty() {
+                tracing::debug!(
+                    "📤 consume_scene_messages: scene '{}' not found, available keys: {:?}",
+                    scene_id,
+                    self.incoming_scene_messages.keys().collect::<Vec<_>>()
+                );
+            }
             Vec::new()
         }
     }
