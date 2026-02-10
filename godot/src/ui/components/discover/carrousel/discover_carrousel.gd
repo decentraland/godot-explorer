@@ -63,5 +63,4 @@ func set_search_param(new_search_param: String):
 
 
 func scroll_to_start() -> void:
-	scroll_container.scroll_horizontal = 0
-	scroll_container.scroll_vertical = 0
+	scroll_container.reset_position()

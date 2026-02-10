@@ -35,6 +35,17 @@ func restart():
 	emit_request()
 
 
+func reset_position():
+	if not is_valid_child():
+		return
+	var c: Control = get_child(0)
+	c.position = Vector2.ZERO
+	velocity = Vector2.ZERO
+	offset = Vector2.ZERO
+	child_physics_position = Vector2.ZERO
+	queue_sort()
+
+
 func emit_request():
 	if not is_valid_child():
 		return
