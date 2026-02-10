@@ -20,12 +20,9 @@ use crate::dcl::common::{
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
-use super::crdt::message::{
-    append_gos_component, delete_entity, process_many_messages, put_or_delete_lww_component,
-};
+use super::crdt::message::process_many_messages;
 use super::crdt::SceneCrdtState;
 use super::serialization::reader::DclReader;
-use super::serialization::writer::DclWriter;
 use super::{RendererResponse, SceneId, SceneResponse, SpawnDclSceneData};
 
 use std::cell::RefCell;
@@ -220,6 +217,12 @@ pub(crate) fn scene_thread(
         if let Some(file) = file {
             let buf = file.get_buffer(file.get_length() as i64).to_vec();
 
+            tracing::info!(
+                "{} main.crdt: raw_size={} bytes",
+                log_info.prefix(),
+                buf.len()
+            );
+
             let mut stream = DclReader::new(&buf);
             let mut scene_crdt_state = scene_crdt.lock().unwrap();
 
@@ -227,37 +230,36 @@ pub(crate) fn scene_thread(
 
             let dirty = scene_crdt_state.take_dirty();
 
-            // Re-serialize only known components for JS (filters out unknown component IDs
-            // that would cause "[receiveMessages] ERROR processing message" in the SDK)
-            let mut filtered_buf = Vec::new();
-            let mut writer = DclWriter::new(&mut filtered_buf);
+            tracing::info!(
+                "{} main.crdt: dirty_lww_components={}, dirty_gos_components={}, entities_born={}, entities_died={}",
+                log_info.prefix(),
+                dirty.lww.len(),
+                dirty.gos.len(),
+                dirty.entities.born.len(),
+                dirty.entities.died.len()
+            );
 
             for (component_id, entities) in dirty.lww.iter() {
-                for entity_id in entities {
-                    let _ = put_or_delete_lww_component(
-                        &scene_crdt_state,
-                        entity_id,
-                        component_id,
-                        &mut writer,
-                    );
-                }
+                tracing::info!(
+                    "{}   LWW component {} has {} dirty entities",
+                    log_info.prefix(),
+                    component_id.0,
+                    entities.len()
+                );
             }
             for (component_id, entities) in dirty.gos.iter() {
-                for (entity_id, element_count) in entities {
-                    let _ = append_gos_component(
-                        &scene_crdt_state,
-                        entity_id,
-                        component_id,
-                        element_count,
-                        &mut writer,
-                    );
-                }
-            }
-            for entity_id in dirty.entities.died.iter() {
-                delete_entity(entity_id, &mut writer);
+                tracing::info!(
+                    "{}   GOS component {} has {} dirty entities",
+                    log_info.prefix(),
+                    component_id.0,
+                    entities.len()
+                );
             }
 
-            scene_main_crdt = Some(filtered_buf);
+            // Pass raw bytes directly to JS — the SDK needs ALL components
+            // (including ones unknown to Godot) for scene logic like PointerEvents.
+            // Only the renderer side (dirty_crdt_state above) filters to known components.
+            scene_main_crdt = Some(buf);
 
             thread_sender_to_main
                 .send(SceneResponse::Ok {
@@ -363,6 +365,11 @@ pub(crate) fn scene_thread(
         .build()
         .unwrap();
 
+    tracing::info!(
+        "{} loading scene code (size={} bytes)",
+        log_info.prefix(),
+        scene_code.len()
+    );
     let script = rt.block_on(async { runtime.execute_script("<loader>", scene_code) });
 
     let script = match script {
