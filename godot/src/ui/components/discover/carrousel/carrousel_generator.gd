@@ -20,5 +20,9 @@ var search_param: String:
 var _new_search: bool = true
 
 
+func clean_items():
+	printerr("This must be override")
+
+
 func on_request(_offset: int, _limit: int) -> void:
 	printerr("This must be override")

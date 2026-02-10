@@ -43,7 +43,6 @@ var _editable: bool = true
 
 @onready var line_edit: LineEdit = %LineEdit
 @onready var button_erase_text: TextureButton = %Button_EraseText
-@onready var search_bar_panel_container: PanelContainer = %SearchBar_PanelContainer
 @onready var button_search: TextureButton = %Button_Search
 
 
@@ -96,12 +95,12 @@ func close_searchbar() -> void:
 	line_edit.hide()
 	line_edit.clear()
 	button_erase_text.hide()
-	search_bar_panel_container.self_modulate = Color.TRANSPARENT
+	self_modulate = Color.TRANSPARENT
 
 
 func open_searchbar() -> void:
 	closed = false
 	line_edit.show()
-	search_bar_panel_container.self_modulate = Color.WHITE
+	self_modulate = Color.WHITE
 	_update_erase_button_visibility()
 	line_edit.grab_focus()

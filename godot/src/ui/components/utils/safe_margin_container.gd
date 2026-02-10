@@ -7,6 +7,11 @@ extends MarginContainer
 @export var use_top: bool = true
 @export var use_bottom: bool = true
 
+@export var extra_margin_top: int = 0
+@export var extra_margin_left: int = 0
+@export var extra_margin_right: int = 0
+@export var extra_margin_bottom: int = 0
+
 var last_margin_bottom: int = 0
 
 
@@ -34,6 +39,11 @@ func _on_size_changed():
 		left = max(left, safe_area.position.x * x_factor)
 		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
 		right = max(right, abs(safe_area.end.x - window_size.x) * x_factor)
+
+	top += extra_margin_top
+	left += extra_margin_left
+	right += extra_margin_right
+	bottom += extra_margin_bottom
 
 	last_margin_bottom = bottom
 
