@@ -186,7 +186,6 @@ theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
 [node name="RichTextLabel_Title" type="RichTextLabel" parent="."]
-unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
