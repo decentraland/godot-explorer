@@ -309,7 +309,7 @@ func set_data(item_data):
 	event_id = item_data.get("id", "id")
 	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
 
-	# Parse event timestamp BEFORE set_attending so it's available for notifications
+	# Parse event timestamp before reminder button setup
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
 	event_status = "live" if live else "upcoming"
@@ -320,7 +320,7 @@ func set_data(item_data):
 			event_start_timestamp = timestamp  # Store for notification scheduling
 			set_time(timestamp, live)
 
-	# Set location before set_attending so event_coordinates is correct for notifications
+	# Set location before reminder button setup
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
 		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
@@ -329,7 +329,9 @@ func set_data(item_data):
 	if event_location_vector.size() == 2:
 		set_event_location(Vector2i(int(event_location_vector[0]), int(event_location_vector[1])))
 
-	set_attending(item_data.get("attending", false), event_id, event_tags)
+	var reminder_btn = _get_reminder_button()
+	if reminder_btn:
+		reminder_btn.set_data(_data)
 	set_user_name(item_data.get("user_name", ""))
 	set_views(item_data.get("user_visits", 0))
 	var like_score = item_data.get("like_score", 0.0)
@@ -489,19 +491,6 @@ func set_attendees_number(_attendees: int) -> void:
 	var label = _get_label_attendees_number()
 	if label:
 		label.text = str(_attendees)
-
-
-func set_attending(_attending: bool, _id: String, _event_tags: String) -> void:
-	var reminder_button = _get_reminder_button()
-	if reminder_button:
-		reminder_button.event_id_value = _id
-		reminder_button.event_tags = _event_tags
-		reminder_button.event_start_timestamp = event_start_timestamp
-		reminder_button.event_name = event_name
-		reminder_button.event_coordinates = location
-		reminder_button.event_cover_image_url = _data.get("image", "") if _data else ""
-		reminder_button.set_pressed_no_signal(_attending)
-		reminder_button.update_styles(_attending)
 
 
 func _parse_iso_timestamp(iso_string: String) -> int:

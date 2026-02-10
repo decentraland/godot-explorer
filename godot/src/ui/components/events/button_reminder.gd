@@ -20,12 +20,100 @@ var event_cover_image_url: String = ""
 
 
 func _ready() -> void:
-	pass
+	_set_loading(false)
+
+
+func set_data(item_data: Dictionary) -> void:
+	event_id_value = item_data.get("id", "")
+	event_tags = "trending" if item_data.get("trending", false) else "none"
+	event_name = item_data.get("name", "")
+	event_cover_image_url = item_data.get("image", "")
+
+	var next_start_at = item_data.get("next_start_at", "")
+	if next_start_at != "":
+		var timestamp = _parse_iso_timestamp(next_start_at)
+		if timestamp > 0:
+			event_start_timestamp = timestamp
+
+	event_coordinates = _parse_position_from_item(item_data)
+
+	async_update_attending_state()
+
+
+func async_update_attending_state() -> void:
+	if event_id_value.is_empty():
+		return
+
+	_set_loading(true)
+
+	var url = DclUrls.events_api() + "/" + event_id_value
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+
+	if response is PromiseError:
+		set_pressed_no_signal(false)
+		update_styles(false)
+	elif response != null:
+		var json = response.get_string_response_as_json()
+		var data = json.get("data", json) if json is Dictionary else null
+		if data is Dictionary:
+			var attending: bool = data.get("attending", false)
+			set_pressed_no_signal(attending)
+			update_styles(attending)
+		else:
+			set_pressed_no_signal(false)
+			update_styles(false)
+	else:
+		set_pressed_no_signal(false)
+		update_styles(false)
+
+	_set_loading(false)
+
+
+static func _parse_position_from_item(item_data: Dictionary) -> Vector2i:
+	var coordinates = item_data.get("coordinates", [0, 0])
+	if coordinates is Array and coordinates.size() == 2:
+		return Vector2i(int(coordinates[0]), int(coordinates[1]))
+	return Vector2i(0, 0)
+
+
+static func _parse_iso_timestamp(iso_string: String) -> int:
+	if iso_string.is_empty():
+		return 0
+
+	var date_parts = iso_string.split("T")
+	if date_parts.size() != 2:
+		return 0
+
+	var date_part = date_parts[0]
+	var time_part = date_parts[1].replace("Z", "").split(".")[0]
+
+	var date_components = date_part.split("-")
+	var time_components = time_part.split(":")
+
+	if date_components.size() != 3 or time_components.size() != 3:
+		return 0
+
+	var year = int(date_components[0])
+	var month = int(date_components[1])
+	var day = int(date_components[2])
+	var hour = int(time_components[0])
+	var minute = int(time_components[1])
+	var second = int(time_components[2])
+
+	var date_dict = {
+		"year": year,
+		"month": month,
+		"day": day,
+		"hour": hour,
+		"minute": minute,
+		"second": second,
+	}
+
+	return Time.get_unix_time_from_datetime_dict(date_dict)
 
 
 func _async_on_toggled(toggled_on: bool) -> void:
-	if event_id_value == null:
-		printerr("NO ID")
+	if event_id_value == null or event_id_value.is_empty():
 		set_pressed_no_signal(!toggled_on)
 		return
 
@@ -49,9 +137,9 @@ func _async_on_toggled(toggled_on: bool) -> void:
 			JSON.stringify({"event_id": event_id_value, "event_tag": event_tags})
 		)
 
-	var response = await Global.async_signed_fetch(url, method)
+	var response = await Global.async_signed_fetch(url, method, "")
 	if response is PromiseError:
-		printerr("Error unpdating attend intention: ", response.get_error())
+		printerr("Error updating attend intention: ", response.get_error())
 		set_pressed_no_signal(!toggled_on)
 	elif response != null:
 		update_styles(toggled_on)
@@ -63,7 +151,7 @@ func _async_on_toggled(toggled_on: bool) -> void:
 			_cancel_local_notification()
 	else:
 		set_pressed_no_signal(!toggled_on)
-		printerr("Error unpdating attend intention")
+		printerr("Error updating attend intention")
 
 	_set_loading(false)
 
