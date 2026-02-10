@@ -101,6 +101,17 @@ impl<T: 'static> From<tokio::sync::oneshot::Sender<T>> for RpcResultSender<T> {
     }
 }
 
+/// Specifies the recipient of a network message
+#[derive(Debug, Clone, Copy)]
+pub enum NetworkMessageRecipient {
+    /// Broadcast to all peers
+    All,
+    /// Send to a specific peer by their Ethereum address
+    Peer(H160),
+    /// Send to the authoritative multiplayer server
+    AuthServer,
+}
+
 #[derive(Debug)]
 pub enum RpcCall {
     // Restricted Actions
@@ -157,7 +168,7 @@ pub enum RpcCall {
     },
     SendCommsMessage {
         body: Vec<u8>,
-        recipient: Option<H160>,
+        recipient: NetworkMessageRecipient,
     },
     GetTextureSize {
         src: String,

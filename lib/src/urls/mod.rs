@@ -55,6 +55,12 @@ pub fn comms_gatekeeper() -> String {
         env()
     )
 }
+pub fn comms_gatekeeper_local() -> String {
+    format!(
+        "https://comms-gatekeeper-local.decentraland.{}/get-scene-adapter",
+        env()
+    )
+}
 pub fn social_service() -> String {
     format!("wss://rpc-social-service-ea.decentraland.{}", env())
 }
@@ -168,6 +174,7 @@ mod tests {
             peer_content(),
             peer_lambdas(),
             comms_gatekeeper(),
+            comms_gatekeeper_local(),
             social_service(),
             archipelago_stats(),
             ethereum_rpc(),

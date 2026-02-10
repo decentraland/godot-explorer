@@ -143,6 +143,19 @@ async fn op_crdt_recv_from_renderer(
                 .filter(|v| !v.1.is_empty())
                 .partition(|v| v.1[0] == COMMS_MSG_TYPE_BINARY);
 
+            if !comms_binary.is_empty() || !comms_string.is_empty() {
+                tracing::debug!(
+                    "🔀 comms partition: {} binary, {} string. First bytes: {:?}",
+                    comms_binary.len(),
+                    comms_string.len(),
+                    comms_binary
+                        .iter()
+                        .chain(comms_string.iter())
+                        .map(|(addr, data)| format!("{:#x}:byte[0]={}", addr, data[0]))
+                        .collect::<Vec<_>>()
+                );
+            }
+
             if !comms_binary.is_empty() {
                 let mut internal_pending_binary_messages = op_state
                     .try_take::<InternalPendingBinaryMessages>()
