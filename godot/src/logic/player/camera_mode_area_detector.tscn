@@ -3,9 +3,9 @@
 [ext_resource type="Script" uid="uid://bcvdbc4b5iya0" path="res://src/logic/player/camera_mode_area_detector.gd" id="1_wchgk"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_aqpo3"]
-margin = 0.05
-radius = 0.25
-height = 1.5
+margin = 0.08
+radius = 0.3
+height = 1.6
 
 [node name="camera_mode_area_detector" type="Area3D"]
 collision_layer = 2147483648

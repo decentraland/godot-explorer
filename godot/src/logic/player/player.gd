@@ -4,6 +4,7 @@ extends CharacterBody3D
 const DEFAULT_CAMERA_FOV = 75.0
 const SPRINTING_CAMERA_FOV = 100.0
 const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
+const COYOTE_TIME = 0.15  # seconds after leaving ground where jump is still allowed
 
 var last_position: Vector3
 var actual_velocity_xz: float
@@ -133,7 +134,8 @@ func _ready():
 	avatar.is_local_player = true
 	avatar.activate_attach_points()
 
-	floor_snap_length = 0.2
+	floor_snap_length = 0.35
+	floor_max_angle = deg_to_rad(46)
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
@@ -240,16 +242,13 @@ func _physics_process(dt: float) -> void:
 	else:
 		time_falling = 0.0
 
-	if not on_floor:
-		var in_grace_time = (
-			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
-		)
-		avatar.land = in_grace_time
-		avatar.rise = velocity.y > .3
-		avatar.fall = velocity.y < -.3 && !in_grace_time
-		velocity.y -= gravity * dt
-	elif (
-		Input.is_action_pressed("ia_jump")
+	var can_coyote_jump = (
+		not on_floor and time_falling < COYOTE_TIME and velocity.y <= 0.0 and jump_time < 0
+	)
+
+	if (
+		(on_floor or can_coyote_jump)
+		and Input.is_action_pressed("ia_jump")
 		and jump_time < 0
 		and not jump_disabled
 		and _hard_landing_timer <= 0
@@ -263,6 +262,14 @@ func _physics_process(dt: float) -> void:
 		avatar.rise = true
 		avatar.fall = false
 		jump_time = 1.5
+	elif not on_floor:
+		var in_grace_time = (
+			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
+		)
+		avatar.land = in_grace_time
+		avatar.rise = velocity.y > .3
+		avatar.fall = velocity.y < -.3 && !in_grace_time
+		velocity.y -= gravity * dt
 	else:
 		if not avatar.land:
 			avatar.land = true
