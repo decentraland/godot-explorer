@@ -42,11 +42,6 @@ func emit_request():
 	request.emit(current_offset, threshold_limit)
 
 
-func _on_scroll_container_scroll_ended():
-	if false:
-		emit_request()
-
-
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings: PackedStringArray
 	if not is_valid_child():
