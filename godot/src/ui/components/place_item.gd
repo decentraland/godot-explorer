@@ -6,6 +6,7 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal jump_in_world(realm: String)
 signal close
+signal ftue_completed
 
 enum DragState { HIDDEN, HALF, FULL }
 enum DragGesture { IDLE, UP, DOWN }
@@ -72,6 +73,13 @@ func _ready():
 	var description_container = _get_hide_from_here()
 	if description_container:
 		description_container.show()
+
+	# Set user name from player profile when used as FTUE
+	var label_nickname_ftue = _get_label_nickname_ftue()
+	if label_nickname_ftue:
+		var player_profile = Global.player_identity.get_profile_or_null()
+		if player_profile:
+			label_nickname_ftue.text = player_profile.get_name()
 
 	if is_draggable and card:
 		var header = _get_header()
@@ -311,6 +319,18 @@ func _get_fav_button() -> FavButton:
 	return _get_node_safe("FavButton")
 
 
+func _get_button_jump_in_ftue() -> Button:
+	return _get_node_safe("Button_JumpIn_FTUE")
+
+
+func _get_button_skip() -> Button:
+	return _get_node_safe("Button_Skip")
+
+
+func _get_label_nickname_ftue() -> Label:
+	return _get_node_safe("Label_NickNameFTUE")
+
+
 func _connect_signals():
 	var button_close = _get_button_close()
 	if button_close:
@@ -340,6 +360,16 @@ func _connect_signals():
 	if button_share:
 		if not button_share.pressed.is_connected(_on_button_share_pressed):
 			button_share.pressed.connect(_on_button_share_pressed)
+
+	var button_jump_in_ftue = _get_button_jump_in_ftue()
+	if button_jump_in_ftue:
+		if not button_jump_in_ftue.pressed.is_connected(_on_button_jump_in_ftue_pressed):
+			button_jump_in_ftue.pressed.connect(_on_button_jump_in_ftue_pressed)
+
+	var button_skip = _get_button_skip()
+	if button_skip:
+		if not button_skip.pressed.is_connected(_on_button_skip_pressed):
+			button_skip.pressed.connect(_on_button_skip_pressed)
 
 
 func set_server_or_location(unlimited: bool = false) -> void:
@@ -426,7 +456,10 @@ func set_title(_title: String):
 	if label:
 		label.text = _title
 	if rtl_title:
-		rtl_title.text = _title
+		if rtl_title.has_method("set_text_trimmed"):
+			rtl_title.set_text_trimmed(_title)
+		else:
+			rtl_title.text = _title
 
 
 func set_description(_description: String):
@@ -465,9 +498,10 @@ func set_user_name(_user_name: String):
 func set_creator(_creator: String):
 	var label = _get_label_creator()
 	var container = _get_container_creator()
-	if label and container:
-		container.set_visible(not _creator.is_empty())
+	if label:
 		label.text = _creator
+	if container:
+		container.set_visible(not _creator.is_empty())
 
 
 func set_download_warning(item_data: Dictionary) -> void:
@@ -552,6 +586,21 @@ func _async_download_image(url: String):
 		printerr("places_generator::_async_download_image promise error: ", result.get_error())
 		return
 	set_image(result.texture)
+
+
+func _on_button_jump_in_ftue_pressed() -> void:
+	_complete_discover_ftue()
+	_do_jump_in()
+
+
+func _on_button_skip_pressed() -> void:
+	_complete_discover_ftue()
+
+
+func _complete_discover_ftue() -> void:
+	Global.get_config().discover_ftue_completed = true
+	Global.get_config().save_to_settings_file()
+	ftue_completed.emit()
 
 
 func _on_button_jump_in_pressed():
