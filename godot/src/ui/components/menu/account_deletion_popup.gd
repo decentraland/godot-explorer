@@ -49,7 +49,9 @@ func async_start_flow() -> void:
 	var data = response.get_string_response_as_json()
 
 	if not data is Dictionary or not data.get("ok", false):
-		var error_msg = data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		var error_msg = (
+			data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		)
 		printerr("Failed to check deletion status: ", error_msg)
 		fail_dialog.show()
 		return
@@ -81,7 +83,9 @@ func _async_on_button_confirm_delete_account_pressed() -> void:
 	var data = response.get_string_response_as_json()
 
 	if not data is Dictionary or not data.get("ok", false):
-		var error_msg = data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		var error_msg = (
+			data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		)
 		printerr("Account deletion request failed: ", error_msg)
 		fail_dialog.show()
 		return
@@ -110,7 +114,9 @@ func _async_on_button_cancel_deletion_pressed() -> void:
 	if data is Dictionary and data.get("ok", false):
 		hide()
 	else:
-		var error_msg = data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		var error_msg = (
+			data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		)
 		printerr("Cancel deletion request failed: ", error_msg)
 		fail_dialog.show()
 
