@@ -1,0 +1,133 @@
+[gd_scene load_steps=11 format=3 uid="uid://bhmbr0xh4h188"]
+
+[ext_resource type="Script" uid="uid://c3gb41r3lvg7o" path="res://src/ui/components/dropdown_list/dropdown_list.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="3_regular"]
+[ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="3_tiq7w"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_semibold"]
+[ext_resource type="StyleBox" uid="uid://dycv502ff00xx" path="res://assets/themes/dropdown_normal.tres" id="4_ymsf1"]
+[ext_resource type="LabelSettings" uid="uid://ohnf401gg7y0" path="res://assets/themes/unselected_dropdown_settings.tres" id="6_4fa15"]
+[ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="6_f66t4"]
+[ext_resource type="Texture2D" uid="uid://cjtlaexth4ts0" path="res://src/ui/components/dropdown_list/icons/arrow-down.svg" id="6_ymsf1"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4fa15"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ymsf1"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.105882354, 0, 0.1764706, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.6313726, 0.29411766, 0.9529412, 0.69803923)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="DropdownList" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+title = "Title"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Label_Title" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_semibold")
+theme_override_font_sizes/font_size = 14
+text = "Title Dropdown	"
+label_settings = ExtResource("3_tiq7w")
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_4fa15")
+
+[node name="PanelContainer_Button" type="PanelContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+theme_override_styles/panel = ExtResource("4_ymsf1")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Button"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Label_Selected" type="Label" parent="VBoxContainer/PanelContainer_Button/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.086, 0.082, 0.094, 1)
+theme_override_fonts/font = ExtResource("3_regular")
+theme_override_font_sizes/font_size = 16
+text = "Selected"
+label_settings = ExtResource("6_4fa15")
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="TextureRect_Arrow" type="TextureRect" parent="VBoxContainer/PanelContainer_Button/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_ymsf1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_4fa15")
+
+[node name="Label_Description" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("3_regular")
+theme_override_font_sizes/font_size = 12
+text = "Short description. 1 line."
+label_settings = ExtResource("6_f66t4")
+text_overrun_behavior = 4
+
+[node name="PopupLayer" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+top_level = true
+z_index = 100
+anchors_preset = 0
+
+[node name="PanelContainer_Popup" type="PanelContainer" parent="PopupLayer"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 200.0
+offset_bottom = 100.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_ymsf1")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="PopupLayer/PanelContainer_Popup"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="VBoxContainer_Items" type="VBoxContainer" parent="PopupLayer/PanelContainer_Popup/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3

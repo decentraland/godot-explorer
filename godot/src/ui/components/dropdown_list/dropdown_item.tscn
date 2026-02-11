@@ -1,0 +1,42 @@
+[gd_scene load_steps=5 format=3 uid="uid://ntabesdtqdc1"]
+
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="1_g0h80"]
+[ext_resource type="Script" uid="uid://biymcj6akv6qd" path="res://src/ui/components/dropdown_list/dropdown_item.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5hhsg"]
+content_margin_left = 16.0
+content_margin_right = 16.0
+draw_center = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g0h80"]
+content_margin_left = 16.0
+content_margin_top = 0.0
+content_margin_right = 16.0
+content_margin_bottom = 0.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="DropdownItem" type="Button"]
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/font_hover_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_constants/icon_max_width = 40
+theme_override_fonts/font = ExtResource("1_g0h80")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_5hhsg")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_5hhsg")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_g0h80")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_g0h80")
+theme_override_styles/hover = SubResource("StyleBoxFlat_g0h80")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_g0h80")
+theme_override_styles/focus = SubResource("StyleBoxFlat_g0h80")
+toggle_mode = true
+text = "Dropdown List Item"
+alignment = 0
+icon_alignment = 2
+script = ExtResource("1_script")
