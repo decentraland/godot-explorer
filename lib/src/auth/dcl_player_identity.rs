@@ -236,7 +236,12 @@ impl DclPlayerIdentity {
     /// The app should wait for a deep link with signin identity ID,
     /// then call complete_mobile_connect_account with that ID.
     #[func]
-    fn start_mobile_connect_account(&mut self, provider: GString) {
+    fn start_mobile_connect_account(
+        &mut self,
+        provider: GString,
+        user_id: GString,
+        session_id: GString,
+    ) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -253,9 +258,19 @@ impl DclPlayerIdentity {
         } else {
             Some(provider.to_string())
         };
+        let user_id = if user_id.is_empty() {
+            None
+        } else {
+            Some(user_id.to_string())
+        };
+        let session_id = if session_id.is_empty() {
+            None
+        } else {
+            Some(session_id.to_string())
+        };
 
         handle.spawn(async move {
-            let result = start_mobile_auth(sender, provider).await;
+            let result = start_mobile_auth(sender, provider, user_id, session_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
