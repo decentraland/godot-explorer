@@ -64,6 +64,7 @@ func _ready():
 				ftue.jump_in_world.connect(_on_ftue_jump_in_world)
 				_async_fetch_ftue_place(ftue)
 
+
 func _async_fetch_ftue_place(ftue_item: Node) -> void:
 	var response = await PlacesHelper.async_get_place_by_id(FTUE_PLACE_ID)
 	if response is PromiseError:
@@ -91,8 +92,8 @@ func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
 	Global.join_world(realm_str)
-	
-	
+
+
 func _get_node_safe(node_name: String) -> Node:
 	if not _node_cache.has(node_name):
 		_node_cache[node_name] = get_node_or_null("%" + node_name)
@@ -101,6 +102,7 @@ func _get_node_safe(node_name: String) -> Node:
 
 func _get_ftue() -> MarginContainer:
 	return _get_node_safe("FTUE")
+
 
 func on_item_pressed(data):
 	jump_in.set_data(data)
