@@ -9,6 +9,17 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
+const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
+const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
+const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
+const TOON_SHADER_DOUBLE = preload("res://assets/avatar/dcl_toon_double.gdshader")
+const TOON_SHADER_ALPHA_CLIP_DOUBLE = preload(
+	"res://assets/avatar/dcl_toon_alpha_clip_double.gdshader"
+)
+const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
+	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
+)
+
 @export var skip_process: bool = false
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
@@ -43,17 +54,6 @@ var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
-
-var toon_shader = preload("res://assets/avatar/dcl_toon.gdshader")
-var toon_shader_alpha_clip = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
-var toon_shader_alpha_blend = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
-var toon_shader_double = preload("res://assets/avatar/dcl_toon_double.gdshader")
-var toon_shader_alpha_clip_double = preload(
-	"res://assets/avatar/dcl_toon_alpha_clip_double.gdshader"
-)
-var toon_shader_alpha_blend_double = preload(
-	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
-)
 
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
@@ -419,23 +419,22 @@ func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
 	var double_sided = base_mat.cull_mode == BaseMaterial3D.CULL_DISABLED
 	var toon_mat = ShaderMaterial.new()
 	if is_alpha_scissor and double_sided:
-		toon_mat.shader = toon_shader_alpha_clip_double
+		toon_mat.shader = TOON_SHADER_ALPHA_CLIP_DOUBLE
 	elif is_alpha_scissor:
-		toon_mat.shader = toon_shader_alpha_clip
+		toon_mat.shader = TOON_SHADER_ALPHA_CLIP
 	elif is_alpha_blend and double_sided:
-		toon_mat.shader = toon_shader_alpha_blend_double
+		toon_mat.shader = TOON_SHADER_ALPHA_BLEND_DOUBLE
 	elif is_alpha_blend:
-		toon_mat.shader = toon_shader_alpha_blend
+		toon_mat.shader = TOON_SHADER_ALPHA_BLEND
 	elif double_sided:
-		toon_mat.shader = toon_shader_double
+		toon_mat.shader = TOON_SHADER_DOUBLE
 	else:
-		toon_mat.shader = toon_shader
+		toon_mat.shader = TOON_SHADER
 	toon_mat.set_shader_parameter("albedo_color", base_mat.albedo_color)
 	if base_mat.albedo_texture:
 		toon_mat.set_shader_parameter("albedo_texture", base_mat.albedo_texture)
 	if base_mat.emission_enabled:
 		toon_mat.set_shader_parameter("emission_color", base_mat.emission)
-		toon_mat.set_shader_parameter("emission_energy", base_mat.emission_energy_multiplier)
 		if base_mat.emission_texture:
 			toon_mat.set_shader_parameter("emission_texture", base_mat.emission_texture)
 	if is_alpha_scissor:

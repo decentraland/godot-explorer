@@ -27,7 +27,6 @@ const float HIGHCOLOR_POWER = 0.15;
 
 // --- Rim light ---
 const float RIMLIGHT_POWER = 0.2;
-const float RIMLIGHT_INSIDE_MASK = 0.15;
 
 void light() {
 	float n_dot_l = dot(NORMAL, LIGHT);

@@ -1,9 +1,8 @@
 shader_type spatial;
-render_mode ambient_light_disabled, cull_back;
+render_mode ambient_light_disabled, cull_back, depth_prepass_alpha;
 
 #include "dcl_toon.gdshaderinc"
 
-uniform bool mix_mask = true;
 uniform vec4 material_color;
 uniform vec4 mask_color;
 uniform sampler2D base_texture : hint_default_white;
