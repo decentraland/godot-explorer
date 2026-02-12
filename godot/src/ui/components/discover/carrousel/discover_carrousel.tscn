@@ -101,6 +101,7 @@ layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("5_lwvhe")
 vertical_scroll_mode = 0
+drag = 6.0
 take_hight_from_children = true
 metadata/_custom_type_script = "uid://c3wphp306q0w"
 

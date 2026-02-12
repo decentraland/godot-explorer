@@ -24,7 +24,8 @@ var child_drag_position: Vector2
 var child_physics_position: Vector2
 var drag_tween: Tween
 var is_touching := false
-var is_scrolling := false
+var is_scrolling_x := false
+var is_scrolling_y := false
 
 var velocity: Vector2
 var force: Vector2
@@ -71,6 +72,8 @@ func _get_minimum_size() -> Vector2:
 		return Vector2.ZERO
 	var c: Control = get_child(0)
 	var min_size := Vector2()
+	# TODO change take_hight_from_children
+	# for a size_flag
 	if take_hight_from_children:
 		min_size.y = c.get_combined_minimum_size().y
 
@@ -81,18 +84,20 @@ func _get_minimum_size() -> Vector2:
 # button presses while scrolling. Using it here instead.
 # TODO prevent button presses on Editor
 func _input(event: InputEvent) -> void:
-	if not is_scrolling:
+	if not (is_scrolling_x or is_scrolling_y):
 		return
 	if event is InputEventScreenTouch:
 		if not event.pressed:
 			accept_event()
 			is_touching = false
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 	elif event is InputEventMouseButton:
 		if not event.pressed:
 			accept_event()
 			is_touching = false
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -101,14 +106,16 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			is_touching = true
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 			start_pos = event.position
 
 			child_drag_position = child_position
 			previous_position = child_position
 		else:
 			is_touching = false
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 			if is_outside_right(200):
 				#TODO pass information
 				scroll_ended.emit()
@@ -118,14 +125,24 @@ func _gui_input(event: InputEvent) -> void:
 
 			if horizontal_scroll_mode != ScrollMode.DISABLED:
 				child_position.x = child_drag_position.x + offset.x
+				if is_outside_left():
+					child_position.x = (child_drag_position.x + offset.x) * 0.2
+				if is_outside_right():
+					var excess: float = is_outside_right()
+					child_position.x = (child_drag_position.x + offset.x) + excess
+					child_position.x -= excess * 0.2
+				if abs(start_pos.x - event.position.x) > 50:
+					is_scrolling_x = true
 			if vertical_scroll_mode != ScrollMode.DISABLED:
 				child_position.y = child_drag_position.y + offset.y
-
-			if is_outside_right():
-				child_position.x = (child_drag_position.x + offset.x) * 0.5
-
-			if start_pos.distance_to(event.position) > 50:
-				is_scrolling = true
+				if is_outside_top():
+					child_position.y = (child_drag_position.y + offset.y) * 0.2
+				if is_outside_bottom():
+					var excess: float = is_outside_bottom()
+					child_position.y = (child_drag_position.y + offset.y) + excess
+					child_position.y -= excess * 0.2
+				if abs(start_pos.y - event.position.y) > 50:
+					is_scrolling_y = true
 			queue_sort()
 
 
@@ -166,26 +183,26 @@ func _physics_process(delta: float) -> void:
 		queue_sort()
 
 
-func is_outside_top(margin: float = 0.0) -> bool:
-	return child_position.y > margin
+func is_outside_top(margin: float = 0.0) -> float:
+	return max(0, child_position.y - margin)
 
 
-func is_outside_bottom(margin: float = 0.0) -> bool:
+func is_outside_bottom(margin: float = 0.0) -> float:
 	var c = get_child(0)
 	if c.size.y < size.y:
-		return -child_position.y > margin
-	return -child_position.y > (c.size.y - size.y) + margin
+		return max(0.0, -child_position.y - margin)
+	return max(0.0, -child_position.y - (c.size.y - size.y) + margin)
 
 
-func is_outside_left(margin: float = 0.0) -> bool:
-	return child_position.x > margin
+func is_outside_left(margin: float = 0.0) -> float:
+	return max(0.0, child_position.x - margin)
 
 
-func is_outside_right(margin: float = 0.0) -> bool:
+func is_outside_right(margin: float = 0.0) -> float:
 	var c = get_child(0)
 	if c.size.x < size.x:
-		return -child_position.x > margin
-	return -child_position.x > (c.size.x - size.x) + margin
+		return max(0.0, -child_position.x - margin)
+	return max(0.0, -child_position.x - (c.size.x - size.x) + margin)
 
 
 func is_valid_child() -> bool:
