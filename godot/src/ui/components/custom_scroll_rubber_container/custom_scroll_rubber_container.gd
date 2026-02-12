@@ -11,7 +11,7 @@ enum ScrollMode { DISABLED, AUTO, ALWAYSSHOW, NEVERSHOW, RESERVE }  ## Wont scro
 @export var draw_focus_border: bool  ## Unused property
 @export var horizontal_scroll_mode := ScrollMode.AUTO
 @export var vertical_scroll_mode := ScrollMode.AUTO
-@export var scroll_deadzone := 0  ## Unused property
+@export var scroll_deadzone := 50
 
 @export_category("Rubber Band behavior")
 @export var drag := 0.8
@@ -123,7 +123,27 @@ func _gui_input(event: InputEvent) -> void:
 		if is_touching:
 			var offset: Vector2 = event.position - start_pos
 
-			if horizontal_scroll_mode != ScrollMode.DISABLED:
+			# Lock to the dominant axis once it exceeds the deadzone
+			if not is_scrolling_x and not is_scrolling_y:
+				var dominant_is_x: float = abs(offset.x) >= abs(offset.y)
+				if dominant_is_x and abs(offset.x) > scroll_deadzone:
+					if horizontal_scroll_mode != ScrollMode.DISABLED:
+						is_scrolling_x = true
+						start_pos = event.position
+						child_drag_position = child_position
+				elif not dominant_is_x and abs(offset.y) > scroll_deadzone:
+					if vertical_scroll_mode != ScrollMode.DISABLED:
+						is_scrolling_y = true
+						start_pos = event.position
+						child_drag_position = child_position
+
+				if not is_scrolling_x and not is_scrolling_y:
+					return
+
+			offset = event.position - start_pos
+			accept_event()
+
+			if is_scrolling_x:
 				child_position.x = child_drag_position.x + offset.x
 				if is_outside_left():
 					child_position.x = (child_drag_position.x + offset.x) * 0.2
@@ -131,9 +151,7 @@ func _gui_input(event: InputEvent) -> void:
 					var excess: float = is_outside_right()
 					child_position.x = (child_drag_position.x + offset.x) + excess
 					child_position.x -= excess * 0.2
-				if abs(start_pos.x - event.position.x) > 50:
-					is_scrolling_x = true
-			if vertical_scroll_mode != ScrollMode.DISABLED:
+			if is_scrolling_y:
 				child_position.y = child_drag_position.y + offset.y
 				if is_outside_top():
 					child_position.y = (child_drag_position.y + offset.y) * 0.2
@@ -141,8 +159,6 @@ func _gui_input(event: InputEvent) -> void:
 					var excess: float = is_outside_bottom()
 					child_position.y = (child_drag_position.y + offset.y) + excess
 					child_position.y -= excess * 0.2
-				if abs(start_pos.y - event.position.y) > 50:
-					is_scrolling_y = true
 			queue_sort()
 
 

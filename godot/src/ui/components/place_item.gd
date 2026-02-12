@@ -44,6 +44,7 @@ var _data: Dictionary = {}
 var _node_cache: Dictionary = {}
 var _tween_callback: Callable
 var _tween_header_visible: bool
+var _card_half_position: float  ## Stores value, since it can change unexpectedly
 
 
 # gdlint:ignore = async-function-name
@@ -84,7 +85,8 @@ func _ready():
 		await get_tree().process_frame
 		await get_tree().process_frame
 		card.position.y = _get_card_hidden_position()
-		tween_to(_get_card_half_position())
+		_card_half_position = _get_card_half_position()
+		tween_to(_card_half_position)
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -1021,7 +1023,9 @@ func _input(event: InputEvent) -> void:
 							_get_header().hide()
 							# Prevents jump glitch when Header closes
 							_get_card().position.y += _get_header().size.y
-							tween_to(_get_card_half_position())
+							# Restore rounded corners when going back to half
+							_on_show_more_toggled(false)
+							tween_to(_card_half_position)
 							drag_state = DragState.HALF
 						DragState.HALF:
 							drag_state = DragState.HIDDEN

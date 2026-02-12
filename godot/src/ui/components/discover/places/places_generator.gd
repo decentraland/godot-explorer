@@ -116,6 +116,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 func async_request_from_api(offset: int, limit: int) -> void:
 	var url: String = PlacesHelper.get_api_url()
+
 	url += "?offset=%d&limit=%d" % [offset, limit]
 	if only_worlds:
 		url += "&only_worlds=true"
@@ -173,7 +174,6 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		for category in categories_array:
 			url += "&categories=" + category
 
-	prints(url)
 	_async_fetch_places(url, limit)
 
 
