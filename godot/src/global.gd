@@ -53,6 +53,9 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
+const FORCE_DEEPLINK = ""
+#const FORCE_DEEPLINK = "decentraland://open?dclenv=today"
+
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
@@ -166,10 +169,13 @@ func _ready():
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
 
-	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
-	if not cli.fake_deeplink.is_empty():
-		deep_link_url = cli.fake_deeplink
-		deep_link_obj = DclParseDeepLink.parse_decentraland_link(cli.fake_deeplink)
+	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
+	var fake_deeplink = cli.fake_deeplink
+	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
+		fake_deeplink = FORCE_DEEPLINK
+	if not fake_deeplink.is_empty():
+		deep_link_url = fake_deeplink
+		deep_link_obj = DclParseDeepLink.parse_decentraland_link(fake_deeplink)
 		print(
 			"[DEEPLINK] Parsed fake deep_link_obj: location=",
 			deep_link_obj.location,

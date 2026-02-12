@@ -2,37 +2,34 @@
 class_name ScrollRubberContainer
 extends Container
 
-signal request(offsett: int, limit: int)
+signal scroll_ended
 
-@export var scroll_horizontal := true
-@export var scroll_vertical := true
-@export var scroll_deadzone := 0.0
+enum ScrollMode { DISABLED, AUTO, ALWAYSSHOW, NEVERSHOW, RESERVE }  ## Wont scroll in this direction  ## Unused property  ## Unused property  ## Unused property  ## Unused property
+
+@export_category("ScrollContainer properties")
+@export var follow_focus: bool  ## Unused property
+@export var draw_focus_border: bool  ## Unused property
+@export var horizontal_scroll_mode := ScrollMode.AUTO
+@export var vertical_scroll_mode := ScrollMode.AUTO
+@export var scroll_deadzone := 0  ## Unused property
+
+@export_category("Rubber Band behavior")
 @export var drag := 0.8
-@export var item_container: Container = null
+@export var rubber_force := 8.0
+@export var take_hight_from_children: bool = false
 
 var start_pos: Vector2
-var offset: Vector2
+var child_position: Vector2
 var child_drag_position: Vector2
 var child_physics_position: Vector2
 var drag_tween: Tween
 var is_touching := false
-var is_scrolling := false
+var is_scrolling_x := false
+var is_scrolling_y := false
 
 var velocity: Vector2
 var force: Vector2
 var previous_position: Vector2
-
-var current_offset = 0
-var threshold_limit = 10
-
-
-func start():
-	emit_request()
-
-
-func restart():
-	current_offset = 0
-	emit_request()
 
 
 func reset_position():
@@ -41,16 +38,9 @@ func reset_position():
 	var c: Control = get_child(0)
 	c.position = Vector2.ZERO
 	velocity = Vector2.ZERO
-	offset = Vector2.ZERO
+	child_position = Vector2.ZERO
 	child_physics_position = Vector2.ZERO
 	queue_sort()
-
-
-func emit_request():
-	if not is_valid_child():
-		return
-	current_offset = item_container.get_child_count()
-	request.emit(current_offset, threshold_limit)
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -63,58 +53,96 @@ func _get_configuration_warnings() -> PackedStringArray:
 func _notification(what):
 	if not is_valid_child():
 		return
+
 	if what == NOTIFICATION_SORT_CHILDREN:
 		var c: Control = get_child(0)
-		var child_position: Vector2
-		if scroll_horizontal:
-			child_position.x += offset.x + child_physics_position.x
-		if scroll_vertical:
-			child_position.y += offset.y + child_physics_position.y
-		var child_min_size := c.get_combined_minimum_size()
-		custom_minimum_size.y = child_min_size.y
-		fit_child_in_rect(c, Rect2(child_position, child_min_size))
+
+		var child_size := c.get_combined_minimum_size()
+
+		if c.size_flags_horizontal & SizeFlags.SIZE_EXPAND:
+			child_size.x = size.x
+		if c.size_flags_vertical & SizeFlags.SIZE_EXPAND:
+			child_size.y = size.y
+
+		fit_child_in_rect(c, Rect2(child_position, child_size))
+
+
+func _get_minimum_size() -> Vector2:
+	if not is_valid_child():
+		return Vector2.ZERO
+	var c: Control = get_child(0)
+	var min_size := Vector2()
+	# TODO change take_hight_from_children
+	# for a size_flag
+	if take_hight_from_children:
+		min_size.y = c.get_combined_minimum_size().y
+
+	return min_size
 
 
 # NOTE accept_event() on _gui_input is not preventing
 # button presses while scrolling. Using it here instead.
 # TODO prevent button presses on Editor
 func _input(event: InputEvent) -> void:
-	if not is_scrolling:
+	if not (is_scrolling_x or is_scrolling_y):
 		return
 	if event is InputEventScreenTouch:
 		if not event.pressed:
 			accept_event()
 			is_touching = false
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 	elif event is InputEventMouseButton:
 		if not event.pressed:
 			accept_event()
 			is_touching = false
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 
 
 func _gui_input(event: InputEvent) -> void:
 	if not is_valid_child():
 		return
-	var c: Control = get_child(0)
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			is_touching = true
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 			start_pos = event.position
-			child_drag_position = c.position
-			previous_position = c.position
-			offset = Vector2.ZERO
+
+			child_drag_position = child_position
+			previous_position = child_position
 		else:
 			is_touching = false
-			is_scrolling = false
+			is_scrolling_x = false
+			is_scrolling_y = false
 			if is_outside_right(200):
-				emit_request()
+				#TODO pass information
+				scroll_ended.emit()
 	elif event is InputEventScreenDrag:
 		if is_touching:
-			offset = event.position - start_pos
-			if start_pos.distance_to(event.position) > 50:
-				is_scrolling = true
+			var offset: Vector2 = event.position - start_pos
+
+			if horizontal_scroll_mode != ScrollMode.DISABLED:
+				child_position.x = child_drag_position.x + offset.x
+				if is_outside_left():
+					child_position.x = (child_drag_position.x + offset.x) * 0.2
+				if is_outside_right():
+					var excess: float = is_outside_right()
+					child_position.x = (child_drag_position.x + offset.x) + excess
+					child_position.x -= excess * 0.2
+				if abs(start_pos.x - event.position.x) > 50:
+					is_scrolling_x = true
+			if vertical_scroll_mode != ScrollMode.DISABLED:
+				child_position.y = child_drag_position.y + offset.y
+				if is_outside_top():
+					child_position.y = (child_drag_position.y + offset.y) * 0.2
+				if is_outside_bottom():
+					var excess: float = is_outside_bottom()
+					child_position.y = (child_drag_position.y + offset.y) + excess
+					child_position.y -= excess * 0.2
+				if abs(start_pos.y - event.position.y) > 50:
+					is_scrolling_y = true
 			queue_sort()
 
 
@@ -123,35 +151,58 @@ func _physics_process(delta: float) -> void:
 		return
 	var c = get_child(0)
 	if is_touching:
+		# Store scroll velocity while user is touching
+		# the screen (Swipe gesture)
 		velocity = lerp(
-			velocity, (c.position - previous_position) * Engine.physics_ticks_per_second, 1.0
+			velocity, (child_position - previous_position) * Engine.physics_ticks_per_second, 1.0
 		)
-		previous_position = c.position
+		previous_position = child_position
 		child_physics_position = child_drag_position
 	else:
-		#TODO add Y axis
-		if is_outside_left():
-			velocity.x = (0.0 - c.position.x) * 2.0
-		elif is_outside_right():
-			velocity.x = ((c.size.x - size.x) - -c.position.x) * -2.0
-		else:
-			velocity += force * delta
-			velocity *= 1.0 - (drag / Engine.physics_ticks_per_second)
+		# If the user is not touching.
+		# Use the stored velocity
+		# to simulate inertia.
+		velocity += force * delta
+		# Simulate drag, so de velocity
+		# goes down over time.
+		velocity *= 1.0 - (drag / Engine.physics_ticks_per_second)
 
-		child_physics_position += velocity * delta
+		# If the uer scrolled beyond of the child container
+		# set a velocity to move the child container
+		# inside the scroll container
+		if is_outside_left():
+			velocity.x = (0.0 - child_position.x) * rubber_force
+		elif is_outside_right():
+			velocity.x = ((c.size.x - size.x) - -child_position.x) * -rubber_force
+		if is_outside_top():
+			velocity.y = (0.0 - child_position.y) * rubber_force
+		elif is_outside_bottom():
+			velocity.y = ((c.size.y - size.y) - -child_position.y) * -rubber_force
+
+		child_position += velocity * delta
 		queue_sort()
 
 
-func is_outside_left(margin: float = 0.0) -> bool:
+func is_outside_top(margin: float = 0.0) -> float:
+	return max(0, child_position.y - margin)
+
+
+func is_outside_bottom(margin: float = 0.0) -> float:
 	var c = get_child(0)
-	return c.position.x > margin
+	if c.size.y < size.y:
+		return max(0.0, -child_position.y - margin)
+	return max(0.0, -child_position.y - (c.size.y - size.y) + margin)
 
 
-func is_outside_right(margin: float = 0.0) -> bool:
+func is_outside_left(margin: float = 0.0) -> float:
+	return max(0.0, child_position.x - margin)
+
+
+func is_outside_right(margin: float = 0.0) -> float:
 	var c = get_child(0)
 	if c.size.x < size.x:
-		return -c.position.x > margin
-	return -c.position.x > (c.size.x - size.x) + margin
+		return max(0.0, -child_position.x - margin)
+	return max(0.0, -child_position.x - (c.size.x - size.x) + margin)
 
 
 func is_valid_child() -> bool:

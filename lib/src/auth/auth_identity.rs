@@ -77,10 +77,12 @@ pub async fn try_create_remote_ephemeral(
 pub async fn start_mobile_auth(
     url_reporter_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
     provider: Option<String>,
+    user_id: Option<String>,
+    session_id: Option<String>,
 ) -> Result<(), anyhow::Error> {
     // For mobile auth, we use an empty request since the server will generate everything
     let request = CreateRequest::from_new_ephemeral("");
-    do_request_mobile(request, url_reporter_sender, provider).await?;
+    do_request_mobile(request, url_reporter_sender, provider, user_id, session_id).await?;
 
     Ok(())
 }

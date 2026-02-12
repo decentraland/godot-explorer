@@ -380,17 +380,29 @@ pub async fn do_request_mobile(
     _message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
     provider: Option<String>,
+    user_id: Option<String>,
+    session_id: Option<String>,
 ) -> Result<(), anyhow::Error> {
     tracing::debug!(
         "do_request_mobile: starting mobile auth request, provider={:?}",
         provider
     );
 
-    // Build URL with optional provider parameter
-    let url = if let Some(provider) = provider {
-        format!("{}?provider={}", urls::auth_mobile_frontend(), provider)
-    } else {
+    // Build URL with optional query parameters
+    let mut params = Vec::new();
+    if let Some(provider) = provider {
+        params.push(format!("provider={provider}"));
+    }
+    if let Some(user_id) = user_id {
+        params.push(format!("u={user_id}"));
+    }
+    if let Some(session_id) = session_id {
+        params.push(format!("s={session_id}"));
+    }
+    let url = if params.is_empty() {
         urls::auth_mobile_frontend()
+    } else {
+        format!("{}?{}", urls::auth_mobile_frontend(), params.join("&"))
     };
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 

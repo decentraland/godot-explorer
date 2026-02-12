@@ -1,15 +1,14 @@
-extends CarrouselRequester
+@tool
+extends ScrollRubberContainer
 
+signal request(offset: int, limit: int)
+
+var item_container: Container = null
 var current_offset = 0
 var threshold_limit = 10
 
 
 func start():
-	var node = self
-	if not node is ScrollContainer:
-		printerr("Not a scroll container!")
-		return
-
 	self.scroll_ended.connect(self._on_scroll_container_scroll_ended)
 	emit_request()
 

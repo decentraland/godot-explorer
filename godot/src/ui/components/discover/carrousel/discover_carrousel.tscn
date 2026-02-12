@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://crybq4wivxc3l" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="1_somjb"]
 [ext_resource type="LabelSettings" uid="uid://dk8eqdewqhsor" path="res://assets/themes/discover_section_title.tres" id="3_lwvhe"]
 [ext_resource type="PackedScene" uid="uid://c8cfkfwtnjk5b" path="res://src/ui/components/discover/carrousel/place_discover_skeleton.tscn" id="4_lwvhe"]
-[ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="6_d7k8r"]
+[ext_resource type="Script" uid="uid://bufowrcf714pf" path="res://src/ui/components/discover/scrollbar_requester.gd" id="5_lwvhe"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amqeq"]
 
@@ -94,15 +94,15 @@ theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
 [node name="PlaceDiscoverSkeleton3" parent="VBoxContainer/SkeletonControl/HBoxContainer" instance=ExtResource("4_lwvhe")]
 layout_mode = 2
 
-[node name="ScrollContainer" type="Container" parent="VBoxContainer" node_paths=PackedStringArray("item_container")]
+[node name="ScrollContainer" type="Container" parent="VBoxContainer"]
 unique_name_in_owner = true
 clip_contents = true
-custom_minimum_size = Vector2(0, 185)
 layout_mode = 2
-size_flags_vertical = 0
-script = ExtResource("6_d7k8r")
-scroll_vertical = false
-item_container = NodePath("HBoxContainer/HBoxContainer_Items")
+size_flags_vertical = 3
+script = ExtResource("5_lwvhe")
+vertical_scroll_mode = 0
+drag = 6.0
+take_hight_from_children = true
 metadata/_custom_type_script = "uid://c3wphp306q0w"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ScrollContainer"]

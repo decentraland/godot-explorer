@@ -1,9 +1,8 @@
-[gd_scene load_steps=14 format=3 uid="uid://nexo8k0ub5ty"]
+[gd_scene load_steps=15 format=3 uid="uid://nexo8k0ub5ty"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_42xhx"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_qu68w"]
 [ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_7ps4n"]
-[ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="4_4et6p"]
 [ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="5_sbcai"]
 [ext_resource type="LabelSettings" uid="uid://iia6jgjebpg" path="res://assets/themes/discover_item_title.tres" id="6_6e6mj"]
 [ext_resource type="Texture2D" uid="uid://b8ad2up57ti1v" path="res://assets/ui/players-outline.svg" id="7_37ec5"]
@@ -24,6 +23,12 @@ corner_radius_top_left = 9
 corner_radius_top_right = 9
 corner_radius_bottom_right = 9
 corner_radius_bottom_left = 9
+
+[sub_resource type="Gradient" id="Gradient_tpvam"]
+colors = PackedColorArray(1, 1, 1, 0.080000006, 1, 1, 1, 0.080000006)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_42xhx"]
+gradient = SubResource("Gradient_tpvam")
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qlstj"]
 draw_center = false
@@ -99,7 +104,7 @@ layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 210.0
 theme = ExtResource("2_qu68w")
-texture = ExtResource("4_4et6p")
+texture = SubResource("GradientTexture1D_42xhx")
 expand_mode = 1
 stretch_mode = 6
 

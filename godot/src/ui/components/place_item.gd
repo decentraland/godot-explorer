@@ -1066,6 +1066,10 @@ func _input(event: InputEvent) -> void:
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:
+							# Header must close immediately
+							_get_header().hide()
+							# Prevents jump glitch when Header closes
+							_get_card().position.y += _get_header().size.y
 							tween_to(_get_card_half_position())
 							drag_state = DragState.HALF
 						DragState.HALF:
@@ -1104,7 +1108,7 @@ func _get_card_half_position() -> float:
 		return 0.0
 	# Layout-independent offset: bottom of hide_from_here relative to card, so half is consistent (places/events)
 	var offset_to_separator_top: float = _get_offset_y_in_ancestor(hide_from_here, card)
-	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y * 0.5
+	var offset_to_separator_bottom: float = offset_to_separator_top + hide_from_here.size.y * 0.2
 	offset_to_separator_bottom += _get_footer().size.y
 	var full_height: float = get_rect().size.y
 	return full_height - offset_to_separator_bottom
@@ -1141,6 +1145,7 @@ func tween_to(
 	if header and is_draggable and header_visible:
 		header.show()
 		header.self_modulate = Color.TRANSPARENT
+		card.position.y -= _get_header().size.y
 	if show_more and is_draggable and not header_visible:
 		show_more.show()
 		show_more.self_modulate = Color.TRANSPARENT

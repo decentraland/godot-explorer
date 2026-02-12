@@ -1,7 +1,6 @@
-[gd_scene load_steps=17 format=3 uid="uid://dj4nqjjptw0th"]
+[gd_scene load_steps=18 format=3 uid="uid://dj4nqjjptw0th"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
-[ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="1_vtdag"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gwscp"]
 [ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_0xa1v"]
 [ext_resource type="PackedScene" uid="uid://mv4erfb0rl17" path="res://src/ui/components/discover/event_pills_bar/event_pills_bar.tscn" id="5_gwscp"]
@@ -11,16 +10,22 @@
 [ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="8_qwmgv"]
 [ext_resource type="LabelSettings" uid="uid://cxx8iqtxnfbqt" path="res://src/ui/components/events/event_creator.tres" id="9_qwmgv"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0y7ny"]
-bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
-border_color = Color(0.9098039, 0.7254902, 1, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0xa1v"]
+bg_color = Color(0, 0, 0, 1)
 corner_radius_top_left = 9
 corner_radius_top_right = 9
 corner_radius_bottom_right = 9
 corner_radius_bottom_left = 9
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0xa1v"]
-bg_color = Color(0, 0, 0, 1)
+[sub_resource type="Gradient" id="Gradient_tpvam"]
+colors = PackedColorArray(1, 1, 1, 0.080000006, 1, 1, 1, 0.080000006)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_xxfdn"]
+gradient = SubResource("Gradient_tpvam")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0y7ny"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
+border_color = Color(0.9098039, 0.7254902, 1, 1)
 corner_radius_top_left = 9
 corner_radius_top_right = 9
 corner_radius_bottom_right = 9
@@ -73,6 +78,28 @@ custom_minimum_size = Vector2(406, 240)
 layout_mode = 2
 mouse_filter = 2
 
+[node name="Panel_Container_Image" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+unique_name_in_owner = true
+clip_children = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_0xa1v")
+
+[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_Image"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("2_gwscp")
+texture = SubResource("GradientTexture1D_xxfdn")
+expand_mode = 1
+stretch_mode = 6
+
 [node name="Panel_Container_NoImage" type="PanelContainer" parent="VBoxContainer/Control_Image"]
 unique_name_in_owner = true
 clip_children = 2
@@ -94,28 +121,6 @@ theme = ExtResource("2_gwscp")
 texture = ExtResource("3_0xa1v")
 expand_mode = 3
 stretch_mode = 5
-
-[node name="Panel_Container_Image" type="PanelContainer" parent="VBoxContainer/Control_Image"]
-unique_name_in_owner = true
-clip_children = 2
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_0xa1v")
-
-[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_Image"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_stretch_ratio = 210.0
-theme = ExtResource("2_gwscp")
-texture = ExtResource("1_vtdag")
-expand_mode = 1
-stretch_mode = 6
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/Control_Image"]
 layout_mode = 1
