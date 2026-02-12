@@ -1,0 +1,50 @@
+[gd_scene load_steps=7 format=3 uid="uid://o5vt3nrlfw3j"]
+
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_y4vnm"]
+[ext_resource type="Script" uid="uid://dbfsrbe28mpbx" path="res://src/ui/components/custom_button/custom_button.gd" id="2_8yorq"]
+[ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="3_ca2ov"]
+[ext_resource type="LabelSettings" uid="uid://dydwjm51ragk4" path="res://assets/themes/secondary_outlined_text_normal.tres" id="4_3qtvg"]
+[ext_resource type="LabelSettings" uid="uid://ckpmvn8kj7osk" path="res://assets/themes/secondary_outlined_text_pressed.tres" id="5_08c3j"]
+[ext_resource type="LabelSettings" uid="uid://d3bmwannffpj1" path="res://assets/themes/secondary_outlined_text_disaabled.tres" id="6_301hu"]
+
+[node name="CustomButton" type="Button"]
+custom_minimum_size = Vector2(300, 96)
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("1_y4vnm")
+theme_type_variation = &"SecondaryOutlinedButton"
+icon_alignment = 2
+expand_icon = true
+script = ExtResource("2_8yorq")
+custom_icon = ExtResource("3_ca2ov")
+custom_text = "SHARE"
+text_normal_settings = ExtResource("4_3qtvg")
+text_pressed_settings = ExtResource("5_08c3j")
+text_disabled_settings = ExtResource("6_301hu")
+
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="TextureRect_Icon" type="TextureRect" parent="HBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_ca2ov")
+expand_mode = 3
+
+[node name="Label_Text" type="Label" parent="HBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SHARE"
+label_settings = ExtResource("4_3qtvg")

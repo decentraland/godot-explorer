@@ -14,7 +14,6 @@
 [ext_resource type="Texture2D" uid="uid://dwd0g63x37e0l" path="res://assets/ui/gameplay.svg" id="9_67hd5"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
 [ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="13_xewta"]
-[ext_resource type="LabelSettings" uid="uid://c8st3oitu2gpy" path="res://src/ui/components/events/event_title.tres" id="15_7krp8"]
 [ext_resource type="PackedScene" uid="uid://ceomwutplh20c" path="res://src/ui/components/settings/section_title.tscn" id="15_h5vs5"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="16_blskf"]
 [ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="17_67hd5"]
@@ -22,6 +21,8 @@
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="19_t1cvu"]
 [ext_resource type="PackedScene" uid="uid://bhmbr0xh4h188" path="res://src/ui/components/dropdown_list/dropdown_list.tscn" id="20_67hd5"]
 [ext_resource type="PackedScene" uid="uid://dru17120tr84j" path="res://src/ui/components/settings/slider.tscn" id="21_xewta"]
+[ext_resource type="Texture2D" uid="uid://bq35g8fuk4i43" path="res://assets/ui/sign-out.svg" id="22_jf4mt"]
+[ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="22_mwb5b"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
 [ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
 
@@ -66,8 +67,6 @@ CheckBox/font_sizes/font_size = 19
 Button/font_sizes/font_size = 20
 
 [sub_resource type="Theme" id="Theme_nuccv"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_h5vs5"]
 
 [node name="Control_SettingsPanel" type="TextureRect"]
 anchors_preset = 15
@@ -268,6 +267,7 @@ size_flags_horizontal = 3
 
 [node name="Container_Gameplay" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -553,7 +553,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer"]
 handle_input_locally = false
-size = Vector2i(624, 351)
+size = Vector2i(500, 351)
 render_target_clear_mode = 2
 render_target_update_mode = 0
 
@@ -1047,42 +1047,23 @@ theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
-[node name="Label_Account" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
+[node name="CustomButton_SignOut" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account" instance=ExtResource("22_mwb5b")]
 layout_mode = 2
-text = "ACCOUNT"
-label_settings = ExtResource("15_7krp8")
+disabled = true
+custom_icon = ExtResource("22_jf4mt")
+custom_icon_pressed = ExtResource("22_jf4mt")
+icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+icon_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.49803922)
+custom_text = "SIGN OUT"
 
 [node name="Button_DeleteAccount" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
 theme = ExtResource("12_sa1v7")
 theme_override_font_sizes/font_size = 22
 text = "DELETE ACCOUNT"
-
-[node name="Button_LogOut" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
-custom_minimum_size = Vector2(300, 80)
-layout_mode = 2
-size_flags_horizontal = 0
-focus_mode = 0
-theme = ExtResource("12_sa1v7")
-disabled = true
-text = "LOG OUT"
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
-custom_minimum_size = Vector2(0, 23)
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_h5vs5")
-
-[node name="Label_Notifications" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
-layout_mode = 2
-text = "NOTIFICATIONS"
-label_settings = ExtResource("15_7krp8")
 
 [node name="Button_AllNotifications" type="CheckButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
 visible = false
@@ -1096,6 +1077,7 @@ button_pressed = true
 text = "ALL NOTIFICATIONS"
 
 [node name="SectionReport" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport"]
@@ -1148,6 +1130,7 @@ alignment = 0
 icon_alignment = 2
 
 [node name="SectionHelp" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp"]
