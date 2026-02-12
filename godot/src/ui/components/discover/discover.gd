@@ -19,7 +19,7 @@ var _node_cache: Dictionary = {}
 @onready var places_my_places: VBoxContainer = %PlacesMyPlaces
 @onready var search_container: SearchSuggestions = %SearchSugestionsContainer
 @onready var button_back_to_explorer: Button = %Button_BackToExplorer
-@onready var label_title: Label = %Label_Title
+@onready var label_discover: Label = %Label_Discover
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 @onready var discover_content: VBoxContainer = %DiscoverContent
 
@@ -138,7 +138,7 @@ func _on_visibility_changed():
 
 func _on_search_bar_opened() -> void:
 	button_back_to_explorer.show()
-	label_title.hide()
+	label_discover.hide()
 	search_container.show()
 	container_content.hide()
 	search_container.set_keyword_search_text("")
@@ -320,7 +320,7 @@ func _on_button_back_to_explorer_pressed() -> void:
 		set_search_filter_text("")
 		search_container.hide()
 		container_content.show()
-		label_title.show()
+		label_discover.show()
 		if not Global.get_explorer():
 			button_back_to_explorer.hide()
 		return

@@ -17,7 +17,7 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
-[ext_resource type="PackedScene" uid="uid://dqo2irljmbunv" path="res://src/ui/components/discover/first_time_user_experience.tscn" id="17_q2sj0"]
+[ext_resource type="PackedScene" path="res://src/ui/components/discover/first_time_user_experience.tscn" id="17_q2sj0"]
 [ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/search-bar/search_bar.tscn" id="18_sbar"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
@@ -58,7 +58,6 @@ stretch_mode = 6
 
 [node name="DiscoverContent" type="VBoxContainer" parent="TextureRect"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -100,7 +99,7 @@ icon = ExtResource("4_edk0s")
 flat = true
 expand_icon = true
 
-[node name="Label_Title" type="Label" parent="TextureRect/DiscoverContent/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer"]
+[node name="Label_Discover" type="Label" parent="TextureRect/DiscoverContent/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
@@ -315,6 +314,7 @@ layout_mode = 2
 
 [node name="FTUE" parent="TextureRect" instance=ExtResource("17_q2sj0")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
