@@ -2,6 +2,7 @@ class_name Discover
 extends Control
 
 var search_text: String = ""
+var _generator_statuses: Dictionary = {}
 
 @onready var jump_in: SidePanelWrapper = %JumpIn
 @onready var event_details: SidePanelWrapper = %EventDetails
@@ -42,10 +43,16 @@ func _ready():
 	search_bar.cleared.connect(_on_search_bar_cleared)
 	container_content.show()
 
-	last_visited.generator.report_loading_status.connect(_on_report_loading_status)
-	places_featured.generator.report_loading_status.connect(_on_report_loading_status)
-	places_most_active.generator.report_loading_status.connect(_on_report_loading_status)
-	events.generator.report_loading_status.connect(_on_report_loading_status)
+	last_visited.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(last_visited)
+	)
+	places_featured.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(places_featured)
+	)
+	places_most_active.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(places_most_active)
+	)
+	events.generator.report_loading_status.connect(_on_report_loading_status.bind(events))
 
 
 func on_item_pressed(data):
@@ -97,6 +104,7 @@ func _on_search_bar_cleared() -> void:
 
 
 func set_search_filter_text(new_text: String) -> void:
+	_generator_statuses.clear()
 	if new_text.is_empty():
 		last_visited.visible = last_visited.has_items()
 		places_featured.show()
@@ -233,17 +241,55 @@ func _on_error_loading_notification() -> void:
 	Global.close_navbar.emit()
 
 
-func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
+func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, container) -> void:
+	_generator_statuses[container] = status
+	_update_global_messages()
+
+
+func _get_active_carousels() -> Array:
+	if search_text.is_empty():
+		return [last_visited, places_featured, places_most_active, events]
+	return [places_most_active, events]
+
+
+func _update_global_messages() -> void:
 	%MessageError.hide()
 	%MessageNoResultsFound.hide()
-	match status:
-		CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
-			if Global.get_config().add_search_history(search_text):
-				Global.get_config().save_to_settings_file()
-		CarrouselGenerator.LoadingStatus.ERROR:
-			%MessageError.show()
-		CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS:
-			%MessageNoResultsFound.show()
+
+	var active := _get_active_carousels()
+	var all_finished := true
+	var all_error := true
+	var any_has_items := false
+	var any_with_results := false
+
+	for container in active:
+		if not _generator_statuses.has(container):
+			all_finished = false
+			all_error = false
+			continue
+		var s = _generator_statuses[container]
+		if s == CarrouselGenerator.LoadingStatus.LOADING:
+			all_finished = false
+			all_error = false
+			continue
+		if s != CarrouselGenerator.LoadingStatus.ERROR:
+			all_error = false
+		if s == CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
+			any_with_results = true
+		if container.has_items():
+			any_has_items = true
+
+	if any_with_results and not search_text.is_empty():
+		if Global.get_config().add_search_history(search_text):
+			Global.get_config().save_to_settings_file()
+
+	if not all_finished:
+		return
+
+	if all_error:
+		%MessageError.show()
+	elif not any_has_items:
+		%MessageNoResultsFound.show()
 
 
 func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
