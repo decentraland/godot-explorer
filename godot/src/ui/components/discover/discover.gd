@@ -1,7 +1,9 @@
 class_name Discover
 extends Control
+const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
 
 var search_text: String = ""
+var _node_cache: Dictionary = {}
 
 @onready var jump_in: SidePanelWrapper = %JumpIn
 @onready var event_details: SidePanelWrapper = %EventDetails
@@ -47,6 +49,58 @@ func _ready():
 	places_most_active.generator.report_loading_status.connect(_on_report_loading_status)
 	events.generator.report_loading_status.connect(_on_report_loading_status)
 
+	var ftue = _get_ftue()
+	if Global.get_config().discover_ftue_completed:
+		discover_content.show()
+		if ftue:
+			ftue.queue_free()
+	else:
+		discover_content.hide()
+		if ftue:
+			ftue.show()
+			if ftue.has_signal("ftue_completed"):
+				ftue.ftue_completed.connect(_on_ftue_completed)
+				ftue.jump_in.connect(_on_ftue_jump_in)
+				ftue.jump_in_world.connect(_on_ftue_jump_in_world)
+				_async_fetch_ftue_place(ftue)
+
+func _async_fetch_ftue_place(ftue_item: Node) -> void:
+	var response = await PlacesHelper.async_get_place_by_id(FTUE_PLACE_ID)
+	if response is PromiseError:
+		printerr("[Discover] Failed to fetch FTUE place data: ", response.get_error())
+		return
+	if not is_instance_valid(ftue_item):
+		return
+	var json: Dictionary = response.get_string_response_as_json()
+	var place_data: Dictionary = json.get("data", json)
+	if place_data.is_empty():
+		return
+	ftue_item.set_data(place_data)
+
+
+func _on_ftue_completed() -> void:
+	var ftue = _get_ftue()
+	if ftue:
+		ftue.queue_free()
+	discover_content.show()
+
+
+func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
+	Global.teleport_to(parcel_position, realm_str)
+
+
+func _on_ftue_jump_in_world(realm_str: String) -> void:
+	Global.join_world(realm_str)
+	
+	
+func _get_node_safe(node_name: String) -> Node:
+	if not _node_cache.has(node_name):
+		_node_cache[node_name] = get_node_or_null("%" + node_name)
+	return _node_cache[node_name]
+
+
+func _get_ftue() -> MarginContainer:
+	return _get_node_safe("FTUE")
 
 func on_item_pressed(data):
 	jump_in.set_data(data)
