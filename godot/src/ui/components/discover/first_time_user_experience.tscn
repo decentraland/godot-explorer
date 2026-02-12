@@ -294,7 +294,7 @@ stretch_mode = 5
 
 [node name="HSeparator7" type="HSeparator" parent="FTUE"]
 layout_mode = 2
-theme_override_constants/separation = 46
+theme_override_constants/separation = 35
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
 [node name="Button_Skip" type="Button" parent="FTUE"]
