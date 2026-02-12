@@ -1,8 +1,8 @@
 class_name TrimmedRichTextLabel
 extends RichTextLabel
 
-## RichTextLabel que limita el texto a [param max_lines] líneas y ajusta [member custom_minimum_size]
-## según el contenido. Asigna el texto con [method set_text_trimmed] para que se aplique el recorte y la altura.
+## RichTextLabel that limits text to [param max_lines] lines and adjusts [member custom_minimum_size]
+## based on content. Assign the text with [method set_text_trimmed] to apply trimming and height.
 
 const _ELLIPSIS := "…"
 
@@ -38,7 +38,7 @@ func _apply_trim_and_size(p_text: String) -> void:
 		custom_minimum_size.y = max_lines_h
 		return
 
-	# Más de max_lines → recortar y altura fija
+	# More than max_lines → trim and set fixed height
 	text = _trim_to_max_lines(p_text)
 	custom_minimum_size.y = max_lines_h
 

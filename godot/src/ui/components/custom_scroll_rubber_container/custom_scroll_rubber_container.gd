@@ -4,11 +4,9 @@ extends Container
 
 signal scroll_ended
 
-enum ScrollMode { DISABLED, AUTO, ALWAYSSHOW, NEVERSHOW, RESERVE }  ## Wont scroll in this direction  ## Unused property  ## Unused property  ## Unused property  ## Unused property
+enum ScrollMode { DISABLED, AUTO, ALWAYSSHOW, NEVERSHOW, RESERVE }
 
 @export_category("ScrollContainer properties")
-@export var follow_focus: bool  ## Unused property
-@export var draw_focus_border: bool  ## Unused property
 @export var horizontal_scroll_mode := ScrollMode.AUTO
 @export var vertical_scroll_mode := ScrollMode.AUTO
 @export var scroll_deadzone := 50

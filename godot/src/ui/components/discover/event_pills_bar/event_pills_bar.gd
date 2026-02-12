@@ -22,7 +22,7 @@ func set_data(item_data) -> void:
 	next_start_at = item_data.get("next_start_at", "")
 
 	event_status = "live" if live else "upcoming"
-	# Usar el flag "live" del API como fuente de verdad para mostrar LIVE (unifica card y detalles)
+	# Use the API "live" flag as the source of truth to show LIVE (unifies card and details)
 	if live:
 		_show_live_state()
 		set_trending(item_data.get("trending", false))
@@ -98,11 +98,11 @@ func _show_live_state() -> void:
 
 func set_time(_start_at: int) -> void:
 	var now = Time.get_unix_time_from_system()
-	# Si ya empezó (tiempo <= 0) → mostrar LIVE y USERS, ocultar TIME
+	# If already started (time <= 0) → show LIVE and USERS, hide TIME
 	if _start_at <= now:
 		_show_live_state()
 		return
-	# Si va a empezar en el futuro → mostrar TIME (borde rojo si <= 5 min, negro si > 5 min)
+	# Starting in the future → show TIME (red border if <= 5 min, black if > 5 min)
 	live_pill.hide()
 	time_pill.show()
 	var time_text = _format_timestamp(_start_at)
@@ -114,11 +114,11 @@ func _format_timestamp(timestamp: int) -> String:
 	var now = Time.get_unix_time_from_system()
 	var time_diff = timestamp - now
 
-	# Solo se llama con evento en el futuro (time_diff > 0). TIME pill visible; borde según tiempo restante.
+	# Only called for future events (time_diff > 0). TIME pill visible; border based on remaining time.
 	var time_pill_style = time_pill.get_theme_stylebox("panel")
 	if time_pill_style:
 		var unique_style = time_pill_style.duplicate()
-		# Borde rojo si faltan 5 minutos o menos, negro si más de 5 min
+		# Red border if 5 minutes or less remain, black if more than 5 min
 		if time_diff <= 300:
 			unique_style.border_color = Color("#ff2d55")
 			label_time_pill.label_settings = TIME_PILL_RED
@@ -131,21 +131,21 @@ func _format_timestamp(timestamp: int) -> String:
 	var hours_diff = time_diff / 3600
 	var days_diff = time_diff / 86400
 
-	# Menos de 1 hora: IN XX MINUTES
+	# Less than 1 hour: IN XX MINUTES
 	if hours_diff < 1:
 		return "IN " + str(int(minutes_diff)) + " MINS"
 
-	# Menos de 48 horas: IN XX HOURS
+	# Less than 48 hours: IN XX HOURS
 	if hours_diff < 48:
 		if hours_diff > 2:
 			return "IN " + str(int(hours_diff)) + " HRS"
 		return "IN " + str(int(hours_diff)) + " HR"
 
-	# 7 días o menos: IN X DAYS
+	# 7 days or less: IN X DAYS
 	if days_diff <= 7:
 		return "IN " + str(int(days_diff)) + " DAYS"
 
-	# Más de 7 días: fecha tipo SEPT 31
+	# More than 7 days: date format e.g. SEPT 31
 	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
 	var month_names = [
 		"", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"

@@ -175,8 +175,8 @@ func add_event_to_calendar() -> void:
 		return
 	var start_time_millis: int = start_timestamp_sec * 1000
 	var end_time_millis: int = start_time_millis + _duration_ms
-	# El calendario del sistema trata el timestamp como hora local y aplica -bias para guardar UTC.
-	# Compensamos pasando un timestamp +(-bias) segundos para que la hora mostrada sea la correcta.
+	# The system calendar treats the timestamp as local time and applies -bias to store UTC.
+	# We compensate by passing a timestamp +(-bias) seconds so the displayed time is correct.
 	var bias_minutes: int = Time.get_time_zone_from_system().get("bias", 0)
 	var compensation_ms: int = (-bias_minutes * 60) * 1000
 	var start_time_millis_for_calendar: int = start_time_millis + compensation_ms

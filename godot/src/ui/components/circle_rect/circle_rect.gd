@@ -3,7 +3,7 @@ class_name CircleRect
 extends Control
 
 @export var color: Color = Color(1, 1, 1)
-@export var radius := 0.0  # 0 = automático
+@export var radius := 0.0  # 0 = automatic
 @export var border_width := 0.0
 @export var border_color := Color.BLACK
 @export_range(8, 128) var segments := 64
