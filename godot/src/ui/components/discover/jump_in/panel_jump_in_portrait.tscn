@@ -29,10 +29,10 @@
 [ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/components/discover/icons/jump-in.svg" id="26_vaiub"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4wgrb"]
-bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2dyqy"]
-bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
 
@@ -127,7 +127,7 @@ base_font = ExtResource("10_cpvjm")
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vaiub"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_elce2"]
-bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_db46w"]
 line_spacing = 0.0
