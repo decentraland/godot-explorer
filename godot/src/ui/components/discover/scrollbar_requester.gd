@@ -27,7 +27,7 @@ func _on_scroll_container_scroll_ended():
 	var min_child_number = 0
 	var max_child_number = 0
 	var scroll_container_width = self.size.x
-	var scroll_horizontal = self.scroll_horizontal
+	var scroll_horizontal = -self.child_position.x
 	for child in item_container.get_children():
 		child_number += 1
 		var begin = child.position.x - scroll_horizontal
