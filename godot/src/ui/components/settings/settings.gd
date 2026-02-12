@@ -20,11 +20,14 @@ var _dirty_connected: bool = false
 @onready var container_advanced: Control = %VBoxContainer_Advanced
 @onready var container_audio: Control = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
+@onready var container_storage: VBoxContainer = %Container_Storage
 
-#General items:
-@onready var text_edit_cache_path = %TextEdit_CachePath
-@onready var label_current_cache_size = %Label_CurrentCacheSize
-@onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
+#Storage items:
+@onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
+@onready var label_current_cache_value: Label = %Label_CurrentCacheValue
+@onready var progress_bar_current_cache_size: ProgressBar = $VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize/ProgressBar_CurrentCacheSize
+
+const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
@@ -102,11 +105,18 @@ func _ready():
 		preview_viewport_container.hide()
 
 	# general
-	text_edit_cache_path.text = Global.get_config().local_content_dir
-	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+
+	dropdown_list_max_cache_size.add_item("1 GB", 0)
+	dropdown_list_max_cache_size.add_item("2 GB", 1)
+	dropdown_list_max_cache_size.add_item("4 GB", 2)
+	var cache_index := clampi(Global.get_config().max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
+	dropdown_list_max_cache_size.select(cache_index)
+	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[cache_index]
+	dropdown_list_max_cache_size.item_selected.connect(_on_dropdown_list_max_cache_size_item_selected)
+
 
 	# graphic
 	var i = 0
@@ -184,14 +194,11 @@ func refresh_graphic_settings():
 	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
 	refresh_zooms()
 
+@onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
 func show_control(control: Control):
-	container_gameplay.hide()
-	container_graphics.hide()
-	container_audio.hide()
-	container_advanced.hide()
-	container_account.hide()
-
+	for child in v_box_container_sections.get_children():
+		child.hide()
 	control.show()
 
 
@@ -441,9 +448,11 @@ func _on_radio_selector_texture_quality_select_item(index, _item):
 	Global.get_config().save_to_settings_file()
 
 
-func _on_radio_selector_max_cache_size_select_item(index, _item):
+func _on_dropdown_list_max_cache_size_item_selected(index: int) -> void:
 	Global.get_config().max_cache_size = index
 	GeneralSettings.apply_max_cache_size()
+	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[index]
+	_update_current_cache_size()
 	Global.get_config().save_to_settings_file()
 
 
@@ -451,10 +460,11 @@ func _update_current_cache_size():
 	var current_size_mb = roundf(
 		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
-	label_current_cache_size.text = "(current size: %dmb)" % int(current_size_mb)
+	label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
+	progress_bar_current_cache_size.value = current_size_mb
 
 
-func _on_container_general_visibility_changed():
+func _on_container_storage_visibility_changed():
 	_update_current_cache_size()
 
 
@@ -721,3 +731,7 @@ func _on_button_terms_of_service_pressed() -> void:
 func _on_button_discord_pressed() -> void:
 	const DISCORD_URL = 'https://discord.com/channels/417796904760639509/1446513533893218465'
 	Global.open_url(DISCORD_URL)
+
+
+func _on_button_storage_pressed() -> void:
+	show_control(container_storage)
