@@ -19,6 +19,7 @@ var loading_first_profile: bool = false
 var current_screen_name: String = ""
 
 var _skip_lobby: bool = false
+var _skip_lobby_to_menu: bool = false
 var _last_panel: Control = null
 var _playing: String
 
@@ -218,6 +219,8 @@ func _ready():
 
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
+	if Global.cli.skip_lobby_to_menu:
+		_skip_lobby_to_menu = true
 
 	# Preview deeplink: create guest and skip lobby for hot reload development
 	if not Global.deep_link_obj.preview.is_empty():
@@ -240,6 +243,9 @@ func _ready():
 	elif _skip_lobby:
 		show_loading_screen()
 		go_to_explorer.call_deferred()
+	elif _skip_lobby_to_menu:
+		show_loading_screen()
+		get_tree().change_scene_to_file.call_deferred("res://src/ui/components/menu/menu.tscn")
 	else:
 		show_account_home_screen()
 
@@ -301,11 +307,17 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			)
 			if _skip_lobby:
 				go_to_explorer.call_deferred()
+			elif _skip_lobby_to_menu:
+				get_tree().change_scene_to_file.call_deferred(
+					"res://src/ui/components/menu/menu.tscn"
+				)
 		else:
 			show_account_home_screen()
 
 	if _skip_lobby:
 		go_to_explorer()
+	elif _skip_lobby_to_menu:
+		get_tree().change_scene_to_file("res://src/ui/components/menu/menu.tscn")
 
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false

@@ -35,6 +35,8 @@ pub struct DclCli {
     #[var(get)]
     pub skip_lobby: bool,
     #[var(get)]
+    pub skip_lobby_to_menu: bool,
+    #[var(get)]
     pub guest_profile: bool,
     #[var(get)]
     pub preview_mode: bool,
@@ -140,6 +142,13 @@ impl DclCli {
             ArgDefinition {
                 name: "--skip-lobby".to_string(),
                 description: "Skip the lobby screen and go directly to the explorer".to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--skip-lobby-to-menu".to_string(),
+                description: "Skip the lobby screen and go directly to the menu/discover screen"
+                    .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
@@ -481,6 +490,7 @@ impl INode for DclCli {
         // Extract common flags
         let force_mobile = args_map.contains_key("--force-mobile");
         let skip_lobby = args_map.contains_key("--skip-lobby");
+        let skip_lobby_to_menu = args_map.contains_key("--skip-lobby-to-menu");
         let guest_profile = args_map.contains_key("--guest-profile");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
@@ -578,6 +588,7 @@ impl INode for DclCli {
             arg_definitions: Self::register_arguments(),
             force_mobile,
             skip_lobby,
+            skip_lobby_to_menu,
             guest_profile,
             preview_mode,
             scene_test_mode,
