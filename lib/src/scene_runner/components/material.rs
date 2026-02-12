@@ -342,9 +342,9 @@ pub fn apply_dcl_material_properties(
             // Only enable transparency when there's an explicit alpha_texture
             if unlit.alpha_texture.is_some() {
                 tracing::debug!(
-                    "Unlit material: setting ALPHA_DEPTH_PRE_PASS (has_alpha_texture=true)"
+                    "Unlit material: setting ALPHA (has_alpha_texture=true)"
                 );
-                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                godot_material.set_transparency(Transparency::ALPHA);
             } else {
                 tracing::debug!(
                     "Unlit material: setting DISABLED (has_alpha_texture=false, has_texture={})",
@@ -406,15 +406,15 @@ pub fn apply_dcl_material_properties(
                     godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
                 }
                 MaterialTransparencyMode::MtmAlphaBlend => {
-                    tracing::debug!("PBR material: MtmAlphaBlend -> ALPHA_DEPTH_PRE_PASS");
-                    godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                    tracing::debug!("PBR material: MtmAlphaBlend -> ALPHA");
+                    godot_material.set_transparency(Transparency::ALPHA);
                 }
                 MaterialTransparencyMode::MtmAlphaTestAndAlphaBlend => {
                     tracing::debug!(
-                        "PBR material: MtmAlphaTestAndAlphaBlend -> ALPHA_DEPTH_PRE_PASS (threshold={})",
+                        "PBR material: MtmAlphaTestAndAlphaBlend -> ALPHA (threshold={})",
                         pbr.alpha_test.0
                     );
-                    godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                    godot_material.set_transparency(Transparency::ALPHA);
                     godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
                 }
                 MaterialTransparencyMode::MtmAuto => {
@@ -423,10 +423,10 @@ pub fn apply_dcl_material_properties(
                     let alpha = pbr.albedo_color.0.a;
                     if alpha < 1.0 {
                         tracing::debug!(
-                            "PBR material: MtmAuto -> ALPHA_DEPTH_PRE_PASS (albedo_alpha={})",
+                            "PBR material: MtmAuto -> ALPHA (albedo_alpha={})",
                             alpha
                         );
-                        godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                        godot_material.set_transparency(Transparency::ALPHA);
                     } else {
                         tracing::debug!(
                             "PBR material: MtmAuto -> DISABLED (albedo_alpha={})",
