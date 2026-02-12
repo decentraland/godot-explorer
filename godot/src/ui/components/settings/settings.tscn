@@ -5,10 +5,10 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_1ym31"]
 [ext_resource type="Texture2D" uid="uid://djwf5d8a0rw6y" path="res://assets/ui/graphics.svg" id="5_lso3q"]
 [ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="6_br0rl"]
+[ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/components/discover/icons/back.svg" id="6_ewc0a"]
 [ext_resource type="Texture2D" uid="uid://g38eqwq311ph" path="res://assets/ui/speaker-on.svg" id="6_q1ods"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="6_sa1v7"]
 [ext_resource type="PackedScene" uid="uid://b5lfwgmd7h8cj" path="res://src/ui/components/radio_selector/radio_selector.tscn" id="7_u8bs2"]
-[ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="8_aj150"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="8_wyn32"]
 [ext_resource type="Texture2D" uid="uid://dwd0g63x37e0l" path="res://assets/ui/gameplay.svg" id="9_67hd5"]
 [ext_resource type="Texture2D" uid="uid://cg1jhvnvea4tw" path="res://assets/ui/account.svg" id="11_6mcfd"]
@@ -117,7 +117,19 @@ layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_bottom = 24
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/ColorRect_Navbar/SafeMarginContainer_Header/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Navbar/SafeMarginContainer_Header/MarginContainer"]
+layout_mode = 2
+
+[node name="Button_BackToExplorer" type="Button" parent="VBoxContainer/ColorRect_Navbar/SafeMarginContainer_Header/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+icon = ExtResource("6_ewc0a")
+flat = true
+expand_icon = true
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/ColorRect_Navbar/SafeMarginContainer_Header/MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_vertical = 8
@@ -295,7 +307,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="Container_Gameplay" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
+[node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -303,33 +315,33 @@ theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="Container_ChatAndSocial" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay"]
+[node name="Container_ChatAndSocial" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
 
-[node name="SectionHelp" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial"]
+[node name="SectionHelp" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="SectionTittle_ChatAndSocial" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer" instance=ExtResource("15_h5vs5")]
+[node name="SectionTittle_ChatAndSocial" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer" instance=ExtResource("15_h5vs5")]
 layout_mode = 2
 title = "CHAT & SOCIAL"
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="CloseChatAfterSending" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer"]
+[node name="CloseChatAfterSending" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -338,50 +350,51 @@ theme_override_font_sizes/font_size = 14
 text = "Close Chat After Sending"
 label_settings = ExtResource("17_67hd5")
 
-[node name="CheckButton_SubmitMessageClosesChat" type="CheckButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending"]
+[node name="CheckButton_SubmitMessageClosesChat" type="CheckButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay"]
 layout_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="Container_Storage" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
+[node name="VBoxContainer_Storage" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 0
 
-[node name="SectionTittle_TemporaryFiles" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage" instance=ExtResource("15_h5vs5")]
+[node name="SectionTittle_TemporaryFiles" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" instance=ExtResource("15_h5vs5")]
 layout_mode = 2
 title = "TEMPORARY FILES"
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="CurrentCacheSize" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="CurrentCacheSize" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize"]
 layout_mode = 2
 theme_override_constants/separation = 8
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
-[node name="TitleRow" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize"]
+[node name="TitleRow" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize/TitleRow"]
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize/TitleRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -389,7 +402,7 @@ theme = SubResource("Theme_eontw")
 text = "Current Cache Size"
 label_settings = ExtResource("17_67hd5")
 
-[node name="Label_CurrentCacheValue" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize/TitleRow"]
+[node name="Label_CurrentCacheValue" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize/TitleRow"]
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_eontw")
@@ -397,12 +410,13 @@ text = "0.5 GB"
 label_settings = SubResource("LabelSettings_m1jcl")
 horizontal_alignment = 2
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize"]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
-[node name="ProgressBar_CurrentCacheSize" type="ProgressBar" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize"]
+[node name="ProgressBar_CurrentCacheSize" type="ProgressBar" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme = ExtResource("12_sa1v7")
@@ -410,29 +424,29 @@ value = 50.0
 rounded = true
 show_percentage = false
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize"]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize"]
 layout_mode = 2
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
 theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="DropdownList_MaxCacheSize" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage" instance=ExtResource("20_67hd5")]
+[node name="DropdownList_MaxCacheSize" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Max Cache Size"
 description = "Sets how much storage the app can use."
 disabled = false
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
 theme_override_constants/separation = 74
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="Button_ClearCache" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="Button_ClearCache" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
@@ -441,12 +455,12 @@ theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
 text = "CLEAN CACHE"
 
-[node name="HSeparator4" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="HSeparator4" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="Label_CleanCacheDescription" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="Label_CleanCacheDescription" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
@@ -455,14 +469,12 @@ text = "Clears downloaded files used to speed up loading. Safe to delete."
 label_settings = ExtResource("19_t1cvu")
 text_overrun_behavior = 4
 
-[node name="VBoxContainer_Graphics" type="BoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
+[node name="VBoxContainer_Graphics" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
-vertical = true
-script = ExtResource("8_aj150")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics"]
 layout_mode = 2
@@ -635,7 +647,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer"]
 handle_input_locally = false
-size = Vector2i(500, 351)
+size = Vector2i(624, 351)
 render_target_clear_mode = 2
 render_target_update_mode = 0
 
@@ -1345,16 +1357,18 @@ underlined_text = "Delete Account"
 color = Color(1, 0.37254903, 0.46666667, 1)
 font = ExtResource("25_jf4mt")
 
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Navbar/SafeMarginContainer_Header/MarginContainer/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Gameplay" to="." method="_on_button_gameplay_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Account" to="." method="_on_button_account_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Storage" to="." method="_on_button_storage_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
-[connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial" to="." method="_on_container_general_visibility_changed"]
-[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
-[connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage" to="." method="_on_container_storage_visibility_changed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
+[connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial" to="." method="_on_container_general_visibility_changed"]
+[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
+[connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
 [connection signal="item_selected" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/CheckButton_DynamicSkybox" to="." method="_on_check_button_dynamic_skybox_toggled"]

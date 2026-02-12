@@ -17,19 +17,19 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready var container_gameplay: Control = %Container_Gameplay
-@onready var container_graphics: Control = %VBoxContainer_Graphics
-@onready var container_advanced: Control = %VBoxContainer_Advanced
-@onready var container_audio: Control = %VBoxContainer_Audio
+@onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
+@onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
+@onready var container_advanced: VBoxContainer = %VBoxContainer_Advanced
+@onready var container_audio: VBoxContainer = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
-@onready var container_storage: VBoxContainer = %Container_Storage
+@onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
+@onready var button_back_to_explorer: Button = %Button_BackToExplorer
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
 @onready var label_current_cache_value: Label = %Label_CurrentCacheValue
-@onready
-var progress_bar_current_cache_size: ProgressBar = $VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize/ProgressBar_CurrentCacheSize
+@onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
 @onready var button_clear_cache: Button = %Button_ClearCache
 
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
@@ -98,6 +98,7 @@ var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginCon
 
 
 func _ready():
+	button_back_to_explorer.hide()
 	#button_developer.visible = !Global.is_production()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
@@ -463,7 +464,12 @@ func _update_current_cache_size():
 	var current_size_mb = roundf(
 		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
-	label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
+	if current_size_mb >= 1024.0:
+		label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
+	elif current_size_mb > 0.0:
+		label_current_cache_value.text = "%.1f MB" % current_size_mb
+	else:
+		label_current_cache_value.text = "0 MB"
 	progress_bar_current_cache_size.value = current_size_mb
 	button_clear_cache.disabled = current_size_mb == 0
 
@@ -738,3 +744,17 @@ func _on_button_discord_pressed() -> void:
 
 func _on_button_storage_pressed() -> void:
 	show_control(container_storage)
+
+
+func _on_button_back_to_explorer_pressed() -> void:
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
+
+
+func _on_visibility_changed() -> void:
+	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		Global.set_orientation_portrait()
+		if Global.get_explorer():
+			if button_back_to_explorer:
+				button_back_to_explorer.show()
