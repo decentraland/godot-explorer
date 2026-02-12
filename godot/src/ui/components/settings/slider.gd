@@ -18,6 +18,8 @@ signal drag_ended(value_changed: bool)
 		value = val
 		if is_node_ready() and _slider:
 			_slider.value = val
+		if is_node_ready():
+			_update_value_label()
 
 ## Minimum value of the slider.
 @export var min_value: float = 0.0:
@@ -47,12 +49,22 @@ signal drag_ended(value_changed: bool)
 		if is_node_ready() and _slider:
 			_slider.editable = val
 
+## If true, the value label displays a percentage (e.g. "7%5").
+## If false, it displays the absolute value (e.g. "75").
+@export var is_percentage: bool = false:
+	set(val):
+		is_percentage = val
+		if is_node_ready():
+			_update_value_label()
+
 @onready var _title_label: Label = %Label
+@onready var _value_label: Label = %ValueLabel
 @onready var _slider: HSlider = %HSlider_GeneralVolume
 
 
 func _ready():
 	_update_title()
+	_update_value_label()
 
 	if Engine.is_editor_hint():
 		return
@@ -70,6 +82,16 @@ func _ready():
 func _update_title():
 	if _title_label:
 		_title_label.text = title
+
+
+func _update_value_label():
+	if _value_label:
+		var display_value := int(value)
+		if is_percentage:
+			display_value = int(value / max_value * 100)
+			_value_label.text = str(display_value) + "%"
+		else:
+			_value_label.text = str(display_value)
 
 
 func _on_slider_value_changed(new_value: float):

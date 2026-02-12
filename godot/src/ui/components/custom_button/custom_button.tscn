@@ -45,11 +45,12 @@ alignment = 1
 [node name="TextureRect_Icon" type="TextureRect" parent="MarginContainer/HBoxContainer_Content"]
 unique_name_in_owner = true
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(36, 0)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("2_jxwgt")
 expand_mode = 5
-stretch_mode = 4
+stretch_mode = 5
 
 [node name="VSeparator_Spacer" type="VSeparator" parent="MarginContainer/HBoxContainer_Content"]
 unique_name_in_owner = true

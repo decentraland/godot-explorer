@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=43 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -14,16 +14,18 @@
 [ext_resource type="Texture2D" uid="uid://dwd0g63x37e0l" path="res://assets/ui/gameplay.svg" id="9_67hd5"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
 [ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="13_xewta"]
-[ext_resource type="PackedScene" uid="uid://ceomwutplh20c" path="res://src/ui/components/settings/section_title.tscn" id="15_h5vs5"]
+[ext_resource type="PackedScene" path="res://src/ui/components/settings/section_title.tscn" id="15_h5vs5"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="16_blskf"]
 [ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="17_67hd5"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="18_xewta"]
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="19_t1cvu"]
 [ext_resource type="PackedScene" uid="uid://bhmbr0xh4h188" path="res://src/ui/components/dropdown_list/dropdown_list.tscn" id="20_67hd5"]
-[ext_resource type="PackedScene" uid="uid://dru17120tr84j" path="res://src/ui/components/settings/slider.tscn" id="21_xewta"]
+[ext_resource type="PackedScene" uid="uid://cygtqvymouhov" path="res://src/ui/components/settings/slider.tscn" id="21_xewta"]
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="22_mwb5b"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
 [ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
+[ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="25_jf4mt"]
+[ext_resource type="PackedScene" uid="uid://d0hixhgq3pfdu" path="res://src/ui/components/settings/underlined_button.tscn" id="25_mwb5b"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_t1cvu"]
 
@@ -71,6 +73,7 @@ Button/font_sizes/font_size = 20
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_bottom = 1531.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_k3n6g")
@@ -791,38 +794,45 @@ theme_override_constants/separation = 48
 [node name="GeneralVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
+is_percentage = true
 
 [node name="SceneVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Scene"
+is_percentage = true
 
 [node name="UIVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "UI SFX"
+title = "Interface"
+is_percentage = true
 
 [node name="MusicVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Music/Ambient"
+title = "Music & Ambient"
+is_percentage = true
 
 [node name="AvatarAndEmotesVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Avatar & Emote SFX"
+title = "Avatar & Emote"
+is_percentage = true
 
 [node name="VoiceChatVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 title = "Voice Chat"
+is_percentage = true
 
 [node name="MicAmplification" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 title = "Mic Amplification"
+is_percentage = true
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -1046,19 +1056,6 @@ theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
-[node name="CustomButton_SignOut" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account" instance=ExtResource("22_mwb5b")]
-layout_mode = 2
-disabled = true
-icon_align = 3
-
-[node name="Button_DeleteAccount" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-custom_minimum_size = Vector2(300, 80)
-layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("12_sa1v7")
-theme_override_font_sizes/font_size = 22
-text = "DELETE ACCOUNT"
-
 [node name="Button_AllNotifications" type="CheckButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
 visible = false
 custom_minimum_size = Vector2(300, 50)
@@ -1071,7 +1068,6 @@ button_pressed = true
 text = "ALL NOTIFICATIONS"
 
 [node name="SectionReport" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport"]
@@ -1092,9 +1088,11 @@ layout_mode = 2
 theme_override_constants/separation = 44
 
 [node name="Button_ReportBug" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer"]
+visible = false
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1111,6 +1109,7 @@ icon_alignment = 2
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1124,7 +1123,6 @@ alignment = 0
 icon_alignment = 2
 
 [node name="SectionHelp" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp"]
@@ -1145,9 +1143,11 @@ layout_mode = 2
 theme_override_constants/separation = 44
 
 [node name="Button_Help" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2"]
+visible = false
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1164,6 +1164,7 @@ icon_alignment = 2
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1180,6 +1181,7 @@ icon_alignment = 2
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1196,13 +1198,14 @@ icon_alignment = 2
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Terms of Service"
+text = "Terms of Use"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1212,6 +1215,7 @@ icon_alignment = 2
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1223,6 +1227,28 @@ icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
 icon_alignment = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 64
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 64
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 44
+
+[node name="CustomButton_SignOut" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/MarginContainer/VBoxContainer" instance=ExtResource("22_mwb5b")]
+layout_mode = 2
+disabled = true
+
+[node name="UnderlinedButton_DeleteAccount" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/MarginContainer/VBoxContainer" instance=ExtResource("25_mwb5b")]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+underlined_text = "Delete Account"
+color = Color(1, 0.37254903, 0.46666667, 1)
+font = ExtResource("25_jf4mt")
 
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
@@ -1260,6 +1286,10 @@ icon_alignment = 2
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_PrivacyPolicy" to="." method="_on_button_privacy_policy_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_ContentPolicy" to="." method="_on_button_content_policy_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_TermsOfService" to="." method="_on_button_terms_of_service_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_Discord" to="." method="_on_button_discord_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/MarginContainer/VBoxContainer/UnderlinedButton_DeleteAccount" to="." method="_on_button_delete_account_pressed"]

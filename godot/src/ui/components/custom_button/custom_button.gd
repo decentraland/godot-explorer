@@ -99,13 +99,9 @@ func _update_visual_state():
 	_icon.modulate = icon_color
 	_icon.visible = _icon.texture != null
 
-	# Icon max width from theme
-	var icon_max_w := get_theme_constant("icon_max_width")
-	if icon_max_w > 0:
-		_icon.custom_minimum_size.x = 0
-		_icon.size.x = mini(int(_icon.size.x), icon_max_w)
-	else:
-		_icon.custom_minimum_size.x = 0
+	# Icon min size based on font size
+	var fs := get_theme_font_size("font_size")
+	_icon.custom_minimum_size.x = int(fs * 1.1)
 
 	# Margins from the active stylebox
 	var style := get_theme_stylebox(stylebox_name)

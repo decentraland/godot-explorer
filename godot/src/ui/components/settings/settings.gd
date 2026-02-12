@@ -111,8 +111,9 @@ func _ready():
 	# graphic
 	var i = 0
 	for profile in GraphicSettings.PROFILE_NAMES:
-		dropdown_list_graphic_profiles.add_item(profile, i)
-		i += 1
+		if profile != "Custom":
+			dropdown_list_graphic_profiles.add_item(profile, i)
+			i += 1
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	refresh_graphic_settings()
@@ -461,6 +462,8 @@ func _on_check_button_dynamic_skybox_toggled(toggled_on: bool) -> void:
 	dropdown_list_custom_skybox.disabled = toggled_on
 	if toggled_on:
 		dropdown_list_custom_skybox.select(-1)
+	else:
+		dropdown_list_custom_skybox.select(3)
 	if Global.get_config().dynamic_skybox != toggled_on:
 		Global.get_config().dynamic_skybox = toggled_on
 		Global.get_config().save_to_settings_file()
@@ -697,3 +700,24 @@ func _on_dropdown_list_custom_skybox_item_selected(index: int) -> void:
 	var time: int = GraphicSettings.SKYBOX_TIME_NAMES[index].secs
 	if Global.get_config().skybox_time != time:
 		Global.get_config().skybox_time = time
+
+
+func _on_button_privacy_policy_pressed() -> void:
+	const PRIVACY_POLICY_URL = 'https://decentraland.org/privacy/'
+	Global.open_url(PRIVACY_POLICY_URL)
+
+
+func _on_button_content_policy_pressed() -> void:
+	const CONTENT_POLICY_URL = 'https://decentraland.org/content/'
+	Global.open_url(CONTENT_POLICY_URL)
+	
+
+
+func _on_button_terms_of_service_pressed() -> void:
+	const TERMS_OF_USE_URL = 'https://decentraland.org/terms/'
+	Global.open_url(TERMS_OF_USE_URL)
+
+
+func _on_button_discord_pressed() -> void:
+	const DISCORD_URL = 'https://discord.com/channels/417796904760639509/1446513533893218465'
+	Global.open_url(DISCORD_URL)
