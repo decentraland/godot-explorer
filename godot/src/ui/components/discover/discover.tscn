@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=25 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -11,6 +11,7 @@
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
+[ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="10_q2sj0"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="12_g4fdo"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
 [ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/components/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
@@ -50,6 +51,7 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_bottom = 880.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("3_lvgj0")
@@ -65,6 +67,7 @@ grow_vertical = 2
 
 [node name="MarginContainer_FTUE" type="MarginContainer" parent="TextureRect/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="FTUE" parent="TextureRect/VBoxContainer/MarginContainer_FTUE" instance=ExtResource("4_5g6gd")]
@@ -134,13 +137,15 @@ size_flags_vertical = 3
 theme_override_constants/margin_top = 24
 theme_override_constants/margin_bottom = 24
 
-[node name="ScrollContainer_Content" type="ScrollContainer" parent="TextureRect/VBoxContainer/DiscoverContent/MarginContainer"]
+[node name="ScrollContainer_Content" type="Container" parent="TextureRect/VBoxContainer/DiscoverContent/MarginContainer"]
 unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
-size_flags_vertical = 3
+script = ExtResource("10_q2sj0")
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 scroll_deadzone = 100
+metadata/_custom_type_script = "uid://c3wphp306q0w"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/DiscoverContent/MarginContainer/ScrollContainer_Content"]
 layout_mode = 2
