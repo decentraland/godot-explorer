@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=41 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -21,7 +21,6 @@
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="19_t1cvu"]
 [ext_resource type="PackedScene" uid="uid://bhmbr0xh4h188" path="res://src/ui/components/dropdown_list/dropdown_list.tscn" id="20_67hd5"]
 [ext_resource type="PackedScene" uid="uid://dru17120tr84j" path="res://src/ui/components/settings/slider.tscn" id="21_xewta"]
-[ext_resource type="Texture2D" uid="uid://bq35g8fuk4i43" path="res://assets/ui/sign-out.svg" id="22_jf4mt"]
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="22_mwb5b"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
 [ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
@@ -1050,12 +1049,7 @@ theme_override_constants/separation = 72
 [node name="CustomButton_SignOut" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account" instance=ExtResource("22_mwb5b")]
 layout_mode = 2
 disabled = true
-custom_icon = ExtResource("22_jf4mt")
-custom_icon_pressed = ExtResource("22_jf4mt")
-icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-icon_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.49803922)
-custom_text = "SIGN OUT"
+icon_align = 3
 
 [node name="Button_DeleteAccount" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
 custom_minimum_size = Vector2(300, 80)
