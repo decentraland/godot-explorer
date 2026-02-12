@@ -315,9 +315,17 @@ pub fn apply_dcl_material_properties(
             godot_material.set_shading_mode(ShadingMode::UNSHADED);
             godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
             // Unity ignores diffuse_color alpha for unlit materials, force alpha to 1.0
-            let mut albedo_color = unlit.diffuse_color.0.to_godot().linear_to_srgb();
+            // No color space conversion — matches Unity (SetColor with no conversion)
+            let mut albedo_color = unlit.diffuse_color.0.to_godot();
             albedo_color.a = 1.0;
             godot_material.set_albedo(albedo_color);
+
+            tracing::debug!(
+                "Unlit material: diffuse_color=({}, {}, {}, {}), has_texture={}, has_alpha_texture={}",
+                albedo_color.r, albedo_color.g, albedo_color.b, albedo_color.a,
+                unlit.texture.is_some(),
+                unlit.alpha_texture.is_some()
+            );
 
             // Apply UV offset/tiling from main texture (only main texture supports this)
             if let Some(texture) = &unlit.texture {
@@ -338,30 +346,39 @@ pub fn apply_dcl_material_properties(
             }
 
             // Handle transparency for unlit materials
-            // Note: Unity ignores diffuse_color alpha for unlit materials
-            // Only enable transparency when there's an explicit alpha_texture
+            // Unity uses AlphaTest (ZWrite=ON, _ALPHATEST_ON) as the base for unlit,
+            // then ResolveAutoMode determines if AlphaBlend is needed.
+            // Only alpha_texture triggers AlphaBlend (matches Unity's ResolveAutoMode).
             if unlit.alpha_texture.is_some() {
-                tracing::debug!(
-                    "Unlit material: setting ALPHA (has_alpha_texture=true)"
-                );
+                tracing::debug!("Unlit material: transparency=ALPHA (has alpha_texture)");
                 godot_material.set_transparency(Transparency::ALPHA);
+            } else if unlit.texture.is_some() {
+                // Texture present but no alpha_texture — use scissor for cutout
+                // (matches Unity's base unlit: _ALPHATEST_ON, ZWrite=1)
+                tracing::debug!("Unlit material: transparency=ALPHA_SCISSOR (has texture, no alpha_texture)");
+                godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
+                godot_material.set_alpha_scissor_threshold(unlit.alpha_test.0);
             } else {
-                tracing::debug!(
-                    "Unlit material: setting DISABLED (has_alpha_texture=false, has_texture={})",
-                    unlit.texture.is_some()
-                );
+                tracing::debug!("Unlit material: transparency=DISABLED (no textures)");
                 godot_material.set_transparency(Transparency::DISABLED);
             }
         }
         DclMaterial::Pbr(pbr) => {
             godot_material.set_metallic(pbr.metallic.0);
             godot_material.set_roughness(pbr.roughness.0);
-            godot_material.set_specular(pbr.specular_intensity.0);
+            // Unity: specularIntensity * directIntensity
+            godot_material.set_specular(pbr.specular_intensity.0 * pbr.direct_intensity.0);
 
             godot_material.set_shading_mode(ShadingMode::PER_PIXEL);
-            godot_material.set_emission(pbr.emissive_color.0.to_godot());
-            godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
-            godot_material.set_feature(Feature::EMISSION, true);
+
+            // Emission: only enable when color is non-black (matches Unity)
+            let emissive = pbr.emissive_color.0.to_godot();
+            let has_emission = emissive.r != 0.0 || emissive.g != 0.0 || emissive.b != 0.0;
+            godot_material.set_feature(Feature::EMISSION, has_emission);
+            if has_emission {
+                godot_material.set_emission(emissive);
+                godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
+            }
 
             // Use MULTIPLY operator when there's an emissive texture, ADD otherwise
             if pbr.emissive_texture.is_some() {
@@ -371,6 +388,7 @@ pub fn apply_dcl_material_properties(
             }
 
             godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
+            // No color space conversion — matches Unity (SetColor with no conversion)
             godot_material.set_albedo(pbr.albedo_color.0.to_godot());
 
             // Apply UV offset/tiling from main texture (only main texture supports this)
@@ -392,46 +410,37 @@ pub fn apply_dcl_material_properties(
             }
 
             // Handle transparency mode
+            // Unity: AlphaBlend → ZWrite=OFF, SrcAlpha/OneMinusSrcAlpha, no depth pre-pass
+            // Godot equivalent: Transparency::ALPHA (NOT ALPHA_DEPTH_PRE_PASS)
+            let albedo_color = pbr.albedo_color.0.to_godot();
+            tracing::debug!(
+                "PBR material: mode={:?}, albedo=({}, {}, {}, {}), metallic={}, roughness={}, specular={}, has_texture={}, has_emissive_tex={}",
+                pbr.transparency_mode,
+                albedo_color.r, albedo_color.g, albedo_color.b, albedo_color.a,
+                pbr.metallic.0, pbr.roughness.0, pbr.specular_intensity.0,
+                pbr.texture.is_some(), pbr.emissive_texture.is_some()
+            );
             match pbr.transparency_mode {
                 MaterialTransparencyMode::MtmOpaque => {
-                    tracing::debug!("PBR material: MtmOpaque -> DISABLED");
                     godot_material.set_transparency(Transparency::DISABLED);
                 }
                 MaterialTransparencyMode::MtmAlphaTest => {
-                    tracing::debug!(
-                        "PBR material: MtmAlphaTest -> ALPHA_SCISSOR (threshold={})",
-                        pbr.alpha_test.0
-                    );
                     godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
                     godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
                 }
                 MaterialTransparencyMode::MtmAlphaBlend => {
-                    tracing::debug!("PBR material: MtmAlphaBlend -> ALPHA");
                     godot_material.set_transparency(Transparency::ALPHA);
                 }
                 MaterialTransparencyMode::MtmAlphaTestAndAlphaBlend => {
-                    tracing::debug!(
-                        "PBR material: MtmAlphaTestAndAlphaBlend -> ALPHA (threshold={})",
-                        pbr.alpha_test.0
-                    );
                     godot_material.set_transparency(Transparency::ALPHA);
                     godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
                 }
                 MaterialTransparencyMode::MtmAuto => {
-                    // Auto-detect: use alpha blend only if albedo color has transparency
-                    // (matches Unity behavior: texture presence does NOT trigger transparency)
-                    let alpha = pbr.albedo_color.0.a;
-                    if alpha < 1.0 {
-                        tracing::debug!(
-                            "PBR material: MtmAuto -> ALPHA (albedo_alpha={})",
-                            alpha
-                        );
+                    // Unity: alphaTexture != null || albedoColor.a < 1.0 → AlphaBlend, else Opaque
+                    // PBR passes null for alphaTexture, so only albedo alpha matters
+                    if pbr.albedo_color.0.a < 1.0 {
                         godot_material.set_transparency(Transparency::ALPHA);
                     } else {
-                        tracing::debug!(
-                            "PBR material: MtmAuto -> DISABLED (albedo_alpha={})",
-                            alpha
-                        );
                         godot_material.set_transparency(Transparency::DISABLED);
                     }
                 }
