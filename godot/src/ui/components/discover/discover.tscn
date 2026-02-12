@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=25 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -18,6 +18,8 @@
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
 [ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/search-bar/search_bar.tscn" id="18_sbar"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5g6gd"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
@@ -82,14 +84,21 @@ script = ExtResource("6_b1byu")
 use_left = false
 use_right = false
 use_bottom = false
-extra_margin_top = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer"]
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_5g6gd")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 14
 
-[node name="Button_BackToExplorer" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer"]
+[node name="Button_BackToExplorer" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -98,7 +107,7 @@ icon = ExtResource("4_edk0s")
 flat = true
 expand_icon = true
 
-[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer"]
+[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
@@ -106,12 +115,12 @@ theme_override_font_sizes/font_size = 28
 text = "Discover"
 label_settings = ExtResource("5_q2sj0")
 
-[node name="SearchBar" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer" instance=ExtResource("18_sbar")]
+[node name="SearchBar" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer" instance=ExtResource("18_sbar")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer"]
+[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
@@ -322,8 +331,8 @@ unique_name_in_owner = true
 visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
-[connection signal="focus_entered" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
-[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
-[connection signal="text_submitted" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
-[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
+[connection signal="focus_entered" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
+[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="text_submitted" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
+[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]

@@ -8,13 +8,15 @@ extends Control
 		%Label_Title.text = new_value
 		title = new_value
 
-#var _last_search_text: String = ""
-
 @onready var scroll_container = %ScrollContainer
 @onready var item_container = %HBoxContainer_Items
 @onready var label_error = $VBoxContainer/Label_Error
 @onready var label_not_found = $VBoxContainer/Label_NotFound
 @onready var h_box_container_loading = $VBoxContainer/SkeletonControl
+
+
+func has_items() -> bool:
+	return item_container.get_child_count() > 0
 
 
 func _ready():
@@ -48,7 +50,6 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 		self.hide()
 		return
 	else:
-		#elif not ok:
 		h_box_container_loading.hide()
 
 		scroll_container.hide()

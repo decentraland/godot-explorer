@@ -98,9 +98,9 @@ func _on_search_bar_cleared() -> void:
 
 func set_search_filter_text(new_text: String) -> void:
 	if new_text.is_empty():
-		last_visited.show()
+		last_visited.visible = last_visited.has_items()
 		places_featured.show()
-		places_my_places.show()
+		places_my_places.visible = places_my_places.has_items()
 	else:
 		last_visited.hide()
 		places_featured.hide()
