@@ -75,6 +75,7 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 20
 script = ExtResource("6_b1byu")
