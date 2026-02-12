@@ -4,6 +4,13 @@ extends Control
 
 signal item_selected(index: int)
 
+const ITEM_HEIGHT: float = 68.0
+const ITEM_GAP: float = 8.0
+const MAX_VISIBLE_ITEMS: int = 5
+const DROPDOWN_ITEM_SCENE = preload("res://src/ui/components/dropdown_list/dropdown_item.tscn")
+const COLOR_ARROW_NORMAL := Color(236, 235, 237, 1)
+const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
+
 ## Title displayed above the dropdown button. Hidden when empty.
 @export var title: String = "":
 	set(value):
@@ -25,11 +32,12 @@ signal item_selected(index: int)
 		if is_node_ready():
 			_apply_disabled_state()
 
-const ITEM_HEIGHT: float = 68.0
-const ITEM_GAP: float = 8.0
-const MAX_VISIBLE_ITEMS: int = 5
-
-const DROPDOWN_ITEM_SCENE = preload("res://src/ui/components/dropdown_list/dropdown_item.tscn")
+var selected: int = -1
+var _items: Array[Dictionary] = []
+var _is_open: bool = false
+var _style_normal: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
+var _style_pressed: StyleBoxFlat = load("res://assets/themes/dropdown_selected.tres")
+var _style_disabled: StyleBoxFlat = load("res://assets/themes/dropdown_disabled.tres")
 
 @onready var _vbox: VBoxContainer = $VBoxContainer
 @onready var _title_label: Label = %Label_Title
@@ -42,24 +50,11 @@ const DROPDOWN_ITEM_SCENE = preload("res://src/ui/components/dropdown_list/dropd
 @onready var _scroll_container: ScrollContainer = %ScrollContainer
 @onready var _items_container: VBoxContainer = %VBoxContainer_Items
 
-var _items: Array[Dictionary] = []
-var selected: int = -1
-var _is_open: bool = false
-
-var _style_normal: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
-var _style_hover: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
-var _style_pressed: StyleBoxFlat = load("res://assets/themes/dropdown_selected.tres")
-var _style_disabled: StyleBoxFlat = load("res://assets/themes/dropdown_disabled.tres")
-
-const COLOR_ARROW_NORMAL := Color(236, 235, 237, 1)
-const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
-
-
 
 func _ready():
 	_update_title()
 	_update_description()
-	
+
 	if Engine.is_editor_hint():
 		return
 
@@ -231,15 +226,23 @@ func _update_selected_text():
 		if selected >= 0 and selected < _items.size():
 			_selected_label.text = _items[selected].text
 			if disabled:
-				_selected_label.label_settings = load("res://assets/themes/selected_dropdown_settings_disabled.tres")
+				_selected_label.label_settings = load(
+					"res://assets/themes/selected_dropdown_settings_disabled.tres"
+				)
 			else:
-				_selected_label.label_settings = load("res://assets/themes/selected_dropdown_settings.tres")
+				_selected_label.label_settings = load(
+					"res://assets/themes/selected_dropdown_settings.tres"
+				)
 		else:
 			_selected_label.text = "Select"
 			if disabled:
-				_selected_label.label_settings = load("res://assets/themes/unselected_dropdown_settings_disabled.tres")
+				_selected_label.label_settings = load(
+					"res://assets/themes/unselected_dropdown_settings_disabled.tres"
+				)
 			else:
-				_selected_label.label_settings = load("res://assets/themes/unselected_dropdown_settings.tres")
+				_selected_label.label_settings = load(
+					"res://assets/themes/unselected_dropdown_settings.tres"
+				)
 
 
 func _apply_disabled_state():
@@ -248,7 +251,9 @@ func _apply_disabled_state():
 			_close_popup()
 		_button_panel.add_theme_stylebox_override("panel", _style_disabled)
 		_title_label.label_settings = load("res://assets/themes/title_settings_disabled.tres")
-		_description_label.label_settings = load("res://assets/themes/description_settings_disabled.tres")
+		_description_label.label_settings = load(
+			"res://assets/themes/description_settings_disabled.tres"
+		)
 		_arrow_icon.modulate = COLOR_ARROW_DISABLED
 	else:
 		_button_panel.add_theme_stylebox_override("panel", _style_normal)
@@ -256,6 +261,7 @@ func _apply_disabled_state():
 		_description_label.label_settings = load("res://assets/themes/description_settings.tres")
 		_arrow_icon.modulate = COLOR_ARROW_NORMAL
 	_update_selected_text()
+
 
 # -- Callbacks ---------------------------------------------------------------
 
@@ -271,7 +277,7 @@ func _on_button_gui_input(event: InputEvent):
 func _on_button_mouse_entered():
 	if disabled or _is_open:
 		return
-	_button_panel.add_theme_stylebox_override("panel", _style_hover)
+	_button_panel.add_theme_stylebox_override("panel", _style_normal)
 
 
 func _on_button_mouse_exited():

@@ -46,7 +46,13 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 ]
 
 const PROFILE_NAMES: Array[String] = ["Very Low", "Low", "Medium", "High", "Custom"]
-const SKYBOX_TIME_NAMES: Array[Dictionary] = [{"name": "Midnight", "secs": 86400}, {"name": "Afternoon", "secs": 64800}, {"name": "Midday", "secs": 43200}, {"name": "Morning", "secs":21600}]
+const SKYBOX_TIME_NAMES: Array[Dictionary] = [
+	{"name": "Midnight", "secs": 86400},
+	{"name": "Afternoon", "secs": 64800},
+	{"name": "Midday", "secs": 43200},
+	{"name": "Morning", "secs": 21600}
+]
+
 
 static func connect_global_signal(root: Window):
 	root.size_changed.connect(GraphicSettings.apply_ui_zoom.bind(root))

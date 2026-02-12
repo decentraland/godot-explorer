@@ -28,7 +28,8 @@ var _dirty_connected: bool = false
 
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
-@onready var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready
+var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 
@@ -40,7 +41,6 @@ var _dirty_connected: bool = false
 @onready var avatar_and_emotes_volume: SettingsSlider = %AvatarAndEmotesVolume
 @onready var voice_chat_volume: SettingsSlider = %VoiceChatVolume
 @onready var mic_amplification: SettingsSlider = %MicAmplification
-
 
 #Graphics items:
 @onready var h_slider_rendering_scale = %HSlider_Resolution3DScale
@@ -58,7 +58,8 @@ var _dirty_connected: bool = false
 @onready var check_button_dynamic_graphics: CheckButton = %CheckButton_DynamicGraphics
 
 # Dynamic graphics toggle
-@onready var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox
+@onready
+var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
 
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
@@ -103,7 +104,9 @@ func _ready():
 	# general
 	text_edit_cache_path.text = Global.get_config().local_content_dir
 	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
-	check_button_submit_message_closes_chat.button_pressed = Global.get_config().submit_message_closes_chat
+	check_button_submit_message_closes_chat.button_pressed = (
+		Global.get_config().submit_message_closes_chat
+	)
 
 	# graphic
 	var i = 0
@@ -129,7 +132,6 @@ func _ready():
 			if GraphicSettings.SKYBOX_TIME_NAMES[k].secs == current_skybox_time:
 				dropdown_list_custom_skybox.select(k)
 				break
-
 
 	# volume
 	general_volume.value = Global.get_config().audio_general_volume
@@ -660,9 +662,9 @@ func _update_dynamic_graphics_status() -> void:
 	dropdown_list_graphic_profiles.select(current_profile)
 	var state_name: String = manager.get_state_name()
 	var profile_name: String = GraphicSettings.PROFILE_NAMES[current_profile]
-	
+
 	print(profile_name, state_name)
-	
+
 	match state_name:
 		"Disabled":
 			print("")
@@ -670,12 +672,10 @@ func _update_dynamic_graphics_status() -> void:
 			var remaining := int(manager.get_warmup_remaining())
 			print("Warming up... (%ds)" % remaining)
 		"Monitoring":
-			print( "Active - Current: %s" % profile_name)
+			print("Active - Current: %s" % profile_name)
 		"Cooldown":
 			var remaining := int(manager.get_cooldown_remaining())
-			print((
-				"Cooldown (%ds) - Current: %s" % [remaining, profile_name]
-			))
+			print("Cooldown (%ds) - Current: %s" % [remaining, profile_name])
 
 
 func _on_dropdown_list_graphic_profiles_item_selected(index: int) -> void:
