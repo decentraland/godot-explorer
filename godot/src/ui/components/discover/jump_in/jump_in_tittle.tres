@@ -1,0 +1,7 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://h2fat30rck6x"]
+
+[ext_resource type="FontVariation" uid="uid://c8semiboldemoji" path="res://assets/themes/fonts/inter_semibold_emoji_fallback.tres" id="1_p27as"]
+
+[resource]
+font = ExtResource("1_p27as")
+font_size = 42

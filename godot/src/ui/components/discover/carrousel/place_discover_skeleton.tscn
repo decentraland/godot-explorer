@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://c8cfkfwtnjk5b"]
+
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="1_bbl52"]
+[ext_resource type="Texture2D" uid="uid://cyb3aek31ytom" path="res://assets/ui/discover/card-discover-skeleton.svg" id="2_76ykn"]
+
+[node name="PlaceDiscoverSkeleton" type="Control"]
+custom_minimum_size = Vector2(290, 250)
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 1
+
+[node name="CardDiscoverSkeleton" type="TextureRect" parent="."]
+material = ExtResource("1_bbl52")
+layout_mode = 0
+offset_right = 294.0
+offset_bottom = 260.0
+texture = ExtResource("2_76ykn")

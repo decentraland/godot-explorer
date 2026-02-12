@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-python@v4
 
       - name: Install gdtoolkit 4
-        run: pip3 install git+https://github.com/kuruk-mm/godot-gdscript-toolkit.git
+        run: pip3 install git+https://github.com/dcl-regenesislabs/godot-gdscript-toolkit.git
 
       - name: Check format GDScript
         run: gdformat -d godot/

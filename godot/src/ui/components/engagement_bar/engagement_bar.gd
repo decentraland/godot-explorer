@@ -5,37 +5,25 @@ const DISLIKE_SOLID = preload("res://assets/ui/dislike_solid.svg")
 const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 
-@export var show_share_button: bool = false:
-	set(value):
-		show_share_button = value
-		if button_share:
-			button_share.visible = value
-
 var place_id
 
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
-@onready var button_fav: Button = %Button_Fav
-@onready var button_share: Button = %Button_Share
+@onready var button_like_pressed: Button = %Button_Like_Pressed
+@onready var button_dislike_pressed: Button = %Button_Dislike_Pressed
 
 
-func _ready() -> void:
-	if button_share:
-		button_share.visible = show_share_button
-
-
-func update_data(data: Dictionary = {}) -> void:
-	place_id = data.get("id", null)
-	if place_id != null:
-		_apply_button_state(data)
-		enable_buttons()
-		show()
+func update_data(id = null) -> void:
+	place_id = id
+	if place_id != null and place_id != "-":
+		async_update_state()
 	else:
 		hide()
 
 
-func _on_button_share_pressed() -> void:
-	pass  # Replace with function body.
+func async_update_state() -> void:
+	await _async_update_status()
+	show()
 
 
 func _async_on_button_like_toggled(toggled_on: bool) -> void:
@@ -90,25 +78,6 @@ func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 	enable_buttons()
 
 
-func _async_on_button_fav_toggled(toggled_on: bool) -> void:
-	if place_id == null:
-		button_fav.set_pressed_no_signal(!toggled_on)
-		return
-
-	disable_buttons()
-
-	var response = await PlacesHelper.async_patch_favorite(place_id, toggled_on)
-
-	if response is PromiseError:
-		button_fav.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching favorites: ", response.get_error())
-	elif response == null:
-		button_fav.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching favorites")
-
-	enable_buttons()
-
-
 func _apply_button_state(data: Dictionary) -> void:
 	button_like.set_pressed_no_signal(data.get("user_like", false))
 	if button_like.is_pressed():
@@ -122,28 +91,48 @@ func _apply_button_state(data: Dictionary) -> void:
 	else:
 		button_dislike.icon = DISLIKE
 
-	button_fav.set_pressed_no_signal(data.get("user_favorite", false))
+
+func _async_update_status() -> void:
+	if place_id == null:
+		enable_buttons()
+		return
+
+	disable_buttons()
+
+	var url = DclUrls.places_api() + "/places/" + str(place_id)
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+
+	if response == null:
+		enable_buttons()
+		return
+	if response is PromiseError:
+		printerr("Error getting place data for likes: ", response.get_error())
+		enable_buttons()
+		return
+
+	var json: Dictionary = response.get_string_response_as_json()
+	var place_data = json.get("data", json)
+	_apply_button_state(place_data)
+	enable_buttons()
 
 
 func disable_buttons() -> void:
 	if button_like:
 		button_like.disabled = true
-		button_like.get_node("TextureProgressBar").show()
+		button_like.self_modulate = Color.TRANSPARENT
+		button_like_pressed.show()
 	if button_dislike:
 		button_dislike.disabled = true
-		button_dislike.get_node("TextureProgressBar").show()
-	if button_fav:
-		button_fav.disabled = true
-		button_fav.get_node("TextureProgressBar").show()
+		button_dislike.self_modulate = Color.TRANSPARENT
+		button_dislike_pressed.show()
 
 
 func enable_buttons() -> void:
 	if button_like:
 		button_like.disabled = false
-		button_like.get_node("TextureProgressBar").hide()
+		button_like.self_modulate = Color.WHITE
+		button_like_pressed.hide()
 	if button_dislike:
 		button_dislike.disabled = false
-		button_dislike.get_node("TextureProgressBar").hide()
-	if button_fav:
-		button_fav.disabled = false
-		button_fav.get_node("TextureProgressBar").hide()
+		button_dislike.self_modulate = Color.WHITE
+		button_dislike_pressed.hide()

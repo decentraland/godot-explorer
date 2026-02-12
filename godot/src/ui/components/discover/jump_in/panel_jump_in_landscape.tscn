@@ -3,7 +3,7 @@
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_limbe"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="2_7i6jj"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_wh5hw"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="3_wh5hw"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_oea3m"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_38j5r"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_cpxdn"]
