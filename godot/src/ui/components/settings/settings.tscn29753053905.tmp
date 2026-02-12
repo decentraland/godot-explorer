@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=40 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -21,9 +21,6 @@
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="18_xewta"]
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="19_t1cvu"]
 [ext_resource type="PackedScene" uid="uid://bhmbr0xh4h188" path="res://src/ui/components/dropdown_list/dropdown_list.tscn" id="20_67hd5"]
-[ext_resource type="PackedScene" uid="uid://dru17120tr84j" path="res://src/ui/components/settings/slider.tscn" id="21_xewta"]
-[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
-[ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_t1cvu"]
 
@@ -54,6 +51,8 @@ Label/font_sizes/font_size = 14
 
 [sub_resource type="Theme" id="Theme_n3110"]
 Label/font_sizes/font_size = 14
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c03rv"]
 
 [sub_resource type="Theme" id="Theme_3h20j"]
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
@@ -363,7 +362,6 @@ size_flags_vertical = 0
 
 [node name="VBoxContainer_Graphics" type="BoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
@@ -496,7 +494,7 @@ theme_override_constants/separation = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_blskf")
 
 [node name="Label_Description" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
-custom_minimum_size = Vector2(0, 30)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
@@ -524,7 +522,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 [node name="DropdownList_CustomSkybox" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer" instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Skybox Time"
+title = "Custom Skybox"
 disabled = false
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
@@ -543,7 +541,7 @@ stretch = true
 handle_input_locally = false
 size = Vector2i(624, 351)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
 [node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
@@ -777,41 +775,233 @@ title = "VOLUME"
 layout_mode = 2
 theme_override_constants/separation = 48
 
-[node name="GeneralVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
+[node name="MasterVolume" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MasterVolume"]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MasterVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "General"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MasterVolume"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="HSlider_GeneralVolume" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MasterVolume"]
 unique_name_in_owner = true
 layout_mode = 2
+theme = ExtResource("12_sa1v7")
+value = 50.0
 
-[node name="SceneVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MasterVolume"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="SceneVolume" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/SceneVolume"]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/SceneVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Scene"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/SceneVolume"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="HSlider_SceneVolume" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/SceneVolume"]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Scene"
+value = 100.0
 
-[node name="UIVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/SceneVolume"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="UIVolume" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/UIVolume"]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/UIVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "UI SFX"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/UIVolume"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="HSlider_UIVolume" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/UIVolume"]
 unique_name_in_owner = true
 layout_mode = 2
-title = "UI SFX"
+value = 100.0
 
-[node name="MusicVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/UIVolume"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="MusicVolume" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MusicVolume"]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MusicVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Music/Ambient"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MusicVolume"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="HSlider_MusicVolume" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MusicVolume"]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Music/Ambient"
+value = 100.0
 
-[node name="AvatarAndEmotesVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MusicVolume"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="AvatarAndEmotesVolume" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume"]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Avatar & Emote SFX"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="AvatarsAndEmotesVolume" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume"]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Avatar & Emote SFX"
+value = 100.0
 
-[node name="VoiceChatVolume" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
-unique_name_in_owner = true
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="VoiceChatVolume" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer"]
 visible = false
 layout_mode = 2
-title = "Voice Chat"
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
 
-[node name="MicAmplification" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume"]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "VoiceChat
+"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="HSlider_VoiceChatVolume" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume"]
 unique_name_in_owner = true
+layout_mode = 2
+value = 100.0
+
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="MicAmplification" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer"]
 visible = false
 layout_mode = 2
-title = "Mic Amplification"
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MicAmplification"]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MicAmplification"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Mic Amplification"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MicAmplification"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="HSlider_MicAmplification" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MicAmplification"]
+unique_name_in_owner = true
+layout_mode = 2
+value = 100.0
+
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MicAmplification"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -1029,6 +1219,7 @@ mouse_filter = 2
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
@@ -1036,13 +1227,11 @@ theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
 [node name="Label_Account" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
 layout_mode = 2
 text = "ACCOUNT"
 label_settings = ExtResource("15_7krp8")
 
 [node name="Button_DeleteAccount" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -1083,150 +1272,32 @@ disabled = true
 button_pressed = true
 text = "ALL NOTIFICATIONS"
 
-[node name="SectionReport" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(0, 23)
 layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_h5vs5")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport"]
+[node name="Label_Help" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
 layout_mode = 2
-theme_override_constants/separation = 0
+text = "HELP"
+label_settings = ExtResource("15_7krp8")
 
-[node name="SectionTittle_Report" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer" instance=ExtResource("15_h5vs5")]
-layout_mode = 2
-title = "REPORT"
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 24
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 44
-
-[node name="Button_ReportBug" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer"]
+[node name="Button_ReportContent" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "Report Bug"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 22
+text = "REPORT CONTENT"
 
-[node name="Button_ReportContent" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer"]
+[node name="Button_ReportBug" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
+custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "Report Content"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
-
-[node name="SectionHelp" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp"]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="SectionTittle_Help" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer" instance=ExtResource("15_h5vs5")]
-layout_mode = 2
-title = "HELP"
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 24
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
-
-[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 44
-
-[node name="Button_Help" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "Help"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
-
-[node name="Button_PrivacyPolicy" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "Privacy Policy"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
-
-[node name="Button_ContentPolicy" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "Content Policy"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
-
-[node name="Button_TermsOfService" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "Terms of Service"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
-
-[node name="Button_Discord" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "Discord"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 22
+text = "REPORT BUG"
 
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
@@ -1250,12 +1321,12 @@ icon_alignment = 2
 [connection signal="select_item" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Bloom/RadioSelector_Bloom" to="." method="_on_radio_selector_bloom_select_item"]
 [connection signal="select_item" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing/RadioSelector_AA" to="." method="_on_radio_selector_aa_select_item"]
 [connection signal="select_item" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality/RadioSelector_TextureQuality" to="." method="_on_radio_selector_texture_quality_select_item"]
-[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
-[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
-[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]
-[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MusicVolume" to="." method="_on_h_slider_music_volume_value_changed"]
-[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
-[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MasterVolume/HSlider_GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/SceneVolume/HSlider_SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/UIVolume/HSlider_UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MusicVolume/HSlider_MusicVolume" to="." method="_on_h_slider_music_volume_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume/HSlider_VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VBoxContainer/MicAmplification/HSlider_MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_SceneLog" to="." method="_on_check_box_scene_log_toggled"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger" to="." method="_on_check_box_raycast_debugger_toggled"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_ScenePause" to="." method="_on_check_box_scene_pause_toggled"]
@@ -1265,5 +1336,5 @@ icon_alignment = 2
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]

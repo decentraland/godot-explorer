@@ -18,8 +18,16 @@ signal item_selected(index: int)
 		if is_node_ready():
 			_update_description()
 
-## Maximum height of the popup panel before it starts scrolling.
-@export var max_popup_height: float = 200.0
+## When true, the dropdown is non-interactive and visually dimmed.
+@export var disabled: bool = false:
+	set(value):
+		disabled = value
+		if is_node_ready():
+			_apply_disabled_state()
+
+const ITEM_HEIGHT: float = 68.0
+const ITEM_GAP: float = 8.0
+const MAX_VISIBLE_ITEMS: int = 5
 
 const DROPDOWN_ITEM_SCENE = preload("res://src/ui/components/dropdown_list/dropdown_item.tscn")
 
@@ -41,15 +49,16 @@ var _is_open: bool = false
 var _style_normal: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
 var _style_hover: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
 var _style_pressed: StyleBoxFlat = load("res://assets/themes/dropdown_selected.tres")
+var _style_disabled: StyleBoxFlat = load("res://assets/themes/dropdown_disabled.tres")
+
+const COLOR_ARROW_NORMAL := Color(236, 235, 237, 1)
+const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
 
 
 
 func _ready():
 	_update_title()
 	_update_description()
-	add_item("ASD1", 0)
-	add_item("ASD2", 1)
-	add_item("ASD3", 2)
 	
 	if Engine.is_editor_hint():
 		return
@@ -61,6 +70,7 @@ func _ready():
 	_button_panel.mouse_exited.connect(_on_button_mouse_exited)
 
 	_popup_layer.gui_input.connect(_on_popup_layer_gui_input)
+	_apply_disabled_state()
 
 
 # -- OptionButton-compatible API ---------------------------------------------
@@ -127,6 +137,13 @@ func _get_minimum_size() -> Vector2:
 # -- Popup control -----------------------------------------------------------
 
 
+func _is_in_bottom_half() -> bool:
+	var button_global_pos := _button_panel.get_global_position()
+	var button_center_y := button_global_pos.y + _button_panel.size.y * 0.5
+	var viewport_height := get_viewport().get_visible_rect().size.y
+	return button_center_y >= viewport_height * 0.5
+
+
 func _toggle_popup():
 	if _is_open:
 		_close_popup()
@@ -140,30 +157,43 @@ func _open_popup():
 
 	# Cover the full viewport so clicks outside close the popup
 	_popup_layer.position = Vector2.ZERO
-	_popup_layer.size = get_viewport().get_visible_rect().size
+	var viewport_size := get_viewport().get_visible_rect().size
+	_popup_layer.size = viewport_size
 
-	# Position the popup panel just below the button, with 4px gap
-	var button_global_pos := _button_panel.get_global_position()
-	var button_size := _button_panel.size
-	_popup_panel.position = Vector2(
-		button_global_pos.x,
-		button_global_pos.y + button_size.y + 4
-	)
-	_popup_panel.size.x = button_size.x
-
-	# Constrain scroll height to max_popup_height
+	# Constrain scroll height: grow up to MAX_VISIBLE_ITEMS, then scroll
+	var visible_count := mini(_items.size(), MAX_VISIBLE_ITEMS)
+	var max_popup_height := visible_count * ITEM_HEIGHT + maxi(visible_count - 1, 0) * ITEM_GAP
 	var items_height := _items_container.get_combined_minimum_size().y
 	_scroll_container.custom_minimum_size.y = min(max_popup_height, items_height)
 
+	# Determine direction: open downward if button is in the top half, upward otherwise
+	var button_global_pos := _button_panel.get_global_position()
+	var button_size := _button_panel.size
+	var opens_down := not _is_in_bottom_half()
+
+	# Position the popup panel with 4px gap
+	var popup_y: float
+	if opens_down:
+		popup_y = button_global_pos.y + button_size.y + 4
+	else:
+		var panel_style := _popup_panel.get_theme_stylebox("panel")
+		var panel_padding := panel_style.content_margin_top + panel_style.content_margin_bottom
+		popup_y = button_global_pos.y - _scroll_container.custom_minimum_size.y - panel_padding - 4
+	_popup_panel.position = Vector2(button_global_pos.x, popup_y)
+	_popup_panel.size.x = button_size.x
+
+	# Apply shadow offset based on open direction
+	var popup_style: StyleBoxFlat = _popup_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if popup_style:
+		popup_style.shadow_offset.y = 12.0 if opens_down else -12.0
+
 	_popup_layer.visible = true
-	_arrow_icon.flip_v = true
 	_button_panel.add_theme_stylebox_override("panel", _style_pressed)
 
 
 func _close_popup():
 	_is_open = false
 	_popup_layer.visible = false
-	_arrow_icon.flip_v = false
 	_button_panel.add_theme_stylebox_override("panel", _style_normal)
 
 
@@ -200,28 +230,54 @@ func _update_selected_text():
 	if _selected_label:
 		if selected >= 0 and selected < _items.size():
 			_selected_label.text = _items[selected].text
-			_selected_label.label_settings = load("res://assets/themes/selected_dropdown_settings.tres")
+			if disabled:
+				_selected_label.label_settings = load("res://assets/themes/selected_dropdown_settings_disabled.tres")
+			else:
+				_selected_label.label_settings = load("res://assets/themes/selected_dropdown_settings.tres")
 		else:
-			_selected_label.text = "Select an option"
-			_selected_label.label_settings = load("res://assets/themes/unselected_dropdown_settings.tres")
+			_selected_label.text = "Select"
+			if disabled:
+				_selected_label.label_settings = load("res://assets/themes/unselected_dropdown_settings_disabled.tres")
+			else:
+				_selected_label.label_settings = load("res://assets/themes/unselected_dropdown_settings.tres")
+
+
+func _apply_disabled_state():
+	if disabled:
+		if _is_open:
+			_close_popup()
+		_button_panel.add_theme_stylebox_override("panel", _style_disabled)
+		_title_label.label_settings = load("res://assets/themes/title_settings_disabled.tres")
+		_description_label.label_settings = load("res://assets/themes/description_settings_disabled.tres")
+		_arrow_icon.modulate = COLOR_ARROW_DISABLED
+	else:
+		_button_panel.add_theme_stylebox_override("panel", _style_normal)
+		_title_label.label_settings = load("res://assets/themes/title_settings.tres")
+		_description_label.label_settings = load("res://assets/themes/description_settings.tres")
+		_arrow_icon.modulate = COLOR_ARROW_NORMAL
+	_update_selected_text()
 
 # -- Callbacks ---------------------------------------------------------------
 
 
 func _on_button_gui_input(event: InputEvent):
+	if disabled:
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_toggle_popup()
 		get_viewport().set_input_as_handled()
 
 
 func _on_button_mouse_entered():
-	if not _is_open:
-		_button_panel.add_theme_stylebox_override("panel", _style_hover)
+	if disabled or _is_open:
+		return
+	_button_panel.add_theme_stylebox_override("panel", _style_hover)
 
 
 func _on_button_mouse_exited():
-	if not _is_open:
-		_button_panel.add_theme_stylebox_override("panel", _style_normal)
+	if disabled or _is_open:
+		return
+	_button_panel.add_theme_stylebox_override("panel", _style_normal)
 
 
 func _on_popup_layer_gui_input(event: InputEvent):

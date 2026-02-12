@@ -20,6 +20,7 @@ corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
 [node name="DropdownItem" type="Button"]
+custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 focus_mode = 0
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

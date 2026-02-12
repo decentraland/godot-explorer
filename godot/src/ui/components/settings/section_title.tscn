@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3 uid="uid://ceomwutplh20c"]
+
+[ext_resource type="Script" uid="uid://bpcd4hvsu27lr" path="res://src/ui/components/settings/section_title.gd" id="1_8kx02"]
+[ext_resource type="LabelSettings" uid="uid://brwn2v86u86w7" path="res://assets/themes/settings_section_title.tres" id="1_sve17"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8kx02"]
+content_margin_top = 8.0
+content_margin_bottom = 12.0
+draw_center = false
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="Section_Title" type="PanelContainer"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 53.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8kx02")
+script = ExtResource("1_8kx02")
+title = "Section asdAsd"
+
+[node name="Label_Title" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+text = "PERFORMANCE"
+label_settings = ExtResource("1_sve17")

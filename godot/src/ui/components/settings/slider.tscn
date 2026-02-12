@@ -1,0 +1,45 @@
+[gd_scene load_steps=6 format=3 uid="uid://dru17120tr84j"]
+
+[ext_resource type="Script" uid="uid://bcnsyme4d4hj2" path="res://src/ui/components/settings/slider.gd" id="1_script"]
+[ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="1_k0spq"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_mryku"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c03rv"]
+
+[sub_resource type="Theme" id="Theme_eontw"]
+Label/font_sizes/font_size = 23
+
+[node name="MasterVolume" type="VBoxContainer"]
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+script = ExtResource("1_script")
+title = "General"
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="Label" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "General"
+label_settings = ExtResource("1_k0spq")
+
+[node name="HSeparator2" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[node name="HSlider_GeneralVolume" type="HSlider" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme = ExtResource("2_mryku")
+value = 50.0
+
+[node name="HSeparator3" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")

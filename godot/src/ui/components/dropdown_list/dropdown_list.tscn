@@ -26,16 +26,20 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+shadow_color = Color(0.08627451, 0.08235294, 0.09411765, 0.40784314)
+shadow_size = 1
+shadow_offset = Vector2(0, 12)
 
 [node name="DropdownList" type="Control"]
+custom_minimum_size = Vector2(250, 0)
 layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = 0
+offset_right = 250.0
+offset_bottom = 161.0
+mouse_filter = 2
 script = ExtResource("1_script")
 title = "Title"
+disabled = null
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -53,7 +57,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("4_semibold")
 theme_override_font_sizes/font_size = 14
-text = "Title Dropdown	"
+text = "Title"
 label_settings = ExtResource("3_tiq7w")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
@@ -100,11 +104,11 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_4fa15")
 
 [node name="Label_Description" type="Label" parent="VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("3_regular")
 theme_override_font_sizes/font_size = 12
-text = "Short description. 1 line."
 label_settings = ExtResource("6_f66t4")
 text_overrun_behavior = 4
 
@@ -131,3 +135,4 @@ horizontal_scroll_mode = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 8

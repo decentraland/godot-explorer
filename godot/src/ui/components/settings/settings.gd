@@ -15,7 +15,7 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready var container_general: Control = %Container_General
+@onready var container_gameplay: Control = %Container_Gameplay
 @onready var container_graphics: Control = %VBoxContainer_Graphics
 @onready var container_advanced: Control = %VBoxContainer_Advanced
 @onready var container_audio: Control = %VBoxContainer_Audio
@@ -26,20 +26,21 @@ var _dirty_connected: bool = false
 @onready var label_current_cache_size = %Label_CurrentCacheSize
 @onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
 
-@onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
-@onready var check_box_submit_message_closes_chat: CheckBox = %CheckBox_SubmitMessageClosesChat
+@onready var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 
 #Audio items
-@onready var h_slider_general_volume = %HSlider_GeneralVolume
-@onready var h_slider_scene_volume = %HSlider_SceneVolume
-@onready var h_slider_ui_volume = %HSlider_UIVolume
-@onready var h_slider_music_volume = %HSlider_MusicVolume
-@onready var h_slider_voice_chat_volume = %HSlider_VoiceChatVolume
-@onready var h_slider_mic_amplification = %HSlider_MicAmplification
+@onready var general_volume: SettingsSlider = %GeneralVolume
+@onready var scene_volume: SettingsSlider = %SceneVolume
+@onready var ui_volume: SettingsSlider = %UIVolume
+@onready var music_volume: SettingsSlider = %MusicVolume
+@onready var avatar_and_emotes_volume: SettingsSlider = %AvatarAndEmotesVolume
+@onready var voice_chat_volume: SettingsSlider = %VoiceChatVolume
+@onready var mic_amplification: SettingsSlider = %MicAmplification
+
 
 #Graphics items:
 @onready var h_slider_rendering_scale = %HSlider_Resolution3DScale
@@ -51,12 +52,14 @@ var _dirty_connected: bool = false
 @onready var box_container_custom = %VBoxContainer_Custom
 
 @onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
-@onready var graphic_profile_container = %RadioSelector_GraphicProfile.get_parent()
 
 # Dynamic graphics toggle
-@onready var check_box_dynamic_graphics: CheckBox = %CheckBox_DynamicGraphics
-@onready var label_dynamic_graphics_status: Label = %Label_DynamicGraphicsStatus
-@onready var dynamic_graphics_container: VBoxContainer = %DynamicGraphics
+@onready var dynamic_graphics_container: HBoxContainer = %DynamicGraphics
+@onready var check_button_dynamic_graphics: CheckButton = %CheckButton_DynamicGraphics
+
+# Dynamic graphics toggle
+@onready var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox
+@onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
 
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
 @onready var radio_selector_skybox = %RadioSelector_Skybox
@@ -82,40 +85,59 @@ var _dirty_connected: bool = false
 @onready var button_general: Button = %Button_General
 @onready var button_graphics: Button = %Button_Graphics
 @onready var button_audio: Button = %Button_Audio
-@onready var button_developer: Button = %Button_Developer
+#@onready var button_developer: Button = %Button_Developer
+@onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
+@onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 
 
 func _ready():
-	button_developer.visible = !Global.is_production()
-	button_general.set_pressed_no_signal(true)
-	_on_button_general_pressed()
+	#button_developer.visible = !Global.is_production()
+	button_graphics.set_pressed_no_signal(true)
+	_on_button_graphics_pressed()
+
+	if Global.get_explorer():
+		preview_viewport_container.show()
+	else:
+		preview_viewport_container.hide()
 
 	# general
 	text_edit_cache_path.text = Global.get_config().local_content_dir
 	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
-
-	preview_viewport_container.hide()
-	check_box_dynamic_skybox.button_pressed = Global.get_config().dynamic_skybox
-	check_box_submit_message_closes_chat.button_pressed = (
-		Global.get_config().submit_message_closes_chat
-	)
-
-	var step_value = 86400 / h_slider_skybox_time.max_value
-	h_slider_skybox_time.value = Global.get_config().skybox_time / step_value
-	h_slider_skybox_time.visible = !Global.get_config().dynamic_skybox
-	label_skybox_time.visible = !Global.get_config().dynamic_skybox
+	check_button_submit_message_closes_chat.button_pressed = Global.get_config().submit_message_closes_chat
 
 	# graphic
+	var i = 0
+	for profile in GraphicSettings.PROFILE_NAMES:
+		dropdown_list_graphic_profiles.add_item(profile, i)
+		i += 1
 	_setup_dynamic_graphics()
+	_update_dynamic_graphics_status()
 	refresh_graphic_settings()
 
+	var j = 0
+	for profile in GraphicSettings.SKYBOX_TIME_NAMES:
+		dropdown_list_custom_skybox.add_item(profile.name, j)
+		j += 1
+
+	if Global.get_config().dynamic_skybox:
+		check_button_dynamic_skybox.button_pressed = true
+		dropdown_list_custom_skybox.select(-1)
+	else:
+		check_button_dynamic_skybox.button_pressed = false
+		var current_skybox_time: int = Global.get_config().skybox_time
+		for k in range(GraphicSettings.SKYBOX_TIME_NAMES.size()):
+			if GraphicSettings.SKYBOX_TIME_NAMES[k].secs == current_skybox_time:
+				dropdown_list_custom_skybox.select(k)
+				break
+
+
 	# volume
-	h_slider_general_volume.value = Global.get_config().audio_general_volume
-	h_slider_scene_volume.value = Global.get_config().audio_scene_volume
-	h_slider_voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
-	h_slider_ui_volume.value = Global.get_config().audio_ui_volume
-	h_slider_music_volume.value = Global.get_config().audio_music_volume
-	h_slider_mic_amplification.value = Global.get_config().audio_mic_amplification
+	general_volume.value = Global.get_config().audio_general_volume
+	scene_volume.value = Global.get_config().audio_scene_volume
+	voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
+	ui_volume.value = Global.get_config().audio_ui_volume
+	music_volume.value = Global.get_config().audio_music_volume
+	mic_amplification.value = Global.get_config().audio_mic_amplification
 
 	refresh_values()
 
@@ -126,7 +148,7 @@ func refresh_graphic_settings():
 
 	# We only show the custom settings if the graphic profile is custom
 	box_container_custom.visible = is_custom_profile
-	radio_selector_graphic_profile.selected = graphic_profile
+	dropdown_list_graphic_profiles.select(graphic_profile)
 
 	# Hide FPS limit and 3D resolution scale when using preset profiles
 	# These are controlled by the profile, not user-configurable
@@ -161,7 +183,7 @@ func refresh_graphic_settings():
 
 
 func show_control(control: Control):
-	container_general.hide()
+	container_gameplay.hide()
 	container_graphics.hide()
 	container_audio.hide()
 	container_advanced.hide()
@@ -433,41 +455,19 @@ func _on_container_general_visibility_changed():
 	_update_current_cache_size()
 
 
-func _on_check_box_dynamic_skybox_toggled(toggled_on: bool) -> void:
-	h_slider_skybox_time.visible = !toggled_on
-	label_skybox_time.visible = !toggled_on
+func _on_check_button_dynamic_skybox_toggled(toggled_on: bool) -> void:
+	dropdown_list_custom_skybox.disabled = toggled_on
+	if toggled_on:
+		dropdown_list_custom_skybox.select(-1)
 	if Global.get_config().dynamic_skybox != toggled_on:
 		Global.get_config().dynamic_skybox = toggled_on
 		Global.get_config().save_to_settings_file()
 
 
-func _on_check_box_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
+func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
 	if Global.get_config().submit_message_closes_chat != toggled_on:
 		Global.get_config().submit_message_closes_chat = toggled_on
 		Global.get_config().save_to_settings_file()
-
-
-func _on_h_slider_skybox_time_value_changed(value: float) -> void:
-	var step_value = 86400 / h_slider_skybox_time.max_value
-	var time: int = value * step_value
-
-	var hours: int = int(time / 3600) % 24
-	var minutes: int = int(time % 3600) / 60
-	label_skybox_time.text = "%02d:%02dh" % [hours, minutes]
-
-	if Global.get_config().skybox_time != time:
-		Global.get_config().skybox_time = time
-
-
-func _on_h_slider_skybox_time_drag_started() -> void:
-	var main_camera = get_tree().root.get_camera_3d()
-	if main_camera != null:
-		preview_camera_3d.global_transform = main_camera.global_transform
-		preview_viewport_container.show()
-
-
-func _on_h_slider_skybox_time_drag_ended(_value_changed: bool) -> void:
-	preview_viewport_container.hide()
 
 
 func _on_button_developer_pressed() -> void:
@@ -478,8 +478,8 @@ func _on_button_graphics_pressed() -> void:
 	show_control(container_graphics)
 
 
-func _on_button_general_pressed() -> void:
-	show_control(container_general)
+func _on_button_gameplay_pressed() -> void:
+	show_control(container_gameplay)
 
 
 func _on_button_audio_pressed():
@@ -622,10 +622,9 @@ func _setup_dynamic_graphics() -> void:
 
 	# Initialize checkbox state
 	var is_enabled: bool = Global.get_config().dynamic_graphics_enabled
-	check_box_dynamic_graphics.set_pressed_no_signal(is_enabled)
-
+	check_button_dynamic_graphics.set_pressed_no_signal(is_enabled)
+	dropdown_list_graphic_profiles.disabled = is_enabled
 	# Update UI state
-	_update_graphic_settings_enabled(is_enabled)
 	_update_dynamic_graphics_status()
 
 	# Connect to manager signal to update UI when profile changes dynamically
@@ -636,7 +635,8 @@ func _setup_dynamic_graphics() -> void:
 	)
 
 
-func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
+func _on_check_button_dynamic_graphics_toggled(toggled_on: bool) -> void:
+	dropdown_list_graphic_profiles.disabled = toggled_on
 	Global.get_config().dynamic_graphics_enabled = toggled_on
 	Global.get_config().save_to_settings_file()
 
@@ -644,20 +644,7 @@ func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
 	Global.dynamic_graphics_manager.set_enabled(toggled_on)
 
 	# Update UI state
-	_update_graphic_settings_enabled(toggled_on)
 	_update_dynamic_graphics_status()
-
-
-func _update_graphic_settings_enabled(dynamic_enabled: bool) -> void:
-	# When dynamic graphics is enabled, hide manual graphic settings
-	# Custom profile is always excluded from dynamic adjustment
-	var current_profile: int = Global.get_config().graphic_profile
-	var should_hide: bool = dynamic_enabled and current_profile != ConfigData.PROFILE_CUSTOM
-
-	# Hide/show the graphic settings that are controlled by dynamic graphics
-	graphic_profile_container.visible = not should_hide
-	container_limit_fps.visible = not should_hide
-	container_resolution_3d_scale.visible = not should_hide
 
 
 func _update_dynamic_graphics_status() -> void:
@@ -666,23 +653,47 @@ func _update_dynamic_graphics_status() -> void:
 
 	var manager = Global.dynamic_graphics_manager
 	if manager == null or not manager.is_enabled():
-		label_dynamic_graphics_status.text = ""
+		#label_dynamic_graphics_status.text = ""
 		return
 
-	var state_name: String = manager.get_state_name()
 	var current_profile: int = manager.get_current_profile()
+	dropdown_list_graphic_profiles.select(current_profile)
+	var state_name: String = manager.get_state_name()
 	var profile_name: String = GraphicSettings.PROFILE_NAMES[current_profile]
-
+	
+	print(profile_name, state_name)
+	
 	match state_name:
 		"Disabled":
-			label_dynamic_graphics_status.text = ""
+			print("")
 		"WarmingUp":
 			var remaining := int(manager.get_warmup_remaining())
-			label_dynamic_graphics_status.text = "Warming up... (%ds)" % remaining
+			print("Warming up... (%ds)" % remaining)
 		"Monitoring":
-			label_dynamic_graphics_status.text = "Active - Current: %s" % profile_name
+			print( "Active - Current: %s" % profile_name)
 		"Cooldown":
 			var remaining := int(manager.get_cooldown_remaining())
-			label_dynamic_graphics_status.text = (
+			print((
 				"Cooldown (%ds) - Current: %s" % [remaining, profile_name]
-			)
+			))
+
+
+func _on_dropdown_list_graphic_profiles_item_selected(index: int) -> void:
+	# Use centralized profile application (handles all parameters)
+	# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
+	if index < ConfigData.PROFILE_CUSTOM:
+		GraphicSettings.apply_graphic_profile(index)
+	else:
+		Global.get_config().graphic_profile = index  # Custom - keep current settings
+
+	refresh_graphic_settings()
+	Global.get_config().save_to_settings_file()
+
+	# Notify dynamic graphics manager of manual profile change
+	Global.dynamic_graphics_manager.on_manual_profile_change(index)
+
+
+func _on_dropdown_list_custom_skybox_item_selected(index: int) -> void:
+	var time: int = GraphicSettings.SKYBOX_TIME_NAMES[index].secs
+	if Global.get_config().skybox_time != time:
+		Global.get_config().skybox_time = time

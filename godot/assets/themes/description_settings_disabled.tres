@@ -1,4 +1,4 @@
-[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://c8gi64m66smxl"]
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://d24f1gcnsungy"]
 
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="1_50xg4"]
 
@@ -6,4 +6,4 @@
 line_spacing = -3.0
 font = ExtResource("1_50xg4")
 font_size = 20
-font_color = Color(0.8117647, 0.8039216, 0.83137256, 1)
+font_color = Color(0.8117647, 0.8039216, 0.83137256, 0.3019608)
