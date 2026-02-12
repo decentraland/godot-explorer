@@ -85,13 +85,6 @@ static func async_get_by_id(place_id: String) -> Variant:
 	#return await async_fetch_places(url)
 
 
-## Fetches a single place by ID from the places API (same as fav_button, engagement_bar).
-## Use this when destinations API get_by_id fails or returns different structure.
-static func async_get_place_by_id(place_id: String) -> Variant:
-	var url: String = DclUrls.places_api() + "/places/" + place_id
-	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
-
-
 static func async_fetch_places(url: String) -> FetchResult:
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
