@@ -60,12 +60,11 @@ func _ready():
 		var ftue = _get_ftue()
 		if ftue:
 			ftue.show()
-			var ftue_item = ftue.get_node_or_null("FTUE")
-			if ftue_item and ftue_item.has_signal("ftue_completed"):
-				ftue_item.ftue_completed.connect(_on_ftue_completed)
-				ftue_item.jump_in.connect(_on_ftue_jump_in)
-				ftue_item.jump_in_world.connect(_on_ftue_jump_in_world)
-				_async_fetch_ftue_place(ftue_item)
+			if ftue.has_signal("ftue_completed"):
+				ftue.ftue_completed.connect(_on_ftue_completed)
+				ftue.jump_in.connect(_on_ftue_jump_in)
+				ftue.jump_in_world.connect(_on_ftue_jump_in_world)
+				_async_fetch_ftue_place(ftue)
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -74,8 +73,8 @@ func _get_node_safe(node_name: String) -> Node:
 	return _node_cache[node_name]
 
 
-func _get_ftue() -> HBoxContainer:
-	return _get_node_safe("MarginContainer_FTUE")
+func _get_ftue() -> MarginContainer:
+	return _get_node_safe("FTUE")
 
 
 func on_item_pressed(data):
