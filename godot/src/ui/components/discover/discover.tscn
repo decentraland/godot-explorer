@@ -51,7 +51,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_bottom = 880.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("3_lvgj0")
@@ -67,7 +66,6 @@ grow_vertical = 2
 
 [node name="MarginContainer_FTUE" type="MarginContainer" parent="TextureRect/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="FTUE" parent="TextureRect/VBoxContainer/MarginContainer_FTUE" instance=ExtResource("4_5g6gd")]

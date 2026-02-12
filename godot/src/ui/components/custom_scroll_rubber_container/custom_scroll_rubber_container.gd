@@ -4,25 +4,19 @@ extends Container
 
 signal scroll_ended
 
+enum ScrollMode { DISABLED, AUTO, ALWAYSSHOW, NEVERSHOW, RESERVE }  ## Wont scroll in this direction  ## Unused property  ## Unused property  ## Unused property  ## Unused property
+
 @export_category("ScrollContainer properties")
-@export var follow_focus: bool ## Unused property
-@export var draw_focus_border: bool ## Unused property
-@export var horizontal_scroll_mode := ScrollMode.Auto
-@export var vertical_scroll_mode := ScrollMode.Auto
-@export var scroll_deadzone := 0 ## Unused property
+@export var follow_focus: bool  ## Unused property
+@export var draw_focus_border: bool  ## Unused property
+@export var horizontal_scroll_mode := ScrollMode.AUTO
+@export var vertical_scroll_mode := ScrollMode.AUTO
+@export var scroll_deadzone := 0  ## Unused property
 
 @export_category("Rubber Band behavior")
 @export var drag := 0.8
 @export var rubber_force := 8.0
 @export var take_hight_from_children: bool = false
-
-enum ScrollMode {
-	Disabled, ## Wont scroll in this direction
-	Auto, ## Unused property
-	AlwaysShow, ## Unused property
-	NeverShow, ## Unused property
-	Reserve ## Unused property
-}
 
 var start_pos: Vector2
 var child_position: Vector2
@@ -35,10 +29,6 @@ var is_scrolling := false
 var velocity: Vector2
 var force: Vector2
 var previous_position: Vector2
-
-
-#func _ready() -> void:
-#	size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 
 func reset_position():
@@ -62,35 +52,17 @@ func _get_configuration_warnings() -> PackedStringArray:
 func _notification(what):
 	if not is_valid_child():
 		return
-	"""
-	if what == NOTIFICATION_RESIZED:
-		if get_parent_control():
-			size.y = get_parent_control().size.y
-			size.y -= get_parent_control().get_theme_constant("theme_override_constants", "margin_top")
-	"""
-	
+
 	if what == NOTIFICATION_SORT_CHILDREN:
 		var c: Control = get_child(0)
 
 		var child_size := c.get_combined_minimum_size()
-		#custom_minimum_size.x = child_min_size.x
-		#if c.size_flags_vertical & SizeFlags.SIZE_FILL:
-		#	size.y = child_min_size.y
-
-		#if false:
-		#	size.y = child_min_size.y
-		#	if size.y > get_rect().size.y:
-		#		size.y = get_rect().size.y
 
 		if c.size_flags_horizontal & SizeFlags.SIZE_EXPAND:
 			child_size.x = size.x
 		if c.size_flags_vertical & SizeFlags.SIZE_EXPAND:
 			child_size.y = size.y
 
-		#if child_min_size.y < size.y:
-			#child_min_size.y = size.y
-		#child_min_size = Vector2(50,50)
-		
 		fit_child_in_rect(c, Rect2(child_position, child_size))
 
 
@@ -101,7 +73,7 @@ func _get_minimum_size() -> Vector2:
 	var min_size := Vector2()
 	if take_hight_from_children:
 		min_size.y = c.get_combined_minimum_size().y
-	
+
 	return min_size
 
 
@@ -131,7 +103,7 @@ func _gui_input(event: InputEvent) -> void:
 			is_touching = true
 			is_scrolling = false
 			start_pos = event.position
-			
+
 			child_drag_position = child_position
 			previous_position = child_position
 		else:
@@ -142,21 +114,19 @@ func _gui_input(event: InputEvent) -> void:
 				scroll_ended.emit()
 	elif event is InputEventScreenDrag:
 		if is_touching:
-			var offset:Vector2 = event.position - start_pos
-			
-			if horizontal_scroll_mode != ScrollMode.Disabled:
+			var offset: Vector2 = event.position - start_pos
+
+			if horizontal_scroll_mode != ScrollMode.DISABLED:
 				child_position.x = child_drag_position.x + offset.x
-			if vertical_scroll_mode != ScrollMode.Disabled:
+			if vertical_scroll_mode != ScrollMode.DISABLED:
 				child_position.y = child_drag_position.y + offset.y
-			
+
 			if is_outside_right():
 				child_position.x = (child_drag_position.x + offset.x) * 0.5
-			
+
 			if start_pos.distance_to(event.position) > 50:
 				is_scrolling = true
 			queue_sort()
-		else:
-			print("Not touching")
 
 
 func _physics_process(delta: float) -> void:
@@ -191,7 +161,7 @@ func _physics_process(delta: float) -> void:
 			velocity.y = (0.0 - child_position.y) * rubber_force
 		elif is_outside_bottom():
 			velocity.y = ((c.size.y - size.y) - -child_position.y) * -rubber_force
-		
+
 		child_position += velocity * delta
 		queue_sort()
 

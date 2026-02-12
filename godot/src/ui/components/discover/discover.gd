@@ -66,10 +66,6 @@ func _ready():
 				ftue_item.jump_in.connect(_on_ftue_jump_in)
 				ftue_item.jump_in_world.connect(_on_ftue_jump_in_world)
 				_async_fetch_ftue_place(ftue_item)
-	
-	if _get_ftue():
-		_get_ftue().queue_free()
-	discover_content.show()
 
 
 func _get_node_safe(node_name: String) -> Node:
@@ -145,7 +141,6 @@ func set_search_filter_text(new_text: String) -> void:
 
 
 func _scroll_all_carousels_to_start() -> void:
-	#container_content.scroll_vertical = 0
 	container_content.reset_position()
 	for carousel in [
 		places_featured,
