@@ -10,6 +10,8 @@ enum SceneLogLevel {
 	SYSTEM_ERROR = 3,
 }
 
+const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
+
 var preview_ws = WebSocketPeer.new()
 var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
@@ -21,13 +23,14 @@ var _dirty_connected: bool = false
 @onready var container_audio: Control = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
 @onready var container_storage: VBoxContainer = %Container_Storage
+@onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
 @onready var label_current_cache_value: Label = %Label_CurrentCacheValue
-@onready var progress_bar_current_cache_size: ProgressBar = $VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize/ProgressBar_CurrentCacheSize
-
-const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
+@onready
+var progress_bar_current_cache_size: ProgressBar = $VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/CurrentCacheSize/ProgressBar_CurrentCacheSize
+@onready var button_clear_cache: Button = %Button_ClearCache
 
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
@@ -115,8 +118,9 @@ func _ready():
 	var cache_index := clampi(Global.get_config().max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
 	dropdown_list_max_cache_size.select(cache_index)
 	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[cache_index]
-	dropdown_list_max_cache_size.item_selected.connect(_on_dropdown_list_max_cache_size_item_selected)
-
+	dropdown_list_max_cache_size.item_selected.connect(
+		_on_dropdown_list_max_cache_size_item_selected
+	)
 
 	# graphic
 	var i = 0
@@ -194,7 +198,6 @@ func refresh_graphic_settings():
 	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
 	refresh_zooms()
 
-@onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
 func show_control(control: Control):
 	for child in v_box_container_sections.get_children():
@@ -462,6 +465,7 @@ func _update_current_cache_size():
 	)
 	label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
 	progress_bar_current_cache_size.value = current_size_mb
+	button_clear_cache.disabled = current_size_mb == 0
 
 
 func _on_container_storage_visibility_changed():
@@ -713,23 +717,22 @@ func _on_dropdown_list_custom_skybox_item_selected(index: int) -> void:
 
 
 func _on_button_privacy_policy_pressed() -> void:
-	const PRIVACY_POLICY_URL = 'https://decentraland.org/privacy/'
+	const PRIVACY_POLICY_URL = "https://decentraland.org/privacy/"
 	Global.open_url(PRIVACY_POLICY_URL)
 
 
 func _on_button_content_policy_pressed() -> void:
-	const CONTENT_POLICY_URL = 'https://decentraland.org/content/'
+	const CONTENT_POLICY_URL = "https://decentraland.org/content/"
 	Global.open_url(CONTENT_POLICY_URL)
-	
 
 
 func _on_button_terms_of_service_pressed() -> void:
-	const TERMS_OF_USE_URL = 'https://decentraland.org/terms/'
+	const TERMS_OF_USE_URL = "https://decentraland.org/terms/"
 	Global.open_url(TERMS_OF_USE_URL)
 
 
 func _on_button_discord_pressed() -> void:
-	const DISCORD_URL = 'https://discord.com/channels/417796904760639509/1446513533893218465'
+	const DISCORD_URL = "https://discord.com/channels/417796904760639509/1446513533893218465"
 	Global.open_url(DISCORD_URL)
 
 

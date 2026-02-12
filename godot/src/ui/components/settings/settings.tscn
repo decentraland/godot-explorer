@@ -356,6 +356,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
+theme_override_constants/separation = 0
 
 [node name="SectionTittle_TemporaryFiles" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage" instance=ExtResource("15_h5vs5")]
 layout_mode = 2
@@ -416,7 +417,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
 layout_mode = 2
-theme_override_constants/separation = 44
+theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="DropdownList_MaxCacheSize" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage" instance=ExtResource("20_67hd5")]
@@ -431,16 +432,18 @@ layout_mode = 2
 theme_override_constants/separation = 74
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="Button" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+[node name="Button_ClearCache" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
+focus_mode = 0
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
 text = "CLEAN CACHE"
 
 [node name="HSeparator4" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="Label_CleanCacheDescription" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage"]
@@ -1351,7 +1354,7 @@ font = ExtResource("25_jf4mt")
 [connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial" to="." method="_on_container_general_visibility_changed"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
 [connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage" to="." method="_on_container_storage_visibility_changed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/Button" to="." method="_on_button_clear_cache_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/Container_Storage/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
 [connection signal="item_selected" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/CheckButton_DynamicSkybox" to="." method="_on_check_button_dynamic_skybox_toggled"]
