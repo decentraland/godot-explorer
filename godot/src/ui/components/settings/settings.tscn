@@ -257,7 +257,7 @@ size_flags_vertical = 5
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
-theme_type_variation = &"WhiteButton"
+theme_type_variation = &"SettingsButton"
 theme_override_constants/h_separation = 0
 text = "RESET ALL
 "
