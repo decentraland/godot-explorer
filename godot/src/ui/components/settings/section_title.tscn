@@ -15,6 +15,7 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 53.0
 grow_horizontal = 2
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_8kx02")
 script = ExtResource("1_8kx02")
 title = "Section asdAsd"
@@ -22,5 +23,5 @@ title = "Section asdAsd"
 [node name="Label_Title" type="Label" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-text = "PERFORMANCE"
+text = "Section asdAsd"
 label_settings = ExtResource("1_sve17")

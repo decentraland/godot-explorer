@@ -563,6 +563,7 @@ SettingsButton/colors/icon_pressed_color = Color(0.08627451, 0.08235294, 0.09411
 SettingsButton/constants/icon_max_width = 32
 SettingsButton/font_sizes/font_size = 24
 SettingsButton/fonts/font = ExtResource("42_qnq51")
+SettingsButton/styles/focus = ExtResource("42_3kpjx")
 SettingsButton/styles/hover = ExtResource("41_f0x44")
 SettingsButton/styles/hover_pressed = ExtResource("42_3kpjx")
 SettingsButton/styles/normal = ExtResource("41_f0x44")
