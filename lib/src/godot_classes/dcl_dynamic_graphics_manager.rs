@@ -35,12 +35,23 @@ const COOLDOWN_AFTER_DOWNGRADE: f64 = 120.0; // 2 minutes after downgrade
 const COOLDOWN_AFTER_UPGRADE: f64 = 300.0; // 5 minutes after upgrade
 const THERMAL_HIGH_DOWNGRADE_TIME: f64 = 30.0; // Seconds of HIGH thermal before downgrade
 const SAMPLE_INTERVAL: f64 = 1.0; // Sample frame time every second
+const PLATFORM_POLL_INTERVAL: f64 = 5.0; // Poll thermal/charging state every 5 seconds
 
 /// Threshold constants
 const FRAME_TIME_DOWNGRADE_RATIO: f64 = 1.2;
 const FRAME_TIME_UPGRADE_RATIO: f64 = 0.5;
 const FRAME_SPIKE_THRESHOLD_MS: f64 = 50.0;
 const FRAME_SPIKE_RATIO_THRESHOLD: f64 = 0.1;
+
+/// Thermal FPS cap timing constants (in seconds)
+const THERMAL_FPS_NORMAL_DURATION_FOR_UPGRADE: f64 = 120.0; // 2 minutes of Normal thermal before upgrading
+const THERMAL_FPS_CHANGE_COOLDOWN: f64 = 60.0; // 1 minute cooldown between changes
+
+/// Thermal FPS cap values (0 = no cap)
+const THERMAL_FPS_CAP_30: i32 = 30;
+const THERMAL_FPS_CAP_45: i32 = 45;
+const THERMAL_FPS_CAP_60: i32 = 60;
+const THERMAL_FPS_NO_CAP: i32 = 0;
 
 /// Profile indices
 const PROFILE_VERY_LOW: i32 = 0;
@@ -454,6 +465,24 @@ pub struct DclDynamicGraphicsManager {
     has_android_plugin: bool,
     viewport_rid: Option<Rid>,
     render_time_enabled: bool,
+
+    // === Thermal FPS Cap State ===
+    /// Current thermal FPS cap (0 = no cap)
+    thermal_fps_cap: i32,
+    /// Timer tracking consecutive seconds of Normal thermal state
+    thermal_fps_normal_timer: f64,
+    /// Cooldown timer for FPS cap changes
+    thermal_fps_cooldown_timer: f64,
+    /// Whether device is currently charging
+    is_charging: bool,
+    /// Whether thermal FPS cap system is enabled
+    thermal_fps_cap_enabled: bool,
+
+    // === Platform polling throttle ===
+    /// Timer for throttling JNI/platform calls
+    platform_poll_timer: f64,
+    /// Cached thermal state string from last platform poll
+    cached_thermal_str: String,
 }
 
 #[godot_api]
@@ -469,6 +498,15 @@ impl INode for DclDynamicGraphicsManager {
             has_android_plugin,
             viewport_rid: None,
             render_time_enabled: false,
+            // Thermal FPS cap state
+            thermal_fps_cap: THERMAL_FPS_NO_CAP,
+            thermal_fps_normal_timer: 0.0,
+            thermal_fps_cooldown_timer: 0.0,
+            is_charging: false,
+            thermal_fps_cap_enabled: true,
+            // Platform polling throttle
+            platform_poll_timer: PLATFORM_POLL_INTERVAL, // Start at limit to poll immediately on first frame
+            cached_thermal_str: "nominal".to_string(),
         }
     }
 
@@ -476,11 +514,13 @@ impl INode for DclDynamicGraphicsManager {
         if let Some(viewport) = self.base().get_viewport() {
             let rid = viewport.get_viewport_rid();
             self.viewport_rid = Some(rid);
-            RenderingServer::singleton().viewport_set_measure_render_time(rid, true);
-            self.render_time_enabled = true;
+            // Don't enable render time measurement yet - it will be enabled
+            // when the manager transitions to an active state (WarmingUp/Monitoring/Cooldown).
+            // GPU timestamp queries can hurt performance on mobile tile-based renderers.
+            self.render_time_enabled = false;
 
             godot_print!(
-                "[DynamicGraphics] ready: render time measurement enabled (iOS={}, Android={})",
+                "[DynamicGraphics] ready: viewport acquired, render time measurement deferred (iOS={}, Android={})",
                 self.has_ios_plugin,
                 self.has_android_plugin
             );
@@ -495,8 +535,23 @@ impl INode for DclDynamicGraphicsManager {
 
     fn process(&mut self, delta: f64) {
         let render_time_ms = self.get_total_render_time_ms();
-        let thermal_str = self.get_thermal_state_from_platform();
 
+        // Throttle platform calls (JNI on Android) to avoid per-frame overhead
+        self.platform_poll_timer += delta;
+        if self.platform_poll_timer >= PLATFORM_POLL_INTERVAL {
+            self.platform_poll_timer = 0.0;
+            let (thermal, charging) = self.get_platform_metrics();
+            self.cached_thermal_str = thermal;
+            self.is_charging = charging == "charging";
+        }
+        let thermal_str = self.cached_thermal_str.clone();
+
+        // Process thermal FPS cap (independent of profile management)
+        if self.thermal_fps_cap_enabled {
+            self.process_thermal_fps_cap(delta, &thermal_str);
+        }
+
+        // Process profile management
         if let Some(action) = self
             .state
             .process_frame(delta, render_time_ms, &thermal_str)
@@ -522,9 +577,13 @@ impl DclDynamicGraphicsManager {
     #[signal]
     fn profile_change_requested(new_profile: i32);
 
+    #[signal]
+    fn thermal_fps_cap_changed(fps_cap: i32);
+
     #[func]
     pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {
         self.state.initialize(enabled, current_profile, fps_limit);
+        self.set_render_time_measurement(self.state.is_active());
         godot_print!(
             "[DynamicGraphics] initialized: enabled={}, profile={}, target={}ms",
             enabled,
@@ -557,11 +616,13 @@ impl DclDynamicGraphicsManager {
     #[func]
     pub fn on_manual_profile_change(&mut self, new_profile: i32) {
         self.state.on_manual_profile_change(new_profile);
+        self.set_render_time_measurement(self.state.is_active());
     }
 
     #[func]
     pub fn set_enabled(&mut self, enabled: bool) {
         self.state.set_enabled(enabled);
+        self.set_render_time_measurement(self.state.is_active());
         godot_print!("[DynamicGraphics] set_enabled({})", enabled);
     }
 
@@ -656,17 +717,78 @@ impl DclDynamicGraphicsManager {
             .as_str(),
         )
     }
+
+    // === Thermal FPS Cap Public API ===
+
+    #[func]
+    pub fn set_thermal_fps_cap_enabled(&mut self, enabled: bool) {
+        let was_enabled = self.thermal_fps_cap_enabled;
+        self.thermal_fps_cap_enabled = enabled;
+
+        if !enabled && was_enabled && self.thermal_fps_cap != THERMAL_FPS_NO_CAP {
+            self.apply_thermal_fps_cap(THERMAL_FPS_NO_CAP);
+        }
+        godot_print!("[DynamicGraphics] thermal FPS cap enabled={}", enabled);
+    }
+
+    #[func]
+    pub fn is_thermal_fps_cap_enabled(&self) -> bool {
+        self.thermal_fps_cap_enabled
+    }
+
+    #[func]
+    pub fn get_thermal_fps_cap(&self) -> i32 {
+        self.thermal_fps_cap
+    }
+
+    #[func]
+    pub fn is_device_charging(&self) -> bool {
+        self.is_charging
+    }
+
+    #[func]
+    pub fn get_thermal_fps_cap_debug_info(&self) -> GString {
+        GString::from(
+            format!(
+                "cap={}, normal_timer={:.1}s, cooldown={:.1}s, charging={}",
+                if self.thermal_fps_cap == THERMAL_FPS_NO_CAP {
+                    "none".to_string()
+                } else {
+                    format!("{}fps", self.thermal_fps_cap)
+                },
+                self.thermal_fps_normal_timer,
+                self.thermal_fps_cooldown_timer,
+                self.is_charging
+            )
+            .as_str(),
+        )
+    }
 }
 
 impl DclDynamicGraphicsManager {
-    fn get_thermal_state_from_platform(&self) -> String {
+    fn set_render_time_measurement(&mut self, enabled: bool) {
+        if self.render_time_enabled == enabled {
+            return;
+        }
+        if let Some(rid) = self.viewport_rid {
+            RenderingServer::singleton().viewport_set_measure_render_time(rid, enabled);
+            self.render_time_enabled = enabled;
+            godot_print!(
+                "[DynamicGraphics] render time measurement {}",
+                if enabled { "enabled" } else { "disabled" }
+            );
+        }
+    }
+
+    /// Get thermal and charging state from the platform in a single call
+    fn get_platform_metrics(&self) -> (String, String) {
         if self.has_ios_plugin {
-            return DclIosPlugin::get_thermal_state().to_string();
+            return DclIosPlugin::get_thermal_and_charging_state();
         }
         if self.has_android_plugin {
-            return DclAndroidPlugin::get_thermal_state().to_string();
+            return DclAndroidPlugin::get_thermal_and_charging_state();
         }
-        "nominal".to_string()
+        ("nominal".to_string(), "unknown".to_string())
     }
 
     fn get_total_render_time_ms(&self) -> f64 {
@@ -682,6 +804,115 @@ impl DclDynamicGraphicsManager {
         } else {
             self.state.target_frame_time_ms
         }
+    }
+
+    /// Process thermal FPS cap logic
+    fn process_thermal_fps_cap(&mut self, delta: f64, thermal_str: &str) {
+        // Update cooldown timer
+        if self.thermal_fps_cooldown_timer > 0.0 {
+            self.thermal_fps_cooldown_timer -= delta;
+            if self.thermal_fps_cooldown_timer < 0.0 {
+                self.thermal_fps_cooldown_timer = 0.0;
+            }
+        }
+
+        // Calculate target cap based on thermal state and charging
+        let target_cap = self.calculate_target_fps_cap(thermal_str);
+
+        if target_cap != self.thermal_fps_cap {
+            let is_downgrade = self.is_fps_cap_downgrade(self.thermal_fps_cap, target_cap);
+
+            if is_downgrade {
+                // Downgrade immediately
+                self.apply_thermal_fps_cap(target_cap);
+                self.thermal_fps_cooldown_timer = THERMAL_FPS_CHANGE_COOLDOWN;
+                self.thermal_fps_normal_timer = 0.0;
+            } else if self.thermal_fps_cooldown_timer <= 0.0 {
+                // Upgrade requires sustained Normal thermal
+                let is_normal = matches!(thermal_str, "nominal" | "fair");
+                if is_normal {
+                    self.thermal_fps_normal_timer += delta;
+                    if self.thermal_fps_normal_timer >= THERMAL_FPS_NORMAL_DURATION_FOR_UPGRADE {
+                        self.apply_thermal_fps_cap(target_cap);
+                        self.thermal_fps_cooldown_timer = THERMAL_FPS_CHANGE_COOLDOWN;
+                        self.thermal_fps_normal_timer = 0.0;
+                    }
+                } else {
+                    self.thermal_fps_normal_timer = 0.0;
+                }
+            }
+        } else {
+            // Update normal timer
+            let is_normal = matches!(thermal_str, "nominal" | "fair");
+            if is_normal {
+                self.thermal_fps_normal_timer += delta;
+            } else {
+                self.thermal_fps_normal_timer = 0.0;
+            }
+        }
+    }
+
+    /// Calculate target FPS cap based on thermal state and charging
+    /// FPS Cap Rules:
+    /// | Thermal  | Charging | Cap     |
+    /// |----------|----------|---------|
+    /// | Normal   | No       | No cap  |
+    /// | Normal   | Yes      | 60 FPS  |
+    /// | High     | No       | 45 FPS  |
+    /// | High     | Yes      | 30 FPS  |
+    /// | Critical | Any      | 30 FPS  |
+    fn calculate_target_fps_cap(&self, thermal_str: &str) -> i32 {
+        match thermal_str {
+            "nominal" | "fair" => {
+                if self.is_charging {
+                    THERMAL_FPS_CAP_60
+                } else {
+                    THERMAL_FPS_NO_CAP
+                }
+            }
+            "serious" => {
+                if self.is_charging {
+                    THERMAL_FPS_CAP_30
+                } else {
+                    THERMAL_FPS_CAP_45
+                }
+            }
+            "critical" => THERMAL_FPS_CAP_30,
+            _ => THERMAL_FPS_NO_CAP,
+        }
+    }
+
+    fn is_fps_cap_downgrade(&self, current: i32, new: i32) -> bool {
+        if current == THERMAL_FPS_NO_CAP {
+            return new != THERMAL_FPS_NO_CAP;
+        }
+        if new == THERMAL_FPS_NO_CAP {
+            return false;
+        }
+        new < current
+    }
+
+    fn apply_thermal_fps_cap(&mut self, new_cap: i32) {
+        let old_cap = self.thermal_fps_cap;
+        self.thermal_fps_cap = new_cap;
+
+        self.base_mut()
+            .emit_signal("thermal_fps_cap_changed", &[new_cap.to_variant()]);
+
+        godot_print!(
+            "[DynamicGraphics] Thermal FPS cap: {} -> {} (charging={})",
+            if old_cap == THERMAL_FPS_NO_CAP {
+                "none".to_string()
+            } else {
+                format!("{}fps", old_cap)
+            },
+            if new_cap == THERMAL_FPS_NO_CAP {
+                "none".to_string()
+            } else {
+                format!("{}fps", new_cap)
+            },
+            self.is_charging
+        );
     }
 }
 

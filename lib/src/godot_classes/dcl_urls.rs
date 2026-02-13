@@ -62,6 +62,10 @@ impl DclUrls {
         urls::comms_gatekeeper().to_godot()
     }
     #[func]
+    pub fn comms_gatekeeper_local() -> GString {
+        urls::comms_gatekeeper_local().to_godot()
+    }
+    #[func]
     pub fn social_service() -> GString {
         urls::social_service().to_godot()
     }
@@ -86,8 +90,16 @@ impl DclUrls {
         urls::places_api().to_godot()
     }
     #[func]
+    pub fn destinations_api() -> GString {
+        urls::destinations_api().to_godot()
+    }
+    #[func]
     pub fn events_api() -> GString {
         urls::events_api().to_godot()
+    }
+    #[func]
+    pub fn mobile_events_api() -> GString {
+        urls::mobile_events_api().to_godot()
     }
     #[func]
     pub fn notifications_api() -> GString {

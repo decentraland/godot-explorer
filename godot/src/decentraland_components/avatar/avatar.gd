@@ -58,6 +58,9 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
+# Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
+var _scene_emote_registry: Dictionary = {}
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 
@@ -173,8 +176,19 @@ func set_hidden(value):
 	hidden = value
 	if hidden:
 		hide()
+		# Disable click detection so blocked/hidden avatars can't be interacted with
+		_set_click_area_enabled(false)
 	else:
 		try_show()
+		# Re-enable click detection
+		_set_click_area_enabled(true)
+
+
+func _set_click_area_enabled(enabled: bool) -> void:
+	if click_area:
+		var collision_shape = click_area.get_node_or_null("CollisionShape3D")
+		if collision_shape:
+			collision_shape.disabled = not enabled
 
 
 func _unset_avatar_modifier_area():
@@ -630,7 +644,6 @@ func async_load_wearables():
 
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
-
 	# Emotes - get from cached emote scenes
 	for emote_urn in avatar_data.get_emotes():
 		if not emote_urn.begins_with("urn"):
@@ -649,6 +662,7 @@ func async_load_wearables():
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
+
 	avatar_ready = true
 	avatar_loaded.emit()
 
@@ -750,8 +764,9 @@ func _process(delta):
 	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
 	emote_controller.process(self_idle)
 
+	var is_emoting = self_idle && emote_controller.is_playing()
 	if is_local_player:
-		Global.comms.set_emoting(emote_controller.is_playing())
+		Global.comms.set_emoting(is_emoting)
 
 	animation_tree.set("parameters/conditions/idle", self_idle)
 	animation_tree.set("parameters/conditions/emote", emote_controller.playing_single)
@@ -832,8 +847,27 @@ func async_play_emote(emote_urn: String):
 	await emote_controller.async_play_emote(emote_urn)
 
 
-func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
-	await emote_controller.async_play_scene_emote(emote_data)
+## Register scene emote content info for later retrieval.
+## Called from Rust before async_play_emote for scene emotes.
+func register_scene_emote_content(
+	scene_id: String, base_url: String, glb_hash: String, audio_hash: String
+) -> void:
+	if not _scene_emote_registry.has(scene_id):
+		_scene_emote_registry[scene_id] = {"base_url": base_url, "emotes": {}}
+	_scene_emote_registry[scene_id]["emotes"][glb_hash] = audio_hash
+
+
+## Get scene emote content info for loading.
+## Returns {base_url, audio_hash} or fallback to realm URL for remote players.
+func get_scene_emote_info(scene_id: String, glb_hash: String) -> Dictionary:
+	if _scene_emote_registry.has(scene_id):
+		var scene_data = _scene_emote_registry[scene_id]
+		if scene_data["emotes"].has(glb_hash):
+			return {
+				"base_url": scene_data["base_url"], "audio_hash": scene_data["emotes"][glb_hash]
+			}
+	# Fallback for remote players - use realm URL (audio won't be available)
+	return {"base_url": Global.realm.content_base_url, "audio_hash": ""}
 
 
 ## Play emote triggered by AvatarShape's expression_trigger_id field.

@@ -17,8 +17,10 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    auth::wallet::AsH160, comms::profile::UserProfile,
-    dcl::components::proto_components::kernel::comms::rfc4, godot_classes::dcl_global::DclGlobal,
+    auth::wallet::AsH160,
+    comms::profile::UserProfile,
+    dcl::{components::proto_components::kernel::comms::rfc4, scene_apis::NetworkMessageRecipient},
+    godot_classes::dcl_global::DclGlobal,
 };
 
 use super::{
@@ -35,7 +37,7 @@ const CHANNEL_SIZE: usize = 1000;
 pub struct NetworkMessage {
     pub data: Vec<u8>,
     pub unreliable: bool,
-    pub recipient: Option<H160>,
+    pub recipient: NetworkMessageRecipient,
 }
 
 pub struct LivekitRoom {
@@ -139,14 +141,14 @@ impl LivekitRoom {
     }
 
     fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
-        self._send_rfc4_targeted(packet, unreliable, None)
+        self._send_rfc4_targeted(packet, unreliable, NetworkMessageRecipient::All)
     }
 
     fn _send_rfc4_targeted(
         &mut self,
         packet: rfc4::Packet,
         unreliable: bool,
-        recipient: Option<H160>,
+        recipient: NetworkMessageRecipient,
     ) -> bool {
         let mut data: Vec<u8> = Vec::new();
         packet.encode(&mut data).unwrap();
@@ -164,7 +166,7 @@ impl LivekitRoom {
         &mut self,
         packet: rfc4::Packet,
         unreliable: bool,
-        recipient: Option<H160>,
+        recipient: NetworkMessageRecipient,
     ) -> bool {
         self._send_rfc4_targeted(packet, unreliable, recipient)
     }
@@ -274,6 +276,7 @@ fn spawn_livekit_task(
         };
 
         // Set participant metadata (version, agent, platform)
+        let local_identity = room.local_participant().identity().0.clone();
         {
             let version = DclGlobal::get_version().to_string();
             let metadata = serde_json::json!({
@@ -391,30 +394,37 @@ fn spawn_livekit_task(
                                 return;
                             }
                             let participant = participant.unwrap();
+                            let identity_str = participant.identity().0.clone();
 
-                            if let Some(address) = participant.identity().0.as_str().as_h160() {
-                                let packet = match rfc4::Packet::decode(payload.as_slice()) {
-                                    Ok(packet) => packet,
-                                    Err(e) => {
-                                        tracing::warn!("unable to parse packet body: {e}");
-                                        continue;
-                                    }
-                                };
-                                let Some(message) = packet.message else {
-                                    tracing::warn!("received empty packet body");
+                            // Resolve address: valid H160 for regular peers, synthetic for
+                            // special identities like "authoritative-server"
+                            let address = if let Some(addr) = identity_str.as_str().as_h160() {
+                                addr
+                            } else {
+                                H160::from_low_u64_be(1)
+                            };
+
+                            let packet = match rfc4::Packet::decode(payload.as_slice()) {
+                                Ok(packet) => packet,
+                                Err(e) => {
+                                    tracing::warn!("unable to parse packet body: {e}");
                                     continue;
-                                };
-                                if let Err(e) = sender.send(IncomingMessage {
-                                    message: MessageType::Rfc4(Rfc4Message {
-                                        message,
-                                        protocol_version: packet.protocol_version,
-                                    }),
-                                    address,
-                                    room_id: room_id.clone(),
-                                }).await {
-                                    tracing::warn!("app pipe broken ({e}), existing loop");
-                                    break 'stream;
                                 }
+                            };
+                            let Some(message) = packet.message else {
+                                tracing::warn!("received empty packet body");
+                                continue;
+                            };
+                            if let Err(e) = sender.send(IncomingMessage {
+                                message: MessageType::Rfc4(Rfc4Message {
+                                    message,
+                                    protocol_version: packet.protocol_version,
+                                }),
+                                address,
+                                room_id: room_id.clone(),
+                            }).await {
+                                tracing::warn!("app pipe broken ({e}), existing loop");
+                                break 'stream;
                             }
                         },
                         livekit::RoomEvent::TrackSubscribed { track, publication: _, participant } => {
@@ -662,27 +672,29 @@ fn spawn_livekit_task(
                             }
                         }
                         livekit::RoomEvent::ParticipantConnected(participant) => {
-                            if let Some(address) = participant.identity().0.as_str().as_h160() {
-                                tracing::debug!("👋 Participant {:#x} connected to LiveKit room", address);
-                                if let Err(e) = sender.send(IncomingMessage {
-                                    message: MessageType::PeerJoined,
-                                    address,
-                                    room_id: room_id.clone(),
-                                }).await {
-                                    tracing::warn!("Failed to send PeerJoined: {}", e);
-                                }
+                            let identity_str = participant.identity().0.clone();
+                            let address = identity_str.as_str().as_h160()
+                                .unwrap_or_else(|| H160::from_low_u64_be(1));
+                            tracing::debug!("👋 Participant {} ({:#x}) connected to LiveKit room", identity_str, address);
+                            if let Err(e) = sender.send(IncomingMessage {
+                                message: MessageType::PeerJoined,
+                                address,
+                                room_id: room_id.clone(),
+                            }).await {
+                                tracing::warn!("Failed to send PeerJoined: {}", e);
                             }
                         }
                         livekit::RoomEvent::ParticipantDisconnected(participant) => {
-                            if let Some(address) = participant.identity().0.as_str().as_h160() {
-                                tracing::debug!("👋 Participant {:#x} disconnected from LiveKit room", address);
-                                if let Err(e) = sender.send(IncomingMessage {
-                                    message: MessageType::PeerLeft,
-                                    address,
-                                    room_id: room_id.clone(),
-                                }).await {
-                                    tracing::warn!("Failed to send PeerLeft: {}", e);
-                                }
+                            let identity_str = participant.identity().0.clone();
+                            let address = identity_str.as_str().as_h160()
+                                .unwrap_or_else(|| H160::from_low_u64_be(1));
+                            tracing::debug!("👋 Participant {} ({:#x}) disconnected from LiveKit room", identity_str, address);
+                            if let Err(e) = sender.send(IncomingMessage {
+                                message: MessageType::PeerLeft,
+                                address,
+                                room_id: room_id.clone(),
+                            }).await {
+                                tracing::warn!("Failed to send PeerLeft: {}", e);
                             }
                         }
                         livekit::RoomEvent::Disconnected { reason } => {
@@ -713,8 +725,15 @@ fn spawn_livekit_task(
                             break 'stream;
                         }
                         livekit::RoomEvent::ParticipantMetadataChanged { participant, metadata, .. } => {
+                            let identity_str = participant.identity().0.clone();
+
+                            // Skip local participant's own metadata changes
+                            if identity_str == local_identity {
+                                continue;
+                            }
+
                             // Handle metadata changes from remote participants (version reporting for staging/dev)
-                            if let Some(address) = participant.identity().0.as_str().as_h160() {
+                            if let Some(address) = identity_str.as_str().as_h160() {
                                 tracing::debug!(
                                     "Received metadata from {:#x}: {}",
                                     address,
@@ -739,10 +758,14 @@ fn spawn_livekit_task(
                     };
 
                     let reliable = !outgoing.unreliable;
-                    let destination_identities = if let Some(address) = outgoing.recipient {
-                        vec![ParticipantIdentity(format!("{address:#x}"))]
-                    } else {
-                        Vec::new()
+                    let destination_identities = match outgoing.recipient {
+                        NetworkMessageRecipient::All => Vec::new(),
+                        NetworkMessageRecipient::Peer(address) => {
+                            vec![ParticipantIdentity(format!("{address:#x}"))]
+                        }
+                        NetworkMessageRecipient::AuthServer => {
+                            vec![ParticipantIdentity("authoritative-server".to_string())]
+                        }
                     };
 
                     if let Err(e) = room.local_participant().publish_data(DataPacket {

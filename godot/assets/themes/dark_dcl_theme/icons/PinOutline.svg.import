@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/PinOutline.svg-5043dae38befc9b5128ad7b3ee7d09
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

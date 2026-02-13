@@ -3,6 +3,17 @@ use godot::prelude::*;
 use crate::godot_classes::dcl_ios_plugin::{DclMobileDeviceInfo, DclMobileMetrics};
 use godot::classes::Image;
 
+#[cfg(debug_assertions)]
+use std::cell::Cell;
+#[cfg(debug_assertions)]
+use std::time::Instant;
+
+#[cfg(debug_assertions)]
+thread_local! {
+    static JNI_TIME_US: Cell<u64> = const { Cell::new(0) };
+    static JNI_CALL_COUNT: Cell<i32> = const { Cell::new(0) };
+}
+
 const SINGLETON_NAME: &str = "dcl-godot-android";
 
 /// Static wrapper for the dcl-godot-android plugin that provides typed access to Android-specific functionality
@@ -21,6 +32,52 @@ impl DclAndroidPlugin {
         Some(singleton.cast::<Object>())
     }
 
+    /// Wrapper around singleton.call() that accumulates JNI timing in debug builds
+    #[cfg(debug_assertions)]
+    fn timed_jni_call(singleton: &mut Gd<Object>, method: &str, args: &[Variant]) -> Variant {
+        let start = Instant::now();
+        let result = singleton.call(method, args);
+        let elapsed_us = start.elapsed().as_micros() as u64;
+        JNI_TIME_US.with(|c| c.set(c.get() + elapsed_us));
+        JNI_CALL_COUNT.with(|c| c.set(c.get() + 1));
+        result
+    }
+
+    #[cfg(not(debug_assertions))]
+    #[inline(always)]
+    fn timed_jni_call(singleton: &mut Gd<Object>, method: &str, args: &[Variant]) -> Variant {
+        singleton.call(method, args)
+    }
+
+    /// Returns accumulated JNI call time in milliseconds since last call, then resets.
+    /// In release builds, always returns 0.0 with no overhead.
+    #[func]
+    pub fn take_jni_time_ms() -> f64 {
+        #[cfg(debug_assertions)]
+        {
+            let us = JNI_TIME_US.with(|c| c.replace(0));
+            us as f64 / 1000.0
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            0.0
+        }
+    }
+
+    /// Returns accumulated JNI call count since last call, then resets.
+    /// In release builds, always returns 0 with no overhead.
+    #[func]
+    pub fn take_jni_call_count() -> i32 {
+        #[cfg(debug_assertions)]
+        {
+            JNI_CALL_COUNT.with(|c| c.replace(0))
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            0
+        }
+    }
+
     /// Check if the dcl-godot-android plugin is available (runtime check)
     #[func]
     pub fn is_available() -> bool {
@@ -33,7 +90,7 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call("showDecentralandMobileToast", &[]);
+        Self::timed_jni_call(&mut singleton, "showDecentralandMobileToast", &[]);
         true
     }
 
@@ -43,7 +100,7 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call("openUrl", &[url.to_variant()]);
+        Self::timed_jni_call(&mut singleton, "openUrl", &[url.to_variant()]);
         true
     }
 
@@ -56,7 +113,7 @@ impl DclAndroidPlugin {
         };
 
         no_dict.set("error", "No dict returned");
-        let data = singleton.call("getLaunchIntentData", &[]);
+        let data = Self::timed_jni_call(&mut singleton, "getLaunchIntentData", &[]);
         data.try_to::<VarDictionary>().ok().unwrap_or(no_dict)
     }
 
@@ -66,7 +123,7 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call("openCustomTabUrl", &[url.to_variant()]);
+        Self::timed_jni_call(&mut singleton, "openCustomTabUrl", &[url.to_variant()]);
         true
     }
 
@@ -76,14 +133,18 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        singleton.call("openWebView", &[url.to_variant(), param.to_variant()]);
+        Self::timed_jni_call(
+            &mut singleton,
+            "openWebView",
+            &[url.to_variant(), param.to_variant()],
+        );
         true
     }
 
     /// Get static mobile device information (doesn't change during runtime) - internal use only
     pub(crate) fn get_mobile_device_info_internal() -> Option<DclMobileDeviceInfo> {
         let mut singleton = Self::try_get_singleton()?;
-        let info = singleton.call("getMobileDeviceInfo", &[]);
+        let info = Self::timed_jni_call(&mut singleton, "getMobileDeviceInfo", &[]);
         let dict = info.try_to::<VarDictionary>().ok()?;
         Some(DclMobileDeviceInfo::from_dictionary(dict))
     }
@@ -91,18 +152,18 @@ impl DclAndroidPlugin {
     /// Get dynamic mobile metrics (changes during runtime) - internal use only
     pub(crate) fn get_mobile_metrics_internal() -> Option<DclMobileMetrics> {
         let mut singleton = Self::try_get_singleton()?;
-        let metrics = singleton.call("getMobileMetrics", &[]);
+        let metrics = Self::timed_jni_call(&mut singleton, "getMobileMetrics", &[]);
         let dict = metrics.try_to::<VarDictionary>().ok()?;
         Some(DclMobileMetrics::from_dictionary(dict))
     }
 
-    /// Get current thermal state for dynamic graphics adjustment
-    /// Returns: "nominal", "fair", "serious", "critical", or empty string if unavailable
-    #[func]
-    pub fn get_thermal_state() -> GString {
-        Self::get_mobile_metrics_internal()
-            .map(|m| GString::from(&m.device_thermal_state))
-            .unwrap_or_default()
+    /// Get thermal and charging state in a single JNI call
+    /// Returns (thermal_state, charging_state) with defaults if unavailable
+    pub(crate) fn get_thermal_and_charging_state() -> (String, String) {
+        match Self::get_mobile_metrics_internal() {
+            Some(m) => (m.device_thermal_state, m.charging_state),
+            None => (String::new(), "unknown".to_string()),
+        }
     }
 
     /// Get total device RAM in megabytes
@@ -128,7 +189,8 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        let result = singleton.call(
+        let result = Self::timed_jni_call(
+            &mut singleton,
             "addCalendarEvent",
             &[
                 title.to_variant(),
@@ -148,7 +210,7 @@ impl DclAndroidPlugin {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
-        let result = singleton.call("shareText", &[text.to_variant()]);
+        let result = Self::timed_jni_call(&mut singleton, "shareText", &[text.to_variant()]);
         result.try_to::<bool>().unwrap_or(false)
     }
 
@@ -174,7 +236,8 @@ impl DclAndroidPlugin {
         // Get the pixel data as a byte array
         let pixel_data = rgba_image.get_data();
 
-        let result = singleton.call(
+        let result = Self::timed_jni_call(
+            &mut singleton,
             "shareTextWithImage",
             &[
                 text.to_variant(),

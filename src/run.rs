@@ -10,6 +10,7 @@ use crate::{
     path::{adjust_canonicalization, get_godot_path},
     platform::validate_platform_for_target,
     ui::{create_spinner, print_build_status, print_message, MessageType},
+    version::read_version,
 };
 
 /// Configuration for ADB device detection retry logic
@@ -526,7 +527,11 @@ fn run_cargo_build(
 
 /// Runs Godot with the provided arguments and checks for successful exit.
 fn run_godot(program: &str, args: &[&str], use_tuned_glibc: bool) -> anyhow::Result<()> {
-    print_message(MessageType::Step, "Starting Godot...");
+    let version = read_version().unwrap_or_else(|_| "unknown".to_string());
+    print_message(
+        MessageType::Step,
+        &format!("Starting Godot (version={})", version),
+    );
 
     let mut cmd = std::process::Command::new(program);
     cmd.args(args);
@@ -569,7 +574,7 @@ fn run_tests(
     args: &[&str],
     scene_tests: bool,
     client_tests: bool,
-    use_tuned_glibc: bool,
+    _use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
     // Prepare arguments for client tests
     let mut final_args = args.to_vec();
@@ -585,7 +590,7 @@ fn run_tests(
 
     // Apply tuned glibc malloc settings on Linux
     #[cfg(target_os = "linux")]
-    if use_tuned_glibc {
+    if _use_tuned_glibc {
         cmd.env("MALLOC_MMAP_THRESHOLD_", "131072");
         cmd.env("MALLOC_TRIM_THRESHOLD_", "131072");
         cmd.env("MALLOC_ARENA_MAX", "2");

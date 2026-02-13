@@ -11,6 +11,7 @@ use super::{
         audio_source::update_audio_source,
         avatar_attach::update_avatar_attach,
         avatar_data::update_avatar_scene_updates,
+        avatar_locomotion_settings::update_avatar_locomotion_settings,
         avatar_modifier_area::update_avatar_modifier_area,
         avatar_shape::update_avatar_shape,
         billboard::update_billboard,
@@ -281,6 +282,25 @@ pub fn _process_scene(
             }
             SceneUpdateState::AvatarModifierArea => {
                 update_avatar_modifier_area(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::AvatarLocomotionSettings => {
+                let changed = update_avatar_locomotion_settings(scene, crdt_state);
+                // Emit signal deferred if locomotion settings changed for the current scene
+                if changed && scene.scene_id == *current_parcel_scene_id {
+                    let settings = scene.locomotion_settings.clone();
+                    DclGlobal::singleton()
+                        .bind()
+                        .scene_runner
+                        .clone()
+                        .call_deferred(
+                            "emit_signal",
+                            &[
+                                "locomotion_settings_changed".to_variant(),
+                                settings.to_variant(),
+                            ],
+                        );
+                }
                 false
             }
             SceneUpdateState::CameraModeArea => {

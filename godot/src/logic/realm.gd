@@ -28,13 +28,18 @@ static func is_dcl_ens(str_param: String) -> bool:
 	return regex.search(str_param) != null
 
 
-static func is_genesis_city(_realm_name: String):
+static func is_genesis_city(_realm_name: String) -> bool:
 	_realm_name = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(_realm_name))
 	_realm_name = Realm.ensure_starts_with_https(_realm_name)
-	for server in DAO_SERVERS:
-		if server.contains(_realm_name):
-			return true
+	if DAO_SERVERS.has(_realm_name):
+		return true
 	return false
+
+
+static func is_local_preview(_realm_name: String) -> bool:
+	var regex = RegEx.new()
+	regex.compile("(?gmi)^https?://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
+	return regex.search(_realm_name) != null
 
 
 static func dcl_world_url(dcl_name: String) -> String:
@@ -42,7 +47,7 @@ static func dcl_world_url(dcl_name: String) -> String:
 
 
 static func ensure_reduce_url(url):
-	return ensure_remove_slash(ensure_dcl_ens(url))
+	return remove_scheme(ensure_remove_slash(ensure_dcl_ens(url)))
 
 
 static func ensure_dcl_ens(url: String) -> String:
@@ -70,6 +75,13 @@ static func ensure_starts_with_https(str_param: String) -> String:
 		return str_param
 
 	return "https://" + str_param
+
+
+static func remove_scheme(str_param: String) -> String:
+	str_param = str_param.trim_prefix("https://")
+	str_param = str_param.trim_prefix("http://")
+
+	return str_param
 
 
 static func resolve_realm_url(value: String) -> String:

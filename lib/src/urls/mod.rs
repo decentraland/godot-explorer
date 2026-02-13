@@ -10,16 +10,32 @@ fn env() -> &'static str {
 
 // Auth
 pub fn auth_frontend() -> String {
-    format!("https://decentraland.{}/auth/requests", env())
+    if env() == "today" {
+        "http://localhost:5173/auth/requests".to_string()
+    } else {
+        format!("https://decentraland.{}/auth/requests", env())
+    }
 }
 pub fn auth_mobile_frontend() -> String {
-    format!("https://decentraland.{}/auth/mobile", env())
+    if env() == "today" {
+        "http://localhost:5173/auth/mobile".to_string()
+    } else {
+        format!("https://decentraland.{}/auth/mobile", env())
+    }
 }
 pub fn auth_api_base() -> String {
-    format!("https://auth-api.decentraland.{}", env())
+    if env() == "today" {
+        "https://auth-api.decentraland.zone".to_string()
+    } else {
+        format!("https://auth-api.decentraland.{}", env())
+    }
 }
 pub fn auth_api_requests() -> String {
-    format!("https://auth-api.decentraland.{}/requests", env())
+    if env() == "today" {
+        "https://auth-api.decentraland.zone/requests".to_string()
+    } else {
+        format!("https://auth-api.decentraland.{}/requests", env())
+    }
 }
 
 // Content
@@ -55,6 +71,12 @@ pub fn comms_gatekeeper() -> String {
         env()
     )
 }
+pub fn comms_gatekeeper_local() -> String {
+    format!(
+        "https://comms-gatekeeper-local.decentraland.{}/get-scene-adapter",
+        env()
+    )
+}
 pub fn social_service() -> String {
     format!("wss://rpc-social-service-ea.decentraland.{}", env())
 }
@@ -74,8 +96,14 @@ pub fn ethereum_rpc_with_project(project: &str) -> String {
 pub fn places_api() -> String {
     format!("https://places.decentraland.{}/api", env())
 }
+pub fn destinations_api() -> String {
+    format!("https://mobile-bff.decentraland.{}/destinations", env())
+}
 pub fn events_api() -> String {
-    format!("https://events.decentraland.{}/api", env())
+    format!("https://events.decentraland.{}/api/events", env())
+}
+pub fn mobile_events_api() -> String {
+    format!("https://mobile-bff.decentraland.{}/events", env())
 }
 pub fn notifications_api() -> String {
     format!("https://notifications.decentraland.{}", env())
@@ -107,7 +135,7 @@ pub fn jump_events() -> String {
     format!("https://decentraland.{}/jump/events", env())
 }
 pub fn account_deletion() -> String {
-    format!("https://decentraland.{}/account-deletion", env())
+    format!("https://mobile-bff.decentraland.{}/deletion", env())
 }
 
 // Proxy
@@ -162,11 +190,13 @@ mod tests {
             peer_content(),
             peer_lambdas(),
             comms_gatekeeper(),
+            comms_gatekeeper_local(),
             social_service(),
             archipelago_stats(),
             ethereum_rpc(),
             places_api(),
             events_api(),
+            mobile_events_api(),
             notifications_api(),
             mobile_bff(),
             host(),

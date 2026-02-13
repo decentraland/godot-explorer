@@ -850,7 +850,7 @@ dependencies = [
 
 [[package]]
 name = "dclgodot"
-version = "0.47.0"
+version = "0.49.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -872,6 +872,7 @@ dependencies = [
  "http-body-util",
  "hyper 0.14.31",
  "hyper 1.5.0",
+ "hyper-util",
  "image",
  "jni",
  "json5",
@@ -1914,6 +1915,21 @@ dependencies = [
  "rustls 0.21.12",
  "tokio",
  "tokio-rustls 0.24.1",
+]
+
+[[package]]
+name = "hyper-util"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df2dcfbe0677734ab2f3ffa7fa7bfd4706bfdc1ef393f2ee30184aed67e631b4"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "http 1.1.0",
+ "http-body 1.0.1",
+ "hyper 1.5.0",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

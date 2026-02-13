@@ -26,8 +26,7 @@ signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
 signal camera_mode_set(camera_mode: Global.CameraMode)
-signal run_anyway
-signal reload_scene
+signal favorite_destination_set
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -54,11 +53,14 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
+const FORCE_DEEPLINK = ""
+#const FORCE_DEEPLINK = "decentraland://open?dclenv=today"
+
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
 # Increase this value when local assets cache format changes (invalidates cache)
-const LOCAL_ASSETS_CACHE_VERSION: int = 3
+const LOCAL_ASSETS_CACHE_VERSION: int = 4
 
 ## Global classes (singleton pattern)
 
@@ -103,6 +105,9 @@ var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
 
+# Startup instrumentation timestamp (set once at load time)
+var _startup_time: int = Time.get_ticks_msec()
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
@@ -143,6 +148,7 @@ func send_haptic_feedback() -> void:
 
 # gdlint: ignore=async-function-name
 func _ready():
+	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
@@ -163,10 +169,13 @@ func _ready():
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
 
-	# Handle fake deep link from CLI (for testing mobile deep links on desktop)
-	if not cli.fake_deeplink.is_empty():
-		deep_link_url = cli.fake_deeplink
-		deep_link_obj = DclParseDeepLink.parse_decentraland_link(cli.fake_deeplink)
+	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
+	var fake_deeplink = cli.fake_deeplink
+	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
+		fake_deeplink = FORCE_DEEPLINK
+	if not fake_deeplink.is_empty():
+		deep_link_url = fake_deeplink
+		deep_link_obj = DclParseDeepLink.parse_decentraland_link(fake_deeplink)
 		print(
 			"[DEEPLINK] Parsed fake deep_link_obj: location=",
 			deep_link_obj.location,
@@ -224,7 +233,11 @@ func _ready():
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
 	# Clear cache if needed (startup flag or version changed) - await completion
+	print(
+		"[Startup] global._async_clear_cache start: %dms" % (Time.get_ticks_msec() - _startup_time)
+	)
 	await _async_clear_cache_if_needed()
+	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -254,21 +267,24 @@ func _ready():
 		DirAccess.make_dir_absolute("user://content/")
 
 	session_id = DclConfig.generate_uuid_v4()
-	# Initialize metrics with proper user_id and session_id
-	self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
-	self.metrics.set_debug_level(0)  # 0 off - 1 on
-	self.metrics.set_name("metrics")
+	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
+	if not cli.asset_server:
+		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
+		self.metrics.set_debug_level(0)  # 0 off - 1 on
+		self.metrics.set_name("metrics")
 
-	var sentry_user = SentryUser.new()
-	sentry_user.id = self.config.analytics_user_id
-	SentrySDK.set_tag("dcl_session_id", session_id)
+	# Skip Sentry setup in asset server mode
+	if not cli.asset_server:
+		var sentry_user = SentryUser.new()
+		sentry_user.id = self.config.analytics_user_id
+		SentrySDK.set_tag("dcl_session_id", session_id)
 
-	# Emit test messages to verify Sentry integration (all builds except production)
-	# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
-	# and we want Rust breadcrumbs to be included in that event
-	if not DclGlobal.is_production():
-		DclGlobal.emit_sentry_rust_test_messages()
-		_emit_sentry_godot_test_messages()
+		# Emit test messages to verify Sentry integration (all builds except production)
+		# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
+		# and we want Rust breadcrumbs to be included in that event
+		if not DclGlobal.is_production():
+			DclGlobal.emit_sentry_rust_test_messages()
+			_emit_sentry_godot_test_messages()
 
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
@@ -298,7 +314,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 	get_tree().root.add_child.call_deferred(self.testing_tools)
-	get_tree().root.add_child.call_deferred(self.metrics)
+	if self.metrics != null:
+		get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
@@ -343,20 +360,30 @@ func _ready():
 		self.network_inspector.set_is_active(false)
 
 	DclMeshRenderer.init_primitive_shapes()
+	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
+
+
+## Check if first launch benchmark should run (mobile only, first launch or dev builds)
+## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
+func should_run_first_launch_benchmark() -> bool:
+	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
+
+
+## Run the first launch benchmark. Called by lobby.gd after loading screen is visible.
+func run_first_launch_benchmark() -> void:
+	if _hardware_benchmark != null:
+		return  # Already running
+	_run_first_launch_benchmark()
 
 
 ## Async helper to clear cache and wait for completion before anything loads.
 func _async_clear_cache_if_needed() -> void:
+	# Skip cache clearing in asset server mode - we want to preserve the download cache
+	if cli.asset_server:
+		return
+
 	var should_clear_startup = cli.clear_cache_startup
 	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
-
-	# Run hardware benchmark on first launch (mobile only)
-	# In dev builds, always run to help with testing
-	var should_run_benchmark: bool = (
-		is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
-	)
-	if should_run_benchmark:
-		_run_first_launch_benchmark.call_deferred()
 
 	if should_clear_startup or version_changed:
 		if should_clear_startup:
@@ -381,16 +408,9 @@ func _init_dynamic_graphics_manager() -> void:
 	loading_started.connect(dynamic_graphics_manager.on_loading_started)
 	loading_finished.connect(dynamic_graphics_manager.on_loading_finished)
 	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
+	dynamic_graphics_manager.thermal_fps_cap_changed.connect(_on_thermal_fps_cap_changed)
 	# Listen for FPS limit changes
 	get_config().param_changed.connect(_on_config_param_changed)
-
-	# Run hardware benchmark on first launch (mobile only)
-	# In debug builds, always run to help with testing
-	var should_run_benchmark: bool = (
-		is_mobile() and (not get_config().first_launch_completed or OS.is_debug_build())
-	)
-	if should_run_benchmark:
-		_run_first_launch_benchmark.call_deferred()
 
 
 func _run_first_launch_benchmark() -> void:
@@ -432,6 +452,19 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 func _on_config_param_changed(param: int) -> void:
 	if param == ConfigData.ConfigParams.LIMIT_FPS:
 		dynamic_graphics_manager.on_fps_limit_changed(get_config().limit_fps)
+		# Re-apply FPS limit considering thermal cap
+		GraphicSettings.apply_fps_limit_with_thermal_cap(
+			get_config().limit_fps, dynamic_graphics_manager.get_thermal_fps_cap()
+		)
+
+
+func _on_thermal_fps_cap_changed(fps_cap: int) -> void:
+	# Apply the effective FPS limit (considering both user setting and thermal cap)
+	GraphicSettings.apply_fps_limit_with_thermal_cap(get_config().limit_fps, fps_cap)
+	if fps_cap == 0:
+		print("[ThermalFPS] Cap removed, using user setting")
+	else:
+		print("[ThermalFPS] Cap applied: %d FPS" % fps_cap)
 
 
 func _on_dynamic_profile_change(new_profile: int) -> void:
@@ -630,7 +663,7 @@ func set_orientation_landscape():
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	elif cli.emulate_ios:
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(false)
@@ -680,6 +713,31 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
+func join_world(world_realm: String) -> void:
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+		Time.get_unix_time_from_system()
+	)
+	var loading_data = {
+		"position": str(Global.scene_fetcher.current_position),
+		"realm": world_realm,
+		"when": "on_world"
+	}
+	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		Global.realm.async_set_realm(world_realm, true)
+		explorer.hide_menu()
+		Global.close_menu.emit()
+	else:
+		Global.close_menu.emit()
+		Global.get_config().last_realm_joined = world_realm
+		Global.get_config().last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
@@ -778,39 +836,52 @@ func _emit_sentry_godot_test_messages() -> void:
 
 
 func check_deep_link_teleport_to():
-	if Global.is_mobile():
-		var new_deep_link_url: String = ""
-		if DclAndroidPlugin.is_available():
-			var args = DclAndroidPlugin.get_deeplink_args()
-			new_deep_link_url = args.get("data", "")
-		elif DclIosPlugin.is_available():
-			var args = DclIosPlugin.get_deeplink_args()
-			new_deep_link_url = args.get("data", "")
+	# Only process deep links on real mobile devices (not emulation/desktop)
+	# This prevents re-teleporting on every focus change with --fake-deeplink
+	if not Global.is_mobile() or Global.is_virtual_mobile():
+		return
 
-		if not new_deep_link_url.is_empty():
-			deep_link_url = new_deep_link_url
-			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+	var new_deep_link_url: String = ""
+	if DclAndroidPlugin.is_available():
+		var args = DclAndroidPlugin.get_deeplink_args()
+		new_deep_link_url = args.get("data", "")
+	elif DclIosPlugin.is_available():
+		var args = DclIosPlugin.get_deeplink_args()
+		new_deep_link_url = args.get("data", "")
 
-		if Global.deep_link_obj.is_location_defined():
-			# Use preview URL as realm if specified, otherwise use realm, otherwise main
-			var realm = Global.deep_link_obj.preview
-			if realm.is_empty():
-				realm = Global.deep_link_obj.realm
-			if realm.is_empty():
-				realm = DclUrls.main_realm()
+	if not new_deep_link_url.is_empty():
+		deep_link_url = new_deep_link_url
+		deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
-			Global.teleport_to(Global.deep_link_obj.location, realm)
-		elif not Global.deep_link_obj.preview.is_empty():
-			# Preview without location - just set realm, don't teleport
-			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
-		elif not Global.deep_link_obj.realm.is_empty():
-			Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
+	# Ignore WalletConnect callbacks
+	if Global.deep_link_obj.is_walletconnect_callback:
+		return
+
+	if Global.deep_link_obj.is_location_defined():
+		# Use preview URL as realm if specified, otherwise use realm, otherwise main
+		var realm = Global.deep_link_obj.preview
+		if realm.is_empty():
+			realm = Global.deep_link_obj.realm
+		if realm.is_empty():
+			realm = DclUrls.main_realm()
+
+		Global.teleport_to(Global.deep_link_obj.location, realm)
+	elif not Global.deep_link_obj.preview.is_empty():
+		# Preview without location - just set realm, don't teleport
+		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
+	elif not Global.deep_link_obj.realm.is_empty():
+		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
 
 
 func _on_deeplink_received(url: String) -> void:
 	if not url.is_empty():
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
+
+		# Ignore WalletConnect callbacks (decentraland://walletconnect)
+		if deep_link_obj.is_walletconnect_callback:
+			print("[DEEPLINK] Ignoring WalletConnect callback")
+			return
 
 		# Handle signin deep link for mobile auth flow
 		if deep_link_obj.is_signin_request():
@@ -836,6 +907,11 @@ func _notification(what: int) -> void:
 
 			if not deep_link_url.is_empty():
 				deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+
+				# Ignore WalletConnect callbacks
+				if deep_link_obj.is_walletconnect_callback:
+					return
+
 				# Handle signin deep link for mobile auth flow
 				if deep_link_obj.is_signin_request():
 					_handle_signin_deep_link(deep_link_obj.signin_identity_id)

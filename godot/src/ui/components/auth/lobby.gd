@@ -19,6 +19,7 @@ var loading_first_profile: bool = false
 var current_screen_name: String = ""
 
 var _skip_lobby: bool = false
+var _skip_lobby_to_menu: bool = false
 var _last_panel: Control = null
 var _playing: String
 
@@ -38,6 +39,7 @@ var _playing: String
 @onready var auth_error_label = %AuthErrorLabel
 @onready var button_cancel = %Button_Cancel
 @onready var button_cancel_icon = %ButtonCancelIcon
+@onready var label_step2_title: Label = %VBoxContainer_SignInStep2/Label_Title
 
 @onready var label_avatar_name = %Label_Name
 
@@ -125,8 +127,9 @@ func show_auth_home_screen():
 	show_panel(control_signin)
 
 
-func show_auth_browser_open_screen():
+func show_auth_browser_open_screen(message: String = "Opening Browser..."):
 	track_lobby_screen("AUTH_BROWSER_OPEN")
+	label_step2_title.text = message
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
 	show_panel(control_signin)
@@ -171,6 +174,7 @@ func async_close_sign_in():
 
 # gdlint:ignore = async-function-name
 func _ready():
+	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_guest.visible = not DclGlobal.is_production()
 
@@ -186,6 +190,18 @@ func _ready():
 	login.show()
 
 	show_loading_screen()
+	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
+	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
+
+	# Track startup metric for analytics
+	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
+	Global.metrics.track_screen_viewed("START", JSON.stringify(startup_data))
+
+	# Run hardware benchmark AFTER loading screen is visible to avoid black screen
+	# on iOS fresh install (Metal shader compilation can take 10-20s)
+	if Global.should_run_first_launch_benchmark():
+		print("[Startup] lobby: triggering first launch benchmark")
+		Global.run_first_launch_benchmark()
 
 	UiSounds.install_audio_recusirve(self)
 	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
@@ -203,6 +219,8 @@ func _ready():
 
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
+	if Global.cli.skip_lobby_to_menu:
+		_skip_lobby_to_menu = true
 
 	# Preview deeplink: create guest and skip lobby for hot reload development
 	if not Global.deep_link_obj.preview.is_empty():
@@ -225,6 +243,9 @@ func _ready():
 	elif _skip_lobby:
 		show_loading_screen()
 		go_to_explorer.call_deferred()
+	elif _skip_lobby_to_menu:
+		show_loading_screen()
+		get_tree().change_scene_to_file.call_deferred("res://src/ui/components/menu/menu.tscn")
 	else:
 		show_account_home_screen()
 
@@ -286,11 +307,17 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			)
 			if _skip_lobby:
 				go_to_explorer.call_deferred()
+			elif _skip_lobby_to_menu:
+				get_tree().change_scene_to_file.call_deferred(
+					"res://src/ui/components/menu/menu.tscn"
+				)
 		else:
 			show_account_home_screen()
 
 	if _skip_lobby:
 		go_to_explorer()
+	elif _skip_lobby_to_menu:
+		get_tree().change_scene_to_file("res://src/ui/components/menu/menu.tscn")
 
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
@@ -329,6 +356,9 @@ func _on_button_different_account_pressed():
 	Global.metrics.update_identity("unauthenticated", false)
 	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
 	Global.get_config().session_account = {}
+
+	# Unsubscribe from block updates before clearing
+	Global.social_service.unsubscribe_from_block_updates()
 
 	# Clear the current social blacklist when switching accounts
 	Global.social_blacklist.clear_blocked()

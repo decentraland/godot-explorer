@@ -322,7 +322,14 @@ impl INode for DclGlobal {
         dynamic_graphics_manager.set_name("dynamic_graphics_manager");
 
         // Use CLI singleton for parsing
-        let (testing_scene_mode, preview_mode, developer_mode, fixed_skybox_time, force_mobile) = {
+        let (
+            testing_scene_mode,
+            preview_mode,
+            developer_mode,
+            fixed_skybox_time,
+            force_mobile,
+            only_no_optimized,
+        ) = {
             let cli_bind = cli.bind();
             (
                 cli_bind.scene_test_mode,
@@ -330,8 +337,17 @@ impl INode for DclGlobal {
                 cli_bind.developer_mode,
                 cli_bind.fixed_skybox_time,
                 cli_bind.force_mobile,
+                cli_bind.only_no_optimized,
             )
         };
+
+        // If --only-no-optimized flag is set, disable optimized wearable/emote loading
+        if only_no_optimized {
+            tracing::info!("--only-no-optimized: Disabling optimized wearable/emote loading");
+            content_provider
+                .bind_mut()
+                .set_optimized_wearable_base_url(GString::new());
+        }
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
@@ -422,6 +438,11 @@ impl DclGlobal {
     #[func]
     fn is_ios(&self) -> bool {
         self.is_ios
+    }
+
+    #[func]
+    fn is_ios_or_emulating(&self) -> bool {
+        self.is_ios || self.cli.bind().emulate_ios
     }
 
     #[func]

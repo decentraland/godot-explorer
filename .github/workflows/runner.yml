@@ -35,6 +35,8 @@ jobs:
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      APK_ANDROID_KEYSTORE_BASE64: ${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}
+      APK_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
@@ -63,6 +65,8 @@ jobs:
     name: 🐳 Docker builds and test
     needs: linux-build
     uses: ./.github/workflows/docker_build_test.yml
+    with:
+      publish_docker: ${{ contains(github.event.pull_request.labels.*.name, 'publish-docker') }}
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
