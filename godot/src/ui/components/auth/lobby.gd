@@ -92,6 +92,7 @@ var _playing: String
 
 @onready var ftue_screen: PlaceItem = $Main/FTUE
 
+
 func show_panel(child_node: Control, subpanel: Control = null):
 	for child in control_main.get_children():
 		child.hide()
@@ -395,6 +396,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			)
 			await async_close_sign_in()
 			return
+# gdlint: ignore=no-else-return
 		else:
 			show_account_home_screen()
 
@@ -529,11 +531,11 @@ func _on_button_next_pressed():
 	# ADR-290: Snapshots are no longer generated/uploaded by clients
 	current_profile.set_avatar(avatar)
 
+	# TODO: REMOVE THIS BEFORE MERGE, USEFUL FOR TESTING NEW ACCOUNT
 	#var promise = ProfileService.async_deploy_profile(current_profile)
 	#await PromiseUtils.async_awaiter(promise)
-#
 	#if promise.is_rejected():
-		#printerr("[Lobby] Profile deploy failed: ", promise.get_reject_reason())
+	#printerr("[Lobby] Profile deploy failed: ", promise.get_reject_reason())
 
 	show_ftue_screen()
 

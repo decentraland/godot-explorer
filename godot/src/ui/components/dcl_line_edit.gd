@@ -88,7 +88,8 @@ func _check_error():
 			label_error.hide()
 	else:
 		label_error.hide()
-		
+
+
 func _ready() -> void:
 	if !line_edit.text_changed.is_connected(_on_line_edit_text_changed):
 		line_edit.text_changed.connect(_on_line_edit_text_changed)
