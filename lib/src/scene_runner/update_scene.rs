@@ -78,390 +78,35 @@ pub fn _process_scene(
     ref_time: &Instant,
     ui_canvas_information: &PbUiCanvasInformation,
     pool_manager: &RefCell<PoolManager>,
+    force_complete: bool,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
-    let Ok(mut crdt_state) = crdt.try_lock() else {
-        return false;
+
+    // When force_complete is set, use an effectively infinite time budget so the state machine
+    // processes to completion in a single call. This prevents the scene thread from being
+    // blocked indefinitely when the normal time budget would cause deferral across frames.
+    let effective_end_time_us = if force_complete {
+        i64::MAX
+    } else {
+        end_time_us
     };
-    let crdt_state = &mut crdt_state;
-    let mut current_time_us;
 
+    // Outer loop: handles both locked (CRDT) and unlocked phases.
+    // States after ComputeCrdtState (ProcessRpcs, SendToThread, Processed) don't need
+    // the CRDT lock. Releasing it before the channel send avoids holding the shared mutex
+    // while the scene thread may be trying to lock it after receiving.
     loop {
-        let before_compute_update = std::time::Instant::now();
-
-        let should_break = match scene.current_dirty.update_state {
-            SceneUpdateState::None => {
-                let engine_info_component =
-                    SceneCrdtStateProtoComponents::get_engine_info_mut(crdt_state);
-                let tick_number =
-                    if let Some(entry) = engine_info_component.get(&SceneEntityId::ROOT) {
-                        if let Some(value) = entry.value.as_ref() {
-                            value.tick_number + 1
-                        } else {
-                            0
-                        }
-                    } else {
-                        0
-                    };
-
-                scene.tick_number = tick_number;
-
-                // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
-                // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
-                if tick_number <= 3 && !scene.gltf_loading.is_empty() {
-                    sync_gltf_loading_state(scene, crdt_state, ref_time, end_time_us);
-
-                    let mut scene_node = scene.godot_dcl_scene.root_node_3d.bind_mut();
-                    scene_node.gltf_loading_count = scene.gltf_loading.len() as i32;
-                    scene_node.max_gltf_loaded_count = scene_node
-                        .gltf_loading_count
-                        .max(scene_node.max_gltf_loaded_count);
-                    return false;
-                }
-
-                scene
-                    .godot_dcl_scene
-                    .root_node_3d
-                    .bind_mut()
-                    .last_tick_number = tick_number as i32;
-
-                engine_info_component.put(
-                    SceneEntityId::ROOT,
-                    Some(PbEngineInfo {
-                        tick_number,
-                        frame_number: frames_count as u32,
-                        total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
-                    }),
-                );
-
-                if tick_number == 0 {
-                    let filter_by_scene_id = if let SceneType::Parcel = scene.scene_type {
-                        Some(*current_parcel_scene_id)
-                    } else {
-                        None
-                    };
-
-                    let primary_player_inside = if let SceneType::Parcel = scene.scene_type {
-                        *current_parcel_scene_id == scene.scene_id
-                    } else {
-                        true
-                    };
-
-                    DclGlobal::singleton()
-                        .bind()
-                        .avatars
-                        .bind()
-                        .first_sync_crdt_state(
-                            crdt_state,
-                            filter_by_scene_id,
-                            primary_player_inside,
-                        );
-
-                    let main_camera =
-                        SceneCrdtStateProtoComponents::get_main_camera_mut(crdt_state);
-                    main_camera.put(
-                        SceneEntityId::CAMERA,
-                        Some(PbMainCamera {
-                            virtual_camera_entity: None,
-                        }),
-                    );
-                }
-
-                // PbRealmInfo
-                sync_realm_info(scene, crdt_state);
-
-                false
-            }
-            SceneUpdateState::PrintLogs => {
-                // enable logs
-                for log in &scene.current_dirty.logs {
-                    let arguments = varray![
-                        scene.scene_id.0,
-                        log.level as i32,
-                        log.timestamp as f32,
-                        log.message.to_godot()
-                    ];
-                    console.callv(&arguments);
-                }
-                false
-            }
-            SceneUpdateState::DeletedEntities => {
-                update_deleted_entities(scene, &mut pool_manager.borrow_mut());
-                false
-            }
-            SceneUpdateState::Tween => {
-                update_tween(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::TransformAndParent => {
-                !update_transform_and_parent(scene, crdt_state, ref_time, end_time_us)
-            }
-            SceneUpdateState::VisibilityComponent => {
-                update_visibility(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::MeshRenderer => {
-                !update_mesh_renderer(scene, crdt_state, ref_time, end_time_us)
-            }
-            SceneUpdateState::ScenePointerEvents => {
-                update_scene_pointer_events(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::Material => {
-                update_material(scene, crdt_state);
-                // Update video textures separately (needs mutable access to video_players)
-                update_video_material_textures(scene);
-                false
-            }
-            SceneUpdateState::TextShape => {
-                update_text_shape(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::Billboard => {
-                update_billboard(scene, crdt_state, camera_global_transform);
-                false
-            }
-            SceneUpdateState::MeshCollider => {
-                update_mesh_collider(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::GltfContainer => {
-                !update_gltf_container(scene, crdt_state, ref_time, end_time_us)
-            }
-            SceneUpdateState::SyncGltfContainer => {
-                !sync_gltf_loading_state(scene, crdt_state, ref_time, end_time_us)
-            }
-            SceneUpdateState::GltfNodeModifiers => {
-                tracing::debug!("Entering GltfNodeModifiers state");
-                let still_processing =
-                    !update_gltf_node_modifiers(scene, crdt_state, ref_time, end_time_us);
-                tracing::debug!(
-                    "GltfNodeModifiers update complete, still_processing={}",
-                    still_processing
-                );
-                // Only check textures when we're done with the main update (avoid redundant work)
-                if !still_processing {
-                    // Check and apply pending textures for modifier materials
-                    update_modifier_textures(scene);
-                    // Update video textures (needs mutable access to video_players)
-                    update_modifier_video_textures(scene);
-                }
-                still_processing
-            }
-            SceneUpdateState::NftShape => {
-                update_nft_shape(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::Animator => {
-                update_animator(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::AvatarShape => {
-                update_avatar_shape(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::AvatarShapeEmoteCommand => {
-                update_avatar_shape_emote_command(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::Raycasts => {
-                update_raycasts(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::AvatarAttach => {
-                update_avatar_attach(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::VideoPlayer => {
-                update_video_player(scene, crdt_state, current_parcel_scene_id);
-                false
-            }
-            SceneUpdateState::AudioStream => {
-                update_audio_stream(scene, crdt_state, current_parcel_scene_id);
-                false
-            }
-            SceneUpdateState::AvatarModifierArea => {
-                update_avatar_modifier_area(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::AvatarLocomotionSettings => {
-                let changed = update_avatar_locomotion_settings(scene, crdt_state);
-                // Emit signal deferred if locomotion settings changed for the current scene
-                if changed && scene.scene_id == *current_parcel_scene_id {
-                    let settings = scene.locomotion_settings.clone();
-                    DclGlobal::singleton()
-                        .bind()
-                        .scene_runner
-                        .clone()
-                        .call_deferred(
-                            "emit_signal",
-                            &[
-                                "locomotion_settings_changed".to_variant(),
-                                settings.to_variant(),
-                            ],
-                        );
-                }
-                false
-            }
-            SceneUpdateState::CameraModeArea => {
-                update_camera_mode_area(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::InputModifier => {
-                update_input_modifier(scene, crdt_state, current_parcel_scene_id);
-                false
-            }
-            SceneUpdateState::SkyboxTime => {
-                update_skybox_time(scene, crdt_state, current_parcel_scene_id);
-                false
-            }
-            SceneUpdateState::TriggerArea => {
-                update_trigger_area(
-                    scene,
-                    crdt_state,
-                    &mut pool_manager.borrow_mut(),
-                    current_parcel_scene_id,
-                );
-                false
-            }
-            SceneUpdateState::VirtualCameras => {
-                update_main_and_virtual_cameras(scene, crdt_state);
-                false
-            }
-            SceneUpdateState::AudioSource => {
-                update_audio_source(scene, crdt_state, current_parcel_scene_id);
-                false
-            }
-            SceneUpdateState::SceneUi => {
-                update_scene_ui(
-                    scene,
-                    crdt_state,
-                    ui_canvas_information,
-                    current_parcel_scene_id,
-                );
-                false
-            }
-            SceneUpdateState::ComputeCrdtState => {
-                update_avatar_scene_updates(scene, crdt_state);
-
-                if scene.godot_dcl_scene.hierarchy_changed_3d {
-                    scene
-                        .godot_dcl_scene
-                        .root_node_3d
-                        .call_deferred("emit_signal", &["tree_changed".to_variant()]);
-                    scene.godot_dcl_scene.hierarchy_changed_3d = false;
-                }
-
-                // Set transforms
-                {
-                    let camera_transform = DclTransformAndParent::from_godot(
-                        camera_global_transform,
-                        scene.godot_dcl_scene.root_node_3d.get_position(),
-                    );
-                    let player_transform = DclTransformAndParent::from_godot(
-                        player_global_transform,
-                        scene.godot_dcl_scene.root_node_3d.get_position(),
-                    );
-
-                    let transform_mut = crdt_state.get_transform_mut();
-
-                    let stored_player_transform = transform_mut
-                        .get(&SceneEntityId::PLAYER)
-                        .and_then(|value| value.value.as_ref());
-                    if stored_player_transform.map(|value| &value.translation)
-                        != Some(&player_transform.translation)
-                    {
-                        transform_mut.put(SceneEntityId::PLAYER, Some(player_transform));
-                    }
-
-                    let stored_camera_transform = transform_mut
-                        .get(&SceneEntityId::CAMERA)
-                        .and_then(|value| value.value.as_ref());
-                    if stored_camera_transform != Some(&camera_transform) {
-                        transform_mut.put(SceneEntityId::CAMERA, Some(camera_transform));
-                    }
-                }
-
-                // Set camera mode
-                let maybe_current_camera_mode =
-                    SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
-                        .get(&SceneEntityId::CAMERA)
-                        .and_then(|camera_mode_value| {
-                            camera_mode_value.value.as_ref().map(|v| v.mode)
-                        });
-
-                if maybe_current_camera_mode != Some(camera_mode) {
-                    let camera_mode_component = PbCameraMode { mode: camera_mode };
-                    SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
-                        .put(SceneEntityId::CAMERA, Some(camera_mode_component));
-                }
-
-                // Set PointerLock
-                let maybe_is_pointer_locked =
-                    SceneCrdtStateProtoComponents::get_pointer_lock(crdt_state)
-                        .get(&SceneEntityId::CAMERA)
-                        .and_then(|pointer_lock_value| {
-                            pointer_lock_value
-                                .value
-                                .as_ref()
-                                .map(|v| v.is_pointer_locked)
-                        });
-
-                let is_pointer_locked = godot::classes::Input::singleton().get_mouse_mode()
-                    == godot::classes::input::MouseMode::CAPTURED;
-                if maybe_is_pointer_locked != Some(is_pointer_locked) {
-                    let pointer_lock_component = PbPointerLock { is_pointer_locked };
-                    SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)
-                        .put(SceneEntityId::CAMERA, Some(pointer_lock_component));
-                }
-
-                // Process pointer events
-                let pointer_events_result_component =
-                    SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
-
-                let results = scene.pointer_events_result.drain(0..);
-                for (entity, value) in results {
-                    pointer_events_result_component.append(entity, value);
-                }
-
-                let mut ui_results = scene.godot_dcl_scene.ui_results.borrow_mut();
-                let results = ui_results.pointer_event_results.drain(0..);
-                for (entity, value) in results {
-                    pointer_events_result_component.append(entity, value);
-                }
-
-                // Process trigger area results
-                if !scene.trigger_area_results.is_empty() {
-                    let trigger_area_result_component =
-                        SceneCrdtStateProtoComponents::get_trigger_area_result_mut(crdt_state);
-                    let results = scene.trigger_area_results.drain(0..);
-                    for (entity, value) in results {
-                        trigger_area_result_component.append(entity, value);
-                    }
-                }
-
-                let incoming_comms_message = DclGlobal::singleton()
-                    .bind_mut()
-                    .comms
-                    .bind_mut()
-                    .get_pending_messages(&scene.scene_entity_definition.id);
-
-                // Set renderer response to the scene
-                let dirty_crdt_state = crdt_state.take_dirty();
-                scene.current_dirty.renderer_response = Some(RendererResponse::Ok {
-                    dirty_crdt_state: Box::new(dirty_crdt_state),
-                    incoming_comms_message,
-                });
-                false
-            }
+        // Phase 1: Handle states that don't need the CRDT lock
+        match scene.current_dirty.update_state {
             SceneUpdateState::ProcessRpcs => {
                 let rpc_calls = std::mem::take(&mut scene.current_dirty.rpc_calls);
                 process_rpcs(scene, current_parcel_scene_id, rpc_calls);
-                false
+                scene.current_dirty.update_state = scene.current_dirty.update_state.next();
+                continue;
             }
             SceneUpdateState::SendToThread => {
-                // The scene is already processed, but the message was not sent to the thread yet
-                if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
+                let cap = scene.dcl_scene.main_sender_to_thread.capacity();
+                if cap > 0 {
                     let response = scene.current_dirty.renderer_response.take().unwrap();
                     if let Err(_err) = scene
                         .dcl_scene
@@ -489,29 +134,418 @@ pub fn _process_scene(
             SceneUpdateState::Processed => {
                 return true;
             }
-        };
+            _ => {} // Fall through to Phase 2
+        }
 
-        const TICK_TIME_LOGABLE_MS: i64 = 16000;
-        let this_update_us = (std::time::Instant::now() - before_compute_update).as_micros() as i64;
-        if this_update_us > TICK_TIME_LOGABLE_MS {
-            tracing::warn!(
+        // Phase 2: Process states that need the CRDT lock
+        let Ok(mut crdt_state) = crdt.try_lock() else {
+            return false;
+        };
+        let crdt_state = &mut crdt_state;
+        let mut current_time_us;
+
+        loop {
+            let before_compute_update = std::time::Instant::now();
+
+            let should_break = match scene.current_dirty.update_state {
+                SceneUpdateState::None => {
+                    let engine_info_component =
+                        SceneCrdtStateProtoComponents::get_engine_info_mut(crdt_state);
+                    let tick_number =
+                        if let Some(entry) = engine_info_component.get(&SceneEntityId::ROOT) {
+                            if let Some(value) = entry.value.as_ref() {
+                                value.tick_number + 1
+                            } else {
+                                0
+                            }
+                        } else {
+                            0
+                        };
+
+                    scene.tick_number = tick_number;
+
+                    // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
+                    // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
+                    if tick_number <= 3 && !scene.gltf_loading.is_empty() && !force_complete {
+                        sync_gltf_loading_state(scene, crdt_state, ref_time, effective_end_time_us);
+
+                        let mut scene_node = scene.godot_dcl_scene.root_node_3d.bind_mut();
+                        scene_node.gltf_loading_count = scene.gltf_loading.len() as i32;
+                        scene_node.max_gltf_loaded_count = scene_node
+                            .gltf_loading_count
+                            .max(scene_node.max_gltf_loaded_count);
+                        return false;
+                    }
+
+                    scene
+                        .godot_dcl_scene
+                        .root_node_3d
+                        .bind_mut()
+                        .last_tick_number = tick_number as i32;
+
+                    engine_info_component.put(
+                        SceneEntityId::ROOT,
+                        Some(PbEngineInfo {
+                            tick_number,
+                            frame_number: frames_count as u32,
+                            total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
+                        }),
+                    );
+
+                    if tick_number == 0 {
+                        let filter_by_scene_id = if let SceneType::Parcel = scene.scene_type {
+                            Some(*current_parcel_scene_id)
+                        } else {
+                            None
+                        };
+
+                        let primary_player_inside = if let SceneType::Parcel = scene.scene_type {
+                            *current_parcel_scene_id == scene.scene_id
+                        } else {
+                            true
+                        };
+
+                        DclGlobal::singleton()
+                            .bind()
+                            .avatars
+                            .bind()
+                            .first_sync_crdt_state(
+                                crdt_state,
+                                filter_by_scene_id,
+                                primary_player_inside,
+                            );
+
+                        let main_camera =
+                            SceneCrdtStateProtoComponents::get_main_camera_mut(crdt_state);
+                        main_camera.put(
+                            SceneEntityId::CAMERA,
+                            Some(PbMainCamera {
+                                virtual_camera_entity: None,
+                            }),
+                        );
+                    }
+
+                    // PbRealmInfo
+                    sync_realm_info(scene, crdt_state);
+
+                    false
+                }
+                SceneUpdateState::PrintLogs => {
+                    // enable logs
+                    for log in &scene.current_dirty.logs {
+                        let arguments = varray![
+                            scene.scene_id.0,
+                            log.level as i32,
+                            log.timestamp as f32,
+                            log.message.to_godot()
+                        ];
+                        console.callv(&arguments);
+                    }
+                    false
+                }
+                SceneUpdateState::DeletedEntities => {
+                    update_deleted_entities(scene, &mut pool_manager.borrow_mut());
+                    false
+                }
+                SceneUpdateState::Tween => {
+                    update_tween(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::TransformAndParent => {
+                    !update_transform_and_parent(scene, crdt_state, ref_time, effective_end_time_us)
+                }
+                SceneUpdateState::VisibilityComponent => {
+                    update_visibility(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::MeshRenderer => {
+                    !update_mesh_renderer(scene, crdt_state, ref_time, effective_end_time_us)
+                }
+                SceneUpdateState::ScenePointerEvents => {
+                    update_scene_pointer_events(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::Material => {
+                    update_material(scene, crdt_state);
+                    // Update video textures separately (needs mutable access to video_players)
+                    update_video_material_textures(scene);
+                    false
+                }
+                SceneUpdateState::TextShape => {
+                    update_text_shape(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::Billboard => {
+                    update_billboard(scene, crdt_state, camera_global_transform);
+                    false
+                }
+                SceneUpdateState::MeshCollider => {
+                    update_mesh_collider(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::GltfContainer => {
+                    !update_gltf_container(scene, crdt_state, ref_time, effective_end_time_us)
+                }
+                SceneUpdateState::SyncGltfContainer => {
+                    !sync_gltf_loading_state(scene, crdt_state, ref_time, effective_end_time_us)
+                }
+                SceneUpdateState::GltfNodeModifiers => {
+                    tracing::debug!("Entering GltfNodeModifiers state");
+                    let still_processing = !update_gltf_node_modifiers(
+                        scene,
+                        crdt_state,
+                        ref_time,
+                        effective_end_time_us,
+                    );
+                    tracing::debug!(
+                        "GltfNodeModifiers update complete, still_processing={}",
+                        still_processing
+                    );
+                    // Only check textures when we're done with the main update (avoid redundant work)
+                    if !still_processing {
+                        // Check and apply pending textures for modifier materials
+                        update_modifier_textures(scene);
+                        // Update video textures (needs mutable access to video_players)
+                        update_modifier_video_textures(scene);
+                    }
+                    still_processing
+                }
+                SceneUpdateState::NftShape => {
+                    update_nft_shape(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::Animator => {
+                    update_animator(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::AvatarShape => {
+                    update_avatar_shape(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::AvatarShapeEmoteCommand => {
+                    update_avatar_shape_emote_command(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::Raycasts => {
+                    update_raycasts(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::AvatarAttach => {
+                    update_avatar_attach(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::VideoPlayer => {
+                    update_video_player(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::AudioStream => {
+                    update_audio_stream(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::AvatarModifierArea => {
+                    update_avatar_modifier_area(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::AvatarLocomotionSettings => {
+                    let changed = update_avatar_locomotion_settings(scene, crdt_state);
+                    // Emit signal deferred if locomotion settings changed for the current scene
+                    if changed && scene.scene_id == *current_parcel_scene_id {
+                        let settings = scene.locomotion_settings.clone();
+                        DclGlobal::singleton()
+                            .bind()
+                            .scene_runner
+                            .clone()
+                            .call_deferred(
+                                "emit_signal",
+                                &[
+                                    "locomotion_settings_changed".to_variant(),
+                                    settings.to_variant(),
+                                ],
+                            );
+                    }
+                    false
+                }
+                SceneUpdateState::CameraModeArea => {
+                    update_camera_mode_area(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::InputModifier => {
+                    update_input_modifier(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::SkyboxTime => {
+                    update_skybox_time(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::TriggerArea => {
+                    update_trigger_area(
+                        scene,
+                        crdt_state,
+                        &mut pool_manager.borrow_mut(),
+                        current_parcel_scene_id,
+                    );
+                    false
+                }
+                SceneUpdateState::VirtualCameras => {
+                    update_main_and_virtual_cameras(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::AudioSource => {
+                    update_audio_source(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::SceneUi => {
+                    update_scene_ui(
+                        scene,
+                        crdt_state,
+                        ui_canvas_information,
+                        current_parcel_scene_id,
+                    );
+                    false
+                }
+                SceneUpdateState::ComputeCrdtState => {
+                    update_avatar_scene_updates(scene, crdt_state);
+
+                    if scene.godot_dcl_scene.hierarchy_changed_3d {
+                        scene
+                            .godot_dcl_scene
+                            .root_node_3d
+                            .call_deferred("emit_signal", &["tree_changed".to_variant()]);
+                        scene.godot_dcl_scene.hierarchy_changed_3d = false;
+                    }
+
+                    // Set transforms
+                    {
+                        let camera_transform = DclTransformAndParent::from_godot(
+                            camera_global_transform,
+                            scene.godot_dcl_scene.root_node_3d.get_position(),
+                        );
+                        let player_transform = DclTransformAndParent::from_godot(
+                            player_global_transform,
+                            scene.godot_dcl_scene.root_node_3d.get_position(),
+                        );
+
+                        let transform_mut = crdt_state.get_transform_mut();
+
+                        let stored_player_transform = transform_mut
+                            .get(&SceneEntityId::PLAYER)
+                            .and_then(|value| value.value.as_ref());
+                        if stored_player_transform.map(|value| &value.translation)
+                            != Some(&player_transform.translation)
+                        {
+                            transform_mut.put(SceneEntityId::PLAYER, Some(player_transform));
+                        }
+
+                        let stored_camera_transform = transform_mut
+                            .get(&SceneEntityId::CAMERA)
+                            .and_then(|value| value.value.as_ref());
+                        if stored_camera_transform != Some(&camera_transform) {
+                            transform_mut.put(SceneEntityId::CAMERA, Some(camera_transform));
+                        }
+                    }
+
+                    // Set camera mode
+                    let maybe_current_camera_mode =
+                        SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
+                            .get(&SceneEntityId::CAMERA)
+                            .and_then(|camera_mode_value| {
+                                camera_mode_value.value.as_ref().map(|v| v.mode)
+                            });
+
+                    if maybe_current_camera_mode != Some(camera_mode) {
+                        let camera_mode_component = PbCameraMode { mode: camera_mode };
+                        SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
+                            .put(SceneEntityId::CAMERA, Some(camera_mode_component));
+                    }
+
+                    // Set PointerLock
+                    let maybe_is_pointer_locked =
+                        SceneCrdtStateProtoComponents::get_pointer_lock(crdt_state)
+                            .get(&SceneEntityId::CAMERA)
+                            .and_then(|pointer_lock_value| {
+                                pointer_lock_value
+                                    .value
+                                    .as_ref()
+                                    .map(|v| v.is_pointer_locked)
+                            });
+
+                    let is_pointer_locked = godot::classes::Input::singleton().get_mouse_mode()
+                        == godot::classes::input::MouseMode::CAPTURED;
+                    if maybe_is_pointer_locked != Some(is_pointer_locked) {
+                        let pointer_lock_component = PbPointerLock { is_pointer_locked };
+                        SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)
+                            .put(SceneEntityId::CAMERA, Some(pointer_lock_component));
+                    }
+
+                    // Process pointer events
+                    let pointer_events_result_component =
+                        SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
+
+                    let results = scene.pointer_events_result.drain(0..);
+                    for (entity, value) in results {
+                        pointer_events_result_component.append(entity, value);
+                    }
+
+                    let mut ui_results = scene.godot_dcl_scene.ui_results.borrow_mut();
+                    let results = ui_results.pointer_event_results.drain(0..);
+                    for (entity, value) in results {
+                        pointer_events_result_component.append(entity, value);
+                    }
+
+                    // Process trigger area results
+                    if !scene.trigger_area_results.is_empty() {
+                        let trigger_area_result_component =
+                            SceneCrdtStateProtoComponents::get_trigger_area_result_mut(crdt_state);
+                        let results = scene.trigger_area_results.drain(0..);
+                        for (entity, value) in results {
+                            trigger_area_result_component.append(entity, value);
+                        }
+                    }
+
+                    let incoming_comms_message = DclGlobal::singleton()
+                        .bind_mut()
+                        .comms
+                        .bind_mut()
+                        .get_pending_messages(&scene.scene_entity_definition.id);
+
+                    // Set renderer response to the scene
+                    let dirty_crdt_state = crdt_state.take_dirty();
+                    scene.current_dirty.renderer_response = Some(RendererResponse::Ok {
+                        dirty_crdt_state: Box::new(dirty_crdt_state),
+                        incoming_comms_message,
+                    });
+                    false
+                }
+                // These states don't need the CRDT lock — handled above after lock is dropped
+                SceneUpdateState::ProcessRpcs
+                | SceneUpdateState::SendToThread
+                | SceneUpdateState::Processed => break,
+            };
+
+            const TICK_TIME_LOGABLE_MS: i64 = 16000;
+            let this_update_us =
+                (std::time::Instant::now() - before_compute_update).as_micros() as i64;
+            if this_update_us > TICK_TIME_LOGABLE_MS {
+                tracing::warn!(
                 "Scene \"{:?}\"(tick={:?}) in state {:?} takes more than {TICK_TIME_LOGABLE_MS}: {:?}us",
                 scene.scene_entity_definition.get_title(),
                 scene.tick_number,
                 scene.current_dirty.update_state,
                 this_update_us
             );
-        }
+            }
 
-        if should_break {
-            return false;
-        }
+            if should_break && !force_complete {
+                return false;
+            }
 
-        scene.current_dirty.update_state = scene.current_dirty.update_state.next();
+            scene.current_dirty.update_state = scene.current_dirty.update_state.next();
 
-        current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
-        if current_time_us > end_time_us {
-            return false;
+            current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
+            if current_time_us > effective_end_time_us {
+                return false;
+            }
         }
+        // CRDT lock (crdt_state) dropped here, outer loop continues to Phase 1
     }
 }

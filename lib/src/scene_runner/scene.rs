@@ -277,6 +277,10 @@ pub struct Scene {
 
     // Deno/V8 memory statistics for this scene
     pub deno_memory_stats: Option<crate::dcl::DenoMemoryStats>,
+
+    /// Number of consecutive frames where _process_scene returned false while waiting_process is true.
+    /// Used to detect stuck scenes and force completion to unblock the scene thread.
+    pub stuck_frames: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -387,6 +391,7 @@ impl Scene {
             virtual_camera: Default::default(),
             locomotion_settings: Default::default(),
             deno_memory_stats: None,
+            stuck_frames: 0,
         }
     }
 
@@ -461,6 +466,7 @@ impl Scene {
             virtual_camera: Default::default(),
             locomotion_settings: Default::default(),
             deno_memory_stats: None,
+            stuck_frames: 0,
         }
     }
 

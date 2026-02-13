@@ -12,6 +12,9 @@ var discover_carrousel_item_loading: Control = null
 
 
 func on_request(_offset: int, limit: int) -> void:
+	if loading:
+		return
+
 	if no_more_elements and not _new_search:
 		return  # we reach the capacity...
 
@@ -38,6 +41,8 @@ func on_request(_offset: int, limit: int) -> void:
 
 		item_container.move_child(discover_carrousel_item_loading, -1)
 
+	loading = true
+
 	# TODO: Implement more filters (categories, sorting, etc.)
 	# For now we only query the events API URL
 	var url = DclUrls.mobile_events_api() + "/"
@@ -54,6 +59,7 @@ func on_request(_offset: int, limit: int) -> void:
 
 func _async_fetch_events(url: String, limit: int = 100):
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	loading = false
 
 	if is_instance_valid(discover_carrousel_item_loading):
 		discover_carrousel_item_loading.hide()
