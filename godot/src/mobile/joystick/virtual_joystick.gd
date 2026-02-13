@@ -60,6 +60,7 @@ var output := Vector2.ZERO
 var _touch_index: int = -1
 var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
+var _joystick_visible := false
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -120,20 +121,28 @@ func _on_input(event: InputEvent) -> void:
 							return
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
-							_dynamic_material.set_shader_parameter("state", 1)
+							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
 						_touch_index = event.index
 						_update_joystick(event.position)
 						if not _is_scene_ui_at_position(event.position):
 							get_viewport().set_input_as_handled()
 			elif event.index == _touch_index:
 				_reset()
-				_dynamic_material.set_shader_parameter("state", 2)
+				if _joystick_visible:
+					_dynamic_material.set_shader_parameter("state", 2)
+					_joystick_visible = false
 				emit_signal("stick_position", Vector2.ZERO)
 				get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
 			if event.index == _touch_index:
 				_update_joystick(event.position)
 				get_viewport().set_input_as_handled()
+
+
+func _on_show_joystick_timer() -> void:
+	if _touch_index != -1:
+		_dynamic_material.set_shader_parameter("state", 1)
+		_joystick_visible = true
 
 
 func _move_base(new_position: Vector2) -> void:
