@@ -115,7 +115,7 @@ func track_lobby_screen(screen_name: String):
 
 
 func show_restore_screen():
-	track_lobby_screen("WELCOME")
+	track_lobby_screen("COMEBACK")
 	button_back.hide()
 	restore_name_footer.show()
 	label_name.show()
