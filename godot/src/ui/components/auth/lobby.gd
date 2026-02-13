@@ -203,8 +203,13 @@ func show_auth_home_screen():
 	show_panel(control_signin)
 
 
-func show_auth_browser_open_screen(message: String = "Opening Browser..."):
-	track_lobby_screen("AUTH_BROWSER_OPEN")
+func show_auth_browser_open_screen(
+	message: String = "Opening Browser...", auth_method: String = ""
+):
+	current_screen_name = "AUTH_BROWSER_OPEN"
+	var extra := JSON.stringify({"method": auth_method}) if not auth_method.is_empty() else ""
+	Global.metrics.track_screen_viewed("AUTH_BROWSER_OPEN", extra)
+	Global.metrics.flush.call_deferred()
 	sign_in_logo.hide()
 	sign_in_logo_sep.hide()
 	container_sign_in_step1.hide()
