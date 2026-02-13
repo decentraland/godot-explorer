@@ -868,7 +868,7 @@ func async_sync_attended_events() -> void:
 				"Notification permission not granted yet, scheduling anyway (OS will handle)"
 			)
 
-	var url = DclUrls.events_api() + "/events/?only_attendee=true"
+	var url = DclUrls.mobile_events_api() + "/?only_attendee=true"
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:

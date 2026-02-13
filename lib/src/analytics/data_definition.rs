@@ -168,6 +168,20 @@ pub struct SegmentEventPerformanceMetrics {
     // GPU render time in milliseconds (lower is better)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub benchmark_gpu_score: Option<f32>,
+
+    // Optimized asset usage counters
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_scene_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runtime_scene_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_wearable_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runtime_wearable_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_scene_pct: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_wearable_pct: Option<f32>,
 }
 
 #[derive(Serialize, Clone)]

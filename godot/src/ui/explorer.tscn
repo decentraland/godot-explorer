@@ -450,4 +450,3 @@ script = ExtResource("20_064cw")
 [connection signal="request_pause_scenes" from="UI/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
-[connection signal="close_all" from="UI/SafeMarginContainerNavbar/Navbar" to="." method="_on_navbar_close_all"]

@@ -11,19 +11,23 @@ var loading = false
 var discover_carrousel_item_loading: Control = null
 
 
+func clean_items():
+	if is_instance_valid(item_container):
+		for child in item_container.get_children():
+			child.queue_free()
+			item_container.remove_child(child)
+
+
 func on_request(_offset: int, limit: int) -> void:
-	if no_more_elements and not new_search:
+	if no_more_elements and not _new_search:
 		return  # we reach the capacity...
 
-	if new_search:
+	if _new_search:
 		loaded_elements = 0
-		new_search = false
+		_new_search = false
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.LOADING)
 
-		if is_instance_valid(item_container):
-			for child in item_container.get_children():
-				child.queue_free()
-				item_container.remove_child(child)
+		clean_items()
 	else:
 		if is_instance_valid(discover_carrousel_item_loading):
 			discover_carrousel_item_loading.show()
@@ -40,9 +44,15 @@ func on_request(_offset: int, limit: int) -> void:
 
 	# TODO: Implement more filters (categories, sorting, etc.)
 	# For now we only query the events API URL
-	var url = DclUrls.events_api() + "/events/"
+	var url = DclUrls.mobile_events_api() + "/"
+	url += "?sdk=7"
+
 	if search_param.length() > 0:
-		url += "?search=" + search_param.replace(" ", "%20")
+		url += "&search=" + search_param.uri_encode()
+
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
+	prints("_async_fetch_events", url)
 	_async_fetch_events(url, limit)
 
 
@@ -65,10 +75,8 @@ func _async_fetch_events(url: String, limit: int = 100):
 			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
 
-	loaded_elements += json.data.size()
-
-	if json.data.size() != limit:
-		no_more_elements = true
+	var api_result_count = json.data.size()
+	var no_more_from_api = api_result_count != limit
 
 	var filtered_data = []
 	for event_data in json.data:
@@ -82,8 +90,13 @@ func _async_fetch_events(url: String, limit: int = 100):
 				filtered_data.append(event_data)
 		json.data = filtered_data
 
+	if no_more_from_api:
+		no_more_elements = true
+
+	loaded_elements += json.data.size()
+
 	if json.data.is_empty():
-		if loaded_elements == 0:
+		if loaded_elements == 0 and no_more_elements:
 			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
 
@@ -94,7 +107,7 @@ func _async_fetch_events(url: String, limit: int = 100):
 		item_container.add_child(item)
 
 		item.set_data(event_data)
-		item.event_pressed.connect(discover._async_handle_event_notification)
+		item.event_pressed.connect(discover.on_event_pressed)
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
 

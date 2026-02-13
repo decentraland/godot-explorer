@@ -83,7 +83,6 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 8
 script = ExtResource("8_wyn32")
-default_margin = 30
 use_bottom = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Navbar/ScrollContainer/MarginContainer"]
@@ -387,9 +386,9 @@ theme_override_font_sizes/font_size = 20
 text = "Auto Graphics Adjustment"
 
 [node name="Label_DynamicGraphicsDesc" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
+modulate = Color(1, 1, 1, 0.7)
 layout_mode = 2
 theme_override_font_sizes/font_size = 12
-modulate = Color(1, 1, 1, 0.7)
 text = "Automatically adjusts graphics based on device performance"
 
 [node name="CheckBox_DynamicGraphics" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
@@ -399,10 +398,9 @@ text = "Enable Dynamic Graphics"
 
 [node name="Label_DynamicGraphicsStatus" type="Label" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/DynamicGraphics"]
 unique_name_in_owner = true
+modulate = Color(0.5, 1, 0.5, 1)
 layout_mode = 2
 theme_override_font_sizes/font_size = 12
-modulate = Color(0.5, 1, 0.5, 1)
-text = ""
 
 [node name="GraphicProfile" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
@@ -996,6 +994,7 @@ theme_override_font_sizes/font_size = 22
 text = "REPORT CONTENT"
 
 [node name="Button_ReportBug" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
+visible = false
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0

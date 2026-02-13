@@ -109,6 +109,12 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 None
             };
 
+            tracing::debug!(
+                "PointerEvents update: entity {:?}, has_pointer_events={}",
+                entity,
+                new_value.is_some()
+            );
+
             let godot_entity_node = godot_dcl_scene.ensure_godot_entity_node(entity);
 
             if let Some(base_ui) = godot_entity_node.base_ui.as_mut() {
@@ -243,6 +249,16 @@ pub fn pointer_events_system(
         &current_raycast_scene_id,
         &current_raycast_entity_id,
     );
+
+    if pointer_event.is_none() {
+        if let Some(raycast) = current_raycast.as_ref() {
+            tracing::debug!(
+                "Raycast hit entity {:?} in scene {:?} but NO PointerEvents configured",
+                raycast.entity_id,
+                raycast.scene_id
+            );
+        }
+    }
 
     if pointer_event.is_none() || changed_inputs.is_empty() {
         return;

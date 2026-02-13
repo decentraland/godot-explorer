@@ -3,14 +3,17 @@
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
 [ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/components/utils/clean_orientation.gd" id="3_rdch8"]
+[ext_resource type="PackedScene" uid="uid://cqnj0gb2vybsi" path="res://src/ui/components/static_button/static_button.tscn" id="4_lhdku"]
+[ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/menu/icons/discover-outlined.svg" id="5_2tihm"]
+[ext_resource type="Texture2D" uid="uid://bh0eqgmbudps4" path="res://src/ui/components/menu/icons/discover.svg" id="6_2fqoa"]
+[ext_resource type="Texture2D" uid="uid://jdyo4awvfkmt" path="res://src/ui/components/menu/icons/backpack-outlined.svg" id="8_2tihm"]
+[ext_resource type="Texture2D" uid="uid://dfgfvtt5o5r30" path="res://src/ui/components/menu/icons/backpack.svg" id="9_2fqoa"]
+[ext_resource type="Texture2D" uid="uid://cvxfoyvj0kqtw" path="res://src/ui/components/menu/icons/settings-outlined.svg" id="11_rdch8"]
+[ext_resource type="Texture2D" uid="uid://dp6cvwbfawfsa" path="res://src/ui/components/menu/icons/settings.svg" id="12_7v87b"]
 [ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/components/discover/discover_button.gd" id="13_2fqoa"]
-[ext_resource type="PackedScene" uid="uid://c6rqy3vx84bnm" path="res://src/ui/components/animated_button/hud_button.tscn" id="15_0o5gq"]
-[ext_resource type="SpriteFrames" uid="uid://dixfuphroeh3a" path="res://assets/animations/discover_animation.tres" id="15_rdch8"]
 [ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/components/backpack/backpack_button.gd" id="16_p7nyr"]
-[ext_resource type="SpriteFrames" uid="uid://pdugkxtvb5a2" path="res://assets/animations/backpack_animation.tres" id="17_iib41"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="17_tc0me"]
 [ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/components/settings/settings_button.gd" id="18_3id7u"]
-[ext_resource type="SpriteFrames" uid="uid://bkr6jgehk1ji0" path="res://assets/animations/settings_animation.tres" id="19_j150v"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
 [ext_resource type="PackedScene" uid="uid://b3e5xybvamaqr" path="res://src/ui/components/menu/account_deletion_popup.tscn" id="31_kkhkt"]
 
@@ -20,18 +23,15 @@ colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_8oh0n"]
 gradient = SubResource("Gradient_6v8vt")
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_080im"]
-bg_color = Color(0.0862745, 0.0784314, 0.105882, 1)
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_hpe6q"]
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_hefdq"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2tihm"]
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+shadow_color = Color(0, 0, 0, 0.2509804)
+shadow_size = 4
+shadow_offset = Vector2(0, -4)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_udswp"]
 resource_local_to_scene = false
 resource_name = "Tabs"
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_lhdku"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4hsmp"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -112,14 +112,17 @@ backpack = NodePath("../Control_Backpack")
 [node name="BottomBar_Portrait" type="PanelContainer" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_080im")
+theme_override_styles/panel = SubResource("StyleBoxFlat_2tihm")
 script = ExtResource("3_rdch8")
 clean_on_landscape = true
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/BottomBar_Portrait"]
+custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 40
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/BottomBar_Portrait/MarginContainer"]
 layout_mode = 2
@@ -128,50 +131,44 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 2
-theme_override_constants/separation = 50
+theme_override_constants/separation = 56
 alignment = 1
 
-[node name="HudButton_Discover" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
+[node name="StaticButton_Discover" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(82, 82)
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_hpe6q")
-icon_alignment = 1
-vertical_icon_alignment = 0
+texture_normal = ExtResource("5_2tihm")
+texture_pressed = ExtResource("6_2fqoa")
+ignore_texture_size = true
+stretch_mode = 0
 script = ExtResource("13_2fqoa")
-sprite_frames_source = ExtResource("15_rdch8")
-sprite_frames_scale = Vector2(1, 1)
 
-[node name="HudButton_Backpack" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
+[node name="StaticButton_Backpack" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(82, 82)
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_hefdq")
-icon_alignment = 1
-vertical_icon_alignment = 0
+texture_normal = ExtResource("8_2tihm")
+texture_pressed = ExtResource("9_2fqoa")
+ignore_texture_size = true
+stretch_mode = 0
 script = ExtResource("16_p7nyr")
-sprite_frames_source = ExtResource("17_iib41")
-sprite_frames_scale = Vector2(1, 1)
+
+[node name="StaticButton_Settings" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(82, 82)
+layout_mode = 2
+texture_normal = ExtResource("11_rdch8")
+texture_pressed = ExtResource("12_7v87b")
+ignore_texture_size = true
+stretch_mode = 0
+script = ExtResource("18_3id7u")
 
 [node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 60)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 button_group = SubResource("ButtonGroup_udswp")
-
-[node name="HudButton_Settings" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("15_0o5gq")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-button_group = SubResource("ButtonGroup_lhdku")
-icon_alignment = 1
-vertical_icon_alignment = 0
-script = ExtResource("18_3id7u")
-sprite_frames_source = ExtResource("19_j150v")
-sprite_frames_scale = Vector2(1, 1)
 
 [node name="ColorRect_Portrait_Bottom_SafeArea" type="ColorRect" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
@@ -236,6 +233,7 @@ layout_mode = 1
 
 [node name="Control_Modal" type="Control" parent="."]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

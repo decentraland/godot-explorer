@@ -20,8 +20,9 @@ use crate::dcl::common::{
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
+use super::crdt::message::process_many_messages;
 use super::crdt::SceneCrdtState;
-use super::{crdt::message::process_many_messages, serialization::reader::DclReader};
+use super::serialization::reader::DclReader;
 use super::{RendererResponse, SceneId, SceneResponse, SpawnDclSceneData};
 
 use std::cell::RefCell;
@@ -216,12 +217,50 @@ pub(crate) fn scene_thread(
         if let Some(file) = file {
             let buf = file.get_buffer(file.get_length() as i64).to_vec();
 
+            tracing::info!(
+                "{} main.crdt: raw_size={} bytes",
+                log_info.prefix(),
+                buf.len()
+            );
+
             let mut stream = DclReader::new(&buf);
             let mut scene_crdt_state = scene_crdt.lock().unwrap();
 
             process_many_messages(&mut stream, &mut scene_crdt_state);
 
             let dirty = scene_crdt_state.take_dirty();
+
+            tracing::info!(
+                "{} main.crdt: dirty_lww_components={}, dirty_gos_components={}, entities_born={}, entities_died={}",
+                log_info.prefix(),
+                dirty.lww.len(),
+                dirty.gos.len(),
+                dirty.entities.born.len(),
+                dirty.entities.died.len()
+            );
+
+            for (component_id, entities) in dirty.lww.iter() {
+                tracing::info!(
+                    "{}   LWW component {} has {} dirty entities",
+                    log_info.prefix(),
+                    component_id.0,
+                    entities.len()
+                );
+            }
+            for (component_id, entities) in dirty.gos.iter() {
+                tracing::info!(
+                    "{}   GOS component {} has {} dirty entities",
+                    log_info.prefix(),
+                    component_id.0,
+                    entities.len()
+                );
+            }
+
+            // Pass raw bytes directly to JS — the SDK needs ALL components
+            // (including ones unknown to Godot) for scene logic like PointerEvents.
+            // Only the renderer side (dirty_crdt_state above) filters to known components.
+            scene_main_crdt = Some(buf);
+
             thread_sender_to_main
                 .send(SceneResponse::Ok {
                     scene_id,
@@ -232,8 +271,6 @@ pub(crate) fn scene_thread(
                     deno_memory_stats: None,
                 })
                 .expect("error sending scene response!!");
-
-            scene_main_crdt = Some(buf);
         }
     }
 
@@ -253,7 +290,7 @@ pub(crate) fn scene_thread(
     }
 
     let scene_code = format!(
-        "var module = {{ exports: {{}} }};{};module.exports.__after__ = async function() {{}};module.exports",
+        "var module = {{ exports: {{}} }};(function(){{{}}})();module.exports.__after__ = async function() {{}};module.exports",
         file.unwrap().get_as_text()
     );
 
@@ -328,6 +365,11 @@ pub(crate) fn scene_thread(
         .build()
         .unwrap();
 
+    tracing::info!(
+        "{} loading scene code (size={} bytes)",
+        log_info.prefix(),
+        scene_code.len()
+    );
     let script = rt.block_on(async { runtime.execute_script("<loader>", scene_code) });
 
     let script = match script {

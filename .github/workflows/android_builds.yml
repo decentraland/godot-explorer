@@ -6,6 +6,10 @@ on:
         required: true
       ANDROID_KEYSTORE_PASSWORD:
         required: true
+      APK_ANDROID_KEYSTORE_BASE64:
+        required: true
+      APK_ANDROID_KEYSTORE_PASSWORD:
+        required: true
       SENTRY_AUTH_TOKEN:
         required: true
       SENTRY_ORG:
@@ -25,7 +29,7 @@ jobs:
   build:
     name: Build VR and Mobile
     runs-on: warp-ubuntu-latest-x64-4x
-    timeout-minutes: 25
+    timeout-minutes: 35
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
@@ -63,7 +67,36 @@ jobs:
           cargo run -- export --target android --format apk --release
           mkdir -p android-debug-symbols
           cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
-      
+
+      # Decode and setup keystore for APK signing
+      - name: Setup APK Signing Keystore
+        run: |
+          echo "${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}" | base64 -d > apk-release.keystore
+          ls -la apk-release.keystore
+
+      # Sign the APK file
+      - name: Sign Android APK
+        run: |
+          # Find Android build-tools
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
+          echo "Using build-tools: $BUILD_TOOLS_DIR"
+
+          # Align the APK first (required for apksigner)
+          ${BUILD_TOOLS_DIR}zipalign -v -p 4 exports/decentraland.godot.client.apk exports/decentraland.godot.client-aligned.apk
+
+          # Sign the APK
+          ${BUILD_TOOLS_DIR}apksigner sign --ks apk-release.keystore \
+            --ks-pass pass:"${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}" \
+            --out exports/decentraland.godot.client-signed.apk \
+            exports/decentraland.godot.client-aligned.apk
+
+          # Verify the signature
+          ${BUILD_TOOLS_DIR}apksigner verify --verbose exports/decentraland.godot.client-signed.apk
+
+          # Replace unsigned with signed
+          mv exports/decentraland.godot.client-signed.apk exports/decentraland.godot.client.apk
+          rm exports/decentraland.godot.client-aligned.apk
+
       - name: Export Android AAB
         run: |
           cargo run -- export --target android --format aab --release

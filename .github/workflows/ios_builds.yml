@@ -113,7 +113,7 @@ jobs:
       # Build section
       - name: Cargo install
         timeout-minutes: 8
-        run: cargo run -- install --targets ios --no-strip
+        run: cargo run -- install --targets ios
 
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
