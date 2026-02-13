@@ -881,8 +881,9 @@ func _async_block_user(user_address: String) -> void:
 		printerr("Block failed: ", PromiseUtils.get_error_message(promise))
 		return
 
-	# Block/Delete Friend metric
-	Global.metrics.track_block_delete_friend(user_address)
+	# Block User metric (track whether blocked user was a friend)
+	var was_friend := current_friendship_status == Global.FriendshipStatus.ACCEPTED
+	Global.metrics.track_block_user(user_address, was_friend)
 
 	Global.social_blacklist.add_blocked(user_address)  # Update local cache
 	_async_delete_friendship_if_exists(user_address)  # Keep existing logic
@@ -1148,8 +1149,8 @@ func _async_unfriend(friend_address: String) -> void:
 		printerr("Failed to unfriend: ", promise.get_data().get_error())
 		return
 
-	# Block/Delete Friend metric
-	Global.metrics.track_block_delete_friend(friend_address)
+	# Unfriend metric
+	Global.metrics.track_unfriend(friend_address)
 
 	print("Profile: Unfriend successful, waiting for signal to update lists")
 	# The signal friendship_deleted will update the UI

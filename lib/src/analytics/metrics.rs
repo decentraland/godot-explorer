@@ -18,9 +18,10 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
-        SegmentEventBlockDeleteFriend, SegmentEventChatMessageSent, SegmentEventClickButton,
-        SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventLoginSuccess, SegmentEventRequestFriend, SegmentEventScreenViewed,
+        SegmentEventAuthSuccess, SegmentEventBlockUser, SegmentEventChatMessageSent,
+        SegmentEventClickButton, SegmentEventCommonExplorerFields,
+        SegmentEventExplorerMoveToParcel, SegmentEventRequestFriend, SegmentEventScreenViewed,
+        SegmentEventUnfriend,
     },
     frame::Frame,
 };
@@ -227,8 +228,8 @@ impl Metrics {
     }
 
     #[func]
-    pub fn track_login_success(&mut self) {
-        let event = SegmentEvent::LoginSuccess(SegmentEventLoginSuccess {});
+    pub fn track_auth_success(&mut self) {
+        let event = SegmentEvent::AuthSuccess(SegmentEventAuthSuccess {});
         self.events.push(event.clone());
         self.debug_print_event("Auth Success", &event);
     }
@@ -255,10 +256,20 @@ impl Metrics {
     }
 
     #[func]
-    pub fn track_block_delete_friend(&mut self, receiver_id: String) {
-        let event = SegmentEvent::BlockDeleteFriend(SegmentEventBlockDeleteFriend { receiver_id });
+    pub fn track_block_user(&mut self, receiver_id: String, is_friend: bool) {
+        let event = SegmentEvent::BlockUser(SegmentEventBlockUser {
+            receiver_id,
+            is_friend,
+        });
         self.events.push(event.clone());
-        self.debug_print_event("Friend Block Delete", &event);
+        self.debug_print_event("Block User", &event);
+    }
+
+    #[func]
+    pub fn track_unfriend(&mut self, receiver_id: String) {
+        let event = SegmentEvent::Unfriend(SegmentEventUnfriend { receiver_id });
+        self.events.push(event.clone());
+        self.debug_print_event("Unfriend", &event);
     }
 
     #[func]

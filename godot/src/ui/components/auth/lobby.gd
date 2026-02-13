@@ -115,7 +115,7 @@ func track_lobby_screen(screen_name: String):
 
 
 func show_restore_screen():
-	track_lobby_screen("COMEBACK")
+	track_lobby_screen("WELCOME")
 	button_back.hide()
 	restore_name_footer.show()
 	label_name.show()
@@ -184,17 +184,8 @@ func _on_notification_permission_result(_granted: bool):
 		)
 
 
-func get_auth_home_screen_name():
-	if Global.is_ios():
-		return "AUTH_HOME_IOS"
-	if Global.is_android():
-		return "AUTH_HOME_ANDROID"
-
-	return "AUTH_HOME_DESKTOP"
-
-
-func show_auth_home_screen():
-	track_lobby_screen(get_auth_home_screen_name())
+func show_auth_method_screen():
+	track_lobby_screen("AUTH_METHOD")
 	sign_in_logo.show()
 	sign_in_logo_sep.show()
 	container_sign_in_step1.show()
@@ -262,8 +253,8 @@ func async_close_sign_in():
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
 
-	# Login Success metric
-	Global.metrics.track_login_success()
+	# Auth Success metric
+	Global.metrics.track_auth_success()
 
 	if _should_go_to_explorer_from_deeplink():
 		go_to_explorer()
@@ -542,7 +533,7 @@ func _on_button_start_pressed():
 	button_enter_as_guest.visible = false
 	sign_in_title.text = "Create your account"
 	is_creating_account = true
-	show_auth_home_screen()
+	show_auth_method_screen()
 
 
 # gdlint:ignore = async-function-name
@@ -578,7 +569,7 @@ func _on_button_go_to_sign_in_pressed():
 	button_enter_as_guest.hide()
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
-	show_auth_home_screen()
+	show_auth_method_screen()
 
 
 func _on_button_back_pressed():
@@ -608,7 +599,7 @@ func _on_button_cancel_pressed():
 	Global.metrics.track_click_button("cancel", current_screen_name, "")
 	_stop_auth_timeout()
 	Global.player_identity.abort_try_connect_account()
-	show_auth_home_screen()
+	show_auth_method_screen()
 
 
 func show_auth_error_screen(error_message: String):
@@ -630,7 +621,7 @@ func _on_auth_timeout():
 
 func _on_button_try_again_pressed():
 	Global.metrics.track_click_button("try_again", current_screen_name, "")
-	show_auth_home_screen()
+	show_auth_method_screen()
 
 
 func _stop_auth_timeout():

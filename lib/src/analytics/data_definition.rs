@@ -56,10 +56,11 @@ pub enum SegmentEvent {
     ChatMessageSent(SegmentEventChatMessageSent),
     ClickButton(SegmentEventClickButton),
     ScreenViewed(SegmentEventScreenViewed),
-    LoginSuccess(SegmentEventLoginSuccess),
+    AuthSuccess(SegmentEventAuthSuccess),
     RequestFriend(SegmentEventRequestFriend),
     AcceptFriend(SegmentEventAcceptFriend),
-    BlockDeleteFriend(SegmentEventBlockDeleteFriend),
+    BlockUser(SegmentEventBlockUser),
+    Unfriend(SegmentEventUnfriend),
 }
 
 #[derive(Serialize, Clone)]
@@ -270,7 +271,7 @@ pub struct SegmentEventScreenViewed {
 }
 
 #[derive(Serialize, Clone)]
-pub struct SegmentEventLoginSuccess {}
+pub struct SegmentEventAuthSuccess {}
 
 #[derive(Serialize, Clone)]
 pub struct SegmentEventRequestFriend {
@@ -288,8 +289,16 @@ pub struct SegmentEventAcceptFriend {
 }
 
 #[derive(Serialize, Clone)]
-pub struct SegmentEventBlockDeleteFriend {
-    // Wallet address of the user being blocked or removed.
+pub struct SegmentEventBlockUser {
+    // Wallet address of the user being blocked.
+    pub receiver_id: String,
+    // Whether the blocked user was a friend at the time of blocking.
+    pub is_friend: bool,
+}
+
+#[derive(Serialize, Clone)]
+pub struct SegmentEventUnfriend {
+    // Wallet address of the user being unfriended.
     pub receiver_id: String,
 }
 
@@ -339,7 +348,7 @@ pub fn build_segment_event_batch_item(
             serde_json::to_value(event).unwrap(),
             None,
         ),
-        SegmentEvent::LoginSuccess(event) => (
+        SegmentEvent::AuthSuccess(event) => (
             "Auth Success".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
@@ -354,8 +363,13 @@ pub fn build_segment_event_batch_item(
             serde_json::to_value(event).unwrap(),
             None,
         ),
-        SegmentEvent::BlockDeleteFriend(event) => (
-            "Friend Block Delete".to_string(),
+        SegmentEvent::BlockUser(event) => (
+            "Block User".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::Unfriend(event) => (
+            "Unfriend".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),
