@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=30 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" uid="uid://do4lb6hapbydx" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="3_p5qhj"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_wk266"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
+[ext_resource type="PackedScene" path="res://src/ui/components/discover/first_time_user_experience.tscn" id="5_3tlbd"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="7_vcjym"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="9_qv8xq"]
@@ -17,9 +18,11 @@
 [ext_resource type="Texture2D" uid="uid://dpto8joivusog" path="res://assets/themes/dark_dcl_theme/icons/cancel-icon.svg" id="15_ypsmd"]
 [ext_resource type="PackedScene" uid="uid://bi3eesytuc1tr" path="res://src/ui/components/auth/login.tscn" id="17_vcjym"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="18_2q7xc"]
-[ext_resource type="Texture2D" uid="uid://0562185xxlpt" path="res://assets/ui/sign-in/dice.svg" id="18_3tlbd"]
+[ext_resource type="Texture2D" uid="uid://bhx6cquf7bji4" path="res://assets/ui/sign-in/dice2.svg" id="18_3tlbd"]
 [ext_resource type="LabelSettings" uid="uid://ipxcah14n2ng" path="res://assets/themes/lobby_title.tres" id="18_ypsmd"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="21_ypsmd"]
+[ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="22_eula"]
+[ext_resource type="Texture2D" uid="uid://c55bxhde80ljl" path="res://assets/ui/sign-in/back-chevron.svg" id="back_chevron"]
 
 [sub_resource type="Gradient" id="Gradient_kt8ab"]
 offsets = PackedFloat32Array(0.00296736, 1)
@@ -43,8 +46,8 @@ corner_radius_bottom_right = 18
 corner_radius_bottom_left = 18
 
 [sub_resource type="LabelSettings" id="LabelSettings_vcjym"]
-font = ExtResource("18_2q7xc")
-font_size = 50
+font = ExtResource("21_ypsmd")
+font_size = 48
 
 [sub_resource type="LabelSettings" id="LabelSettings_ypsmd"]
 font = ExtResource("18_2q7xc")
@@ -115,10 +118,23 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_wk266")
 
+[node name="FTUE" parent="Main" instance=ExtResource("5_3tlbd")]
+visible = false
+layout_mode = 2
+
 [node name="Loading" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+
+[node name="LoadingSolidBg" type="ColorRect" parent="Main/Loading"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.411765, 0.121569, 0.662745, 1)
 
 [node name="TextureProgressBar" parent="Main/Loading" instance=ExtResource("11_7iulh")]
 layout_mode = 1
@@ -152,6 +168,207 @@ texture = ExtResource("3_mwmw7")
 expand_mode = 1
 stretch_mode = 4
 
+[node name="Eula" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Main/Eula"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxFixed" type="VBoxContainer" parent="Main/Eula/MarginContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/Eula/MarginContainer/VBoxFixed"]
+custom_minimum_size = Vector2(425, 650)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Title" type="Label" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 36
+text = "Welcome!"
+label_settings = ExtResource("18_ypsmd")
+
+[node name="Label_Subtitle" type="Label" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+text = "Before playing, you have to agree to our terms."
+label_settings = ExtResource("22_eula")
+autowrap_mode = 2
+
+[node name="HSeparator2" type="HSeparator" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 69
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="EulaCheckArea" type="Control" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+custom_minimum_size = Vector2(80, 110)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/EulaCheckArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 7
+
+[node name="CheckBox_Eula" type="CheckBox" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/EulaCheckArea/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("9_ypsmd")
+theme_override_constants/icon_max_width = 40
+autowrap_mode = 2
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/EulaCheckArea/HBoxContainer"]
+clip_contents = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/normal_font = ExtResource("5_g62s5")
+theme_override_font_sizes/normal_font_size = 28
+theme_override_font_sizes/bold_font_size = 28
+theme_override_font_sizes/bold_italics_font_size = 28
+theme_override_font_sizes/italics_font_size = 28
+theme_override_font_sizes/mono_font_size = 28
+bbcode_enabled = true
+text = "I have read and accept Decentraland's [color=#FF2D55][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#FF2D55][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#FF2D55][url=\"https://decentraland.org/content/\"]Content Policy[/url][/color]."
+fit_content = true
+scroll_active = false
+
+[node name="ButtonSpacer" type="Control" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Button_AcceptEula" type="Button" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_override_font_sizes/font_size = 30
+disabled = true
+text = "ACCEPT"
+icon_alignment = 2
+
+[node name="ButtonPad" type="HSeparator" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 92
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="VersionUpgrade" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Main/VersionUpgrade"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxFixed" type="VBoxContainer" parent="Main/VersionUpgrade/MarginContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed"]
+custom_minimum_size = Vector2(425, 650)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Title" type="Label" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 36
+text = "New Version Available"
+label_settings = ExtResource("18_ypsmd")
+
+[node name="Label_Subtitle" type="Label" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+text = "A new version of Decentraland is available. Update for the best experience."
+label_settings = ExtResource("22_eula")
+autowrap_mode = 2
+
+[node name="ButtonSpacer" type="Control" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Button_Update" type="Button" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_override_font_sizes/font_size = 30
+text = "UPDATE"
+icon_alignment = 2
+
+[node name="HSeparator3" type="HSeparator" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_NotNow" type="Button" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 30
+text = "NOT NOW"
+
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
@@ -170,24 +387,32 @@ theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 100
 theme_override_constants/margin_bottom = 40
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Main/Start/MarginContainer"]
-custom_minimum_size = Vector2(425, 450)
+[node name="VBoxFixed" type="VBoxContainer" parent="Main/Start/MarginContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="Main/Start/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/Start/MarginContainer/VBoxFixed"]
+custom_minimum_size = Vector2(425, 650)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 texture = ExtResource("3_p5qhj")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="Main/Start/MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="RichTextLabel" type="RichTextLabel" parent="Main/Start/MarginContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+text = "Get started!"
+label_settings = ExtResource("18_ypsmd")
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
 layout_mode = 2
 theme_override_fonts/normal_font = ExtResource("7_vcjym")
 theme_override_fonts/bold_font = ExtResource("4_ghcwt")
@@ -200,12 +425,11 @@ bbcode_enabled = true
 text = "[b]Discover a virtual social world[/b] shaped by its community of creators & explorers."
 fit_content = true
 
-[node name="HSeparator2" type="HSeparator" parent="Main/Start/MarginContainer/VBoxContainer"]
+[node name="ButtonSpacer" type="Control" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 40
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+size_flags_vertical = 3
 
-[node name="Button_Start" type="Button" parent="Main/Start/MarginContainer/VBoxContainer"]
+[node name="Button_Start" type="Button" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 focus_mode = 0
@@ -216,12 +440,12 @@ theme_override_font_sizes/font_size = 30
 text = "CREATE ACCOUNT"
 icon_alignment = 2
 
-[node name="HSeparator3" type="HSeparator" parent="Main/Start/MarginContainer/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Button_GoToSignIn" type="Button" parent="Main/Start/MarginContainer/VBoxContainer"]
+[node name="Button_GoToSignIn" type="Button" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 focus_mode = 0
@@ -250,12 +474,18 @@ theme_override_constants/margin_bottom = 40
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="RichTextLabel" type="Label" parent="Main/BackpackContainer/MarginContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="Main/BackpackContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_constants/separation = 17
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Name" type="Label" parent="Main/BackpackContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
-theme_override_font_sizes/font_size = 68
-text = "Create Avatar"
-horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+text = "    Create your avatar"
+label_settings = ExtResource("18_ypsmd")
 
 [node name="Backpack" parent="Main/BackpackContainer/MarginContainer/VBoxContainer" instance=ExtResource("9_qv8xq")]
 unique_name_in_owner = true
@@ -264,18 +494,22 @@ hide_background = true
 hide_navbar = true
 
 [node name="Button_Continue" type="Button" parent="Main/BackpackContainer/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(200, 60)
+custom_minimum_size = Vector2(624, 80)
 layout_mode = 2
-size_flags_horizontal = 8
+size_flags_horizontal = 4
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_override_font_sizes/font_size = 30
 text = "NEXT"
 icon_alignment = 2
 
+[node name="HSeparator3" type="HSeparator" parent="Main/BackpackContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -285,9 +519,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 100
+theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 100
+theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 125
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer"]
@@ -301,18 +535,37 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 
-[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
+[node name="HSeparator2" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
+layout_mode = 2
+theme_override_constants/separation = 29
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
+layout_mode = 2
+
+[node name="Button_Back" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_8mib7")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_8mib7")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_8mib7")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_8mib7")
+icon = ExtResource("back_chevron")
+expand_icon = true
+
+[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
-theme_override_font_sizes/font_size = 36
-text = "Pick Your Name"
+theme_override_font_sizes/font_size = 20
+text = "Pick your name"
 label_settings = ExtResource("18_ypsmd")
 horizontal_alignment = 1
 
-[node name="HSeparator2" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
+[node name="HSeparator3" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 46
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead"]
@@ -323,8 +576,7 @@ theme_override_constants/separation = 12
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-advice = "*Avoid using your real name for safety"
-hint = "Username"
+hint = "Name"
 
 [node name="VBoxContainer" type="MarginContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer"]
 layout_mode = 2
@@ -333,7 +585,7 @@ theme_override_constants/margin_top = 7
 
 [node name="Button_RandomName" type="Button" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/VBoxContainer"]
 texture_filter = 4
-custom_minimum_size = Vector2(66, 66)
+custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
 size_flags_vertical = 4
 theme = ExtResource("9_ypsmd")
@@ -348,36 +600,6 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_rqbts")
 icon = ExtResource("18_3tlbd")
 icon_alignment = 1
 expand_icon = true
-
-[node name="RestoreNameHead" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(425, 0)
-layout_mode = 2
-size_flags_horizontal = 4
-alignment = 1
-
-[node name="TextureRect" type="TextureRect" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameHead"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-size_flags_horizontal = 4
-texture = ExtResource("3_p5qhj")
-expand_mode = 3
-stretch_mode = 4
-
-[node name="HSeparator" type="HSeparator" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameHead"]
-layout_mode = 2
-theme_override_constants/separation = 10
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="Label" type="Label" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameHead"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("5_g62s5")
-theme_override_font_sizes/font_size = 36
-text = "Welcome Back!"
-label_settings = ExtResource("18_ypsmd")
-horizontal_alignment = 1
 
 [node name="TextureRect" type="Control" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -421,7 +643,6 @@ horizontal_alignment = 1
 
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/RestoreAndChooseName/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 11
 alignment = 2
@@ -473,6 +694,75 @@ theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
 text = "USE ANOTHER ACCOUNT"
 
+[node name="AuthError" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Main/AuthError"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -86.0
+offset_bottom = 86.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 100
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 100
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxFixed" type="VBoxContainer" parent="Main/AuthError/MarginContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/AuthError/MarginContainer/VBoxFixed"]
+custom_minimum_size = Vector2(425, 650)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Title" type="Label" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
+custom_minimum_size = Vector2(425, 0)
+layout_mode = 2
+text = "Something went wrong"
+label_settings = ExtResource("18_ypsmd")
+autowrap_mode = 3
+
+[node name="Label_ErrorMessage" type="Label" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+label_settings = ExtResource("22_eula")
+autowrap_mode = 2
+
+[node name="ButtonSpacer" type="Control" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Button_TryAgain" type="Button" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 30
+text = "TRY AGAIN"
+icon_alignment = 2
+
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
@@ -483,6 +773,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = -86.0
+offset_bottom = 86.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 100
@@ -490,53 +782,58 @@ theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 100
 theme_override_constants/margin_bottom = 40
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn/MarginContainer"]
-custom_minimum_size = Vector2(425, 450)
+[node name="VBoxFixed" type="VBoxContainer" parent="Main/SignIn/MarginContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="Main/SignIn/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed"]
+custom_minimum_size = Vector2(425, 650)
+layout_mode = 2
+
+[node name="SignInLogo" type="TextureRect" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 texture = ExtResource("3_p5qhj")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer"]
+[node name="SignInLogoSep" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="SignInTitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1"]
+[node name="SignInTitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 36
-text = "Sign In to Decentraland"
+text = "Sign in to Decentraland"
 label_settings = ExtResource("18_ypsmd")
 autowrap_mode = 3
 
-[node name="HSeparator5" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1"]
+[node name="HSeparator5" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1"]
 layout_mode = 2
 theme_override_constants/separation = 45
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Login" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" instance=ExtResource("17_vcjym")]
+[node name="Login" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" instance=ExtResource("17_vcjym")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator6" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1"]
+[node name="HSeparator6" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1"]
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Button_EnterAsGuest" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1"]
+[node name="Button_EnterAsGuest" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 80)
 layout_mode = 2
@@ -547,12 +844,12 @@ theme_override_font_sizes/font_size = 24
 text = "QUICK DIVE AS A GUEST"
 expand_icon = true
 
-[node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="Label_Title" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
+[node name="Label_Title" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -562,17 +859,18 @@ text = "Opening Browser..."
 label_settings = SubResource("LabelSettings_ypsmd")
 autowrap_mode = 3
 
-[node name="HSeparator5" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
+[node name="HSeparator5" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="AuthSpinner" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" instance=ExtResource("11_7iulh")]
+[node name="AuthSpinner" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" instance=ExtResource("11_7iulh")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 160)
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
+[node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -581,12 +879,12 @@ theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator4" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
+[node name="HSeparator4" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Button_Cancel" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2"]
+[node name="Button_Cancel" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
@@ -599,7 +897,7 @@ theme_override_font_sizes/font_size = 30
 text = "CANCEL"
 expand_icon = true
 
-[node name="ButtonCancelIcon" type="TextureRect" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel"]
+[node name="ButtonCancelIcon" type="TextureRect" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -616,14 +914,57 @@ grow_vertical = 2
 texture = ExtResource("15_ypsmd")
 expand_mode = 1
 
-[connection signal="pressed" from="Main/Start/MarginContainer/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
-[connection signal="pressed" from="Main/Start/MarginContainer/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_wk266")
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="Control" type="Control" parent="SafeMarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Button_Back" type="Button" parent="SafeMarginContainer/Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 0
+offset_left = 40.0
+offset_top = 72.0
+offset_right = 100.0
+offset_bottom = 132.0
+focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_8mib7")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_8mib7")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_8mib7")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_8mib7")
+icon = ExtResource("back_chevron")
+expand_icon = true
+
+[connection signal="ftue_completed" from="Main/FTUE" to="." method="_on_ftue_ftue_completed"]
+[connection signal="jump_in" from="Main/FTUE" to="." method="_on_ftue_jump_in"]
+[connection signal="jump_in_world" from="Main/FTUE" to="." method="_on_ftue_jump_in_world"]
+[connection signal="gui_input" from="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/EulaCheckArea" to="." method="_on_eula_check_area_gui_input"]
+[connection signal="toggled" from="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/EulaCheckArea/HBoxContainer/CheckBox_Eula" to="." method="_on_check_box_eula_toggled"]
+[connection signal="meta_clicked" from="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/EulaCheckArea/HBoxContainer/RichTextLabel" to="." method="_on_eula_meta_clicked"]
+[connection signal="pressed" from="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/Button_AcceptEula" to="." method="_on_button_accept_eula_pressed"]
+[connection signal="pressed" from="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer/Button_Update" to="." method="_on_button_update_pressed"]
+[connection signal="pressed" from="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer/Button_NotNow" to="." method="_on_button_not_now_pressed"]
+[connection signal="pressed" from="Main/Start/MarginContainer/VBoxFixed/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
+[connection signal="pressed" from="Main/Start/MarginContainer/VBoxFixed/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
 [connection signal="pressed" from="Main/BackpackContainer/MarginContainer/VBoxContainer/Button_Continue" to="." method="_on_button_continue_pressed"]
+[connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2/Button_Back" to="." method="_on_button_back_pressed"]
 [connection signal="dcl_line_edit_changed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/DclLineEdit" to="." method="_on_dcl_line_edit_dcl_line_edit_changed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/VBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
 [connection signal="gui_input" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/TextureRect/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/Button_Next" to="." method="_on_button_next_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
-[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
-[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer/Button_TryAgain" to="." method="_on_button_try_again_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/Control/Button_Back" to="." method="_on_button_back_pressed"]

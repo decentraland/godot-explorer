@@ -525,6 +525,16 @@ func get_explorer() -> Explorer:
 	return null
 
 
+func sign_out() -> void:
+	NotificationsManager.stop_polling()
+	social_service.unsubscribe_from_block_updates()
+	social_blacklist.clear_blocked()
+	social_blacklist.clear_muted()
+	get_config().session_account = {}
+	get_config().save_to_settings_file()
+	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+
+
 func explorer_has_focus() -> bool:
 	var explorer = get_explorer()
 	if explorer == null:

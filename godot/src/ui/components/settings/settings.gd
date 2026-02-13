@@ -494,6 +494,10 @@ func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
 
 
+func _on_button_sign_out_pressed() -> void:
+	Global.sign_out()
+
+
 func _on_button_test_notification_pressed() -> void:
 	# Test notification with emojis and accents in both title and body
 	# This will test if iOS can display both correctly

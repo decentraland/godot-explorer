@@ -943,13 +943,11 @@ theme_override_font_sizes/font_size = 22
 text = "DELETE ACCOUNT"
 
 [node name="Button_LogOut" type="Button" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
-visible = false
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
-disabled = true
 text = "LOG OUT"
 
 [node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account"]
@@ -1048,5 +1046,6 @@ hide_on_portrait = true
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_TestNotification/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_OpenUserData/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_LogOut" to="." method="_on_button_sign_out_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
 [connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Account/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]

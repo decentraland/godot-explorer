@@ -9,7 +9,6 @@ signal checked_error
 @export var allow_edge_spaces: bool = false
 @export var allow_special_characters: bool = false
 @export var is_optional: bool = false
-@export var advice: String = "Any advice or nothing"
 @export var hint: String = "Hint"
 @export var error_color: Color = Color.RED
 @export var show_tag: bool = false
@@ -20,9 +19,7 @@ var text_value: String = ""
 
 @onready var line_edit: LineEdit = %LineEdit
 @onready var label_length: Label = %Label_Length
-@onready var label_advice: Label = %Label_Advice
 @onready var label_error: RichTextLabel = %Label_Error
-@onready var panel_container_error_border: PanelContainer = %PanelContainer_ErrorBorder
 @onready var label_tag: Label = %Label_Tag
 
 
@@ -86,22 +83,15 @@ func _check_error():
 	if error:
 		if error_message.length() > 0:
 			label_error.show()
-			label_advice.hide()
 			label_error.text = error_message
 		else:
 			label_error.hide()
-			label_advice.show()
-		panel_container_error_border.self_modulate = error_color
 	else:
 		label_error.hide()
-		label_advice.show()
-		panel_container_error_border.self_modulate = Color.TRANSPARENT
-
-
+		
 func _ready() -> void:
 	if !line_edit.text_changed.is_connected(_on_line_edit_text_changed):
 		line_edit.text_changed.connect(_on_line_edit_text_changed)
-	label_advice.text = advice
 	line_edit.placeholder_text = hint
 	label_tag.visible = show_tag
 	_check_error()
