@@ -116,12 +116,15 @@ func _on_input(event: InputEvent) -> void:
 							and _is_point_inside_base(event.position)
 						)
 					):
+						if Global.scene_runner.raycast_use_cursor_position:
+							return
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
 							_dynamic_material.set_shader_parameter("state", 1)
 						_touch_index = event.index
 						_update_joystick(event.position)
-						get_viewport().set_input_as_handled()
+						if not _is_scene_ui_at_position(event.position):
+							get_viewport().set_input_as_handled()
 			elif event.index == _touch_index:
 				_reset()
 				_dynamic_material.set_shader_parameter("state", 2)
@@ -271,6 +274,24 @@ func _on_resized() -> void:
 	if not is_node_ready():
 		return
 	_reset()
+
+
+func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
+	var base_ui = Global.scene_runner.base_ui
+	if not is_instance_valid(base_ui) or not base_ui.visible:
+		return false
+	return _check_children_for_pointer_control(base_ui, touch_position)
+
+
+func _check_children_for_pointer_control(node: Node, touch_position: Vector2) -> bool:
+	for child in node.get_children():
+		if child is Control and child.visible and child.mouse_filter == Control.MOUSE_FILTER_STOP:
+			if child.get_global_rect().has_point(touch_position):
+				return true
+		if child.get_child_count() > 0:
+			if _check_children_for_pointer_control(child, touch_position):
+				return true
+	return false
 
 
 func _on_button_camera_pressed() -> void:
