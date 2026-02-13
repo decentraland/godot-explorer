@@ -204,7 +204,7 @@ func show_auth_home_screen():
 
 
 func show_auth_browser_open_screen(
-	message: String = "Opening Browser...", auth_method: String = ""
+	message: String = "Opening browser...", auth_method: String = ""
 ):
 	current_screen_name = "AUTH_BROWSER_OPEN"
 	var extra := JSON.stringify({"method": auth_method}) if not auth_method.is_empty() else ""
@@ -547,7 +547,7 @@ func _on_button_start_pressed():
 	button_enter_as_guest.visible = false
 	sign_in_title.text = "Create your account"
 	is_creating_account = true
-	show_auth_method_screen()
+	show_auth_home_screen()
 
 
 # gdlint:ignore = async-function-name
@@ -583,7 +583,7 @@ func _on_button_go_to_sign_in_pressed():
 	button_enter_as_guest.hide()
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
-	show_auth_method_screen()
+	show_auth_home_screen()
 
 
 func _on_button_back_pressed():
@@ -613,7 +613,7 @@ func _on_button_cancel_pressed():
 	Global.metrics.track_click_button("cancel", current_screen_name, "")
 	_stop_auth_timeout()
 	Global.player_identity.abort_try_connect_account()
-	show_auth_method_screen()
+	show_auth_home_screen()
 
 
 func show_auth_error_screen(error_message: String):
@@ -635,7 +635,7 @@ func _on_auth_timeout():
 
 func _on_button_try_again_pressed():
 	Global.metrics.track_click_button("try_again", current_screen_name, "")
-	show_auth_method_screen()
+	show_auth_home_screen()
 
 
 func _stop_auth_timeout():
