@@ -184,8 +184,17 @@ func _on_notification_permission_result(_granted: bool):
 		)
 
 
-func show_auth_method_screen():
-	track_lobby_screen("AUTH_METHOD")
+func get_auth_home_screen_name():
+	if Global.is_ios():
+		return "AUTH_HOME_IOS"
+	if Global.is_android():
+		return "AUTH_HOME_ANDROID"
+
+	return "AUTH_HOME_DESKTOP"
+
+
+func show_auth_home_screen():
+	track_lobby_screen(get_auth_home_screen_name())
 	sign_in_logo.show()
 	sign_in_logo_sep.show()
 	container_sign_in_step1.show()
@@ -218,7 +227,7 @@ func show_auth_browser_open_screen(message: String = "Opening Browser..."):
 
 
 func show_ftue_screen():
-	track_lobby_screen("FTUE")
+	track_lobby_screen("DISCOVER_FTUE")
 	button_back.hide()
 	var nickname_label = ftue_screen.get_node_or_null("%Label_NickNameFTUE")
 	if nickname_label and current_profile:
