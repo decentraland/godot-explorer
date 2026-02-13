@@ -881,6 +881,9 @@ func _async_block_user(user_address: String) -> void:
 		printerr("Block failed: ", PromiseUtils.get_error_message(promise))
 		return
 
+	# Block/Delete Friend metric
+	Global.metrics.track_block_delete_friend(user_address)
+
 	Global.social_blacklist.add_blocked(user_address)  # Update local cache
 	_async_delete_friendship_if_exists(user_address)  # Keep existing logic
 	_update_buttons()
@@ -1145,6 +1148,9 @@ func _async_unfriend(friend_address: String) -> void:
 		printerr("Failed to unfriend: ", promise.get_data().get_error())
 		return
 
+	# Block/Delete Friend metric
+	Global.metrics.track_block_delete_friend(friend_address)
+
 	print("Profile: Unfriend successful, waiting for signal to update lists")
 	# The signal friendship_deleted will update the UI
 	# But also update immediately to ensure UI is responsive
@@ -1167,12 +1173,12 @@ func _async_send_friend_request(friend_address: String) -> void:
 	await PromiseUtils.async_awaiter(promise)
 	button_add_friend.disabled = false
 
-	# friend_request_sent metric
-	Global.metrics.track_click_button("friend_request_sent", "PROFILE", "")
-
 	if promise.is_rejected():
 		printerr("Failed to send friend request: ", promise.get_data().get_error())
 		return
+
+	# Request Friend metric
+	Global.metrics.track_request_friend(friend_address)
 
 	_async_update_buttons_and_lists()
 
@@ -1183,12 +1189,12 @@ func _async_accept_friend_request(friend_address: String) -> void:
 	await PromiseUtils.async_awaiter(promise)
 	button_add_friend.disabled = false
 
-	# friend_request_accept metric
-	Global.metrics.track_click_button("friend_request_accept", "PROFILE", "")
-
 	if promise.is_rejected():
 		printerr("Failed to accept friend request: ", promise.get_data().get_error())
 		return
+
+	# Accept Friend metric (no friendship_id available in profile context)
+	Global.metrics.track_accept_friend(friend_address, "")
 
 	_async_update_buttons_and_lists()
 
