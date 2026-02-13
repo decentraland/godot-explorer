@@ -51,7 +51,7 @@ layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
-[node name="HSlider_GeneralVolume" type="HSlider" parent="."]
+[node name="HSlider" type="HSlider" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
 theme = ExtResource("2_mryku")
@@ -61,3 +61,6 @@ value = 50.0
 layout_mode = 2
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
+
+[connection signal="drag_ended" from="HSlider" to="." method="_on_h_slider_drag_ended"]
+[connection signal="value_changed" from="HSlider" to="." method="_on_h_slider_value_changed"]

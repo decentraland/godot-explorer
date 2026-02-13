@@ -1,4 +1,4 @@
-[gd_scene load_steps=48 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=46 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -15,7 +15,7 @@
 [ext_resource type="Texture2D" uid="uid://clha72gfrf4t1" path="res://assets/ui/storage.svg" id="12_6mcfd"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
 [ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="13_xewta"]
-[ext_resource type="PackedScene" path="res://src/ui/components/settings/section_title.tscn" id="15_h5vs5"]
+[ext_resource type="PackedScene" uid="uid://ceomwutplh20c" path="res://src/ui/components/settings/section_title.tscn" id="15_h5vs5"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="16_blskf"]
 [ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="17_67hd5"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="17_ewc0a"]
@@ -70,13 +70,7 @@ Label/font_sizes/font_size = 14
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 Label/font_sizes/font_size = 19
 
-[sub_resource type="Theme" id="Theme_3pvx0"]
-CheckBox/font_sizes/font_size = 19
-
-[sub_resource type="Theme" id="Theme_57uk1"]
-Button/font_sizes/font_size = 20
-
-[sub_resource type="Theme" id="Theme_nuccv"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewc0a"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mwb5b"]
 
@@ -647,7 +641,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer"]
 handle_input_locally = false
-size = Vector2i(624, 351)
+size = Vector2i(500, 351)
 render_target_clear_mode = 2
 render_target_update_mode = 0
 
@@ -928,87 +922,96 @@ is_percentage = true
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
-theme_override_constants/separation = 15
+theme_override_constants/separation = 0
 
-[node name="HBoxContainer5" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
+[node name="Section_Title" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "DEV TOOLS"
+
+[node name="HSeparator5" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
-[node name="CheckBox_SceneLog" type="CheckBox" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
-layout_mode = 2
-theme = SubResource("Theme_3pvx0")
-text = "Scene logs enabled"
-
-[node name="CheckBox_RaycastDebugger" type="CheckBox" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 10
-theme = SubResource("Theme_3pvx0")
-text = "Raycast debugger"
-
-[node name="CheckBox_ScenePause" type="CheckBox" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
-layout_mode = 2
-size_flags_horizontal = 10
-theme = SubResource("Theme_3pvx0")
-text = "Scene processing paused"
-
-[node name="VBoxContainer_Realm" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 10
-alignment = 1
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Realm"]
+[node name="HBoxContainer5" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 48
 
-[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2"]
+[node name="SceneLogsEnabled" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
 layout_mode = 2
-text = "Realm"
+theme_override_constants/separation = 32
 
-[node name="OptionButton_Realm" type="OptionButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2"]
-unique_name_in_owner = true
+[node name="Label_Title" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled"]
 layout_mode = 2
 size_flags_horizontal = 3
-tooltip_text = "Select scene to load"
-focus_mode = 1
-text_overrun_behavior = 1
-clip_text = true
-item_count = 11
-popup/item_0/text = "mannakia.dcl.eth"
-popup/item_0/id = 0
-popup/item_1/text = "http://127.0.0.1:8000"
-popup/item_1/id = 1
-popup/item_2/text = "https://sdk-test-scenes.decentraland.org"
-popup/item_2/id = 2
-popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
-popup/item_3/id = 3
-popup/item_4/text = "https://peer.decentraland.org"
-popup/item_4/id = 4
-popup/item_5/text = "https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main"
-popup/item_5/id = 5
-popup/item_6/text = "https://peer.decentraland.org"
-popup/item_6/id = 6
-popup/item_7/text = "shibu.dcl.eth"
-popup/item_7/id = 7
-popup/item_8/text = "https://leanmendoza.github.io/mannakia-dcl-scene/mannakia-dcl-scene"
-popup/item_8/id = 8
-popup/item_9/text = "https://sdilauro.github.io/dae-unit-tests/dae-unit-tests"
-popup/item_9/id = 9
-popup/item_10/text = "https://realm-provider.decentraland.org/main"
-popup/item_10/id = 10
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Scene Logs Enabled"
+label_settings = ExtResource("17_67hd5")
 
-[node name="HSeparator4" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
+[node name="CheckButton_SceneLogsEnabled" type="CheckButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled"]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="RaycastDebugger" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Raycast Debugger"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_RaycastDebugger" type="CheckButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="SceneProcessingPaused" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneProcessingPaused"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Scene Processing Paused"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_SceneProcessingPaused" type="CheckButton" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneProcessingPaused"]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="HSeparator6" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 74
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="DropdownList_Realm" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" instance=ExtResource("20_67hd5")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Realm"
+disabled = false
+
+[node name="HSeparator7" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 74
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
 [node name="VBoxContainer_Connection" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 custom_minimum_size = Vector2(400, 0)
@@ -1034,7 +1037,7 @@ text = "http://127.0.0.1:8000/"
 [node name="Button_ConnectPreview" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer"]
 layout_mode = 2
 focus_mode = 0
-theme = SubResource("Theme_57uk1")
+theme = ExtResource("12_sa1v7")
 text = "Connect!"
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Connection"]
@@ -1050,95 +1053,49 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Disconnected"
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
+[node name="HSeparator8" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 74
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
-[node name="VBoxContainer_ProcessTickQuota" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 10
-alignment = 1
-
-[node name="Label_ProcessTickQuota" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota"]
-layout_mode = 2
-theme = SubResource("Theme_nuccv")
-text = "Process Tick Quota"
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="HSlider_ProcessTickQuota" type="HSlider" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer"]
+[node name="ProcessTickQuota" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 1
+title = "Process Tick Quota"
+value = 1.0
 min_value = 1.0
 max_value = 16.0
-value = 1.0
-editable = false
 
-[node name="Label_ProcessTickQuotaValue" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 0)
+[node name="HSeparator9" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 layout_mode = 2
-text = "1"
-horizontal_alignment = 1
-
-[node name="VBoxContainer_TestNotification" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-size_flags_vertical = 4
 mouse_filter = 2
-theme_override_constants/separation = 10
-alignment = 1
+theme_override_constants/separation = 74
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
-[node name="Label_TestNotification" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_TestNotification"]
-layout_mode = 2
-theme = SubResource("Theme_nuccv")
-text = "Test Notification"
-
-[node name="Button_TestNotification" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_TestNotification"]
+[node name="Button_TestNotification" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 50)
+custom_minimum_size = Vector2(300, 96)
 layout_mode = 2
-size_flags_horizontal = 0
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"SecondaryOutlinedButton"
 text = "Test Notification with Emojis"
 
-[node name="VBoxContainer_OpenUserData" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
-custom_minimum_size = Vector2(400, 0)
+[node name="HSeparator10" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 layout_mode = 2
-size_flags_vertical = 4
 mouse_filter = 2
-theme_override_constants/separation = 10
-alignment = 1
+theme_override_constants/separation = 74
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
-[node name="Label_OpenUserData" type="Label" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
-layout_mode = 2
-theme = SubResource("Theme_nuccv")
-text = "User Data"
-
-[node name="Button_OpenUserData" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_OpenUserData"]
+[node name="Button_OpenUserData" type="Button" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 50)
+custom_minimum_size = Vector2(300, 96)
 layout_mode = 2
-size_flags_horizontal = 0
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"SecondaryOutlinedButton"
 text = "Open User Data Folder"
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
-layout_mode = 2
-mouse_filter = 2
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
@@ -1388,14 +1345,13 @@ font = ExtResource("25_jf4mt")
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/MusicVolume" to="." method="_on_h_slider_music_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
-[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/CheckBox_SceneLog" to="." method="_on_check_box_scene_log_toggled"]
-[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger" to="." method="_on_check_box_raycast_debugger_toggled"]
-[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/CheckBox_ScenePause" to="." method="_on_check_box_scene_pause_toggled"]
-[connection signal="item_selected" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
+[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled/CheckButton_SceneLogsEnabled" to="." method="_on_check_button_scene_logs_enabled_toggled"]
+[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger/CheckButton_RaycastDebugger" to="." method="_on_check_button_raycast_debugger_toggled"]
+[connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneProcessingPaused/CheckButton_SceneProcessingPaused" to="." method="_on_check_button_scene_processing_paused_toggled"]
+[connection signal="item_selected" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/DropdownList_Realm" to="." method="_on_dropdown_list_realm_item_selected"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
-[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_TestNotification/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_OpenUserData/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_PrivacyPolicy" to="." method="_on_button_privacy_policy_pressed"]

@@ -79,15 +79,11 @@ var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginCon
 @onready var container_resolution_3d_scale = %Resolution3DScale
 
 #Advanced items:
-@onready var option_button_realm = %OptionButton_Realm
 @onready var line_edit_preview_url = %LineEdit_PreviewUrl
 @onready var label_ws_state = %Label_WsState
-
-@onready var h_slider_process_tick_quota = %HSlider_ProcessTickQuota
-@onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
-
-@onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
-@onready var button_test_notification = %Button_TestNotification
+@onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
+@onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_general: Button = %Button_General
 @onready var button_graphics: Button = %Button_Graphics
@@ -159,6 +155,25 @@ func _ready():
 
 	refresh_values()
 
+	# Dev Tools
+	dropdown_list_realm.add_item("mannakia.dcl.eth", 0)
+	dropdown_list_realm.add_item("http://127.0.0.1:8000", 1)
+	dropdown_list_realm.add_item("https://sdk-test-scenes.decentraland.org", 2)
+	dropdown_list_realm.add_item(
+		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest", 3
+	)
+	dropdown_list_realm.add_item("https://peer.decentraland.org", 4)
+	dropdown_list_realm.add_item(
+		"https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main", 5
+	)
+	dropdown_list_realm.add_item("https://peer.decentraland.org", 6)
+	dropdown_list_realm.add_item("shibu.dcl.eth", 7)
+	dropdown_list_realm.add_item(
+		"https://leanmendoza.github.io/mannakia-dcl-scene/mannakia-dcl-scene", 8
+	)
+	dropdown_list_realm.add_item("https://sdilauro.github.io/dae-unit-tests/dae-unit-tests", 9)
+	dropdown_list_realm.add_item("https://realm-provider.decentraland.org/main", 10)
+
 
 func refresh_graphic_settings():
 	var graphic_profile = Global.get_config().graphic_profile
@@ -223,19 +238,9 @@ func _on_checkbox_fps_toggled(button_pressed):
 
 
 func refresh_values():
-	h_slider_process_tick_quota.set_value_no_signal(Global.get_config().process_tick_quota_ms)
-	label_process_tick_quota_value.text = str(Global.get_config().process_tick_quota_ms)
-
+	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
-		check_box_raycast_debugger.set_pressed_no_signal(true)
-
-
-func _on_h_slider_process_tick_quota_value_changed(value):
-	label_process_tick_quota_value.text = str(value)
-
-
-func _on_option_button_realm_item_selected(index):
-	Global.realm.async_set_realm(option_button_realm.get_item_text(index))
+		check_button_raycast_debugger.set_pressed_no_signal(true)
 
 
 func set_ws_state(connected: bool) -> void:
@@ -305,18 +310,6 @@ func set_preview_url(url: String) -> void:
 	_preview_connect_to_url = url.to_lower().replace("http://", "ws://").replace(
 		"https://", "wss://"
 	)
-
-
-func _on_check_box_scene_log_toggled(toggled_on):
-	request_debug_panel.emit(toggled_on)
-
-
-func _on_check_box_scene_pause_toggled(toggled_on):
-	emit_signal("request_pause_scenes", toggled_on)
-
-
-func _on_check_box_raycast_debugger_toggled(toggled_on):
-	Global.set_raycast_debugger_enable(toggled_on)
 
 
 func refresh_zooms():
@@ -758,3 +751,30 @@ func _on_visibility_changed() -> void:
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+
+
+func _on_check_button_scene_processing_paused_toggled(toggled_on: bool) -> void:
+	emit_signal("request_pause_scenes", toggled_on)
+
+
+func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
+	Global.set_raycast_debugger_enable(toggled_on)
+
+
+func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:
+	request_debug_panel.emit(toggled_on)
+
+
+func _on_dropdown_list_realm_item_selected(index: int) -> void:
+	var realm_text := dropdown_list_realm.get_item_text(index)
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		Global.realm.async_set_realm(realm_text)
+		explorer.hide_menu()
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
+	else:
+		Global.close_menu.emit()
+		Global.get_config().last_realm_joined = realm_text
+		Global.get_config().last_parcel_position = Vector2i.ZERO
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")

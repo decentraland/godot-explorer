@@ -13,7 +13,6 @@
 [ext_resource type="Texture2D" uid="uid://clajn5iajhqii" path="res://assets/themes/icons/radio_button_off.svg" id="8_kyfa3"]
 [ext_resource type="Texture2D" uid="uid://ban6yfq73wlkr" path="res://assets/themes/icons/checkbox_off.svg" id="9_6dlaa"]
 [ext_resource type="Texture2D" uid="uid://druvtx8hs4m2x" path="res://assets/ui/switch-off.svg" id="9_rt0af"]
-[ext_resource type="Texture2D" uid="uid://c7lblc7w1ymlg" path="res://assets/ui/slider.png" id="11_cnbrf"]
 [ext_resource type="Texture2D" uid="uid://bt7jdyunelh1x" path="res://assets/ui/tick.tres" id="12_hiyy2"]
 [ext_resource type="StyleBox" uid="uid://df8k6h14mxhcr" path="res://assets/themes/general_slider/grabber_area.tres" id="13_aywie"]
 [ext_resource type="StyleBox" uid="uid://b7b33rteyw7y0" path="res://assets/themes/general_slider/grabber_highlight_area.tres" id="14_0c0kf"]
@@ -25,6 +24,7 @@
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="17_xiu8x"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="18_uv0rg"]
 [ext_resource type="StyleBox" uid="uid://nw2w7vul1wnx" path="res://assets/themes/option_button_disabled.tres" id="19_njqlq"]
+[ext_resource type="Texture2D" uid="uid://dk6gwhgymcqv4" path="res://assets/ui/new-slider.png" id="19_s5chg"]
 [ext_resource type="StyleBox" uid="uid://g3qbyl5ohgr" path="res://assets/themes/option_button_normal.tres" id="20_xeyyo"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="25_1x5yb"]
 [ext_resource type="StyleBox" uid="uid://bwtnv6ee45sva" path="res://assets/themes/primary_disabled.tres" id="26_1ib1f"]
@@ -395,10 +395,10 @@ HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_aqont")
 HScrollBar/styles/scroll = SubResource("StyleBoxFlat_mgwk6")
 HScrollBar/styles/scroll_focus = null
 HSlider/constants/center_grabber = 0
-HSlider/constants/grabber_offset = 0
-HSlider/icons/grabber = ExtResource("11_cnbrf")
-HSlider/icons/grabber_disabled = ExtResource("11_cnbrf")
-HSlider/icons/grabber_highlight = ExtResource("11_cnbrf")
+HSlider/constants/grabber_offset = 3
+HSlider/icons/grabber = ExtResource("19_s5chg")
+HSlider/icons/grabber_disabled = ExtResource("19_s5chg")
+HSlider/icons/grabber_highlight = ExtResource("19_s5chg")
 HSlider/icons/tick = ExtResource("12_hiyy2")
 HSlider/styles/grabber_area = ExtResource("13_aywie")
 HSlider/styles/grabber_area_highlight = ExtResource("14_0c0kf")
