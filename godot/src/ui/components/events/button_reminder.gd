@@ -202,7 +202,7 @@ func _async_schedule_local_notification() -> void:
 
 	# Check and request notification permission
 	if not NotificationsManager.has_local_notification_permission():
-		NotificationsManager.request_local_notification_permission()
+		NotificationsManager.request_local_notification_permission("EVENT_REMINDER")
 
 		# Check permission after request
 		# Note: On iOS this is async, but we'll try to schedule anyway

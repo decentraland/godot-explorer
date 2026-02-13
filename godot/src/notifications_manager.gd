@@ -483,6 +483,11 @@ func _on_poll_timeout() -> void:
 
 ## OS wrapper signal handlers
 func _on_permission_changed(granted: bool) -> void:
+	if granted:
+		Global.metrics.track_click_button("ACCEPT_NOTIF", "NOTIF_PROMPT", "")
+	else:
+		Global.metrics.track_click_button("REJECT_NOTIF", "NOTIF_PROMPT", "")
+	Global.metrics.flush.call_deferred()
 	local_notification_permission_changed.emit(granted)
 
 
@@ -609,8 +614,10 @@ func show_system_toast(
 
 
 ## Request permission to show local notifications
-func request_local_notification_permission() -> void:
+func request_local_notification_permission(from_screen: String = "") -> void:
 	if _os_wrapper:
+		Global.metrics.track_screen_viewed("NOTIF_PROMPT", from_screen)
+		Global.metrics.flush.call_deferred()
 		_os_wrapper.request_permission()
 
 
@@ -858,7 +865,7 @@ func async_sync_attended_events() -> void:
 
 	# Check and request notification permission
 	if not has_local_notification_permission():
-		request_local_notification_permission()
+		request_local_notification_permission("SYNC_ATTENDED_EVENTS")
 
 		# Check permission after request
 		# Note: On iOS this is async, but we'll try to schedule anyway

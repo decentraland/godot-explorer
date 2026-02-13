@@ -155,7 +155,33 @@ func show_version_upgrade_screen():
 func show_account_home_screen():
 	track_lobby_screen("ACCOUNT_HOME")
 	button_back.hide()
+	_request_notification_permission_if_needed()
 	show_panel(control_start)
+
+
+func _request_notification_permission_if_needed():
+	if not Global.is_mobile() or Global.is_virtual_mobile():
+		return
+	if NotificationsManager.has_local_notification_permission():
+		return
+	NotificationsManager.request_local_notification_permission(current_screen_name)
+	# Listen for the result (especially for iOS async flow)
+	if not NotificationsManager.local_notification_permission_changed.is_connected(
+		_on_notification_permission_result
+	):
+		NotificationsManager.local_notification_permission_changed.connect(
+			_on_notification_permission_result
+		)
+
+
+func _on_notification_permission_result(_granted: bool):
+	# Disconnect after first result
+	if NotificationsManager.local_notification_permission_changed.is_connected(
+		_on_notification_permission_result
+	):
+		NotificationsManager.local_notification_permission_changed.disconnect(
+			_on_notification_permission_result
+		)
 
 
 func get_auth_home_screen_name():
