@@ -93,6 +93,8 @@ pub struct DclCli {
     #[var(get)]
     pub emulate_android: bool,
     #[var(get)]
+    pub landscape: bool,
+    #[var(get)]
     pub asset_server: bool,
     #[var(get)]
     pub fi_benchmark_size: i32,
@@ -162,6 +164,13 @@ impl DclCli {
             ArgDefinition {
                 name: "--emulate-android".to_string(),
                 description: "Emulate Android safe area margins (status bar + gesture nav)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--landscape".to_string(),
+                description: "Start in landscape orientation (used with --emulate-ios/--emulate-android)"
                     .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
@@ -520,6 +529,7 @@ impl INode for DclCli {
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
+        let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
@@ -617,6 +627,7 @@ impl INode for DclCli {
             stress_test,
             emulate_ios,
             emulate_android,
+            landscape,
             asset_server,
             fi_benchmark_size,
             asset_server_port,
