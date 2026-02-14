@@ -59,6 +59,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_t2lj5")
 script = ExtResource("2_fu4v6")
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="TextureRect" type="TextureRect" parent="."]
 layout_mode = 1
@@ -78,6 +79,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 88
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 51
 script = ExtResource("3_wk266")
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
@@ -113,6 +118,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 88
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 51
 script = ExtResource("3_wk266")
 
 [node name="Loading" type="Control" parent="Main"]
@@ -154,7 +163,6 @@ stretch_mode = 4
 
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(425, 450)
 layout_mode = 2
 
@@ -232,6 +240,7 @@ text = "SIGN IN"
 
 [node name="BackpackContainer" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/BackpackContainer"]
