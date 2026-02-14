@@ -24,10 +24,8 @@ var _orient_toggle: Button
 var _scene_menu_2d: MenuButton
 var _scene_menu_3d: MenuButton
 
-# Overlay
-var _overlay_viewport: SubViewport
-var _overlay_rect: ColorRect
-var _shader_material: ShaderMaterial
+# Overlay (generated ImageTexture — no SubViewport/shader needed)
+var _overlay_texture: ImageTexture
 
 # Dialogs
 var _confirm_dialog: ConfirmationDialog
@@ -43,6 +41,7 @@ var _renderer_control: Control  # Editor's rendering method chooser (hidden when
 
 
 func _enter_tree() -> void:
+	set_force_draw_over_forwarding_enabled()
 	_create_icons()
 
 	# --- Toolbar: device dropdown + orientation toggle ---
@@ -70,9 +69,6 @@ func _enter_tree() -> void:
 
 	_scene_menu_3d = _create_scene_menu()
 	add_control_to_container(CONTAINER_SPATIAL_EDITOR_MENU, _scene_menu_3d)
-
-	# --- Overlay ---
-	_setup_overlay()
 
 	# --- Dialogs ---
 	_confirm_dialog = ConfirmationDialog.new()
@@ -123,8 +119,6 @@ func _exit_tree() -> void:
 	if is_instance_valid(_scene_menu_3d):
 		remove_control_from_container(CONTAINER_SPATIAL_EDITOR_MENU, _scene_menu_3d)
 		_scene_menu_3d.queue_free()
-	if is_instance_valid(_overlay_viewport):
-		_overlay_viewport.queue_free()
 	if is_instance_valid(_confirm_dialog):
 		_confirm_dialog.queue_free()
 	if is_instance_valid(_error_dialog):
@@ -157,7 +151,9 @@ func _find_renderer_in(node: Node, depth: int) -> Control:
 
 func _create_scene_menu() -> MenuButton:
 	var menu := MenuButton.new()
-	menu.text = "Scene Orientation"
+	menu.text = " ▾"
+	menu.icon = _icon_portrait
+	menu.tooltip_text = "Scene Orientation"
 	var popup := menu.get_popup()
 	popup.add_radio_check_item("Both Orientations", ORIENT_BOTH)
 	popup.add_radio_check_item("Portrait Only", ORIENT_PORTRAIT)
@@ -275,26 +271,115 @@ static func _draw_corner_arc(img: Image, cx: int, cy: int, r: int, color: Color)
 			err += 2 * (y - x) + 1
 
 
-# --- Overlay setup ---
+# --- Overlay image generation (SDF helpers) ---
 
-func _setup_overlay() -> void:
-	_overlay_viewport = SubViewport.new()
-	_overlay_viewport.transparent_bg = true
-	_overlay_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	_overlay_viewport.size = Vector2i(720, 720)
+static func _sdf_rounded_box(p: Vector2, half_size: Vector2, radius: float) -> float:
+	var q := Vector2(absf(p.x) - half_size.x + radius, absf(p.y) - half_size.y + radius)
+	return Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - radius
 
-	_overlay_rect = ColorRect.new()
-	_overlay_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_overlay_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var shader = load("res://assets/no-export/phone_frame_overlay.gdshader")
-	if shader:
-		_shader_material = ShaderMaterial.new()
-		_shader_material.shader = shader
-		_overlay_rect.material = _shader_material
+static func _sdf_pill(p: Vector2, half_size: Vector2) -> float:
+	return _sdf_rounded_box(p, half_size, minf(half_size.x, half_size.y))
 
-	_overlay_viewport.add_child(_overlay_rect)
-	add_child(_overlay_viewport)
+
+func _generate_overlay(width: int, height: int, is_ios: bool, is_portrait: bool) -> void:
+	var img := Image.create(width, height, false, Image.FORMAT_RGBA8)
+	img.fill(Color.TRANSPARENT)
+
+	var min_dim := mini(width, height)
+	var r := int(ceil(float(min_dim) * 0.04))
+	var center := Vector2(width * 0.5, height * 0.5)
+	var half_size := Vector2(width * 0.5, height * 0.5)
+	var black := Color.BLACK
+
+	# Rounded corners — only iterate the 4 corner squares (r×r each)
+	for cy in r:
+		for cx in r:
+			var px := float(cx) + 0.5
+			var py := float(cy) + 0.5
+			if _sdf_rounded_box(Vector2(px, py) - center, half_size, float(r)) > 0.0:
+				img.set_pixel(cx, cy, black)
+			var rx := width - 1 - cx
+			if _sdf_rounded_box(Vector2(float(rx) + 0.5, py) - center, half_size, float(r)) > 0.0:
+				img.set_pixel(rx, cy, black)
+			var by := height - 1 - cy
+			if _sdf_rounded_box(Vector2(px, float(by) + 0.5) - center, half_size, float(r)) > 0.0:
+				img.set_pixel(cx, by, black)
+			if _sdf_rounded_box(Vector2(float(rx) + 0.5, float(by) + 0.5) - center, half_size, float(r)) > 0.0:
+				img.set_pixel(rx, by, black)
+
+	if is_ios:
+		# Dynamic island
+		var iw: float
+		var ih: float
+		var icx: float
+		var icy: float
+		if is_portrait:
+			iw = width * 0.27
+			ih = height * 0.035
+			icx = width * 0.5
+			icy = height * 0.012 + ih * 0.5
+		else:
+			iw = width * 0.035
+			ih = height * 0.27
+			icx = width * 0.012 + iw * 0.5
+			icy = height * 0.5
+		var ihs := Vector2(iw, ih) * 0.5
+		var ix0 := maxi(0, int(icx - iw * 0.5) - 1)
+		var ix1 := mini(width, int(icx + iw * 0.5) + 2)
+		var iy0 := maxi(0, int(icy - ih * 0.5) - 1)
+		var iy1 := mini(height, int(icy + ih * 0.5) + 2)
+		for y in range(iy0, iy1):
+			for x in range(ix0, ix1):
+				if _sdf_pill(Vector2(x + 0.5, y + 0.5) - Vector2(icx, icy), ihs) < 0.0:
+					img.set_pixel(x, y, black)
+
+		# Home indicator
+		var hw: float
+		var hh: float
+		var hcx: float
+		var hcy: float
+		if is_portrait:
+			hw = width * 0.35
+			hh = height * 0.005
+			hcx = width * 0.5
+			hcy = height * (1.0 - 0.008) - hh * 0.5
+		else:
+			hw = width * 0.35
+			hh = height * 0.005 * 2.0
+			hcx = width * 0.5
+			hcy = height * (1.0 - 0.016) - hh * 0.5
+		var hhs := Vector2(hw, hh) * 0.5
+		var hx0 := maxi(0, int(hcx - hw * 0.5) - 1)
+		var hx1 := mini(width, int(hcx + hw * 0.5) + 2)
+		var hy0 := maxi(0, int(hcy - hh * 0.5) - 1)
+		var hy1 := mini(height, int(hcy + hh * 0.5) + 2)
+		var home_color := Color(0, 0, 0, 0.3)
+		for y in range(hy0, hy1):
+			for x in range(hx0, hx1):
+				if _sdf_pill(Vector2(x + 0.5, y + 0.5) - Vector2(hcx, hcy), hhs) < 0.0:
+					img.set_pixel(x, y, home_color)
+	else:
+		# Android camera hole
+		var cam_r := float(min_dim) * 0.018
+		var cam_cx: float
+		var cam_cy: float
+		if is_portrait:
+			cam_cx = width * 0.5
+			cam_cy = height * 0.022
+		else:
+			cam_cx = width * 0.022
+			cam_cy = height * 0.5
+		var cx0 := maxi(0, int(cam_cx - cam_r) - 1)
+		var cx1 := mini(width, int(cam_cx + cam_r) + 2)
+		var cy0 := maxi(0, int(cam_cy - cam_r) - 1)
+		var cy1 := mini(height, int(cam_cy + cam_r) + 2)
+		for y in range(cy0, cy1):
+			for x in range(cx0, cx1):
+				if Vector2(x + 0.5, y + 0.5).distance_to(Vector2(cam_cx, cam_cy)) < cam_r:
+					img.set_pixel(x, y, black)
+
+	_overlay_texture = ImageTexture.create_from_image(img)
 
 
 # --- Scene orientation metadata ---
@@ -457,11 +542,10 @@ func _apply_settings(device_index: int, is_portrait: bool) -> void:
 	else:
 		ProjectSettings.set_setting("editor/run/main_run_args", "")
 
-	if _shader_material:
-		_shader_material.set_shader_parameter("is_ios", is_ios)
-		_shader_material.set_shader_parameter("is_portrait", is_portrait)
-	if _overlay_viewport:
-		_overlay_viewport.size = Vector2i(vp_width, vp_height)
+	if is_active:
+		_generate_overlay(vp_width, vp_height, is_ios, is_portrait)
+	else:
+		_overlay_texture = null
 
 	if is_instance_valid(_renderer_control):
 		_renderer_control.visible = false
@@ -473,23 +557,19 @@ func _apply_settings(device_index: int, is_portrait: bool) -> void:
 
 # --- Overlay drawing ---
 
-func _forward_canvas_draw_over_viewport(overlay: Control) -> void:
+func _forward_canvas_force_draw_over_viewport(overlay: Control) -> void:
+	if _overlay_texture == null:
+		return
 	var device_index: int = _device_button.selected if is_instance_valid(_device_button) else 0
 	if device_index == 0:
-		return
-	if _overlay_viewport == null or _shader_material == null:
-		return
-
-	var texture := _overlay_viewport.get_texture()
-	if texture == null:
 		return
 
 	var device = DEVICES[device_index]
 	var vp_width: float = device[1] if _is_portrait else device[3]
 	var vp_height: float = device[2] if _is_portrait else device[4]
 
-	var xform: Transform2D = overlay.get_viewport_transform() * overlay.get_canvas_transform()
+	var xform := EditorInterface.get_editor_viewport_2d().get_final_transform()
 	var top_left: Vector2 = xform * Vector2.ZERO
 	var bottom_right: Vector2 = xform * Vector2(vp_width, vp_height)
 
-	overlay.draw_texture_rect(texture, Rect2(top_left, bottom_right - top_left), false)
+	overlay.draw_texture_rect(_overlay_texture, Rect2(top_left, bottom_right - top_left), false)

@@ -4,10 +4,13 @@ extends Control
 @export var clean_on_landscape: bool = false
 @export var clean_on_portrait: bool = false
 
+var _original_visible: bool = true
+
 
 # gdlint:ignore = async-function-name
 func _ready() -> void:
 	if Engine.is_editor_hint():
+		_original_visible = visible
 		set_process(true)
 		_update_visibility_editor()
 		return
@@ -17,6 +20,15 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if Engine.is_editor_hint():
+		_update_visibility_editor()
+
+
+func _notification(what: int) -> void:
+	if not Engine.is_editor_hint():
+		return
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		visible = _original_visible
+	elif what == NOTIFICATION_EDITOR_POST_SAVE:
 		_update_visibility_editor()
 
 

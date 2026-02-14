@@ -3,9 +3,12 @@ extends BoxContainer
 
 @export var invert: bool = false
 
+var _original_vertical: bool = false
+
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
+		_original_vertical = vertical
 		set_process(true)
 		_update_orientation_editor()
 		return
@@ -15,6 +18,15 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if Engine.is_editor_hint():
+		_update_orientation_editor()
+
+
+func _notification(what: int) -> void:
+	if not Engine.is_editor_hint():
+		return
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		vertical = _original_vertical
+	elif what == NOTIFICATION_EDITOR_POST_SAVE:
 		_update_orientation_editor()
 
 

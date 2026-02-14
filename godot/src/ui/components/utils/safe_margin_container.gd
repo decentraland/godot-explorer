@@ -23,6 +23,18 @@ func _process(_delta: float) -> void:
 		_update_margins_editor()
 
 
+func _notification(what: int) -> void:
+	if not Engine.is_editor_hint():
+		return
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		remove_theme_constant_override("margin_top")
+		remove_theme_constant_override("margin_left")
+		remove_theme_constant_override("margin_right")
+		remove_theme_constant_override("margin_bottom")
+	elif what == NOTIFICATION_EDITOR_POST_SAVE:
+		_update_margins_editor()
+
+
 func _update_margins_editor() -> void:
 	var active: bool = ProjectSettings.get_setting("_mobile_preview/active", false)
 	if not active:
