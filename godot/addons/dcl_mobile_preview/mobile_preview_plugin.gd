@@ -1,11 +1,11 @@
 @tool
 extends EditorPlugin
 
-# Device definitions: [label, portrait_w, portrait_h, landscape_w, landscape_h, is_ios]
+# Device definitions: [label, portrait_w, portrait_h, landscape_w, landscape_h, is_ios, color]
 const DEVICES := [
-	["Default", 720, 720, 720, 720, false],
-	["iPhone 14 Pro", 590, 1280, 1561, 720, true],
-	["Moto Edge 60 Pro", 576, 1280, 1600, 720, false],
+	["Default", 720, 720, 720, 720, false, Color(0.5, 0.5, 0.5)],
+	["iPhone 14 Pro", 590, 1280, 1561, 720, true, Color(0.35, 0.6, 1.0)],
+	["Moto Edge 60 Pro", 576, 1280, 1600, 720, false, Color(0.35, 0.85, 0.45)],
 ]
 
 const SCENE_META_KEY := "mobile_preview_orientation"
@@ -39,6 +39,7 @@ var _is_portrait: bool = true
 var _icon_portrait: ImageTexture
 var _icon_landscape: ImageTexture
 var _clean_versions: Dictionary = {}  # scene_path -> UndoRedo version at load/save
+var _renderer_control: Control  # Editor's rendering method chooser (hidden when preview active)
 
 
 func _enter_tree() -> void:
@@ -47,9 +48,13 @@ func _enter_tree() -> void:
 	# --- Toolbar: device dropdown + orientation toggle ---
 	_device_button = OptionButton.new()
 	_device_button.flat = true
+	_device_button.fit_to_longest_item = false
 	_device_button.tooltip_text = "Mobile Preview Device"
+	var bold_font := EditorInterface.get_editor_theme().get_font("bold", "EditorFonts")
+	_device_button.add_theme_font_override("font", bold_font)
 	for i in DEVICES.size():
 		_device_button.add_item(DEVICES[i][0], i)
+		_device_button.set_item_icon(i, _make_color_circle(DEVICES[i][6]))
 	_device_button.item_selected.connect(_on_device_selected)
 	add_control_to_container(CONTAINER_TOOLBAR, _device_button)
 
@@ -84,6 +89,11 @@ func _enter_tree() -> void:
 
 	scene_changed.connect(_on_scene_changed)
 
+	# Hide the rendering method chooser to save toolbar space
+	_renderer_control = _find_renderer_option_button()
+	if is_instance_valid(_renderer_control):
+		_renderer_control.visible = false
+
 	# Restore last selections
 	var es := EditorInterface.get_editor_settings()
 	var last_device: int = es.get_setting(SETTINGS_DEVICE_KEY) if es.has_setting(SETTINGS_DEVICE_KEY) else 0
@@ -98,6 +108,8 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	_apply_settings(0, false)
+	if is_instance_valid(_renderer_control):
+		_renderer_control.visible = true
 
 	if is_instance_valid(_device_button):
 		remove_control_from_container(CONTAINER_TOOLBAR, _device_button)
@@ -117,6 +129,28 @@ func _exit_tree() -> void:
 		_confirm_dialog.queue_free()
 	if is_instance_valid(_error_dialog):
 		_error_dialog.queue_free()
+
+
+# --- Find editor renderer control ---
+
+func _find_renderer_option_button() -> Control:
+	var base := EditorInterface.get_base_control()
+	var editor_node := base.get_parent()
+	if not editor_node:
+		return null
+	return _find_renderer_in(editor_node, 6)
+
+
+func _find_renderer_in(node: Node, depth: int) -> Control:
+	if depth < 0:
+		return null
+	if node is OptionButton and "rendering" in node.tooltip_text.to_lower():
+		return node
+	for child in node.get_children():
+		var found := _find_renderer_in(child, depth - 1)
+		if found:
+			return found
+	return null
 
 
 # --- Scene navbar menu ---
@@ -161,6 +195,19 @@ func _on_scene_orient_selected(id: int) -> void:
 
 
 # --- Icon creation (32x32, 2px lines) ---
+
+static func _make_color_circle(color: Color) -> ImageTexture:
+	var s := 12
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color.TRANSPARENT)
+	var center := Vector2(s / 2.0, s / 2.0)
+	var radius := s / 2.0 - 0.5
+	for y in s:
+		for x in s:
+			if Vector2(x + 0.5, y + 0.5).distance_to(center) <= radius:
+				img.set_pixel(x, y, color)
+	return ImageTexture.create_from_image(img)
+
 
 func _create_icons() -> void:
 	_icon_portrait = _make_phone_icon(true)
@@ -415,6 +462,9 @@ func _apply_settings(device_index: int, is_portrait: bool) -> void:
 		_shader_material.set_shader_parameter("is_portrait", is_portrait)
 	if _overlay_viewport:
 		_overlay_viewport.size = Vector2i(vp_width, vp_height)
+
+	if is_instance_valid(_renderer_control):
+		_renderer_control.visible = false
 
 	EditorInterface.get_editor_settings().set_setting(SETTINGS_DEVICE_KEY, device_index)
 
