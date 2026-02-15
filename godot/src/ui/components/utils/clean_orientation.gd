@@ -20,7 +20,6 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	if Engine.is_editor_hint():
-		print("[CleanOrientation] _exit_tree: ", name)
 		set_process(false)
 
 

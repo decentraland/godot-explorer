@@ -13,6 +13,8 @@ const SETTINGS_DEVICE_KEY := "dcl_mobile_preview/last_device"
 const SETTINGS_ORIENT_KEY := "dcl_mobile_preview/last_orientation"
 const SETTINGS_OVERLAY_KEY := "dcl_mobile_preview/overlay_visible"
 
+const ICON_DIR := "res://addons/dcl_mobile_preview/icons/"
+
 const ORIENT_NONE := 0
 const ORIENT_BOTH := 1
 const ORIENT_PORTRAIT := 2
@@ -103,6 +105,7 @@ func _enter_tree() -> void:
 	EditorInterface.get_base_control().add_child(_error_dialog)
 
 	scene_changed.connect(_on_scene_changed)
+	set_force_draw_over_forwarding_enabled()
 
 	# Hide the rendering method chooser to save toolbar space
 	_renderer_control = _find_renderer_option_button()
@@ -129,73 +132,48 @@ func _enter_tree() -> void:
 	_record_clean_version()
 
 
-func _notification(what: int) -> void:
-	print("[MobilePreview] notification: ", what)
-
-
 func _exit_tree() -> void:
-	print("[MobilePreview] _exit_tree START")
-
-	# Disconnect signal first to prevent callbacks during shutdown
 	if scene_changed.is_connected(_on_scene_changed):
 		scene_changed.disconnect(_on_scene_changed)
-	print("[MobilePreview] signal disconnected")
 
-	# Reset ProjectSettings
-	ProjectSettings.set_setting("display/window/size/viewport_width", 720)
-	ProjectSettings.set_setting("display/window/size/viewport_height", 720)
-	ProjectSettings.set_setting("_mobile_preview/active", false)
-	ProjectSettings.set_setting("editor/run/main_run_args", "")
-	_overlay_texture = null
-	_bezel = 0
-	print("[MobilePreview] ProjectSettings reset")
+	# NOTE: Do NOT call ProjectSettings.set_setting() here.
+	# Changing any setting triggers @tool scripts to react during shutdown,
+	# which causes a crash in PlaceholderExtensionInstance when the dclgodot
+	# GDExtension is unloaded (Godot engine bug on macOS).
+	# All in-memory settings are discarded when the editor process exits.
 
+	# Restore renderer visibility
+	if is_instance_valid(_renderer_control):
+		_renderer_control.visible = true
+
+	# Remove toolbar controls
 	if is_instance_valid(_device_button):
 		remove_control_from_container(CONTAINER_TOOLBAR, _device_button)
 		_device_button.queue_free()
-	print("[MobilePreview] device_button removed")
-
 	if is_instance_valid(_orient_toggle):
 		remove_control_from_container(CONTAINER_TOOLBAR, _orient_toggle)
 		_orient_toggle.queue_free()
-	print("[MobilePreview] orient_toggle removed")
-
 	if is_instance_valid(_overlay_toggle):
 		remove_control_from_container(CONTAINER_TOOLBAR, _overlay_toggle)
 		_overlay_toggle.queue_free()
-	print("[MobilePreview] overlay_toggle removed")
 
+	# Remove scene menus
 	if is_instance_valid(_scene_menu_2d):
 		remove_control_from_container(CONTAINER_CANVAS_EDITOR_MENU, _scene_menu_2d)
 		_scene_menu_2d.queue_free()
 	if is_instance_valid(_scene_menu_3d):
 		remove_control_from_container(CONTAINER_SPATIAL_EDITOR_MENU, _scene_menu_3d)
 		_scene_menu_3d.queue_free()
-	print("[MobilePreview] scene menus removed")
 
-	# Remove dialogs from base_control and free immediately (not deferred)
-	# to prevent them from being in the tree during shutdown
+	# Free dialogs
 	if is_instance_valid(_confirm_dialog):
-		var parent = _confirm_dialog.get_parent()
-		if is_instance_valid(parent):
-			parent.remove_child(_confirm_dialog)
-		_confirm_dialog.free()
-	print("[MobilePreview] confirm_dialog freed")
-
+		_confirm_dialog.queue_free()
 	if is_instance_valid(_error_dialog):
-		var parent = _error_dialog.get_parent()
-		if is_instance_valid(parent):
-			parent.remove_child(_error_dialog)
-		_error_dialog.free()
-	print("[MobilePreview] error_dialog freed")
+		_error_dialog.queue_free()
 
-	# Restore renderer control and drop reference to editor-owned node
-	if is_instance_valid(_renderer_control):
-		_renderer_control.visible = true
+	_overlay_texture = null
+	_bezel = 0
 	_renderer_control = null
-	print("[MobilePreview] renderer_control restored and nulled")
-
-	print("[MobilePreview] _exit_tree END")
 
 
 # --- Find editor renderer control ---
@@ -278,8 +256,6 @@ func _on_scene_orient_selected(id: int) -> void:
 
 
 # --- Icon helpers ---
-
-const ICON_DIR := "res://addons/dcl_mobile_preview/icons/"
 
 
 static func _load_tinted_icon(svg_name: String, color: Color) -> ImageTexture:
@@ -589,6 +565,8 @@ func _on_device_selected(_index: int) -> void:
 
 
 func _on_scene_changed(_scene_root: Node) -> void:
+	if not _scene_root:
+		return
 	var old_portrait := _is_portrait
 	var old_orient := _scene_orient
 	_sync_orient_from_scene()
@@ -736,11 +714,8 @@ func _apply_settings(device_index: int, is_portrait: bool, save_device: bool = t
 
 # --- Overlay drawing ---
 
-#func _handles(_object: Object) -> bool:
-#	return true
 
-
-func _forward_canvas_draw_over_viewport(overlay: Control) -> void:
+func _forward_canvas_force_draw_over_viewport(overlay: Control) -> void:
 	if not _overlay_visible or _overlay_texture == null:
 		return
 	var device_index: int = _device_button.selected if is_instance_valid(_device_button) else 0
