@@ -189,6 +189,12 @@ func _exit_tree() -> void:
 		_error_dialog.free()
 	print("[MobilePreview] error_dialog freed")
 
+	# Restore renderer control and drop reference to editor-owned node
+	if is_instance_valid(_renderer_control):
+		_renderer_control.visible = true
+	_renderer_control = null
+	print("[MobilePreview] renderer_control restored and nulled")
+
 	print("[MobilePreview] _exit_tree END")
 
 
@@ -730,9 +736,8 @@ func _apply_settings(device_index: int, is_portrait: bool, save_device: bool = t
 
 # --- Overlay drawing ---
 
-
-func _handles(_object: Object) -> bool:
-	return true
+#func _handles(_object: Object) -> bool:
+#	return true
 
 
 func _forward_canvas_draw_over_viewport(overlay: Control) -> void:
