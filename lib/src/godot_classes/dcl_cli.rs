@@ -170,8 +170,9 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--landscape".to_string(),
-                description: "Start in landscape orientation (used with --emulate-ios/--emulate-android)"
-                    .to_string(),
+                description:
+                    "Start in landscape orientation (used with --emulate-ios/--emulate-android)"
+                        .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
