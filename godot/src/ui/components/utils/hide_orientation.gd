@@ -16,6 +16,11 @@ func _ready() -> void:
 	_on_size_changed()
 
 
+func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		set_process(false)
+
+
 func _process(_delta: float) -> void:
 	if Engine.is_editor_hint():
 		_update_visibility_editor()

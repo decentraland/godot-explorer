@@ -131,18 +131,18 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	# Disconnect signal first to prevent callbacks during shutdown
+	if scene_changed.is_connected(_on_scene_changed):
+		scene_changed.disconnect(_on_scene_changed)
+
 	# Reset ProjectSettings directly — don't call _apply_settings/update_overlays
 	# because the tree is being torn down and overlay callbacks would crash.
-	var device = DEVICES[0]
-	ProjectSettings.set_setting("display/window/size/viewport_width", device[1])
-	ProjectSettings.set_setting("display/window/size/viewport_height", device[2])
+	ProjectSettings.set_setting("display/window/size/viewport_width", 720)
+	ProjectSettings.set_setting("display/window/size/viewport_height", 720)
 	ProjectSettings.set_setting("_mobile_preview/active", false)
 	ProjectSettings.set_setting("editor/run/main_run_args", "")
 	_overlay_texture = null
 	_bezel = 0
-
-	if is_instance_valid(_renderer_control):
-		_renderer_control.visible = true
 
 	if is_instance_valid(_device_button):
 		remove_control_from_container(CONTAINER_TOOLBAR, _device_button)
