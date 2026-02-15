@@ -129,39 +129,67 @@ func _enter_tree() -> void:
 	_record_clean_version()
 
 
+func _notification(what: int) -> void:
+	print("[MobilePreview] notification: ", what)
+
+
 func _exit_tree() -> void:
+	print("[MobilePreview] _exit_tree START")
+
 	# Disconnect signal first to prevent callbacks during shutdown
 	if scene_changed.is_connected(_on_scene_changed):
 		scene_changed.disconnect(_on_scene_changed)
+	print("[MobilePreview] signal disconnected")
 
-	# Reset ProjectSettings directly — don't call _apply_settings/update_overlays
-	# because the tree is being torn down and overlay callbacks would crash.
+	# Reset ProjectSettings
 	ProjectSettings.set_setting("display/window/size/viewport_width", 720)
 	ProjectSettings.set_setting("display/window/size/viewport_height", 720)
 	ProjectSettings.set_setting("_mobile_preview/active", false)
 	ProjectSettings.set_setting("editor/run/main_run_args", "")
 	_overlay_texture = null
 	_bezel = 0
+	print("[MobilePreview] ProjectSettings reset")
 
 	if is_instance_valid(_device_button):
 		remove_control_from_container(CONTAINER_TOOLBAR, _device_button)
 		_device_button.queue_free()
+	print("[MobilePreview] device_button removed")
+
 	if is_instance_valid(_orient_toggle):
 		remove_control_from_container(CONTAINER_TOOLBAR, _orient_toggle)
 		_orient_toggle.queue_free()
+	print("[MobilePreview] orient_toggle removed")
+
 	if is_instance_valid(_overlay_toggle):
 		remove_control_from_container(CONTAINER_TOOLBAR, _overlay_toggle)
 		_overlay_toggle.queue_free()
+	print("[MobilePreview] overlay_toggle removed")
+
 	if is_instance_valid(_scene_menu_2d):
 		remove_control_from_container(CONTAINER_CANVAS_EDITOR_MENU, _scene_menu_2d)
 		_scene_menu_2d.queue_free()
 	if is_instance_valid(_scene_menu_3d):
 		remove_control_from_container(CONTAINER_SPATIAL_EDITOR_MENU, _scene_menu_3d)
 		_scene_menu_3d.queue_free()
+	print("[MobilePreview] scene menus removed")
+
+	# Remove dialogs from base_control and free immediately (not deferred)
+	# to prevent them from being in the tree during shutdown
 	if is_instance_valid(_confirm_dialog):
-		_confirm_dialog.queue_free()
+		var parent = _confirm_dialog.get_parent()
+		if is_instance_valid(parent):
+			parent.remove_child(_confirm_dialog)
+		_confirm_dialog.free()
+	print("[MobilePreview] confirm_dialog freed")
+
 	if is_instance_valid(_error_dialog):
-		_error_dialog.queue_free()
+		var parent = _error_dialog.get_parent()
+		if is_instance_valid(parent):
+			parent.remove_child(_error_dialog)
+		_error_dialog.free()
+	print("[MobilePreview] error_dialog freed")
+
+	print("[MobilePreview] _exit_tree END")
 
 
 # --- Find editor renderer control ---
