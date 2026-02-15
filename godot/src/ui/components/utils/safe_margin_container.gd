@@ -19,7 +19,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if Engine.is_editor_hint():
+	if Engine.is_editor_hint() and is_inside_tree():
 		_update_margins_editor()
 
 
@@ -27,10 +27,14 @@ func _notification(what: int) -> void:
 	if not Engine.is_editor_hint():
 		return
 	if what == NOTIFICATION_EDITOR_PRE_SAVE:
-		remove_theme_constant_override("margin_top")
-		remove_theme_constant_override("margin_left")
-		remove_theme_constant_override("margin_right")
-		remove_theme_constant_override("margin_bottom")
+		if use_top:
+			remove_theme_constant_override("margin_top")
+		if use_left:
+			remove_theme_constant_override("margin_left")
+		if use_right:
+			remove_theme_constant_override("margin_right")
+		if use_bottom:
+			remove_theme_constant_override("margin_bottom")
 	elif what == NOTIFICATION_EDITOR_POST_SAVE:
 		_update_margins_editor()
 

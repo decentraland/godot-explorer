@@ -131,7 +131,16 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	_apply_settings(0, false)
+	# Reset ProjectSettings directly — don't call _apply_settings/update_overlays
+	# because the tree is being torn down and overlay callbacks would crash.
+	var device = DEVICES[0]
+	ProjectSettings.set_setting("display/window/size/viewport_width", device[1])
+	ProjectSettings.set_setting("display/window/size/viewport_height", device[2])
+	ProjectSettings.set_setting("_mobile_preview/active", false)
+	ProjectSettings.set_setting("editor/run/main_run_args", "")
+	_overlay_texture = null
+	_bezel = 0
+
 	if is_instance_valid(_renderer_control):
 		_renderer_control.visible = true
 
