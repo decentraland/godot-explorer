@@ -49,7 +49,6 @@ var _renderer_control: Control  # Editor's rendering method chooser (hidden when
 
 
 func _enter_tree() -> void:
-	set_force_draw_over_forwarding_enabled()
 	_create_icons()
 
 	# --- Toolbar: device dropdown + orientation toggle ---
@@ -704,7 +703,11 @@ func _apply_settings(device_index: int, is_portrait: bool, save_device: bool = t
 # --- Overlay drawing ---
 
 
-func _forward_canvas_force_draw_over_viewport(overlay: Control) -> void:
+func _handles(_object: Object) -> bool:
+	return true
+
+
+func _forward_canvas_draw_over_viewport(overlay: Control) -> void:
 	if not _overlay_visible or _overlay_texture == null:
 		return
 	var device_index: int = _device_button.selected if is_instance_valid(_device_button) else 0
