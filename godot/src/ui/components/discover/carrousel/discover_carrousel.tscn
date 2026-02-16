@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://3de823q04ptd"]
+[gd_scene load_steps=7 format=3 uid="uid://3de823q04ptd"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="1_qm5fw"]
 [ext_resource type="Script" uid="uid://crybq4wivxc3l" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="1_somjb"]
-[ext_resource type="Script" uid="uid://bufowrcf714pf" path="res://src/ui/components/discover/scrollbar_requester.gd" id="3_dtbt6"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_ix28e"]
+[ext_resource type="LabelSettings" uid="uid://dk8eqdewqhsor" path="res://assets/themes/discover_section_title.tres" id="3_lwvhe"]
+[ext_resource type="PackedScene" uid="uid://c8cfkfwtnjk5b" path="res://src/ui/components/discover/carrousel/place_discover_skeleton.tscn" id="4_lwvhe"]
+[ext_resource type="Script" uid="uid://bufowrcf714pf" path="res://src/ui/components/discover/scrollbar_requester.gd" id="5_lwvhe"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amqeq"]
 
@@ -14,12 +15,13 @@ offset_bottom = 35.0
 grow_horizontal = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
+theme_override_constants/separation = 20
 script = ExtResource("1_somjb")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_constants/margin_left = 30
+theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
@@ -34,6 +36,7 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("1_qm5fw")
 theme_override_font_sizes/font_size = 18
 text = "Section Tittle"
+label_settings = ExtResource("3_lwvhe")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -58,44 +61,56 @@ text = "It seems there is nothing to show here..."
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HBoxContainer_Loading" type="HBoxContainer" parent="VBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(0, 185)
-layout_mode = 2
-size_flags_horizontal = 4
-
-[node name="Control" type="Control" parent="VBoxContainer/HBoxContainer_Loading"]
-custom_minimum_size = Vector2(200, 185)
+[node name="SkeletonControl" type="Control" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 250)
 layout_mode = 2
 
-[node name="TextureProgressBar" parent="VBoxContainer/HBoxContainer_Loading/Control" instance=ExtResource("4_ix28e")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SkeletonControl"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/SkeletonControl/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
+
+[node name="PlaceDiscoverSkeleton" parent="VBoxContainer/SkeletonControl/HBoxContainer" instance=ExtResource("4_lwvhe")]
+layout_mode = 2
+
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/SkeletonControl/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
+
+[node name="PlaceDiscoverSkeleton2" parent="VBoxContainer/SkeletonControl/HBoxContainer" instance=ExtResource("4_lwvhe")]
+layout_mode = 2
+
+[node name="VSeparator3" type="VSeparator" parent="VBoxContainer/SkeletonControl/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
+
+[node name="PlaceDiscoverSkeleton3" parent="VBoxContainer/SkeletonControl/HBoxContainer" instance=ExtResource("4_lwvhe")]
+layout_mode = 2
+
+[node name="ScrollContainer" type="Container" parent="VBoxContainer"]
 unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
-horizontal_scroll_mode = 3
+size_flags_vertical = 3
+script = ExtResource("5_lwvhe")
 vertical_scroll_mode = 0
-scroll_deadzone = 100
-script = ExtResource("3_dtbt6")
+drag = 6.0
+take_hight_from_children = true
+metadata/_custom_type_script = "uid://c3wphp306q0w"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ScrollContainer"]
 layout_mode = 2
 
 [node name="VSeparator" type="VSeparator" parent="VBoxContainer/ScrollContainer/HBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
 
 [node name="HBoxContainer_Items" type="HBoxContainer" parent="VBoxContainer/ScrollContainer/HBoxContainer"]
@@ -104,4 +119,4 @@ custom_minimum_size = Vector2(0, 185)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
-theme_override_constants/separation = 19
+theme_override_constants/separation = 32

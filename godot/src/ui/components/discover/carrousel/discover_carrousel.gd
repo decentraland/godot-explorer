@@ -8,13 +8,15 @@ extends Control
 		%Label_Title.text = new_value
 		title = new_value
 
-var _last_search_text: String = ""
-
 @onready var scroll_container = %ScrollContainer
 @onready var item_container = %HBoxContainer_Items
 @onready var label_error = $VBoxContainer/Label_Error
 @onready var label_not_found = $VBoxContainer/Label_NotFound
-@onready var h_box_container_loading = $VBoxContainer/HBoxContainer_Loading
+@onready var h_box_container_loading = $VBoxContainer/SkeletonControl
+
+
+func has_items() -> bool:
+	return item_container.get_child_count() > 0
 
 
 func _ready():
@@ -35,6 +37,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 		scroll_container.hide()
 		label_not_found.hide()
 		label_error.hide()
+		show()
 	elif status == CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS:
 		self.show()
 		scroll_container.show()
@@ -42,18 +45,23 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 		h_box_container_loading.hide()
 		label_not_found.hide()
 		label_error.hide()
+		show()
 	elif status == CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS:
 		self.hide()
 		return
 	else:
-		#elif not ok:
 		h_box_container_loading.hide()
 
 		scroll_container.hide()
 		label_not_found.hide()
 		label_error.show()
+		hide()
 
 
 func set_search_param(new_search_param: String):
 	generator.search_param = new_search_param
 	scroll_container.restart()
+
+
+func scroll_to_start() -> void:
+	scroll_container.reset_position()

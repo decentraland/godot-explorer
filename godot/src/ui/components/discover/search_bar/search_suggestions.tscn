@@ -1,0 +1,101 @@
+[gd_scene load_steps=6 format=3 uid="uid://ct64rhq0dtpa3"]
+
+[ext_resource type="Script" uid="uid://8804vpyob5mu" path="res://src/ui/components/discover/search_bar/search_suggestions.gd" id="1_dpmtn"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_2i8jq"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_kov7k"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_prili"]
+font = ExtResource("2_2i8jq")
+font_size = 32
+font_color = Color(1, 1, 1, 0.7019608)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u3ijx"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 0.176471, 0.333333, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="SearchSugestionsContainer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("1_dpmtn")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="MarginContainer_RecentSearchs" type="MarginContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Recent searches"
+label_settings = SubResource("LabelSettings_prili")
+
+[node name="Button_ClearHistory" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/h_separation = 0
+theme_override_fonts/font = ExtResource("3_kov7k")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_u3ijx")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_u3ijx")
+theme_override_styles/hover = SubResource("StyleBoxFlat_u3ijx")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_u3ijx")
+theme_override_styles/focus = SubResource("StyleBoxFlat_u3ijx")
+toggle_mode = true
+text = "Clean all"
+flat = true
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer/Button_ClearHistory"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="SearchSugestions" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0

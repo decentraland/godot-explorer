@@ -1,113 +1,38 @@
-[gd_scene load_steps=32 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=25 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_17slp"]
+[ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="3_lvgj0"]
 [ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/components/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
-[ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="4_64qur"]
-[ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_ck13e"]
+[ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/components/discover/icons/back.svg" id="4_edk0s"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
-[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_5g6gd"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
-[ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="8_t3lcc"]
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="9_2ra1o"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
-[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="9_pwm2g"]
-[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="10_73ifx"]
-[ext_resource type="Texture2D" uid="uid://cj4xqne10w3ka" path="res://assets/ui/discover/genesis_banner.png" id="11_t2lm2"]
-[ext_resource type="Texture2D" uid="uid://bf4ybqg0uow10" path="res://assets/ui/discover/worlds_banner.png" id="12_74ecw"]
+[ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="10_q2sj0"]
+[ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="12_g4fdo"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
+[ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/components/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
+[ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/search-bar/search_bar.tscn" id="18_sbar"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
-bg_color = Color(0, 0, 0, 0.2)
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5g6gd"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_753ow"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0tgth"]
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+[sub_resource type="LabelSettings" id="LabelSettings_iyg6d"]
+font = ExtResource("13_73ifx")
+font_size = 48
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[sub_resource type="Gradient" id="Gradient_iuj6o"]
-colors = PackedColorArray(0.713726, 0.0588235, 0.333333, 1, 1, 0.458824, 0.384314, 1)
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_86ojj"]
 
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_cci5n"]
-gradient = SubResource("Gradient_iuj6o")
-fill_to = Vector2(0, 1)
-
-[sub_resource type="Gradient" id="Gradient_genyl"]
-colors = PackedColorArray(0.0862745, 0.0823529, 0.0941176, 1, 0.423529, 0.152941, 0.631373, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_3q3ud"]
-gradient = SubResource("Gradient_genyl")
-fill_to = Vector2(0, 1)
-
-[sub_resource type="Animation" id="Animation_b4fwa"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Control/WorldsBanner:position")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector2(0, 68)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Control/GenesisBanner:position")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector2(0, 0)]
-}
-
-[sub_resource type="Animation" id="Animation_mh318"]
-resource_name = "default"
-length = 16.0
-loop_mode = 1
-step = 1.0
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Control/WorldsBanner:position")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 7, 8, 15),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
-"update": 0,
-"values": [Vector2(0, 68), Vector2(0, 68), Vector2(0, 0), Vector2(0, 0)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Control/GenesisBanner:position")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0, 7, 8, 15),
-"transitions": PackedFloat32Array(1, 1, 1, 1),
-"update": 0,
-"values": [Vector2(0, 0), Vector2(0, 0), Vector2(0, -64), Vector2(0, -64)]
-}
-
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_xfp2p"]
-_data = {
-&"RESET": SubResource("Animation_b4fwa"),
-&"default": SubResource("Animation_mh318")
-}
+[sub_resource type="LabelSettings" id="LabelSettings_8uyq4"]
+font = ExtResource("14_dn5gj")
+font_size = 34
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]
 
@@ -122,13 +47,15 @@ focus_mode = 1
 theme = ExtResource("1_tkk7t")
 script = ExtResource("2_f08es")
 
-[node name="TextureRect" type="Control" parent="."]
+[node name="TextureRect" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+texture = ExtResource("3_lvgj0")
+stretch_mode = 6
 
 [node name="VBoxContainer" type="VBoxContainer" parent="TextureRect"]
 layout_mode = 1
@@ -138,351 +65,259 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PanelContainer_Navbar" type="PanelContainer" parent="TextureRect/VBoxContainer"]
-unique_name_in_owner = true
+[node name="PanelContainer_Navbar" type="MarginContainer" parent="TextureRect/VBoxContainer"]
 layout_mode = 2
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_746xu")
-
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar"]
-custom_minimum_size = Vector2(0, 76)
-layout_mode = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 8
 script = ExtResource("6_b1byu")
-default_margin = 30
+use_left = false
+use_right = false
+use_bottom = false
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="SafeTopMarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 20
+script = ExtResource("6_b1byu")
+use_left = false
+use_right = false
 use_bottom = false
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer"]
 layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_5g6gd")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 8
 theme_override_constants/separation = 14
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Button_BackToExplorer" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+icon = ExtResource("4_edk0s")
+flat = true
+expand_icon = true
+
+[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
 theme_override_font_sizes/font_size = 28
 text = "Discover"
 label_settings = ExtResource("5_q2sj0")
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="SearchBar" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer" instance=ExtResource("18_sbar")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 1
-theme_override_styles/separator = SubResource("StyleBoxEmpty_753ow")
 
-[node name="LineEdit_SearchBar" type="LineEdit" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(350, 0)
-layout_mode = 2
-placeholder_text = "Search Genesis City and Worlds"
-clear_button_enabled = true
-right_icon = ExtResource("4_64qur")
-
-[node name="Button_SearchBar" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 41)
-layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("6_5g6gd")
-theme_type_variation = &"SnowButton"
-theme_override_font_sizes/font_size = 16
-text = "Search"
-icon = ExtResource("4_64qur")
-
-[node name="Button_ClearFilter" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 41)
-layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("6_5g6gd")
-theme_type_variation = &"SnowButton"
-theme_override_font_sizes/font_size = 16
-text = "Clear filter"
-icon = ExtResource("4_ck13e")
-
-[node name="Button_Close" type="Button" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 41)
-layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("6_5g6gd")
-theme_type_variation = &"SnowButton"
-theme_override_constants/h_separation = 0
-theme_override_constants/icon_max_width = 10
-theme_override_font_sizes/font_size = 16
-icon = ExtResource("9_g4fdo")
-script = ExtResource("10_73ifx")
-hide_on_portrait = true
-
-[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-script = ExtResource("6_b1byu")
-use_top = false
-use_bottom = false
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_bottom = 24
 
-[node name="ScrollContainer" type="ScrollContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer"]
+[node name="ScrollContainer_Content" type="Container" parent="TextureRect/VBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
-size_flags_vertical = 3
+script = ExtResource("10_q2sj0")
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 scroll_deadzone = 100
+drag = 6.0
+metadata/_custom_type_script = "uid://c3wphp306q0w"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="Banners" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="MessageSearching" type="Control" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 0
-
-[node name="Control" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
-clip_children = 2
-clip_contents = true
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 
-[node name="GenesisBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
-clip_children = 2
-clip_contents = true
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_right = 64.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageSearching"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 20.0
+text = "Searching!"
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner"]
+[node name="MessageNoResultsFound" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-texture = SubResource("GradientTexture2D_cci5n")
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+alignment = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound"]
+custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer"]
-layout_mode = 2
-
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(20, 20)
-layout_mode = 2
-texture = ExtResource("8_t3lcc")
-expand_mode = 2
-
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("9_pwm2g")
-theme_override_font_sizes/font_size = 16
-text = "Genesis City"
-
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-theme_override_fonts/font = ExtResource("9_2ra1o")
-theme_override_font_sizes/font_size = 10
-text = "Map Made up of thousands of parcels owned and populated with dynamic content by its diverse community."
-autowrap_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
-layout_mode = 1
-anchors_preset = 11
-anchor_left = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -156.0
-offset_top = -75.0
-offset_bottom = 75.0
-grow_horizontal = 0
-grow_vertical = 2
-texture = ExtResource("11_t2lm2")
-expand_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("12_g4fdo")
+expand_mode = 3
 stretch_mode = 5
 
-[node name="WorldsBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
-clip_children = 2
-clip_contents = true
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 68.0
-offset_right = 64.0
-offset_bottom = 68.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
-
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound"]
 layout_mode = 2
-texture = SubResource("GradientTexture2D_3q3ud")
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_242e4")
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound"]
 layout_mode = 2
+text = "No result found"
+label_settings = SubResource("LabelSettings_iyg6d")
+horizontal_alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound"]
 layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_86ojj")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound"]
 layout_mode = 2
+text = "Try searching with
+different keywords."
+label_settings = SubResource("LabelSettings_8uyq4")
+horizontal_alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(20, 20)
+[node name="MessageError" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-texture = ExtResource("8_t3lcc")
-expand_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+alignment = 1
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError"]
+custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
-theme_override_fonts/font = ExtResource("9_pwm2g")
-theme_override_font_sizes/font_size = 16
-text = "Decentraland Worlds"
-
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-theme_override_fonts/font = ExtResource("9_2ra1o")
-theme_override_font_sizes/font_size = 10
-text = "Personal 3D space separate from Genesis City, where you can unleash your creativity, host events, and more!"
-autowrap_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
-layout_mode = 1
-anchors_preset = 11
-anchor_left = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -156.0
-offset_top = -75.0
-offset_bottom = 75.0
-grow_horizontal = 0
-grow_vertical = 2
-texture = ExtResource("12_74ecw")
-expand_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("12_g4fdo")
+expand_mode = 3
 stretch_mode = 5
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
-libraries = {
-&"": SubResource("AnimationLibrary_xfp2p")
-}
-autoplay = "default"
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError"]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_242e4")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError"]
+layout_mode = 2
+text = "Something
+went wrong"
+label_settings = SubResource("LabelSettings_iyg6d")
+horizontal_alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError"]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_86ojj")
+
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError"]
+layout_mode = 2
+text = "We couldn’t load the results.
+Please try again."
+label_settings = SubResource("LabelSettings_8uyq4")
+horizontal_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesFeaturedGenerator")
 title = "Featured"
 
-[node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 only_featured = true
 discover = NodePath("../../../../../../../..")
 
-[node name="Events" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="Events" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("EventsGenerator")
 title = "Events"
 
-[node name="EventsGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
+[node name="EventsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
 discover = NodePath("../../../../../../../..")
 
-[node name="LastVisited" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="LastVisited" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("LastVisitGenerator")
 title = "Last Visited"
 
-[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 unique_name_in_owner = true
 last_places_logic = true
 discover = NodePath("../../../../../../../..")
 
-[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Most Actives"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 discover = NodePath("../../../../../../../..")
 
-[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Favorites"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 only_favorites = true
 discover = NodePath("../../../../../../../..")
 
-[node name="PlacesMyPlaces" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesMyPlaces" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "My Places"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMyPlaces" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesMyPlaces" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 only_my_places = true
 discover = NodePath("../../../../../../../..")
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 128
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
 
-[node name="PanelContainer" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer"]
+layout_mode = 2
+
+[node name="SearchSugestionsContainer" parent="TextureRect/VBoxContainer/MarginContainer" instance=ExtResource("14_5g6gd")]
+unique_name_in_owner = true
 layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
@@ -496,11 +331,8 @@ unique_name_in_owner = true
 visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
-[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
-[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
-[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
-[connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
-[connection signal="jump_in" from="CanvasLayer/EventDetails" to="." method="_on_event_details_jump_in"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
+[connection signal="focus_entered" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
+[connection signal="text_changed" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="text_submitted" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
+[connection signal="timeout" from="TextureRect/VBoxContainer/PanelContainer_Navbar/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]

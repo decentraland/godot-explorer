@@ -217,7 +217,6 @@ func _ready():
 	)
 	add_child(disconnect_handler)
 
-	#Global.scene_fetcher.current_position = start_parcel_position
 	Global.scene_fetcher.update_position(start_parcel_position, true)
 
 	if cmd_realm != null:
@@ -231,7 +230,6 @@ func _ready():
 			)
 		else:
 			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
-
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
 	control_menu.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
@@ -498,8 +496,6 @@ func _on_panel_chat_submit_message(message: String):
 				Time.get_unix_time_from_system()
 			)
 			Global.realm.async_set_realm(world_realm, true)
-			loading_ui.enable_loading_screen()
-			# LOADING_START metric
 			var loading_data = {
 				"position": str(Global.scene_fetcher.current_position),
 				"realm": world_realm,
@@ -507,6 +503,8 @@ func _on_panel_chat_submit_message(message: String):
 			}
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
+		elif command_str == "/pos":
+			_emit_pos_command_message()
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
@@ -528,6 +526,109 @@ func _on_panel_chat_submit_message(message: String):
 		)
 
 
+func _emit_pos_command_message() -> void:
+	# Coordinates: Decentraland uses X right, Y up, Z forward (north). Godot uses X right, Y up, Z backward.
+	# So DCL position = (godot.x, godot.y, -godot.z). Parcels are 16m; parcel = (floor(x/16), floor(z/16)).
+	var cam = get_viewport().get_camera_3d()
+	if not cam:
+		Global.on_chat_message.emit(
+			"system", "[color=#ccc]🔴 No active camera[/color]", Time.get_unix_time_from_system()
+		)
+		return
+
+	var pos_godot_player := player.global_position
+	var pos_dcl_player := Vector3(pos_godot_player.x, pos_godot_player.y, -pos_godot_player.z)
+	var parcel_player := Vector2i(floori(pos_dcl_player.x / 16.0), floori(pos_dcl_player.z / 16.0))
+
+	var pos_godot_cam: Vector3 = cam.global_position
+	var pos_dcl_cam := Vector3(pos_godot_cam.x, pos_godot_cam.y, -pos_godot_cam.z)
+	var parcel_cam := Vector2i(floori(pos_dcl_cam.x / 16.0), floori(pos_dcl_cam.z / 16.0))
+
+	# Relative to current parcel (origin at parcel corner, 0-16 m on XZ)
+	var rel_parcel_player := Vector3(
+		pos_dcl_player.x - parcel_player.x * 16.0,
+		pos_dcl_player.y,
+		pos_dcl_player.z - parcel_player.y * 16.0
+	)
+	var rel_parcel_cam := Vector3(
+		pos_dcl_cam.x - parcel_cam.x * 16.0, pos_dcl_cam.y, pos_dcl_cam.z - parcel_cam.y * 16.0
+	)
+
+	# Relative to current scene base parcel
+	var current_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
+	var base_parcel: Vector2i = Global.scene_runner.get_scene_base_parcel(current_scene_id)
+	var rel_base_player := Vector3(
+		pos_dcl_player.x - base_parcel.x * 16.0,
+		pos_dcl_player.y,
+		pos_dcl_player.z - base_parcel.y * 16.0
+	)
+	var rel_base_cam := Vector3(
+		pos_dcl_cam.x - base_parcel.x * 16.0, pos_dcl_cam.y, pos_dcl_cam.z - base_parcel.y * 16.0
+	)
+
+	# Camera forward in Godot is -basis.z; convert to DCL axis (Z_dcl = -Z_godot)
+	var forward_godot: Vector3 = -cam.global_transform.basis.z
+	var forward_dcl := Vector3(forward_godot.x, forward_godot.y, -forward_godot.z)
+	if forward_dcl.length_squared() > 0.0001:
+		forward_dcl = forward_dcl.normalized()
+
+	# Realm: display name and type (main / world / preview)
+	var realm_display: String = Global.realm.get_realm_string()
+	if realm_display.is_empty():
+		realm_display = Global.realm.realm_url
+	var realm_type: String
+	if Realm.is_genesis_city(Global.realm.realm_url):
+		realm_type = "main"
+	elif Realm.is_dcl_ens(realm_display) or realm_display.ends_with(".dcl.eth"):
+		realm_type = "world"
+	elif Realm.is_local_preview(Global.realm.realm_url):
+		realm_type = "preview"
+	else:
+		realm_type = "realm"
+
+	var msg := (
+		(
+			"[color=#cfc][b]Position (DCL)[/b][/color]\n"
+			+ "Realm: %s  [%s]\n"
+			+ "Player world: (%.2f, %.2f, %.2f)  Parcel: (%d, %d)\n"
+			+ "  rel parcel: (%.2f, %.2f, %.2f)  rel base: (%.2f, %.2f, %.2f)\n"
+			+ "Camera world: (%.2f, %.2f, %.2f)  Parcel: (%d, %d)\n"
+			+ "  rel parcel: (%.2f, %.2f, %.2f)  rel base: (%.2f, %.2f, %.2f)\n"
+			+ "Camera dir (unit): (%.4f, %.4f, %.4f)"
+		)
+		% [
+			realm_display,
+			realm_type,
+			pos_dcl_player.x,
+			pos_dcl_player.y,
+			pos_dcl_player.z,
+			parcel_player.x,
+			parcel_player.y,
+			rel_parcel_player.x,
+			rel_parcel_player.y,
+			rel_parcel_player.z,
+			rel_base_player.x,
+			rel_base_player.y,
+			rel_base_player.z,
+			pos_dcl_cam.x,
+			pos_dcl_cam.y,
+			pos_dcl_cam.z,
+			parcel_cam.x,
+			parcel_cam.y,
+			rel_parcel_cam.x,
+			rel_parcel_cam.y,
+			rel_parcel_cam.z,
+			rel_base_cam.x,
+			rel_base_cam.y,
+			rel_base_cam.z,
+			forward_dcl.x,
+			forward_dcl.y,
+			forward_dcl.z
+		]
+	)
+	Global.on_chat_message.emit("system", msg, Time.get_unix_time_from_system())
+
+
 func _on_control_menu_request_pause_scenes(enabled):
 	Global.scene_runner.set_pause(enabled)
 
@@ -538,7 +639,7 @@ func _on_control_menu_request_pause_scenes(enabled):
 ## @param skip_loading: When true, skips showing the loading screen.
 ##                      This is used when teleporting inside a scene to avoid
 ##                      showing the loading UI for an already-loaded area.
-func move_to(position: Vector3, skip_loading: bool):
+func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 	if disable_move_to:
 		return
 
@@ -546,7 +647,7 @@ func move_to(position: Vector3, skip_loading: bool):
 	if player.avatar and player.avatar.emote_controller:
 		player.avatar.emote_controller.set_teleport_grace()
 
-	player.move_to(position)
+	player.move_to(position, check_stuck)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
 	)
@@ -563,11 +664,16 @@ func move_to(position: Vector3, skip_loading: bool):
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
+	_async_teleport_to(parcel, realm)
+
+
+func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
+	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+		loading_ui.enable_loading_screen()
+		await Global.realm.async_set_realm(realm)
+
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
-
-	if not realm.is_empty() && realm != Global.realm.get_realm_string():
-		Global.realm.async_set_realm(realm)
 
 	Global.scene_fetcher.update_position(parcel, true)
 

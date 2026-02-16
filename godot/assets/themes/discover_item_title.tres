@@ -1,0 +1,9 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://iia6jgjebpg"]
+
+[ext_resource type="FontVariation" uid="uid://0ccjare113tm" path="res://assets/themes/fonts/inter_semibold_emoji_fallback.tres" id="1_3olo2"]
+
+[resource]
+line_spacing = 0.0
+font = ExtResource("1_3olo2")
+font_size = 26
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

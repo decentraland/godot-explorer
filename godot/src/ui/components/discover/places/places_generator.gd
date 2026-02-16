@@ -7,7 +7,7 @@ enum OrderBy {
 }
 
 const DISCOVER_CARROUSEL_ITEM = preload(
-	"res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn"
+	"res://src/ui/components/discover/carrousel/place_discover_card.tscn"
 )
 
 @export var order_by: OrderBy = OrderBy.NONE
@@ -29,6 +29,10 @@ func on_request(offset: int, limit: int) -> void:
 	if _no_more_elements and not _new_search:
 		return  # we reach the capacity...
 
+	if _new_search:
+		clean_items()
+		offset = 0
+
 	if last_places_logic:
 		async_request_last_places(offset, limit)
 	else:
@@ -43,15 +47,17 @@ func reload(offset, limit) -> void:
 	async_request_from_api(offset, limit)
 
 
-func async_request_last_places(_offset: int, _limit: int) -> void:
-	_no_more_elements = true
-	if _loading:
-		return
-
+func clean_items():
 	for item in item_container.get_children():
 		if item is PlaceItem:
 			item_container.remove_child(item)
 			item.queue_free()
+
+
+func async_request_last_places(_offset: int, _limit: int) -> void:
+	_no_more_elements = true
+	if _loading:
+		return
 
 	_loading = true
 
@@ -103,12 +109,14 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 	if last_places.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
-
+	else:
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 	_loading = false
 
 
 func async_request_from_api(offset: int, limit: int) -> void:
 	var url: String = PlacesHelper.get_api_url()
+
 	url += "?offset=%d&limit=%d" % [offset, limit]
 	if only_worlds:
 		url += "&only_worlds=true"
