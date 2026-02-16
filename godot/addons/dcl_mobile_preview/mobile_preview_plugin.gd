@@ -105,7 +105,6 @@ func _enter_tree() -> void:
 	EditorInterface.get_base_control().add_child(_error_dialog)
 
 	scene_changed.connect(_on_scene_changed)
-	set_force_draw_over_forwarding_enabled()
 
 	# Hide the rendering method chooser to save toolbar space
 	_renderer_control = _find_renderer_option_button()
@@ -128,8 +127,10 @@ func _enter_tree() -> void:
 	_update_overlay_icon()
 
 	_sync_orient_from_scene()
-	_apply_current()
-	_record_clean_version()
+
+	# Defer apply to avoid modifying ProjectSettings during GDExtension init
+	_apply_current.call_deferred()
+	_record_clean_version.call_deferred()
 
 
 func _exit_tree() -> void:
@@ -567,6 +568,12 @@ func _on_device_selected(_index: int) -> void:
 func _on_scene_changed(_scene_root: Node) -> void:
 	if not _scene_root:
 		return
+	# Defer to avoid modifying ProjectSettings while GDExtension placeholder
+	# instances are being recreated during startup.
+	_on_scene_changed_deferred.call_deferred()
+
+
+func _on_scene_changed_deferred() -> void:
 	var old_portrait := _is_portrait
 	var old_orient := _scene_orient
 	_sync_orient_from_scene()
@@ -580,7 +587,7 @@ func _on_scene_changed(_scene_root: Node) -> void:
 	if needs_reload:
 		var root = EditorInterface.get_edited_scene_root()
 		if root and not root.scene_file_path.is_empty():
-			call_deferred("_reload_current_scene")
+			_reload_current_scene.call_deferred()
 
 
 func _reload_current_scene() -> void:
@@ -715,11 +722,18 @@ func _apply_settings(device_index: int, is_portrait: bool, save_device: bool = t
 # --- Overlay drawing ---
 
 
-func _forward_canvas_force_draw_over_viewport(overlay: Control) -> void:
+func _handles(_object: Object) -> bool:
+	return true
+
+
+func _forward_canvas_draw_over_viewport(overlay: Control) -> void:
 	if not _overlay_visible or _overlay_texture == null:
 		return
 	var device_index: int = _device_button.selected if is_instance_valid(_device_button) else 0
 	if device_index == 0:
+		return
+	var vp_2d = EditorInterface.get_editor_viewport_2d()
+	if not is_instance_valid(vp_2d):
 		return
 
 	var device = DEVICES[device_index]
@@ -727,7 +741,7 @@ func _forward_canvas_force_draw_over_viewport(overlay: Control) -> void:
 	var vp_height: float = device[2] if _is_portrait else device[4]
 
 	var bz := Vector2(_bezel, _bezel)
-	var xform := EditorInterface.get_editor_viewport_2d().get_final_transform()
+	var xform := vp_2d.get_final_transform()
 	var top_left: Vector2 = xform * (-bz)
 	var bottom_right: Vector2 = xform * (Vector2(vp_width, vp_height) + bz)
 

@@ -501,6 +501,26 @@ var scene_path: String = root.scene_file_path
 
 **Prevention:** When in doubt, use explicit type annotations (`: Type`) instead of type inference (`:=`). Always use `: Type` when the source expression involves an untyped variable.
 
+### Pitfall 8: Using `call_deferred("method_name")` Instead of `method.call_deferred()`
+
+**Problem:** Using `call_deferred` with a string method name is the legacy Godot 3 style. It bypasses type checking, is harder to refactor, and won't catch typos at parse time.
+
+```gdscript
+# ❌ WRONG - string-based, no type safety
+call_deferred("_apply_current")
+call_deferred("_reload_current_scene")
+```
+
+**Solution:** Use the callable `.call_deferred()` syntax:
+
+```gdscript
+# ✅ CORRECT - type-safe, refactor-friendly
+_apply_current.call_deferred()
+_reload_current_scene.call_deferred()
+```
+
+**Prevention:** Always use `func_name.call_deferred()` instead of `call_deferred("func_name")`. The same applies to `call()` vs direct callable invocation.
+
 ## Best Practices
 
 ### 1. Consult References for Common Issues
