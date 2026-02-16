@@ -106,8 +106,7 @@ pub fn update_transform_and_parent(
                         node_3d.try_get_node_as::<StaticBody3D>("MeshCollider")
                     {
                         let rid = mesh_collider.get_rid();
-                        PhysicsServer3D::singleton()
-                            .body_set_mode(rid, BodyMode::KINEMATIC);
+                        PhysicsServer3D::singleton().body_set_mode(rid, BodyMode::KINEMATIC);
                     }
                     // Switch existing GltfContainer colliders via signal
                     if let Some(mut gltf_container) =
