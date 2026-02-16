@@ -652,6 +652,87 @@ mod local_notification_queue_tests {
         assert!(all_pending_scheduled, "First 4 pending should be scheduled");
     }
 
+    /// Test 7: Verify get_notifications() returns notifications sorted by timestamp descending
+    /// Ensures newest notifications appear first in the returned array
+    #[godot::test::itest]
+    fn test_get_notifications_returns_sorted_by_timestamp_desc(_ctx: &TestContext) {
+        let fixture = NotificationTestFixture::new();
+        let mut manager = fixture.manager.clone();
+
+        // Create notifications with out-of-order timestamps (milliseconds)
+        let mut notifications = VariantArray::new();
+
+        let mut notif1 = Dictionary::new();
+        notif1.set("id", "notif_old");
+        notif1.set("timestamp", 1000); // oldest
+        notif1.set("type", "test");
+        notifications.push(&notif1.to_variant());
+
+        let mut notif2 = Dictionary::new();
+        notif2.set("id", "notif_newest");
+        notif2.set("timestamp", 5000); // newest
+        notif2.set("type", "test");
+        notifications.push(&notif2.to_variant());
+
+        let mut notif3 = Dictionary::new();
+        notif3.set("id", "notif_middle");
+        notif3.set("timestamp", 3000); // middle
+        notif3.set("type", "test");
+        notifications.push(&notif3.to_variant());
+
+        // Set the internal _notifications array directly
+        manager.set("_notifications", &notifications.to_variant());
+
+        // Call get_notifications()
+        let result = manager.call("get_notifications", &[]);
+        let result_array = result.to::<VariantArray>();
+
+        assert_eq!(result_array.len(), 3, "Should return all 3 notifications");
+
+        // Verify order: newest first (5000, 3000, 1000)
+        let first = result_array.get(0).unwrap().to::<Dictionary>();
+        let second = result_array.get(1).unwrap().to::<Dictionary>();
+        let third = result_array.get(2).unwrap().to::<Dictionary>();
+
+        let first_ts = first.get("timestamp").unwrap().to::<i64>();
+        let second_ts = second.get("timestamp").unwrap().to::<i64>();
+        let third_ts = third.get("timestamp").unwrap().to::<i64>();
+
+        assert_eq!(
+            first_ts, 5000,
+            "First notification should have timestamp 5000 (newest)"
+        );
+        assert_eq!(
+            second_ts, 3000,
+            "Second notification should have timestamp 3000"
+        );
+        assert_eq!(
+            third_ts, 1000,
+            "Third notification should have timestamp 1000 (oldest)"
+        );
+
+        // Also verify the IDs match expected order
+        let first_id = first.get("id").unwrap().to::<GString>();
+        let second_id = second.get("id").unwrap().to::<GString>();
+        let third_id = third.get("id").unwrap().to::<GString>();
+
+        assert_eq!(
+            first_id,
+            GString::from("notif_newest"),
+            "First should be newest"
+        );
+        assert_eq!(
+            second_id,
+            GString::from("notif_middle"),
+            "Second should be middle"
+        );
+        assert_eq!(
+            third_id,
+            GString::from("notif_old"),
+            "Third should be oldest"
+        );
+    }
+
     /// Helper struct for consistency validation results
     struct ConsistencyResult {
         is_consistent: bool,
