@@ -105,6 +105,7 @@ func _enter_tree() -> void:
 	EditorInterface.get_base_control().add_child(_error_dialog)
 
 	scene_changed.connect(_on_scene_changed)
+	set_force_draw_over_forwarding_enabled()
 
 	# Hide the rendering method chooser to save toolbar space
 	_renderer_control = _find_renderer_option_button()
@@ -722,11 +723,7 @@ func _apply_settings(device_index: int, is_portrait: bool, save_device: bool = t
 # --- Overlay drawing ---
 
 
-func _handles(_object: Object) -> bool:
-	return true
-
-
-func _forward_canvas_draw_over_viewport(overlay: Control) -> void:
+func _forward_canvas_force_draw_over_viewport(overlay: Control) -> void:
 	if not _overlay_visible or _overlay_texture == null:
 		return
 	var device_index: int = _device_button.selected if is_instance_valid(_device_button) else 0
