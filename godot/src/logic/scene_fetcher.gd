@@ -128,7 +128,7 @@ func on_loading_finished():
 		if target_position != null:
 			# Trust the spawn point position, move up if inside a collider
 			var valid_position := _find_valid_spawn_position(target_position)
-			Global.get_explorer().move_to(valid_position, true)
+			Global.get_explorer().move_to(valid_position, true, false)  # skip stuck check, position already validated
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -937,7 +937,7 @@ func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
 	)
 	# Trust the spawn point position, move up if inside a collider
 	var valid_position := _find_valid_spawn_position(parcel_center)
-	Global.get_explorer().move_to(valid_position, true)
+	Global.get_explorer().move_to(valid_position, true, false)  # skip stuck check, position already validated
 
 
 ## Finds a valid spawn position by trusting the spawn point and moving up if inside a collider.
