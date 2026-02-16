@@ -13,9 +13,12 @@ use crate::{
 };
 use godot::{
     classes::{
-        mesh::PrimitiveType, ArrayMesh, BoxShape3D, CollisionShape3D, CylinderShape3D, Shape3D,
+        mesh::PrimitiveType,
+        physics_server_3d::BodyMode,
+        ArrayMesh, BoxShape3D, CollisionShape3D, CylinderShape3D, PhysicsServer3D, Shape3D,
         SphereShape3D, StaticBody3D,
     },
+    obj::Singleton,
     prelude::*,
 };
 use num_traits::Zero;
@@ -345,6 +348,13 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     static_body_3d.set_name("MeshCollider");
                     static_body_3d.set_meta("dcl_entity_id", &(entity.as_i32()).to_variant());
                     static_body_3d.set_meta("dcl_scene_id", &(scene.scene_id.0).to_variant());
+
+                    // If entity has an active tween, set collider to KINEMATIC
+                    if scene.kinematic_entities.contains(entity) {
+                        let rid = static_body_3d.get_rid();
+                        PhysicsServer3D::singleton()
+                            .body_set_mode(rid, BodyMode::KINEMATIC);
+                    }
 
                     node_3d.add_child(&static_body_3d.upcast::<Node>());
                 }

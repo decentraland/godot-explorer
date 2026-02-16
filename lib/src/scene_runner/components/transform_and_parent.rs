@@ -2,6 +2,8 @@ use std::time::Instant;
 
 use godot::{
     builtin::math::FloatExt,
+    classes::{physics_server_3d::BodyMode, PhysicsServer3D, StaticBody3D},
+    obj::Singleton,
     prelude::{Node, Transform3D, Vector3},
 };
 
@@ -93,6 +95,29 @@ pub fn update_transform_and_parent(
             if godot_entity_node.desired_parent_3d != old_parent {
                 godot_dcl_scene.unparented_entities_3d.insert(*entity);
                 godot_dcl_scene.hierarchy_dirty_3d = true;
+            }
+
+            // Detect movement: if entity already had a transform, this is a repeat
+            // update → mark kinematic and retroactively switch existing colliders
+            if scene.transform_initialized.contains(entity) {
+                if scene.kinematic_entities.insert(*entity) {
+                    // Newly kinematic — switch existing MeshCollider
+                    if let Some(mesh_collider) =
+                        node_3d.try_get_node_as::<StaticBody3D>("MeshCollider")
+                    {
+                        let rid = mesh_collider.get_rid();
+                        PhysicsServer3D::singleton()
+                            .body_set_mode(rid, BodyMode::KINEMATIC);
+                    }
+                    // Switch existing GltfContainer colliders via signal
+                    if let Some(mut gltf_container) =
+                        node_3d.try_get_node_as::<Node>("GltfContainer")
+                    {
+                        gltf_container.emit_signal("switch_to_kinematic", &[]);
+                    }
+                }
+            } else {
+                scene.transform_initialized.insert(*entity);
             }
 
             updated_count += 1;

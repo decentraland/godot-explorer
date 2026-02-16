@@ -10,15 +10,12 @@ enum GltfContainerLoadingState {
 
 const MAX_CONCURRENT_LOADS := 10
 
-# Debug: Set to true to paint meshes red when switching from STATIC to KINEMATIC
-const DEBUG_PAINT_KINEMATIC_BODIES := false
-
 var dcl_gltf_hash := ""
 var optimized := false
-# Track if this GLTF has static colliders (for STATIC->KINEMATIC optimization)
-var _has_static_colliders := false
 # Track specific error reason from loading (for better error reporting)
 var _last_load_error := ""
+# Once entity is known to move, all colliders should spawn as KINEMATIC
+var _kinematic_requested := false
 
 @onready var timer = $Timer
 
@@ -26,20 +23,18 @@ var _last_load_error := ""
 static var currently_loading_assets := []
 # Static queue for throttling
 static var pending_load_queue := []
-# Shared debug material for kinematic bodies visualization
-static var _debug_kinematic_material: StandardMaterial3D = null
 
 
 func _ready():
+	# Check if Rust flagged this entity as kinematic (has active tween)
+	if self.has_meta("kinematic_requested"):
+		_kinematic_requested = true
 	# Connect to switch_to_kinematic signal from Rust
 	self.switch_to_kinematic.connect(_on_switch_to_kinematic)
 	self.async_load_gltf.call_deferred()
 
 
 func _exit_tree():
-	# Disable transform tracking FIRST to prevent signal emission during cleanup
-	self.disable_transform_tracking()
-
 	# Remove from pending queue
 	pending_load_queue.erase(self)
 
@@ -266,7 +261,7 @@ func _async_load_and_instantiate(scene_path: String) -> Node3D:
 	apply_fixes(gltf_node)
 
 	# Set collision masks (colliders created with mask=0 initially)
-	_has_static_colliders = set_mask_colliders(
+	set_mask_colliders(
 		gltf_node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
 
@@ -290,10 +285,6 @@ func _complete_load():
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
 	timer.stop()
 	_finish_loading_slot()
-
-	# Enable transform tracking if we have static colliders
-	if _has_static_colliders:
-		self.enable_transform_tracking()
 
 	self.check_animations()
 
@@ -428,11 +419,6 @@ func async_deferred_add_child():
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
 	timer.stop()
 
-	# Enable transform tracking in Rust if we have static colliders
-	# Transform checking is done in Rust for better per-frame performance
-	if _has_static_colliders:
-		self.enable_transform_tracking()
-
 	self.check_animations()
 
 
@@ -481,9 +467,14 @@ func set_mask_colliders(
 					body_3d.process_mode = Node.PROCESS_MODE_DISABLED
 				else:
 					body_3d.process_mode = Node.PROCESS_MODE_INHERIT
-					# StaticBody3D is already STATIC by default
-					# Mark for tracking - will switch to KINEMATIC if entity moves
-					body_3d.set_meta("dcl_static_mode", true)
+					if _kinematic_requested:
+						# Entity already known to move - set KINEMATIC immediately
+						var rid = body_3d.get_rid()
+						if rid.is_valid():
+							PhysicsServer3D.body_set_mode(rid, PhysicsServer3D.BODY_MODE_KINEMATIC)
+					else:
+						# Mark for deferred tracking - will switch to KINEMATIC if entity moves
+						body_3d.set_meta("dcl_static_mode", true)
 					has_active_colliders = true
 
 		if set_mask_colliders(node, visible_cmask, invisible_cmask, scene_id, entity_id):
@@ -519,19 +510,6 @@ func update_mask_colliders(node_to_inspect: Node):
 		update_mask_colliders(node)
 
 
-static func _get_debug_kinematic_material() -> StandardMaterial3D:
-	if _debug_kinematic_material == null:
-		_debug_kinematic_material = StandardMaterial3D.new()
-		_debug_kinematic_material.albedo_color = Color.RED
-		_debug_kinematic_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_debug_kinematic_material.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
-		_debug_kinematic_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-		# Add emission to make it really visible
-		_debug_kinematic_material.emission_enabled = true
-		_debug_kinematic_material.emission = Color.RED
-		_debug_kinematic_material.emission_energy_multiplier = 2.0
-	return _debug_kinematic_material
-
 
 # Signal handler: called by Rust when entity has moved enough to require kinematic mode
 func _on_switch_to_kinematic():
@@ -541,6 +519,9 @@ func _on_switch_to_kinematic():
 	if is_queued_for_deletion():
 		return
 
+	# Remember that this entity moves, so future colliders spawn as KINEMATIC
+	_kinematic_requested = true
+
 	var gltf_node = get_gltf_resource()
 	if gltf_node != null and is_instance_valid(gltf_node):
 		_switch_colliders_to_kinematic(gltf_node)
@@ -548,6 +529,7 @@ func _on_switch_to_kinematic():
 
 # Switch all colliders from STATIC to KINEMATIC mode
 # Called when the entity moves (after the 2nd transform change)
+# Searches ALL descendants for StaticBody3D, not just direct children of MeshInstance3D
 func _switch_colliders_to_kinematic(node_to_inspect: Node):
 	# Guard: Skip if node is being freed
 	if not is_instance_valid(node_to_inspect):
@@ -557,28 +539,14 @@ func _switch_colliders_to_kinematic(node_to_inspect: Node):
 		if not is_instance_valid(node):
 			continue
 
-		if node is MeshInstance3D:
-			var mesh_instance: MeshInstance3D = node
-			var body_3d = get_static_body_3d(mesh_instance)
-			if (
-				body_3d != null
-				and is_instance_valid(body_3d)
-				and body_3d.has_meta("dcl_static_mode")
-			):
-				# Check RID validity before PhysicsServer3D call
+		# Switch any StaticBody3D with dcl_static_mode to KINEMATIC
+		if node is StaticBody3D:
+			var body_3d: StaticBody3D = node
+			if body_3d.has_meta("dcl_static_mode"):
 				var rid = body_3d.get_rid()
 				if rid.is_valid():
-					# Switch to KINEMATIC mode via PhysicsServer3D
 					PhysicsServer3D.body_set_mode(rid, PhysicsServer3D.BODY_MODE_KINEMATIC)
 				body_3d.remove_meta("dcl_static_mode")
-
-			# Debug: Paint visible meshes red (skip collider meshes)
-			if DEBUG_PAINT_KINEMATIC_BODIES:
-				var is_collider_mesh = mesh_instance.name.to_lower().contains("collider")
-				if not is_collider_mesh and mesh_instance.visible:
-					var mat = _get_debug_kinematic_material()
-					mesh_instance.material_override = mat
-					print("[DEBUG] KINEMATIC painted: ", mesh_instance.name)
 
 		_switch_colliders_to_kinematic(node)
 
@@ -602,14 +570,9 @@ func change_gltf(
 	dcl_invisible_cmask = invisible_meshes_collision_mask
 
 	if gltf_changed:
-		# Disable transform tracking BEFORE removing old GLTF to prevent signal during cleanup
-		self.disable_transform_tracking()
-
 		# New GLTF source - reload everything
 		dcl_gltf_src = new_gltf
-		_has_static_colliders = false
 		optimized = false
-		self.reset_transform_tracking()
 
 		if gltf_node != null:
 			remove_child(gltf_node)
