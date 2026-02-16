@@ -660,21 +660,21 @@ mod local_notification_queue_tests {
         let mut manager = fixture.manager.clone();
 
         // Create notifications with out-of-order timestamps (milliseconds)
-        let mut notifications = VariantArray::new();
+        let mut notifications = VarArray::new();
 
-        let mut notif1 = Dictionary::new();
+        let mut notif1 = VarDictionary::new();
         notif1.set("id", "notif_old");
         notif1.set("timestamp", 1000); // oldest
         notif1.set("type", "test");
         notifications.push(&notif1.to_variant());
 
-        let mut notif2 = Dictionary::new();
+        let mut notif2 = VarDictionary::new();
         notif2.set("id", "notif_newest");
         notif2.set("timestamp", 5000); // newest
         notif2.set("type", "test");
         notifications.push(&notif2.to_variant());
 
-        let mut notif3 = Dictionary::new();
+        let mut notif3 = VarDictionary::new();
         notif3.set("id", "notif_middle");
         notif3.set("timestamp", 3000); // middle
         notif3.set("type", "test");
@@ -685,14 +685,14 @@ mod local_notification_queue_tests {
 
         // Call get_notifications()
         let result = manager.call("get_notifications", &[]);
-        let result_array = result.to::<VariantArray>();
+        let result_array = result.to::<VarArray>();
 
         assert_eq!(result_array.len(), 3, "Should return all 3 notifications");
 
         // Verify order: newest first (5000, 3000, 1000)
-        let first = result_array.get(0).unwrap().to::<Dictionary>();
-        let second = result_array.get(1).unwrap().to::<Dictionary>();
-        let third = result_array.get(2).unwrap().to::<Dictionary>();
+        let first = result_array.get(0).unwrap().to::<VarDictionary>();
+        let second = result_array.get(1).unwrap().to::<VarDictionary>();
+        let third = result_array.get(2).unwrap().to::<VarDictionary>();
 
         let first_ts = first.get("timestamp").unwrap().to::<i64>();
         let second_ts = second.get("timestamp").unwrap().to::<i64>();
