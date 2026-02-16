@@ -229,13 +229,9 @@ func _update_input_actions():
 		Input.action_press(action_down, output.y)
 	elif Input.is_action_pressed(action_down):
 		Input.action_release(action_down)
-	if output.length() < 0.75:
-		Input.action_press(action_walk)
-		_sprint_timer.stop()
-	elif Input.is_action_pressed(action_walk):
-		Input.action_release(action_walk)
 	if output.length() < 0.95:
 		Input.action_release(action_sprint)
+		_sprint_timer.stop()
 	elif _sprint_timer.is_stopped() and !Input.is_action_pressed(action_sprint):
 		_sprint_timer.start()
 
@@ -277,6 +273,11 @@ func _reset():
 			Input.action_release(action_down)
 		if Input.is_action_pressed(action_up) or Input.is_action_just_pressed(action_up):
 			Input.action_release(action_up)
+		if Input.is_action_pressed(action_walk) or Input.is_action_just_pressed(action_walk):
+			Input.action_release(action_walk)
+		if Input.is_action_pressed(action_sprint) or Input.is_action_just_pressed(action_sprint):
+			Input.action_release(action_sprint)
+		_sprint_timer.stop()
 
 
 func _on_resized() -> void:

@@ -48,7 +48,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_8x4dy")
-deadzone_size = 1.0
+deadzone_size = 10.0
 _joystick_default_position = Vector2(160, 165)
 joystick_mode = 1
 visibility_mode = 1
@@ -108,6 +108,7 @@ icon_alignment = 1
 
 [node name="SprintTimer" type="Timer" parent="."]
 unique_name_in_owner = true
+wait_time = 0.5
 
 [connection signal="resized" from="." to="." method="_on_resized"]
 [connection signal="pressed" from="Button_Camera" to="." method="_on_button_camera_pressed"]
