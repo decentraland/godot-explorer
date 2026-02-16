@@ -1103,6 +1103,7 @@ func _on_discover_open():
 
 
 func _on_menu_close():
+	Global.set_orientation_landscape()
 	if !navbar.visible:
 		navbar.set_manually_hidden(false)
 		release_mouse()
