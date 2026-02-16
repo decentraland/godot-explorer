@@ -410,8 +410,8 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
-func move_to(target: Vector3):
+func move_to(target: Vector3, check_stuck: bool = true):
 	global_position = target
 	velocity = Vector3.ZERO
-	if stuck_detector:
+	if check_stuck and stuck_detector:
 		stuck_detector.check_stuck()
