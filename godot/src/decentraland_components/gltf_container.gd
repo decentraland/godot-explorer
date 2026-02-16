@@ -510,7 +510,6 @@ func update_mask_colliders(node_to_inspect: Node):
 		update_mask_colliders(node)
 
 
-
 # Signal handler: called by Rust when entity has moved enough to require kinematic mode
 func _on_switch_to_kinematic():
 	# Guard: Don't process if we're being freed or not in tree
