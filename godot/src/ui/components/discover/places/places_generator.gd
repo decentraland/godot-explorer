@@ -25,6 +25,11 @@ var _loading: bool = false
 var _discover_carrousel_item_loading: Control = null
 
 
+func _ready() -> void:
+	if only_favorites:
+		Global.favorite_destination_set.connect(_on_favorite_changed)
+
+
 func on_request(offset: int, limit: int) -> void:
 	if _no_more_elements and not _new_search:
 		return  # we reach the capacity...
@@ -38,13 +43,11 @@ func on_request(offset: int, limit: int) -> void:
 	else:
 		async_request_from_api(offset, limit)
 
-	if only_favorites:
-		Global.favorite_destination_set.connect(reload.bind(offset, limit))
 
-
-func reload(offset, limit) -> void:
+func _on_favorite_changed() -> void:
 	_new_search = true
-	async_request_from_api(offset, limit)
+	_no_more_elements = false
+	async_request_from_api(0, 10)
 
 
 func clean_items():
@@ -173,7 +176,9 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		for category in categories_array:
 			query += "&categories=" + category
 
-	var base_url := PlacesHelper.get_sign_api_url() if only_favorites else PlacesHelper.get_api_url()
+	var base_url := (
+		PlacesHelper.get_sign_api_url() if only_favorites else PlacesHelper.get_api_url()
+	)
 	var url := base_url + query
 	_async_fetch_places(url, limit)
 

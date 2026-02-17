@@ -52,7 +52,6 @@ func on_request(_offset: int, limit: int) -> void:
 
 	if Global.is_ios_or_emulating():
 		url += "&tag=allowed_ios"
-	prints("_async_fetch_events", url)
 	_async_fetch_events(url, limit)
 
 

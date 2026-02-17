@@ -898,6 +898,8 @@ func _share_place_or_event() -> void:
 		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(msg)
+	else:
+		print("[Share] ", msg)
 
 
 func _on_button_share_pressed() -> void:
