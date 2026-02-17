@@ -179,7 +179,7 @@ func update_styles(toggled_on):
 		texture_rect_icon.texture = null
 	else:
 		disabled = false
-		label.text = "REMIND ME"
+		label.text = "REMINDER SET" if toggled_on else "REMIND ME"
 		if toggled_on:
 			texture_rect_icon.texture = check_texture
 			texture_rect_icon.modulate = COLOR_PRESSED
