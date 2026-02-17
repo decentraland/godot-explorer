@@ -700,6 +700,7 @@ func set_orientation_portrait():
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
+	Global.set_orientation_landscape()
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.teleport_to(parcel_position, new_realm)
@@ -717,6 +718,7 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 
 
 func join_world(world_realm: String) -> void:
+	Global.set_orientation_landscape()
 	Global.on_chat_message.emit(
 		"system",
 		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
