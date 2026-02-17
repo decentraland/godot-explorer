@@ -1,14 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
 use godot::{
-    builtin::StringName,
+    builtin::{NodePath, StringName},
     classes::{
-        Animation, AnimationNode, AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2,
-        AnimationNodeBlendTree, AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer,
-        AnimationRootNode, AnimationTree, IAnimationTree, Node, Node3D,
+        animation::TrackType, Animation, AnimationLibrary, AnimationNode, AnimationNodeAdd2,
+        AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
+        AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer, AnimationRootNode,
+        AnimationTree, IAnimationTree, Node, Node3D,
     },
     meta::ToGodot,
-    obj::{Base, Gd, NewGd, WithBaseField},
+    obj::{Base, EngineEnum, Gd, NewGd, WithBaseField},
     prelude::{godot_api, GodotClass},
 };
 
@@ -112,6 +113,19 @@ impl MultipleAnimationController {
 
     pub fn apply_anims(&mut self, suggested_value: &PbAnimator) {
         let mut value = suggested_value.clone();
+
+        // Remap clip names that don't match existing animations.
+        // Godot's GLTF importer may strip numeric suffixes (e.g., "Action.001" -> "Action")
+        // when a GLB has only one animation with that base name.
+        for state in &mut value.states {
+            if !self.existing_anims_duration.contains_key(&state.clip) {
+                if let Some(resolved) = resolve_clip_name(&state.clip, &self.existing_anims_duration)
+                {
+                    state.clip = resolved;
+                }
+            }
+        }
+
         value
             .states
             .retain(|state| self.existing_anims_duration.contains_key(&state.clip));
@@ -315,8 +329,8 @@ impl MultipleAnimationController {
             self.playing_anims.insert(anim.clip.clone(), anim_item);
         }
 
-        // Finally set dummy animation to not used slots
-        for anim in available_index {
+        // Finally set dummy animation to not used slots and silence them
+        for anim in &available_index {
             let anim_name_node = StringName::from(&format!("anim_{}", anim));
             let mut anim_node = self
                 .base()
@@ -328,6 +342,12 @@ impl MultipleAnimationController {
                 .cast::<AnimationNodeAnimation>();
 
             anim_node.set_animation(DUMMY_ANIMATION_NAME);
+
+            // Silence unused slots so dummy animation doesn't corrupt transforms
+            self.base_mut().set(
+                &StringName::from(&format!("parameters/blend_{}/blend_amount", anim)),
+                &0_f32.to_variant(),
+            );
         }
     }
 
@@ -413,6 +433,120 @@ impl MultipleAnimationController {
     }
 }
 
+/// Resolves a clip name against available animations.
+/// Godot's GLTF importer may strip numeric suffixes (e.g., "Action.001" -> "Action")
+/// when a GLB has only one animation with that base name. This function tries:
+/// 1. Strip the numeric suffix (e.g., "Action.001" -> "Action")
+/// 2. If only one real animation exists, return it as a fallback
+fn resolve_clip_name(clip: &str, existing_anims: &HashMap<String, f32>) -> Option<String> {
+    // Try stripping numeric suffix: "Action.001" -> "Action"
+    if let Some(dot_pos) = clip.rfind('.') {
+        let suffix = &clip[dot_pos + 1..];
+        if suffix.chars().all(|c| c.is_ascii_digit()) {
+            let base = &clip[..dot_pos];
+            if existing_anims.contains_key(base) {
+                return Some(base.to_string());
+            }
+        }
+    }
+
+    // Fallback: if there's exactly 1 real animation, use it
+    let real_anims: Vec<_> = existing_anims
+        .keys()
+        .filter(|k| k.as_str() != DUMMY_ANIMATION_NAME && k.as_str() != "RESET")
+        .collect();
+    if real_anims.len() == 1 {
+        return Some(real_anims[0].clone());
+    }
+
+    None
+}
+
+/// Creates a RESET animation that captures the rest pose for all animated properties.
+/// Without this, AnimationNodeAdd2/Blend2 use wrong default values as rest_pose,
+/// corrupting transforms (e.g., scale averaging with identity instead of the GLTF value).
+fn create_reset_animation(
+    anim_player: &Gd<AnimationPlayer>,
+    gltf_node: &Gd<Node3D>,
+) -> Gd<Animation> {
+    let mut reset_anim = Animation::new_gd();
+    let mut seen_tracks: HashSet<String> = HashSet::new();
+    let anim_list = anim_player.get_animation_list();
+
+    for anim_name in anim_list.as_slice() {
+        let name_str = anim_name.to_string();
+        if name_str == DUMMY_ANIMATION_NAME || name_str == "RESET" {
+            continue;
+        }
+        let Some(anim) = anim_player.get_animation(&StringName::from(anim_name)) else {
+            continue;
+        };
+
+        for track_idx in 0..anim.get_track_count() {
+            let track_path = anim.track_get_path(track_idx);
+            let track_type = anim.track_get_type(track_idx);
+
+            let track_key = format!("{}:{}", track_path, track_type.ord());
+            if seen_tracks.contains(&track_key) {
+                continue;
+            }
+            seen_tracks.insert(track_key);
+
+            // Resolve the node from the track path (relative to GLTF root)
+            let node_path_str = track_path.get_concatenated_names().to_string();
+
+            let node = if node_path_str.is_empty() || node_path_str == "." {
+                // Track targets the root node itself (common for single-node GLTFs)
+                Some(gltf_node.clone().upcast::<Node>())
+            } else {
+                let node_path = NodePath::from(&node_path_str);
+                gltf_node.get_node_or_null(&node_path)
+            };
+
+            let Some(node) = node else {
+                continue;
+            };
+
+            match track_type {
+                TrackType::POSITION_3D => {
+                    let node_3d: Gd<Node3D> = node.cast();
+                    let pos = node_3d.get_position();
+                    let new_track = reset_anim.add_track(TrackType::POSITION_3D);
+                    reset_anim.track_set_path(new_track, &track_path);
+                    reset_anim.position_track_insert_key(new_track, 0.0, pos);
+                }
+                TrackType::ROTATION_3D => {
+                    let node_3d: Gd<Node3D> = node.cast();
+                    let rot = node_3d.get_quaternion();
+                    let new_track = reset_anim.add_track(TrackType::ROTATION_3D);
+                    reset_anim.track_set_path(new_track, &track_path);
+                    reset_anim.rotation_track_insert_key(new_track, 0.0, rot);
+                }
+                TrackType::SCALE_3D => {
+                    let node_3d: Gd<Node3D> = node.cast();
+                    let scale = node_3d.get_scale();
+                    let new_track = reset_anim.add_track(TrackType::SCALE_3D);
+                    reset_anim.track_set_path(new_track, &track_path);
+                    reset_anim.scale_track_insert_key(new_track, 0.0, scale);
+                }
+                TrackType::VALUE => {
+                    // For value tracks, resolve the property from subnames
+                    let subnames = track_path.get_concatenated_subnames().to_string();
+                    if !subnames.is_empty() {
+                        let value = node.get(&StringName::from(&subnames));
+                        let new_track = reset_anim.add_track(TrackType::VALUE);
+                        reset_anim.track_set_path(new_track, &track_path);
+                        reset_anim.track_insert_key(new_track, 0.0, &value);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    reset_anim
+}
+
 fn create_and_add_multiple_animation_controller(
     mut gltf_node: Gd<Node3D>,
 ) -> Option<Gd<MultipleAnimationController>> {
@@ -437,11 +571,17 @@ fn create_and_add_multiple_animation_controller(
     );
     anim_builder.set_name(MULTIPLE_ANIMATION_CONTROLLER_NAME);
 
+    let mut anim_lib = anim_player.get_animation_library("").unwrap();
+
     if !anim_player.has_animation(DUMMY_ANIMATION_NAME) {
-        anim_player
-            .get_animation_library("")
-            .unwrap()
-            .add_animation(DUMMY_ANIMATION_NAME, &Animation::new_gd());
+        anim_lib.add_animation(DUMMY_ANIMATION_NAME, &Animation::new_gd());
+    }
+
+    // Create RESET animation to define the rest pose for AnimationTree blending.
+    // Without this, Add2/Blend2 nodes use wrong defaults and corrupt transforms.
+    if !anim_player.has_animation("RESET") {
+        let reset_anim = create_reset_animation(&anim_player, &gltf_node);
+        anim_lib.add_animation("RESET", &reset_anim);
     }
 
     gltf_node.add_child(&anim_builder.clone().upcast::<Node>());
@@ -458,32 +598,88 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
         return;
     }
 
-    let mut playing_count = 0;
-    for state in value.states.iter() {
-        if state.playing.unwrap_or_default() {
-            playing_count += 1;
-            if playing_count > 1 {
-                break;
-            }
-        }
-    }
+    let playing_states: Vec<&PbAnimationState> = value
+        .states
+        .iter()
+        .filter(|s| s.playing.unwrap_or(false))
+        .collect();
 
-    // TODO: this is an optimizacion to avoid creating AnimationTree for every animation player
-    //  with just one animation, we can use the AnimationPlayer directly, but a proper controller is needed
-    // let need_multiple_animation = playing_count > 1;
+    let need_multiple_animation = playing_states.len() > 1
+        || value.states.len() > 1
+        || {
+            // Check if the GLTF has more than 1 real animation
+            let anim_player =
+                gltf_container_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer");
+            anim_player
+                .map(|ap| {
+                    ap.get_animation_list()
+                        .as_slice()
+                        .iter()
+                        .filter(|name| {
+                            let s = name.to_string();
+                            s != DUMMY_ANIMATION_NAME && s != "RESET"
+                        })
+                        .count()
+                        > 1
+                })
+                .unwrap_or(false)
+        };
 
-    let need_multiple_animation = true;
-
-    // For handling multiple animations, we need to create a new MultipleAnimationController
     if need_multiple_animation {
         let Some(mut new_blend_builder) =
             create_and_add_multiple_animation_controller(gltf_container_node)
         else {
-            // No animations available
             return;
         };
         new_blend_builder.bind_mut().apply_anims(value);
     } else {
-        todo!("single animation not implemented yet")
+        // Single animation: use AnimationPlayer directly, no AnimationTree needed
+        let Some(mut anim_player) =
+            gltf_container_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")
+        else {
+            return;
+        };
+
+        // Duplicate the AnimationLibrary so each instance has independent animation
+        // state. PackedScene.instantiate() shares resources, so without this all
+        // instances of the same GLTF would share the same animation objects.
+        if let Some(shared_lib) = anim_player.get_animation_library("") {
+            let unique_lib: Gd<AnimationLibrary> = shared_lib.duplicate().unwrap().cast();
+            anim_player.remove_animation_library("");
+            anim_player.add_animation_library("", &unique_lib);
+        }
+
+        if let Some(state) = playing_states.first() {
+            // Build a duration map from the AnimationPlayer for clip name resolution
+            let existing_anims: HashMap<String, f32> = anim_player
+                .get_animation_list()
+                .as_slice()
+                .iter()
+                .filter_map(|name| {
+                    let s = name.to_string();
+                    anim_player
+                        .get_animation(&StringName::from(name))
+                        .map(|a| (s, a.get_length()))
+                })
+                .collect();
+
+            // Resolve the clip name (handles Godot stripping numeric suffixes)
+            let resolved_clip = if existing_anims.contains_key(&state.clip) {
+                Some(state.clip.clone())
+            } else {
+                resolve_clip_name(&state.clip, &existing_anims)
+            };
+
+            if let Some(clip_name) = resolved_clip {
+                let anim_name = StringName::from(&clip_name);
+                anim_player.set_speed_scale(state.speed.unwrap_or(1.0));
+                if state.r#loop.unwrap_or(true) {
+                    if let Some(mut anim) = anim_player.get_animation(&anim_name) {
+                        anim.set_loop_mode(godot::classes::animation::LoopMode::LINEAR);
+                    }
+                }
+                anim_player.play_ex().name(&anim_name).done();
+            }
+        }
     }
 }
