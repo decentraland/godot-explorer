@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Decentraland Godot Explorer is a cross-platform metaverse client that combines:
-- **Godot Engine 4.5.1** (custom fork) for 3D rendering and UI
+- **Godot Engine 4.6.1** (custom fork) for 3D rendering and UI
 - **Rust** for core systems and performance-critical components
 - **GDScript** for game logic
 - **JavaScript/V8** runtime for executing Decentraland SDK scenes
@@ -194,7 +194,7 @@ cargo run -- export --target ios
 
 ## Important Notes
 
-- The project uses a forked Godot 4.5.1 - don't update the engine version
+- The project uses a forked Godot 4.6.1 - don't update the engine version
 - Windows users should clone to short paths (e.g., `C:/gexplorer`)
 - The Rust toolchain is pinned in `rust-toolchain.toml` (1.90)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
