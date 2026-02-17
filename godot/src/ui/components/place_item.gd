@@ -59,7 +59,7 @@ func _ready():
 		set_title(title)
 		set_event_name(event_name)
 		set_description(description)
-		set_likes_percent(likes_percent)
+		set_likes_percent(0, 0)
 		set_location(location)
 		set_categories(categories)
 	else:
@@ -436,12 +436,16 @@ func set_description(_description: String):
 		label.text = _description
 
 
-func set_likes_percent(_likes: float):
+func set_likes_percent(likes: int, dislikes: int):
 	var label = _get_label_likes()
 	var container = _get_container_likes()
 	if label and container:
-		container.set_visible(_likes > 0.0)
-		label.text = str(int(round(_likes * 100))) + "%"
+		var total = likes + dislikes
+		if total > 0:
+			label.text = str(int(round(float(likes) / float(total) * 100))) + "%"
+		else:
+			label.text = ""
+		container.set_visible(true)
 		_update_separators()
 
 
@@ -520,8 +524,9 @@ func set_data(item_data):
 		reminder_btn.set_data(_data)
 	_update_reminder_and_jump_buttons()
 	set_user_name(item_data.get("user_name", ""))
-	var like_score = item_data.get("like_score", 0.0)
-	set_likes_percent(like_score if like_score is float else 0.0)
+	var likes = item_data.get("likes", 0)
+	var dislikes = item_data.get("dislikes", 0)
+	set_likes_percent(likes, dislikes)
 	set_online(item_data.get("user_count", 0))
 	set_duration(item_data.get("duration", 0))
 	set_recurrent(_get_or_empty_string(item_data, "recurrent_frequency"))

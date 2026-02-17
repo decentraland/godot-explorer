@@ -20,7 +20,6 @@ var _generator_statuses: Dictionary = {}
 @onready var button_back_to_explorer: Button = %Button_BackToExplorer
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
-@onready var discover_content: VBoxContainer = %DiscoverContent
 
 
 func _ready():
