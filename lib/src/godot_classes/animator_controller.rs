@@ -119,7 +119,8 @@ impl MultipleAnimationController {
         // when a GLB has only one animation with that base name.
         for state in &mut value.states {
             if !self.existing_anims_duration.contains_key(&state.clip) {
-                if let Some(resolved) = resolve_clip_name(&state.clip, &self.existing_anims_duration)
+                if let Some(resolved) =
+                    resolve_clip_name(&state.clip, &self.existing_anims_duration)
                 {
                     state.clip = resolved;
                 }
@@ -604,26 +605,23 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
         .filter(|s| s.playing.unwrap_or(false))
         .collect();
 
-    let need_multiple_animation = playing_states.len() > 1
-        || value.states.len() > 1
-        || {
-            // Check if the GLTF has more than 1 real animation
-            let anim_player =
-                gltf_container_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer");
-            anim_player
-                .map(|ap| {
-                    ap.get_animation_list()
-                        .as_slice()
-                        .iter()
-                        .filter(|name| {
-                            let s = name.to_string();
-                            s != DUMMY_ANIMATION_NAME && s != "RESET"
-                        })
-                        .count()
-                        > 1
-                })
-                .unwrap_or(false)
-        };
+    let need_multiple_animation = playing_states.len() > 1 || value.states.len() > 1 || {
+        // Check if the GLTF has more than 1 real animation
+        let anim_player = gltf_container_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer");
+        anim_player
+            .map(|ap| {
+                ap.get_animation_list()
+                    .as_slice()
+                    .iter()
+                    .filter(|name| {
+                        let s = name.to_string();
+                        s != DUMMY_ANIMATION_NAME && s != "RESET"
+                    })
+                    .count()
+                    > 1
+            })
+            .unwrap_or(false)
+    };
 
     if need_multiple_animation {
         let Some(mut new_blend_builder) =
