@@ -43,7 +43,7 @@ func set_plane(uvs: Array):
 	var data_array = DclMeshRenderer.get_plane_arrays()
 	var n = min(floor(float(uvs.size()) / 2.0), 8)
 	for i in range(n):
-		data_array[4][i] = Vector2(uvs[i * 2], -uvs[i * 2 + 1])
+		data_array[4][i] = Vector2(uvs[i * 2], 1.0 - uvs[i * 2 + 1])
 
 	self.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, data_array)
 
