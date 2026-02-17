@@ -115,11 +115,10 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 
 func async_request_from_api(offset: int, limit: int) -> void:
-	var url: String = PlacesHelper.get_api_url()
+	var query := "?offset=%d&limit=%d" % [offset, limit]
 
-	url += "?offset=%d&limit=%d" % [offset, limit]
 	if only_worlds:
-		url += "&only_worlds=true"
+		query += "&only_worlds=true"
 
 	if _new_search:
 		_loaded_elements = 0
@@ -145,35 +144,37 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		item_container.move_child(_discover_carrousel_item_loading, -1)
 
 	if search_param.length() > 0:
-		url += "&search=" + search_param.uri_encode()
+		query += "&search=" + search_param.uri_encode()
 
 	if only_favorites:
-		url += "&only_favorites=true"
+		query += "&only_favorites=true"
 
 	if only_my_places:
 		var address := Global.player_identity.get_address_str()
 		if not address.is_empty():
-			url += "&owner=" + address
+			query += "&owner=" + address
 
 	if only_highlighted:
-		url += "&only_highlighted=true"
+		query += "&only_highlighted=true"
 
 	if only_featured:
-		url += "&tag=featured"
+		query += "&tag=featured"
 
 	if order_by != OrderBy.NONE:
-		url += "&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
+		query += "&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
 
 	if Global.is_ios_or_emulating():
-		url += "&tag=allowed_ios"
+		query += "&tag=allowed_ios"
 
-	url += "&sdk=7"
+	query += "&sdk=7"
 
 	if categories != "all":
 		var categories_array = categories.split(",")
 		for category in categories_array:
-			url += "&categories=" + category
+			query += "&categories=" + category
 
+	var base_url := PlacesHelper.get_sign_api_url() if only_favorites else PlacesHelper.get_api_url()
+	var url := base_url + query
 	_async_fetch_places(url, limit)
 
 
