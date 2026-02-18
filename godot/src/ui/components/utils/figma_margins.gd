@@ -72,6 +72,9 @@ func _request_update():
 
 func _is_portrait() -> bool:
 	if Engine.is_editor_hint():
+		var preview_active = ProjectSettings.get_setting("_mobile_preview/active", false)
+		if preview_active:
+			return ProjectSettings.get_setting("_mobile_preview/is_portrait", true)
 		return simulate_portrait
 	return Global.is_orientation_portrait()
 

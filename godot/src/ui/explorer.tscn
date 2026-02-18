@@ -40,6 +40,7 @@ corner_radius_bottom_left = 40
 
 [node name="explorer" type="Node"]
 script = ExtResource("1_5n8xk")
+metadata/mobile_preview_orientation = "landscape"
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 visible = false

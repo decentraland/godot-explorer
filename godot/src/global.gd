@@ -169,6 +169,9 @@ func _ready():
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
 
+	if cli.landscape and (cli.emulate_ios or cli.emulate_android):
+		set_orientation_landscape()
+
 	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
 	var fake_deeplink = cli.fake_deeplink
 	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
