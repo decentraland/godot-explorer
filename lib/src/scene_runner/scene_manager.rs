@@ -909,6 +909,21 @@ impl SceneManager {
                     continue;
                 }
 
+                // Detect stuck scenes: if the scene thread has been waiting for a response
+                // for too many frames, force-process to completion to unblock it.
+                // This matches bevy-explorer's behavior of always processing each scene
+                // to completion once started.
+                const STUCK_FRAMES_THRESHOLD: u32 = 10;
+                let force_complete = scene.stuck_frames >= STUCK_FRAMES_THRESHOLD;
+                if force_complete {
+                    tracing::warn!(
+                        "Scene {:?} stuck for {} frames at state {:?}, forcing completion",
+                        scene.scene_entity_definition.get_title(),
+                        scene.stuck_frames,
+                        scene.current_dirty.update_state,
+                    );
+                }
+
                 if _process_scene(
                     scene,
                     end_time_us,
@@ -921,9 +936,13 @@ impl SceneManager {
                     &self.begin_time,
                     &self.ui_canvas_information,
                     &self.pool_manager,
+                    force_complete,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+                    scene.stuck_frames = 0;
+                } else if scene.current_dirty.waiting_process {
+                    scene.stuck_frames += 1;
                 }
             }
         }

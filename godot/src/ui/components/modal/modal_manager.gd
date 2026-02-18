@@ -274,7 +274,8 @@ func _on_scene_timeout_primary() -> void:
 
 func _on_scene_timeout_secondary() -> void:
 	Global.metrics.track_click_button("run_anyway", "LOADING", "")
-	Global.run_anyway.emit()
+	# Emit loading_timeout so loading_screen_progress_logic hides the loading screen and shows the scene
+	Global.scene_runner.loading_timeout.emit(-1)
 	close_current_modal()
 
 

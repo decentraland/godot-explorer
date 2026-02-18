@@ -4,7 +4,12 @@ const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
 # DEBUG: Set to true to trigger notifications in 10 seconds instead of actual event time
 const DEBUG_TRIGGER_IN_10_SECONDS = false
+const COLOR_PRESSED = Color("#FD4766")
+const COLOR_NORMAL = Color("#FCFCFC")
+const COLOR_WHILE = Color("#CFCDD4")
 
+var bell_texture = load("res://assets/ui/bell.svg")
+var check_texture = load("res://assets/ui/check.svg")
 var event_id_value: String
 var event_tags: String
 var event_start_timestamp: int = 0  # Unix timestamp (seconds) when event starts
@@ -12,11 +17,8 @@ var event_name: String = ""
 var event_coordinates: Vector2i = Vector2i(0, 0)
 var event_cover_image_url: String = ""
 
-@onready var texture_progress_bar: TextureProgressBar = $TextureProgressBar
-@onready var texture_rect_add: TextureRect = %TextureRect_Add
-@onready var texture_rect_remove: TextureRect = %TextureRect_Remove
+@onready var texture_rect_icon: TextureRect = %TextureRect_Icon
 @onready var label: Label = %Label
-@onready var h_box_container_content: HBoxContainer = %HBoxContainer_Content
 
 
 func _ready() -> void:
@@ -24,19 +26,22 @@ func _ready() -> void:
 
 
 func set_data(item_data: Dictionary) -> void:
-	event_id_value = item_data.get("id", "")
-	event_tags = "trending" if item_data.get("trending", false) else "none"
-	event_name = item_data.get("name", "")
-	event_cover_image_url = item_data.get("image", "")
+	if item_data.is_empty():
+		hide()
+		return
 
-	var next_start_at = item_data.get("next_start_at", "")
-	if next_start_at != "":
-		var timestamp = _parse_iso_timestamp(next_start_at)
-		if timestamp > 0:
-			event_start_timestamp = timestamp
+	event_id_value = str(item_data.get("id", ""))
+	if event_id_value.is_empty():
+		hide()
+		return
 
+	event_tags = str(item_data.get("event_tags", item_data.get("tags", "")))
+	event_name = str(item_data.get("name", ""))
+	event_cover_image_url = str(item_data.get("image", ""))
+	event_start_timestamp = _parse_iso_timestamp(str(item_data.get("next_start_at", "")))
 	event_coordinates = _parse_position_from_item(item_data)
 
+	show()
 	async_update_attending_state()
 
 
@@ -70,45 +75,43 @@ func async_update_attending_state() -> void:
 
 
 static func _parse_position_from_item(item_data: Dictionary) -> Vector2i:
-	var coordinates = item_data.get("coordinates", [0, 0])
-	if coordinates is Array and coordinates.size() == 2:
-		return Vector2i(int(coordinates[0]), int(coordinates[1]))
-	return Vector2i(0, 0)
+	var coords = item_data.get("coordinates", null)
+	var pos_arr = item_data.get("position", null)
+	var base_pos = item_data.get("base_position", null)
+	if coords is Array and coords.size() >= 2:
+		return Vector2i(int(coords[0]), int(coords[1]))
+	if pos_arr is Array and pos_arr.size() >= 2:
+		return Vector2i(int(pos_arr[0]), int(pos_arr[1]))
+	if item_data.get("x") != null and item_data.get("y") != null:
+		return Vector2i(int(item_data.x), int(item_data.y))
+	if base_pos:
+		var parts = str(base_pos).split(",")
+		if parts.size() >= 2:
+			return Vector2i(int(parts[0]), int(parts[1]))
+	return Vector2i.ZERO
 
 
 static func _parse_iso_timestamp(iso_string: String) -> int:
 	if iso_string.is_empty():
 		return 0
-
 	var date_parts = iso_string.split("T")
 	if date_parts.size() != 2:
 		return 0
-
 	var date_part = date_parts[0]
 	var time_part = date_parts[1].replace("Z", "").split(".")[0]
-
 	var date_components = date_part.split("-")
 	var time_components = time_part.split(":")
-
 	if date_components.size() != 3 or time_components.size() != 3:
 		return 0
-
 	var year = int(date_components[0])
 	var month = int(date_components[1])
 	var day = int(date_components[2])
 	var hour = int(time_components[0])
 	var minute = int(time_components[1])
 	var second = int(time_components[2])
-
 	var date_dict = {
-		"year": year,
-		"month": month,
-		"day": day,
-		"hour": hour,
-		"minute": minute,
-		"second": second,
+		"year": year, "month": month, "day": day, "hour": hour, "minute": minute, "second": second
 	}
-
 	return Time.get_unix_time_from_datetime_dict(date_dict)
 
 
@@ -119,6 +122,9 @@ func _async_on_toggled(toggled_on: bool) -> void:
 
 	_set_loading(true)
 
+	# API: https://decentraland.org/events/docs/
+	# POST /api/events/{event_id}/attendees - create intention to attend (no body)
+	# DELETE /api/events/{event_id}/attendees - remove intention to attend (no body)
 	var url = DclUrls.events_api() + "/" + event_id_value + "/attendees"
 	var method: HTTPClient.Method
 
@@ -157,16 +163,12 @@ func _async_on_toggled(toggled_on: bool) -> void:
 
 
 func _set_loading(status: bool) -> void:
-	if status:
-		texture_progress_bar.show()
-		self_modulate = "FFFFFF00"
-		h_box_container_content.modulate = "FFFFFF00"
-		disabled = true
-	else:
-		disabled = false
-		texture_progress_bar.hide()
-		self_modulate = "FFFFFF"
-		h_box_container_content.modulate = "FFFFFF"
+	disabled = status
+	texture_rect_icon.texture = bell_texture
+	texture_rect_icon.modulate = COLOR_WHILE
+	label.label_settings.font_color = COLOR_WHILE
+	if status == false:
+		update_styles(button_pressed)
 
 
 func update_styles(toggled_on):
@@ -174,23 +176,18 @@ func update_styles(toggled_on):
 	if guest_profile:
 		disabled = true
 		label.text = "SIGN IN TO USE REMINDERS"
-		label.label_settings.font_color = "#ffffff"
-		label.label_settings.font_size = 18
-		texture_rect_add.hide()
-		texture_rect_remove.hide()
+		texture_rect_icon.texture = null
 	else:
 		disabled = false
-		label.label_settings.font_size = 22
+		label.text = "REMIND ME"
 		if toggled_on:
-			label.text = "REMINDER"
-			label.label_settings.font_color = "#161518"
-			texture_rect_add.hide()
-			texture_rect_remove.show()
+			texture_rect_icon.texture = check_texture
+			texture_rect_icon.modulate = COLOR_PRESSED
+			label.label_settings.font_color = COLOR_PRESSED
 		else:
-			label.text = "REMINDER"
-			label.label_settings.font_color = "#ff2d55"
-			texture_rect_add.show()
-			texture_rect_remove.hide()
+			texture_rect_icon.texture = bell_texture
+			texture_rect_icon.modulate = COLOR_NORMAL
+			label.label_settings.font_color = COLOR_NORMAL
 
 
 func _async_schedule_local_notification() -> void:

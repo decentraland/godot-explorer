@@ -35,6 +35,8 @@ pub struct DclCli {
     #[var(get)]
     pub skip_lobby: bool,
     #[var(get)]
+    pub skip_lobby_to_menu: bool,
+    #[var(get)]
     pub guest_profile: bool,
     #[var(get)]
     pub preview_mode: bool,
@@ -91,6 +93,8 @@ pub struct DclCli {
     #[var(get)]
     pub emulate_android: bool,
     #[var(get)]
+    pub landscape: bool,
+    #[var(get)]
     pub asset_server: bool,
     #[var(get)]
     pub fi_benchmark_size: i32,
@@ -144,6 +148,13 @@ impl DclCli {
                 category: "UI/Display".to_string(),
             },
             ArgDefinition {
+                name: "--skip-lobby-to-menu".to_string(),
+                description: "Skip the lobby screen and go directly to the menu/discover screen"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
                 name: "--emulate-ios".to_string(),
                 description: "Emulate iOS safe area margins (iPhone 14 Pro style notch)"
                     .to_string(),
@@ -154,6 +165,14 @@ impl DclCli {
                 name: "--emulate-android".to_string(),
                 description: "Emulate Android safe area margins (status bar + gesture nav)"
                     .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--landscape".to_string(),
+                description:
+                    "Start in landscape orientation (used with --emulate-ios/--emulate-android)"
+                        .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
@@ -481,6 +500,7 @@ impl INode for DclCli {
         // Extract common flags
         let force_mobile = args_map.contains_key("--force-mobile");
         let skip_lobby = args_map.contains_key("--skip-lobby");
+        let skip_lobby_to_menu = args_map.contains_key("--skip-lobby-to-menu");
         let guest_profile = args_map.contains_key("--guest-profile");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
@@ -510,6 +530,7 @@ impl INode for DclCli {
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
+        let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
@@ -578,6 +599,7 @@ impl INode for DclCli {
             arg_definitions: Self::register_arguments(),
             force_mobile,
             skip_lobby,
+            skip_lobby_to_menu,
             guest_profile,
             preview_mode,
             scene_test_mode,
@@ -606,6 +628,7 @@ impl INode for DclCli {
             stress_test,
             emulate_ios,
             emulate_android,
+            landscape,
             asset_server,
             fi_benchmark_size,
             asset_server_port,

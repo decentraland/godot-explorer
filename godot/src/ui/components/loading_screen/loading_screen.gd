@@ -47,7 +47,6 @@ func enable_loading_screen():
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
 	Global.loading_started.emit()
-
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
 

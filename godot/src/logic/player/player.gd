@@ -200,6 +200,7 @@ func _physics_process(dt: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, 20 * dt)
 
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
+	var input_magnitude := clampf(input_dir.length(), 0.0, 1.0)
 
 	if not Global.explorer_has_focus():  # ignore input
 		input_dir = Vector2(0, 0)
@@ -281,15 +282,22 @@ func _physics_process(dt: float) -> void:
 
 		# Determine the effective speed based on input modifiers
 		var effective_speed := 0.0
-		if wants_walk and not walk_disabled:
-			effective_speed = walk_speed
-		elif wants_sprint and not run_disabled:
+		if wants_sprint and not run_disabled:
 			camera.set_target_fov(SPRINTING_CAMERA_FOV)
 			effective_speed = run_speed
+		elif Global.is_mobile():
+			# Analog speed: interpolate walk→jog based on stick displacement
+			if walk_disabled and not jog_disabled:
+				effective_speed = jog_speed
+			elif jog_disabled and not walk_disabled:
+				effective_speed = walk_speed
+			elif not walk_disabled and not jog_disabled:
+				effective_speed = lerpf(walk_speed, jog_speed, input_magnitude)
+		elif wants_walk and not walk_disabled:
+			effective_speed = walk_speed
 		elif not jog_disabled:
 			effective_speed = jog_speed
 		elif not walk_disabled:
-			# Fallback to walk if jog is disabled but walk is allowed
 			effective_speed = walk_speed
 		# else: effective_speed remains 0, no movement allowed
 
@@ -410,8 +418,8 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
-func move_to(target: Vector3):
+func move_to(target: Vector3, check_stuck: bool = true):
 	global_position = target
 	velocity = Vector3.ZERO
-	if stuck_detector:
+	if check_stuck and stuck_detector:
 		stuck_detector.check_stuck()

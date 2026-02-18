@@ -20,6 +20,7 @@ glow_intensity = 1.25
 glow_strength = 1.25
 glow_blend_mode = 1
 glow_hdr_threshold = 0.5
+glow_hdr_scale = 2.75
 fog_enabled = true
 fog_mode = 1
 fog_light_color = Color(0.245887, 0.52169, 1, 1)

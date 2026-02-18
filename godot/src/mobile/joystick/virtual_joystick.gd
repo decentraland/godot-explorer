@@ -60,6 +60,7 @@ var output := Vector2.ZERO
 var _touch_index: int = -1
 var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
+var _joystick_visible := false
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -118,19 +119,32 @@ func _on_input(event: InputEvent) -> void:
 					):
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
-							_dynamic_material.set_shader_parameter("state", 1)
+							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
 						_touch_index = event.index
 						_update_joystick(event.position)
-						get_viewport().set_input_as_handled()
+						if (
+							not Global.scene_runner.raycast_use_cursor_position
+							and not _is_scene_ui_at_position(event.position)
+						):
+							get_viewport().set_input_as_handled()
 			elif event.index == _touch_index:
 				_reset()
-				_dynamic_material.set_shader_parameter("state", 2)
+				if _joystick_visible:
+					_dynamic_material.set_shader_parameter("state", 2)
+					_joystick_visible = false
 				emit_signal("stick_position", Vector2.ZERO)
-				get_viewport().set_input_as_handled()
+				if not Global.scene_runner.raycast_use_cursor_position:
+					get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
 			if event.index == _touch_index:
 				_update_joystick(event.position)
 				get_viewport().set_input_as_handled()
+
+
+func _on_show_joystick_timer() -> void:
+	if _touch_index != -1:
+		_dynamic_material.set_shader_parameter("state", 1)
+		_joystick_visible = true
 
 
 func _move_base(new_position: Vector2) -> void:
@@ -217,13 +231,9 @@ func _update_input_actions():
 		Input.action_press(action_down, output.y)
 	elif Input.is_action_pressed(action_down):
 		Input.action_release(action_down)
-	if output.length() < 0.75:
-		Input.action_press(action_walk)
-		_sprint_timer.stop()
-	elif Input.is_action_pressed(action_walk):
-		Input.action_release(action_walk)
 	if output.length() < 0.95:
 		Input.action_release(action_sprint)
+		_sprint_timer.stop()
 	elif _sprint_timer.is_stopped() and !Input.is_action_pressed(action_sprint):
 		_sprint_timer.start()
 
@@ -265,12 +275,35 @@ func _reset():
 			Input.action_release(action_down)
 		if Input.is_action_pressed(action_up) or Input.is_action_just_pressed(action_up):
 			Input.action_release(action_up)
+		if Input.is_action_pressed(action_walk) or Input.is_action_just_pressed(action_walk):
+			Input.action_release(action_walk)
+		if Input.is_action_pressed(action_sprint) or Input.is_action_just_pressed(action_sprint):
+			Input.action_release(action_sprint)
+		_sprint_timer.stop()
 
 
 func _on_resized() -> void:
 	if not is_node_ready():
 		return
 	_reset()
+
+
+func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
+	var base_ui = Global.scene_runner.base_ui
+	if not is_instance_valid(base_ui) or not base_ui.visible:
+		return false
+	return _check_children_for_pointer_control(base_ui, touch_position)
+
+
+func _check_children_for_pointer_control(node: Node, touch_position: Vector2) -> bool:
+	for child in node.get_children():
+		if child is Control and child.visible and child.mouse_filter == Control.MOUSE_FILTER_STOP:
+			if child.get_global_rect().has_point(touch_position):
+				return true
+		if child.get_child_count() > 0:
+			if _check_children_for_pointer_control(child, touch_position):
+				return true
+	return false
 
 
 func _on_button_camera_pressed() -> void:

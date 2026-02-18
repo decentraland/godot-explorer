@@ -481,14 +481,30 @@ async fn process_texture(
     resize_image_if_needed(&mut image, max_size);
 
     // Compress the image using ETC2 (mobile-optimized format)
-    // This uses the same approach as texture.rs which works on mobile platforms
+    // Pad dimensions to multiples of 4 (ETC2 operates on 4x4 blocks)
     if !image.is_compressed() {
+        let w = image.get_width();
+        let h = image.get_height();
+        let pw = ((w + 3) / 4) * 4;
+        let ph = ((h + 3) / 4) * 4;
+        if w != pw || h != ph {
+            image.resize(pw, ph);
+        }
+
         tracing::debug!(
             "Compressing image {}x{} with ETC2",
             image.get_width(),
             image.get_height()
         );
-        image.compress(CompressMode::ETC2);
+        let result = image.compress(CompressMode::ETC2);
+        if result != godot::global::Error::OK {
+            tracing::warn!(
+                "ETC2 compression failed ({}x{}, error {:?}), saving uncompressed",
+                image.get_width(),
+                image.get_height(),
+                result
+            );
+        }
     }
 
     // Create ImageTexture from the compressed image

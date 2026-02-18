@@ -26,8 +26,6 @@ signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
 signal camera_mode_set(camera_mode: Global.CameraMode)
-signal run_anyway
-signal reload_scene
 signal favorite_destination_set
 
 enum CameraMode {
@@ -170,6 +168,9 @@ func _ready():
 		get_window().size = target_size
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
+
+	if cli.landscape and (cli.emulate_ios or cli.emulate_android):
+		set_orientation_landscape()
 
 	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
 	var fake_deeplink = cli.fake_deeplink
@@ -702,6 +703,7 @@ func set_orientation_portrait():
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
+	Global.set_orientation_landscape()
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.teleport_to(parcel_position, new_realm)
@@ -715,6 +717,32 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
+func join_world(world_realm: String) -> void:
+	Global.set_orientation_landscape()
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+		Time.get_unix_time_from_system()
+	)
+	var loading_data = {
+		"position": str(Global.scene_fetcher.current_position),
+		"realm": world_realm,
+		"when": "on_world"
+	}
+	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		Global.realm.async_set_realm(world_realm, true)
+		explorer.hide_menu()
+		Global.close_menu.emit()
+	else:
+		Global.close_menu.emit()
+		Global.get_config().last_realm_joined = world_realm
+		Global.get_config().last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
