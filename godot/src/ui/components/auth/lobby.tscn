@@ -371,7 +371,6 @@ text = "NOT NOW"
 
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(425, 450)
 layout_mode = 2
 
@@ -396,7 +395,7 @@ custom_minimum_size = Vector2(425, 650)
 layout_mode = 2
 
 [node name="TextureRect" type="TextureRect" parent="Main/Start/MarginContainer/VBoxFixed/VBoxContainer"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 texture = ExtResource("3_p5qhj")
 expand_mode = 3
@@ -416,11 +415,11 @@ label_settings = ExtResource("18_ypsmd")
 layout_mode = 2
 theme_override_fonts/normal_font = ExtResource("7_vcjym")
 theme_override_fonts/bold_font = ExtResource("4_ghcwt")
-theme_override_font_sizes/normal_font_size = 40
-theme_override_font_sizes/bold_font_size = 40
-theme_override_font_sizes/bold_italics_font_size = 40
-theme_override_font_sizes/italics_font_size = 40
-theme_override_font_sizes/mono_font_size = 40
+theme_override_font_sizes/normal_font_size = 44
+theme_override_font_sizes/bold_font_size = 44
+theme_override_font_sizes/bold_italics_font_size = 44
+theme_override_font_sizes/italics_font_size = 44
+theme_override_font_sizes/mono_font_size = 44
 bbcode_enabled = true
 text = "[b]Discover a virtual social world[/b] shaped by its community of creators & explorers."
 fit_content = true
@@ -456,6 +455,7 @@ text = "SIGN IN"
 
 [node name="BackpackContainer" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/BackpackContainer"]
@@ -510,6 +510,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/RestoreAndChooseName"]
@@ -694,75 +695,6 @@ theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
 text = "USE ANOTHER ACCOUNT"
 
-[node name="AuthError" type="Control" parent="Main"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="Main/AuthError"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -86.0
-offset_bottom = 86.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 100
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 100
-theme_override_constants/margin_bottom = 40
-
-[node name="VBoxFixed" type="VBoxContainer" parent="Main/AuthError/MarginContainer"]
-layout_mode = 2
-alignment = 1
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Main/AuthError/MarginContainer/VBoxFixed"]
-custom_minimum_size = Vector2(425, 650)
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-texture = ExtResource("3_p5qhj")
-expand_mode = 3
-stretch_mode = 4
-
-[node name="HSeparator" type="HSeparator" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 10
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="Label_Title" type="Label" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
-custom_minimum_size = Vector2(425, 0)
-layout_mode = 2
-text = "Something went wrong"
-label_settings = ExtResource("18_ypsmd")
-autowrap_mode = 3
-
-[node name="Label_ErrorMessage" type="Label" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 0)
-layout_mode = 2
-label_settings = ExtResource("22_eula")
-autowrap_mode = 2
-
-[node name="ButtonSpacer" type="Control" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="Button_TryAgain" type="Button" parent="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-focus_mode = 0
-theme = ExtResource("9_ypsmd")
-theme_override_constants/icon_max_width = 24
-theme_override_fonts/font = ExtResource("4_ghcwt")
-theme_override_font_sizes/font_size = 30
-text = "TRY AGAIN"
-icon_alignment = 2
-
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
@@ -806,6 +738,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="SignInTitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1"]
@@ -846,7 +779,6 @@ expand_icon = true
 
 [node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="Label_Title" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
@@ -864,18 +796,27 @@ layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="AuthSpinner" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" instance=ExtResource("11_7iulh")]
+[node name="VBoxContainer2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+
+[node name="AuthSpinner" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer2" instance=ExtResource("11_7iulh")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 160)
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+
+[node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
 theme_override_font_sizes/font_size = 24
+text = "Test test Test testTest testTest testTest testTest testTest testTest test"
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -913,6 +854,18 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("15_ypsmd")
 expand_mode = 1
+
+[node name="Button_TryAgain" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
+visible = false
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 30
+text = "TRY AGAIN"
+icon_alignment = 2
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -964,7 +917,7 @@ expand_icon = true
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/ChooseNameFooter/Button_Next" to="." method="_on_button_next_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/RestoreAndChooseName/MarginContainer/VBoxContainer/RestoreNameFooter/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
-[connection signal="pressed" from="Main/AuthError/MarginContainer/VBoxFixed/VBoxContainer/Button_TryAgain" to="." method="_on_button_try_again_pressed"]
 [connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
 [connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain" to="." method="_on_button_try_again_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/Control/Button_Back" to="." method="_on_button_back_pressed"]

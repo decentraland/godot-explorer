@@ -53,8 +53,6 @@ var _playing: String
 @onready var control_eula = %Eula
 @onready var control_version_upgrade = %VersionUpgrade
 @onready var control_signin = %SignIn
-@onready var control_auth_error = %AuthError
-@onready var label_error_message: Label = %Label_ErrorMessage
 @onready var control_start = %Start
 @onready var control_backpack = %BackpackContainer
 @onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
@@ -70,6 +68,8 @@ var _playing: String
 @onready var label_step2_title: Label = %VBoxContainer_SignInStep2/Label_Title
 
 @onready var label_avatar_name = %Label_Name
+@onready
+var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain
 
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var button_next = %Button_Next
@@ -223,6 +223,7 @@ func show_auth_browser_open_screen(
 	auth_spinner.show()
 	button_cancel.show()
 	button_cancel_icon.show()
+	button_try_again.hide()
 
 	# Mark that we're waiting for browser auth
 	auth_waiting_for_browser = true
@@ -616,26 +617,30 @@ func _on_button_cancel_pressed():
 	show_auth_home_screen()
 
 
-func show_auth_error_screen(error_message: String):
+func _on_button_try_again_pressed():
+	Global.metrics.track_click_button("try_again", current_screen_name, "")
+	_stop_auth_timeout()
+	show_auth_home_screen()
+
+
+func _show_auth_error(error_message: String):
 	track_lobby_screen("AUTH_ERROR")
-	label_error_message.text = error_message
-	button_back.hide()
-	show_panel(control_auth_error)
+	auth_spinner.hide()
+	auth_error_label.text = error_message
+	auth_error_label.show()
+	button_cancel.hide()
+	button_cancel_icon.hide()
+	button_try_again.show()
 
 
 func _on_auth_error(error_message: String):
 	_stop_auth_timeout()
-	show_auth_error_screen(error_message)
+	_show_auth_error(error_message)
 
 
 func _on_auth_timeout():
 	Global.player_identity.abort_try_connect_account()
-	show_auth_error_screen("Authentication timed out. Please try again.")
-
-
-func _on_button_try_again_pressed():
-	Global.metrics.track_click_button("try_again", current_screen_name, "")
-	show_auth_home_screen()
+	_show_auth_error("Authentication timed out. Please try again.")
 
 
 func _stop_auth_timeout():
