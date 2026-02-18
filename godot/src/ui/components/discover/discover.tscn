@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/components/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
+[ext_resource type="PackedScene" path="res://src/ui/components/events/event_discover_skeleton.tscn" id="16_skel"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
 [ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/search-bar/search_bar.tscn" id="18_sbar"]
 
@@ -247,6 +248,8 @@ discover = NodePath("../../../../../../../..")
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("EventsGenerator")
+skeleton_scene = ExtResource("16_skel")
+skeleton_height = 359.0
 title = "Events"
 
 [node name="EventsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/Events" node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]

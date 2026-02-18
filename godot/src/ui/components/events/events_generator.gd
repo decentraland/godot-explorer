@@ -38,6 +38,7 @@ func on_request(_offset: int, limit: int) -> void:
 				)
 				. instantiate()
 			)
+			discover_carrousel_item_loading.custom_minimum_size = Vector2(406, 359)
 			item_container.add_child(discover_carrousel_item_loading)
 
 		item_container.move_child(discover_carrousel_item_loading, -1)
@@ -56,6 +57,7 @@ func on_request(_offset: int, limit: int) -> void:
 
 
 func _async_fetch_events(url: String, limit: int = 100):
+	prints(url)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if is_instance_valid(discover_carrousel_item_loading):
