@@ -598,8 +598,6 @@ func _on_button_skip_pressed() -> void:
 
 
 func _complete_discover_ftue() -> void:
-	Global.get_config().discover_ftue_completed = true
-	Global.get_config().save_to_settings_file()
 	ftue_completed.emit()
 
 

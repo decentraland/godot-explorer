@@ -228,8 +228,12 @@ func show_auth_browser_open_screen(
 	# Mark that we're waiting for browser auth
 	auth_waiting_for_browser = true
 
-	# Timer pauses on FOCUS_OUT and restarts on FOCUS_IN
-	auth_timeout_timer.stop()
+	# On mobile, start the timeout timer now (counts only while app is in focus).
+	# FOCUS_OUT pauses it, FOCUS_IN resets it to full duration.
+	if Global.is_mobile() and not Global.is_virtual_mobile():
+		auth_timeout_timer.start(AUTH_TIMEOUT_SECONDS)
+	else:
+		auth_timeout_timer.stop()
 
 
 func show_ftue_screen():
@@ -715,18 +719,12 @@ func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 
 
 func _on_ftue_ftue_completed() -> void:
-	Global.get_config().discover_ftue_completed = true
-	Global.get_config().save_to_settings_file()
 	async_close_sign_in()
 
 
 func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
-	Global.get_config().discover_ftue_completed = true
-	Global.get_config().save_to_settings_file()
 	Global.teleport_to(parcel_position, realm_str)
 
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
-	Global.get_config().discover_ftue_completed = true
-	Global.get_config().save_to_settings_file()
 	Global.join_world(realm_str)

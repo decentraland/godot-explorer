@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://dqo2irljmbunv"]
+[gd_scene load_steps=23 format=3 uid="uid://5x6lss2vy1x0"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_7ysho"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_voa0q"]
