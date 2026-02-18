@@ -355,7 +355,9 @@ pub fn apply_dcl_material_properties(
             } else if unlit.texture.is_some() {
                 // Texture present but no alpha_texture — use scissor for cutout
                 // (matches Unity's base unlit: _ALPHATEST_ON, ZWrite=1)
-                tracing::debug!("Unlit material: transparency=ALPHA_SCISSOR (has texture, no alpha_texture)");
+                tracing::debug!(
+                    "Unlit material: transparency=ALPHA_SCISSOR (has texture, no alpha_texture)"
+                );
                 godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
                 godot_material.set_alpha_scissor_threshold(unlit.alpha_test.0);
             } else {
