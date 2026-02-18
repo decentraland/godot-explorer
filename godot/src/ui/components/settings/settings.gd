@@ -99,7 +99,7 @@ var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginCon
 
 func _ready():
 	button_back_to_explorer.hide()
-	#button_developer.visible = !Global.is_production()
+	button_developer.visible = !Global.is_production()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
 
