@@ -141,9 +141,11 @@ func stop_polling() -> void:
 		_poll_timer.stop()
 
 
-## Get currently cached notifications
+## Get currently cached notifications sorted by timestamp descending (newest first)
 func get_notifications() -> Array:
-	return _notifications.duplicate()
+	var sorted = _notifications.duplicate()
+	sorted.sort_custom(func(a, b): return a.get("timestamp", 0) > b.get("timestamp", 0))
+	return sorted
 
 
 ## Filter notifications to only include supported types

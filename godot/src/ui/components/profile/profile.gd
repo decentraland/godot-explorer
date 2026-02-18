@@ -686,8 +686,10 @@ func _reorder_add_link_button() -> void:
 		)
 
 
-func _on_change_nick_popup_update_name_on_profile(nickname: String) -> void:
+func _async_on_change_nick_popup_update_name_on_profile(nickname: String) -> void:
 	label_nickname.text = nickname
+	Global.player_identity.get_mutable_profile().set_name(nickname)
+	await Global.player_identity.async_save_profile_metadata()
 
 
 func _copy_name_and_tag() -> void:
