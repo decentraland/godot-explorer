@@ -82,11 +82,13 @@ pub fn _process_scene(
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
 
-    // When force_complete is set, use an effectively infinite time budget so the state machine
+    // When force_complete is set, use a generous 2-second time budget so the state machine
     // processes to completion in a single call. This prevents the scene thread from being
-    // blocked indefinitely when the normal time budget would cause deferral across frames.
+    // blocked indefinitely when the normal time budget would cause deferral across frames,
+    // while still capping execution to avoid freezing the client on buggy scenes.
+    const FORCE_COMPLETE_BUDGET_US: i64 = 2_000_000; // 2 seconds
     let effective_end_time_us = if force_complete {
-        i64::MAX
+        (ref_time.elapsed().as_micros() as i64).saturating_add(FORCE_COMPLETE_BUDGET_US)
     } else {
         end_time_us
     };

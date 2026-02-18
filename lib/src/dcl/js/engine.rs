@@ -114,7 +114,7 @@ async fn op_crdt_recv_from_renderer(
                     dirty_crdt_state.gos.len(),
                 );
                 for entity_id in dirty_crdt_state.entities.died.iter() {
-                    tracing::info!("  died entity: {:?}", entity_id);
+                    tracing::debug!("  died entity: {:?}", entity_id);
                 }
             }
 
@@ -162,7 +162,7 @@ async fn op_crdt_recv_from_renderer(
             }
 
             if skipped_lww > 0 || skipped_gos > 0 {
-                tracing::info!(
+                tracing::debug!(
                     "recv_from_renderer: skipped {} lww + {} gos updates for dead entities",
                     skipped_lww,
                     skipped_gos,
