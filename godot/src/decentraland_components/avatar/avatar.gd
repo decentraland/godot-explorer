@@ -9,6 +9,17 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
+const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
+const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
+const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
+const TOON_SHADER_DOUBLE = preload("res://assets/avatar/dcl_toon_double.gdshader")
+const TOON_SHADER_ALPHA_CLIP_DOUBLE = preload(
+	"res://assets/avatar/dcl_toon_alpha_clip_double.gdshader"
+)
+const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
+	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
+)
+
 @export var skip_process: bool = false
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
@@ -412,14 +423,46 @@ func async_try_to_set_body_shape(body_shape_hash):
 	_add_attach_points()
 
 
-func apply_unshaded_mode(node_to_apply: Node):
+func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
+	var is_alpha_scissor = base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	var is_alpha_blend = (
+		base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA
+		or base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
+		or base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+	)
+	var double_sided = base_mat.cull_mode == BaseMaterial3D.CULL_DISABLED
+	var toon_mat = ShaderMaterial.new()
+	if is_alpha_scissor and double_sided:
+		toon_mat.shader = TOON_SHADER_ALPHA_CLIP_DOUBLE
+	elif is_alpha_scissor:
+		toon_mat.shader = TOON_SHADER_ALPHA_CLIP
+	elif is_alpha_blend and double_sided:
+		toon_mat.shader = TOON_SHADER_ALPHA_BLEND_DOUBLE
+	elif is_alpha_blend:
+		toon_mat.shader = TOON_SHADER_ALPHA_BLEND
+	elif double_sided:
+		toon_mat.shader = TOON_SHADER_DOUBLE
+	else:
+		toon_mat.shader = TOON_SHADER
+	toon_mat.set_shader_parameter("albedo_color", base_mat.albedo_color)
+	if base_mat.albedo_texture:
+		toon_mat.set_shader_parameter("albedo_texture", base_mat.albedo_texture)
+	if base_mat.emission_enabled:
+		toon_mat.set_shader_parameter("emission_color", base_mat.emission)
+		if base_mat.emission_texture:
+			toon_mat.set_shader_parameter("emission_texture", base_mat.emission_texture)
+	if is_alpha_scissor:
+		toon_mat.set_shader_parameter("alpha_scissor_threshold", base_mat.alpha_scissor_threshold)
+	return toon_mat
+
+
+func apply_toon_material(node_to_apply: Node):
 	if node_to_apply is MeshInstance3D:
 		for surface_idx in range(node_to_apply.mesh.get_surface_count()):
 			var mat = node_to_apply.mesh.surface_get_material(surface_idx)
 			if mat != null and mat is BaseMaterial3D:
-				mat.disable_receive_shadows = true
-				mat.roughness = .1
-				mat.metallic = 0.0
+				var toon_mat = _convert_to_toon(mat)
+				node_to_apply.mesh.surface_set_material(surface_idx, toon_mat)
 
 
 func async_load_wearables():
@@ -587,11 +630,12 @@ func async_load_wearables():
 
 	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
 	await PromiseUtils.async_awaiter(promise)
-	apply_color_and_facial()
 
-	apply_unshaded_mode(body_shape_skeleton_3d)
+	apply_toon_material(body_shape_skeleton_3d)
 	for child in body_shape_skeleton_3d.get_children():
-		apply_unshaded_mode(child)
+		apply_toon_material(child)
+
+	apply_color_and_facial()
 
 	# For show_only_wearables, reset skeleton to T-pose so wearable doesn't animate
 	if show_only_wearables:
@@ -636,12 +680,16 @@ func apply_color_and_facial():
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
 				var material = child.mesh.surface_get_material(i)
 
-				if material is StandardMaterial3D:
+				if material is ShaderMaterial:
+					if mat_name.find("skin") != -1:
+						material.set_shader_parameter("albedo_color", avatar_data.get_skin_color())
+					elif mat_name.find("hair") != -1:
+						material.set_shader_parameter("albedo_color", avatar_data.get_hair_color())
+				elif material is StandardMaterial3D:
 					material.metallic = 0
 					material.metallic_specular = 0
 					if mat_name.find("skin") != -1:
 						material.albedo_color = avatar_data.get_skin_color()
-						material.metallic = 0
 					elif mat_name.find("hair") != -1:
 						material.roughness = 1
 						material.albedo_color = avatar_data.get_hair_color()
