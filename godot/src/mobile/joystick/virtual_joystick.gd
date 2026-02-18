@@ -117,14 +117,15 @@ func _on_input(event: InputEvent) -> void:
 							and _is_point_inside_base(event.position)
 						)
 					):
-						if Global.scene_runner.raycast_use_cursor_position:
-							return
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
 							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
 						_touch_index = event.index
 						_update_joystick(event.position)
-						if not _is_scene_ui_at_position(event.position):
+						if (
+							not Global.scene_runner.raycast_use_cursor_position
+							and not _is_scene_ui_at_position(event.position)
+						):
 							get_viewport().set_input_as_handled()
 			elif event.index == _touch_index:
 				_reset()
@@ -132,7 +133,8 @@ func _on_input(event: InputEvent) -> void:
 					_dynamic_material.set_shader_parameter("state", 2)
 					_joystick_visible = false
 				emit_signal("stick_position", Vector2.ZERO)
-				get_viewport().set_input_as_handled()
+				if not Global.scene_runner.raycast_use_cursor_position:
+					get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
 			if event.index == _touch_index:
 				_update_joystick(event.position)
