@@ -46,7 +46,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
+mouse_filter = 2
 script = ExtResource("1_8x4dy")
 deadzone_size = 1.0
 _joystick_default_position = Vector2(160, 165)
@@ -62,7 +62,7 @@ offset_top = -425.0
 offset_right = 171.458
 grow_horizontal = 2
 grow_vertical = 0
-mouse_filter = 1
+mouse_filter = 2
 script = ExtResource("2_gh23i")
 
 [node name="ColorRect" type="ColorRect" parent="ActiveArea"]

@@ -12,11 +12,6 @@ on:
         required: false
         type: string
         default: ''
-      external:
-        description: 'Use EXT- prefix instead of PR- for deploy branch'
-        required: false
-        type: boolean
-        default: false
     secrets:
       DEPLOY_SSH_KEY:
         required: true
@@ -36,11 +31,6 @@ on:
         options:
           - main
           - release
-      external:
-        description: 'Use EXT- prefix instead of PR- for deploy branch'
-        required: false
-        type: boolean
-        default: false
 permissions:
   pull-requests: write
   contents: read
@@ -155,11 +145,7 @@ jobs:
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
           REF="${{ inputs.ref || github.event.inputs.ref }}"
           if [ -n "$PR_NUMBER" ]; then
-            if [ "${{ inputs.external }}" == "true" ]; then
-              BRANCH_NAME="EXT-${PR_NUMBER}-${REF}"
-            else
-              BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
-            fi
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
             BRANCH_NAME="${REF}"
           fi
@@ -279,11 +265,7 @@ jobs:
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
           REF="${{ inputs.ref || github.event.inputs.ref }}"
           if [ -n "$PR_NUMBER" ]; then
-            if [ "${{ inputs.external }}" == "true" ]; then
-              BRANCH_NAME="EXT-${PR_NUMBER}-${REF}"
-            else
-              BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
-            fi
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
             BRANCH_NAME="${REF}"
           fi
@@ -346,11 +328,7 @@ jobs:
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
           REF="${{ inputs.ref || github.event.inputs.ref }}"
           if [ -n "$PR_NUMBER" ]; then
-            if [ "${{ inputs.external }}" == "true" ]; then
-              BRANCH_NAME="EXT-${PR_NUMBER}-${REF}"
-            else
-              BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
-            fi
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           else
             BRANCH_NAME="${REF}"
           fi
@@ -411,11 +389,7 @@ jobs:
         run: |
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
           REF="${{ inputs.ref || github.event.inputs.ref }}"
-          if [ "${{ inputs.external }}" == "true" ]; then
-            BRANCH_NAME="EXT-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
-          fi
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
 
@@ -449,11 +423,7 @@ jobs:
         run: |
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
           REF="${{ inputs.ref || github.event.inputs.ref }}"
-          if [ "${{ inputs.external }}" == "true" ]; then
-            BRANCH_NAME="EXT-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
-          fi
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           COMMENT_BODY="---
@@ -484,11 +454,7 @@ jobs:
         run: |
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
           REF="${{ inputs.ref || github.event.inputs.ref }}"
-          if [ "${{ inputs.external }}" == "true" ]; then
-            BRANCH_NAME="EXT-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
-          fi
+          BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           COMMENT_BODY="---

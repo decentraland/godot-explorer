@@ -639,7 +639,7 @@ func _on_control_menu_request_pause_scenes(enabled):
 ## @param skip_loading: When true, skips showing the loading screen.
 ##                      This is used when teleporting inside a scene to avoid
 ##                      showing the loading UI for an already-loaded area.
-func move_to(position: Vector3, skip_loading: bool):
+func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 	if disable_move_to:
 		return
 
@@ -647,7 +647,7 @@ func move_to(position: Vector3, skip_loading: bool):
 	if player.avatar and player.avatar.emote_controller:
 		player.avatar.emote_controller.set_teleport_grace()
 
-	player.move_to(position)
+	player.move_to(position, check_stuck)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
 	)
@@ -1103,6 +1103,7 @@ func _on_discover_open():
 
 
 func _on_menu_close():
+	Global.set_orientation_landscape()
 	if !navbar.visible:
 		navbar.set_manually_hidden(false)
 		release_mouse()
