@@ -152,6 +152,7 @@ func _ready():
 	voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
 	ui_volume.value = Global.get_config().audio_ui_volume
 	music_volume.value = Global.get_config().audio_music_volume
+	avatar_and_emotes_volume.value = Global.get_config().audio_avatar_and_emotes_volume
 	mic_amplification.value = Global.get_config().audio_mic_amplification
 
 	refresh_values()
@@ -230,7 +231,7 @@ func _scroll_to_tab_button(button: Button) -> void:
 	var btn_right := button.position.x + button.size.x
 	var visible_left := float(scroll)
 	var visible_right := float(scroll) + view_width
-	var fully_visible := (btn_left >= visible_left and btn_right <= visible_right)
+	var fully_visible := btn_left >= visible_left and btn_right <= visible_right
 	if fully_visible:
 		return
 	var separation := 48.0
@@ -811,3 +812,9 @@ func _on_dropdown_list_realm_item_selected(index: int) -> void:
 		Global.get_config().last_realm_joined = realm_text
 		Global.get_config().last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
+func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
+	Global.get_config().audio_avatar_and_emotes_volume = value
+	AudioSettings.apply_avatar_and_emotes_volume_settings()
+	Global.get_config().save_to_settings_file()

@@ -864,7 +864,6 @@ items = Array[String](["LOW", "MEDIUM", "HIGH", "SOURCE"])
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -1115,6 +1114,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1358,6 +1358,7 @@ font = ExtResource("25_jf4mt")
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/MusicVolume" to="." method="_on_h_slider_music_volume_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume" to="." method="_on_avatar_and_emotes_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled/CheckButton_SceneLogsEnabled" to="." method="_on_check_button_scene_logs_enabled_toggled"]

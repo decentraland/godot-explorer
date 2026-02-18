@@ -901,7 +901,7 @@ one_shot = true
 
 [node name="AudioPlayer_Emote" type="AudioStreamPlayer3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
-bus = &"Scene"
+bus = &"AvatarAndEmotes"
 
 [node name="Avatar_SFXs" parent="." instance=ExtResource("7_xt6ge")]
 
