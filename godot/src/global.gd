@@ -169,6 +169,9 @@ func _ready():
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
 
+	if cli.landscape and (cli.emulate_ios or cli.emulate_android):
+		set_orientation_landscape()
+
 	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
 	var fake_deeplink = cli.fake_deeplink
 	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
@@ -700,6 +703,7 @@ func set_orientation_portrait():
 
 
 func teleport_to(parcel_position: Vector2i, new_realm: String):
+	Global.set_orientation_landscape()
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.teleport_to(parcel_position, new_realm)
@@ -717,6 +721,7 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 
 
 func join_world(world_realm: String) -> void:
+	Global.set_orientation_landscape()
 	Global.on_chat_message.emit(
 		"system",
 		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",

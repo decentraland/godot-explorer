@@ -293,7 +293,7 @@ jobs:
             echo ""
             echo "### 🍏 iOS"
             echo ""
-            echo "> iOS builds are triggered manually. Add the \`build-ios-internal\` label to trigger an iOS build."
+            echo "> iOS builds are triggered manually. Add the \`build-ios\` label to trigger an iOS build."
             echo ""
             echo "---"
             echo ""

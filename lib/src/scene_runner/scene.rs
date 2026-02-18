@@ -253,6 +253,10 @@ pub struct Scene {
 
     // Tween
     pub tweens: HashMap<SceneEntityId, Tween>,
+    // Entities with active tweens or repeated transform writes — their colliders should be KINEMATIC
+    pub kinematic_entities: HashSet<SceneEntityId>,
+    // Entities that have had at least one transform applied (second write = movement)
+    pub transform_initialized: HashSet<SceneEntityId>,
     // Texture animations (UV offset/scale) driven by TextureMove/TextureMoveContinuous tweens
     pub texture_animations: HashMap<SceneEntityId, TextureAnimation>,
     // Duplicated value to async-access the animator
@@ -381,6 +385,8 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            kinematic_entities: HashSet::new(),
+            transform_initialized: HashSet::new(),
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
@@ -456,6 +462,8 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            kinematic_entities: HashSet::new(),
+            transform_initialized: HashSet::new(),
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),

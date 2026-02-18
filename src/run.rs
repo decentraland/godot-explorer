@@ -836,86 +836,150 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Deploy and run on iOS device using ios-deploy or xcrun
-fn deploy_and_run_ios(_release: bool) -> anyhow::Result<()> {
-    // Check platform
+/// iOS bundle identifier
+const IOS_BUNDLE_ID: &str = "org.decentraland.godotexplorer";
+
+/// Deploy and run on iOS device using xcodebuild and xcrun devicectl
+fn deploy_and_run_ios(release: bool) -> anyhow::Result<()> {
     if std::env::consts::OS != "macos" {
         return Err(anyhow::anyhow!("iOS deployment is only supported on macOS"));
     }
 
-    // The IPA name is always the same regardless of release/debug mode
-    let ipa_name = "decentraland-godot-client.ipa";
-    let ipa_path = format!("{}/{}", EXPORTS_FOLDER, ipa_name);
-
-    // For iOS, we typically export as .xcarchive or use Xcode project
-    // The actual implementation depends on how Godot exports iOS projects
-
-    // Check if ios-deploy is available
-    let ios_deploy_check = std::process::Command::new("which")
-        .arg("ios-deploy")
-        .output();
-
-    if ios_deploy_check.is_err() || !ios_deploy_check.unwrap().status.success() {
-        print_message(
-            MessageType::Warning,
-            "ios-deploy not found. Install with: brew install ios-deploy",
-        );
-
-        // Try xcrun as fallback
-        return deploy_ios_with_xcrun(_release);
-    }
-
-    // Check for connected devices
-    let spinner = create_spinner("Checking for connected iOS devices...");
-    let devices_output = std::process::Command::new("ios-deploy")
-        .args(["-c", "-t", "1"])
-        .output()?;
-    spinner.finish();
-
-    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
-    if devices_str.contains("No devices found") {
+    let xcodeproj = format!("{}decentraland-godot-client.xcodeproj", EXPORTS_FOLDER);
+    if !std::path::Path::new(&xcodeproj).exists() {
         return Err(anyhow::anyhow!(
-            "No iOS devices found. Please connect a device and trust this computer."
+            "Xcode project not found at: {}. Run export first.",
+            xcodeproj
         ));
     }
 
-    // Install and run
-    let spinner = create_spinner("Installing and launching on iOS device...");
-    let deploy_status = std::process::Command::new("ios-deploy")
-        .args(["--bundle", &ipa_path, "--justlaunch", "--debug"])
-        .status()?;
+    // Detect connected iOS device
+    let device_id = get_connected_ios_device()?;
+    print_message(MessageType::Info, &format!("Using device: {}", device_id));
+
+    // Build the Xcode project
+    let configuration = if release { "Release" } else { "Debug" };
+    let derived_data = format!("{}build", EXPORTS_FOLDER);
+
+    let spinner = create_spinner("Building Xcode project...");
+    let build_output = std::process::Command::new("xcodebuild")
+        .args([
+            "-project",
+            &xcodeproj,
+            "-scheme",
+            "decentraland-godot-client",
+            "-configuration",
+            configuration,
+            "-destination",
+            "generic/platform=iOS",
+            "-derivedDataPath",
+            &derived_data,
+            "-allowProvisioningUpdates",
+            "build",
+        ])
+        .output()?;
     spinner.finish();
 
-    if !deploy_status.success() {
-        return Err(anyhow::anyhow!("Failed to deploy to iOS device"));
+    if !build_output.status.success() {
+        let stderr = String::from_utf8_lossy(&build_output.stderr);
+        return Err(anyhow::anyhow!("xcodebuild failed:\n{}", stderr));
+    }
+
+    print_message(MessageType::Success, "Xcode build succeeded");
+
+    // Find the .app bundle
+    let app_path = format!(
+        "{}/Build/Products/{}-iphoneos/decentraland-godot-client.app",
+        derived_data, configuration
+    );
+    if !std::path::Path::new(&app_path).exists() {
+        return Err(anyhow::anyhow!(".app not found at: {}", app_path));
+    }
+
+    // Install on device
+    let spinner = create_spinner("Installing on iOS device...");
+    let install_output = std::process::Command::new("xcrun")
+        .args([
+            "devicectl",
+            "device",
+            "install",
+            "app",
+            "--device",
+            &device_id,
+            &app_path,
+        ])
+        .output()?;
+    spinner.finish();
+
+    if !install_output.status.success() {
+        let stderr = String::from_utf8_lossy(&install_output.stderr);
+        return Err(anyhow::anyhow!(
+            "Failed to install app on device:\n{}",
+            stderr
+        ));
+    }
+
+    print_message(MessageType::Success, "App installed on device");
+
+    // Launch the app
+    let spinner = create_spinner("Launching application...");
+    let launch_output = std::process::Command::new("xcrun")
+        .args([
+            "devicectl",
+            "device",
+            "process",
+            "launch",
+            "--device",
+            &device_id,
+            IOS_BUNDLE_ID,
+        ])
+        .output()?;
+    spinner.finish();
+
+    if !launch_output.status.success() {
+        let stderr = String::from_utf8_lossy(&launch_output.stderr);
+        return Err(anyhow::anyhow!(
+            "Failed to launch app on device:\n{}",
+            stderr
+        ));
     }
 
     print_message(MessageType::Success, "Application launched on iOS device");
     Ok(())
 }
 
-/// Fallback iOS deployment using xcrun
-fn deploy_ios_with_xcrun(_release: bool) -> anyhow::Result<()> {
-    // This is a simplified version - actual implementation would need
-    // to handle Xcode project properly
-    print_message(
-        MessageType::Info,
-        "Using xcrun for iOS deployment (limited functionality)",
-    );
-
-    // List devices
-    let devices_output = std::process::Command::new("xcrun")
-        .args(["devicectl", "device", "list"])
+/// Detect a connected iOS device using xcrun devicectl.
+/// Returns the device UUID.
+fn get_connected_ios_device() -> anyhow::Result<String> {
+    let spinner = create_spinner("Checking for connected iOS devices...");
+    let output = std::process::Command::new("xcrun")
+        .args(["devicectl", "list", "devices"])
         .output()?;
+    spinner.finish();
 
-    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
-    print_message(
-        MessageType::Info,
-        &format!("Available devices:\n{}", devices_str),
-    );
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "Failed to list iOS devices. Ensure Xcode command-line tools are installed."
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse the table output to find connected devices
+    // Lines contain: Name  Hostname  Identifier  State  ...
+    for line in stdout.lines() {
+        if line.contains("connected") {
+            // Extract the UUID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
+            for word in line.split_whitespace() {
+                if word.len() == 36 && word.chars().filter(|c| *c == '-').count() == 4 {
+                    return Ok(word.to_string());
+                }
+            }
+        }
+    }
 
     Err(anyhow::anyhow!(
-        "Full iOS deployment requires ios-deploy. Please install it with: brew install ios-deploy"
+        "No connected iOS devices found. Please connect a device and trust this computer."
     ))
 }
 

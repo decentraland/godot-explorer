@@ -78,9 +78,9 @@ vertical_scroll_mode = 0
 custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
 theme = ExtResource("12_sa1v7")
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 30
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 88
+theme_override_constants/margin_right = 0
 theme_override_constants/margin_bottom = 8
 script = ExtResource("8_wyn32")
 use_bottom = false
@@ -91,7 +91,6 @@ theme_override_constants/separation = 14
 alignment = 1
 
 [node name="Label_Title" type="Label" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer"]
-visible = false
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_1ym31")
 theme_override_font_sizes/font_size = 28
@@ -105,6 +104,7 @@ size_flags_vertical = 4
 theme_override_constants/separation = 15
 
 [node name="Label_Title" type="Label" parent="ColorRect_Navbar/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+visible = false
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_1ym31")
 text = "Settings"
@@ -1003,6 +1003,7 @@ theme_override_font_sizes/font_size = 22
 text = "REPORT BUG"
 
 [node name="Control" type="Control" parent="ColorRect_Content/SafeMarginContainer/MarginContainer"]
+visible = false
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 script = ExtResource("5_drkw7")

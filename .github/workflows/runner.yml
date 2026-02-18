@@ -42,7 +42,7 @@ jobs:
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
   # iOS builds are triggered separately via:
-  # - Label 'build-ios-internal' on PRs (see ios_label_trigger.yml)
+  # - Label 'build-ios' on PRs (see ios_label_trigger.yml)
   # - Manual workflow dispatch (see ios_builds.yml)
 
   linux-build:

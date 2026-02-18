@@ -54,7 +54,7 @@ run/main_run_args="--emulate-ios"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 
