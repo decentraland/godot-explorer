@@ -47,6 +47,7 @@ var _style_disabled: StyleBoxFlat = load("res://assets/themes/dropdown_disabled.
 @onready var _button_panel: PanelContainer = %PanelContainer_Button
 @onready var _popup_layer: Control = %PopupLayer
 @onready var _popup_panel: PanelContainer = %PanelContainer_Popup
+@onready var _shadow_rect: ColorRect = %ColorRect_Shadow
 @onready var _scroll_container: ScrollContainer = %ScrollContainer
 @onready var _items_container: VBoxContainer = %VBoxContainer_Items
 
@@ -179,8 +180,45 @@ func _open_popup():
 
 	# Apply shadow offset based on open direction
 	var popup_style: StyleBoxFlat = _popup_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	var shadow_offset_y := 12.0 if opens_down else -12.0
 	if popup_style:
-		popup_style.shadow_offset.y = 12.0 if opens_down else -12.0
+		popup_style.shadow_offset.y = shadow_offset_y
+
+	# Sync shadow rect with popup panel (position, size, and offset)
+	await get_tree().process_frame
+	if _shadow_rect:
+		# Get corner radius from popup style
+		var popup_style_shadow: StyleBoxFlat = _popup_panel.get_theme_stylebox("panel") as StyleBoxFlat
+		var corner_radius := 12.0
+		if popup_style_shadow:
+			corner_radius = float(popup_style_shadow.corner_radius_top_left)
+		
+		# Shadow size: popup size + horizontal expansion (0.75 * radius for blur edges),
+		# + 18px vertical expansion to overflow above/below
+		var shadow_size := _popup_panel.size + Vector2(corner_radius * 0.75, 18.0)
+		
+		# Shadow position:
+		# - X: popup position - small offset to center horizontally behind popup
+		# - Y: popup position - 18px if opening upward, popup position if opening downward
+		#     This makes shadow extend 18px beyond popup in the offset direction
+		var shadow_y := _popup_panel.position.y
+		if shadow_offset_y < 0.0:
+			# Opening upward: shadow extends 18px above popup
+			shadow_y = _popup_panel.position.y - 18.0
+		# If opening downward, shadow starts at popup.y and extends 18px below
+		
+		var shadow_position := Vector2(
+			_popup_panel.position.x - corner_radius * 0.25,
+			shadow_y
+		)
+		
+		_shadow_rect.position = shadow_position
+		_shadow_rect.size = shadow_size
+		
+		# Update shader uniform with shadow rect size for correct corner radius calculation
+		var material := _shadow_rect.material as ShaderMaterial
+		if material:
+			material.set_shader_parameter("rect_size", shadow_size)
 
 	_popup_layer.visible = true
 	_button_panel.add_theme_stylebox_override("panel", _style_pressed)

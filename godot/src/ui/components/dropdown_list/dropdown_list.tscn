@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://bhmbr0xh4h188"]
+[gd_scene load_steps=13 format=3 uid="uid://bhmbr0xh4h188"]
 
 [ext_resource type="Script" uid="uid://c3gb41r3lvg7o" path="res://src/ui/components/dropdown_list/dropdown_list.gd" id="1_script"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="3_regular"]
@@ -8,8 +8,17 @@
 [ext_resource type="LabelSettings" uid="uid://ohnf401gg7y0" path="res://assets/themes/unselected_dropdown_settings.tres" id="6_4fa15"]
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="6_f66t4"]
 [ext_resource type="Texture2D" uid="uid://cjtlaexth4ts0" path="res://src/ui/components/dropdown_list/icons/arrow-down.svg" id="6_ymsf1"]
+[ext_resource type="Shader" uid="uid://d27gxdyw3uebd" path="res://assets/shaders/shadow_blur.gdshader" id="7_shadow_blur"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4fa15"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_shadow"]
+shader = ExtResource("7_shadow_blur")
+shader_parameter/blur_radius = 20.0
+shader_parameter/shadow_color = Color(0.08627451, 0.08235294, 0.09411765, 0.69803923)
+shader_parameter/corner_radius_px = 12.00000057
+shader_parameter/softness = 1.0
+shader_parameter/rect_size = Vector2(200, 100)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ymsf1"]
 content_margin_left = 4.0
@@ -26,9 +35,6 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
-shadow_color = Color(0.08627451, 0.08235294, 0.09411765, 0.40784314)
-shadow_size = 1
-shadow_offset = Vector2(0, 12)
 
 [node name="DropdownList" type="Control"]
 custom_minimum_size = Vector2(250, 0)
@@ -117,6 +123,14 @@ visible = false
 top_level = true
 z_index = 100
 anchors_preset = 0
+
+[node name="ColorRect_Shadow" type="ColorRect" parent="PopupLayer"]
+unique_name_in_owner = true
+z_index = -1
+material = SubResource("ShaderMaterial_shadow")
+layout_mode = 0
+offset_right = 200.0
+offset_bottom = 100.0
 
 [node name="PanelContainer_Popup" type="PanelContainer" parent="PopupLayer"]
 unique_name_in_owner = true
