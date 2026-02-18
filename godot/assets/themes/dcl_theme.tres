@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=99 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=110 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -64,6 +64,7 @@
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="51_adyvx"]
 [ext_resource type="StyleBox" uid="uid://bk5rtvwf5rno4" path="res://assets/themes/dcl_theme/touchable_disabled.tres" id="51_b8nvg"]
 [ext_resource type="StyleBox" uid="uid://b66geet5bo5yf" path="res://assets/themes/dcl_theme/touchable_normal.tres" id="52_adyvx"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="52_kypl7"]
 [ext_resource type="StyleBox" uid="uid://cvducxvis7n6e" path="res://assets/themes/dcl_theme/touchable_pressed.tres" id="53_f0x44"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1t6yp"]
@@ -77,6 +78,42 @@
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5vc47"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0wbub"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ume8b"]
+resource_name = "Selected_FBB"
+content_margin_left = 9.0
+content_margin_top = 9.0
+content_margin_right = 9.0
+content_margin_bottom = 9.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_13bqh"]
+resource_name = "Selected_FBB"
+content_margin_left = 9.0
+content_margin_top = 9.0
+content_margin_right = 9.0
+content_margin_bottom = 9.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gw08q"]
+resource_name = "Normal_FBB"
+content_margin_left = 9.0
+content_margin_top = 9.0
+content_margin_right = 9.0
+content_margin_bottom = 9.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t010i"]
 bg_color = Color(1, 0.180392, 0.333333, 1)
@@ -107,6 +144,8 @@ corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1x5yb"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_uacby"]
 
@@ -186,6 +225,54 @@ content_margin_left = 0.0
 content_margin_top = 0.0
 content_margin_right = 0.0
 content_margin_bottom = 0.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1x5yb"]
+resource_name = "Selected"
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 0.176471, 0.333333, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kypl7"]
+resource_name = "Normal"
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x5msw"]
+resource_name = "Selected_SB"
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b70k2"]
+resource_name = "Default_SB"
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mcvo5"]
 bg_color = Color(0.960784, 0.152941, 0.345098, 1)
@@ -273,6 +360,22 @@ corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 expand_margin_left = 7.0
 expand_margin_right = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_s5chg"]
+resource_name = "Normal_WCB"
+content_margin_bottom = 9.0
+bg_color = Color(0.60038817, 0.60038817, 0.60038817, 1)
+draw_center = false
+border_width_bottom = 6
+border_color = Color(0.8001019, 0.8001019, 0.8001019, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p3sh4"]
+resource_name = "Selected_WCB"
+content_margin_bottom = 9.0
+bg_color = Color(0.60038817, 0.60038817, 0.60038817, 1)
+draw_center = false
+border_width_bottom = 6
+border_color = Color(1, 0.1764706, 0.33333334, 1)
 
 [resource]
 AcceptDialog/styles/panel = ExtResource("1_6dlaa")
@@ -384,6 +487,15 @@ EngagementButton/styles/normal = ExtResource("16_3kpjx")
 EngagementButton/styles/normal_mirrored = ExtResource("16_3kpjx")
 EngagementButton/styles/pressed = ExtResource("17_1x5yb")
 EngagementButton/styles/pressed_mirrored = ExtResource("17_1x5yb")
+FilterButtonBackpack/base_type = &"Button"
+FilterButtonBackpack/colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+FilterButtonBackpack/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+FilterButtonBackpack/colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+FilterButtonBackpack/constants/icon_max_width = 29
+FilterButtonBackpack/styles/hover = SubResource("StyleBoxFlat_ume8b")
+FilterButtonBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_13bqh")
+FilterButtonBackpack/styles/normal = SubResource("StyleBoxFlat_gw08q")
+FilterButtonBackpack/styles/pressed = SubResource("StyleBoxFlat_13bqh")
 HScrollBar/styles/grabber = SubResource("StyleBoxFlat_t010i")
 HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_on1kl")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_aqont")
@@ -398,6 +510,8 @@ HSlider/icons/tick = ExtResource("12_hiyy2")
 HSlider/styles/grabber_area = ExtResource("13_aywie")
 HSlider/styles/grabber_area_highlight = ExtResource("14_0c0kf")
 HSlider/styles/slider = ExtResource("15_wftf5")
+HiddenVSeparator/base_type = &"VSeparator"
+HiddenVSeparator/styles/separator = SubResource("StyleBoxEmpty_1x5yb")
 Label/colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 Label/colors/font_outline_color = Color(0.988235, 0.988235, 0.988235, 1)
 Label/colors/font_shadow_color = Color(0, 0, 0, 0)
@@ -526,6 +640,20 @@ SecondaryLittle/styles/normal = ExtResource("37_k33ds")
 SecondaryLittle/styles/normal_mirrored = ExtResource("37_k33ds")
 SecondaryLittle/styles/pressed = ExtResource("35_aywie")
 SecondaryLittle/styles/pressed_mirrored = ExtResource("35_aywie")
+SectionsButtonBackpack/base_type = &"Button"
+SectionsButtonBackpack/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SectionsButtonBackpack/colors/font_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SectionsButtonBackpack/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SectionsButtonBackpack/colors/icon_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SectionsButtonBackpack/constants/h_separation = 4
+SectionsButtonBackpack/constants/icon_max_width = 32
+SectionsButtonBackpack/font_sizes/font_size = 26
+SectionsButtonBackpack/fonts/font = ExtResource("42_qnq51")
+SectionsButtonBackpack/styles/focus = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/hover = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/normal = SubResource("StyleBoxFlat_kypl7")
+SectionsButtonBackpack/styles/pressed = SubResource("StyleBoxFlat_1x5yb")
 SnowButton/base_type = &"Button"
 SnowButton/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 SnowButton/colors/font_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
@@ -568,6 +696,16 @@ SnowOutlinedToggleButton/styles/normal = ExtResource("40_cnbrf")
 SnowOutlinedToggleButton/styles/normal_mirrored = ExtResource("40_cnbrf")
 SnowOutlinedToggleButton/styles/pressed = ExtResource("41_hiyy2")
 SnowOutlinedToggleButton/styles/pressed_mirrored = ExtResource("41_hiyy2")
+SubcategoryButton/base_type = &"Button"
+SubcategoryButton/colors/font_color = Color(1, 1, 1, 0.70000005)
+SubcategoryButton/colors/font_hover_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SubcategoryButton/colors/font_hover_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SubcategoryButton/colors/font_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SubcategoryButton/fonts/font = ExtResource("52_kypl7")
+SubcategoryButton/styles/hover = SubResource("StyleBoxFlat_x5msw")
+SubcategoryButton/styles/hover_pressed = SubResource("StyleBoxFlat_x5msw")
+SubcategoryButton/styles/normal = SubResource("StyleBoxFlat_b70k2")
+SubcategoryButton/styles/pressed = SubResource("StyleBoxFlat_x5msw")
 TabBar/styles/button_highlight = SubResource("StyleBoxFlat_mcvo5")
 TabBar/styles/button_pressed = SubResource("StyleBoxFlat_jxfws")
 TabBar/styles/tab_selected = SubResource("StyleBoxFlat_cdpqd")
@@ -659,6 +797,12 @@ WearableButton/styles/hover_pressed_mirrored = ExtResource("43_xl2gf")
 WearableButton/styles/normal = ExtResource("43_xl2gf")
 WearableButton/styles/normal_mirrored = ExtResource("43_xl2gf")
 WearableButton/styles/pressed = ExtResource("44_xl2gf")
+WearableCategoryBackpack/base_type = &"Button"
+WearableCategoryBackpack/colors/font_color = Color(0.8117647, 0.8039216, 0.83137256, 1)
+WearableCategoryBackpack/styles/hover = SubResource("StyleBoxFlat_s5chg")
+WearableCategoryBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_p3sh4")
+WearableCategoryBackpack/styles/normal = SubResource("StyleBoxFlat_s5chg")
+WearableCategoryBackpack/styles/pressed = SubResource("StyleBoxFlat_p3sh4")
 WearableSecondaryButton/base_type = &"Button"
 WearableSecondaryButton/font_sizes/font_size = 24
 WearableSecondaryButton/styles/disabled = ExtResource("46_jqsp7")

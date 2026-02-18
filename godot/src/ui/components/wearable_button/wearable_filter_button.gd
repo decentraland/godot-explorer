@@ -32,8 +32,8 @@ enum WearableCategoryEnum {
 
 @export var filter_category: WearableCategoryEnum:
 	set(new_value):
-		_update_category_icon()
-		_update_category_text()
+		#_update_category_icon()
+		#_update_category_text()
 		filter_category = new_value
 
 var press_time: int = 0
@@ -62,8 +62,9 @@ func _update_category_text():
 
 
 func _ready():
-	_update_category_icon()
-	_update_category_text()
+	#_update_category_icon()
+	#_update_category_text()
+	pass
 
 
 func get_category_name():

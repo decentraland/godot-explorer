@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="21"
+   height="21"
+   viewBox="0 0 21 21"
+   fill="none"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="emotes2_square.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="false"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="31.666667"
+     inkscape:cx="7.4999999"
+     inkscape:cy="10.5"
+     inkscape:window-width="1512"
+     inkscape:window-height="884"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <path
+     d="M 5.6191458,3.6506314 C 5.2472591,3.7973109 5.0650177,4.2179712 5.2123631,4.5895907 l 3.2173307,4.5667323 1.0894737,2.414484 -2.2380913,2.197614 -1.4314834,3.510793 c -0.075926,0.442689 0.2650348,0.847102 0.7141812,0.847102 0.3605432,0 0.6662349,-0.265105 0.7173022,-0.621944 l 1.2538753,-2.916739 2.8599705,-2.286297 -0.566083,4.986739 c -0.05072,0.446829 0.298799,0.838241 0.74849,0.838241 0.377604,0 0.696863,-0.279559 0.746711,-0.65383 L 13.11,11.570807 12.740887,9.156323 15.499725,5.1840366 c 0.324881,-0.4678418 -0.0099,-1.1079875 -0.579528,-1.1079875 -0.234745,0 -0.454165,0.1167843 -0.585265,0.3115387 l -1.424087,2.0087716 c -0.532891,0.751686 -1.397134,1.1983774 -2.318546,1.1983774 -0.9031373,0 -1.7525128,-0.4292453 -2.2881925,-1.1563673 L 6.563774,4.0760491 C 6.4247136,3.6936874 5.9976326,3.5013532 5.6191458,3.6506314 Z"
+     fill="#fcfcfc"
+     id="path1"
+     style="stroke-width:0.726316" />
+  <circle
+     cx="10.610609"
+     cy="4.691442"
+     r="1.8177578"
+     fill="#fcfcfc"
+     id="circle1"
+     style="stroke-width:0.726316" />
+</svg>
