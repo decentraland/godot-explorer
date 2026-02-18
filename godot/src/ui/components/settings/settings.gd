@@ -79,8 +79,8 @@ var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginCon
 @onready var container_resolution_3d_scale = %Resolution3DScale
 
 #Advanced items:
-@onready var line_edit_preview_url = %LineEdit_PreviewUrl
-@onready var label_ws_state = %Label_WsState
+@onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
+@onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
@@ -99,6 +99,10 @@ func _ready():
 	#button_developer.visible = !Global.is_production()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
+
+	# Preview URL: release focus when clicking outside, keep visible when keyboard opens, connect button
+	line_edit_custom_preview_url.custom_focus_entered.connect(_on_line_edit_preview_url_focus_entered)
+	line_edit_custom_preview_url.button_pressed.connect(_on_button_connect_preview_pressed)
 
 	if Global.get_explorer():
 		preview_viewport_container.show()
@@ -253,6 +257,45 @@ func _on_button_pressed():
 	self.hide()
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	# Release LineEdit focus when tapping outside so virtual keyboard closes
+	if not is_visible_in_tree():
+		return
+	if not line_edit_custom_preview_url.has_focus():
+		return
+	var pos: Vector2
+	if event is InputEventMouseButton and event.pressed:
+		pos = event.global_position
+	elif event is InputEventScreenTouch and event.pressed:
+		pos = event.position
+	else:
+		return
+	if not line_edit_custom_preview_url.get_global_rect().has_point(pos):
+		line_edit_custom_preview_url.release_focus()
+
+
+# gdlint:ignore = async-function-name
+func _on_line_edit_preview_url_focus_entered() -> void:
+	# After a short delay (keyboard opening), scroll so the LineEdit stays visible
+	await get_tree().create_timer(0.35).timeout
+	if not is_instance_valid(line_edit_custom_preview_url) or not line_edit_custom_preview_url.has_focus():
+		return
+	var content_node: Control = content_scroll_container.get_child(0)
+	var scroll_y: float = content_scroll_container.scroll_vertical
+	var view_h: float = content_scroll_container.size.y
+	var line_edit_global_top: float = line_edit_custom_preview_url.global_position.y
+	var content_global_top: float = content_node.global_position.y
+	var line_edit_y_in_content: float = line_edit_global_top - content_global_top + scroll_y
+	var line_edit_h: float = line_edit_custom_preview_url.size.y
+	var padding: float = 20.0
+	if line_edit_y_in_content < scroll_y + padding:
+		content_scroll_container.scroll_vertical = maxf(0, line_edit_y_in_content - padding)
+	elif line_edit_y_in_content + line_edit_h > scroll_y + view_h - padding:
+		var v_bar = content_scroll_container.get_v_scroll_bar()
+		var max_scroll: float = v_bar.max_value if v_bar else 0.0
+		content_scroll_container.scroll_vertical = minf(max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding)
+
+
 # gdlint:ignore = async-function-name
 func _on_button_clear_cache_pressed():
 	# Clean the content cache folder
@@ -273,11 +316,9 @@ func refresh_values():
 
 func set_ws_state(connected: bool) -> void:
 	if connected:
-		label_ws_state.text = "Connected"
-		label_ws_state.add_theme_color_override("font_color", Color.FOREST_GREEN)
+		line_edit_custom_preview_url.set_description_text_and_color("Connected", Color.FOREST_GREEN)
 	else:
-		label_ws_state.text = "Disconnected"
-		label_ws_state.add_theme_color_override("font_color", Color.RED)
+		line_edit_custom_preview_url.set_description_text_and_color("Disconnected", Color.RED)
 
 
 func _process(_delta):
@@ -331,7 +372,7 @@ func _process(_delta):
 
 
 func _on_button_connect_preview_pressed():
-	set_preview_url(line_edit_preview_url.text)
+	set_preview_url(line_edit_custom_preview_url.get_text())
 
 
 func set_preview_url(url: String) -> void:
