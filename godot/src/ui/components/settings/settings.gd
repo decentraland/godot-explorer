@@ -89,6 +89,7 @@ var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginCon
 @onready var button_graphics: Button = %Button_Graphics
 @onready var button_audio: Button = %Button_Audio
 #@onready var button_developer: Button = %Button_Developer
+@onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 
@@ -219,6 +220,32 @@ func show_control(control: Control):
 	for child in v_box_container_sections.get_children():
 		child.hide()
 	control.show()
+
+
+func _scroll_to_tab_button(button: Button) -> void:
+	await get_tree().process_frame
+	var scroll := tabs_scroll_container.scroll_horizontal
+	var view_width := tabs_scroll_container.size.x
+	var btn_left := button.position.x
+	var btn_right := button.position.x + button.size.x
+	var visible_left := float(scroll)
+	var visible_right := float(scroll) + view_width
+	var fully_visible := (btn_left >= visible_left and btn_right <= visible_right)
+	if fully_visible:
+		return
+	var separation := 48.0
+	var target_x := 0.0
+	var h_bar := tabs_scroll_container.get_h_scroll_bar()
+	var max_scroll := float(maxi(0, int(h_bar.max_value)) if h_bar else 0)
+	var cut_left := btn_left < visible_left
+	var cut_right := btn_right > visible_right
+	if cut_left:
+		target_x = btn_left - separation
+	elif cut_right:
+		target_x = btn_right - view_width + separation
+	target_x = clamp(target_x, 0.0, max_scroll)
+	var tween := create_tween()
+	tween.tween_property(tabs_scroll_container, "scroll_horizontal", int(target_x), 0.2)
 
 
 func _on_button_pressed():
@@ -490,22 +517,27 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 
 func _on_button_developer_pressed() -> void:
 	show_control(container_advanced)
+	_scroll_to_tab_button(%Button_Developer)
 
 
 func _on_button_graphics_pressed() -> void:
 	show_control(container_graphics)
+	_scroll_to_tab_button(button_graphics)
 
 
 func _on_button_gameplay_pressed() -> void:
 	show_control(container_gameplay)
+	_scroll_to_tab_button(%Button_Gameplay)
 
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
+	_scroll_to_tab_button(button_audio)
 
 
 func _on_button_account_pressed() -> void:
 	show_control(container_account)
+	_scroll_to_tab_button(%Button_Account)
 
 
 func _on_button_delete_account_pressed() -> void:
@@ -737,6 +769,7 @@ func _on_button_discord_pressed() -> void:
 
 func _on_button_storage_pressed() -> void:
 	show_control(container_storage)
+	_scroll_to_tab_button(%Button_Storage)
 
 
 func _on_button_back_to_explorer_pressed() -> void:

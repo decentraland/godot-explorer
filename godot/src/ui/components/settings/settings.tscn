@@ -88,6 +88,7 @@ texture = ExtResource("13_xewta")
 expand_mode = 1
 stretch_mode = 6
 script = ExtResource("2_gps4e")
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -139,31 +140,31 @@ layout_mode = 2
 theme_override_constants/margin_top = 18
 theme_override_constants/margin_bottom = 18
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
+[node name="TabsScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-follow_focus = true
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 scroll_deadzone = 100
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/TabsScrollContainer"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 24
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_67hd5")
 
-[node name="Button_Graphics" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="Button_Graphics" type="Button" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
-focus_mode = 1
+focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
@@ -174,12 +175,12 @@ text = "Graphics"
 icon = ExtResource("5_lso3q")
 alignment = 0
 
-[node name="Button_Audio" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="Button_Audio" type="Button" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
-focus_mode = 1
+focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
@@ -189,12 +190,12 @@ text = "Audio"
 icon = ExtResource("6_q1ods")
 alignment = 0
 
-[node name="Button_Gameplay" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="Button_Gameplay" type="Button" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
-focus_mode = 1
+focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
@@ -204,12 +205,12 @@ text = "Gameplay"
 icon = ExtResource("9_67hd5")
 alignment = 0
 
-[node name="Button_Account" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="Button_Account" type="Button" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
-focus_mode = 1
+focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
@@ -219,12 +220,12 @@ text = "Account"
 icon = ExtResource("11_6mcfd")
 alignment = 0
 
-[node name="Button_Storage" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="Button_Storage" type="Button" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
-focus_mode = 1
+focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
@@ -234,12 +235,12 @@ text = "Storage"
 icon = ExtResource("12_6mcfd")
 alignment = 0
 
-[node name="Button_Developer" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="Button_Developer" type="Button" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
-focus_mode = 1
+focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
@@ -249,19 +250,19 @@ text = "Dev Tools"
 icon = ExtResource("6_br0rl")
 alignment = 0
 
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_67hd5")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer"]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 19
 alignment = 2
 
-[node name="Button_ResetAll" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/HBoxContainer2"]
+[node name="Button_ResetAll" type="Button" parent="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer/HBoxContainer2"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
@@ -436,7 +437,6 @@ unique_name_in_owner = true
 layout_mode = 2
 title = "Max Cache Size"
 description = "Sets how much storage the app can use."
-disabled = false
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
@@ -553,7 +553,6 @@ unique_name_in_owner = true
 layout_mode = 2
 title = "Graphics Profile"
 description = "Sets a graphics quality preset for your device."
-disabled = false
 
 [node name="SectionVisual" type="MarginContainer" parent="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
@@ -628,7 +627,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 unique_name_in_owner = true
 layout_mode = 2
 title = "Skybox Time"
-disabled = false
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
 layout_mode = 2
@@ -1009,7 +1007,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 unique_name_in_owner = true
 layout_mode = 2
 title = "Realm"
-disabled = false
 
 [node name="HSeparator7" type="HSeparator" parent="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 layout_mode = 2
@@ -1334,12 +1331,12 @@ font = ExtResource("25_jf4mt")
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Navbar/SafeMarginContainer_Header/MarginContainer/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Gameplay" to="." method="_on_button_gameplay_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Account" to="." method="_on_button_account_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Storage" to="." method="_on_button_storage_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer/Button_Gameplay" to="." method="_on_button_gameplay_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer/Button_Account" to="." method="_on_button_account_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer/Button_Storage" to="." method="_on_button_storage_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/TabsScrollContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
 [connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial" to="." method="_on_container_general_visibility_changed"]
 [connection signal="toggled" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionHelp/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
 [connection signal="visibility_changed" from="VBoxContainer/ColorRect_Content/MarginContainer/ScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
