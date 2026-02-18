@@ -144,10 +144,10 @@ func _toggle_popup():
 	if _is_open:
 		_close_popup()
 	else:
-		_open_popup()
+		_async_open_popup()
 
 
-func _open_popup():
+func _async_open_popup() -> void:
 	_is_open = true
 	_sync_popup_items()
 
@@ -188,15 +188,17 @@ func _open_popup():
 	await get_tree().process_frame
 	if _shadow_rect:
 		# Get corner radius from popup style
-		var popup_style_shadow: StyleBoxFlat = _popup_panel.get_theme_stylebox("panel") as StyleBoxFlat
+		var popup_style_shadow: StyleBoxFlat = (
+			_popup_panel.get_theme_stylebox("panel") as StyleBoxFlat
+		)
 		var corner_radius := 12.0
 		if popup_style_shadow:
 			corner_radius = float(popup_style_shadow.corner_radius_top_left)
-		
+
 		# Shadow size: popup size + horizontal expansion (0.75 * radius for blur edges),
 		# + 18px vertical expansion to overflow above/below
 		var shadow_size := _popup_panel.size + Vector2(corner_radius * 0.75, 18.0)
-		
+
 		# Shadow position:
 		# - X: popup position - small offset to center horizontally behind popup
 		# - Y: popup position - 18px if opening upward, popup position if opening downward
@@ -206,15 +208,12 @@ func _open_popup():
 			# Opening upward: shadow extends 18px above popup
 			shadow_y = _popup_panel.position.y - 18.0
 		# If opening downward, shadow starts at popup.y and extends 18px below
-		
-		var shadow_position := Vector2(
-			_popup_panel.position.x - corner_radius * 0.25,
-			shadow_y
-		)
-		
+
+		var shadow_position := Vector2(_popup_panel.position.x - corner_radius * 0.25, shadow_y)
+
 		_shadow_rect.position = shadow_position
 		_shadow_rect.size = shadow_size
-		
+
 		# Update shader uniform with shadow rect size for correct corner radius calculation
 		var material := _shadow_rect.material as ShaderMaterial
 		if material:

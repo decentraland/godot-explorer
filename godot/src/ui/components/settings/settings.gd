@@ -85,10 +85,13 @@ var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginCon
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
-@onready var button_general: Button = %Button_General
 @onready var button_graphics: Button = %Button_Graphics
 @onready var button_audio: Button = %Button_Audio
-#@onready var button_developer: Button = %Button_Developer
+@onready var button_gameplay: Button = %Button_Gameplay
+@onready var button_account: Button = %Button_Account
+@onready var button_storage: Button = %Button_Storage
+@onready var button_developer: Button = %Button_Developer
+
 @onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
@@ -101,7 +104,9 @@ func _ready():
 	_on_button_graphics_pressed()
 
 	# Preview URL: release focus when clicking outside, keep visible when keyboard opens, connect button
-	line_edit_custom_preview_url.custom_focus_entered.connect(_on_line_edit_preview_url_focus_entered)
+	line_edit_custom_preview_url.custom_focus_entered.connect(
+		_on_line_edit_preview_url_focus_entered
+	)
 	line_edit_custom_preview_url.button_pressed.connect(_on_button_connect_preview_pressed)
 
 	if Global.get_explorer():
@@ -227,7 +232,7 @@ func show_control(control: Control):
 	control.show()
 
 
-func _scroll_to_tab_button(button: Button) -> void:
+func _async_scroll_to_tab_button(button: Button) -> void:
 	await get_tree().process_frame
 	var scroll := tabs_scroll_container.scroll_horizontal
 	var view_width := tabs_scroll_container.size.x
@@ -278,7 +283,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_line_edit_preview_url_focus_entered() -> void:
 	# After a short delay (keyboard opening), scroll so the LineEdit stays visible
 	await get_tree().create_timer(0.35).timeout
-	if not is_instance_valid(line_edit_custom_preview_url) or not line_edit_custom_preview_url.has_focus():
+	if (
+		not is_instance_valid(line_edit_custom_preview_url)
+		or not line_edit_custom_preview_url.has_focus()
+	):
 		return
 	var content_node: Control = content_scroll_container.get_child(0)
 	var scroll_y: float = content_scroll_container.scroll_vertical
@@ -293,7 +301,9 @@ func _on_line_edit_preview_url_focus_entered() -> void:
 	elif line_edit_y_in_content + line_edit_h > scroll_y + view_h - padding:
 		var v_bar = content_scroll_container.get_v_scroll_bar()
 		var max_scroll: float = v_bar.max_value if v_bar else 0.0
-		content_scroll_container.scroll_vertical = minf(max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding)
+		content_scroll_container.scroll_vertical = minf(
+			max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding
+		)
 
 
 # gdlint:ignore = async-function-name
@@ -559,27 +569,27 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 
 func _on_button_developer_pressed() -> void:
 	show_control(container_advanced)
-	_scroll_to_tab_button(%Button_Developer)
+	_async_scroll_to_tab_button(button_developer)
 
 
 func _on_button_graphics_pressed() -> void:
 	show_control(container_graphics)
-	_scroll_to_tab_button(button_graphics)
+	_async_scroll_to_tab_button(button_graphics)
 
 
 func _on_button_gameplay_pressed() -> void:
 	show_control(container_gameplay)
-	_scroll_to_tab_button(%Button_Gameplay)
+	_async_scroll_to_tab_button(button_gameplay)
 
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
-	_scroll_to_tab_button(button_audio)
+	_async_scroll_to_tab_button(button_audio)
 
 
 func _on_button_account_pressed() -> void:
 	show_control(container_account)
-	_scroll_to_tab_button(%Button_Account)
+	_async_scroll_to_tab_button(button_account)
 
 
 func _on_button_delete_account_pressed() -> void:
@@ -811,7 +821,7 @@ func _on_button_discord_pressed() -> void:
 
 func _on_button_storage_pressed() -> void:
 	show_control(container_storage)
-	_scroll_to_tab_button(%Button_Storage)
+	_async_scroll_to_tab_button(%Button_Storage)
 
 
 func _on_button_back_to_explorer_pressed() -> void:

@@ -7,11 +7,11 @@ signal text_changed(new_text: String)
 ## Emitted when the user submits the text (Enter / Done on virtual keyboard).
 signal text_submitted(text: String)
 ## Emitted when the LineEdit gains focus.
-signal custom_focus_entered()
+signal custom_focus_entered
 ## Emitted when the LineEdit loses focus.
-signal custom_focus_exited()
+signal custom_focus_exited
 ## Emitted when the optional action button is pressed.
-signal button_pressed()
+signal button_pressed
 
 ## Title displayed above the field. Hidden when empty.
 @export var title: String = "":
@@ -42,7 +42,6 @@ signal button_pressed()
 			_line_edit.placeholder_text = placeholder_text
 
 ## Current text value. Use this to set or get the content.
-var _text_value: String = ""
 @export var text: String = "":
 	set(value):
 		_text_value = value
@@ -57,6 +56,8 @@ var _text_value: String = ""
 		disabled = value
 		if is_node_ready():
 			_apply_disabled_state()
+
+var _text_value: String = ""
 
 @onready var _title_label: Label = %Label_Title
 @onready var _description_label: Label = %Label_Description
@@ -152,7 +153,9 @@ func _update_description() -> void:
 func _apply_disabled_state() -> void:
 	if _line_edit:
 		_line_edit.editable = not disabled
-		_line_edit.mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_IBEAM
+		_line_edit.mouse_default_cursor_shape = (
+			Control.CURSOR_ARROW if disabled else Control.CURSOR_IBEAM
+		)
 	if _button:
 		_button.disabled = disabled
 
