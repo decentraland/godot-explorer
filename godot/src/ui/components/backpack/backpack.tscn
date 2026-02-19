@@ -96,8 +96,10 @@ mouse_filter = 2
 
 [node name="PanelContainer_Navbar" type="PanelContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
+z_index = 1
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_no6vh")
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Navbar"]
@@ -237,7 +239,6 @@ use_bottom = false
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-mouse_filter = 2
 theme_override_constants/separation = 0
 script = ExtResource("7_w8hgg")
 
@@ -246,8 +247,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-size_flags_stretch_ratio = 1.5
-mouse_filter = 2
+mouse_filter = 1
 
 [node name="TextureProgressBar_AvatarLoading" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
@@ -267,17 +267,20 @@ grow_vertical = 2
 [node name="AvatarPreview" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("4_4kxkq")]
 unique_name_in_owner = true
 layout_mode = 1
+anchors_preset = -1
+anchor_top = -0.63171357
+anchor_bottom = 1.6163683
 size_flags_horizontal = 1
-mouse_filter = 0
+mouse_filter = 2
 stretch = true
 hide_name = true
+metadata/_edit_use_anchors_ = true
 
 [node name="RightEditorContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-size_flags_stretch_ratio = 2.0
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 20
@@ -295,7 +298,6 @@ layout_mode = 2
 
 [node name="WearableEditor" type="PanelContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 material = SubResource("ShaderMaterial_k780d")
 layout_mode = 2
 size_flags_horizontal = 3
@@ -432,7 +434,8 @@ size_flags_vertical = 0
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
-vertical_scroll_mode = 3
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
 
 [node name="HBoxContainer_SubCategories" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer2/ScrollContainer"]
 unique_name_in_owner = true
@@ -701,17 +704,19 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 0
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/margin_bottom = 30
 
 [node name="GridContainer_WearablesList" type="GridContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/h_separation = 4
-theme_override_constants/v_separation = 4
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 24
 columns = 3
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ScrollContainer_Items/MarginContainer"]
@@ -753,6 +758,7 @@ horizontal_alignment = 1
 
 [node name="EmoteEditor" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" instance=ExtResource("30_vfwc7")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 

@@ -60,7 +60,7 @@ fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.75, 0.25)
 
 [node name="EmoteSquareItem" type="TextureButton"]
-custom_minimum_size = Vector2(118, 118)
+custom_minimum_size = Vector2(192, 192)
 offset_right = 118.0
 offset_bottom = 118.0
 pivot_offset = Vector2(-38, 215)

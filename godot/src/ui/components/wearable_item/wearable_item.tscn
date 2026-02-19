@@ -33,7 +33,7 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="WearableItem" type="Button"]
-custom_minimum_size = Vector2(160, 160)
+custom_minimum_size = Vector2(192, 192)
 offset_right = 160.0
 offset_bottom = 160.0
 size_flags_horizontal = 0
@@ -47,15 +47,15 @@ script = ExtResource("1_vccc4")
 
 [node name="PanelContainer_External" type="PanelContainer" parent="."]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -80.0
-offset_top = -80.0
-offset_right = 80.0
-offset_bottom = 80.0
+anchors_preset = -1
+anchor_left = 0.6
+anchor_top = 0.6
+anchor_right = 0.6
+anchor_bottom = 0.6
+offset_left = -115.200005
+offset_top = -115.200005
+offset_right = 76.799995
+offset_bottom = 76.799995
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -73,6 +73,7 @@ theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
+metadata/_edit_use_anchors_ = true
 
 [node name="PanelContainer_White" type="PanelContainer" parent="MarginContainer"]
 layout_mode = 2
@@ -116,6 +117,7 @@ expand_mode = 1
 stretch_mode = 4
 
 [node name="TextureRect_Preview3" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+visible = false
 custom_minimum_size = Vector2(42, 42)
 layout_mode = 1
 offset_right = 36.0
@@ -127,6 +129,7 @@ expand_mode = 1
 stretch_mode = 4
 
 [node name="TextureRect_Preview4" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+visible = false
 custom_minimum_size = Vector2(42, 42)
 layout_mode = 1
 offset_right = 28.0
@@ -139,6 +142,7 @@ stretch_mode = 4
 
 [node name="TextureRect_Category" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(10, 10)
 layout_mode = 1
 anchors_preset = -1

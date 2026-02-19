@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=110 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=112 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -146,6 +146,10 @@ corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1x5yb"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kypl7"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gw08q"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_uacby"]
 
@@ -512,6 +516,9 @@ HSlider/styles/grabber_area_highlight = ExtResource("14_0c0kf")
 HSlider/styles/slider = ExtResource("15_wftf5")
 HiddenVSeparator/base_type = &"VSeparator"
 HiddenVSeparator/styles/separator = SubResource("StyleBoxEmpty_1x5yb")
+InvisibleScrollContainer/base_type = &"ScrollContainer"
+InvisibleScrollContainer/styles/focus = SubResource("StyleBoxEmpty_kypl7")
+InvisibleScrollContainer/styles/panel = SubResource("StyleBoxEmpty_gw08q")
 Label/colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 Label/colors/font_outline_color = Color(0.988235, 0.988235, 0.988235, 1)
 Label/colors/font_shadow_color = Color(0, 0, 0, 0)
