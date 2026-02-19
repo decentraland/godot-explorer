@@ -423,9 +423,10 @@ pub(crate) fn scene_thread(
         });
 
         if let Err(e) = result {
-            let err_str = format!("{:?}", e);
-            if let Ok(err) = e.downcast::<JsError>() {
-                if reported_error_filter < 10 {
+            reported_error_filter += 1;
+            if reported_error_filter <= 10 {
+                let err_str = format!("{:?}", e);
+                if let Ok(err) = e.downcast::<JsError>() {
                     tracing::error!(
                         "{} script error onUpdate: {} msg {:?} @ {:?}",
                         log_info.prefix(),
@@ -433,13 +434,18 @@ pub(crate) fn scene_thread(
                         err.message,
                         err
                     );
+                } else {
+                    tracing::error!("{} script error onUpdate: {}", log_info.prefix(), err_str);
                 }
-            } else if reported_error_filter < 10 {
-                tracing::error!("{} script error onUpdate: {}", log_info.prefix(), err_str);
+                if reported_error_filter == 10 {
+                    tracing::error!(
+                        "{} not logging any further uncaught errors.",
+                        log_info.prefix()
+                    );
+                }
             }
-            reported_error_filter += 1;
 
-            if (10..15).contains(&reported_error_filter)
+            if reported_error_filter == 10
                 && state
                     .borrow()
                     .try_borrow::<CommunicatedWithRenderer>()
@@ -451,8 +457,6 @@ pub(crate) fn scene_thread(
                 );
                 break;
             }
-        } else if reported_error_filter > 0 {
-            reported_error_filter -= 1;
         }
 
         // Collect V8 heap statistics every second

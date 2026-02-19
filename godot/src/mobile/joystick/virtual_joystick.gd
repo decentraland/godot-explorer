@@ -117,14 +117,15 @@ func _on_input(event: InputEvent) -> void:
 							and _is_point_inside_base(event.position)
 						)
 					):
-						if Global.scene_runner.raycast_use_cursor_position:
-							return
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
 							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
 						_touch_index = event.index
 						_update_joystick(event.position)
-						if not _is_scene_ui_at_position(event.position):
+						if (
+							not Global.scene_runner.raycast_use_cursor_position
+							and not _is_scene_ui_at_position(event.position)
+						):
 							get_viewport().set_input_as_handled()
 			elif event.index == _touch_index:
 				_reset()
@@ -132,7 +133,8 @@ func _on_input(event: InputEvent) -> void:
 					_dynamic_material.set_shader_parameter("state", 2)
 					_joystick_visible = false
 				emit_signal("stick_position", Vector2.ZERO)
-				get_viewport().set_input_as_handled()
+				if not Global.scene_runner.raycast_use_cursor_position:
+					get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
 			if event.index == _touch_index:
 				_update_joystick(event.position)
@@ -229,13 +231,9 @@ func _update_input_actions():
 		Input.action_press(action_down, output.y)
 	elif Input.is_action_pressed(action_down):
 		Input.action_release(action_down)
-	if output.length() < 0.75:
-		Input.action_press(action_walk)
-		_sprint_timer.stop()
-	elif Input.is_action_pressed(action_walk):
-		Input.action_release(action_walk)
 	if output.length() < 0.95:
 		Input.action_release(action_sprint)
+		_sprint_timer.stop()
 	elif _sprint_timer.is_stopped() and !Input.is_action_pressed(action_sprint):
 		_sprint_timer.start()
 
@@ -277,6 +275,11 @@ func _reset():
 			Input.action_release(action_down)
 		if Input.is_action_pressed(action_up) or Input.is_action_just_pressed(action_up):
 			Input.action_release(action_up)
+		if Input.is_action_pressed(action_walk) or Input.is_action_just_pressed(action_walk):
+			Input.action_release(action_walk)
+		if Input.is_action_pressed(action_sprint) or Input.is_action_just_pressed(action_sprint):
+			Input.action_release(action_sprint)
+		_sprint_timer.stop()
 
 
 func _on_resized() -> void:
