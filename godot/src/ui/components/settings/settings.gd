@@ -556,6 +556,7 @@ func _on_check_button_dynamic_skybox_toggled(toggled_on: bool) -> void:
 		dropdown_list_custom_skybox.select(-1)
 	else:
 		dropdown_list_custom_skybox.select(3)
+		_on_dropdown_list_custom_skybox_item_selected(3)
 	if Global.get_config().dynamic_skybox != toggled_on:
 		Global.get_config().dynamic_skybox = toggled_on
 		Global.get_config().save_to_settings_file()

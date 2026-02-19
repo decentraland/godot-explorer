@@ -126,6 +126,7 @@ anchors_preset = 0
 
 [node name="ColorRect_Shadow" type="ColorRect" parent="PopupLayer"]
 unique_name_in_owner = true
+visible = false
 z_index = -1
 material = SubResource("ShaderMaterial_shadow")
 layout_mode = 0
