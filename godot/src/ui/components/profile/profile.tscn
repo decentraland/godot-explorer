@@ -1,4 +1,4 @@
-[gd_scene load_steps=50 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=53 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
@@ -12,8 +12,8 @@
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="7_m8kjd"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="7_yx7pe"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="8_wxsqs"]
-[ext_resource type="Texture2D" uid="uid://cqwsvinsujxri" path="res://src/ui/components/debug_panel/icons/ActionCopy.svg" id="9_oyuqo"]
 [ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="9_uj2xw"]
+[ext_resource type="Texture2D" uid="uid://cxrkry4lwh1a4" path="res://assets/ui/edit-icon.svg" id="9_ybu4s"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_odsw2"]
 [ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="10_ur8se"]
 [ext_resource type="Texture2D" uid="uid://dju11x2qyib75" path="res://assets/ui/menu_icon.svg" id="11_8iwyo"]
@@ -32,7 +32,9 @@
 [ext_resource type="Texture2D" uid="uid://62idnxbalp7x" path="res://assets/ui/profile/sexual_orientation.svg" id="16_d31ng"]
 [ext_resource type="Texture2D" uid="uid://d02sq5beqvafj" path="res://assets/ui/profile/employment.svg" id="17_g7mhu"]
 [ext_resource type="PackedScene" uid="uid://7u7y8c3bnf1i" path="res://src/ui/components/social/mutual_friends.tscn" id="18_61jmm"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="18_fhbaj"]
 [ext_resource type="Texture2D" uid="uid://2ewijqnp4rks" path="res://assets/ui/profile/profession.svg" id="18_uj2xw"]
+[ext_resource type="Texture2D" uid="uid://cd0ijxb0jr8mm" path="res://assets/ui/copy-icon.svg" id="19_awuqu"]
 [ext_resource type="Texture2D" uid="uid://cx5hu05afkdsq" path="res://assets/ui/profile/real_name.svg" id="19_mpru1"]
 [ext_resource type="Texture2D" uid="uid://y82giak6j1iy" path="res://assets/ui/profile/hobbies.svg" id="20_m8kjd"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="22_mpru1"]
@@ -82,6 +84,11 @@ corner_radius_bottom_left = 12
 [sub_resource type="LabelSettings" id="LabelSettings_61jmm"]
 font = ExtResource("13_ltw05")
 font_size = 15
+
+[sub_resource type="LabelSettings" id="LabelSettings_7xla3"]
+font = ExtResource("18_fhbaj")
+font_size = 26
+font_color = Color(0.9098039, 0.7254902, 1, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8pwo8"]
 bg_color = Color(0, 0, 0, 0.352941)
@@ -135,10 +142,6 @@ script = ExtResource("1_y2op1")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
 script = ExtResource("3_54w24")
 default_margin = 20
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
@@ -204,7 +207,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("7_m8kjd")
 theme_override_font_sizes/font_size = 27
-text = "NickName"
+text = "Namemaxcharacte"
 
 [node name="Label_Tag" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -231,20 +234,6 @@ texture = ExtResource("8_wxsqs")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Button_CopyNick" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
-modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(38, 38)
-layout_mode = 2
-size_flags_vertical = 4
-focus_mode = 0
-mouse_default_cursor_shape = 2
-theme = ExtResource("12_dja5r")
-theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 40
-icon = ExtResource("9_oyuqo")
-icon_alignment = 1
-
 [node name="Button_EditNick" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
@@ -254,8 +243,8 @@ size_flags_vertical = 4
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"SecondaryLittle"
 theme_override_constants/icon_max_width = 12
-icon = ExtResource("3_gf7h4")
-icon_alignment = 1
+text = "EDIT PROFILE"
+icon = ExtResource("9_ybu4s")
 
 [node name="Button_ClaimName" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer"]
 unique_name_in_owner = true
@@ -406,20 +395,26 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("10_odsw2")
 theme_override_font_sizes/font_size = 18
-text = "0x1...a92"
+text = "0x4e1...1c13B"
+label_settings = SubResource("LabelSettings_7xla3")
 
-[node name="Button_CopyAddress" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer2/HBoxContainer"]
+[node name="Button_CopyAddress" type="TextureButton" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer2/HBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(38, 38)
+custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"SecondaryLittle"
-icon = ExtResource("9_oyuqo")
-icon_alignment = 1
+texture_normal = ExtResource("19_awuqu")
+texture_pressed = ExtResource("19_awuqu")
+texture_hover = ExtResource("19_awuqu")
+texture_disabled = ExtResource("19_awuqu")
+texture_focused = ExtResource("19_awuqu")
+ignore_texture_size = true
+stretch_mode = 5
 
 [node name="MutualFriends" parent="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader" instance=ExtResource("18_61jmm")]
 unique_name_in_owner = true
@@ -986,7 +981,6 @@ visible = false
 layout_mode = 2
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer/Button_CopyNick" to="." method="_on_copy_nick_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/Button_EditNick" to="." method="_on_button_edit_nick_pressed"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer/Button_ClaimName" to="." method="_on_button_claim_name_pressed"]
 [connection signal="toggled" from="MarginContainer/HBoxContainer/VBoxContainer_info/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_MuteUser" to="." method="_on_button_mute_user_toggled"]
