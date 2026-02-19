@@ -94,7 +94,7 @@ pub fn ethereum_rpc_with_project(project: &str) -> String {
 
 // API
 pub fn places_api() -> String {
-    format!("https://places.decentraland.{}/api", env())
+    "https://places.decentraland.org/api".to_string()
 }
 pub fn destinations_api() -> String {
     format!("https://mobile-bff.decentraland.{}/destinations", env())

@@ -2,6 +2,8 @@ extends Control
 
 @export var generator: CarrouselGenerator = null
 @export var with_search: bool = false
+@export var skeleton_scene: PackedScene = null
+@export var skeleton_height: float = 0
 
 @export var title: String = "No title":
 	set(new_value):
@@ -20,6 +22,29 @@ func has_items() -> bool:
 
 
 func _ready():
+	if skeleton_height > 0:
+		h_box_container_loading.custom_minimum_size.y = skeleton_height
+		item_container.custom_minimum_size.y = skeleton_height
+		label_error.custom_minimum_size.y = skeleton_height
+		label_not_found.custom_minimum_size.y = skeleton_height
+
+	if skeleton_scene != null:
+		var hbox = h_box_container_loading.get_node("HBoxContainer")
+		for child in hbox.get_children():
+			hbox.remove_child(child)
+			child.queue_free()
+
+		var separator_style = StyleBoxFlat.new()
+		for i in 2:
+			var sep = VSeparator.new()
+			sep.add_theme_constant_override("separation", 48)
+			sep.add_theme_stylebox_override("separator", separator_style)
+			hbox.add_child(sep)
+
+			var skeleton_instance = skeleton_scene.instantiate()
+			skeleton_instance.layout_mode = 2
+			hbox.add_child(skeleton_instance)
+
 	if is_instance_valid(generator):
 		generator.report_loading_status.connect(self._on_report_loading_status)
 		generator.item_container = item_container

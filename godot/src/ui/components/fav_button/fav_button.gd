@@ -2,6 +2,7 @@ class_name FavButton
 extends TextureButton
 
 var _place_id
+var _debounced: DebouncedAction
 
 @onready var texture_rect_pressed: TextureRect = %TextureRect_Pressed
 
@@ -13,8 +14,8 @@ func update_data(id = null) -> void:
 
 func async_update_visibility() -> void:
 	if _place_id != null and _place_id != "-":
+		disabled = true
 		await _async_update_status()
-		show()
 	else:
 		hide()
 
@@ -24,31 +25,27 @@ func _async_set_fav(toggled_on) -> void:
 		set_pressed_no_signal(!toggled_on)
 		return
 
-	disable_button()
+	set_pressed_no_signal(toggled_on)
+	_get_debounced().schedule(toggled_on)
 
-	var url = DclUrls.places_api() + "/places/" + _place_id + "/favorites"
-	var body = JSON.stringify({"favorites": toggled_on})
 
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
-	if response is PromiseError:
-		printerr("Error patching favorites: ", response.get_error())
-	if response != null:
-		set_pressed_no_signal(toggled_on)
-	else:
-		set_pressed_no_signal(!toggled_on)
-		printerr("Error patching favorites")
-	enable_button()
+func _get_debounced() -> DebouncedAction:
+	if _debounced == null:
+		_debounced = DebouncedAction.new(_async_patch_fav, false)
+		add_child(_debounced)
+	return _debounced
+
+
+func _async_patch_fav(toggled_on: bool) -> void:
+	await PlacesHelper.async_patch_favorite(_place_id, toggled_on)
 
 
 func _async_update_status() -> void:
-	disable_button()
-
 	var url = DclUrls.places_api() + "/places/" + _place_id
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
 
 	if response == null:
 		printerr("Error getting place's data")
-		enable_button()
 		return
 	if response is PromiseError:
 		printerr("Error getting place's data: ", response.get_error())
@@ -57,18 +54,7 @@ func _async_update_status() -> void:
 	var json: Dictionary = response.get_string_response_as_json()
 	var place_data = json.data
 
-	set_pressed_no_signal(place_data.user_favorite)
-
-	enable_button()
-
-
-func disable_button() -> void:
-	disabled = true
-	self_modulate = Color.TRANSPARENT
-	texture_rect_pressed.show()
-
-
-func enable_button() -> void:
+	var is_fav: bool = place_data.user_favorite
+	set_pressed_no_signal(is_fav)
+	_get_debounced().set_state_no_send(is_fav)
 	disabled = false
-	self_modulate = Color.WHITE
-	texture_rect_pressed.hide()

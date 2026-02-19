@@ -84,5 +84,5 @@ icon = ExtResource("6_cp6lm")
 icon_alignment = 1
 expand_icon = true
 
-[connection signal="toggled" from="Button_Like" to="." method="_async_on_button_like_toggled"]
-[connection signal="toggled" from="Button_Dislike" to="." method="_async_on_button_dislike_toggled"]
+[connection signal="toggled" from="Button_Like" to="." method="_on_button_like_toggled"]
+[connection signal="toggled" from="Button_Dislike" to="." method="_on_button_dislike_toggled"]
