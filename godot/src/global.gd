@@ -846,20 +846,13 @@ func check_deep_link_teleport_to():
 	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
 
-	var new_deep_link_url: String = ""
-	if DclAndroidPlugin.is_available():
-		var args = DclAndroidPlugin.get_deeplink_args()
-		new_deep_link_url = args.get("data", "")
-	elif DclIosPlugin.is_available():
-		var args = DclIosPlugin.get_deeplink_args()
-		new_deep_link_url = args.get("data", "")
-
-	if not new_deep_link_url.is_empty():
-		deep_link_url = new_deep_link_url
-		deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+	# Skip if no pending deep link (already consumed or none received)
+	if deep_link_url.is_empty():
+		return
 
 	# Ignore WalletConnect callbacks
 	if Global.deep_link_obj.is_walletconnect_callback:
+		_clear_deep_link()
 		return
 
 	if Global.deep_link_obj.is_location_defined():
@@ -877,9 +870,18 @@ func check_deep_link_teleport_to():
 	elif not Global.deep_link_obj.realm.is_empty():
 		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
 
+	# Clear deep link after processing to prevent re-teleporting on app resume
+	_clear_deep_link()
+
 
 func _on_deeplink_received(url: String) -> void:
 	if not url.is_empty():
+		# Consume receivedUrl from the iOS plugin so that _notification(FOCUS_IN)
+		# doesn't re-read the same URL via get_deeplink_url() on the next resume.
+		# This signal already provides the URL, so the polling fallback isn't needed.
+		if DclIosPlugin.is_available():
+			DclIosPlugin.get_deeplink_args()
+
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
 
@@ -902,28 +904,40 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 		printerr("[DEEPLINK] Received signin deep link but no pending mobile auth")
 
 
+func _clear_deep_link() -> void:
+	# Only clear the URL flag, not deep_link_obj.
+	# deep_link_obj is still needed by scene_fetcher (preview mode)
+	# and other systems that check deep link parameters.
+	deep_link_url = ""
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():
+			var new_url: String = ""
 			if DclAndroidPlugin.is_available():
-				deep_link_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
+				new_url = DclAndroidPlugin.get_deeplink_args().get("data", "")
 			elif DclIosPlugin.is_available():
-				deep_link_url = DclIosPlugin.get_deeplink_args().get("data", "")
+				new_url = DclIosPlugin.get_deeplink_args().get("data", "")
 
-			if not deep_link_url.is_empty():
-				deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+			# Only process if a new deep link URL was received.
+			# Don't overwrite deep_link_url with empty to avoid clobbering
+			# data set by the iOS signal path (_on_deeplink_received).
+			if new_url.is_empty():
+				return
 
-				# Ignore WalletConnect callbacks
-				if deep_link_obj.is_walletconnect_callback:
-					return
+			deep_link_url = new_url
+			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
 
-				# Handle signin deep link for mobile auth flow
-				if deep_link_obj.is_signin_request():
-					_handle_signin_deep_link(deep_link_obj.signin_identity_id)
-				else:
-					deep_link_received.emit.call_deferred()
+			# Ignore WalletConnect callbacks
+			if deep_link_obj.is_walletconnect_callback:
+				return
 
-			# We do not check at this instance since we'd need to check each singular state (is in lobby? is in navigating? , etc...)
+			# Handle signin deep link for mobile auth flow
+			if deep_link_obj.is_signin_request():
+				_handle_signin_deep_link(deep_link_obj.signin_identity_id)
+			else:
+				deep_link_received.emit.call_deferred()
 
 
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:

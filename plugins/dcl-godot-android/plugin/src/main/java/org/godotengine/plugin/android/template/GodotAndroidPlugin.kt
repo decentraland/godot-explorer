@@ -584,6 +584,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     (result["extras"] as Dictionary)[key] = value.toString()
                 }
             }
+
+            // Clear intent data after reading to prevent re-processing the same
+            // deep link when the app resumes from background
+            if (data != null) {
+                intent?.data = null
+            }
         } ?: run {
             Log.e(pluginName, "Activity is null, cannot retrieve intent")
             result["error"] = "Activity is null"
