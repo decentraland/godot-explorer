@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="1_mat"]
+[ext_resource type="Texture2D" path="res://assets/ui/discover/card-event-skeleton.svg" id="2_svg"]
+
+[node name="EventDiscoverSkeleton" type="Control"]
+custom_minimum_size = Vector2(406, 359)
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 1
+
+[node name="CardEventSkeleton" type="TextureRect" parent="."]
+material = ExtResource("1_mat")
+layout_mode = 0
+offset_right = 406.0
+offset_bottom = 359.0
+texture = ExtResource("2_svg")

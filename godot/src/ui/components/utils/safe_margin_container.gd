@@ -8,6 +8,12 @@ extends MarginContainer
 @export var use_top: bool = true
 @export var use_bottom: bool = true
 
+@export_group("Minimum Margin")
+@export var min_margin_top: int = 0
+@export var min_margin_bottom: int = 0
+@export var min_margin_left: int = 0
+@export var min_margin_right: int = 0
+
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -73,13 +79,13 @@ func _update_margins_editor() -> void:
 
 func _apply_margins(top: int, left: int, bottom: int, right: int) -> void:
 	if use_top:
-		add_theme_constant_override("margin_top", top)
+		add_theme_constant_override("margin_top", maxi(top, min_margin_top))
 	if use_left:
-		add_theme_constant_override("margin_left", left)
+		add_theme_constant_override("margin_left", maxi(left, min_margin_left))
 	if use_right:
-		add_theme_constant_override("margin_right", right)
+		add_theme_constant_override("margin_right", maxi(right, min_margin_right))
 	if use_bottom:
-		add_theme_constant_override("margin_bottom", bottom)
+		add_theme_constant_override("margin_bottom", maxi(bottom, min_margin_bottom))
 
 
 func _on_size_changed():

@@ -173,6 +173,9 @@ func _ready():
 	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
 		_on_control_menu_request_debug_panel(true)
 
+	# Clear deep link after initial setup to prevent re-teleporting on first app resume
+	Global._clear_deep_link()
+
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
 

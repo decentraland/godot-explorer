@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://cm0sccjf036pe"]
+[gd_scene load_steps=10 format=3 uid="uid://cm0sccjf036pe"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_k4u78"]
 [ext_resource type="StyleBox" uid="uid://c38cofu2ty3bv" path="res://assets/themes/remind_me_normal.tres" id="2_1umtk"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://jusvx3prmk47" path="res://src/ui/components/events/button_reminder.gd" id="5_0dsnb"]
 [ext_resource type="Texture2D" uid="uid://0wpolo44fm8x" path="res://assets/ui/bell.svg" id="5_kix6m"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="7_kix6m"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="8_spinner"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_1umtk"]
 font = ExtResource("7_kix6m")
@@ -73,4 +74,22 @@ text = "remind me"
 label_settings = SubResource("LabelSettings_1umtk")
 uppercase = true
 
-[connection signal="toggled" from="." to="." method="_async_on_toggled"]
+[node name="LoadingSpinner" parent="." instance=ExtResource("8_spinner")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.5, 0.5)
+pivot_offset = Vector2(64, 64)
+speed_scale = 2.0
+
+[connection signal="toggled" from="." to="." method="_on_toggled"]

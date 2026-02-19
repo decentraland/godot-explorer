@@ -1,0 +1,22 @@
+<svg width="406" height="359" viewBox="0 0 406 359" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_event)">
+<rect width="406" height="240" rx="16" fill="white" fill-opacity="0.08"/>
+</g>
+<g clip-path="url(#clip1_event)">
+<rect y="260" width="406" height="28" rx="4" fill="white" fill-opacity="0.08"/>
+</g>
+<g clip-path="url(#clip2_event)">
+<rect y="310" width="200" height="24" rx="4" fill="white" fill-opacity="0.08"/>
+</g>
+<defs>
+<clipPath id="clip0_event">
+<rect width="406" height="240" rx="16" fill="white"/>
+</clipPath>
+<clipPath id="clip1_event">
+<rect y="260" width="406" height="28" rx="4" fill="white"/>
+</clipPath>
+<clipPath id="clip2_event">
+<rect y="310" width="200" height="24" rx="4" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -1,8 +1,9 @@
-[gd_scene load_steps=23 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=24 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
 [ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/components/utils/clean_orientation.gd" id="3_rdch8"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="4_2fqoa"]
 [ext_resource type="PackedScene" uid="uid://cqnj0gb2vybsi" path="res://src/ui/components/static_button/static_button.tscn" id="4_lhdku"]
 [ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/menu/icons/discover-outlined.svg" id="5_2tihm"]
 [ext_resource type="Texture2D" uid="uid://bh0eqgmbudps4" path="res://src/ui/components/menu/icons/discover.svg" id="6_2fqoa"]
@@ -52,6 +53,7 @@ grow_vertical = 2
 focus_mode = 1
 mouse_force_pass_scroll_events = false
 script = ExtResource("2_cgghr")
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -64,14 +66,6 @@ focus_mode = 1
 mouse_force_pass_scroll_events = false
 theme = ExtResource("1_ji0pe")
 theme_override_constants/separation = 0
-
-[node name="ColorRect_Portrait_Top_SafeArea" type="ColorRect" parent="VBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-color = Color(0.0862745, 0.0784314, 0.105882, 1)
-script = ExtResource("3_rdch8")
-clean_on_landscape = true
 
 [node name="ColorRect_Background" type="TextureRect" parent="VBoxContainer"]
 show_behind_parent = true
@@ -110,31 +104,34 @@ layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 
 [node name="BottomBar_Portrait" type="PanelContainer" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2tihm")
 script = ExtResource("3_rdch8")
 clean_on_landscape = true
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/BottomBar_Portrait"]
-custom_minimum_size = Vector2(0, 180)
+[node name="BottomSafeMarginContainer" type="MarginContainer" parent="VBoxContainer/BottomBar_Portrait"]
 layout_mode = 2
-theme_override_constants/margin_left = 64
+theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 64
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_right = 0
+script = ExtResource("4_2fqoa")
+use_left = false
+use_right = false
+use_top = false
+min_margin_bottom = 32
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/BottomBar_Portrait/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 2
-theme_override_constants/separation = 56
+theme_override_constants/separation = 45
 alignment = 1
 
-[node name="StaticButton_Discover" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
+[node name="StaticButton_Discover" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(82, 82)
 layout_mode = 2
@@ -144,7 +141,7 @@ ignore_texture_size = true
 stretch_mode = 0
 script = ExtResource("13_2fqoa")
 
-[node name="StaticButton_Backpack" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
+[node name="StaticButton_Backpack" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(82, 82)
 layout_mode = 2
@@ -154,7 +151,7 @@ ignore_texture_size = true
 stretch_mode = 0
 script = ExtResource("16_p7nyr")
 
-[node name="StaticButton_Settings" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
+[node name="StaticButton_Settings" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("4_lhdku")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(82, 82)
 layout_mode = 2
@@ -164,16 +161,11 @@ ignore_texture_size = true
 stretch_mode = 0
 script = ExtResource("18_3id7u")
 
-[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
+[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 button_group = SubResource("ButtonGroup_udswp")
-
-[node name="ColorRect_Portrait_Bottom_SafeArea" type="ColorRect" parent="VBoxContainer/BottomBar_Portrait/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
 [node name="Control_DeployingProfile" type="ColorRect" parent="."]
 unique_name_in_owner = true
