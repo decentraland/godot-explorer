@@ -1,0 +1,69 @@
+[gd_scene load_steps=6 format=3 uid="uid://o5vt3nrlfw3j"]
+
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_y4vnm"]
+[ext_resource type="Script" uid="uid://dbfsrbe28mpbx" path="res://src/ui/components/custom_button/custom_button.gd" id="2_8yorq"]
+[ext_resource type="Texture2D" uid="uid://bq35g8fuk4i43" path="res://assets/ui/sign-out.svg" id="2_jxwgt"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="3_8yorq"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_spacer"]
+
+[node name="CustomButton" type="Button"]
+custom_minimum_size = Vector2(300, 96)
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("1_y4vnm")
+theme_type_variation = &"SecondaryOutlinedButton"
+icon_alignment = 2
+expand_icon = true
+script = ExtResource("2_8yorq")
+custom_icon = ExtResource("2_jxwgt")
+custom_icon_pressed = ExtResource("2_jxwgt")
+custom_text = "SIGN OUT"
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = -1
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = -1
+
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="TextureRect_Icon" type="TextureRect" parent="MarginContainer/HBoxContainer_Content"]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(33, 0)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_jxwgt")
+expand_mode = 5
+stretch_mode = 5
+
+[node name="VSeparator_Spacer" type="VSeparator" parent="MarginContainer/HBoxContainer_Content"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_spacer")
+
+[node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("3_8yorq")
+theme_override_font_sizes/font_size = 30
+text = "SIGN OUT"

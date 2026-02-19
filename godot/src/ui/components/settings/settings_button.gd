@@ -11,6 +11,7 @@ func _connect_update_signals() -> void:
 
 
 func _on_button_clicked() -> void:
+	Global.close_navbar.emit()
 	Global.open_settings.emit()
 	Global.send_haptic_feedback()
 

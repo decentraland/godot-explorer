@@ -1,0 +1,78 @@
+[gd_scene load_steps=12 format=3 uid="uid://bij0xgcmb6ivs"]
+
+[ext_resource type="Script" uid="uid://cttwqr85x38kx" path="res://src/ui/components/line_edit_custom/line_edit_custom.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_regular"]
+[ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="3_tiq7w"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_0a0uc"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_semibold"]
+[ext_resource type="StyleBox" uid="uid://dycv502ff00xx" path="res://assets/themes/dropdown_normal.tres" id="5_panel"]
+[ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="6_f66t4"]
+[ext_resource type="StyleBox" uid="uid://g0ilcib25naw" path="res://assets/themes/dropdown_disabled.tres" id="7_6jnwr"]
+[ext_resource type="StyleBox" uid="uid://cgisnyxldnqqn" path="res://assets/themes/dropdown_selected.tres" id="8_0a0uc"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="8_5wmnl"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sep"]
+
+[node name="LineEditCustom" type="VBoxContainer"]
+offset_right = 261.0
+offset_bottom = 136.0
+mouse_filter = 2
+theme_override_constants/separation = 0
+script = ExtResource("1_script")
+text_button = "Casa"
+
+[node name="Label_Title" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_semibold")
+theme_override_font_sizes/font_size = 14
+label_settings = ExtResource("3_tiq7w")
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LineEdit_Input" type="LineEdit" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 1
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_uneditable_color = Color(0.701961, 0.701961, 0.701961, 1)
+theme_override_colors/caret_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("4_0a0uc")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = ExtResource("5_panel")
+theme_override_styles/read_only = ExtResource("7_6jnwr")
+theme_override_styles/focus = ExtResource("8_0a0uc")
+
+[node name="Button" type="Button" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("8_5wmnl")
+theme_override_font_sizes/font_size = 30
+
+[node name="HSeparator2" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
+
+[node name="Label_Description" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("2_regular")
+theme_override_font_sizes/font_size = 12
+label_settings = ExtResource("6_f66t4")
+text_overrun_behavior = 4

@@ -189,6 +189,10 @@ var audio_music_volume: float = 100.0:
 	set(value):
 		audio_music_volume = value
 
+var audio_avatar_and_emotes_volume: float = 100.0:
+	set(value):
+		audio_avatar_and_emotes_volume = value
+
 var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
@@ -360,6 +364,10 @@ func load_from_settings_file():
 		"config", "audio_music_volume", data_default.audio_music_volume
 	)
 
+	self.audio_avatar_and_emotes_volume = settings_file.get_value(
+		"config", "audio_avatar_and_emotes_volume", data_default.audio_avatar_and_emotes_volume
+	)
+
 	self.audio_mic_amplification = settings_file.get_value(
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
 	)
@@ -435,6 +443,9 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "audio_ui_volume", self.audio_ui_volume)
 	new_settings_file.set_value("config", "audio_music_volume", self.audio_music_volume)
 	new_settings_file.set_value("config", "audio_voice_chat_volume", self.audio_voice_chat_volume)
+	new_settings_file.set_value(
+		"config", "audio_avatar_and_emotes_volume", self.audio_avatar_and_emotes_volume
+	)
 	new_settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 	new_settings_file.set_value("session", "account", self.session_account)
