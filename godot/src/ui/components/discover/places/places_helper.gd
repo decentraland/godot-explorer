@@ -27,6 +27,10 @@ static func get_api_url() -> String:
 	return DclUrls.destinations_api() + "/"
 
 
+static func get_sign_api_url() -> String:
+	return DclUrls.places_api() + "/destinations/"
+
+
 static func async_patch_like(place_id: String, like: LIKE) -> Variant:
 	var url := DclUrls.places_api() + "/places/" + place_id + "/likes"
 	var body: String
@@ -82,7 +86,6 @@ static func async_get_by_id(place_id: String) -> Variant:
 	var url: String = get_api_url() + place_id
 
 	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
-	#return await async_fetch_places(url)
 
 
 ## Fetches a single place by ID from the places API (same as fav_button, engagement_bar).
