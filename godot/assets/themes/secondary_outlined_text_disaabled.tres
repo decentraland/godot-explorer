@@ -1,0 +1,8 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://d3bmwannffpj1"]
+
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_n4ttg"]
+
+[resource]
+font = ExtResource("1_n4ttg")
+font_size = 30
+font_color = Color(0.627451, 0.60784316, 0.65882355, 0.49803922)

@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=99 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=104 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -13,7 +13,6 @@
 [ext_resource type="Texture2D" uid="uid://clajn5iajhqii" path="res://assets/themes/icons/radio_button_off.svg" id="8_kyfa3"]
 [ext_resource type="Texture2D" uid="uid://ban6yfq73wlkr" path="res://assets/themes/icons/checkbox_off.svg" id="9_6dlaa"]
 [ext_resource type="Texture2D" uid="uid://druvtx8hs4m2x" path="res://assets/ui/switch-off.svg" id="9_rt0af"]
-[ext_resource type="Texture2D" uid="uid://c7lblc7w1ymlg" path="res://assets/ui/slider.png" id="11_cnbrf"]
 [ext_resource type="Texture2D" uid="uid://bt7jdyunelh1x" path="res://assets/ui/tick.tres" id="12_hiyy2"]
 [ext_resource type="StyleBox" uid="uid://df8k6h14mxhcr" path="res://assets/themes/general_slider/grabber_area.tres" id="13_aywie"]
 [ext_resource type="StyleBox" uid="uid://b7b33rteyw7y0" path="res://assets/themes/general_slider/grabber_highlight_area.tres" id="14_0c0kf"]
@@ -25,6 +24,7 @@
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="17_xiu8x"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="18_uv0rg"]
 [ext_resource type="StyleBox" uid="uid://nw2w7vul1wnx" path="res://assets/themes/option_button_disabled.tres" id="19_njqlq"]
+[ext_resource type="Texture2D" uid="uid://dk6gwhgymcqv4" path="res://assets/ui/new-slider.png" id="19_s5chg"]
 [ext_resource type="StyleBox" uid="uid://g3qbyl5ohgr" path="res://assets/themes/option_button_normal.tres" id="20_xeyyo"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="25_1x5yb"]
 [ext_resource type="StyleBox" uid="uid://bwtnv6ee45sva" path="res://assets/themes/primary_disabled.tres" id="26_1ib1f"]
@@ -50,12 +50,17 @@
 [ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="38_rt0af"]
 [ext_resource type="StyleBox" uid="uid://uskyptougkeg" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed_hover.tres" id="39_3x5rh"]
 [ext_resource type="StyleBox" uid="uid://7trdin4r32ka" path="res://assets/themes/tabs/tab_selected.tres" id="39_g67sn"]
+[ext_resource type="StyleBox" uid="uid://dkykkgjyku6h1" path="res://assets/themes/secondary_outlined_normal.tres" id="40_3kpjx"]
 [ext_resource type="StyleBox" uid="uid://doxrea38sohxr" path="res://assets/themes/dcl_theme/snow_outlined_black_normal.tres" id="40_cnbrf"]
 [ext_resource type="StyleBox" uid="uid://bje68jsif1cd6" path="res://assets/themes/tabs/tab_unselected.tres" id="40_n8xxy"]
 [ext_resource type="Texture2D" uid="uid://b4h5kvblb5s3a" path="res://assets/themes/icons/dcl_arrow.png" id="41_beqrj"]
+[ext_resource type="StyleBox" uid="uid://ji17mwd8x42g" path="res://assets/themes/settings_button_normal.tres" id="41_f0x44"]
 [ext_resource type="StyleBox" uid="uid://cvd354aiai815" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed.tres" id="41_hiyy2"]
+[ext_resource type="StyleBox" uid="uid://b710k2wnilt8k" path="res://assets/themes/secondary_outlined_disabled.tres" id="41_kypl7"]
+[ext_resource type="StyleBox" uid="uid://ber58lxckdf58" path="res://assets/themes/settings_button_pressed.tres" id="42_3kpjx"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="42_qnq51"]
 [ext_resource type="StyleBox" uid="uid://bknvp87n5bpcq" path="res://assets/themes/wearable_disabled.tres" id="42_t5yfb"]
+[ext_resource type="StyleBox" uid="uid://dn5s5fs7fgxuw" path="res://assets/themes/secondary_outlined_pressed.tres" id="43_gw08q"]
 [ext_resource type="StyleBox" uid="uid://d0clnpkagvv6p" path="res://assets/themes/wearable_normal.tres" id="43_xl2gf"]
 [ext_resource type="StyleBox" uid="uid://u0fvwsl85ccd" path="res://assets/themes/wearable_pressed.tres" id="44_xl2gf"]
 [ext_resource type="StyleBox" uid="uid://dos4er8sw2ap6" path="res://assets/themes/wearable_secondary_disabled.tres" id="46_jqsp7"]
@@ -390,10 +395,10 @@ HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_aqont")
 HScrollBar/styles/scroll = SubResource("StyleBoxFlat_mgwk6")
 HScrollBar/styles/scroll_focus = null
 HSlider/constants/center_grabber = 0
-HSlider/constants/grabber_offset = 0
-HSlider/icons/grabber = ExtResource("11_cnbrf")
-HSlider/icons/grabber_disabled = ExtResource("11_cnbrf")
-HSlider/icons/grabber_highlight = ExtResource("11_cnbrf")
+HSlider/constants/grabber_offset = 3
+HSlider/icons/grabber = ExtResource("19_s5chg")
+HSlider/icons/grabber_disabled = ExtResource("19_s5chg")
+HSlider/icons/grabber_highlight = ExtResource("19_s5chg")
 HSlider/icons/tick = ExtResource("12_hiyy2")
 HSlider/styles/grabber_area = ExtResource("13_aywie")
 HSlider/styles/grabber_area_highlight = ExtResource("14_0c0kf")
@@ -526,6 +531,43 @@ SecondaryLittle/styles/normal = ExtResource("37_k33ds")
 SecondaryLittle/styles/normal_mirrored = ExtResource("37_k33ds")
 SecondaryLittle/styles/pressed = ExtResource("35_aywie")
 SecondaryLittle/styles/pressed_mirrored = ExtResource("35_aywie")
+SecondaryOutlinedButton/base_type = &"Button"
+SecondaryOutlinedButton/colors/font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SecondaryOutlinedButton/colors/font_disabled_color = Color(0.627451, 0.60784316, 0.65882355, 0.5019608)
+SecondaryOutlinedButton/colors/font_hover_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SecondaryOutlinedButton/colors/font_hover_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryOutlinedButton/colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryOutlinedButton/colors/icon_disabled_color = Color(0.627451, 0.60784316, 0.65882355, 0.5019608)
+SecondaryOutlinedButton/colors/icon_hover_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SecondaryOutlinedButton/colors/icon_hover_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryOutlinedButton/colors/icon_normal_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SecondaryOutlinedButton/colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryOutlinedButton/constants/h_separation = 8
+SecondaryOutlinedButton/constants/icon_max_width = 32
+SecondaryOutlinedButton/font_sizes/font_size = 30
+SecondaryOutlinedButton/fonts/font = ExtResource("51_adyvx")
+SecondaryOutlinedButton/styles/disabled = ExtResource("41_kypl7")
+SecondaryOutlinedButton/styles/hover = ExtResource("40_3kpjx")
+SecondaryOutlinedButton/styles/hover_pressed = ExtResource("43_gw08q")
+SecondaryOutlinedButton/styles/normal = ExtResource("40_3kpjx")
+SecondaryOutlinedButton/styles/pressed = ExtResource("43_gw08q")
+SettingsButton/base_type = &"Button"
+SettingsButton/colors/font_color = Color(1, 1, 1, 0.69803923)
+SettingsButton/colors/font_hover_color = Color(1, 1, 1, 0.69803923)
+SettingsButton/colors/font_hover_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SettingsButton/colors/font_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SettingsButton/colors/icon_hover_color = Color(1, 1, 1, 0.69803923)
+SettingsButton/colors/icon_hover_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SettingsButton/colors/icon_normal_color = Color(1, 1, 1, 0.69803923)
+SettingsButton/colors/icon_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SettingsButton/constants/icon_max_width = 32
+SettingsButton/font_sizes/font_size = 24
+SettingsButton/fonts/font = ExtResource("42_qnq51")
+SettingsButton/styles/focus = ExtResource("42_3kpjx")
+SettingsButton/styles/hover = ExtResource("41_f0x44")
+SettingsButton/styles/hover_pressed = ExtResource("42_3kpjx")
+SettingsButton/styles/normal = ExtResource("41_f0x44")
+SettingsButton/styles/pressed = ExtResource("42_3kpjx")
 SnowButton/base_type = &"Button"
 SnowButton/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 SnowButton/colors/font_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)

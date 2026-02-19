@@ -118,6 +118,7 @@ func _ready():
 	Global.open_notifications_panel.connect(_show_notifications_panel)
 	Global.open_chat.connect(_on_global_open_chat)
 	Global.open_discover.connect(_on_discover_open)
+	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
 
 	# Connect friends button
@@ -1102,6 +1103,10 @@ func _on_discover_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	navbar.set_manually_hidden(true)
+	release_mouse()
+
+
+func _on_menu_open():
 	release_mouse()
 
 
