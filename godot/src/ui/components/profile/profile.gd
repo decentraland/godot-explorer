@@ -73,11 +73,10 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var label_address: Label = %Label_Address
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 @onready var label_tag: Label = %Label_Tag
-@onready var button_edit_nick: Button = %Button_EditNick
 @onready var button_add_friend: Button = %Button_AddFriend
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var label_no_intro: Label = %Label_NoIntro
-@onready var button_claim_name: Button = %Button_ClaimName
+#@onready var button_claim_name: Button = %Button_ClaimName
 @onready var url_popup: ColorRect = %UrlPopup
 @onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
 @onready var change_nick_popup: ColorRect = %ChangeNickPopup
@@ -301,21 +300,11 @@ func _update_elements_visibility() -> void:
 		button_unfriend.hide()
 		button_edit_about.show()
 		button_edit_links.show()
-		button_edit_nick.show()
-		if current_profile != null:
-			if current_profile.has_claimed_name():
-				button_claim_name.hide()
-			else:
-				button_claim_name.show()
-		if Global.is_ios():
-			button_claim_name.hide()
 	else:
 		button_block_user.show()
 		button_mute_user.show()
 		button_edit_about.hide()
 		button_edit_links.hide()
-		button_edit_nick.hide()
-		button_claim_name.hide()
 		button_menu.show()
 
 	if current_profile != null:
@@ -323,13 +312,11 @@ func _update_elements_visibility() -> void:
 			texture_rect_claimed_checkmark.show()
 			label_tag.text = ""
 			label_tag.hide()
-			button_claim_name.hide()
 		else:
 			texture_rect_claimed_checkmark.hide()
 			label_tag.show()
 			label_tag.text = "#" + address.substr(address.length() - 4, 4)
-			if !Global.is_ios() and is_own_passport:
-				button_claim_name.show()
+
 
 	_turn_links_editing(false)
 	_turn_about_editing(false)
