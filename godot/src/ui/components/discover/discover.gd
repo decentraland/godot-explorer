@@ -110,14 +110,17 @@ func set_search_filter_text(new_text: String) -> void:
 	if new_text.is_empty():
 		last_visited.visible = last_visited.has_items()
 		places_featured.show()
+		places_favorites.show()
 		places_my_places.visible = places_my_places.has_items()
+		places_most_active.title = "Most Actives"
 	else:
 		last_visited.hide()
+		places_featured.hide()
+		places_favorites.hide()
 		places_my_places.hide()
-	places_featured.set_search_param(new_text)
+		places_most_active.title = "Scenes"
 	places_most_active.set_search_param(new_text)
 	events.set_search_param(new_text)
-	places_favorites.set_search_param(new_text)
 	_scroll_all_carousels_to_start()
 
 
@@ -252,7 +255,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, contain
 func _get_active_carousels() -> Array:
 	if search_text.is_empty():
 		return [last_visited, places_featured, places_most_active, events, places_favorites]
-	return [places_featured, places_most_active, events, places_favorites]
+	return [places_most_active, events]
 
 
 func _update_global_messages() -> void:
