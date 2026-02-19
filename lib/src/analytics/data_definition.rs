@@ -56,7 +56,6 @@ pub enum SegmentEvent {
     ChatMessageSent(SegmentEventChatMessageSent),
     ClickButton(SegmentEventClickButton),
     ScreenViewed(SegmentEventScreenViewed),
-    AuthSuccess(SegmentEventAuthSuccess),
     RequestFriend(SegmentEventRequestFriend),
     AcceptFriend(SegmentEventAcceptFriend),
     BlockUser(SegmentEventBlockUser),
@@ -271,9 +270,6 @@ pub struct SegmentEventScreenViewed {
 }
 
 #[derive(Serialize, Clone)]
-pub struct SegmentEventAuthSuccess {}
-
-#[derive(Serialize, Clone)]
 pub struct SegmentEventRequestFriend {
     // Wallet address of the user receiving the friend request.
     pub receiver_id: String,
@@ -345,11 +341,6 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::ScreenViewed(event) => (
             "Screen Viewed".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::AuthSuccess(event) => (
-            "Auth Success".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

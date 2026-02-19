@@ -273,7 +273,7 @@ func async_close_sign_in():
 	)
 
 	# Auth Success metric
-	Global.metrics.track_auth_success()
+	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
 
 	if _should_go_to_explorer_from_deeplink():
 		go_to_explorer()

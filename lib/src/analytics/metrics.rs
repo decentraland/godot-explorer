@@ -18,7 +18,7 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
-        SegmentEventAuthSuccess, SegmentEventBlockUser, SegmentEventChatMessageSent,
+        SegmentEventBlockUser, SegmentEventChatMessageSent,
         SegmentEventClickButton, SegmentEventCommonExplorerFields,
         SegmentEventExplorerMoveToParcel, SegmentEventRequestFriend, SegmentEventScreenViewed,
         SegmentEventUnfriend,
@@ -225,13 +225,6 @@ impl Metrics {
         });
         self.events.push(event.clone());
         self.debug_print_event("Screen Viewed", &event);
-    }
-
-    #[func]
-    pub fn track_auth_success(&mut self) {
-        let event = SegmentEvent::AuthSuccess(SegmentEventAuthSuccess {});
-        self.events.push(event.clone());
-        self.debug_print_event("Auth Success", &event);
     }
 
     #[func]

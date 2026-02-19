@@ -486,9 +486,9 @@ func _on_poll_timeout() -> void:
 ## OS wrapper signal handlers
 func _on_permission_changed(granted: bool) -> void:
 	if granted:
-		Global.metrics.track_click_button("ACCEPT_NOTIF", "NOTIF_PROMPT", "")
+		Global.metrics.track_click_button("accept", "NOTIF_PROMPT", "")
 	else:
-		Global.metrics.track_click_button("REJECT_NOTIF", "NOTIF_PROMPT", "")
+		Global.metrics.track_click_button("reject", "NOTIF_PROMPT", "")
 	Global.metrics.flush.call_deferred()
 	local_notification_permission_changed.emit(granted)
 
