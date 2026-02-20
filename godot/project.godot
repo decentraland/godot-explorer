@@ -8,6 +8,14 @@
 
 config_version=5
 
+[_mobile_preview]
+
+active=false
+is_ios=false
+is_portrait=false
+viewport_width=720
+viewport_height=720
+
 [animation]
 
 warnings/check_invalid_track_paths=false

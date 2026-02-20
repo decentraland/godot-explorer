@@ -27,7 +27,7 @@ func async_set_mutual_friends(address):
 	if mutual_friends.size() == 0:
 		hide()
 	else:
-		label.text = str(mutual_friends.size()) + " Mutual"
+		label.text = str(mutual_friends.size()) + " Mutual Friends"
 		_clear_profile_pictures()
 		await _add_profile_pictures(mutual_friends)
 
@@ -50,7 +50,7 @@ func _add_profile_pictures(mutual_friends):
 		var profile_picture_scene = load(PROFILE_PICTURE)
 		var profile_picture_instance = profile_picture_scene.instantiate() as ProfilePicture
 
-		profile_picture_instance.picture_size = ProfilePicture.Size.SMALL
+		profile_picture_instance.picture_size = ProfilePicture.Size.MUTUAL
 
 		h_box_container_pictures.add_child(profile_picture_instance)
 		var data = SocialItemData.new()

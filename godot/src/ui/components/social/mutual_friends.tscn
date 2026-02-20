@@ -1,28 +1,26 @@
 [gd_scene load_steps=4 format=3 uid="uid://7u7y8c3bnf1i"]
 
 [ext_resource type="Script" uid="uid://mj0h3hjqnd8r" path="res://src/ui/components/social/mutual_friends.gd" id="1_dnuyt"]
-[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="2_dnuyt"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_dnuyt"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_dnuyt"]
 font = ExtResource("2_dnuyt")
-font_size = 14
-font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+font_size = 18
+font_color = Color(0.9098039, 0.7254902, 1, 1)
 
-[node name="MutualFriends" type="Control"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="MutualFriends" type="MarginContainer"]
+offset_right = 111.0
+offset_bottom = 72.0
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 16
 script = ExtResource("1_dnuyt")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 custom_minimum_size = Vector2(0, 40)
-layout_mode = 0
-offset_right = 87.0
-offset_bottom = 28.0
-theme_override_constants/separation = 9
+layout_mode = 2
+theme_override_constants/separation = 10
 
 [node name="HBoxContainer_Pictures" type="HBoxContainer" parent="HBoxContainer"]
 unique_name_in_owner = true

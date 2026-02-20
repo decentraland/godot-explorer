@@ -2,7 +2,7 @@
 class_name ProfilePicture
 extends Control
 
-enum Size { EXTRA_LARGE, LARGE, MEDIUM, SMALL }
+enum Size { EXTRA_LARGE, LARGE, MEDIUM, SMALL, MUTUAL }
 const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 
 @export var picture_size: Size = Size.MEDIUM:
@@ -52,6 +52,9 @@ func _update_size() -> void:
 		Size.SMALL:
 			size_px = 28
 			border_px = 2
+		Size.MUTUAL:
+			size_px = 38
+			border_px = 3
 
 	# Update the border width property
 	border_width = border_px

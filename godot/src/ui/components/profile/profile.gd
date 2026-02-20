@@ -73,7 +73,8 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var label_address: Label = %Label_Address
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 @onready var label_tag: Label = %Label_Tag
-@onready var button_add_friend: Button = %Button_AddFriend
+@onready var button_add_friend: CustomButton = %Button_AddFriend
+@onready var button_pending: CustomButton = %Button_Pending
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var label_no_intro: Label = %Label_NoIntro
 #@onready var button_claim_name: Button = %Button_ClaimName
@@ -1151,16 +1152,18 @@ func _on_button_add_friend_pressed() -> void:
 
 
 func _async_send_friend_request(friend_address: String) -> void:
-	button_add_friend.disabled = true
+	button_add_friend.hide()
+	button_pending.show()
 	var promise = Global.social_service.send_friend_request(friend_address, "")
 	await PromiseUtils.async_awaiter(promise)
-	button_add_friend.disabled = false
 
 	# friend_request_sent metric
 	Global.metrics.track_click_button("friend_request_sent", "PROFILE", "")
 
 	if promise.is_rejected():
 		printerr("Failed to send friend request: ", promise.get_data().get_error())
+		button_pending.hide()
+		button_add_friend.show()
 		return
 
 	_async_update_buttons_and_lists()
@@ -1243,11 +1246,11 @@ func _update_friendship_buttons() -> void:
 			button_cancel_request.show()
 		Global.FriendshipStatus.REQUEST_RECEIVED:
 			button_add_friend.show()
-			button_add_friend.text = "ACCEPT"
+			button_add_friend.custom_text = "ACCEPT"
 		_:  # NONE, UNKNOWN, or other statuses
 			if not is_blocked_user:
 				button_add_friend.show()
-				button_add_friend.text = "ADD FRIEND"
+				button_add_friend.custom_text = "ADD FRIEND"
 
 
 func _is_social_service_available() -> bool:
@@ -1270,6 +1273,7 @@ func _hide_all_social_buttons() -> void:
 
 func _hide_friendship_buttons() -> void:
 	button_add_friend.hide()
+	button_pending.hide()
 	button_cancel_request.hide()
 	button_friend.hide()
 	button_unfriend.hide()

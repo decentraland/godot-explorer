@@ -111,6 +111,14 @@ func _update_visual_state():
 		_margin.add_theme_constant_override("margin_right", int(style.content_margin_right))
 		_margin.add_theme_constant_override("margin_bottom", int(style.content_margin_bottom))
 
+	_update_min_size.call_deferred()
+
+
+func _update_min_size():
+	if not _margin:
+		return
+	custom_minimum_size.x = _margin.size.x
+
 
 func _update_icon_align():
 	if not _icon or not _hbox or not _spacer or not _label:

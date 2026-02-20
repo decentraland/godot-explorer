@@ -13,6 +13,7 @@ grow_vertical = 2
 mouse_force_pass_scroll_events = false
 color = Color(0, 0, 0, 0.784314)
 script = ExtResource("1_d5ewq")
+metadata/mobile_preview_orientation = "both"
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
