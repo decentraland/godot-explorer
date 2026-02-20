@@ -69,7 +69,7 @@ if [ ! -d "./godot" ] || [ -z "$(ls -A ./godot 2>/dev/null)" ]; then
         echo ""
     else
         echo "   To set up Godot headers, you need to:"
-        echo "   1. Clone Godot source: git clone --depth 1 --branch 4.5.1 https://github.com/decentraland/godotengine ${IOS_PLUGIN_DIR}/godot"
+        echo "   1. Clone Godot source: git clone --depth 1 --branch 4.6.1 https://github.com/decentraland/godotengine ${IOS_PLUGIN_DIR}/godot"
         echo "   2. Or create a symlink to existing Godot source:"
         echo "      ln -s /path/to/godot-source ${IOS_PLUGIN_DIR}/godot"
         echo ""

@@ -4,7 +4,7 @@
 [![CI](https://github.com/decentraland/godot-explorer/actions/workflows/ci.yml/badge.svg)](https://github.com/decentraland/godot-explorer/actions)
 [![Android](https://github.com/decentraland/godot-explorer/actions/workflows/android_builds.yml/badge.svg)](https://github.com/decentraland/godot-explorer/actions)
 
-Decentraland Godot Explorer is a cross-platform metaverse client built with Godot 4.5.1 and Rust, supporting desktop, mobile, and VR platforms.
+Decentraland Godot Explorer is a cross-platform metaverse client built with Godot 4.6.1 and Rust, supporting desktop, mobile, and VR platforms.
 
 ## ✨ Features
 
