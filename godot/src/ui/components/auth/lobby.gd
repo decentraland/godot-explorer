@@ -231,7 +231,6 @@ func show_auth_browser_open_screen(
 	button_try_again.hide()
 
 
-
 func show_control_ftue():
 	track_lobby_screen("DISCOVER_FTUE")
 	button_back.hide()
@@ -440,7 +439,6 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
-
 	Global.get_config().session_account = {}
 
 	var new_stored_account := {}
@@ -608,7 +606,6 @@ func _show_auth_error(error_message: String):
 
 
 func _on_auth_error(error_message: String):
-
 	_show_auth_error(error_message)
 
 
