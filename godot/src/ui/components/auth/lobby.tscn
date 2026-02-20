@@ -99,31 +99,16 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.411765, 0.121569, 0.662745, 1)
 
-[node name="VersionMargin" type="MarginContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("3_wk266")
-metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
-
-[node name="Version" type="Control" parent="VersionMargin"]
-layout_mode = 2
-mouse_filter = 2
-
-[node name="Label_Version" type="Label" parent="VersionMargin/Version"]
+[node name="Label_Version" type="Label" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 41.0
-offset_top = -28.0
+offset_top = -44.0
 offset_right = 510.0
-offset_bottom = -10.0
+offset_bottom = -26.0
 grow_vertical = 0
 size_flags_vertical = 8
 theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
@@ -517,6 +502,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="ChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/ChooseName"]
@@ -748,7 +734,6 @@ text = "USE ANOTHER ACCOUNT"
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn"]
@@ -838,12 +823,13 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 64
-text = "Opening Browser...."
+text = "Authentication failed"
 label_settings = ExtResource("18_ypsmd")
-autowrap_mode = 3
+autowrap_mode = 2
 
 [node name="VBoxContainer_AuthSpinner" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 258)
 layout_mode = 2
 alignment = 1
@@ -856,7 +842,6 @@ size_flags_horizontal = 4
 
 [node name="VBoxContainer_AuthError" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(0, 258)
 layout_mode = 2
 

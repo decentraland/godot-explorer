@@ -24,12 +24,9 @@ extends Control
 
 signal change_scene(new_scene_path: String)
 
-const AUTH_TIMEOUT_SECONDS: float = 10.0
 const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
 
 var is_creating_account: bool = false
-var auth_timeout_timer: Timer = null
-var auth_waiting_for_browser: bool = false
 
 var current_profile: DclUserProfile
 var guest_account_created: bool = false
@@ -233,15 +230,6 @@ func show_auth_browser_open_screen(
 	button_cancel.show()
 	button_try_again.hide()
 
-	# Mark that we're waiting for browser auth
-	auth_waiting_for_browser = true
-
-	# On mobile, start the timeout timer now (counts only while app is in focus).
-	# FOCUS_OUT pauses it, FOCUS_IN resets it to full duration.
-	if Global.is_mobile() and not Global.is_virtual_mobile():
-		auth_timeout_timer.start(AUTH_TIMEOUT_SECONDS)
-	else:
-		auth_timeout_timer.stop()
 
 
 func show_control_ftue():
@@ -329,12 +317,6 @@ func _ready():
 	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
 	Global.player_identity.auth_error.connect(self._on_auth_error)
 
-	# Create auth timeout timer
-	auth_timeout_timer = Timer.new()
-	auth_timeout_timer.one_shot = true
-	auth_timeout_timer.timeout.connect(self._on_auth_timeout)
-	add_child(auth_timeout_timer)
-
 	Global.scene_runner.set_pause(true)
 
 	if Global.cli.skip_lobby:
@@ -386,23 +368,9 @@ func _notification(what: int) -> void:
 		_handle_back_action()
 		return
 
-	# On mobile, pause/resume auth timeout when app loses/gains focus
-	# This prevents timeout while user is in external browser for auth
-	if not Global.is_mobile() or Global.is_virtual_mobile():
-		return
-
-	if not auth_waiting_for_browser:
-		return
-
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
-		# App lost focus (browser opened) - stop the timer
-		if auth_timeout_timer != null:
-			auth_timeout_timer.stop()
-	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		# App regained focus (returned from browser) - update text and start timeout
-		label_step2_title.text = "Signing in..."
-		if auth_timeout_timer != null:
-			auth_timeout_timer.start(AUTH_TIMEOUT_SECONDS)
+		if current_screen_name == "AUTH_BROWSER_OPEN":
+			label_step2_title.text = label_step2_title.text.replace("Opening", "Waiting")
 
 
 func go_to_explorer():
@@ -472,7 +440,7 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
-	_stop_auth_timeout()
+
 	Global.get_config().session_account = {}
 
 	var new_stored_account := {}
@@ -617,14 +585,14 @@ func _handle_back_action():
 
 func _on_button_cancel_pressed():
 	Global.metrics.track_click_button("cancel", current_screen_name, "")
-	_stop_auth_timeout()
+
 	Global.player_identity.abort_try_connect_account()
 	show_auth_home_screen()
 
 
 func _on_button_try_again_pressed():
 	Global.metrics.track_click_button("try_again", current_screen_name, "")
-	_stop_auth_timeout()
+
 	show_auth_home_screen()
 
 
@@ -640,19 +608,8 @@ func _show_auth_error(error_message: String):
 
 
 func _on_auth_error(error_message: String):
-	_stop_auth_timeout()
+
 	_show_auth_error(error_message)
-
-
-func _on_auth_timeout():
-	Global.player_identity.abort_try_connect_account()
-	_show_auth_error("Authentication timed out. Please try again.")
-
-
-func _stop_auth_timeout():
-	auth_waiting_for_browser = false
-	if auth_timeout_timer != null:
-		auth_timeout_timer.stop()
 
 
 func create_guest_account_if_needed():

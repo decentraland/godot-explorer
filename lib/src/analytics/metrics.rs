@@ -18,10 +18,9 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
-        SegmentEventBlockUser, SegmentEventChatMessageSent,
-        SegmentEventClickButton, SegmentEventCommonExplorerFields,
-        SegmentEventExplorerMoveToParcel, SegmentEventRequestFriend, SegmentEventScreenViewed,
-        SegmentEventUnfriend,
+        SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
+        SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
+        SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
 };

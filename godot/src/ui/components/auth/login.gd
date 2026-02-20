@@ -69,7 +69,7 @@ func async_login(provider: String = ""):
 		Global.player_identity.try_connect_account()
 
 	lobby.waiting_for_new_wallet = true
-	lobby.show_auth_browser_open_screen("Opening Browser...", provider)
+	lobby.show_auth_browser_open_screen("Opening browser...", provider)
 
 
 func switch_google_with_apple():
