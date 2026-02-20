@@ -1,41 +1,12 @@
-[gd_scene load_steps=9 format=3 uid="uid://fc5fxcmfp4pq"]
+[gd_scene load_steps=10 format=3 uid="uid://fc5fxcmfp4pq"]
 
 [ext_resource type="Script" uid="uid://bo6p514e8op0r" path="res://src/ui/components/dcl_line_edit.gd" id="1_gt5hx"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_8pd44"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="2_q7bqo"]
+[ext_resource type="StyleBox" uid="uid://bmwt0rbi3myn3" path="res://assets/themes/lineedit_normal_error.tres" id="3_q7bqo"]
+[ext_resource type="StyleBox" uid="uid://yn45ej03jpoq" path="res://assets/themes/lineedit_readonly.tres" id="4_lg14u"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_v66w7"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0118s"]
-content_margin_left = 16.0
-content_margin_top = 8.0
-content_margin_right = 20.0
-content_margin_bottom = 8.0
-bg_color = Color(0, 0, 0, 0.4)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ao8tk"]
-content_margin_left = 16.0
-content_margin_top = 8.0
-content_margin_right = 20.0
-content_margin_bottom = 8.0
-bg_color = Color(0, 0, 0, 0.4)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gt5hx"]
-content_margin_left = 16.0
-content_margin_top = 8.0
-content_margin_right = 20.0
-content_margin_bottom = 8.0
-bg_color = Color(0, 0, 0, 0.4)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+[ext_resource type="StyleBox" uid="uid://bcoprda85lwd5" path="res://assets/themes/lineedit_focus_error.tres" id="5_rrmjg"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_poknr"]
 font = ExtResource("2_8pd44")
@@ -43,6 +14,7 @@ font_size = 24
 font_color = Color(0.687215, 0.687215, 0.687215, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_ao8tk"]
+font_size = 20
 
 [node name="DclLineEdit" type="VBoxContainer"]
 custom_minimum_size = Vector2(0, 150)
@@ -51,10 +23,11 @@ anchor_right = 1.0
 offset_bottom = 109.0
 grow_horizontal = 2
 size_flags_vertical = 0
+theme_override_constants/separation = 6
 script = ExtResource("1_gt5hx")
 
 [node name="Control" type="Control" parent="."]
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 
 [node name="LineEdit" type="LineEdit" parent="Control"]
@@ -67,11 +40,16 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/font_placeholder_color = Color(0.9882353, 0.9882353, 0.9882353, 0.4)
-theme_override_font_sizes/font_size = 32
-theme_override_styles/normal = SubResource("StyleBoxFlat_0118s")
-theme_override_styles/read_only = SubResource("StyleBoxFlat_ao8tk")
-theme_override_styles/focus = SubResource("StyleBoxFlat_gt5hx")
+theme_override_colors/font_uneditable_color = Color(0.701961, 0.701961, 0.701961, 1)
+theme_override_colors/font_placeholder_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
+theme_override_colors/clear_button_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/clear_button_color_pressed = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_q7bqo")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = ExtResource("3_q7bqo")
+theme_override_styles/read_only = ExtResource("4_lg14u")
+theme_override_styles/focus = ExtResource("5_rrmjg")
 placeholder_text = "Hint"
 clear_button_enabled = true
 
@@ -101,6 +79,7 @@ layout_mode = 2
 
 [node name="Label_Error" type="RichTextLabel" parent="HBoxContainer2"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/default_color = Color(1, 0, 0, 1)

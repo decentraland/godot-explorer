@@ -45,8 +45,8 @@ func _configure_wallet_button() -> void:
 		button_wallet_connect.text = "METAMASK"
 		texture_rect_wallet_icon.texture = METAMASK_ICON
 		# Adjust icon position for "METAMASK" text (shorter than "WALLET CONNECT")
-		texture_rect_wallet_icon.offset_left = -135.5
-		texture_rect_wallet_icon.offset_right = -88.5
+		texture_rect_wallet_icon.offset_left = -170.0
+		texture_rect_wallet_icon.offset_right = texture_rect_wallet_icon.offset_left + 60
 	else:
 		# iOS and other platforms: Show WalletConnect button
 		button_wallet_connect.text = "WALLET CONNECT"

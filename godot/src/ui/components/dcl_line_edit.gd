@@ -22,6 +22,10 @@ var text_value: String = ""
 @onready var label_error: RichTextLabel = %Label_Error
 @onready var label_tag: Label = %Label_Tag
 
+const LINEEDIT_FOCUS = preload("uid://bv7k1bt4j7pgb")
+const LINEEDIT_FOCUS_ERROR = preload("uid://bcoprda85lwd5")
+const LINEEDIT_NORMAL = preload("uid://o0x3mbwnvobx")
+const LINEEDIT_NORMAL_ERROR = preload("uid://bmwt0rbi3myn3")
 
 func is_alphanumeric_with_spaces(value: String) -> bool:
 	var regex := RegEx.new()
@@ -86,7 +90,12 @@ func _check_error():
 			label_error.text = error_message
 		else:
 			label_error.hide()
+			
+		line_edit.set("theme_override_styles/focus", LINEEDIT_FOCUS_ERROR)
+		line_edit.set("theme_override_styles/normal", LINEEDIT_NORMAL_ERROR)
 	else:
+		line_edit.set("theme_override_styles/focus", LINEEDIT_FOCUS)
+		line_edit.set("theme_override_styles/normal", LINEEDIT_NORMAL)
 		label_error.hide()
 
 

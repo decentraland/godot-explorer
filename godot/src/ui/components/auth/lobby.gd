@@ -55,31 +55,32 @@ var _playing: String
 @onready var control_signin = %SignIn
 @onready var control_start = %Start
 @onready var control_backpack = %BackpackContainer
-@onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
+@onready var control_choose_name: Control = %ChooseName
+@onready var control_comeback: Control = %Comeback
+
+@onready var loading_solid_bg: ColorRect = %LoadingSolidBg
+@onready var default_bg: TextureRect = %DefaultBg
+@onready var discover_bg: TextureRect = $DiscoverBg
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
-@onready var sign_in_logo = %SignInLogo
-@onready var sign_in_logo_sep = %SignInLogoSep
-@onready var auth_spinner = %AuthSpinner
-@onready var auth_error_label = %AuthErrorLabel
+@onready var auth_spinner_container = %VBoxContainer_AuthSpinner
+@onready var auth_error_container = %VBoxContainer_AuthError
+@onready var auth_error_label_main = %AuthErrorLabel
+@onready var auth_error_label_code = %AuthErrorCodeLabel
 @onready var button_cancel = %Button_Cancel
-@onready var button_cancel_icon = %ButtonCancelIcon
 @onready var label_step2_title: Label = %VBoxContainer_SignInStep2/Label_Title
 
-@onready var label_avatar_name = %Label_Name
 @onready
 var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain
 
+@onready var avatar_preview_container_comeback: Control = %AvatarPreviewContainer_Comeback
+@onready var avatar_preview_container_choose_name: Control = %AvatarPreviewContainer_ChooseName
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var button_next = %Button_Next
 
 @onready var backpack = %Backpack
-
-@onready var choose_name_head: VBoxContainer = %ChooseNameHead
-@onready var choose_name_footer: VBoxContainer = %ChooseNameFooter
-@onready var restore_name_footer: VBoxContainer = %RestoreNameFooter
-@onready var label_name: Label = %Label_Name
+@onready var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead/Label_SignedAsName
 
 @onready var button_enter_as_guest: Button = %Button_EnterAsGuest
 @onready var button_back: Button = %Button_Back
@@ -90,10 +91,22 @@ var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContai
 
 @onready var label_version = %Label_Version
 
-@onready var ftue_screen: PlaceItem = $Main/FTUE
+@onready var control_ftue = %FTUE
 
+@onready var backgrounds = [loading_solid_bg, default_bg, discover_bg]
+@onready var control_with_discover_bg = [control_ftue, control_comeback, control_choose_name, control_backpack]
 
 func show_panel(child_node: Control, subpanel: Control = null):
+	for bg in backgrounds:
+		bg.hide()
+		
+	if child_node == control_loading:
+		loading_solid_bg.show()
+	elif control_with_discover_bg.has(child_node):
+		discover_bg.show()
+	else:
+		default_bg.show()
+	
 	for child in control_main.get_children():
 		child.hide()
 
@@ -114,30 +127,26 @@ func track_lobby_screen(screen_name: String):
 	Global.metrics.flush.call_deferred()
 
 
-func show_restore_screen():
+func show_comeback_screen():
 	track_lobby_screen("COMEBACK")
 	button_back.hide()
-	restore_name_footer.show()
-	label_name.show()
-	choose_name_head.hide()
-	choose_name_footer.hide()
-	show_panel(control_restore_and_choose_name)
+	show_panel(control_comeback)
+	avatar_preview.reparent(avatar_preview_container_comeback)
 
 
 func show_avatar_naming_screen():
 	track_lobby_screen("AVATAR_NAMING")
 	button_back.hide()
-	restore_name_footer.hide()
-	label_name.hide()
-	choose_name_head.show()
-	choose_name_footer.show()
-	show_panel(control_restore_and_choose_name)
+	show_panel(control_choose_name)
+	avatar_preview.reparent(avatar_preview_container_choose_name)
 
 
 func show_loading_screen():
 	current_screen_name = "LOBBY_LOADING"
 	button_back.hide()
 	show_panel(control_loading)
+	loading_solid_bg.show()
+	default_bg.hide()
 
 
 func show_eula_screen():
@@ -195,8 +204,6 @@ func get_auth_home_screen_name():
 
 func show_auth_home_screen():
 	track_lobby_screen(get_auth_home_screen_name())
-	sign_in_logo.show()
-	sign_in_logo_sep.show()
 	container_sign_in_step1.show()
 	container_sign_in_step2.hide()
 	button_back.show()
@@ -210,8 +217,6 @@ func show_auth_browser_open_screen(
 	var extra := JSON.stringify({"method": auth_method}) if not auth_method.is_empty() else ""
 	Global.metrics.track_screen_viewed("AUTH_BROWSER_OPEN", extra)
 	Global.metrics.flush.call_deferred()
-	sign_in_logo.hide()
-	sign_in_logo_sep.hide()
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
 	button_back.hide()
@@ -219,10 +224,9 @@ func show_auth_browser_open_screen(
 
 	label_step2_title.text = message
 	label_step2_title.show()
-	auth_error_label.hide()
-	auth_spinner.show()
+	auth_error_container.hide()
+	auth_spinner_container.show()
 	button_cancel.show()
-	button_cancel_icon.show()
 	button_try_again.hide()
 
 	# Mark that we're waiting for browser auth
@@ -236,13 +240,13 @@ func show_auth_browser_open_screen(
 		auth_timeout_timer.stop()
 
 
-func show_ftue_screen():
+func show_control_ftue():
 	track_lobby_screen("DISCOVER_FTUE")
 	button_back.hide()
-	var nickname_label = ftue_screen.get_node_or_null("%Label_NickNameFTUE")
+	var nickname_label = control_ftue.get_node_or_null("%Label_NickNameFTUE")
 	if nickname_label and current_profile:
 		nickname_label.text = current_profile.get_name()
-	show_panel(ftue_screen)
+	show_panel(control_ftue)
 	_async_fetch_ftue_place()
 
 
@@ -251,13 +255,13 @@ func _async_fetch_ftue_place() -> void:
 	if response is PromiseError:
 		printerr("[Lobby] Failed to fetch FTUE place data: ", response.get_error())
 		return
-	if not is_instance_valid(ftue_screen):
+	if not is_instance_valid(control_ftue):
 		return
 	var json: Dictionary = response.get_string_response_as_json()
 	var place_data: Dictionary = json.get("data", json)
 	if place_data.is_empty():
 		return
-	ftue_screen.set_data(place_data)
+	control_ftue.set_data(place_data)
 
 
 func show_avatar_create_screen():
@@ -292,7 +296,6 @@ func _ready():
 	button_enter_as_guest.visible = false
 
 	Global.music_player.play.call_deferred("music_builder")
-	control_restore_and_choose_name.hide()
 
 	var login = %Login
 
@@ -394,8 +397,6 @@ func _notification(what: int) -> void:
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		# App regained focus (returned from browser) - update text and start timeout
 		label_step2_title.text = "Signing in..."
-		sign_in_logo.show()
-		sign_in_logo_sep.show()
 		if auth_timeout_timer != null:
 			auth_timeout_timer.start(AUTH_TIMEOUT_SECONDS)
 
@@ -421,10 +422,6 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
 		Global.get_config().save_to_settings_file()
-		restore_name_footer.hide()
-		label_name.hide()
-		choose_name_head.show()
-		choose_name_footer.show()
 
 	if loading_first_profile:
 		loading_first_profile = false
@@ -448,8 +445,8 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		waiting_for_new_wallet = false
 		if profile_has_name():
 			# User has an existing profile: show Welcome Back screen
-			label_avatar_name.set_text(new_profile.get_name())
-			show_restore_screen()
+			label_signed_as_name.set_text("You're signed in as\n%s." % [new_profile.get_name()])
+			show_comeback_screen()
 			_show_avatar_preview()
 			Global.metrics.update_identity(
 				Global.player_identity.get_address_str(), Global.player_identity.is_guest
@@ -576,7 +573,7 @@ func _on_button_next_pressed():
 	#if promise.is_rejected():
 	#printerr("[Lobby] Profile deploy failed: ", promise.get_reject_reason())
 
-	show_ftue_screen()
+	show_control_ftue()
 
 
 func _on_button_random_name_pressed():
@@ -629,11 +626,12 @@ func _on_button_try_again_pressed():
 
 func _show_auth_error(error_message: String):
 	track_lobby_screen("AUTH_ERROR")
-	auth_spinner.hide()
-	auth_error_label.text = error_message
-	auth_error_label.show()
+	auth_spinner_container.hide()
+	label_step2_title.text = "Authentication failed"
+	auth_error_label_main.text = error_message
+	auth_error_label_code.text = ""
+	auth_error_container.show()
 	button_cancel.hide()
-	button_cancel_icon.hide()
 	button_try_again.show()
 
 
