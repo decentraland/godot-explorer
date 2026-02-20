@@ -27,6 +27,7 @@ const LINEEDIT_FOCUS_ERROR = preload("uid://bcoprda85lwd5")
 const LINEEDIT_NORMAL = preload("uid://o0x3mbwnvobx")
 const LINEEDIT_NORMAL_ERROR = preload("uid://bmwt0rbi3myn3")
 
+
 func is_alphanumeric_with_spaces(value: String) -> bool:
 	var regex := RegEx.new()
 	regex.compile(r"^[A-Za-z0-9 ]+$")
@@ -90,7 +91,7 @@ func _check_error():
 			label_error.text = error_message
 		else:
 			label_error.hide()
-			
+
 		line_edit.set("theme_override_styles/focus", LINEEDIT_FOCUS_ERROR)
 		line_edit.set("theme_override_styles/normal", LINEEDIT_NORMAL_ERROR)
 	else:

@@ -80,7 +80,8 @@ var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContai
 @onready var button_next = %Button_Next
 
 @onready var backpack = %Backpack
-@onready var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead/Label_SignedAsName
+@onready
+var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead/Label_SignedAsName
 
 @onready var button_enter_as_guest: Button = %Button_EnterAsGuest
 @onready var button_back: Button = %Button_Back
@@ -94,19 +95,22 @@ var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContai
 @onready var control_ftue = %FTUE
 
 @onready var backgrounds = [loading_solid_bg, default_bg, discover_bg]
-@onready var control_with_discover_bg = [control_ftue, control_comeback, control_choose_name, control_backpack]
+@onready var control_with_discover_bg = [
+	control_ftue, control_comeback, control_choose_name, control_backpack
+]
+
 
 func show_panel(child_node: Control, subpanel: Control = null):
 	for bg in backgrounds:
 		bg.hide()
-		
+
 	if child_node == control_loading:
 		loading_solid_bg.show()
 	elif control_with_discover_bg.has(child_node):
 		discover_bg.show()
 	else:
 		default_bg.show()
-	
+
 	for child in control_main.get_children():
 		child.hide()
 
