@@ -4,6 +4,11 @@ extends VBoxContainer
 signal dcl_line_edit_changed
 signal checked_error
 
+const LINEEDIT_FOCUS = preload("uid://bv7k1bt4j7pgb")
+const LINEEDIT_FOCUS_ERROR = preload("uid://bcoprda85lwd5")
+const LINEEDIT_NORMAL = preload("uid://o0x3mbwnvobx")
+const LINEEDIT_NORMAL_ERROR = preload("uid://bmwt0rbi3myn3")
+
 @export var character_limit: int = 15
 @export var allow_spaces: bool = true
 @export var allow_edge_spaces: bool = false
@@ -21,11 +26,6 @@ var text_value: String = ""
 @onready var label_length: Label = %Label_Length
 @onready var label_error: RichTextLabel = %Label_Error
 @onready var label_tag: Label = %Label_Tag
-
-const LINEEDIT_FOCUS = preload("uid://bv7k1bt4j7pgb")
-const LINEEDIT_FOCUS_ERROR = preload("uid://bcoprda85lwd5")
-const LINEEDIT_NORMAL = preload("uid://o0x3mbwnvobx")
-const LINEEDIT_NORMAL_ERROR = preload("uid://bmwt0rbi3myn3")
 
 
 func is_alphanumeric_with_spaces(value: String) -> bool:
