@@ -54,7 +54,7 @@ func _update_size() -> void:
 			border_px = 2
 		Size.MUTUAL:
 			size_px = 38
-			border_px = 3
+			border_px = 5
 
 	# Update the border width property
 	border_width = border_px

@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/gender.svg-3121c8168e18dada81a6b1138a5b8b96.d
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

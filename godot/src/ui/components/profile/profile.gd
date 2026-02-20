@@ -2,6 +2,8 @@ extends Control
 
 signal close_profile
 
+enum AboutMode { NONE, DESCRIPTION_ONLY, ABOUT_DATA_ONLY, BOTH }
+
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
 const NICK_MAX_LENGTH: int = 15
@@ -35,6 +37,8 @@ var original_about_me: String = ""
 var player_profile = Global.player_identity.get_profile_or_null()
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
+var _about_mode: int = AboutMode.NONE
+var _about_data_count: int = 0
 
 @onready var control_landscape_avatar: Control = %Control_landscape_avatar
 @onready var margin_container_portrait_avatar: MarginContainer = %MarginContainer_PortraitAvatar
@@ -44,31 +48,18 @@ var _deploy_timeout_timer: Timer
 @onready var label_editing_links: Label = %Label_EditingLinks
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
-@onready var button_edit_about: Button = %Button_EditAbout
-@onready var button_edit_links: Button = %Button_EditLinks
-@onready var h_flow_container_equipped_wearables: HFlowContainer = %HFlowContainer_EquippedWearables
+#@onready var button_edit_about: Button = %Button_EditAbout
+#@onready var button_edit_links: Button = %Button_EditLinks
+@onready var scroll_container_equipped_wearables: ScrollContainer = %ScrollContainer_EquippedWearables
+@onready var margin_container_description: MarginContainer = %MarginContainer_Description
 @onready var label_info_description: Label = %Label_InfoDescription
-@onready var label_info_description_2: Label = %Label_InfoDescription2
+@onready var margin_container_data_about: MarginContainer = %MarginContainer_DataAbout
 @onready var grid_container_about: GridContainer = %GridContainer_About
 @onready var h_separator_1: HSeparator = %HSeparator1
 @onready var v_box_container_about_actions: VBoxContainer = %VBoxContainer_AboutActions
 @onready var v_box_container_links_actions: VBoxContainer = %VBoxContainer_LinksActions
 @onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
 @onready var button_add_link: Button = %Button_AddLink
-@onready var profile_field_text_about_me: MarginContainer = %ProfileFieldText_AboutMe
-@onready var profile_field_option_country: MarginContainer = %ProfileFieldOption_Country
-@onready var profile_field_option_language: MarginContainer = %ProfileFieldOption_Language
-@onready var profile_field_option_pronouns: MarginContainer = %ProfileFieldOption_Pronouns
-@onready var profile_field_option_gender: MarginContainer = %ProfileFieldOption_Gender
-@onready
-var profile_field_option_relationship_status: MarginContainer = %ProfileFieldOption_RelationshipStatus
-@onready
-var profile_field_option_sexual_orientation: MarginContainer = %ProfileFieldOption_SexualOrientation
-@onready
-var profile_field_option_employment_status: MarginContainer = %ProfileFieldOption_EmploymentStatus
-@onready var profile_field_text_profession: MarginContainer = %ProfileFieldText_Profession
-@onready var profile_field_text_real_name: MarginContainer = %ProfileFieldText_RealName
-@onready var profile_field_text_hobbies: MarginContainer = %ProfileFieldText_Hobbies
 @onready var label_nickname: Label = %Label_Nickname
 @onready var label_address: Label = %Label_Address
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
@@ -94,6 +85,24 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var mutual_friends: Control = %MutualFriends
 @onready var profile_header: VBoxContainer = %ProfileHeader
 @onready var control_own_and_landscape: Control = %Control_OwnAndLandscape
+
+
+@onready var about_data_country: AboutData = %AboutData_Country
+@onready var about_data_language: AboutData = %AboutData_Language
+@onready var about_data_pronouns: AboutData = %AboutData_Pronouns
+@onready var about_data_gender: AboutData = %AboutData_Gender
+@onready var about_data_relationship_status: AboutData = %AboutData_RelationshipStatus
+@onready var about_data_sexual_orientation: AboutData = %AboutData_SexualOrientation
+@onready var about_data_employment_status: AboutData = %AboutData_EmploymentStatus
+@onready var about_data_profession: AboutData = %AboutData_Profession
+@onready var about_data_real_name: AboutData = %AboutData_RealName
+@onready var about_data_hobby: AboutData = %AboutData_Hobby
+@onready var margin_container_about: MarginContainer = %MarginContainer_About
+@onready var h_separator_3: HSeparator = %HSeparator3
+@onready var h_separator_4: HSeparator = %HSeparator4
+@onready var v_box_container_links: VBoxContainer = %VBoxContainer_Links
+@onready var margin_container_see_more: MarginContainer = %MarginContainer_SeeMore
+@onready var underlined_button_see_more: UnderlinedButton = %UnderlinedButton_SeeMore
 
 
 func _ready() -> void:
@@ -128,7 +137,7 @@ func _ready() -> void:
 	_deploy_timeout_timer.timeout.connect(self._async_on_deploy_timeout)
 	add_child(_deploy_timeout_timer)
 
-	_populate_about_fields()
+	#_populate_about_fields()
 	_update_elements_visibility()
 	add_to_group("blacklist_ui_sync")
 
@@ -168,117 +177,118 @@ func _find_option_index(value: String, options_array: Array) -> int:
 
 
 func _save_original_values() -> void:
-	original_country_index = profile_field_option_country.option_button.selected
-	original_language_index = profile_field_option_language.option_button.selected
-	original_pronouns_index = profile_field_option_pronouns.option_button.selected
-	original_gender_index = profile_field_option_gender.option_button.selected
-	original_relationship_index = profile_field_option_relationship_status.option_button.selected
-	original_sexual_orientation_index = (
-		profile_field_option_sexual_orientation.option_button.selected
-	)
-	original_employment_index = profile_field_option_employment_status.option_button.selected
-	original_profession = profile_field_text_profession.text_edit_value.text
-	original_real_name = profile_field_text_real_name.text_edit_value.text
-	original_hobbies = profile_field_text_hobbies.text_edit_value.text
-	original_about_me = profile_field_text_about_me.text_edit_value.text
+	#original_country_index = profile_field_option_country.option_button.selected
+	#original_language_index = profile_field_option_language.option_button.selected
+	#original_pronouns_index = profile_field_option_pronouns.option_button.selected
+	#original_gender_index = profile_field_option_gender.option_button.selected
+	#original_relationship_index = profile_field_option_relationship_status.option_button.selected
+	#original_sexual_orientation_index = (
+		#profile_field_option_sexual_orientation.option_button.selected
+	#)
+	#original_employment_index = profile_field_option_employment_status.option_button.selected
+	#original_profession = profile_field_text_profession.text_edit_value.text
+	#original_real_name = profile_field_text_real_name.text_edit_value.text
+	#original_hobbies = profile_field_text_hobbies.text_edit_value.text
+	#original_about_me = profile_field_text_about_me.text_edit_value.text
+	pass
 
 
 func _restore_original_values() -> void:
-	profile_field_option_country.select_option(original_country_index)
-	profile_field_option_language.select_option(original_language_index)
-	profile_field_option_pronouns.select_option(original_pronouns_index)
-	profile_field_option_gender.select_option(original_gender_index)
-	profile_field_option_relationship_status.select_option(original_relationship_index)
-	profile_field_option_sexual_orientation.select_option(original_sexual_orientation_index)
-	profile_field_option_employment_status.select_option(original_employment_index)
-	profile_field_text_profession.set_text(original_profession)
-	profile_field_text_real_name.set_text(original_real_name)
-	profile_field_text_hobbies.set_text(original_hobbies)
-	profile_field_text_about_me.set_text(original_about_me)
-
-
-func _get_option_text(option_field: MarginContainer, index: int) -> String:
-	if index <= 0:
-		return ""
-
-	var option_button = option_field.get_node("VBoxContainer/OptionButton")
-	if option_button and index < option_button.get_item_count():
-		return option_button.get_item_text(index)
-	return ""
-
-
-func _async_save_profile_changes() -> void:
-	var current_country_index = profile_field_option_country.option_button.selected
-	if current_country_index != original_country_index:
-		var country_text = _get_option_text(profile_field_option_country, current_country_index)
-		Global.player_identity.get_mutable_profile().set_country(country_text)
-		original_country_index = current_country_index
-
-	var current_language_index = profile_field_option_language.option_button.selected
-	if current_language_index != original_language_index:
-		var language_text = _get_option_text(profile_field_option_language, current_language_index)
-		Global.player_identity.get_mutable_profile().set_language(language_text)
-		original_language_index = current_language_index
-
-	var current_pronouns_index = profile_field_option_pronouns.option_button.selected
-	if current_pronouns_index != original_pronouns_index:
-		var pronouns_text = _get_option_text(profile_field_option_pronouns, current_pronouns_index)
-		Global.player_identity.get_mutable_profile().set_pronouns(pronouns_text)
-		original_pronouns_index = current_pronouns_index
-
-	var current_gender_index = profile_field_option_gender.option_button.selected
-	if current_gender_index != original_gender_index:
-		var gender_text = _get_option_text(profile_field_option_gender, current_gender_index)
-		Global.player_identity.get_mutable_profile().set_gender(gender_text)
-		original_gender_index = current_gender_index
-
-	var current_relationship_index = profile_field_option_relationship_status.option_button.selected
-	if current_relationship_index != original_relationship_index:
-		var relationship_text = _get_option_text(
-			profile_field_option_relationship_status, current_relationship_index
-		)
-		Global.player_identity.get_mutable_profile().set_relationship_status(relationship_text)
-		original_relationship_index = current_relationship_index
-
-	var current_sexual_orientation_index = (
-		profile_field_option_sexual_orientation.option_button.selected
-	)
-	if current_sexual_orientation_index != original_sexual_orientation_index:
-		var sexual_orientation_text = _get_option_text(
-			profile_field_option_sexual_orientation, current_sexual_orientation_index
-		)
-		Global.player_identity.get_mutable_profile().set_sexual_orientation(sexual_orientation_text)
-		original_sexual_orientation_index = current_sexual_orientation_index
-
-	var current_employment_index = profile_field_option_employment_status.option_button.selected
-	if current_employment_index != original_employment_index:
-		var employment_text = _get_option_text(
-			profile_field_option_employment_status, current_employment_index
-		)
-		Global.player_identity.get_mutable_profile().set_employment_status(employment_text)
-		original_employment_index = current_employment_index
-
-	var current_profession = profile_field_text_profession.text_edit_value.text
-	if current_profession != original_profession:
-		Global.player_identity.get_mutable_profile().set_profession(current_profession)
-		original_profession = current_profession
-
-	var current_real_name = profile_field_text_real_name.text_edit_value.text
-	if current_real_name != original_real_name:
-		Global.player_identity.get_mutable_profile().set_real_name(current_real_name)
-		original_real_name = current_real_name
-
-	var current_hobbies = profile_field_text_hobbies.text_edit_value.text
-	if current_hobbies != original_hobbies:
-		Global.player_identity.get_mutable_profile().set_hobbies(current_hobbies)
-		original_hobbies = current_hobbies
-
-	var current_about_me = profile_field_text_about_me.text_edit_value.text
-	if current_about_me != original_about_me:
-		Global.player_identity.get_mutable_profile().set_description(current_about_me)
-		original_about_me = current_about_me
-
-	await Global.player_identity.async_save_profile_metadata()
+	#profile_field_option_country.select_option(original_country_index)
+	#profile_field_option_language.select_option(original_language_index)
+	#profile_field_option_pronouns.select_option(original_pronouns_index)
+	#profile_field_option_gender.select_option(original_gender_index)
+	#profile_field_option_relationship_status.select_option(original_relationship_index)
+	#profile_field_option_sexual_orientation.select_option(original_sexual_orientation_index)
+	#profile_field_option_employment_status.select_option(original_employment_index)
+	#profile_field_text_profession.set_text(original_profession)
+	#profile_field_text_real_name.set_text(original_real_name)
+	#profile_field_text_hobbies.set_text(original_hobbies)
+	#profile_field_text_about_me.set_text(original_about_me)
+	pass
+#
+#func _get_option_text(option_field: MarginContainer, index: int) -> String:
+	#if index <= 0:
+		#return ""
+#
+	#var option_button = option_field.get_node("VBoxContainer/OptionButton")
+	#if option_button and index < option_button.get_item_count():
+		#return option_button.get_item_text(index)
+	#return ""
+#
+#
+#func _async_save_profile_changes() -> void:
+	#var current_country_index = profile_field_option_country.option_button.selected
+	#if current_country_index != original_country_index:
+		#var country_text = _get_option_text(profile_field_option_country, current_country_index)
+		#Global.player_identity.get_mutable_profile().set_country(country_text)
+		#original_country_index = current_country_index
+#
+	#var current_language_index = profile_field_option_language.option_button.selected
+	#if current_language_index != original_language_index:
+		#var language_text = _get_option_text(profile_field_option_language, current_language_index)
+		#Global.player_identity.get_mutable_profile().set_language(language_text)
+		#original_language_index = current_language_index
+#
+	#var current_pronouns_index = profile_field_option_pronouns.option_button.selected
+	#if current_pronouns_index != original_pronouns_index:
+		#var pronouns_text = _get_option_text(profile_field_option_pronouns, current_pronouns_index)
+		#Global.player_identity.get_mutable_profile().set_pronouns(pronouns_text)
+		#original_pronouns_index = current_pronouns_index
+#
+	#var current_gender_index = profile_field_option_gender.option_button.selected
+	#if current_gender_index != original_gender_index:
+		#var gender_text = _get_option_text(profile_field_option_gender, current_gender_index)
+		#Global.player_identity.get_mutable_profile().set_gender(gender_text)
+		#original_gender_index = current_gender_index
+#
+	#var current_relationship_index = profile_field_option_relationship_status.option_button.selected
+	#if current_relationship_index != original_relationship_index:
+		#var relationship_text = _get_option_text(
+			#profile_field_option_relationship_status, current_relationship_index
+		#)
+		#Global.player_identity.get_mutable_profile().set_relationship_status(relationship_text)
+		#original_relationship_index = current_relationship_index
+#
+	#var current_sexual_orientation_index = (
+		#profile_field_option_sexual_orientation.option_button.selected
+	#)
+	#if current_sexual_orientation_index != original_sexual_orientation_index:
+		#var sexual_orientation_text = _get_option_text(
+			#profile_field_option_sexual_orientation, current_sexual_orientation_index
+		#)
+		#Global.player_identity.get_mutable_profile().set_sexual_orientation(sexual_orientation_text)
+		#original_sexual_orientation_index = current_sexual_orientation_index
+#
+	#var current_employment_index = profile_field_option_employment_status.option_button.selected
+	#if current_employment_index != original_employment_index:
+		#var employment_text = _get_option_text(
+			#profile_field_option_employment_status, current_employment_index
+		#)
+		#Global.player_identity.get_mutable_profile().set_employment_status(employment_text)
+		#original_employment_index = current_employment_index
+#
+	#var current_profession = profile_field_text_profession.text_edit_value.text
+	#if current_profession != original_profession:
+		#Global.player_identity.get_mutable_profile().set_profession(current_profession)
+		#original_profession = current_profession
+#
+	#var current_real_name = profile_field_text_real_name.text_edit_value.text
+	#if current_real_name != original_real_name:
+		#Global.player_identity.get_mutable_profile().set_real_name(current_real_name)
+		#original_real_name = current_real_name
+#
+	#var current_hobbies = profile_field_text_hobbies.text_edit_value.text
+	#if current_hobbies != original_hobbies:
+		#Global.player_identity.get_mutable_profile().set_hobbies(current_hobbies)
+		#original_hobbies = current_hobbies
+#
+	#var current_about_me = profile_field_text_about_me.text_edit_value.text
+	#if current_about_me != original_about_me:
+		#Global.player_identity.get_mutable_profile().set_description(current_about_me)
+		#original_about_me = current_about_me
+#
+	#await Global.player_identity.async_save_profile_metadata()
 
 
 func _update_elements_visibility() -> void:
@@ -299,13 +309,13 @@ func _update_elements_visibility() -> void:
 		button_menu.hide()
 		button_add_friend.hide()
 		button_unfriend.hide()
-		button_edit_about.show()
-		button_edit_links.show()
+		#button_edit_about.show()
+		#button_edit_links.show()
 	else:
 		button_block_user.show()
 		button_mute_user.show()
-		button_edit_about.hide()
-		button_edit_links.hide()
+		#button_edit_about.hide()
+		#button_edit_links.hide()
 		button_menu.show()
 
 	if current_profile != null:
@@ -319,16 +329,16 @@ func _update_elements_visibility() -> void:
 			label_tag.text = "#" + address.substr(address.length() - 4, 4)
 
 
-	_turn_links_editing(false)
-	_turn_about_editing(false)
+	#_turn_links_editing(false)
+	#_turn_about_editing(false)
 
 
 func _set_avatar_loading() -> int:
 	panel_container_getting_data.show()
 	profile_header.hide()
 	v_box_container_content.hide()
-	button_edit_about.hide()
-	button_edit_links.hide()
+	#button_edit_about.hide()
+	#button_edit_links.hide()
 
 	avatar_preview.hide()
 	avatar_loading_counter += 1
@@ -431,80 +441,80 @@ func _on_reset_avatars_rotation() -> void:
 	avatar_preview.reset_avatar_rotation()
 
 
-func _on_button_edit_about_pressed() -> void:
-	_save_original_values()
-	_turn_about_editing(true)
+#func _on_button_edit_about_pressed() -> void:
+	#_save_original_values()
+	#_turn_about_editing(true)
+#
+#
+#func _on_button_edit_links_pressed() -> void:
+	#_turn_links_editing(true)
 
 
-func _on_button_edit_links_pressed() -> void:
-	_turn_links_editing(true)
-
-
-func _turn_about_editing(editing: bool) -> void:
-	if editing:
-		label_info_description.show()
-		label_info_description_2.show()
-		v_box_container_about_actions.show()
-		button_edit_about.hide()
-		label_no_intro.hide()
-	else:
-		if profile_field_text_about_me.label_value.text == "":
-			label_no_intro.show()
-		else:
-			label_no_intro.hide()
-		label_info_description.hide()
-		label_info_description_2.hide()
-		v_box_container_about_actions.hide()
-		if is_own_passport:
-			button_edit_about.show()
-
-	for child in h_box_container_about_1.get_children():
-		child.emit_signal("change_editing", editing)
-	for child in grid_container_about.get_children():
-		child.emit_signal("change_editing", editing)
-
-
-func _turn_links_editing(editing: bool) -> void:
-	for child in h_flow_container_links.get_children():
-		if child.is_in_group("profile_link_buttons"):
-			child.emit_signal("change_editing", editing)
-	if editing:
-		_check_add_link_button_status()
-		label_editing_links.show()
-		v_box_container_links_actions.show()
-		button_edit_links.hide()
-		label_no_links.hide()
-	else:
-		if current_profile != null:
-			if current_profile.get_links().size() == 0:
-				label_no_links.show()
-			else:
-				label_no_links.hide()
-			button_add_link.hide()
-			label_editing_links.hide()
-			v_box_container_links_actions.hide()
-		if is_own_passport:
-			button_edit_links.show()
-
-	_reorder_add_link_button()
-
-
-func _on_button_about_cancel_pressed() -> void:
-	_restore_original_values()
-	_turn_about_editing(false)
-
-
-func _on_button_links_cancel_pressed() -> void:
-	_turn_links_editing(false)
-	_refresh_links()
-
-
-func _async_on_button_about_save_pressed() -> void:
-	if current_profile != null:
-		_async_save_profile_changes()
-		_turn_about_editing(false)
-	else:
-		printerr("No current profile to save")
+#func _turn_about_editing(editing: bool) -> void:
+	#if editing:
+		#label_info_description.show()
+		#label_info_description_2.show()
+		#v_box_container_about_actions.show()
+		#button_edit_about.hide()
+		#label_no_intro.hide()
+	#else:
+		#if profile_field_text_about_me.label_value.text == "":
+			#label_no_intro.show()
+		#else:
+			#label_no_intro.hide()
+		#label_info_description.hide()
+		#label_info_description_2.hide()
+		#v_box_container_about_actions.hide()
+		#if is_own_passport:
+			#button_edit_about.show()
+#
+	#for child in h_box_container_about_1.get_children():
+		#child.emit_signal("change_editing", editing)
+	#for child in grid_container_about.get_children():
+		#child.emit_signal("change_editing", editing)
+#
+#
+#func _turn_links_editing(editing: bool) -> void:
+	#for child in h_flow_container_links.get_children():
+		#if child.is_in_group("profile_link_buttons"):
+			#child.emit_signal("change_editing", editing)
+	#if editing:
+		#_check_add_link_button_status()
+		#label_editing_links.show()
+		#v_box_container_links_actions.show()
+		#button_edit_links.hide()
+		#label_no_links.hide()
+	#else:
+		#if current_profile != null:
+			#if current_profile.get_links().size() == 0:
+				#label_no_links.show()
+			#else:
+				#label_no_links.hide()
+			#button_add_link.hide()
+			#label_editing_links.hide()
+			#v_box_container_links_actions.hide()
+		#if is_own_passport:
+			#button_edit_links.show()
+#
+	#_reorder_add_link_button()
+#
+#
+#func _on_button_about_cancel_pressed() -> void:
+	#_restore_original_values()
+	#_turn_about_editing(false)
+#
+#
+#func _on_button_links_cancel_pressed() -> void:
+	#_turn_links_editing(false)
+	#_refresh_links()
+#
+#
+#func _async_on_button_about_save_pressed() -> void:
+	#if current_profile != null:
+		#_async_save_profile_changes()
+		#_turn_about_editing(false)
+	#else:
+		#printerr("No current profile to save")
 
 
 func close() -> void:
@@ -512,15 +522,11 @@ func close() -> void:
 	_hide_all_social_buttons()
 	_on_stop_emote()
 	_on_reset_avatars_rotation()
-	_turn_links_editing(false)
-	_turn_about_editing(false)
+	#_turn_links_editing(false)
+	#_turn_about_editing(false)
 	_disconnect_friendship_signals()
 	if closable:
 		close_profile.emit()
-
-
-func _on_button_claim_name_pressed() -> void:
-	Global.open_url(DclUrls.marketplace_claim_name())
 
 
 func _on_button_edit_nick_pressed() -> void:
@@ -544,50 +550,99 @@ func _refresh_links() -> void:
 func _refresh_about() -> void:
 	if current_profile == null:
 		return
+	if not is_inside_tree():
+		return
 
-	var country = current_profile.get_country()
-	var country_index = _find_option_index(country, ProfileConstants.COUNTRIES)
-	profile_field_option_country.select_option(country_index)
+	var description = current_profile.get_description()
+	var has_description = not description.is_empty()
 
-	var language = current_profile.get_language()
-	var language_index = _find_option_index(language, ProfileConstants.LANGUAGES)
-	profile_field_option_language.select_option(language_index)
+	# Set all about data values (set_value handles visibility per item)
+	about_data_country.set_value(current_profile.get_country())
+	about_data_language.set_value(current_profile.get_language())
+	about_data_pronouns.set_value(current_profile.get_pronouns())
+	about_data_gender.set_value(current_profile.get_gender())
+	about_data_relationship_status.set_value(current_profile.get_relationship_status())
+	about_data_sexual_orientation.set_value(current_profile.get_sexual_orientation())
+	about_data_employment_status.set_value(current_profile.get_employment_status())
+	about_data_profession.set_value(current_profile.get_profession())
+	about_data_real_name.set_value(current_profile.get_real_name())
+	about_data_hobby.set_value(current_profile.get_hobbies())
 
-	var pronouns = current_profile.get_pronouns()
-	var pronouns_index = _find_option_index(pronouns, ProfileConstants.PRONOUNS)
-	profile_field_option_pronouns.select_option(pronouns_index)
+	# Count about data items with value
+	_about_data_count = 0
+	for child in grid_container_about.get_children():
+		if child is AboutData and child.has_value():
+			_about_data_count += 1
 
-	var gender = current_profile.get_gender()
-	var gender_index = _find_option_index(gender, ProfileConstants.GENDERS)
-	profile_field_option_gender.select_option(gender_index)
+	var has_about_data = _about_data_count > 0
 
-	var relationship_status = current_profile.get_relationship_status()
-	var relationship_index = _find_option_index(
-		relationship_status, ProfileConstants.RELATIONSHIP_STATUS
-	)
-	profile_field_option_relationship_status.select_option(relationship_index)
+	if has_description:
+		label_info_description.text = description
 
-	var sexual_orientation = current_profile.get_sexual_orientation()
-	var sexual_orientation_index = _find_option_index(
-		sexual_orientation, ProfileConstants.SEXUAL_ORIENTATIONS
-	)
-	profile_field_option_sexual_orientation.select_option(sexual_orientation_index)
+	# Determine about mode
+	if has_description and has_about_data:
+		_about_mode = AboutMode.BOTH
+	elif has_description:
+		_about_mode = AboutMode.DESCRIPTION_ONLY
+	elif has_about_data:
+		_about_mode = AboutMode.ABOUT_DATA_ONLY
+	else:
+		_about_mode = AboutMode.NONE
 
-	var employment_status = current_profile.get_employment_status()
-	var employment_index = _find_option_index(employment_status, ProfileConstants.EMPLOYMENT_STATUS)
-	profile_field_option_employment_status.select_option(employment_index)
+	underlined_button_see_more.set_pressed_no_signal(false)
+	_set_compact_view()
 
-	var profession = current_profile.get_profession()
-	profile_field_text_profession.set_text(profession, true)
 
-	var real_name = current_profile.get_real_name()
-	profile_field_text_real_name.set_text(real_name, true)
+func _set_compact_view() -> void:
+	match _about_mode:
+		AboutMode.NONE:
+			margin_container_about.hide()
+		AboutMode.DESCRIPTION_ONLY:
+			margin_container_about.show()
+			margin_container_description.show()
+			margin_container_data_about.hide()
+			margin_container_see_more.hide()
+		AboutMode.ABOUT_DATA_ONLY:
+			margin_container_about.show()
+			margin_container_description.hide()
+			margin_container_data_about.show()
+			_show_about_data_limited(3)
+			margin_container_see_more.visible = _about_data_count > 3
+			underlined_button_see_more.underlined_text = "SEE MORE"
+		AboutMode.BOTH:
+			margin_container_about.show()
+			margin_container_description.show()
+			margin_container_data_about.hide()
+			margin_container_see_more.show()
+			underlined_button_see_more.underlined_text = "SEE MORE"
 
-	var hobbies = current_profile.get_hobbies()
-	profile_field_text_hobbies.set_text(hobbies, true)
 
-	var about_me = current_profile.get_description()
-	profile_field_text_about_me.set_text(about_me, true)
+func _set_expand_view() -> void:
+	match _about_mode:
+		AboutMode.ABOUT_DATA_ONLY:
+			margin_container_data_about.show()
+			_show_all_about_data()
+			underlined_button_see_more.underlined_text = "SEE LESS"
+		AboutMode.BOTH:
+			margin_container_data_about.show()
+			_show_all_about_data()
+			underlined_button_see_more.underlined_text = "SEE LESS"
+
+
+func _show_about_data_limited(max_count: int) -> void:
+	var shown := 0
+	for child in grid_container_about.get_children():
+		if child is AboutData and child.has_value():
+			shown += 1
+			child.visible = shown <= max_count
+		elif child is AboutData:
+			child.visible = false
+
+
+func _show_all_about_data() -> void:
+	for child in grid_container_about.get_children():
+		if child is AboutData:
+			child.visible = child.has_value()
 
 
 func _refresh_name_and_address() -> void:
@@ -603,7 +658,7 @@ func _async_refresh_equipped_items() -> void:
 	var equipped_button_group = ButtonGroup.new()
 	equipped_button_group.allow_unpress = true
 
-	for child in h_flow_container_equipped_wearables.get_children():
+	for child in scroll_container_equipped_wearables.get_children():
 		child.queue_free()
 
 	var profile_dictionary = current_profile.to_godot_dictionary()
@@ -622,7 +677,7 @@ func _async_refresh_equipped_items() -> void:
 			)
 			if wearable_definition != null:
 				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
-				h_flow_container_equipped_wearables.add_child(wearable_item)
+				scroll_container_equipped_wearables.add_child(wearable_item)
 				wearable_item.button_group = equipped_button_group
 				wearable_item.async_set_item(wearable_definition)
 			else:
@@ -644,7 +699,7 @@ func _async_refresh_equipped_items() -> void:
 			)
 			if emote_definition != null:
 				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
-				h_flow_container_equipped_wearables.add_child(emote_item)
+				scroll_container_equipped_wearables.add_child(emote_item)
 				emote_item.button_group = equipped_button_group
 				emote_item.async_set_item(emote_definition)
 				emote_item.set_as_emote(emote.urn)
@@ -746,24 +801,24 @@ func _async_on_button_links_save_pressed():
 			links_to_save.append({"title": child.text, "url": child.url})
 	Global.player_identity.get_mutable_profile().set_links(links_to_save)
 	await Global.player_identity.async_save_profile()
-	_turn_links_editing(false)
-
-
-func _populate_about_fields() -> void:
-	for country in ProfileConstants.COUNTRIES:
-		profile_field_option_country.add_option(country)
-	for language in ProfileConstants.LANGUAGES:
-		profile_field_option_language.add_option(language)
-	for pronoun in ProfileConstants.PRONOUNS:
-		profile_field_option_pronouns.add_option(pronoun)
-	for gender in ProfileConstants.GENDERS:
-		profile_field_option_gender.add_option(gender)
-	for relationship in ProfileConstants.RELATIONSHIP_STATUS:
-		profile_field_option_relationship_status.add_option(relationship)
-	for sexual_orientation in ProfileConstants.SEXUAL_ORIENTATIONS:
-		profile_field_option_sexual_orientation.add_option(sexual_orientation)
-	for employment_status in ProfileConstants.EMPLOYMENT_STATUS:
-		profile_field_option_employment_status.add_option(employment_status)
+	#_turn_links_editing(false)
+#
+#
+#func _populate_about_fields() -> void:
+	#for country in ProfileConstants.COUNTRIES:
+		#profile_field_option_country.add_option(country)
+	#for language in ProfileConstants.LANGUAGES:
+		#profile_field_option_language.add_option(language)
+	#for pronoun in ProfileConstants.PRONOUNS:
+		#profile_field_option_pronouns.add_option(pronoun)
+	#for gender in ProfileConstants.GENDERS:
+		#profile_field_option_gender.add_option(gender)
+	#for relationship in ProfileConstants.RELATIONSHIP_STATUS:
+		#profile_field_option_relationship_status.add_option(relationship)
+	#for sexual_orientation in ProfileConstants.SEXUAL_ORIENTATIONS:
+		#profile_field_option_sexual_orientation.add_option(sexual_orientation)
+	#for employment_status in ProfileConstants.EMPLOYMENT_STATUS:
+		#profile_field_option_employment_status.add_option(employment_status)
 
 
 func _on_global_profile_changed(new_profile: DclUserProfile) -> void:
@@ -1294,3 +1349,10 @@ func _on_copy_nick_pressed() -> void:
 
 func _on_copy_address_pressed() -> void:
 	_copy_address()
+
+
+func _on_underlined_button_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		_set_expand_view()
+	else:
+		_set_compact_view()
