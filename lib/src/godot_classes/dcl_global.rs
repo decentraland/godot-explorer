@@ -642,4 +642,20 @@ impl DclGlobal {
     pub fn get_dcl_environment() -> GString {
         GString::from(crate::env::get_environment().suffix())
     }
+
+    /// Set the app lifecycle pause state for scene threads (iOS watchdog fix).
+    /// Call with `true` when app goes to background (NOTIFICATION_APPLICATION_PAUSED).
+    /// Call with `false` when app returns to foreground (NOTIFICATION_APPLICATION_RESUMED).
+    /// When paused, scene threads skip onUpdate processing to reduce CPU usage
+    /// and respond faster to kill signals, preventing iOS watchdog timeouts.
+    #[func]
+    pub fn set_app_lifecycle_paused(paused: bool) {
+        #[cfg(feature = "use_deno")]
+        crate::dcl::js::set_app_lifecycle_paused(paused);
+
+        #[cfg(not(feature = "use_deno"))]
+        {
+            let _ = paused;
+        }
+    }
 }
