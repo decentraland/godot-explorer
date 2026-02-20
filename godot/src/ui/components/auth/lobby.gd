@@ -90,6 +90,7 @@ var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/R
 @onready var label_version = %Label_Version
 
 @onready var control_ftue = %FTUE
+@onready var place_ftue = %FTUE/FTUE
 
 @onready var backgrounds = [loading_solid_bg, default_bg, discover_bg]
 @onready var control_with_discover_bg = [
@@ -234,7 +235,7 @@ func show_auth_browser_open_screen(
 func show_control_ftue():
 	track_lobby_screen("DISCOVER_FTUE")
 	button_back.hide()
-	var nickname_label = control_ftue.get_node_or_null("%Label_NickNameFTUE")
+	var nickname_label = place_ftue._get_label_nickname_ftue()
 	if nickname_label and current_profile:
 		nickname_label.text = current_profile.get_name()
 	show_panel(control_ftue)
@@ -246,13 +247,13 @@ func _async_fetch_ftue_place() -> void:
 	if response is PromiseError:
 		printerr("[Lobby] Failed to fetch FTUE place data: ", response.get_error())
 		return
-	if not is_instance_valid(control_ftue):
+	if not is_instance_valid(place_ftue):
 		return
 	var json: Dictionary = response.get_string_response_as_json()
 	var place_data: Dictionary = json.get("data", json)
 	if place_data.is_empty():
 		return
-	control_ftue.set_data(place_data)
+	place_ftue.set_data(place_data)
 
 
 func show_avatar_create_screen():
@@ -537,11 +538,10 @@ func _on_button_next_pressed():
 	# ADR-290: Snapshots are no longer generated/uploaded by clients
 	current_profile.set_avatar(avatar)
 
-	# TODO: REMOVE THIS BEFORE MERGE, USEFUL FOR TESTING NEW ACCOUNT
-	#var promise = ProfileService.async_deploy_profile(current_profile)
-	#await PromiseUtils.async_awaiter(promise)
-	#if promise.is_rejected():
-	#printerr("[Lobby] Profile deploy failed: ", promise.get_reject_reason())
+	var promise = ProfileService.async_deploy_profile(current_profile)
+	await PromiseUtils.async_awaiter(promise)
+	if promise.is_rejected():
+		printerr("[Lobby] Profile deploy failed: ", promise.get_reject_reason())
 
 	show_control_ftue()
 
