@@ -103,6 +103,7 @@ func _ready():
 		audio_player_emote.queue_free()
 
 		audio_player_emote = AudioStreamPlayer.new()
+		audio_player_emote.bus = &"AvatarAndEmotes"
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
 

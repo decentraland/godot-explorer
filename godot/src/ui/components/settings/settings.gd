@@ -10,36 +10,43 @@ enum SceneLogLevel {
 	SYSTEM_ERROR = 3,
 }
 
+const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
+
 var preview_ws = WebSocketPeer.new()
 var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready var container_general: Control = %Container_General
-@onready var container_graphics: Control = %VBoxContainer_Graphics
-@onready var container_advanced: Control = %VBoxContainer_Advanced
-@onready var container_audio: Control = %VBoxContainer_Audio
+@onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
+@onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
+@onready var container_advanced: VBoxContainer = %VBoxContainer_Advanced
+@onready var container_audio: VBoxContainer = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
+@onready var container_storage: VBoxContainer = %VBoxContainer_Storage
+@onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
+@onready var button_back_to_explorer: Button = %Button_BackToExplorer
 
-#General items:
-@onready var text_edit_cache_path = %TextEdit_CachePath
-@onready var label_current_cache_size = %Label_CurrentCacheSize
-@onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
+#Storage items:
+@onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
+@onready var label_current_cache_value: Label = %Label_CurrentCacheValue
+@onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
+@onready var button_clear_cache: Button = %Button_ClearCache
 
-@onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
 @onready var label_skybox_time: Label = %Label_SkyboxTime
-@onready var check_box_submit_message_closes_chat: CheckBox = %CheckBox_SubmitMessageClosesChat
+@onready
+var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 
 #Audio items
-@onready var h_slider_general_volume = %HSlider_GeneralVolume
-@onready var h_slider_scene_volume = %HSlider_SceneVolume
-@onready var h_slider_ui_volume = %HSlider_UIVolume
-@onready var h_slider_music_volume = %HSlider_MusicVolume
-@onready var h_slider_voice_chat_volume = %HSlider_VoiceChatVolume
-@onready var h_slider_mic_amplification = %HSlider_MicAmplification
+@onready var general_volume: SettingsSlider = %GeneralVolume
+@onready var scene_volume: SettingsSlider = %SceneVolume
+@onready var ui_volume: SettingsSlider = %UIVolume
+@onready var music_volume: SettingsSlider = %MusicVolume
+@onready var avatar_and_emotes_volume: SettingsSlider = %AvatarAndEmotesVolume
+@onready var voice_chat_volume: SettingsSlider = %VoiceChatVolume
+@onready var mic_amplification: SettingsSlider = %MicAmplification
 
 #Graphics items:
 @onready var h_slider_rendering_scale = %HSlider_Resolution3DScale
@@ -51,12 +58,15 @@ var _dirty_connected: bool = false
 @onready var box_container_custom = %VBoxContainer_Custom
 
 @onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
-@onready var graphic_profile_container = %RadioSelector_GraphicProfile.get_parent()
 
 # Dynamic graphics toggle
-@onready var check_box_dynamic_graphics: CheckBox = %CheckBox_DynamicGraphics
-@onready var label_dynamic_graphics_status: Label = %Label_DynamicGraphicsStatus
-@onready var dynamic_graphics_container: VBoxContainer = %DynamicGraphics
+@onready var dynamic_graphics_container: HBoxContainer = %DynamicGraphics
+@onready var check_button_dynamic_graphics: CheckButton = %CheckButton_DynamicGraphics
+
+# Dynamic graphics toggle
+@onready
+var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox
+@onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
 
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
 @onready var radio_selector_skybox = %RadioSelector_Skybox
@@ -69,55 +79,111 @@ var _dirty_connected: bool = false
 @onready var container_resolution_3d_scale = %Resolution3DScale
 
 #Advanced items:
-@onready var option_button_realm = %OptionButton_Realm
-@onready var line_edit_preview_url = %LineEdit_PreviewUrl
-@onready var label_ws_state = %Label_WsState
+@onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
+@onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
+@onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
+@onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
-@onready var h_slider_process_tick_quota = %HSlider_ProcessTickQuota
-@onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
-
-@onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
-@onready var button_test_notification = %Button_TestNotification
-
-@onready var button_general: Button = %Button_General
 @onready var button_graphics: Button = %Button_Graphics
 @onready var button_audio: Button = %Button_Audio
+@onready var button_gameplay: Button = %Button_Gameplay
+@onready var button_account: Button = %Button_Account
+@onready var button_storage: Button = %Button_Storage
 @onready var button_developer: Button = %Button_Developer
+
+@onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
+@onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
+@onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 
 
 func _ready():
+	button_back_to_explorer.hide()
 	button_developer.visible = !Global.is_production()
-	button_general.set_pressed_no_signal(true)
-	_on_button_general_pressed()
+	button_graphics.set_pressed_no_signal(true)
+	_on_button_graphics_pressed()
+
+	# Preview URL: release focus when clicking outside, keep visible when keyboard opens, connect button
+	line_edit_custom_preview_url.custom_focus_entered.connect(
+		_on_line_edit_preview_url_focus_entered
+	)
+	line_edit_custom_preview_url.button_pressed.connect(_on_button_connect_preview_pressed)
+
+	if Global.get_explorer():
+		preview_viewport_container.show()
+	else:
+		preview_viewport_container.hide()
 
 	# general
-	text_edit_cache_path.text = Global.get_config().local_content_dir
-	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
-
-	preview_viewport_container.hide()
-	check_box_dynamic_skybox.button_pressed = Global.get_config().dynamic_skybox
-	check_box_submit_message_closes_chat.button_pressed = (
+	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
 
-	var step_value = 86400 / h_slider_skybox_time.max_value
-	h_slider_skybox_time.value = Global.get_config().skybox_time / step_value
-	h_slider_skybox_time.visible = !Global.get_config().dynamic_skybox
-	label_skybox_time.visible = !Global.get_config().dynamic_skybox
+	dropdown_list_max_cache_size.add_item("1 GB", 0)
+	dropdown_list_max_cache_size.add_item("2 GB", 1)
+	dropdown_list_max_cache_size.add_item("4 GB", 2)
+	var cache_index := clampi(Global.get_config().max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
+	dropdown_list_max_cache_size.select(cache_index)
+	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[cache_index]
+	dropdown_list_max_cache_size.item_selected.connect(
+		_on_dropdown_list_max_cache_size_item_selected
+	)
 
 	# graphic
+	var i = 0
+	for profile in GraphicSettings.PROFILE_NAMES:
+		if profile != "Custom":
+			dropdown_list_graphic_profiles.add_item(profile, i)
+			i += 1
 	_setup_dynamic_graphics()
+	_update_dynamic_graphics_status()
 	refresh_graphic_settings()
 
+	var j = 0
+	for profile in GraphicSettings.SKYBOX_TIME_NAMES:
+		dropdown_list_custom_skybox.add_item(profile.name, j)
+		j += 1
+
+	if Global.get_config().dynamic_skybox:
+		check_button_dynamic_skybox.button_pressed = true
+		dropdown_list_custom_skybox.select(-1)
+	else:
+		check_button_dynamic_skybox.button_pressed = false
+		var current_skybox_time: int = Global.get_config().skybox_time
+		for k in range(GraphicSettings.SKYBOX_TIME_NAMES.size()):
+			if GraphicSettings.SKYBOX_TIME_NAMES[k].secs == current_skybox_time:
+				dropdown_list_custom_skybox.select(k)
+				break
+
 	# volume
-	h_slider_general_volume.value = Global.get_config().audio_general_volume
-	h_slider_scene_volume.value = Global.get_config().audio_scene_volume
-	h_slider_voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
-	h_slider_ui_volume.value = Global.get_config().audio_ui_volume
-	h_slider_music_volume.value = Global.get_config().audio_music_volume
-	h_slider_mic_amplification.value = Global.get_config().audio_mic_amplification
+	general_volume.value = Global.get_config().audio_general_volume
+	scene_volume.value = Global.get_config().audio_scene_volume
+	voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
+	ui_volume.value = Global.get_config().audio_ui_volume
+	music_volume.value = Global.get_config().audio_music_volume
+	avatar_and_emotes_volume.value = Global.get_config().audio_avatar_and_emotes_volume
+	mic_amplification.value = Global.get_config().audio_mic_amplification
 
 	refresh_values()
+
+	# Dev Tools
+	dropdown_list_realm.add_item("mannakia.dcl.eth", 0)
+	dropdown_list_realm.add_item("http://127.0.0.1:8000", 1)
+	dropdown_list_realm.add_item("https://sdk-test-scenes.decentraland.org", 2)
+	dropdown_list_realm.add_item(
+		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest", 3
+	)
+	dropdown_list_realm.add_item("https://peer.decentraland.org", 4)
+	dropdown_list_realm.add_item(
+		"https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main", 5
+	)
+	dropdown_list_realm.add_item("https://peer.decentraland.org", 6)
+	dropdown_list_realm.add_item("shibu.dcl.eth", 7)
+	dropdown_list_realm.add_item(
+		"https://leanmendoza.github.io/mannakia-dcl-scene/mannakia-dcl-scene", 8
+	)
+	dropdown_list_realm.add_item("https://sdilauro.github.io/dae-unit-tests/dae-unit-tests", 9)
+	dropdown_list_realm.add_item("https://realm-provider.decentraland.org/main", 10)
 
 
 func refresh_graphic_settings():
@@ -126,7 +192,7 @@ func refresh_graphic_settings():
 
 	# We only show the custom settings if the graphic profile is custom
 	box_container_custom.visible = is_custom_profile
-	radio_selector_graphic_profile.selected = graphic_profile
+	dropdown_list_graphic_profiles.select(graphic_profile)
 
 	# Hide FPS limit and 3D resolution scale when using preset profiles
 	# These are controlled by the profile, not user-configurable
@@ -161,17 +227,83 @@ func refresh_graphic_settings():
 
 
 func show_control(control: Control):
-	container_general.hide()
-	container_graphics.hide()
-	container_audio.hide()
-	container_advanced.hide()
-	container_account.hide()
-
+	for child in v_box_container_sections.get_children():
+		child.hide()
 	control.show()
+
+
+func _async_scroll_to_tab_button(button: Button) -> void:
+	await get_tree().process_frame
+	var scroll := tabs_scroll_container.scroll_horizontal
+	var view_width := tabs_scroll_container.size.x
+	var btn_left := button.position.x
+	var btn_right := button.position.x + button.size.x
+	var visible_left := float(scroll)
+	var visible_right := float(scroll) + view_width
+	var fully_visible := btn_left >= visible_left and btn_right <= visible_right
+	if fully_visible:
+		return
+	var separation := 48.0
+	var target_x := 0.0
+	var h_bar := tabs_scroll_container.get_h_scroll_bar()
+	var max_scroll := float(maxi(0, int(h_bar.max_value)) if h_bar else 0)
+	var cut_left := btn_left < visible_left
+	var cut_right := btn_right > visible_right
+	if cut_left:
+		target_x = btn_left - separation
+	elif cut_right:
+		target_x = btn_right - view_width + separation
+	target_x = clamp(target_x, 0.0, max_scroll)
+	var tween := create_tween()
+	tween.tween_property(tabs_scroll_container, "scroll_horizontal", int(target_x), 0.2)
 
 
 func _on_button_pressed():
 	self.hide()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Release LineEdit focus when tapping outside so virtual keyboard closes
+	if not is_visible_in_tree():
+		return
+	if not line_edit_custom_preview_url.has_focus():
+		return
+	var pos: Vector2
+	if event is InputEventMouseButton and event.pressed:
+		pos = event.global_position
+	elif event is InputEventScreenTouch and event.pressed:
+		pos = event.position
+	else:
+		return
+	if not line_edit_custom_preview_url.get_global_rect().has_point(pos):
+		line_edit_custom_preview_url.release_focus()
+
+
+# gdlint:ignore = async-function-name
+func _on_line_edit_preview_url_focus_entered() -> void:
+	# After a short delay (keyboard opening), scroll so the LineEdit stays visible
+	await get_tree().create_timer(0.35).timeout
+	if (
+		not is_instance_valid(line_edit_custom_preview_url)
+		or not line_edit_custom_preview_url.has_focus()
+	):
+		return
+	var content_node: Control = content_scroll_container.get_child(0)
+	var scroll_y: float = content_scroll_container.scroll_vertical
+	var view_h: float = content_scroll_container.size.y
+	var line_edit_global_top: float = line_edit_custom_preview_url.global_position.y
+	var content_global_top: float = content_node.global_position.y
+	var line_edit_y_in_content: float = line_edit_global_top - content_global_top + scroll_y
+	var line_edit_h: float = line_edit_custom_preview_url.size.y
+	var padding: float = 20.0
+	if line_edit_y_in_content < scroll_y + padding:
+		content_scroll_container.scroll_vertical = maxf(0, line_edit_y_in_content - padding)
+	elif line_edit_y_in_content + line_edit_h > scroll_y + view_h - padding:
+		var v_bar = content_scroll_container.get_v_scroll_bar()
+		var max_scroll: float = v_bar.max_value if v_bar else 0.0
+		content_scroll_container.scroll_vertical = minf(
+			max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding
+		)
 
 
 # gdlint:ignore = async-function-name
@@ -187,28 +319,16 @@ func _on_checkbox_fps_toggled(button_pressed):
 
 
 func refresh_values():
-	h_slider_process_tick_quota.set_value_no_signal(Global.get_config().process_tick_quota_ms)
-	label_process_tick_quota_value.text = str(Global.get_config().process_tick_quota_ms)
-
+	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
-		check_box_raycast_debugger.set_pressed_no_signal(true)
-
-
-func _on_h_slider_process_tick_quota_value_changed(value):
-	label_process_tick_quota_value.text = str(value)
-
-
-func _on_option_button_realm_item_selected(index):
-	Global.realm.async_set_realm(option_button_realm.get_item_text(index))
+		check_button_raycast_debugger.set_pressed_no_signal(true)
 
 
 func set_ws_state(connected: bool) -> void:
 	if connected:
-		label_ws_state.text = "Connected"
-		label_ws_state.add_theme_color_override("font_color", Color.FOREST_GREEN)
+		line_edit_custom_preview_url.set_description_text_and_color("Connected", Color.FOREST_GREEN)
 	else:
-		label_ws_state.text = "Disconnected"
-		label_ws_state.add_theme_color_override("font_color", Color.RED)
+		line_edit_custom_preview_url.set_description_text_and_color("Disconnected", Color.RED)
 
 
 func _process(_delta):
@@ -262,25 +382,13 @@ func _process(_delta):
 
 
 func _on_button_connect_preview_pressed():
-	set_preview_url(line_edit_preview_url.text)
+	set_preview_url(line_edit_custom_preview_url.get_text())
 
 
 func set_preview_url(url: String) -> void:
 	_preview_connect_to_url = url.to_lower().replace("http://", "ws://").replace(
 		"https://", "wss://"
 	)
-
-
-func _on_check_box_scene_log_toggled(toggled_on):
-	request_debug_panel.emit(toggled_on)
-
-
-func _on_check_box_scene_pause_toggled(toggled_on):
-	emit_signal("request_pause_scenes", toggled_on)
-
-
-func _on_check_box_raycast_debugger_toggled(toggled_on):
-	Global.set_raycast_debugger_enable(toggled_on)
 
 
 func refresh_zooms():
@@ -416,9 +524,11 @@ func _on_radio_selector_texture_quality_select_item(index, _item):
 	Global.get_config().save_to_settings_file()
 
 
-func _on_radio_selector_max_cache_size_select_item(index, _item):
+func _on_dropdown_list_max_cache_size_item_selected(index: int) -> void:
 	Global.get_config().max_cache_size = index
 	GeneralSettings.apply_max_cache_size()
+	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[index]
+	_update_current_cache_size()
 	Global.get_config().save_to_settings_file()
 
 
@@ -426,68 +536,61 @@ func _update_current_cache_size():
 	var current_size_mb = roundf(
 		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
-	label_current_cache_size.text = "(current size: %dmb)" % int(current_size_mb)
+	if current_size_mb >= 1024.0:
+		label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
+	elif current_size_mb > 0.0:
+		label_current_cache_value.text = "%.1f MB" % current_size_mb
+	else:
+		label_current_cache_value.text = "0 MB"
+	progress_bar_current_cache_size.value = current_size_mb
+	button_clear_cache.disabled = current_size_mb == 0
 
 
-func _on_container_general_visibility_changed():
+func _on_container_storage_visibility_changed():
 	_update_current_cache_size()
 
 
-func _on_check_box_dynamic_skybox_toggled(toggled_on: bool) -> void:
-	h_slider_skybox_time.visible = !toggled_on
-	label_skybox_time.visible = !toggled_on
+func _on_check_button_dynamic_skybox_toggled(toggled_on: bool) -> void:
+	dropdown_list_custom_skybox.disabled = toggled_on
+	if toggled_on:
+		dropdown_list_custom_skybox.select(-1)
+	else:
+		dropdown_list_custom_skybox.select(3)
+		_on_dropdown_list_custom_skybox_item_selected(3)
 	if Global.get_config().dynamic_skybox != toggled_on:
 		Global.get_config().dynamic_skybox = toggled_on
 		Global.get_config().save_to_settings_file()
 
 
-func _on_check_box_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
+func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
 	if Global.get_config().submit_message_closes_chat != toggled_on:
 		Global.get_config().submit_message_closes_chat = toggled_on
 		Global.get_config().save_to_settings_file()
 
 
-func _on_h_slider_skybox_time_value_changed(value: float) -> void:
-	var step_value = 86400 / h_slider_skybox_time.max_value
-	var time: int = value * step_value
-
-	var hours: int = int(time / 3600) % 24
-	var minutes: int = int(time % 3600) / 60
-	label_skybox_time.text = "%02d:%02dh" % [hours, minutes]
-
-	if Global.get_config().skybox_time != time:
-		Global.get_config().skybox_time = time
-
-
-func _on_h_slider_skybox_time_drag_started() -> void:
-	var main_camera = get_tree().root.get_camera_3d()
-	if main_camera != null:
-		preview_camera_3d.global_transform = main_camera.global_transform
-		preview_viewport_container.show()
-
-
-func _on_h_slider_skybox_time_drag_ended(_value_changed: bool) -> void:
-	preview_viewport_container.hide()
-
-
 func _on_button_developer_pressed() -> void:
 	show_control(container_advanced)
+	_async_scroll_to_tab_button(button_developer)
 
 
 func _on_button_graphics_pressed() -> void:
 	show_control(container_graphics)
+	_async_scroll_to_tab_button(button_graphics)
 
 
-func _on_button_general_pressed() -> void:
-	show_control(container_general)
+func _on_button_gameplay_pressed() -> void:
+	show_control(container_gameplay)
+	_async_scroll_to_tab_button(button_gameplay)
 
 
 func _on_button_audio_pressed():
 	show_control(container_audio)
+	_async_scroll_to_tab_button(button_audio)
 
 
 func _on_button_account_pressed() -> void:
 	show_control(container_account)
+	_async_scroll_to_tab_button(button_account)
 
 
 func _on_button_delete_account_pressed() -> void:
@@ -626,10 +729,9 @@ func _setup_dynamic_graphics() -> void:
 
 	# Initialize checkbox state
 	var is_enabled: bool = Global.get_config().dynamic_graphics_enabled
-	check_box_dynamic_graphics.set_pressed_no_signal(is_enabled)
-
+	check_button_dynamic_graphics.set_pressed_no_signal(is_enabled)
+	dropdown_list_graphic_profiles.disabled = is_enabled
 	# Update UI state
-	_update_graphic_settings_enabled(is_enabled)
 	_update_dynamic_graphics_status()
 
 	# Connect to manager signal to update UI when profile changes dynamically
@@ -640,7 +742,8 @@ func _setup_dynamic_graphics() -> void:
 	)
 
 
-func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
+func _on_check_button_dynamic_graphics_toggled(toggled_on: bool) -> void:
+	dropdown_list_graphic_profiles.disabled = toggled_on
 	Global.get_config().dynamic_graphics_enabled = toggled_on
 	Global.get_config().save_to_settings_file()
 
@@ -648,20 +751,7 @@ func _on_check_box_dynamic_graphics_toggled(toggled_on: bool) -> void:
 	Global.dynamic_graphics_manager.set_enabled(toggled_on)
 
 	# Update UI state
-	_update_graphic_settings_enabled(toggled_on)
 	_update_dynamic_graphics_status()
-
-
-func _update_graphic_settings_enabled(dynamic_enabled: bool) -> void:
-	# When dynamic graphics is enabled, hide manual graphic settings
-	# Custom profile is always excluded from dynamic adjustment
-	var current_profile: int = Global.get_config().graphic_profile
-	var should_hide: bool = dynamic_enabled and current_profile != ConfigData.PROFILE_CUSTOM
-
-	# Hide/show the graphic settings that are controlled by dynamic graphics
-	graphic_profile_container.visible = not should_hide
-	container_limit_fps.visible = not should_hide
-	container_resolution_3d_scale.visible = not should_hide
 
 
 func _update_dynamic_graphics_status() -> void:
@@ -670,23 +760,117 @@ func _update_dynamic_graphics_status() -> void:
 
 	var manager = Global.dynamic_graphics_manager
 	if manager == null or not manager.is_enabled():
-		label_dynamic_graphics_status.text = ""
+		#label_dynamic_graphics_status.text = ""
 		return
 
-	var state_name: String = manager.get_state_name()
 	var current_profile: int = manager.get_current_profile()
+	dropdown_list_graphic_profiles.select(current_profile)
+	var state_name: String = manager.get_state_name()
 	var profile_name: String = GraphicSettings.PROFILE_NAMES[current_profile]
+
+	print(profile_name, state_name)
 
 	match state_name:
 		"Disabled":
-			label_dynamic_graphics_status.text = ""
+			print("")
 		"WarmingUp":
 			var remaining := int(manager.get_warmup_remaining())
-			label_dynamic_graphics_status.text = "Warming up... (%ds)" % remaining
+			print("Warming up... (%ds)" % remaining)
 		"Monitoring":
-			label_dynamic_graphics_status.text = "Active - Current: %s" % profile_name
+			print("Active - Current: %s" % profile_name)
 		"Cooldown":
 			var remaining := int(manager.get_cooldown_remaining())
-			label_dynamic_graphics_status.text = (
-				"Cooldown (%ds) - Current: %s" % [remaining, profile_name]
-			)
+			print("Cooldown (%ds) - Current: %s" % [remaining, profile_name])
+
+
+func _on_dropdown_list_graphic_profiles_item_selected(index: int) -> void:
+	# Use centralized profile application (handles all parameters)
+	# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
+	if index < ConfigData.PROFILE_CUSTOM:
+		GraphicSettings.apply_graphic_profile(index)
+	else:
+		Global.get_config().graphic_profile = index  # Custom - keep current settings
+
+	refresh_graphic_settings()
+	Global.get_config().save_to_settings_file()
+
+	# Notify dynamic graphics manager of manual profile change
+	Global.dynamic_graphics_manager.on_manual_profile_change(index)
+
+
+func _on_dropdown_list_custom_skybox_item_selected(index: int) -> void:
+	var time: int = GraphicSettings.SKYBOX_TIME_NAMES[index].secs
+	if Global.get_config().skybox_time != time:
+		Global.get_config().skybox_time = time
+
+
+func _on_button_privacy_policy_pressed() -> void:
+	const PRIVACY_POLICY_URL = "https://decentraland.org/privacy/"
+	Global.open_url(PRIVACY_POLICY_URL)
+
+
+func _on_button_content_policy_pressed() -> void:
+	const CONTENT_POLICY_URL = "https://decentraland.org/content/"
+	Global.open_url(CONTENT_POLICY_URL)
+
+
+func _on_button_terms_of_service_pressed() -> void:
+	const TERMS_OF_USE_URL = "https://decentraland.org/terms/"
+	Global.open_url(TERMS_OF_USE_URL)
+
+
+func _on_button_discord_pressed() -> void:
+	const DISCORD_URL = "https://discord.com/channels/417796904760639509/1446513533893218465"
+	Global.open_url(DISCORD_URL)
+
+
+func _on_button_storage_pressed() -> void:
+	show_control(container_storage)
+	_async_scroll_to_tab_button(%Button_Storage)
+
+
+func _on_button_back_to_explorer_pressed() -> void:
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
+
+
+func _on_visibility_changed() -> void:
+	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		Global.set_orientation_portrait()
+		if Global.get_explorer():
+			if button_back_to_explorer:
+				button_back_to_explorer.show()
+
+
+func _on_check_button_scene_processing_paused_toggled(toggled_on: bool) -> void:
+	emit_signal("request_pause_scenes", toggled_on)
+
+
+func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
+	Global.set_raycast_debugger_enable(toggled_on)
+
+
+func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:
+	request_debug_panel.emit(toggled_on)
+
+
+func _on_dropdown_list_realm_item_selected(index: int) -> void:
+	var realm_text := dropdown_list_realm.get_item_text(index)
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		Global.realm.async_set_realm(realm_text)
+		explorer.hide_menu()
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
+	else:
+		Global.close_menu.emit()
+		Global.get_config().last_realm_joined = realm_text
+		Global.get_config().last_parcel_position = Vector2i.ZERO
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
+func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
+	Global.get_config().audio_avatar_and_emotes_volume = value
+	AudioSettings.apply_avatar_and_emotes_volume_settings()
+	Global.get_config().save_to_settings_file()
