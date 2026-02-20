@@ -1,28 +1,33 @@
 [gd_scene load_steps=6 format=3 uid="uid://biapgh26sgkca"]
 
-[ext_resource type="Texture2D" uid="uid://c13mgihwjpqy7" path="res://assets/ui/profile/link.svg" id="1_3knha"]
 [ext_resource type="StyleBox" uid="uid://cocacywor1hkb" path="res://src/ui/components/profile/profile_link_button_normal.tres" id="1_j0r87"]
 [ext_resource type="Script" uid="uid://c7ktnujnnsko8" path="res://src/ui/components/profile/profile_link_button.gd" id="2_j0r87"]
+[ext_resource type="Texture2D" uid="uid://c22ghvgmgry8" path="res://assets/ui/profile/link-icon.svg" id="2_oyqjs"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_3knha"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_r8w7o"]
+[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_r8w7o"]
 
 [node name="PofileLinkButton" type="Button"]
-custom_minimum_size = Vector2(0, 45)
+custom_minimum_size = Vector2(0, 64)
 offset_right = 133.0
 offset_bottom = 42.0
 mouse_filter = 1
-theme_override_colors/font_color = Color(0.341176, 0.760784, 1, 1)
-theme_override_colors/font_focus_color = Color(0.341176, 0.760784, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.341176, 0.760784, 1, 1)
-theme_override_colors/font_hover_color = Color(0.341176, 0.760784, 1, 1)
-theme_override_constants/h_separation = 9
-theme_override_constants/icon_max_width = 20
+theme_override_colors/font_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/font_focus_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/font_hover_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/icon_normal_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/icon_focus_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/icon_pressed_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/icon_hover_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.627451, 0.67058825, 1, 1)
+theme_override_constants/h_separation = 6
+theme_override_constants/icon_max_width = 24
 theme_override_styles/normal = ExtResource("1_j0r87")
 theme_override_styles/pressed = ExtResource("1_j0r87")
 theme_override_styles/hover = ExtResource("1_j0r87")
 theme_override_styles/hover_pressed = ExtResource("1_j0r87")
 text = "LINK LABEL"
-icon = ExtResource("1_3knha")
+icon = ExtResource("2_oyqjs")
 script = ExtResource("2_j0r87")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]

@@ -39,6 +39,7 @@ var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
 var _about_mode: int = AboutMode.NONE
 var _about_data_count: int = 0
+var _description_truncated: bool = false
 
 @onready var control_landscape_avatar: Control = %Control_landscape_avatar
 @onready var margin_container_portrait_avatar: MarginContainer = %MarginContainer_PortraitAvatar
@@ -50,7 +51,7 @@ var _about_data_count: int = 0
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 #@onready var button_edit_about: Button = %Button_EditAbout
 #@onready var button_edit_links: Button = %Button_EditLinks
-@onready var scroll_container_equipped_wearables: ScrollContainer = %ScrollContainer_EquippedWearables
+@onready var h_box_container_equipped_wearables: HBoxContainer = %HBoxContainer_EquippedWearables
 @onready var margin_container_description: MarginContainer = %MarginContainer_Description
 @onready var label_info_description: Label = %Label_InfoDescription
 @onready var margin_container_data_about: MarginContainer = %MarginContainer_DataAbout
@@ -386,6 +387,7 @@ func _unset_avatar_loading(current: int):
 
 func async_show_profile(profile: DclUserProfile) -> void:
 	_hide_all_social_buttons()
+	margin_container_about.hide()
 	current_profile = profile
 	# Reset friendship status to ensure buttons don't show with old state
 	current_friendship_status = Global.FriendshipStatus.UNKNOWN
@@ -543,8 +545,10 @@ func _refresh_links() -> void:
 	for child in children_to_remove:
 		h_flow_container_links.remove_child(child)
 		child.queue_free()
-	for link in current_profile.get_links():
+	var links = current_profile.get_links()
+	for link in links:
 		_instantiate_link_button(link.title, link.url, false)
+	v_box_container_links.visible = links.size() > 0
 
 
 func _refresh_about() -> void:
@@ -577,7 +581,12 @@ func _refresh_about() -> void:
 	var has_about_data = _about_data_count > 0
 
 	if has_description:
+		var regex = RegEx.new()
+		regex.compile("  +")
+		description = regex.sub(description, " ", true)
 		label_info_description.text = description
+		label_info_description.max_lines_visible = -1
+		_description_truncated = label_info_description.get_line_count() > 2
 
 	# Determine about mode
 	if has_description and has_about_data:
@@ -600,8 +609,10 @@ func _set_compact_view() -> void:
 		AboutMode.DESCRIPTION_ONLY:
 			margin_container_about.show()
 			margin_container_description.show()
+			_compact_description()
 			margin_container_data_about.hide()
-			margin_container_see_more.hide()
+			margin_container_see_more.visible = _description_truncated
+			underlined_button_see_more.underlined_text = "SEE MORE"
 		AboutMode.ABOUT_DATA_ONLY:
 			margin_container_about.show()
 			margin_container_description.hide()
@@ -612,6 +623,7 @@ func _set_compact_view() -> void:
 		AboutMode.BOTH:
 			margin_container_about.show()
 			margin_container_description.show()
+			_compact_description()
 			margin_container_data_about.hide()
 			margin_container_see_more.show()
 			underlined_button_see_more.underlined_text = "SEE MORE"
@@ -619,14 +631,30 @@ func _set_compact_view() -> void:
 
 func _set_expand_view() -> void:
 	match _about_mode:
+		AboutMode.DESCRIPTION_ONLY:
+			_expand_description()
+			underlined_button_see_more.underlined_text = "SEE LESS"
 		AboutMode.ABOUT_DATA_ONLY:
 			margin_container_data_about.show()
 			_show_all_about_data()
 			underlined_button_see_more.underlined_text = "SEE LESS"
 		AboutMode.BOTH:
+			_expand_description()
 			margin_container_data_about.show()
 			_show_all_about_data()
 			underlined_button_see_more.underlined_text = "SEE LESS"
+
+
+func _compact_description() -> void:
+	label_info_description.max_lines_visible = 2
+	label_info_description.update_minimum_size()
+	margin_container_description.update_minimum_size()
+
+
+func _expand_description() -> void:
+	label_info_description.max_lines_visible = -1
+	label_info_description.update_minimum_size()
+	margin_container_description.update_minimum_size()
 
 
 func _show_about_data_limited(max_count: int) -> void:
@@ -658,7 +686,7 @@ func _async_refresh_equipped_items() -> void:
 	var equipped_button_group = ButtonGroup.new()
 	equipped_button_group.allow_unpress = true
 
-	for child in scroll_container_equipped_wearables.get_children():
+	for child in h_box_container_equipped_wearables.get_children():
 		child.queue_free()
 
 	var profile_dictionary = current_profile.to_godot_dictionary()
@@ -677,7 +705,7 @@ func _async_refresh_equipped_items() -> void:
 			)
 			if wearable_definition != null:
 				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
-				scroll_container_equipped_wearables.add_child(wearable_item)
+				h_box_container_equipped_wearables.add_child(wearable_item)
 				wearable_item.button_group = equipped_button_group
 				wearable_item.async_set_item(wearable_definition)
 			else:
@@ -699,7 +727,7 @@ func _async_refresh_equipped_items() -> void:
 			)
 			if emote_definition != null:
 				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
-				scroll_container_equipped_wearables.add_child(emote_item)
+				h_box_container_equipped_wearables.add_child(emote_item)
 				emote_item.button_group = equipped_button_group
 				emote_item.async_set_item(emote_definition)
 				emote_item.set_as_emote(emote.urn)

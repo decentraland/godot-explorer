@@ -14,11 +14,9 @@ offset_bottom = 72.0
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 16
 script = ExtResource("1_dnuyt")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
-custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
