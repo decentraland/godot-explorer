@@ -311,8 +311,8 @@ func _async_on_button_add_friend_pressed() -> void:
 		button_add_friend.disabled = false
 		return
 
-	# friend_request_sent metric
-	Global.metrics.track_click_button("friend_request_sent", "SOCIAL_PANEL", "")
+	# Request Friend metric
+	Global.metrics.track_request_friend(social_data.address)
 
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
@@ -341,8 +341,8 @@ func _async_on_button_accept_pressed() -> void:
 	button_add_friend.hide()
 	label_pending_request.hide()
 
-	# friend_request_accept metric
-	Global.metrics.track_click_button("friend_request_accept", "SOCIAL_PANEL", "")
+	# Accept Friend metric
+	Global.metrics.track_accept_friend(social_data.address, social_data.friendship_id)
 
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_accepted.emit(social_data.address)
