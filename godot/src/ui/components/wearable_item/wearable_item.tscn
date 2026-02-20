@@ -1,25 +1,12 @@
-[gd_scene load_steps=10 format=3 uid="uid://bahsrsgo0jx48"]
+[gd_scene load_steps=11 format=3 uid="uid://bahsrsgo0jx48"]
 
 [ext_resource type="Script" uid="uid://diff1e0rtmlew" path="res://src/ui/components/wearable_item/wearable_item.gd" id="1_vccc4"]
 [ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_bnu38"]
-[ext_resource type="Texture2D" uid="uid://bheg7fuh5a4p0" path="res://assets/ui/checked.svg" id="4_cqflp"]
+[ext_resource type="Texture2D" uid="uid://oqs81qmhfows" path="res://assets/ui/backpack/Equiped.svg" id="3_225su"]
 [ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]
 [ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="6_ckipv"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="7_74eud"]
 [ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="7_h4p8s"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_24axm"]
-bg_color = Color(1, 0.454902, 0.223529, 1)
-draw_center = false
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(1, 0.454902, 0.223529, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6655i"]
 content_margin_left = 3.0
@@ -27,10 +14,31 @@ content_margin_top = 3.0
 content_margin_right = 3.0
 content_margin_bottom = 3.0
 bg_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.25)
+shadow_size = 4
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_225su"]
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8)
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_24axm"]
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [node name="WearableItem" type="Button"]
 custom_minimum_size = Vector2(192, 192)
@@ -45,22 +53,6 @@ button_mask = 0
 flat = true
 script = ExtResource("1_vccc4")
 
-[node name="PanelContainer_External" type="PanelContainer" parent="."]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.6
-anchor_top = 0.6
-anchor_right = 0.6
-anchor_bottom = 0.6
-offset_left = -115.200005
-offset_top = -115.200005
-offset_right = 76.799995
-offset_bottom = 76.799995
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_24axm")
-
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -69,10 +61,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
 metadata/_edit_use_anchors_ = true
 
 [node name="PanelContainer_White" type="PanelContainer" parent="MarginContainer"]
@@ -96,23 +84,26 @@ mouse_filter = 2
 expand_mode = 3
 stretch_mode = 5
 
-[node name="TextureRect_Equiped" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+[node name="TextureRect_Equiped" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
 unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(20, 20)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
+anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -20.0
 offset_top = -20.0
-grow_horizontal = 0
+grow_horizontal = 2
 grow_vertical = 0
-size_flags_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_225su")
+
+[node name="TextureRect_EquipedB" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/TextureRect_Equiped"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("4_cqflp")
+texture = ExtResource("3_225su")
 expand_mode = 1
 stretch_mode = 4
 
@@ -157,6 +148,23 @@ mouse_filter = 2
 texture = ExtResource("7_h4p8s")
 expand_mode = 1
 stretch_mode = 4
+
+[node name="PanelContainer_External" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -101.0
+offset_top = -101.0
+offset_right = 101.0
+offset_bottom = 101.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(101, 101)
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_24axm")
 
 [node name="TextureProgressBar_Loading" parent="." instance=ExtResource("7_74eud")]
 unique_name_in_owner = true

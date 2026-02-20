@@ -77,20 +77,21 @@ func async_set_wearable(wearable: DclItemEntityDefinition):
 func effect_toggle():
 	if button_pressed:
 		if was_pressed == false:
-			var new_size = panel_container_external_orig_rect.size * 0.9
-			var new_position = (panel_container_external_orig_rect.size - new_size) / 2
-			panel_container_external.set_position(new_position)
-			panel_container_external.set_size(new_size)
+			#var new_size = panel_container_external_orig_rect.size * 0.8
+			#var new_position = (panel_container_external_orig_rect.size - new_size) / 2
+			#panel_container_external.set_position(new_position)
+			#panel_container_external.set_size(new_size)
+			panel_container_external.scale = Vector2.ONE * 0.97
 
 			var tween = get_tree().create_tween().set_parallel(true)
+			#tween.tween_property(
+				#panel_container_external,
+				#"position",
+				#panel_container_external_orig_rect.position,
+				#0.15
+			#)
 			tween.tween_property(
-				panel_container_external,
-				"position",
-				panel_container_external_orig_rect.position,
-				0.15
-			)
-			tween.tween_property(
-				panel_container_external, "size", panel_container_external_orig_rect.size, 0.15
+				panel_container_external, "scale", Vector2.ONE, 0.15
 			)
 
 			panel_container_external.show()

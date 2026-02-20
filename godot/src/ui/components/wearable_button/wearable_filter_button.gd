@@ -27,14 +27,20 @@ enum WearableCategoryEnum {
 	TOP_HEAD,
 	HELMET,
 	SKIN,
-	BODY_SHAPE
+	BODY_SHAPE,
+	
+	FACE,
+	CLOTHING,
+	EXTRAS,
+	ALL_EXTRAS
 }
 
 @export var filter_category: WearableCategoryEnum:
 	set(new_value):
 		#_update_category_icon()
-		#_update_category_text()
+		_update_category_text()
 		filter_category = new_value
+@export var uppercase := false
 
 var press_time: int = 0
 
@@ -56,14 +62,17 @@ func _update_category_icon():
 func _update_category_text():
 	var category_text = type_to_text(filter_category)
 	if category_text != "":
-		self.text = category_text
+		if uppercase:
+			self.text = category_text.to_upper()
+		else:
+			self.text = category_text
 	else:
 		self.text = "Unknown"
 
 
 func _ready():
 	#_update_category_icon()
-	#_update_category_text()
+	_update_category_text()
 	pass
 
 
@@ -120,6 +129,15 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 			result = Wearables.Categories.SKIN
 		WearableCategoryEnum.BODY_SHAPE:
 			result = Wearables.Categories.BODY_SHAPE
+		
+		WearableCategoryEnum.FACE:
+			result = Wearables.Categories.FACE
+		WearableCategoryEnum.CLOTHING:
+			result = Wearables.Categories.CLOTHING
+		WearableCategoryEnum.EXTRAS:
+			result = Wearables.Categories.EXTRAS
+		WearableCategoryEnum.ALL_EXTRAS:
+			result = Wearables.Categories.ALL_EXTRAS
 
 	return result
 
@@ -173,6 +191,15 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 			text = "Skin"
 		WearableCategoryEnum.BODY_SHAPE:
 			text = "Body Shape"
+		
+		WearableCategoryEnum.FACE:
+			text = "Face"
+		WearableCategoryEnum.CLOTHING:
+			text = "Clothing"
+		WearableCategoryEnum.EXTRAS:
+			text = "Extras"
+		WearableCategoryEnum.ALL_EXTRAS:
+			text = "All"
 	return text
 
 

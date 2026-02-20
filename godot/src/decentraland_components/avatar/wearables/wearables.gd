@@ -371,6 +371,10 @@ class Categories:
 	const LEGS: String = "legs"
 	const BODY: String = "body"
 	const TORSO: String = "torso"
+	const FACE: String = "face"
+	const CLOTHING: String = "clothing"
+	const EXTRAS: String = "extras"
+	const ALL_EXTRAS: String = "all_extras"
 
 	# Missing: HEAD, FACIAL, HANDS
 	const HIDING_PRIORITY = [
@@ -431,6 +435,10 @@ class Categories:
 		TORSO: [UPPER_BODY, HANDS_WEAR],
 		LEGS: [LOWER_BODY, FEET],
 		ALL: [ALL],
+		
+		FACE: [HAIR, FACIAL_HAIR, EYES, EYEBROWS, MOUTH],
+		CLOTHING: [UPPER_BODY, LEGS, FEET, HANDS],
+		EXTRAS: [ALL_EXTRAS, HAT, HELMET, TIARA, FACIAL, MASK, EARRING]
 	}
 
 	const ALL_CATEGORIES: PackedStringArray = [
@@ -457,6 +465,14 @@ class Categories:
 		HANDS_WEAR
 	]
 
+	const ALL_EXTRAS_CATEGORIES :PackedStringArray = [
+		HAT,
+		HELMET,
+		TIARA,
+		FACIAL,
+		MASK,
+		EARRING
+	]
 
 static func is_texture(category: String) -> bool:
 	if (
