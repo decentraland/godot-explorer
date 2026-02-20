@@ -78,39 +78,86 @@ mod android {
 #[cfg(target_os = "ios")]
 mod ios {
     use crate::tools::sentry_logger::SentryTracingLayer;
-    use tracing_oslog::OsLogger;
     use tracing_subscriber::filter::EnvFilter;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
+    /// A custom tracing layer that uses the `oslog` crate to write to Apple's Unified Logging.
+    /// Unlike `tracing-oslog`, the `oslog` crate uses `%{public}s` in its C wrapper,
+    /// so messages are fully visible in Console.app instead of showing `<private>`.
+    struct IosOsLogLayer {
+        logger: oslog::OsLog,
+    }
+
+    impl<S: tracing::Subscriber> tracing_subscriber::layer::Layer<S> for IosOsLogLayer {
+        fn on_event(
+            &self,
+            event: &tracing::Event<'_>,
+            _ctx: tracing_subscriber::layer::Context<'_, S>,
+        ) {
+            let metadata = event.metadata();
+            let level = metadata.level();
+            let target = metadata.target();
+
+            // Collect all fields into a formatted message
+            let mut message = String::new();
+            let mut visitor = FieldVisitor(&mut message);
+            event.record(&mut visitor);
+
+            let formatted = format!("[{}] [{}] {}", level, target, message);
+
+            let oslog_level = match *level {
+                tracing::Level::ERROR | tracing::Level::WARN => oslog::Level::Error,
+                tracing::Level::INFO => oslog::Level::Info,
+                tracing::Level::DEBUG | tracing::Level::TRACE => oslog::Level::Debug,
+            };
+            self.logger.with_level(oslog_level, &formatted);
+        }
+    }
+
+    /// Visitor that formats tracing event fields into a string.
+    struct FieldVisitor<'a>(&'a mut String);
+
+    impl<'a> tracing::field::Visit for FieldVisitor<'a> {
+        fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+            use std::fmt::Write;
+            if field.name() == "message" {
+                let _ = write!(self.0, "{:?}", value);
+            } else {
+                if !self.0.is_empty() {
+                    self.0.push(' ');
+                }
+                let _ = write!(self.0, "{}={:?}", field.name(), value);
+            }
+        }
+
+        fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+            use std::fmt::Write;
+            if field.name() == "message" {
+                let _ = write!(self.0, "{}", value);
+            } else {
+                if !self.0.is_empty() {
+                    self.0.push(' ');
+                }
+                let _ = write!(self.0, "{}={}", field.name(), value);
+            }
+        }
+    }
+
     pub fn init_logger() {
-        // Configure logging filters for iOS
-        // By default, filter everything to INFO level
-        // You can customize specific modules here:
-        // Examples:
-        //   "warn" - only warnings and errors
-        //   "debug" - show debug logs from all modules
-        //   "dclgodot::scene_runner=debug,warn" - debug for scene_runner, warn for others
-        //   "dclgodot::scene_runner=debug,dclgodot::comms=info,warn" - multiple modules
+        let filter = EnvFilter::new("info");
 
-        let filter = EnvFilter::new(
-            // TODO: Modify this line to change logging levels
-            // "warn"  // Only warnings and errors
-            // "debug"  // Debug, info, warnings and errors (shows all debug logs)
-            // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
-            // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
-            "info",
-        );
-
-        // Use OSLog for iOS - writes to the system log instead of stderr
-        // This avoids crashes when stderr is not available (e.g., running without Xcode)
-        // Note: Level is shown in Console.app's "Type" column, target is not included in message
-        let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
+        let oslog_layer = IosOsLogLayer {
+            logger: oslog::OsLog::new(env!("CARGO_PKG_NAME"), "default"),
+        };
 
         // Add Sentry layer to capture errors and warnings
         let sentry_layer = SentryTracingLayer;
 
-        registry().with(oslog_layer).with(sentry_layer).init();
+        registry()
+            .with(oslog_layer.with_filter(filter))
+            .with(sentry_layer)
+            .init();
     }
 }
 
