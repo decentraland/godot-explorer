@@ -541,7 +541,8 @@ func _on_button_next_pressed():
 	var promise = ProfileService.async_deploy_profile(current_profile)
 	await PromiseUtils.async_awaiter(promise)
 	if promise.is_rejected():
-		printerr("[Lobby] Profile deploy failed: ", promise.get_reject_reason())
+		var error: PromiseError = promise.get_data()
+		printerr("[Lobby] Profile deploy failed: ", error.get_error())
 
 	show_control_ftue()
 
@@ -611,6 +612,16 @@ func _on_auth_error(error_message: String):
 
 func create_guest_account_if_needed():
 	if not guest_account_created:
+		# Don't create a guest account if the user already has a web3 wallet connected
+		# (e.g., MetaMask via WalletConnect). Creating a guest account would overwrite
+		# the web3 wallet with a random local wallet.
+		if (
+			not Global.player_identity.is_guest
+			and not Global.player_identity.get_address_str().is_empty()
+		):
+			guest_account_created = true
+			return
+
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()

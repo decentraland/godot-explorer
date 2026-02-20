@@ -301,9 +301,10 @@ func _complete_wc_auth(signature: String) -> void:
 	var signer_address = plugin.walletConnectGetAddress()
 	var ephemeral_private_key = _wc_ephemeral_data.get("ephemeral_private_key", PackedByteArray())
 	var expiration_timestamp = _wc_ephemeral_data.get("expiration_timestamp", 0)
+	var original_message = _wc_ephemeral_data.get("message", "")
 
 	var success = Global.player_identity.try_set_walletconnect_auth(
-		signer_address, signature, ephemeral_private_key, expiration_timestamp
+		signer_address, signature, ephemeral_private_key, expiration_timestamp, original_message
 	)
 
 	if success:
