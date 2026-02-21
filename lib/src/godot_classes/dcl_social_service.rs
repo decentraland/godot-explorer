@@ -9,8 +9,8 @@ use crate::godot_classes::promise::Promise;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 use crate::social::social_service_manager::SocialServiceManager;
 
-/// Friendship request data: (address, name, has_claimed_name, profile_picture_url, message, created_at)
-type FriendshipRequestData = (String, String, bool, String, String, i64);
+/// Friendship request data: (address, name, has_claimed_name, profile_picture_url, message, created_at, friendship_id)
+type FriendshipRequestData = (String, String, bool, String, String, i64, String);
 
 /// Blocked user data: (address, name, has_claimed_name, profile_picture_url, blocked_at)
 type BlockedUserData = (String, String, bool, String, i64);
@@ -983,7 +983,7 @@ impl DclSocialService {
     }
 
     /// Extract friendship requests with full profile data
-    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, message, created_at)
+    /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, message, created_at, friendship_id)
     fn extract_friendship_requests_with_profile(
         response: PaginatedFriendshipRequestsResponse,
     ) -> Vec<FriendshipRequestData> {
@@ -1004,6 +1004,7 @@ impl DclSocialService {
                 let profile_picture_url = friend.profile_picture_url;
                 let message = req.message.unwrap_or_default();
                 let created_at = req.created_at;
+                let friendship_id = req.id;
                 Some((
                     address,
                     name,
@@ -1011,6 +1012,7 @@ impl DclSocialService {
                     profile_picture_url,
                     message,
                     created_at,
+                    friendship_id,
                 ))
             })
             .collect()
@@ -1065,8 +1067,15 @@ impl DclSocialService {
         match result {
             Ok(requests) => {
                 let mut array = Array::new();
-                for (address, name, has_claimed_name, profile_picture_url, message, created_at) in
-                    requests
+                for (
+                    address,
+                    name,
+                    has_claimed_name,
+                    profile_picture_url,
+                    message,
+                    created_at,
+                    friendship_id,
+                ) in requests
                 {
                     let mut dict = VarDictionary::new();
                     dict.set("address", address);
@@ -1075,6 +1084,7 @@ impl DclSocialService {
                     dict.set("profile_picture_url", profile_picture_url);
                     dict.set("message", message);
                     dict.set("created_at", created_at);
+                    dict.set("friendship_id", friendship_id);
                     array.push(&dict.to_variant());
                 }
                 promise.bind_mut().resolve_with_data(array.to_variant());

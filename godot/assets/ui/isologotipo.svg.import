@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/isologotipo.svg-a1f86b97f81f2b7885d72c5f3c7e1
 
 [params]
 
-base_scale=1.0
+base_scale=4.0
 saturation=1.0
 color_map={}
 compress=true

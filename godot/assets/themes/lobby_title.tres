@@ -3,5 +3,6 @@
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_gegye"]
 
 [resource]
+line_spacing = 0.0
 font = ExtResource("1_gegye")
-font_size = 68
+font_size = 80

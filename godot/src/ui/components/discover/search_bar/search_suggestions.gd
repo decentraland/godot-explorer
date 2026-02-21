@@ -41,7 +41,7 @@ func async_get_popular_keywords() -> void:
 	var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
 	match fetch_result.status:
 		PlacesHelper.FetchResultStatus.ERROR:
-			printerr("Error request places ", url, " ", fetch_result.premise_error.get_error())
+			printerr("Error request places ", url, " ", fetch_result.promise_error.get_error())
 			return
 		PlacesHelper.FetchResultStatus.OK:
 			pass

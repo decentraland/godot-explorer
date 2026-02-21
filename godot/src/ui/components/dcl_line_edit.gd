@@ -4,12 +4,16 @@ extends VBoxContainer
 signal dcl_line_edit_changed
 signal checked_error
 
+const LINEEDIT_FOCUS = preload("uid://bv7k1bt4j7pgb")
+const LINEEDIT_FOCUS_ERROR = preload("uid://bcoprda85lwd5")
+const LINEEDIT_NORMAL = preload("uid://o0x3mbwnvobx")
+const LINEEDIT_NORMAL_ERROR = preload("uid://bmwt0rbi3myn3")
+
 @export var character_limit: int = 15
 @export var allow_spaces: bool = true
 @export var allow_edge_spaces: bool = false
 @export var allow_special_characters: bool = false
 @export var is_optional: bool = false
-@export var advice: String = "Any advice or nothing"
 @export var hint: String = "Hint"
 @export var error_color: Color = Color.RED
 @export var show_tag: bool = false
@@ -20,9 +24,7 @@ var text_value: String = ""
 
 @onready var line_edit: LineEdit = %LineEdit
 @onready var label_length: Label = %Label_Length
-@onready var label_advice: Label = %Label_Advice
 @onready var label_error: RichTextLabel = %Label_Error
-@onready var panel_container_error_border: PanelContainer = %PanelContainer_ErrorBorder
 @onready var label_tag: Label = %Label_Tag
 
 
@@ -86,22 +88,21 @@ func _check_error():
 	if error:
 		if error_message.length() > 0:
 			label_error.show()
-			label_advice.hide()
 			label_error.text = error_message
 		else:
 			label_error.hide()
-			label_advice.show()
-		panel_container_error_border.self_modulate = error_color
+
+		line_edit.set("theme_override_styles/focus", LINEEDIT_FOCUS_ERROR)
+		line_edit.set("theme_override_styles/normal", LINEEDIT_NORMAL_ERROR)
 	else:
+		line_edit.set("theme_override_styles/focus", LINEEDIT_FOCUS)
+		line_edit.set("theme_override_styles/normal", LINEEDIT_NORMAL)
 		label_error.hide()
-		label_advice.show()
-		panel_container_error_border.self_modulate = Color.TRANSPARENT
 
 
 func _ready() -> void:
 	if !line_edit.text_changed.is_connected(_on_line_edit_text_changed):
 		line_edit.text_changed.connect(_on_line_edit_text_changed)
-	label_advice.text = advice
 	line_edit.placeholder_text = hint
 	label_tag.visible = show_tag
 	_check_error()
