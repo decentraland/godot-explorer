@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=112 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=117 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -652,20 +652,6 @@ SecondaryLittle/styles/normal = ExtResource("37_k33ds")
 SecondaryLittle/styles/normal_mirrored = ExtResource("37_k33ds")
 SecondaryLittle/styles/pressed = ExtResource("35_aywie")
 SecondaryLittle/styles/pressed_mirrored = ExtResource("35_aywie")
-SectionsButtonBackpack/base_type = &"Button"
-SectionsButtonBackpack/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-SectionsButtonBackpack/colors/font_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
-SectionsButtonBackpack/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-SectionsButtonBackpack/colors/icon_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
-SectionsButtonBackpack/constants/h_separation = 4
-SectionsButtonBackpack/constants/icon_max_width = 32
-SectionsButtonBackpack/font_sizes/font_size = 26
-SectionsButtonBackpack/fonts/font = ExtResource("42_qnq51")
-SectionsButtonBackpack/styles/focus = SubResource("StyleBoxFlat_1x5yb")
-SectionsButtonBackpack/styles/hover = SubResource("StyleBoxFlat_1x5yb")
-SectionsButtonBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_1x5yb")
-SectionsButtonBackpack/styles/normal = SubResource("StyleBoxFlat_kypl7")
-SectionsButtonBackpack/styles/pressed = SubResource("StyleBoxFlat_1x5yb")
 SecondaryOutlinedButton/base_type = &"Button"
 SecondaryOutlinedButton/colors/font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
 SecondaryOutlinedButton/colors/font_disabled_color = Color(0.627451, 0.60784316, 0.65882355, 0.5019608)
@@ -686,6 +672,20 @@ SecondaryOutlinedButton/styles/hover = ExtResource("40_3kpjx")
 SecondaryOutlinedButton/styles/hover_pressed = ExtResource("43_gw08q")
 SecondaryOutlinedButton/styles/normal = ExtResource("40_3kpjx")
 SecondaryOutlinedButton/styles/pressed = ExtResource("43_gw08q")
+SectionsButtonBackpack/base_type = &"Button"
+SectionsButtonBackpack/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SectionsButtonBackpack/colors/font_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SectionsButtonBackpack/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SectionsButtonBackpack/colors/icon_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SectionsButtonBackpack/constants/h_separation = 4
+SectionsButtonBackpack/constants/icon_max_width = 32
+SectionsButtonBackpack/font_sizes/font_size = 26
+SectionsButtonBackpack/fonts/font = ExtResource("42_qnq51")
+SectionsButtonBackpack/styles/focus = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/hover = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/normal = SubResource("StyleBoxFlat_kypl7")
+SectionsButtonBackpack/styles/pressed = SubResource("StyleBoxFlat_1x5yb")
 SettingsButton/base_type = &"Button"
 SettingsButton/colors/font_color = Color(1, 1, 1, 0.69803923)
 SettingsButton/colors/font_hover_color = Color(1, 1, 1, 0.69803923)

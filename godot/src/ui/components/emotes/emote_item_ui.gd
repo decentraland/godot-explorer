@@ -5,27 +5,24 @@ extends BaseButton
 signal play_emote(emote_urn: String)
 signal select_emote(selected: bool, emote_urn: String)
 
+var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
+var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
+var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
+var rare_thumbnail = preload("res://assets/ui/RareThumbnail.png")
+var epic_thumbnail = preload("res://assets/ui/EpicThumbnail.png")
+var exotic_thumbnail = preload("res://assets/ui/ExoticThumbnail.png")
+var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
+var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
+var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
+
+@onready var texture_rect_background = %TextureRect_Background
+
+
 @export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
 		rarity = new_value
-		%Glow.set_visible(rarity != Wearables.ItemRarity.COMMON)
-		var color = Color("#ECEBED")
-		match rarity:
-			Wearables.ItemRarity.COMMON:
-				color = Color("#ECEBED")
-			Wearables.ItemRarity.UNCOMMON:
-				color = Color("#FF8362")
-			Wearables.ItemRarity.RARE:
-				color = Color("#34CE76")
-			Wearables.ItemRarity.EPIC:
-				color = Color("#599CFF")
-			Wearables.ItemRarity.LEGENDARY:
-				color = Color("#B262FF")
-			Wearables.ItemRarity.MYTHIC:
-				color = Color("#FF63E1")
-			Wearables.ItemRarity.UNIQUE:
-				color = Color("#FFB626")
-		%Inner.self_modulate = color
+		if is_node_ready():
+			set_rarity_background()
 
 @export var picture: Texture2D = null:
 	set(new_value):
@@ -95,6 +92,29 @@ func _ready():
 		button_down.connect(self._on_button_down)
 		button_up.connect(self._on_button_up)
 		toggled.connect(self._on_toggled)
+	set_rarity_background()
+
+
+func set_rarity_background() -> void:
+	match rarity:
+		Wearables.ItemRarity.COMMON:
+			texture_rect_background.texture = common_thumbnail
+		Wearables.ItemRarity.UNCOMMON:
+			texture_rect_background.texture = uncommon_thumbnail
+		Wearables.ItemRarity.RARE:
+			texture_rect_background.texture = rare_thumbnail
+		Wearables.ItemRarity.EPIC:
+			texture_rect_background.texture = epic_thumbnail
+		Wearables.ItemRarity.LEGENDARY:
+			texture_rect_background.texture = legendary_thumbnail
+		Wearables.ItemRarity.EXOTIC:
+			texture_rect_background.texture = exotic_thumbnail
+		Wearables.ItemRarity.MYTHIC:
+			texture_rect_background.texture = mythic_thumbnail
+		Wearables.ItemRarity.UNIQUE:
+			texture_rect_background.texture = unique_thumbnail
+		_:
+			texture_rect_background.texture = base_thumbnail
 
 
 # Executed with @tool

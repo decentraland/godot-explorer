@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3 uid="uid://bahsrsgo0jx48"]
 
 [ext_resource type="Script" uid="uid://diff1e0rtmlew" path="res://src/ui/components/wearable_item/wearable_item.gd" id="1_vccc4"]
-[ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_bnu38"]
+[ext_resource type="Texture2D" uid="uid://bgjf4umjbsjvm" path="res://assets/ui/BaseThumbnail.png" id="2_225su"]
 [ext_resource type="Texture2D" uid="uid://oqs81qmhfows" path="res://assets/ui/backpack/Equiped.svg" id="3_225su"]
 [ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]
 [ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="6_ckipv"]
@@ -73,7 +73,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_stretch_ratio = 0.0
 mouse_filter = 2
-texture = ExtResource("2_bnu38")
+texture = ExtResource("2_225su")
 expand_mode = 3
 stretch_mode = 5
 

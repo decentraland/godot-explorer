@@ -9,6 +9,7 @@ var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
 var rare_thumbnail = preload("res://assets/ui/RareThumbnail.png")
 var epic_thumbnail = preload("res://assets/ui/EpicThumbnail.png")
+var exotic_thumbnail = preload("res://assets/ui/ExoticThumbnail.png")
 var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
 var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
@@ -52,6 +53,8 @@ func async_set_wearable(wearable: DclItemEntityDefinition):
 			texture_rect_background.texture = epic_thumbnail
 		"legendary":
 			texture_rect_background.texture = legendary_thumbnail
+		"exotic":
+			texture_rect_background.texture = exotic_thumbnail
 		"mythic":
 			texture_rect_background.texture = mythic_thumbnail
 		"unique":
