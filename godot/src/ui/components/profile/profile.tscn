@@ -243,14 +243,20 @@ font_size = 22
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_quy3q"]
-bg_color = Color(0, 0, 0, 0.8)
-corner_radius_top_left = 9
-corner_radius_top_right = 9
-corner_radius_bottom_right = 9
-corner_radius_bottom_left = 9
-shadow_color = Color(0, 0, 0, 0.356863)
-shadow_size = 2
-shadow_offset = Vector2(2, 2)
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.105882354, 0, 0.1764706, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_61jmm"]
 content_margin_left = 16.0
@@ -825,7 +831,6 @@ hide_on_portrait = true
 
 [node name="Menu" type="ColorRect" parent="."]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0)
@@ -857,11 +862,10 @@ theme_override_constants/margin_bottom = 10
 z_index = 10
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_constants/separation = 16
+theme_override_constants/separation = 8
 
 [node name="Button_MuteUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(38, 38)
 layout_mode = 2
@@ -869,11 +873,11 @@ size_flags_horizontal = 3
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
-theme_type_variation = &"SecondaryLittle"
+theme_type_variation = &"ProfileMenuButton"
 theme_override_constants/icon_max_width = 21
 toggle_mode = true
+text = "Mute chat"
 icon = ExtResource("12_8iwyo")
-icon_alignment = 1
 
 [node name="Button_BlockUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
