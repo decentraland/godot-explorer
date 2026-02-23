@@ -241,7 +241,13 @@ func _load_filtered_data(filter: String):
 		if wearable != null:
 			var is_filter_all = filter == "all"
 			var is_filter_all_extras = filter == "all_extras"
-			if (wearable.get_category() == filter or is_filter_all) or (is_filter_all_extras and wearable.get_category() in Wearables.Categories.ALL_EXTRAS_CATEGORIES):
+			if (
+				(wearable.get_category() == filter or is_filter_all)
+				or (
+					is_filter_all_extras
+					and wearable.get_category() in Wearables.Categories.ALL_EXTRAS_CATEGORIES
+				)
+			):
 				var is_body_shape = wearable.get_category() == "body_shape"
 				var is_equipable = Wearables.can_equip(
 					wearable, Global.player_identity.get_mutable_avatar().get_body_shape()

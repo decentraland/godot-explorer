@@ -28,7 +28,6 @@ enum WearableCategoryEnum {
 	HELMET,
 	SKIN,
 	BODY_SHAPE,
-	
 	FACE,
 	CLOTHING,
 	EXTRAS,
@@ -73,7 +72,6 @@ func _update_category_text():
 func _ready():
 	#_update_category_icon()
 	_update_category_text()
-	pass
 
 
 func get_category_name():
@@ -129,7 +127,7 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 			result = Wearables.Categories.SKIN
 		WearableCategoryEnum.BODY_SHAPE:
 			result = Wearables.Categories.BODY_SHAPE
-		
+
 		WearableCategoryEnum.FACE:
 			result = Wearables.Categories.FACE
 		WearableCategoryEnum.CLOTHING:
@@ -191,7 +189,7 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 			text = "Skin"
 		WearableCategoryEnum.BODY_SHAPE:
 			text = "Body Shape"
-		
+
 		WearableCategoryEnum.FACE:
 			text = "Face"
 		WearableCategoryEnum.CLOTHING:

@@ -84,11 +84,12 @@ func focus_camera_on(type):
 
 
 func _input(event: InputEvent):
-	if not can_move: return
+	if not can_move:
+		return
 	if get_parent_control():
 		if not get_parent_control().get_global_rect().has_point(event.position):
 			return
-	
+
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
@@ -116,16 +117,16 @@ func _input(event: InputEvent):
 			var diff = 0.005 * (get_global_mouse_position() - start_dragging_position)
 			var changed_transform = Transform3D(start_camera_transform)
 			#var min_y = (
-				#MAX_CAMERA_Y
-				#- (
-					#((camera_3d.transform.origin.z - MIN_CAMERA_Z) / (MAX_CAMERA_Z - MIN_CAMERA_Z))
-					#* (MAX_CAMERA_Y - MIN_CAMERA_Y)
-				#)
+			#MAX_CAMERA_Y
+			#- (
+			#((camera_3d.transform.origin.z - MIN_CAMERA_Z) / (MAX_CAMERA_Z - MIN_CAMERA_Z))
+			#* (MAX_CAMERA_Y - MIN_CAMERA_Y)
 			#)
-			
+			#)
+
 			# TODO verify if platform is enabled
-			var min_y :float
-			var max_y :float
+			var min_y: float
+			var max_y: float
 			if on_head:
 				min_y = HEAD_CAMERA_POSITION.y + MIN_CAMERA_Y
 				max_y = HEAD_CAMERA_POSITION.y + MAX_CAMERA_Y

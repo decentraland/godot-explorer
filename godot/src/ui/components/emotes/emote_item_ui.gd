@@ -5,18 +5,6 @@ extends BaseButton
 signal play_emote(emote_urn: String)
 signal select_emote(selected: bool, emote_urn: String)
 
-var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
-var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
-var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
-var rare_thumbnail = preload("res://assets/ui/RareThumbnail.png")
-var epic_thumbnail = preload("res://assets/ui/EpicThumbnail.png")
-var exotic_thumbnail = preload("res://assets/ui/ExoticThumbnail.png")
-var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
-var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
-var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
-
-@onready var texture_rect_background = %TextureRect_Background
-
 
 @export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
@@ -34,12 +22,23 @@ var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 # The display name
 @export var emote_name: String = "wave"
 
+var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
+var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
+var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
+var rare_thumbnail = preload("res://assets/ui/RareThumbnail.png")
+var epic_thumbnail = preload("res://assets/ui/EpicThumbnail.png")
+var exotic_thumbnail = preload("res://assets/ui/ExoticThumbnail.png")
+var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
+var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
+var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 var inside = false
 
 @onready var control_inner = %Control_Inner
-
+@onready var texture_rect_background = %TextureRect_Background
 @onready var texture_rect_selected = %Selected
 @onready var texture_rect_pressed = %Pressed
+@onready var texture_rect_equiped = %TextureRect_Equiped
+
 
 
 func async_load_from_urn(_emote_urn: String, _index: int = -1):
@@ -140,13 +139,16 @@ func _on_pressed():
 
 func _on_toggled(new_toggled: bool):
 	texture_rect_pressed.set_visible(new_toggled)
+	texture_rect_equiped.set_visible(new_toggled)
 
 
 func _on_button_down():
 	if !toggle_mode:
 		texture_rect_pressed.set_visible(true)
+		texture_rect_equiped.set_visible(true)
 
 
 func _on_button_up():
 	if !toggle_mode:
 		texture_rect_pressed.set_visible(false)
+		texture_rect_equiped.set_visible(false)

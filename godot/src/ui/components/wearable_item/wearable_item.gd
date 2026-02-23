@@ -88,14 +88,12 @@ func effect_toggle():
 
 			var tween = get_tree().create_tween().set_parallel(true)
 			#tween.tween_property(
-				#panel_container_external,
-				#"position",
-				#panel_container_external_orig_rect.position,
-				#0.15
+			#panel_container_external,
+			#"position",
+			#panel_container_external_orig_rect.position,
+			#0.15
 			#)
-			tween.tween_property(
-				panel_container_external, "scale", Vector2.ONE, 0.15
-			)
+			tween.tween_property(panel_container_external, "scale", Vector2.ONE, 0.15)
 
 			panel_container_external.show()
 	else:
