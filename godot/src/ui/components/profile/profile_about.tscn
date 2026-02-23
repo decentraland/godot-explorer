@@ -1,0 +1,138 @@
+[gd_scene load_steps=8 format=4]
+
+[ext_resource type="Script" path="res://src/ui/components/profile/profile_about.gd" id="1_about"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
+[ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="3_desc_ls"]
+[ext_resource type="PackedScene" uid="uid://cwthmkhfqjqb2" path="res://src/ui/components/profile/about_data.tscn" id="4_about_data"]
+[ext_resource type="PackedScene" path="res://src/ui/components/settings/underlined_button.tscn" id="5_underlined"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="6_font_semi"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("2_font700")
+font_size = 22
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="ProfileAbout" type="MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/margin_right = 32
+script = ExtResource("1_about")
+
+[node name="VBoxContainer_Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 0
+
+[node name="Label" type="Label" parent="VBoxContainer_Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 13
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 24
+text = "About me"
+label_settings = SubResource("LabelSettings_title")
+uppercase = true
+
+[node name="MarginContainer_Description" type="MarginContainer" parent="VBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 8
+
+[node name="Label_InfoDescription" type="Label" parent="VBoxContainer_Content/MarginContainer_Description"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 12
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 20
+text = "Use this space to describe yourself in a few words."
+label_settings = ExtResource("3_desc_ls")
+autowrap_mode = 2
+
+[node name="MarginContainer_DataAbout" type="MarginContainer" parent="VBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 24
+
+[node name="GridContainer_About" type="GridContainer" parent="VBoxContainer_Content/MarginContainer_DataAbout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/h_separation = 32
+theme_override_constants/v_separation = 24
+columns = 3
+
+[node name="AboutData_Country" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Country"
+
+[node name="AboutData_Language" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Language"
+
+[node name="AboutData_Pronouns" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Pronouns"
+
+[node name="AboutData_Gender" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Gender"
+
+[node name="AboutData_RelationshipStatus" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Relationship Status"
+
+[node name="AboutData_SexualOrientation" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Sexual Orientation"
+
+[node name="AboutData_EmploymentStatus" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Employment Status"
+
+[node name="AboutData_Profession" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Profession"
+
+[node name="AboutData_RealName" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Real Name"
+
+[node name="AboutData_Hobby" parent="VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "HOBBY"
+
+[node name="MarginContainer_SeeMore" type="MarginContainer" parent="VBoxContainer_Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 18
+
+[node name="HBoxContainer_SeeMore" type="HBoxContainer" parent="VBoxContainer_Content/MarginContainer_SeeMore"]
+layout_mode = 2
+alignment = 2
+
+[node name="UnderlinedButton_SeeMore" parent="VBoxContainer_Content/MarginContainer_SeeMore/HBoxContainer_SeeMore" instance=ExtResource("5_underlined")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 8
+toggle_mode = true
+underlined_text = "SEE MORE"
+color = Color(0.627451, 0.67058825, 1, 1)
+font = ExtResource("6_font_semi")
+font_size = 16

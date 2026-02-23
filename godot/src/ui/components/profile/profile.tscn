@@ -1,4 +1,4 @@
-[gd_scene load_steps=57 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=56 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="Shader" uid="uid://c17t4i65mhoo0" path="res://src/ui/components/profile/profile.gdshader" id="3_4hw2j"]
@@ -7,10 +7,8 @@
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_4hw2j"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="5_yx7pe"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="7_m8kjd"]
-[ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="7_yx7pe"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_fhbaj"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="8_wxsqs"]
-[ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="9_uj2xw"]
 [ext_resource type="Texture2D" uid="uid://cxrkry4lwh1a4" path="res://assets/ui/edit-icon.svg" id="9_ybu4s"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_odsw2"]
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="12_7xla3"]
@@ -26,13 +24,13 @@
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="18_fhbaj"]
 [ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/components/discover/icons/close.svg" id="19_7xla3"]
 [ext_resource type="Texture2D" uid="uid://cd0ijxb0jr8mm" path="res://assets/ui/copy-icon.svg" id="19_awuqu"]
-[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="23_pa1ft"]
-[ext_resource type="PackedScene" path="res://src/ui/components/settings/underlined_button.tscn" id="25_8iwyo"]
 [ext_resource type="Texture2D" uid="uid://0w50cay6b2b6" path="res://assets/ui/mute.svg" id="27_8iwyo"]
-[ext_resource type="PackedScene" uid="uid://cwthmkhfqjqb2" path="res://src/ui/components/profile/about_data.tscn" id="27_dja5r"]
 [ext_resource type="PackedScene" uid="uid://bndmt8hl1n5ke" path="res://src/ui/components/change_nick_popup.tscn" id="30_8t4r5"]
 [ext_resource type="PackedScene" uid="uid://dklmxtp0xs5sv" path="res://src/ui/components/profile/profile_new_link_popup.tscn" id="31_8t4r5"]
 [ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/url_popup/url_popup.tscn" id="31_ood4l"]
+[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_about.tscn" id="40_about"]
+[ext_resource type="PackedScene" uid="uid://b2ojldlluptgu" path="res://src/ui/components/profile/profile_equipped.tscn" id="41_equipped"]
+[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_links.tscn" id="42_links"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_l7lko"]
 shader = ExtResource("3_4hw2j")
@@ -230,17 +228,7 @@ font = ExtResource("18_fhbaj")
 font_size = 26
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8pwo8"]
-bg_color = Color(0, 0, 0, 0.352941)
-corner_radius_top_left = 15
-corner_radius_top_right = 15
-corner_radius_bottom_right = 15
-corner_radius_bottom_left = 15
-
-[sub_resource type="LabelSettings" id="LabelSettings_aoppn"]
-font = ExtResource("23_pa1ft")
-font_size = 22
-font_color = Color(0.9098039, 0.7254902, 1, 1)
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8iwyo"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_quy3q"]
 content_margin_left = 24.0
@@ -257,6 +245,15 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_dja5r"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8pwo8"]
+bg_color = Color(0, 0, 0, 0.352941)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
 
 [node name="Profile" type="PanelContainer"]
 show_behind_parent = true
@@ -596,211 +593,15 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="PanelContainer_Badges" type="PanelContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
-visible = false
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
+[node name="ProfileAbout" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" instance=ExtResource("40_about")]
+unique_name_in_owner = true
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges"]
-layout_mode = 2
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
-
-[node name="VBoxContainer_Badges" type="VBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges/MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 30
-
-[node name="Label" type="Label" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
-text = "Badges"
-label_settings = ExtResource("7_yx7pe")
-uppercase = true
-
-[node name="HBoxContainer_Badges" type="HBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
-layout_mode = 2
-
-[node name="MarginContainer_About" type="MarginContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
+[node name="ProfileEquipped" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" instance=ExtResource("41_equipped")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 0
-mouse_filter = 2
-theme_override_constants/margin_right = 32
 
-[node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About"]
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_constants/separation = 0
-
-[node name="Label" type="Label" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 13
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
-text = "About me"
-label_settings = SubResource("LabelSettings_aoppn")
-uppercase = true
-
-[node name="MarginContainer_Description" type="MarginContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content"]
+[node name="ProfileLinks" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" instance=ExtResource("42_links")]
 unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/margin_top = 8
-
-[node name="Label_InfoDescription" type="Label" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_Description"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 12
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 20
-text = "Use this space to describe yourself in a few words."
-label_settings = ExtResource("9_uj2xw")
-autowrap_mode = 2
-
-[node name="MarginContainer_DataAbout" type="MarginContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/margin_top = 24
-
-[node name="GridContainer_About" type="GridContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_constants/h_separation = 32
-theme_override_constants/v_separation = 24
-columns = 3
-
-[node name="AboutData_Country" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Country"
-
-[node name="AboutData_Language" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Language"
-
-[node name="AboutData_Pronouns" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Pronouns"
-
-[node name="AboutData_Gender" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Gender"
-
-[node name="AboutData_RelationshipStatus" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Relationship Status"
-
-[node name="AboutData_SexualOrientation" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Sexual Orientation"
-
-[node name="AboutData_EmploymentStatus" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Employment Status"
-
-[node name="AboutData_Profession" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Profession"
-
-[node name="AboutData_RealName" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "Real Name"
-
-[node name="AboutData_Hobby" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("27_dja5r")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "HOBBY"
-
-[node name="MarginContainer_SeeMore" type="MarginContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/margin_top = 18
-
-[node name="HBoxContainer_SeeMore" type="HBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_SeeMore"]
-layout_mode = 2
-alignment = 2
-
-[node name="UnderlinedButton_SeeMore" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_SeeMore/HBoxContainer_SeeMore" instance=ExtResource("25_8iwyo")]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 0)
-layout_mode = 2
-toggle_mode = true
-underlined_text = "SEE MORE"
-color = Color(0.627451, 0.67058825, 1, 1)
-font = ExtResource("7_m8kjd")
-font_size = 16
-
-[node name="VBoxContainer_EquippedWearables" type="VBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Label" type="Label" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/VBoxContainer_EquippedWearables"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 13
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
-text = "equipped"
-label_settings = SubResource("LabelSettings_aoppn")
-uppercase = true
-
-[node name="ScrollContainer_EquippedWearables" type="ScrollContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/VBoxContainer_EquippedWearables"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 4
-horizontal_scroll_mode = 3
-vertical_scroll_mode = 0
-
-[node name="HBoxContainer_EquippedWearables" type="HBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/VBoxContainer_EquippedWearables/ScrollContainer_EquippedWearables"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="VBoxContainer_Links" type="VBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Label" type="Label" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/VBoxContainer_Links"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 13
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
-text = "LINKS"
-label_settings = SubResource("LabelSettings_aoppn")
-uppercase = true
-
-[node name="HFlowContainer_Links" type="HFlowContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/VBoxContainer_Links"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/h_separation = 24
 
 [node name="Control_OwnAndLandscape" type="VBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -815,26 +616,41 @@ hide_on_portrait = true
 
 [node name="Menu" type="ColorRect" parent="."]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
-color = Color(1, 1, 1, 0)
+color = Color(0, 0, 0, 0)
 metadata/_edit_lock_ = true
 
-[node name="PanelContainer_Menu" type="PanelContainer" parent="Menu"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Menu"]
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
+anchors_preset = 15
 anchor_right = 1.0
-offset_left = -283.0
-offset_top = 88.0
-offset_right = -88.0
-offset_bottom = 216.0
-grow_horizontal = 0
-size_flags_horizontal = 4
-size_flags_vertical = 4
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator" type="HSeparator" parent="Menu/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 95
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8iwyo")
+
+[node name="PanelContainer_Menu" type="PanelContainer" parent="Menu/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_quy3q")
 
-[node name="MarginContainer" type="MarginContainer" parent="Menu/PanelContainer_Menu"]
+[node name="MarginContainer" type="MarginContainer" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu"]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/margin_left = 8
@@ -842,13 +658,13 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Menu/PanelContainer_Menu/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer"]
 z_index = 10
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 8
 
-[node name="Button_MuteUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+[node name="Button_MuteUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(298, 64)
@@ -858,14 +674,14 @@ size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
-toggle_mode = true
 text = "Mute chat"
 icon = ExtResource("27_8iwyo")
 alignment = 0
 expand_icon = true
 
-[node name="Button_UnmuteUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+[node name="Button_UnmuteUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(298, 64)
 layout_mode = 2
@@ -874,18 +690,18 @@ size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButtonRed"
-toggle_mode = true
 text = "Unmute chat"
 icon = ExtResource("27_8iwyo")
 alignment = 0
 expand_icon = true
 
-[node name="Button_BlockUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+[node name="Button_BlockUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(298, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
 text = "Block"
@@ -893,12 +709,13 @@ icon = ExtResource("13_quy3q")
 alignment = 0
 expand_icon = true
 
-[node name="Button_UnblockUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+[node name="Button_UnblockUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(298, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButtonRed"
 text = "Unblock"
@@ -906,18 +723,38 @@ icon = ExtResource("13_quy3q")
 alignment = 0
 expand_icon = true
 
-[node name="Button_Unfriend" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+[node name="Button_Unfriend" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(298, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
 text = "Unfriend"
 icon = ExtResource("14_ur8se")
 alignment = 0
 expand_icon = true
+
+[node name="VSeparator" type="VSeparator" parent="Menu/HBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 108
+theme_override_styles/separator = SubResource("StyleBoxEmpty_dja5r")
+
+[node name="Control_OwnAndLandscapeMenu" type="VBoxContainer" parent="Menu/HBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="Menu/HBoxContainer/Control_OwnAndLandscapeMenu"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_oe5oo")
+hide_on_portrait = true
 
 [node name="ChangeNickPopup" parent="." instance=ExtResource("30_8t4r5")]
 unique_name_in_owner = true
@@ -964,10 +801,5 @@ layout_mode = 2
 [connection signal="toggled" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_Menu" to="." method="_on_button_menu_toggled"]
 [connection signal="pressed" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_CloseProfile" to="." method="close"]
 [connection signal="pressed" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer/Button_CopyAddress" to="." method="_on_copy_address_pressed"]
-[connection signal="toggled" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_SeeMore/HBoxContainer_SeeMore/UnderlinedButton_SeeMore" to="." method="_on_underlined_button_toggled"]
-[connection signal="pressed" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_MuteUser" to="." method="_on_button_mute_user_pressed"]
-[connection signal="toggled" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_MuteUser" to="." method="_on_button_mute_user_toggled"]
-[connection signal="pressed" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_BlockUser" to="." method="_on_button_block_user_pressed"]
-[connection signal="pressed" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_UnblockUser" to="." method="_on_button_unblock_user_pressed"]
 [connection signal="update_name_on_profile" from="ChangeNickPopup" to="." method="_async_on_change_nick_popup_update_name_on_profile"]
 [connection signal="add_link" from="ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]
