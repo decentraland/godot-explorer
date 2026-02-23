@@ -594,11 +594,13 @@ func _async_download_image(url: String):
 
 
 func _on_button_jump_in_ftue_pressed() -> void:
+	Global.metrics.track_click_button("JUMP_IN", "DISCOVER_FTUE_CLICK", "")
 	_complete_discover_ftue()
 	_do_jump_in()
 
 
 func _on_button_skip_pressed() -> void:
+	Global.metrics.track_click_button("SKIP", "DISCOVER_FTUE_CLICK", "")
 	_complete_discover_ftue()
 
 
@@ -607,6 +609,16 @@ func _complete_discover_ftue() -> void:
 
 
 func _on_button_jump_in_pressed():
+	if _data is Dictionary and not _data.is_empty():
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"JUMP_IN",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": _data.get("id", "")}),
+			)
+		)
 	_do_jump_in()
 
 
@@ -957,12 +969,41 @@ func _on_button_share_pressed() -> void:
 		_share_place_or_event()
 		return
 
+	if _is_place_item_event(_data):
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"SHARE",
+				"EVENT_DETAIL_CLICK",
+				JSON.stringify({"event_id": event_id, "event_status": event_status}),
+			)
+		)
+	else:
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"SHARE",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": _data.get("id", "")}),
+			)
+		)
 	_share_place_or_event()
 
 
 func _on_button_calendar_pressed() -> void:
 	var btn = _get_button_calendar()
 	if btn is CalendarButton:
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"ADD_CALENDAR",
+				"EVENT_DETAIL_CLICK",
+				JSON.stringify({"event_id": event_id, "event_status": event_status}),
+			)
+		)
 		btn.add_event_to_calendar()
 
 
