@@ -32,8 +32,6 @@ var fade_in_tween: Tween = null
 
 @onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
 
-@onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
-@onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
 @onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
 
 @onready var static_button_backpack: TextureButton = %StaticButton_Backpack
@@ -55,8 +53,6 @@ func _ready():
 	account_deletion_pop_up.hide()
 
 	is_in_game = self != get_tree().current_scene
-	get_window().size_changed.connect(self._on_size_changed)
-	_on_size_changed()
 
 	control_deploying_profile.hide()
 
@@ -260,27 +256,6 @@ func _async_request_hide_menu():
 func _on_button_backpack_toggled(toggled_on):
 	if !toggled_on:
 		Global.player_identity.async_save_profile()
-
-
-func _on_size_changed() -> void:
-	var safe_area: Rect2i = Global.get_safe_area()
-	var window_size: Vector2i = DisplayServer.window_get_size()
-
-	var top: int = 0
-	var bottom: int = 0
-
-	if window_size.x >= safe_area.size.x and window_size.y >= safe_area.size.y:
-		var y_factor: float = size.y / window_size.y
-
-		top = max(top, safe_area.position.y * y_factor)
-		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
-
-	if (
-		is_instance_valid(color_rect_portrait_top_safe_area)
-		and is_instance_valid(color_rect_portrait_bottom_safe_area)
-	):
-		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
-		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
 
 
 func _on_notification_clicked(notification_dict: Dictionary) -> void:

@@ -118,6 +118,7 @@ func _ready():
 	Global.open_notifications_panel.connect(_show_notifications_panel)
 	Global.open_chat.connect(_on_global_open_chat)
 	Global.open_discover.connect(_on_discover_open)
+	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
 
 	# Connect friends button
@@ -171,6 +172,9 @@ func _ready():
 	# --debug-panel (automatically enabled with --preview or preview deeplink)
 	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
 		_on_control_menu_request_debug_panel(true)
+
+	# Clear deep link after initial setup to prevent re-teleporting on first app resume
+	Global._clear_deep_link()
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
@@ -1099,6 +1103,10 @@ func _on_discover_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	navbar.set_manually_hidden(true)
+	release_mouse()
+
+
+func _on_menu_open():
 	release_mouse()
 
 

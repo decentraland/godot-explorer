@@ -6,19 +6,20 @@ const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 const DEBUG_TRIGGER_IN_10_SECONDS = false
 const COLOR_PRESSED = Color("#FD4766")
 const COLOR_NORMAL = Color("#FCFCFC")
-const COLOR_WHILE = Color("#CFCDD4")
 
-var bell_texture = load("res://assets/ui/bell.svg")
-var check_texture = load("res://assets/ui/check.svg")
 var event_id_value: String
 var event_tags: String
 var event_start_timestamp: int = 0  # Unix timestamp (seconds) when event starts
 var event_name: String = ""
 var event_coordinates: Vector2i = Vector2i(0, 0)
 var event_cover_image_url: String = ""
+var bell_texture = load("res://assets/ui/bell.svg")
+var check_texture = load("res://assets/ui/check.svg")
+var _debounced: DebouncedAction
 
 @onready var texture_rect_icon: TextureRect = %TextureRect_Icon
 @onready var label: Label = %Label
+@onready var loading_spinner: TextureProgressBar = %LoadingSpinner
 
 
 func _ready() -> void:
@@ -54,22 +55,18 @@ func async_update_attending_state() -> void:
 	var url = DclUrls.events_api() + "/" + event_id_value
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
+	var attending := false
 	if response is PromiseError:
-		set_pressed_no_signal(false)
-		update_styles(false)
+		pass
 	elif response != null:
 		var json = response.get_string_response_as_json()
 		var data = json.get("data", json) if json is Dictionary else null
 		if data is Dictionary:
-			var attending: bool = data.get("attending", false)
-			set_pressed_no_signal(attending)
-			update_styles(attending)
-		else:
-			set_pressed_no_signal(false)
-			update_styles(false)
-	else:
-		set_pressed_no_signal(false)
-		update_styles(false)
+			attending = data.get("attending", false)
+
+	set_pressed_no_signal(attending)
+	update_styles(attending)
+	_get_debounced().set_state_no_send(attending)
 
 	_set_loading(false)
 
@@ -115,13 +112,23 @@ static func _parse_iso_timestamp(iso_string: String) -> int:
 	return Time.get_unix_time_from_datetime_dict(date_dict)
 
 
-func _async_on_toggled(toggled_on: bool) -> void:
+func _get_debounced() -> DebouncedAction:
+	if _debounced == null:
+		_debounced = DebouncedAction.new(_async_patch_reminder, false)
+		add_child(_debounced)
+	return _debounced
+
+
+func _on_toggled(toggled_on: bool) -> void:
 	if event_id_value == null or event_id_value.is_empty():
 		set_pressed_no_signal(!toggled_on)
 		return
 
-	_set_loading(true)
+	update_styles(toggled_on)
+	_get_debounced().schedule(toggled_on)
 
+
+func _async_patch_reminder(toggled_on: bool) -> void:
 	# API: https://decentraland.org/events/docs/
 	# POST /api/events/{event_id}/attendees - create intention to attend (no body)
 	# DELETE /api/events/{event_id}/attendees - remove intention to attend (no body)
@@ -146,28 +153,23 @@ func _async_on_toggled(toggled_on: bool) -> void:
 	var response = await Global.async_signed_fetch(url, method, "")
 	if response is PromiseError:
 		printerr("Error updating attend intention: ", response.get_error())
-		set_pressed_no_signal(!toggled_on)
 	elif response != null:
-		update_styles(toggled_on)
-
 		# Handle local notification scheduling/cancellation
 		if toggled_on:
 			_async_schedule_local_notification()
 		else:
 			_cancel_local_notification()
 	else:
-		set_pressed_no_signal(!toggled_on)
 		printerr("Error updating attend intention")
-
-	_set_loading(false)
 
 
 func _set_loading(status: bool) -> void:
 	disabled = status
-	texture_rect_icon.texture = bell_texture
-	texture_rect_icon.modulate = COLOR_WHILE
-	label.label_settings.font_color = COLOR_WHILE
-	if status == false:
+	loading_spinner.visible = status
+	texture_rect_icon.visible = not status
+	if status:
+		label.text = ""
+	else:
 		update_styles(button_pressed)
 
 
@@ -179,7 +181,7 @@ func update_styles(toggled_on):
 		texture_rect_icon.texture = null
 	else:
 		disabled = false
-		label.text = "REMIND ME"
+		label.text = "REMINDER SET" if toggled_on else "REMIND ME"
 		if toggled_on:
 			texture_rect_icon.texture = check_texture
 			texture_rect_icon.modulate = COLOR_PRESSED
@@ -202,7 +204,7 @@ func _async_schedule_local_notification() -> void:
 
 	# Check and request notification permission
 	if not NotificationsManager.has_local_notification_permission():
-		NotificationsManager.request_local_notification_permission()
+		NotificationsManager.request_local_notification_permission("EVENT_REMINDER")
 
 		# Check permission after request
 		# Note: On iOS this is async, but we'll try to schedule anyway

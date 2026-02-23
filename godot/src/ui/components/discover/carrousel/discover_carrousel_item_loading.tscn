@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="1_lnjd4"]
 
 [node name="DiscoverCarrouselItemLoading" type="Control"]
-custom_minimum_size = Vector2(235, 226)
+custom_minimum_size = Vector2(290, 250)
 layout_mode = 3
 anchors_preset = 0
 offset_right = 225.0
