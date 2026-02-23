@@ -82,6 +82,8 @@ var _description_truncated: bool = false
 @onready var button_cancel_request: Button = %Button_CancelRequest
 @onready var button_friend: Button = %Button_Friend
 @onready var button_unfriend: Button = %Button_Unfriend
+@onready var button_unmute_user: Button = %Button_UnmuteUser
+@onready var button_unblock_user: Button = %Button_UnblockUser
 @onready var menu: ColorRect = %Menu
 @onready var mutual_friends: Control = %MutualFriends
 @onready var profile_header: VBoxContainer = %ProfileHeader
@@ -357,31 +359,7 @@ func _unset_avatar_loading(current: int):
 	if not avatar_preview.avatar.emote_controller.is_playing():
 		avatar_preview.avatar.emote_controller.async_play_emote("wave")
 	_update_elements_visibility()
-	# Only update buttons for block/mute, not friendship buttons yet
-	# Friendship buttons will be updated after _async_check_friendship_status() completes
-	if is_own_passport:
-		_update_buttons()
-	else:
-		# Update only block/mute buttons, not friendship buttons
-		var current_avatar = avatar_preview.avatar
-		is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-		if is_blocked_user:
-			button_block_user.icon = null
-			button_block_user.text = "UNBLOCK"
-			button_block_user.custom_minimum_size.x = 86
-			button_mute_user.hide()
-		else:
-			button_block_user.icon = BLOCK
-			button_block_user.custom_minimum_size.x = 38
-			button_block_user.text = "BLOCK"
-			button_mute_user.show()
-
-		is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
-		button_mute_user.set_pressed_no_signal(is_muted_user)
-		if is_muted_user:
-			button_mute_user.icon = MUTE
-		else:
-			button_mute_user.icon = UNMUTE
+	_update_buttons()
 	_update_friendship_buttons()
 
 
@@ -905,23 +883,21 @@ func _update_buttons() -> void:
 		return
 	var current_avatar = avatar_preview.avatar
 	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-	if is_blocked_user:
-		button_block_user.icon = null
-		button_block_user.text = "UNBLOCK"
-		button_block_user.custom_minimum_size.x = 86
-		button_mute_user.hide()
-	else:
-		button_block_user.icon = BLOCK
-		button_block_user.custom_minimum_size.x = 38
-		button_block_user.text = "BLOCK"
-		button_mute_user.show()
-
 	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
-	button_mute_user.set_pressed_no_signal(is_muted_user)
-	if is_muted_user:
-		button_mute_user.icon = MUTE
+	if is_blocked_user:
+		button_block_user.hide()
+		button_unblock_user.show()
+		button_mute_user.hide()
+		button_unmute_user.hide()
 	else:
-		button_mute_user.icon = UNMUTE
+		button_block_user.show()
+		button_unblock_user.hide()
+		if is_muted_user:
+			button_mute_user.hide()
+			button_unmute_user.show()
+		else:
+			button_mute_user.show()
+			button_unmute_user.hide()
 
 	# Update friendship buttons based on status (only if status has been checked)
 	# Don't update if status is still UNKNOWN and we haven't verified it yet
@@ -931,23 +907,15 @@ func _update_buttons() -> void:
 
 func _on_button_block_user_pressed() -> void:
 	var current_avatar = avatar_preview.avatar
-	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-
-	# Disable button during RPC call
 	button_block_user.disabled = true
-
-	if is_blocked_user:
-		Global.metrics.track_click_button("user_unblock", "PROFILE", "")
-		_async_unblock_user_from_profile(current_avatar.avatar_id)
-	else:
-		Global.metrics.track_click_button("user_block", "PROFILE", "")
-		_async_block_user(current_avatar.avatar_id)
+	Global.metrics.track_click_button("user_block", "PROFILE", "")
+	_async_block_user(current_avatar.avatar_id)
+	
 
 
 func _async_block_user(user_address: String) -> void:
 	var promise = Global.social_service.block_user(user_address)
 	await PromiseUtils.async_awaiter(promise)
-
 	button_block_user.disabled = false
 
 	if promise.is_rejected():
@@ -958,24 +926,22 @@ func _async_block_user(user_address: String) -> void:
 	_async_delete_friendship_if_exists(user_address)  # Keep existing logic
 	_update_buttons()
 	_notify_other_components_of_change()
-	button_menu.button_pressed = false
-
+	#button_menu.button_pressed = false
+	call_deferred("_update_buttons")
 
 func _async_unblock_user_from_profile(user_address: String) -> void:
 	var promise = Global.social_service.unblock_user(user_address)
 	await PromiseUtils.async_awaiter(promise)
-
-	button_block_user.disabled = false
+	button_unblock_user.disabled = false
 
 	if promise.is_rejected():
 		printerr("Unblock failed: ", PromiseUtils.get_error_message(promise))
 		return
 
 	Global.social_blacklist.remove_blocked(user_address)  # Update local cache
-	_update_buttons()
 	_notify_other_components_of_change()
-	button_menu.button_pressed = false
-
+	#button_menu.button_pressed = false
+	call_deferred("_update_buttons")
 
 func _notify_other_components_of_change() -> void:
 	if avatar_preview.avatar != null:
@@ -1384,3 +1350,15 @@ func _on_underlined_button_toggled(toggled_on: bool) -> void:
 		_set_expand_view()
 	else:
 		_set_compact_view()
+
+
+func _on_button_mute_user_pressed() -> void:
+	Global.social_blacklist.add_muted(avatar_preview.avatar.avatar_id)
+	call_deferred("_update_buttons")
+
+
+func _on_button_unblock_user_pressed() -> void:
+	var current_avatar = avatar_preview.avatar
+	button_unblock_user.disabled = true
+	Global.metrics.track_click_button("user_unblock", "PROFILE", "")
+	_async_unblock_user_from_profile(current_avatar.avatar_id)

@@ -864,6 +864,22 @@ icon = ExtResource("27_8iwyo")
 alignment = 0
 expand_icon = true
 
+[node name="Button_UnmuteUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(298, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"ProfileMenuButtonRed"
+toggle_mode = true
+text = "Unmute chat"
+icon = ExtResource("27_8iwyo")
+alignment = 0
+expand_icon = true
+
 [node name="Button_BlockUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
@@ -873,6 +889,19 @@ size_flags_vertical = 4
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
 text = "Block"
+icon = ExtResource("13_quy3q")
+alignment = 0
+expand_icon = true
+
+[node name="Button_UnblockUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(298, 64)
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"ProfileMenuButtonRed"
+text = "Unblock"
 icon = ExtResource("13_quy3q")
 alignment = 0
 expand_icon = true
@@ -936,6 +965,9 @@ layout_mode = 2
 [connection signal="pressed" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_CloseProfile" to="." method="close"]
 [connection signal="pressed" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer/Button_CopyAddress" to="." method="_on_copy_address_pressed"]
 [connection signal="toggled" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer_About/VBoxContainer_Content/MarginContainer_SeeMore/HBoxContainer_SeeMore/UnderlinedButton_SeeMore" to="." method="_on_underlined_button_toggled"]
+[connection signal="pressed" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_MuteUser" to="." method="_on_button_mute_user_pressed"]
 [connection signal="toggled" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_MuteUser" to="." method="_on_button_mute_user_toggled"]
+[connection signal="pressed" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_BlockUser" to="." method="_on_button_block_user_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer/Button_UnblockUser" to="." method="_on_button_unblock_user_pressed"]
 [connection signal="update_name_on_profile" from="ChangeNickPopup" to="." method="_async_on_change_nick_popup_update_name_on_profile"]
 [connection signal="add_link" from="ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]
