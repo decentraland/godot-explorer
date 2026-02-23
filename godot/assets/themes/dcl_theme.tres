@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=106 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=107 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -47,6 +47,7 @@
 [ext_resource type="StyleBox" uid="uid://cjr732avt4ugw" path="res://assets/themes/secondary_disabled_little.tres" id="35_wftf5"]
 [ext_resource type="StyleBox" uid="uid://crrn6r8naryki" path="res://assets/themes/secondary_little.tres" id="37_k33ds"]
 [ext_resource type="StyleBox" uid="uid://b7d06o1s6gl8s" path="res://assets/themes/dcl_theme/ProfileMenuButton/profile_menu_button_normal/profile_menu_button_normal.tres" id="37_p3sh4"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="37_x5msw"]
 [ext_resource type="StyleBox" uid="uid://c7m5mur2isqjv" path="res://assets/themes/dcl_theme/ProfileMenuButton/profile_menu_button_normal/profile_menu_button_pressed.tres" id="38_b70k2"]
 [ext_resource type="StyleBox" uid="uid://smxgemhwjkrd" path="res://assets/themes/tabs/tab_disabled.tres" id="38_rijel"]
 [ext_resource type="StyleBox" uid="uid://dshgx56fbjoul" path="res://assets/themes/dcl_theme/snow_outlined_black_disabled.tres" id="38_rt0af"]
@@ -469,8 +470,32 @@ PopupMenu/styles/panel_disabled = SubResource("StyleBoxFlat_3u30j")
 PopupMenu/styles/separator = SubResource("StyleBoxLine_mwxa2")
 PopupPanel/styles/panel = SubResource("StyleBoxFlat_twrpd")
 ProfileMenuButton/base_type = &"Button"
+ProfileMenuButton/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+ProfileMenuButton/colors/font_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+ProfileMenuButton/colors/font_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+ProfileMenuButton/colors/font_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+ProfileMenuButton/colors/font_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+ProfileMenuButton/colors/icon_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+ProfileMenuButton/colors/icon_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+ProfileMenuButton/colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+ProfileMenuButton/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+ProfileMenuButton/colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+ProfileMenuButton/constants/h_separation = 12
+ProfileMenuButton/constants/icon_max_width = 32
+ProfileMenuButton/font_sizes/font_size = 28
+ProfileMenuButton/fonts/font = ExtResource("37_x5msw")
+ProfileMenuButton/styles/focus = ExtResource("37_p3sh4")
+ProfileMenuButton/styles/hover = ExtResource("37_p3sh4")
+ProfileMenuButton/styles/hover_mirrored = ExtResource("37_p3sh4")
+ProfileMenuButton/styles/hover_pressed = ExtResource("38_b70k2")
+ProfileMenuButton/styles/hover_pressed_mirrored = ExtResource("38_b70k2")
 ProfileMenuButton/styles/normal = ExtResource("37_p3sh4")
+ProfileMenuButton/styles/normal_mirrored = ExtResource("37_p3sh4")
 ProfileMenuButton/styles/pressed = ExtResource("38_b70k2")
+ProfileMenuButton/styles/pressed_mirrored = ExtResource("38_b70k2")
+ProfileMenuButtonRed/base_type = &"Button"
+ProfileMenuButtonRed/styles/normal = ExtResource("37_p3sh4")
+ProfileMenuButtonRed/styles/pressed = ExtResource("38_b70k2")
 ProgressBar/colors/font_color = Color(0.95, 0.95, 0.95, 1)
 ProgressBar/colors/font_outline_color = Color(1, 0.180392, 0.333333, 1)
 ProgressBar/constants/outline_size = 4

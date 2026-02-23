@@ -1,4 +1,4 @@
-[gd_scene load_steps=58 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=57 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="Shader" uid="uid://c17t4i65mhoo0" path="res://src/ui/components/profile/profile.gdshader" id="3_4hw2j"]
@@ -14,12 +14,11 @@
 [ext_resource type="Texture2D" uid="uid://cxrkry4lwh1a4" path="res://assets/ui/edit-icon.svg" id="9_ybu4s"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_odsw2"]
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="12_7xla3"]
-[ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="12_8iwyo"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_dja5r"]
 [ext_resource type="Texture2D" uid="uid://byaritt3jr72o" path="res://assets/ui/friend-icon.svg" id="13_pa1ft"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="13_quy3q"]
 [ext_resource type="Texture2D" uid="uid://6nj4qi6iey2o" path="res://assets/ui/pending-icon.svg" id="14_7xla3"]
-[ext_resource type="Texture2D" uid="uid://bxi281gjgk05i" path="res://assets/ui/unfriend.svg" id="14_ur8se"]
+[ext_resource type="Texture2D" uid="uid://bu0ha8dwtwdcl" path="res://assets/ui/unfriend.svg" id="14_ur8se"]
 [ext_resource type="Texture2D" uid="uid://db3wvj8amhgv4" path="res://assets/ui/cancel-request-icon.svg" id="15_pa1ft"]
 [ext_resource type="Texture2D" uid="uid://b4tgkud7pa3en" path="res://assets/ui/add-friend-icon.svg" id="16_aoppn"]
 [ext_resource type="Texture2D" uid="uid://cqjwja1mdqpus" path="res://assets/ui/menu-icon.svg" id="18_7xla3"]
@@ -29,6 +28,7 @@
 [ext_resource type="Texture2D" uid="uid://cd0ijxb0jr8mm" path="res://assets/ui/copy-icon.svg" id="19_awuqu"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="23_pa1ft"]
 [ext_resource type="PackedScene" path="res://src/ui/components/settings/underlined_button.tscn" id="25_8iwyo"]
+[ext_resource type="Texture2D" uid="uid://0w50cay6b2b6" path="res://assets/ui/mute.svg" id="27_8iwyo"]
 [ext_resource type="PackedScene" uid="uid://cwthmkhfqjqb2" path="res://src/ui/components/profile/about_data.tscn" id="27_dja5r"]
 [ext_resource type="PackedScene" uid="uid://bndmt8hl1n5ke" path="res://src/ui/components/change_nick_popup.tscn" id="30_8t4r5"]
 [ext_resource type="PackedScene" uid="uid://dklmxtp0xs5sv" path="res://src/ui/components/profile/profile_new_link_popup.tscn" id="31_8t4r5"]
@@ -253,22 +253,6 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_61jmm"]
-content_margin_left = 16.0
-content_margin_top = 8.0
-content_margin_right = 16.0
-content_margin_bottom = 8.0
-bg_color = Color(0, 0, 0, 0.4)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 0, 0, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
@@ -867,63 +851,44 @@ theme_override_constants/separation = 8
 [node name="Button_MuteUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(38, 38)
+custom_minimum_size = Vector2(298, 64)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
-theme_override_constants/icon_max_width = 21
 toggle_mode = true
 text = "Mute chat"
-icon = ExtResource("12_8iwyo")
+icon = ExtResource("27_8iwyo")
+alignment = 0
+expand_icon = true
 
 [node name="Button_BlockUser" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(15, 38)
+custom_minimum_size = Vector2(298, 64)
 layout_mode = 2
 size_flags_vertical = 4
 theme = ExtResource("12_dja5r")
-theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_61jmm")
-text = "BLOCK"
+theme_type_variation = &"ProfileMenuButton"
+text = "Block"
 icon = ExtResource("13_quy3q")
+alignment = 0
+expand_icon = true
 
 [node name="Button_Unfriend" type="Button" parent="Menu/PanelContainer_Menu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(15, 38)
+custom_minimum_size = Vector2(298, 64)
 layout_mode = 2
 size_flags_vertical = 4
 theme = ExtResource("12_dja5r")
-theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_61jmm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_61jmm")
-text = "UNFRIEND"
+theme_type_variation = &"ProfileMenuButton"
+text = "Unfriend"
 icon = ExtResource("14_ur8se")
+alignment = 0
+expand_icon = true
 
 [node name="ChangeNickPopup" parent="." instance=ExtResource("30_8t4r5")]
 unique_name_in_owner = true
