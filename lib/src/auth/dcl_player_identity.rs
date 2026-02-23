@@ -382,6 +382,7 @@ impl DclPlayerIdentity {
     /// * `signature` - The signature hex string from the wallet
     /// * `ephemeral_private_key` - The ephemeral private key from generate_ephemeral_for_signing
     /// * `expiration_timestamp` - Unix timestamp from generate_ephemeral_for_signing
+    /// * `original_message` - The exact message that was signed by the wallet
     ///
     /// # Returns
     /// true if authentication was successful, false otherwise
@@ -392,6 +393,7 @@ impl DclPlayerIdentity {
         signature: GString,
         ephemeral_private_key: PackedByteArray,
         expiration_timestamp: i64,
+        original_message: GString,
     ) -> bool {
         let expiration = std::time::SystemTime::UNIX_EPOCH
             + std::time::Duration::from_secs(expiration_timestamp as u64);
@@ -401,6 +403,7 @@ impl DclPlayerIdentity {
             &signature.to_string(),
             ephemeral_private_key.as_slice(),
             expiration,
+            &original_message.to_string(),
         ) {
             Ok(ephemeral_auth_chain) => {
                 let address = ephemeral_auth_chain.signer();
