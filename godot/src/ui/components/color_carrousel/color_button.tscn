@@ -1,0 +1,106 @@
+[gd_scene load_steps=11 format=3 uid="uid://c23lk3g2cnolg"]
+
+[ext_resource type="Script" uid="uid://cu0ehwf1yo4r6" path="res://src/ui/components/color_carrousel/color_button.gd" id="1_v4hss"]
+[ext_resource type="Texture2D" uid="uid://das8hml42d71l" path="res://src/ui/components/color_carrousel/color_button_border.png" id="2_vwwex"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4exyl"]
+bg_color = Color(0.7451514, 0.5074483, 0, 0)
+draw_center = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hux04"]
+bg_color = Color(0.7451514, 0.5074483, 0, 0)
+draw_center = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_snwt5"]
+bg_color = Color(0.7451514, 0.5074483, 0, 0)
+draw_center = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_su4bc"]
+bg_color = Color(0.7451514, 0.5074483, 0, 0)
+draw_center = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_31n2r"]
+bg_color = Color(0.7451514, 0.5074483, 0, 0)
+draw_center = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mgcx2"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vwwex"]
+bg_color = Color(0.9098039, 0.7254902, 1, 1)
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q408p"]
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[node name="Control" type="Button"]
+custom_minimum_size = Vector2(70, 70)
+offset_right = 70.0
+offset_bottom = 70.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_4exyl")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hux04")
+theme_override_styles/hover = SubResource("StyleBoxFlat_snwt5")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_su4bc")
+theme_override_styles/focus = SubResource("StyleBoxFlat_31n2r")
+toggle_mode = true
+script = ExtResource("1_v4hss")
+metadata/_custom_type_script = "uid://dq2es2bh7xr7j"
+
+[node name="ColorButton" type="Panel" parent="."]
+modulate = Color(0.80703396, 0.00065092026, 0.83292043, 1)
+custom_minimum_size = Vector2(70, 70)
+layout_mode = 0
+offset_right = 70.0
+offset_bottom = 70.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_mgcx2")
+
+[node name="ColorButtonBorder" type="TextureRect" parent="."]
+custom_minimum_size = Vector2(70, 70)
+layout_mode = 0
+offset_right = 70.0
+offset_bottom = 70.0
+texture = ExtResource("2_vwwex")
+expand_mode = 1
+
+[node name="PressedBorder" type="Panel" parent="."]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 0
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 75.0
+offset_bottom = 75.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_vwwex")
+metadata/_edit_horizontal_guides_ = [-18.0]
+
+[node name="SelectedBorder" type="Panel" parent="."]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 0
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 75.0
+offset_bottom = 75.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_q408p")
+metadata/_edit_horizontal_guides_ = [-18.0]

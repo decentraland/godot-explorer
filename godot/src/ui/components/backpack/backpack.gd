@@ -31,6 +31,7 @@ var _avatar_update_retries: int = 0
 
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
+@onready var color_carrousel = %ColorCarrousel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
@@ -76,6 +77,7 @@ func _ready():
 	backpack_loading.show()
 
 	skin_color_picker.hide()
+	color_carrousel.hide()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -315,19 +317,27 @@ func _on_wearable_filter_button_filter_type(type):
 	if type == Wearables.Categories.BODY_SHAPE:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
 		skin_color_picker.set_color(mutable_avatar.get_skin_color())
+		color_carrousel.color_type = color_carrousel.ColorTargetType.SKIN
+		color_carrousel.set_color(mutable_avatar.get_skin_color())
 	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
 		skin_color_picker.set_color(mutable_avatar.get_hair_color())
+		color_carrousel.color_type = color_carrousel.ColorTargetType.OTHER
+		color_carrousel.set_color(mutable_avatar.get_hair_color())
 	elif type == Wearables.Categories.EYES:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
 		skin_color_picker.set_color(mutable_avatar.get_eyes_color())
+		color_carrousel.color_type = color_carrousel.ColorTargetType.OTHER
+		color_carrousel.set_color(mutable_avatar.get_eyes_color())
 	else:
 		should_hide = true
 
 	if should_hide:
 		skin_color_picker.hide()
+		color_carrousel.hide()
 	else:
-		skin_color_picker.show()
+		#skin_color_picker.show()
+		color_carrousel.show()
 
 
 func _on_wearable_equip(wearable_id: String):

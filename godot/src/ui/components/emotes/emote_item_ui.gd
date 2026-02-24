@@ -5,7 +5,6 @@ extends BaseButton
 signal play_emote(emote_urn: String)
 signal select_emote(selected: bool, emote_urn: String)
 
-
 @export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
 		rarity = new_value
@@ -38,7 +37,6 @@ var inside = false
 @onready var texture_rect_selected = %Selected
 @onready var texture_rect_pressed = %Pressed
 @onready var texture_rect_equiped = %TextureRect_Equiped
-
 
 
 func async_load_from_urn(_emote_urn: String, _index: int = -1):

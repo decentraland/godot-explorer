@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://cf4f5teas815x"]
+
+[ext_resource type="Script" uid="uid://msvarpv6qbfo" path="res://src/ui/components/color_carrousel/color_carrousel.gd" id="1_wr7xx"]
+[ext_resource type="PackedScene" uid="uid://c23lk3g2cnolg" path="res://src/ui/components/color_carrousel/color_button.tscn" id="2_mgcx2"]
+
+[node name="ColorCarrousel" type="HBoxContainer"]
+theme_override_constants/separation = 30
+script = ExtResource("1_wr7xx")
+
+[node name="ColorButton" parent="." instance=ExtResource("2_mgcx2")]
+layout_mode = 2
+color = Color(1, 0, 1, 1)
