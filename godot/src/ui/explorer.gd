@@ -225,8 +225,7 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		if control_menu.control_settings.instance != null:
-			control_menu.control_settings.instance.set_preview_url(cmd_realm)
+		Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -235,8 +234,6 @@ func _ready():
 		else:
 			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
-
-	control_menu.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
@@ -409,10 +406,6 @@ func _on_control_menu_hide_menu():
 
 func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
-
-
-func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
-	Global.scene_fetcher.reload_scene(scene_id)
 
 
 func _on_virtual_joystick_right_stick_position(stick_position: Vector2):

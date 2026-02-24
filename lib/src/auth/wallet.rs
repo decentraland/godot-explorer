@@ -119,6 +119,34 @@ impl SimpleAuthChain {
         ])
     }
 
+    /// Creates an ephemeral identity auth chain using a pre-formatted signature hex string.
+    /// Used for WalletConnect where we need to preserve the original v=27/28 format
+    /// instead of ethers' normalized v=0/1 format.
+    pub fn new_ephemeral_identity_auth_chain_from_hex(
+        signer_address: Address,
+        ephemeral_message: String,
+        signature_hex: String,
+    ) -> Self {
+        const PERSONAL_SIGNATURE_LENGTH: usize = 132;
+        let auth_chain_type = if signature_hex.len() == PERSONAL_SIGNATURE_LENGTH {
+            "ECDSA_EPHEMERAL"
+        } else {
+            "ECDSA_EIP_1654_EPHEMERAL"
+        };
+        Self(vec![
+            ChainLink {
+                ty: "SIGNER".to_owned(),
+                payload: format!("{signer_address:#x}"),
+                signature: String::default(),
+            },
+            ChainLink {
+                ty: auth_chain_type.to_owned(),
+                payload: ephemeral_message,
+                signature: signature_hex,
+            },
+        ])
+    }
+
     pub fn add_signed_entity(&mut self, payload: String, signature: Signature) {
         self.0.push(ChainLink {
             ty: "ECDSA_SIGNED_ENTITY".to_owned(),
