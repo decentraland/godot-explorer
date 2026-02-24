@@ -1,9 +1,14 @@
-extends MarginContainer
+@tool
+extends VBoxContainer
 
 enum AboutMode { NONE, DESCRIPTION_ONLY, ABOUT_DATA_ONLY, BOTH }
 
 ## If true, always shows expanded view, hides SEE MORE, and uses a 2-column grid.
-@export var is_portrait: bool = false
+@export var is_portrait: bool = false:
+	set(value):
+		is_portrait = value
+		if is_inside_tree():
+			grid_container_about.columns = 2 if is_portrait else 3
 
 var _about_mode: int = AboutMode.NONE
 var _about_data_count: int = 0
@@ -28,10 +33,14 @@ var _description_truncated: bool = false
 
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	underlined_button_see_more.toggled.connect(_on_underlined_button_toggled)
 
 
 func refresh(profile: DclUserProfile) -> void:
+	if Engine.is_editor_hint():
+		return
 	if profile == null:
 		return
 	if not is_inside_tree():

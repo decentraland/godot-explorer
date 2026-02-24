@@ -5,15 +5,27 @@ const AVATAR_PREVIEW_SCENE: PackedScene = preload(
 )
 
 var _avatar_preview: AvatarPreview
+var _opened_from_landscape: bool = false
 
 @onready var draggable_bottom_sheet: DraggableBottomSheet = %DraggableBottomSheet
 @onready var avatar_container: MarginContainer = %SafeTopMarginContainer
+@onready var canvas_layer: CanvasLayer = $CanvasLayer
+@onready var button_back: Button = %Button_BackToExplorer
+@onready var button_save: Button = %Button_Save
+@onready var button_cancel: Button = %Button_Cancel
 
 
 func _ready() -> void:
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content:
 		content.link_clicked.connect(_on_link_clicked)
+		content.emote_pressed.connect(_on_emote_pressed)
+		content.stop_emote.connect(_on_stop_emote)
+		content.edit_profile_pressed.connect(show_editor)
+
+	button_back.pressed.connect(_on_close_editor)
+	button_save.pressed.connect(_on_close_editor)
+	button_cancel.pressed.connect(_on_close_editor)
 
 
 func _on_visibility_changed() -> void:
@@ -21,7 +33,27 @@ func _on_visibility_changed() -> void:
 		_show_avatar()
 		_refresh_content()
 	else:
+		hide_editor()
 		_free_avatar()
+
+
+func show_editor(from_landscape: bool = false) -> void:
+	_opened_from_landscape = from_landscape
+	canvas_layer.visible = true
+
+
+func hide_editor() -> void:
+	if canvas_layer != null:
+		canvas_layer.visible = false
+
+
+func _on_close_editor() -> void:
+	hide_editor()
+	if _opened_from_landscape:
+		_opened_from_landscape = false
+		Global.set_orientation_landscape()
+		Global.close_menu.emit()
+		Global.open_own_profile.emit()
 
 
 func _show_avatar() -> void:
@@ -52,6 +84,21 @@ func _refresh_content() -> void:
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content and content.has_method("refresh"):
 		content.refresh(profile)
+
+
+func _on_emote_pressed(urn: String) -> void:
+	if _avatar_preview == null:
+		return
+	_avatar_preview.reset_avatar_rotation()
+	_avatar_preview.avatar.emote_controller.stop_emote()
+	if not _avatar_preview.avatar.emote_controller.is_playing():
+		_avatar_preview.avatar.emote_controller.async_play_emote(urn)
+
+
+func _on_stop_emote() -> void:
+	if _avatar_preview == null:
+		return
+	_avatar_preview.avatar.emote_controller.stop_emote()
 
 
 func _on_link_clicked(url: String) -> void:

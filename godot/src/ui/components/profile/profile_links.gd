@@ -1,3 +1,4 @@
+@tool
 extends VBoxContainer
 
 signal link_clicked(url: String)
@@ -8,6 +9,8 @@ const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_lin
 
 
 func refresh(profile: DclUserProfile) -> void:
+	if Engine.is_editor_hint():
+		return
 	if profile == null:
 		return
 	var children_to_remove = []

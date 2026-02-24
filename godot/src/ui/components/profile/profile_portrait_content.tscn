@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://0icleo1x2y07"]
+[gd_scene load_steps=18 format=3 uid="uid://0icleo1x2y07"]
 
 [ext_resource type="Script" uid="uid://ry6j54iml4ww" path="res://src/ui/components/profile/profile_portrait_content.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_7gsml"]
@@ -12,6 +12,7 @@
 [ext_resource type="Texture2D" uid="uid://cd0ijxb0jr8mm" path="res://assets/ui/copy-icon.svg" id="8_7le3q"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="9_ppjg4"]
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="10_lhp2a"]
+[ext_resource type="PackedScene" uid="uid://b2ojldlluptgu" path="res://src/ui/components/profile/profile_equipped.tscn" id="12_xqjxo"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_lhp2a"]
 font = ExtResource("5_5mqkx")
@@ -41,6 +42,7 @@ theme_override_constants/margin_left = 48
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 30
 script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -71,7 +73,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("4_xqjxo")
 theme_override_font_sizes/font_size = 27
-text = "Namemaxcharacte"
+text = "ASD"
 label_settings = SubResource("LabelSettings_lhp2a")
 
 [node name="Label_Tag" type="Label" parent="VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
@@ -165,6 +167,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
 
 [node name="CustomButton_EditProfile" parent="VBoxContainer" instance=ExtResource("10_lhp2a")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(312, 96)
 layout_mode = 2
 theme_override_constants/h_separation = 16
 theme_override_font_sizes/font_size = 32
@@ -173,6 +176,7 @@ custom_icon_pressed = ExtResource("3_lhp2a")
 custom_text = "EDIT PROFILE"
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 60
 theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
@@ -183,6 +187,17 @@ layout_mode = 2
 is_portrait = true
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
+
+[node name="ProfileEquipped" parent="VBoxContainer" instance=ExtResource("12_xqjxo")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator4" type="HSeparator" parent="VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 60
 theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")

@@ -1,3 +1,4 @@
+@tool
 extends VBoxContainer
 
 signal emote_pressed(urn: String)
@@ -11,6 +12,8 @@ var scroll_container_equipped_wearables: ScrollContainer = %ScrollContainer_Equi
 
 
 func async_refresh(profile: DclUserProfile) -> void:
+	if Engine.is_editor_hint():
+		return
 	var equipped_button_group = ButtonGroup.new()
 	equipped_button_group.allow_unpress = true
 

@@ -28,7 +28,7 @@
 [ext_resource type="PackedScene" uid="uid://bndmt8hl1n5ke" path="res://src/ui/components/change_nick_popup.tscn" id="30_8t4r5"]
 [ext_resource type="PackedScene" uid="uid://dklmxtp0xs5sv" path="res://src/ui/components/profile/profile_new_link_popup.tscn" id="31_8t4r5"]
 [ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/url_popup/url_popup.tscn" id="31_ood4l"]
-[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_about.tscn" id="40_about"]
+[ext_resource type="PackedScene" uid="uid://ddgiwkq38wjib" path="res://src/ui/components/profile/profile_about.tscn" id="40_about"]
 [ext_resource type="PackedScene" uid="uid://b2ojldlluptgu" path="res://src/ui/components/profile/profile_equipped.tscn" id="41_equipped"]
 [ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_links.tscn" id="42_links"]
 
@@ -386,16 +386,17 @@ texture = ExtResource("8_wxsqs")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Button_EditProfile" type="Button" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer"]
+[node name="Button_EditProfile" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer" instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(38, 60)
+custom_minimum_size = Vector2(220, 60)
 layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("12_dja5r")
-theme_type_variation = &"SecondaryOutlinedSmall"
-text = "EDIT PROFILE"
-icon = ExtResource("9_ybu4s")
+size_flags_horizontal = 1
+theme_override_constants/h_separation = 16
+theme_override_font_sizes/font_size = 20
+custom_icon = ExtResource("9_ybu4s")
+custom_icon_pressed = ExtResource("9_ybu4s")
+custom_text = "EDIT PROFILE"
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3"]
 custom_minimum_size = Vector2(84, 0)
@@ -406,7 +407,7 @@ alignment = 2
 [node name="Button_Friend" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(230, 60)
+custom_minimum_size = Vector2(168, 60)
 layout_mode = 2
 theme_type_variation = &"SecondaryLittle"
 custom_icon = ExtResource("13_pa1ft")
@@ -416,7 +417,7 @@ custom_text = "FRIEND"
 [node name="Button_Pending" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(301, 60)
+custom_minimum_size = Vector2(190, 60)
 layout_mode = 2
 theme_type_variation = &"SecondaryLittle"
 custom_icon = ExtResource("14_7xla3")
@@ -446,7 +447,7 @@ custom_text = "CANCEL REQUEST"
 [node name="Button_Blocked" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(301, 60)
+custom_minimum_size = Vector2(196, 60)
 layout_mode = 2
 theme_type_variation = &"SecondaryLittle"
 theme_override_styles/normal = SubResource("StyleBoxFlat_7xla3")
@@ -466,7 +467,7 @@ custom_text = "BLOCKED"
 [node name="Button_AddFriend" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(230, 60)
+custom_minimum_size = Vector2(227, 60)
 layout_mode = 2
 theme_type_variation = &"ButtonLittle"
 custom_icon = ExtResource("16_aoppn")
@@ -593,8 +594,13 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="ProfileAbout" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" instance=ExtResource("40_about")]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content"]
+layout_mode = 2
+theme_override_constants/margin_right = 32
+
+[node name="ProfileAbout" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer" instance=ExtResource("40_about")]
 unique_name_in_owner = true
+layout_mode = 2
 
 [node name="ProfileEquipped" parent="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" instance=ExtResource("41_equipped")]
 unique_name_in_owner = true

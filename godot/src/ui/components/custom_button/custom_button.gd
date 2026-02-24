@@ -117,7 +117,7 @@ func _update_visual_state():
 func _update_min_size():
 	if not _margin:
 		return
-	custom_minimum_size.x = _margin.size.x
+	custom_minimum_size.x = _margin.get_combined_minimum_size().x
 
 
 func _update_icon_align():

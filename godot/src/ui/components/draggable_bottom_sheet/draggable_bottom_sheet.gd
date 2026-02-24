@@ -14,7 +14,7 @@ enum DragGesture { IDLE, UP, DOWN }
 
 const _TWEEN_DURATION := 0.2
 const _DRAG_THRESHOLD := 50.0
-const _PEEK_HEIGHT := 80.0
+const _PEEK_HEIGHT := 64.0
 
 ## Scene to instantiate inside the scroll container.
 @export var content_scene: PackedScene

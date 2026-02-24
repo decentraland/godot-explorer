@@ -39,7 +39,7 @@ var _deploy_timeout_timer: Timer
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
-@onready var profile_about: MarginContainer = %ProfileAbout
+@onready var profile_about: VBoxContainer = %ProfileAbout
 @onready var profile_equipped: VBoxContainer = %ProfileEquipped
 @onready var profile_links: VBoxContainer = %ProfileLinks
 @onready var label_nickname: Label = %Label_Nickname
@@ -56,6 +56,7 @@ var _deploy_timeout_timer: Timer
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 @onready var button_mute_user: Button = %Button_MuteUser
 @onready var control_avatar: Control = %Control_Avatar
+@onready var button_edit_profile: Button = %Button_EditProfile
 @onready var button_close_profile: Button = %Button_CloseProfile
 @onready var button_menu: Button = %Button_Menu
 @onready var button_cancel_request: Button = %Button_CancelRequest
@@ -111,6 +112,7 @@ func _ready() -> void:
 	profile_equipped.emote_pressed.connect(_on_emote_pressed)
 	profile_equipped.stop_emote.connect(_on_stop_emote)
 	profile_links.link_clicked.connect(_open_go_to_link)
+	button_edit_profile.pressed.connect(_on_button_edit_profile_pressed)
 
 	# Connect friendship buttons
 	if not button_add_friend.pressed.is_connected(_on_button_add_friend_pressed):
@@ -288,14 +290,12 @@ func _update_elements_visibility() -> void:
 		button_menu.hide()
 		button_add_friend.hide()
 		button_unfriend.hide()
-		#button_edit_about.show()
-		#button_edit_links.show()
+		button_edit_profile.show()
 	else:
 		button_block_user.show()
 		button_mute_user.show()
-		#button_edit_about.hide()
-		#button_edit_links.hide()
 		button_menu.show()
+		button_edit_profile.hide()
 
 	if current_profile != null:
 		if current_profile.has_claimed_name():
@@ -1069,6 +1069,12 @@ func _relocate_avatar_preview():
 		avatar_preview.reparent(control_landscape_avatar)
 	else:
 		avatar_preview.reparent(margin_container_portrait_avatar)
+
+
+func _on_button_edit_profile_pressed() -> void:
+	close()
+	Global.set_orientation_portrait()
+	Global.open_profile_editor.emit()
 
 
 func _on_copy_nick_pressed() -> void:

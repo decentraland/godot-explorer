@@ -77,6 +77,7 @@ func _ready():
 	Global.open_backpack.connect(async_show_backpack)
 	Global.open_discover.connect(async_show_discover)
 	Global.open_own_profile.connect(async_show_own_profile)
+	Global.open_profile_editor.connect(async_show_profile_editor)
 	Global.close_menu.connect(close)
 	Global.delete_account.connect(_on_account_delete)
 
@@ -147,6 +148,14 @@ func async_show_own_profile():
 		return
 	await control_profile_portrait._async_instantiate()
 	select_profile_screen(true, true)
+	_open()
+
+
+func async_show_profile_editor():
+	await control_profile_portrait._async_instantiate()
+	select_profile_screen(true, true)
+	if control_profile_portrait.instance:
+		control_profile_portrait.instance.show_editor(true)
 	_open()
 
 

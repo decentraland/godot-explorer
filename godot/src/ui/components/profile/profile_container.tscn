@@ -13,7 +13,7 @@ grow_vertical = 2
 mouse_force_pass_scroll_events = false
 color = Color(0, 0, 0, 0.784314)
 script = ExtResource("1_d5ewq")
-metadata/mobile_preview_orientation = "both"
+metadata/mobile_preview_orientation = "landscape"
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -24,7 +24,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_6mjwx")
-default_margin = 50
+default_margin = 52
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
 [node name="Control" type="Control" parent="SafeMarginContainer"]
@@ -43,7 +43,6 @@ grow_vertical = 2
 [node name="Profile" parent="SafeMarginContainer/Control/ProfileClipContainer" instance=ExtResource("2_d5ewq")]
 unique_name_in_owner = true
 layout_mode = 1
-offset_right = 0.0
 rounded = true
 closable = true
 

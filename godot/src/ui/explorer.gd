@@ -897,6 +897,11 @@ func _on_control_menu_open_profile() -> void:
 func _on_global_open_own_profile() -> void:
 	if Global.is_orientation_portrait():
 		return
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	navbar.collapse()
 	_open_own_profile()
 
 
@@ -1106,7 +1111,7 @@ func _close_all_panels():
 
 
 func _on_discover_open():
-	navbar.close_from_discover_button()
+	navbar.collapse()
 	joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
