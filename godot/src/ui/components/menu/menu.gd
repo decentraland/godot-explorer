@@ -8,7 +8,6 @@ signal toggle_fps
 signal toggle_ram
 signal request_pause_scenes(enabled: bool)
 signal request_debug_panel(enabled: bool)
-signal preview_hot_reload(scene_type: String, scene_id: String)
 #signals from advanced settings
 
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
@@ -144,9 +143,6 @@ func async_show_settings():
 	)
 	control_settings.instance.request_debug_panel.connect(
 		func(enabled): request_debug_panel.emit(enabled)
-	)
-	control_settings.instance.preview_hot_reload.connect(
-		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
 	)
 
 	select_settings_screen()

@@ -55,6 +55,10 @@ var _use_dynamic_loading: bool = false
 # This is a one-shot flag that gets reset after use
 var _is_reloading: bool = false
 
+# When true, the current reload is a hot reload from the preview WebSocket
+# Hot reloads skip the loading screen for a smoother development experience
+var _is_hot_reloading: bool = false
+
 # Flag to purge cache on first scene load in preview mode
 # This prevents the race condition where cached content is used before
 # the WebSocket SCENE_UPDATE can trigger a reload
@@ -83,9 +87,15 @@ var _floating_islands_created: int = 0
 # Simple floor for large scenes (>100 empty parcels)
 var _large_scene_floor: Node3D = null
 
+# Preview WebSocket for hot reload
+var _preview_ws := PreviewWebSocket.new()
+
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
+
+	add_child(_preview_ws)
+	_preview_ws.scene_update.connect(_on_preview_scene_update)
 
 	# Initialize wall manager and base floor manager only for floating islands mode
 	if is_using_floating_islands():
@@ -277,22 +287,26 @@ func _async_on_desired_scene_changed():
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
-	# Capture reloading flag - only consume it when there are scenes to load
+	# Capture reloading flags - only consume them when there are scenes to load
 	# This ensures we don't lose the flag if coordinator hasn't discovered scenes yet
 	var is_reloading_now := _is_reloading
+	var is_hot_reloading_now := _is_hot_reloading
 	if not loadable_scenes.is_empty():
-		_is_reloading = false  # Only reset when we have scenes to consider
+		_is_reloading = false
+		_is_hot_reloading = false
 
 	# Determine if we should show a loading screen
 	# Show loading screen when:
 	# - We have no scenes loaded AND there are scenes to load
 	# - We're in floating islands mode
 	# - Either NOT in dynamic loading mode, OR this is a teleport (user expects to wait)
+	# - NOT a hot reload (preview WebSocket) — hot reloads skip loading screen
 	var new_loading = (
 		loaded_scenes.is_empty()
 		and not loadable_scenes.is_empty()
 		and is_using_floating_islands()
 		and (not _use_dynamic_loading or is_reloading_now)
+		and not is_hot_reloading_now
 	)
 
 	# Start a new loading session if we need to load scenes
@@ -1309,6 +1323,15 @@ func reload_scene(scene_id: String) -> void:
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
 		_is_reloading = true
+
+
+func set_preview_url(url: String) -> void:
+	_preview_ws.set_url(url)
+
+
+func _on_preview_scene_update(scene_id: String) -> void:
+	_is_hot_reloading = true
+	reload_scene(scene_id)
 
 
 func set_debugging_js_scene_id(id: String) -> void:
