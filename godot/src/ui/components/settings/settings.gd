@@ -32,8 +32,6 @@ var _dirty_connected: bool = false
 @onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
 @onready var button_clear_cache: Button = %Button_ClearCache
 
-@onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
-@onready var label_skybox_time: Label = %Label_SkyboxTime
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
@@ -63,9 +61,8 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var dynamic_graphics_container: HBoxContainer = %DynamicGraphics
 @onready var check_button_dynamic_graphics: CheckButton = %CheckButton_DynamicGraphics
 
-# Dynamic graphics toggle
-@onready
-var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox
+# Dynamic skybox toggle
+@onready var dynamic_skybox: HBoxContainer = %DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
 
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
@@ -297,12 +294,12 @@ func _on_line_edit_preview_url_focus_entered() -> void:
 	var line_edit_h: float = line_edit_custom_preview_url.size.y
 	var padding: float = 20.0
 	if line_edit_y_in_content < scroll_y + padding:
-		content_scroll_container.scroll_vertical = maxf(0, line_edit_y_in_content - padding)
+		content_scroll_container.scroll_vertical = int(maxf(0, line_edit_y_in_content - padding))
 	elif line_edit_y_in_content + line_edit_h > scroll_y + view_h - padding:
 		var v_bar = content_scroll_container.get_v_scroll_bar()
 		var max_scroll: float = v_bar.max_value if v_bar else 0.0
-		content_scroll_container.scroll_vertical = minf(
-			max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding
+		content_scroll_container.scroll_vertical = int(
+			minf(max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding)
 		)
 
 
