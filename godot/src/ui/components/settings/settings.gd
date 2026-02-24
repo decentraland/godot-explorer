@@ -2,7 +2,6 @@ extends Control
 
 signal request_debug_panel(enabled: bool)
 signal request_pause_scenes(enabled: bool)
-signal preview_hot_reload(scene_type: String, scene_id: String)
 
 enum SceneLogLevel {
 	LOG = 1,
@@ -11,11 +10,6 @@ enum SceneLogLevel {
 }
 
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
-
-var preview_ws = WebSocketPeer.new()
-var _preview_connect_to_url: String = ""
-var _dirty_closed: bool = false
-var _dirty_connected: bool = false
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -324,71 +318,9 @@ func refresh_values():
 		check_button_raycast_debugger.set_pressed_no_signal(true)
 
 
-func set_ws_state(connected: bool) -> void:
-	if connected:
-		line_edit_custom_preview_url.set_description_text_and_color("Connected", Color.FOREST_GREEN)
-	else:
-		line_edit_custom_preview_url.set_description_text_and_color("Disconnected", Color.RED)
-
-
-func _process(_delta):
-	preview_ws.poll()
-
-	var state = preview_ws.get_ready_state()
-	if state == WebSocketPeer.STATE_OPEN:
-		if not _preview_connect_to_url.is_empty():
-			preview_ws.close()
-
-		if _dirty_connected:
-			_dirty_connected = false
-			_dirty_closed = true
-			set_ws_state(true)
-
-		while preview_ws.get_available_packet_count():
-			var packet = preview_ws.get_packet().get_string_from_utf8()
-			var json = JSON.parse_string(packet)
-			if json != null and json is Dictionary:
-				var msg_type = json.get("type", "")
-				match msg_type:
-					"SCENE_UPDATE":
-						var scene_id = json.get("payload", {}).get("sceneId", "unknown")
-						var scene_type = json.get("payload", {}).get("sceneType", "scene")
-						print("preview-ws > update of ", scene_type, " with id '", scene_id, "'")
-						preview_hot_reload.emit(scene_type, scene_id)
-					_:
-						printerr("preview-ws > unknown message type ", msg_type)
-
-	elif state == WebSocketPeer.STATE_CLOSING:
-		_dirty_closed = true
-	elif state == WebSocketPeer.STATE_CLOSED:
-		if _dirty_closed:
-			set_ws_state(false)
-
-			var code = preview_ws.get_close_code()
-			var reason = preview_ws.get_close_reason()
-			print(
-				(
-					"preview-ws > closed with code: %d, reason %s. Clean: %s"
-					% [code, reason, code != -1]
-				)
-			)
-			_dirty_closed = false
-
-		if not _preview_connect_to_url.is_empty():
-			preview_ws.connect_to_url(_preview_connect_to_url)
-			print("preview-ws > connecting to ", _preview_connect_to_url)
-			_preview_connect_to_url = ""
-			_dirty_connected = true
-
-
 func _on_button_connect_preview_pressed():
-	set_preview_url(line_edit_custom_preview_url.get_text())
-
-
-func set_preview_url(url: String) -> void:
-	_preview_connect_to_url = url.to_lower().replace("http://", "ws://").replace(
-		"https://", "wss://"
-	)
+	var url = line_edit_custom_preview_url.get_text()
+	Global.scene_fetcher.set_preview_url(url)
 
 
 func refresh_zooms():

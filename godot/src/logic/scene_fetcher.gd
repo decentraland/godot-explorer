@@ -55,6 +55,10 @@ var _use_dynamic_loading: bool = false
 # This is a one-shot flag that gets reset after use
 var _is_reloading: bool = false
 
+# When true, the current reload is a hot reload from the preview WebSocket
+# Hot reloads skip the loading screen for a smoother development experience
+var _is_hot_reloading: bool = false
+
 # Flag to purge cache on first scene load in preview mode
 # This prevents the race condition where cached content is used before
 # the WebSocket SCENE_UPDATE can trigger a reload
@@ -82,6 +86,12 @@ var _floating_islands_created: int = 0
 
 # Simple floor for large scenes (>100 empty parcels)
 var _large_scene_floor: Node3D = null
+
+# Preview WebSocket for hot reload
+var _preview_ws := WebSocketPeer.new()
+var _preview_ws_pending_url: String = ""
+var _preview_ws_dirty_connected: bool = false
+var _preview_ws_dirty_closed: bool = false
 
 
 func _ready():
@@ -196,6 +206,8 @@ func is_dynamic_loading_mode() -> bool:
 
 # gdlint:ignore = async-function-name
 func _process(_dt):
+	_process_preview_ws()
+
 	# Process async floating islands generation (2 parcels per frame)
 	_process_floating_islands_batch()
 
@@ -277,22 +289,26 @@ func _async_on_desired_scene_changed():
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
-	# Capture reloading flag - only consume it when there are scenes to load
+	# Capture reloading flags - only consume them when there are scenes to load
 	# This ensures we don't lose the flag if coordinator hasn't discovered scenes yet
 	var is_reloading_now := _is_reloading
+	var is_hot_reloading_now := _is_hot_reloading
 	if not loadable_scenes.is_empty():
-		_is_reloading = false  # Only reset when we have scenes to consider
+		_is_reloading = false
+		_is_hot_reloading = false
 
 	# Determine if we should show a loading screen
 	# Show loading screen when:
 	# - We have no scenes loaded AND there are scenes to load
 	# - We're in floating islands mode
 	# - Either NOT in dynamic loading mode, OR this is a teleport (user expects to wait)
+	# - NOT a hot reload (preview WebSocket) — hot reloads skip loading screen
 	var new_loading = (
 		loaded_scenes.is_empty()
 		and not loadable_scenes.is_empty()
 		and is_using_floating_islands()
 		and (not _use_dynamic_loading or is_reloading_now)
+		and not is_hot_reloading_now
 	)
 
 	# Start a new loading session if we need to load scenes
@@ -1309,6 +1325,49 @@ func reload_scene(scene_id: String) -> void:
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
 		_is_reloading = true
+
+
+func set_preview_url(url: String) -> void:
+	_preview_ws_pending_url = (url.to_lower().replace("http://", "ws://").replace(
+		"https://", "wss://"
+	))
+
+
+func _process_preview_ws():
+	_preview_ws.poll()
+
+	var state = _preview_ws.get_ready_state()
+	if state == WebSocketPeer.STATE_OPEN:
+		if not _preview_ws_pending_url.is_empty():
+			_preview_ws.close()
+
+		if _preview_ws_dirty_connected:
+			_preview_ws_dirty_connected = false
+			_preview_ws_dirty_closed = true
+
+		while _preview_ws.get_available_packet_count():
+			var packet = _preview_ws.get_packet().get_string_from_utf8()
+			var json = JSON.parse_string(packet)
+			if json != null and json is Dictionary:
+				var msg_type = json.get("type", "")
+				match msg_type:
+					"SCENE_UPDATE":
+						var scene_id = json.get("payload", {}).get("sceneId", "unknown")
+						_is_hot_reloading = true
+						reload_scene(scene_id)
+					_:
+						printerr("preview-ws > unknown message type ", msg_type)
+
+	elif state == WebSocketPeer.STATE_CLOSING:
+		_preview_ws_dirty_closed = true
+	elif state == WebSocketPeer.STATE_CLOSED:
+		if _preview_ws_dirty_closed:
+			_preview_ws_dirty_closed = false
+
+		if not _preview_ws_pending_url.is_empty():
+			_preview_ws.connect_to_url(_preview_ws_pending_url)
+			_preview_ws_pending_url = ""
+			_preview_ws_dirty_connected = true
 
 
 func set_debugging_js_scene_id(id: String) -> void:
