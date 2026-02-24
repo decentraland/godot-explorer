@@ -558,6 +558,7 @@ theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="DynamicSkybox" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 32
 
@@ -649,6 +650,7 @@ theme_override_font_sizes/font_size = 24
 text = "Graphic Profile"
 
 [node name="RadioSelector_GraphicProfile" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/GraphicProfile" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
 items = Array[String](["VERY LOW", "LOW", "MEDIUM", "HIGH", "CUSTOM"])
