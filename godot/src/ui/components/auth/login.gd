@@ -45,8 +45,8 @@ func _configure_wallet_button() -> void:
 		button_wallet_connect.text = "METAMASK"
 		texture_rect_wallet_icon.texture = METAMASK_ICON
 		# Adjust icon position for "METAMASK" text (shorter than "WALLET CONNECT")
-		texture_rect_wallet_icon.offset_left = -135.5
-		texture_rect_wallet_icon.offset_right = -88.5
+		texture_rect_wallet_icon.offset_left = -170.0
+		texture_rect_wallet_icon.offset_right = texture_rect_wallet_icon.offset_left + 60
 	else:
 		# iOS and other platforms: Show WalletConnect button
 		button_wallet_connect.text = "WALLET CONNECT"
@@ -69,7 +69,7 @@ func async_login(provider: String = ""):
 		Global.player_identity.try_connect_account()
 
 	lobby.waiting_for_new_wallet = true
-	lobby.show_auth_browser_open_screen()
+	lobby.show_auth_browser_open_screen("Opening browser...", provider)
 
 
 func switch_google_with_apple():
@@ -301,9 +301,10 @@ func _complete_wc_auth(signature: String) -> void:
 	var signer_address = plugin.walletConnectGetAddress()
 	var ephemeral_private_key = _wc_ephemeral_data.get("ephemeral_private_key", PackedByteArray())
 	var expiration_timestamp = _wc_ephemeral_data.get("expiration_timestamp", 0)
+	var original_message = _wc_ephemeral_data.get("message", "")
 
 	var success = Global.player_identity.try_set_walletconnect_auth(
-		signer_address, signature, ephemeral_private_key, expiration_timestamp
+		signer_address, signature, ephemeral_private_key, expiration_timestamp, original_message
 	)
 
 	if success:
@@ -353,7 +354,8 @@ func _on_button_wallet_connect_pressed() -> void:
 		if native_result == true:
 			lobby.waiting_for_new_wallet = true
 			var wallet_name = "MetaMask" if Global.is_android() else "Wallet"
-			lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...")
+			var method_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
+			lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...", method_name)
 			var metric_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
 			Global.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
 			return

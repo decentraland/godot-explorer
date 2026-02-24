@@ -1,37 +1,20 @@
-[gd_scene load_steps=9 format=3 uid="uid://fc5fxcmfp4pq"]
+[gd_scene load_steps=10 format=3 uid="uid://fc5fxcmfp4pq"]
 
 [ext_resource type="Script" uid="uid://bo6p514e8op0r" path="res://src/ui/components/dcl_line_edit.gd" id="1_gt5hx"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_8pd44"]
-[ext_resource type="FontFile" uid="uid://c578syx7u7pdh" path="res://assets/themes/fonts/lato_family/Lato-Italic.ttf" id="3_q7bqo"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="2_q7bqo"]
+[ext_resource type="StyleBox" uid="uid://bmwt0rbi3myn3" path="res://assets/themes/lineedit_normal_error.tres" id="3_q7bqo"]
+[ext_resource type="StyleBox" uid="uid://yn45ej03jpoq" path="res://assets/themes/lineedit_readonly.tres" id="4_lg14u"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_v66w7"]
-[ext_resource type="LabelSettings" uid="uid://c8tjmk5hweyae" path="res://assets/themes/lobby_error.tres" id="5_lg14u"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rrmjg"]
-content_margin_left = 6.0
-content_margin_top = 6.0
-content_margin_right = 6.0
-content_margin_bottom = 6.0
-bg_color = Color(0.6, 0.6, 0.6, 0)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(1, 0, 0, 1)
-corner_radius_top_left = 28
-corner_radius_top_right = 28
-corner_radius_bottom_right = 28
-corner_radius_bottom_left = 28
+[ext_resource type="StyleBox" uid="uid://bcoprda85lwd5" path="res://assets/themes/lineedit_focus_error.tres" id="5_rrmjg"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_poknr"]
 font = ExtResource("2_8pd44")
 font_size = 24
 font_color = Color(0.687215, 0.687215, 0.687215, 1)
 
-[sub_resource type="LabelSettings" id="LabelSettings_uxhe4"]
-font = ExtResource("3_q7bqo")
+[sub_resource type="LabelSettings" id="LabelSettings_ao8tk"]
 font_size = 20
-outline_size = 2
-outline_color = Color(0, 0, 0, 1)
 
 [node name="DclLineEdit" type="VBoxContainer"]
 custom_minimum_size = Vector2(0, 150)
@@ -40,16 +23,15 @@ anchor_right = 1.0
 offset_bottom = 109.0
 grow_horizontal = 2
 size_flags_vertical = 0
+theme_override_constants/separation = 6
 script = ExtResource("1_gt5hx")
 
 [node name="Control" type="Control" parent="."]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 
-[node name="PanelContainer_ErrorBorder" type="PanelContainer" parent="Control"]
+[node name="LineEdit" type="LineEdit" parent="Control"]
 unique_name_in_owner = true
-self_modulate = Color(1, 0, 0, 1)
-custom_minimum_size = Vector2(0, 72)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -57,14 +39,17 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_rrmjg")
-
-[node name="LineEdit" type="LineEdit" parent="Control/PanelContainer_ErrorBorder"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_uneditable_color = Color(0.701961, 0.701961, 0.701961, 1)
+theme_override_colors/font_placeholder_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
+theme_override_colors/clear_button_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/clear_button_color_pressed = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_q7bqo")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = ExtResource("3_q7bqo")
+theme_override_styles/read_only = ExtResource("4_lg14u")
+theme_override_styles/focus = ExtResource("5_rrmjg")
 placeholder_text = "Hint"
 clear_button_enabled = true
 
@@ -92,14 +77,6 @@ vertical_alignment = 1
 [node name="HBoxContainer2" type="HBoxContainer" parent="."]
 layout_mode = 2
 
-[node name="Label_Advice" type="Label" parent="HBoxContainer2"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Any advice or nothing"
-label_settings = SubResource("LabelSettings_uxhe4")
-autowrap_mode = 2
-
 [node name="Label_Error" type="RichTextLabel" parent="HBoxContainer2"]
 unique_name_in_owner = true
 visible = false
@@ -110,6 +87,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_fonts/normal_font = ExtResource("4_v66w7")
 theme_override_font_sizes/normal_font_size = 20
+text = "Error example"
 fit_content = true
 autowrap_mode = 2
 
@@ -117,11 +95,11 @@ autowrap_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
 theme_override_fonts/font = ExtResource("2_8pd44")
 theme_override_font_sizes/font_size = 20
 text = "0/15"
-label_settings = ExtResource("5_lg14u")
+label_settings = SubResource("LabelSettings_ao8tk")
 horizontal_alignment = 2
 
-[connection signal="text_changed" from="Control/PanelContainer_ErrorBorder/LineEdit" to="." method="_on_line_edit_text_changed"]
+[connection signal="text_changed" from="Control/LineEdit" to="." method="_on_line_edit_text_changed"]

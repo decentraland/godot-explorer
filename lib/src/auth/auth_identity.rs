@@ -150,28 +150,33 @@ pub fn create_ephemeral_from_external_signature(
     signature: &str,
     ephemeral_private_key: &[u8],
     expiration: std::time::SystemTime,
+    original_message: &str,
 ) -> Result<EphemeralAuthChain, anyhow::Error> {
     let signer = signer_address
         .as_h160()
         .ok_or(anyhow::Error::msg("invalid signer address"))?;
 
-    let signature = Signature::from_str(signature)?;
+    // Normalize the signature hex string to ensure it has 0x prefix and v=27/28
+    let sig_hex = signature.strip_prefix("0x").unwrap_or(signature);
+    let sig_bytes = hex::decode(sig_hex)
+        .map_err(|e| anyhow::Error::msg(format!("invalid signature hex: {}", e)))?;
+    if sig_bytes.len() != 65 {
+        return Err(anyhow::Error::msg(format!(
+            "invalid signature length: {} (expected 65)",
+            sig_bytes.len()
+        )));
+    }
+    // Ensure v is in Ethereum format (27/28) not recovery id (0/1)
+    let mut sig_normalized = sig_bytes;
+    if sig_normalized[64] < 27 {
+        sig_normalized[64] += 27;
+    }
+    let signature_hex = format!("0x{}", hex::encode(&sig_normalized));
 
-    let local_wallet = LocalWallet::from_bytes(ephemeral_private_key)?;
-    let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
-    let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
-    let ephemeral_message = get_ephemeral_message(&ephemeral_address, expiration);
-
-    let auth_chain =
-        SimpleAuthChain::new_ephemeral_identity_auth_chain(signer, ephemeral_message, signature);
-
-    let expiration_datetime: DateTime<Utc> = expiration.into();
-    tracing::debug!(
-        "External auth chain created - signer: {:#x}, ephemeral_address: {}, expiration: {}, auth_chain: {:?}",
+    let auth_chain = SimpleAuthChain::new_ephemeral_identity_auth_chain_from_hex(
         signer,
-        ephemeral_address,
-        expiration_datetime.format("%Y-%m-%dT%H:%M:%S%.3fZ"),
-        auth_chain
+        original_message.to_string(),
+        signature_hex,
     );
 
     Ok(EphemeralAuthChain::new(
@@ -188,8 +193,16 @@ pub fn generate_ephemeral_for_signing() -> (String, Vec<u8>, std::time::SystemTi
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
     let ephemeral_address = format!("{:#x}", local_wallet.address());
-    let expiration =
-        std::time::SystemTime::now() + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS);
+    // Truncate to whole seconds so the timestamp survives the roundtrip through GDScript
+    // (GDScript stores it as i64 seconds, losing sub-second precision).
+    // Without this, the message MetaMask signs ("...Expiration: ...45.123Z") would differ
+    // from the reconstructed message ("...Expiration: ...45.000Z"), causing ecrecover to fail.
+    let expiration_secs = (std::time::SystemTime::now()
+        + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS))
+    .duration_since(std::time::UNIX_EPOCH)
+    .unwrap()
+    .as_secs();
+    let expiration = std::time::UNIX_EPOCH + std::time::Duration::from_secs(expiration_secs);
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
     (ephemeral_message, signing_key_bytes, expiration)
