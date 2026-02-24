@@ -26,6 +26,16 @@ func _async_set_fav(toggled_on) -> void:
 		return
 
 	set_pressed_no_signal(toggled_on)
+	var button_text := "FAVORITE" if toggled_on else "UNFAVORITE"
+	(
+		Global
+		. metrics
+		. track_click_button(
+			button_text,
+			"PLACE_DETAIL_CLICK",
+			JSON.stringify({"place_id": _place_id}),
+		)
+	)
 	_get_debounced().schedule(toggled_on)
 
 
