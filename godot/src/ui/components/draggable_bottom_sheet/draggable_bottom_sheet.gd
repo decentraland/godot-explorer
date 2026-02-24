@@ -24,11 +24,6 @@ const _PEEK_HEIGHT := 80.0
 ## If false (default), close button returns to HALF state.
 @export var closeable: bool = false
 
-@onready var panel_container_header: PanelContainer = %PanelContainer_Header
-@onready var panel_container_card: PanelContainer = %PanelContainer_Card
-@onready var scroll_content: ScrollContainer = %ScrollContent
-@onready var margin_container_show_more: MarginContainer = %MarginContainer_ShowMore
-
 var drag_state := DragState.HALF
 var dragging := false
 var start_pos: Vector2
@@ -37,6 +32,11 @@ var _card_half_position: float
 var _tween_callback: Callable
 var _tween_header_visible: bool
 var _content_instance: Node
+
+@onready var panel_container_header: PanelContainer = %PanelContainer_Header
+@onready var panel_container_card: PanelContainer = %PanelContainer_Card
+@onready var scroll_content: ScrollContainer = %ScrollContent
+@onready var margin_container_show_more: MarginContainer = %MarginContainer_ShowMore
 
 
 func _ready() -> void:
@@ -51,10 +51,10 @@ func _ready() -> void:
 
 	panel_container_card.set_anchors_and_offsets_preset.call_deferred(Control.PRESET_FULL_RECT)
 	panel_container_card.set_position.call_deferred(Vector2(0, _get_hidden_position()))
+	_initialize_card_position.call_deferred()
 
-	await get_tree().process_frame
-	await get_tree().process_frame
 
+func _initialize_card_position() -> void:
 	panel_container_card.position.y = _get_hidden_position()
 	_card_half_position = _get_half_position()
 	tween_to(_card_half_position)

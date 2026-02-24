@@ -6,7 +6,8 @@ signal stop_emote
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 
 @onready var h_box_container_equipped_wearables: HBoxContainer = %HBoxContainer_EquippedWearables
-@onready var scroll_container_equipped_wearables: ScrollContainer = %ScrollContainer_EquippedWearables
+@onready
+var scroll_container_equipped_wearables: ScrollContainer = %ScrollContainer_EquippedWearables
 
 
 func async_refresh(profile: DclUserProfile) -> void:

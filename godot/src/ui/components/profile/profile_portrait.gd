@@ -4,10 +4,10 @@ const AVATAR_PREVIEW_SCENE: PackedScene = preload(
 	"res://src/ui/components/backpack/avatar_preview.tscn"
 )
 
+var _avatar_preview: AvatarPreview
+
 @onready var draggable_bottom_sheet: DraggableBottomSheet = %DraggableBottomSheet
 @onready var avatar_container: MarginContainer = %SafeTopMarginContainer
-
-var _avatar_preview: AvatarPreview
 
 
 func _ready() -> void:
